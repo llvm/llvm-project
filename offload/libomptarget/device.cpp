@@ -23,8 +23,10 @@
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 
+#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -38,6 +40,7 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -48,7 +51,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   void *Event = getEvent();
   bool NeedNewEvent = Event == nullptr;
   if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to create event\n");
+    REPORT() << "Failed to create event";
     return OFFLOAD_FAIL;
   }
 
@@ -56,7 +59,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   // know if the target support event. But if a target doesn't,
   // recordEvent should always return success.
   if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+    REPORT() << "Failed to set dependence on event " << Event;
     return OFFLOAD_FAIL;
   }
 
@@ -88,12 +91,30 @@ llvm::Error DeviceTy::init() {
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
-    // Enables saving the device memory kernel output post execution if set.
-    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    BoolEnvar OMPX_RecordOutput("LIBOMPTARGET_RECORD_OUTPUT", true);
+    Int64Envar OMPX_RecordMemSize("LIBOMPTARGET_RECORD_MEMSIZE",
+                                  8 * 1024 * 1024 * 1024ULL);
+    Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RECORD_DEVICE", 0);
+    StringEnvar OMPX_RecordOutputDir("LIBOMPTARGET_RECORD_DIR", "");
+    BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
+    StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME",
+                                          "");
+    if (OMPX_RecordDevice != RTLDeviceID)
+      return llvm::Error::success();
 
-    uint64_t ReqPtrArgOffset;
-    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
-                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
+    // Print report if it was enabled explicitly or a report file was indicated.
+    bool EmitReport =
+        OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
+
+    Ret = RTL->initialize_record_replay(
+        RTLDeviceID, OMPX_RecordMemSize, nullptr,
+        /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
+        OMPX_RecordReportFilename.get().c_str(),
+        OMPX_RecordOutputDir.get().c_str());
+    if (Ret != OFFLOAD_SUCCESS)
+      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                       "failed to initialize RR in device %d\n",
+                                       DeviceID);
   }
 
   return llvm::Error::success();
@@ -181,6 +202,13 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                         AsyncInfo))
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to copy data");
+  // The IndirectCallTable is on the stack, so we must synchronize to ensure
+  // the data is copied before we return.
+  if (Device.synchronize(AsyncInfo))
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to synchronize after copying data");
+
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
 
@@ -210,7 +238,7 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   DeviceEnvironment.NumDevices = RTL->getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = RTLDeviceID;
-  DeviceEnvironment.DynamicMemSize = GenericDevice.getDynamicMemorySize();
+  DeviceEnvironment.DynamicMemSize = 0;
   DeviceEnvironment.ClockFrequency = GenericDevice.getClockFrequency();
   DeviceEnvironment.IndirectCallTable =
       reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
@@ -261,7 +289,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -281,7 +309,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
@@ -315,32 +343,107 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
-     DPxPTR(HstPtr), Size);
+  ODBG(ODT_Mapping) << "Notifying about new mapping: HstPtr=" << HstPtr
+                    << ", Size=" << Size;
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT("Notifying about data mapping failed.\n");
+    REPORT() << "Notifying about data mapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+  ODBG(ODT_Mapping) << "Notifying about an unmapping: HstPtr=" << HstPtr;
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT("Notifying about data unmapping failed.\n");
+    REPORT() << "Notifying about data unmapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
+/// Resolve \p NumArgs (base pointer, offset) pairs into a flattened array of
+/// argument-value pointers suitable for a kernel launch, writing the result
+/// into \p LaunchArgs.NumArgs/Args.
+static void resolveKernelLaunchParams(void **const TgtArgs,
+                                      ptrdiff_t *const TgtOffsets,
+                                      uint32_t NumArgs,
+                                      llvm::SmallVector<void *> &Args,
+                                      llvm::SmallVector<void *> &Ptrs,
+                                      KernelLaunchArgsTy &LaunchArgs) {
+  LaunchArgs.NumArgs = NumArgs;
+  Args.resize(NumArgs);
+  Ptrs.resize(NumArgs);
+
+  if (NumArgs == 0)
+    return;
+
+  for (uint32_t I = 0; I < NumArgs; ++I) {
+    Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(TgtArgs[I]) +
+                                       TgtOffsets[I]);
+    Ptrs[I] = &Args[I];
+  }
+
+  LaunchArgs.Args = &Ptrs[0];
+}
+
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                               KernelReplayOutcomeTy *ReplayOutcome,
                                AsyncInfoTy &AsyncInfo) {
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                            &KernelArgs, AsyncInfo);
+  llvm::SmallVector<void *> Args, Ptrs;
+  llvm::SmallVector<int64_t> ArgSizes;
+
+  KernelLaunchArgsTy LaunchArgs;
+  LaunchArgs.OmpABIVersion = KernelArgs.Version;
+  LaunchArgs.ReplayOutcome = ReplayOutcome;
+  LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
+  LaunchArgs.Tripcount = KernelArgs.Tripcount;
+  LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
+  llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
+  llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
+  LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
+  LaunchArgs.Flags.StrictBlocks = KernelArgs.Flags.StrictBlocks;
+  LaunchArgs.Flags.StrictThreads = KernelArgs.Flags.StrictThreads;
+  LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
+
+  if (KernelArgs.Flags.IsCUDA) {
+    // Kernel languages (CUDA/HIP) pass an already-flattened argument-pointer
+    // array through KernelArgs.ArgPtrs instead of using the OpenMP
+    // base-pointer/offset argument scheme.
+    auto *LaunchParams =
+        reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
+    LaunchArgs.NumArgs = LaunchParams->NumArgs;
+    LaunchArgs.Args = LaunchParams->Args;
+  } else {
+    resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
+                              Ptrs, LaunchArgs);
+    // The dyn_ptr slot is reserved by the host (version >= 4) or by
+    // upgradeKernelArgs (version 3) as the last element of the argument
+    // array. Version 3 device kernels expect it first instead, so rotate it
+    // to the front to match that ABI.
+    if (KernelArgs.NumArgs > 0 &&
+        KernelArgs.Version >= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+      if (KernelArgs.Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+        std::rotate(Args.begin(), Args.end() - 1, Args.end());
+        LaunchArgs.DynPtrSlot = &Args[0];
+
+        // Keep ArgSizes in sync with the rotated Args, if present.
+        if (LaunchArgs.ArgSizes) {
+          ArgSizes.assign(LaunchArgs.ArgSizes,
+                          LaunchArgs.ArgSizes + KernelArgs.NumArgs);
+          std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
+          LaunchArgs.ArgSizes = ArgSizes.data();
+        }
+      } else {
+        LaunchArgs.DynPtrSlot = &Args[KernelArgs.NumArgs - 1];
+      }
+    }
+  }
+
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
 // Run region on device

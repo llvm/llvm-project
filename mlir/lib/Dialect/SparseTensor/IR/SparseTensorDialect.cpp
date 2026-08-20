@@ -47,7 +47,7 @@ using namespace mlir::sparse_tensor;
 // Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
 // well.
 namespace mlir::sparse_tensor {
-llvm::hash_code hash_value(LevelType lt) {
+static llvm::hash_code hash_value(LevelType lt) {
   return llvm::hash_value(static_cast<uint64_t>(lt));
 }
 } // namespace mlir::sparse_tensor
@@ -513,6 +513,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   AffineMap transMap =
       dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
 
+  // Check if transMap is valid. There are cases where the lvlToDim map is
+  // uninitialized due to the format used, e.g. ELL. This is visible as
+  // inferring lvlToDim (see inferLvlToDim function below) may return an
+  // uninitialized affine map. Fallback to dynamic shapes.
+  if (!transMap) {
+    ret.resize(rank, ShapedType::kDynamic);
+    return ret;
+  }
+
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
@@ -525,10 +534,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
     }
   };
 
+  // The number of symbols information is included inside the `dimToLvl` map
+  // during parsing. Here, we're extracting it to be used when simplifying the
+  // affine expression.
+  unsigned numSymbols = getDimToLvl().getNumSymbols();
+
   for (AffineExpr exp : transMap.getResults()) {
     // Do constant propagation on the affine map.
-    AffineExpr evalExp =
-        simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
+    AffineExpr evalExp = simplifyAffineExpr(exp.replaceDims(dimRep),
+                                            srcShape.size(), numSymbols);
     // use llvm namespace here to avoid ambiguity
     if (auto c = llvm::dyn_cast<AffineConstantExpr>(evalExp)) {
       ret.push_back(c.getValue() + 1);
@@ -826,6 +840,15 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "SoA is only applicable to singleton lvlTypes.";
   }
 
+  // Dense levels cannot follow a non-unique level. The iteration model for
+  // dense levels requires exactly one parent position to linearize into a
+  // contiguous range, but a non-unique parent provides two cursor values
+  // (segment start and end), which the dense level cannot handle.
+  for (auto [i, lt] : llvm::drop_begin(llvm::enumerate(lvlTypes))) {
+    if (isDenseLT(lt) && !isUniqueLT(lvlTypes[i - 1]))
+      return emitError() << "dense level cannot follow a non-unique level";
+  }
+
   // TODO: audit formats that actually are supported by backend.
   if (auto it = llvm::find_if(lvlTypes, isNOutOfMLT);
       it != std::end(lvlTypes)) {
@@ -896,6 +919,18 @@ LogicalResult SparseTensorEncodingAttr::verify(
   return success();
 }
 
+static bool isValidPrimaryType(Type elemTp) {
+  if (elemTp.isF64() || elemTp.isF32() || elemTp.isF16() || elemTp.isBF16() ||
+      elemTp.isInteger(64) || elemTp.isInteger(32) || elemTp.isInteger(16) ||
+      elemTp.isInteger(8))
+    return true;
+  if (auto complexTp = dyn_cast<ComplexType>(elemTp)) {
+    Type elt = complexTp.getElementType();
+    return elt.isF64() || elt.isF32();
+  }
+  return false;
+}
+
 LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     ArrayRef<Size> dimShape, Type elementType,
     function_ref<InFlightDiagnostic()> emitError) const {
@@ -941,6 +976,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
       return emitError() << "implicit value must be zero";
     }
   }
+  if (!isValidPrimaryType(elementType))
+    return emitError() << "invalid primary type";
   return success();
 }
 
@@ -1596,8 +1633,7 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
 
 template <typename ToBufferOp>
 static LogicalResult inferSparseBufferType(ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   typename ToBufferOp::Adaptor adaptor(ops, attr, prop, region);
   SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
@@ -1638,7 +1674,7 @@ LogicalResult ToPositionsOp::verify() {
 LogicalResult
 ToPositionsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                 ValueRange ops, DictionaryAttr attr,
-                                OpaqueProperties prop, RegionRange region,
+                                PropertyRef prop, RegionRange region,
                                 SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToPositionsOp>(ops, attr, prop, region, ret);
 }
@@ -1655,7 +1691,7 @@ LogicalResult ToCoordinatesOp::verify() {
 LogicalResult
 ToCoordinatesOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                                   ValueRange ops, DictionaryAttr attr,
-                                  OpaqueProperties prop, RegionRange region,
+                                  PropertyRef prop, RegionRange region,
                                   SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesOp>(ops, attr, prop, region, ret);
 }
@@ -1669,7 +1705,7 @@ LogicalResult ToCoordinatesBufferOp::verify() {
 
 LogicalResult ToCoordinatesBufferOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToCoordinatesBufferOp>(ops, attr, prop, region,
                                                       ret);
@@ -1686,8 +1722,7 @@ LogicalResult ToValuesOp::verify() {
 LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
                                            std::optional<Location> loc,
                                            ValueRange ops, DictionaryAttr attr,
-                                           OpaqueProperties prop,
-                                           RegionRange region,
+                                           PropertyRef prop, RegionRange region,
                                            SmallVectorImpl<mlir::Type> &ret) {
   return inferSparseBufferType<ToValuesOp>(ops, attr, prop, region, ret);
 }
@@ -1746,7 +1781,12 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
       return op->emitError() << regionName << " region argument " << (i + 1)
                              << " type mismatch";
   }
-  Operation *term = region.front().getTerminator();
+  Block &block = region.front();
+  if (!block.mightHaveTerminator())
+    return op->emitError() << regionName
+                           << " region must end with a terminator";
+
+  Operation *term = block.getTerminator();
   YieldOp yield = dyn_cast<YieldOp>(term);
   if (!yield)
     return op->emitError() << regionName
@@ -2353,7 +2393,7 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
 
 LogicalResult ExtractIterSpaceOp::inferReturnTypes(
     MLIRContext *ctx, std::optional<Location> loc, ValueRange ops,
-    DictionaryAttr attr, OpaqueProperties prop, RegionRange region,
+    DictionaryAttr attr, PropertyRef prop, RegionRange region,
     SmallVectorImpl<mlir::Type> &ret) {
 
   ExtractIterSpaceOp::Adaptor adaptor(ops, attr, prop, region);
@@ -2605,9 +2645,14 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body
   // or back into the operation itself.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor(getOperation()));
+}
+
+ValueRange IterateOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getRegionIterArgs());
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

@@ -22,6 +22,46 @@
 namespace llvm {
 namespace RTLIB {
 
+/// \return The SHL_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSHL(EVT VT);
+
+/// \return The SRL_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSRL(EVT VT);
+
+/// \return The SRA_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSRA(EVT VT);
+
+/// \return The MUL_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getMUL(EVT VT);
+
+/// \return The MULO_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getMULO(EVT VT);
+
+/// \return The SDIV_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSDIV(EVT VT);
+
+/// \return The UDIV_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getUDIV(EVT VT);
+
+/// \return The SREM_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSREM(EVT VT);
+
+/// \return The UREM_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getUREM(EVT VT);
+
+/// \return The CTPOP_* value for the given types, or UNKNOWN_LIBCALL if there
+/// is none.
+LLVM_ABI Libcall getCTPOP(EVT VT);
+
 /// GetFPLibCall - Helper to return the right libcall for the given floating
 /// point type, or UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getFPLibCall(EVT VT, Libcall Call_F32, Libcall Call_F64,
@@ -52,45 +92,11 @@ LLVM_ABI Libcall getSINTTOFP(EVT OpVT, EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
 
-/// getPOWI - Return the POWI_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getPOWI(EVT RetVT);
-
-/// getPOW - Return the POW_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getPOW(EVT RetVT);
-
-/// getLDEXP - Return the LDEXP_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getLDEXP(EVT RetVT);
-
-/// getFREXP - Return the FREXP_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getFREXP(EVT RetVT);
-
-/// Return the SIN_* value for the given types, or UNKNOWN_LIBCALL if there is
-/// none.
-LLVM_ABI Libcall getSIN(EVT RetVT);
-
-/// Return the COS_* value for the given types, or UNKNOWN_LIBCALL if there is
-/// none.
-LLVM_ABI Libcall getCOS(EVT RetVT);
-
-/// getSINCOS - Return the SINCOS_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getSINCOS(EVT RetVT);
-
-/// getSINCOSPI - Return the SINCOSPI_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getSINCOSPI(EVT RetVT);
-
-/// Return the SINCOS_STRET_ value for the given types, or UNKNOWN_LIBCALL if
-/// there is none.
-LLVM_ABI Libcall getSINCOS_STRET(EVT RetVT);
-
-/// getMODF - Return the MODF_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getMODF(EVT RetVT);
+/// The floating-point selectors get<OP>(EVT) return the <OP>_* libcall for the
+/// given type, or UNKNOWN_LIBCALL. Generated from the RuntimeLibcallFamily
+/// table in RuntimeLibcalls.td.
+#define GET_RUNTIME_LIBCALL_FP_SELECTOR_DECLS
+#include "llvm/IR/RuntimeLibcalls.inc"
 
 /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
 /// UNKNOWN_LIBCALL if there is none.

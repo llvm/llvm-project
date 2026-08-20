@@ -22,6 +22,8 @@ extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
 extern cl::opt<bool> EnableCSPreInliner;
 extern cl::opt<bool> UseContextCostForPreInliner;
+extern cl::opt<bool> LoadFunctionFromSymbol;
+extern cl::opt<bool> TimeProfGen;
 
 } // end namespace llvm
 

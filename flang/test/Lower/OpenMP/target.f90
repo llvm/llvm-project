@@ -10,7 +10,7 @@
 subroutine omp_target_enter_simple
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a)
     return
@@ -30,7 +30,7 @@ subroutine omp_target_enter_depend
    call foo(a)
    !$omp end task
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a) depend(in: a)
     return
@@ -48,7 +48,7 @@ subroutine omp_target_enter_depend_section
    !$omp end task
    !CHECK: %[[DESIGNATE2:.*]] = hlfir.designate %[[A]]#0 ({{.*}}) shape %{{.*}} : (!fir.ref<!fir.array<1024xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<512xi32>>
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data depend(taskdependin -> %[[DESIGNATE2]] : !fir.ref<!fir.array<512xi32>>) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a) depend(in: a(1:512))
     return
@@ -65,13 +65,13 @@ subroutine omp_target_enter_mt
    integer :: c(1024)
    integer :: d(1024)
    !CHECK: %[[BOUNDS_0:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_0]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_0]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_1:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr(%{{.*}})  map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_1]]) -> !fir.ref<!fir.array<1024xi32>> {name = "b"}
+   !CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr(%{{.*}})  map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_1]]) name("b") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_2:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(always, storage) capture(ByRef) bounds(%[[BOUNDS_2]]) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+   !CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(always, storage) capture(ByRef) bounds(%[[BOUNDS_2]]) name("c") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_3:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_3]]) -> !fir.ref<!fir.array<1024xi32>> {name = "d"}
+   !CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS_3]]) name("d") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data   map_entries(%[[MAP_0]], %[[MAP_1]], %[[MAP_2]], %[[MAP_3]] : !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a, b) map(always, alloc: c) map(to: d)
 end subroutine omp_target_enter_mt
@@ -84,7 +84,7 @@ end subroutine omp_target_enter_mt
 subroutine omp_target_enter_nowait
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) nowait
    !$omp target enter data map(to: a) nowait
 end subroutine omp_target_enter_nowait
@@ -102,7 +102,7 @@ subroutine omp_target_enter_if
    !CHECK: %[[VAL_4:.*]] = arith.constant 10 : i32
    !CHECK: %[[VAL_5:.*]] = arith.cmpi slt, %[[VAL_3]], %[[VAL_4]] : i32
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data   if(%[[VAL_5]]) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data if(i<10) map(to: a)
 end subroutine omp_target_enter_if
@@ -116,7 +116,7 @@ subroutine omp_target_enter_device
    integer :: a(1024)
    !CHECK: %[[VAL_1:.*]] = arith.constant 2 : i32
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_enter_data   device(%[[VAL_1]] : i32) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target enter data map(to: a) device(2)
 end subroutine omp_target_enter_device
@@ -129,7 +129,7 @@ end subroutine omp_target_enter_device
 subroutine omp_target_exit_simple
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_exit_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target exit data map(from: a)
 end subroutine omp_target_exit_simple
@@ -146,15 +146,15 @@ subroutine omp_target_exit_mt
    integer :: d(1024)
    integer :: e(1024)
    !CHECK: %[[BOUNDS_0:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_0]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_0]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_1:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_1]]) -> !fir.ref<!fir.array<1024xi32>> {name = "b"}
+   !CHECK: %[[MAP_1:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_1]]) name("b") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_2:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(storage) capture(ByRef) bounds(%[[BOUNDS_2]]) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+   !CHECK: %[[MAP_2:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(storage) capture(ByRef) bounds(%[[BOUNDS_2]]) name("c") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_3:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(always, delete, storage) capture(ByRef) bounds(%[[BOUNDS_3]]) -> !fir.ref<!fir.array<1024xi32>> {name = "d"}
+   !CHECK: %[[MAP_3:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(always, delete, storage) capture(ByRef) bounds(%[[BOUNDS_3]]) name("d") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: %[[BOUNDS_4:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_4:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_4]]) -> !fir.ref<!fir.array<1024xi32>> {name = "e"}
+   !CHECK: %[[MAP_4:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS_4]]) name("e") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_exit_data map_entries(%[[MAP_0]], %[[MAP_1]], %[[MAP_2]], %[[MAP_3]], %[[MAP_4]] : !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    !$omp target exit data map(from: a,b) map(release: c) map(always, delete: d) map(from: e)
 end subroutine omp_target_exit_mt
@@ -169,7 +169,7 @@ subroutine omp_target_exit_device
    integer :: d
    !CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<i32>
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_exit_data   device(%[[VAL_2]] : i32) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target exit data map(from: a) device(d)
 end subroutine omp_target_exit_device
@@ -187,7 +187,7 @@ subroutine omp_target_exit_depend
    call foo(a)
    !$omp end task
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_exit_data depend(taskdependout -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target exit data map(from: a) depend(out: a)
 end subroutine omp_target_exit_depend
@@ -208,7 +208,7 @@ subroutine omp_target_update_depend
    !$omp end task
 
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_update depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target update to(a) depend(in:a)
 end subroutine omp_target_update_depend
@@ -226,7 +226,7 @@ subroutine omp_target_update_to
 
    !CHECK: %[[TO_MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
    !CHECK-SAME: map_clauses(to) capture(ByRef)
-   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK-SAME: bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
 
    !CHECK: omp.target_update map_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target update to(a)
@@ -245,7 +245,7 @@ subroutine omp_target_update_from
 
    !CHECK: %[[FROM_MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
    !CHECK-SAME: map_clauses(from) capture(ByRef)
-   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK-SAME: bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
 
    !CHECK: omp.target_update map_entries(%[[FROM_MAP]] : !fir.ref<!fir.array<1024xi32>>)
    !$omp target update from(a)
@@ -311,7 +311,7 @@ subroutine omp_target_data
    !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) {uniq_name = "_QFomp_target_dataEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_data   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target data map(tofrom: a)
       !CHECK: %[[C10:.*]] = arith.constant 10 : i32
@@ -333,14 +333,14 @@ subroutine omp_target_data_mt
    !CHECK: %[[VAR_B:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_data_mtEb"}
    !CHECK: %[[VAR_B_DECL:.*]]:2 = hlfir.declare %[[VAR_B]](%{{.*}}) {uniq_name = "_QFomp_target_data_mtEb"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAR_A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAR_A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_data   map_entries(%[[MAP_A]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target data map(a)
    !CHECK: omp.terminator
    !$omp end target data
    !CHECK: }
    !CHECK: %[[BOUNDS_B:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAR_B_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(always, from) capture(ByRef) bounds(%[[BOUNDS_B]]) -> !fir.ref<!fir.array<1024xi32>> {name = "b"}
+   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAR_B_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(always, from) capture(ByRef) bounds(%[[BOUNDS_B]]) name("b") -> !fir.ref<!fir.array<1024xi32>>
    !CHECK: omp.target_data   map_entries(%[[MAP_B]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target data map(always, from : b)
    !CHECK: omp.terminator
@@ -357,8 +357,8 @@ subroutine omp_target
    !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFomp_targetEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target map(tofrom: a)
       !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
       !CHECK: %[[VAL_2:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -390,8 +390,8 @@ subroutine omp_target_depend
    !CHECK: %[[LBOUND_A:.*]] = arith.constant 0 : index
    !CHECK: %[[UBOUND_A:.*]] = arith.subi %c1024, %c1 : index
    !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds lower_bound(%[[LBOUND_A]] : index) upper_bound(%[[UBOUND_A]] : index) extent(%[[EXTENT_A]] : index) stride(%[[STRIDE_A]] : index) start_idx(%[[STRIDE_A]] : index)
-   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
+   !CHECK: omp.target kernel_type(generic) depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target map(tofrom: a) depend(in: a)
       a(1) = 10
       !CHECK: omp.terminator
@@ -410,8 +410,8 @@ subroutine omp_target_implicit
    !CHECK: %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFomp_target_implicitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
-   !CHECK: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[VAL_4]] -> %[[VAL_6:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) name("a") -> !fir.ref<!fir.array<1024xi32>>
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[VAL_6:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target
       !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
       !CHECK: %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -434,8 +434,8 @@ end subroutine omp_target_implicit
 subroutine omp_target_implicit_nested
    integer::a, b
 
-   !CHECK-NO-FPRIV: omp.target   map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-   !CHECK-FPRIV: omp.target   map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %{{.*}} -> %[[ARG2:.*]] [map_idx=0], @{{.*}} %{{.*}} -> %[[ARG3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-NO-FPRIV: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-FPRIV: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %{{.*}} -> %[[ARG2:.*]] [map_idx=0], @{{.*}} %{{.*}} -> %[[ARG3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
       !CHECK-NO-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_target_implicit_nestedEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-NO-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFomp_target_implicit_nestedEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -481,9 +481,9 @@ subroutine omp_target_implicit_bounds(n)
    integer :: n
    integer :: a(n)
    !CHECK: %[[VAL_14:.*]] = omp.map.bounds lower_bound(%c0{{.*}} : index) upper_bound(%[[UB]] : index) extent(%[[VAL_7]] : index) stride(%c1{{.*}} : index) start_idx(%c1{{.*}} : index)
-   !CHECK: %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
-   !CHECK: %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = ""}
-   !CHECK: omp.target map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
+   !CHECK: %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) name("a") -> !fir.ref<!fir.array<?xi32>>
+   !CHECK: %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("") -> !fir.ref<i32>
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
    !$omp target
       !CHECK: %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<i32>
       !CHECK: %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
@@ -510,9 +510,9 @@ end subroutine omp_target_implicit_bounds
 !CHECK-LABEL: func.func @_QPomp_target_thread_limit() {
 subroutine omp_target_thread_limit
    integer :: a
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
    !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
-   !CHECK: omp.target thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
+   !CHECK: omp.target kernel_type(generic) thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
    !$omp target map(tofrom: a) thread_limit(64)
       a = 10
    !CHECK: omp.terminator
@@ -529,7 +529,7 @@ subroutine omp_target_device_ptr
    use iso_c_binding, only : c_ptr, c_loc
    type(c_ptr) :: a
    integer, target :: b
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) mapper(@[[CPTR_DEFAULT:_QQM__fortran_builtinsc_ptr_omp_default_mapper]]) -> {{.*}} {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) mapper(@[[CPTR_DEFAULT:_QQM__fortran_builtinsc_ptr_omp_default_mapper]]) name("a") -> {{.*}}
    !CHECK: omp.target_data map_entries(%[[MAP]]{{.*}}) use_device_ptr({{.*}} -> %[[VAL_1:.*]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
    !$omp target data map(tofrom: a) use_device_ptr(a)
    !CHECK: {{.*}} = fir.coordinate_of %[[VAL_1:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
@@ -548,11 +548,13 @@ subroutine omp_target_device_addr
    integer, pointer :: a
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}
    !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFomp_target_device_addrEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-   !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[MAP_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "a"}
-   !CHECK: %[[DEV_ADDR_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, i32) map_clauses(return_param) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
-   !CHECK: %[[DEV_ADDR:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[DEV_ADDR_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "a"}
-   !CHECK: omp.target_data map_entries(%[[MAP]], %[[MAP_MEMBERS]] : {{.*}}) use_device_addr(%[[DEV_ADDR]] -> %[[ARG_0:.*]], %[[DEV_ADDR_MEMBERS]] -> %[[ARG_1:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.llvm_ptr<!fir.ref<i32>>) {
+   !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[MAP_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+   !CHECK: %[[MAP_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+   !CHECK: %[[DEV_ADDR_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(return_param) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+   !CHECK: %[[DEV_ADDR:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[DEV_ADDR_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+   !CHECK: %[[DEV_ADDR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+   !CHECK: omp.target_data map_entries(%[[MAP]], %[[MAP_ATTACH]], %[[DEV_ADDR_ATTACH]], %[[MAP_MEMBERS]] : {{.*}}) use_device_addr(%[[DEV_ADDR]] -> %[[ARG_0:.*]], %[[DEV_ADDR_MEMBERS]] -> %[[ARG_1:.*]] : {{.*}}) {
    !$omp target data map(tofrom: a) use_device_addr(a)
    !CHECK: %[[VAL_1_DECL:.*]]:2 = hlfir.declare %[[ARG_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFomp_target_device_addrEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
    !CHECK: %[[C10:.*]] = arith.constant 10 : i32
@@ -564,6 +566,36 @@ subroutine omp_target_device_addr
    !$omp end target data
    !CHECK: }
 end subroutine omp_target_device_addr
+
+
+!===============================================================================
+! Target `is_device_ptr` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_is_device_ptr() {
+subroutine omp_target_is_device_ptr
+   use iso_c_binding, only: c_ptr
+   implicit none
+   integer :: i
+   integer :: arr(4)
+   type(c_ptr) :: p
+
+   i = 0
+   arr = 0
+
+   !CHECK: %[[P_STORAGE:.*]] = omp.map.info {{.*}}name("p")
+   !CHECK: %[[P_IS:.*]] = omp.map.info {{.*}}name("p")
+   !CHECK: %[[ARR_MAP:.*]] = omp.map.info {{.*}}name("arr")
+   !CHECK: omp.target kernel_type(generic) is_device_ptr(%[[P_IS]] :
+   !CHECK-SAME: has_device_addr(%[[P_STORAGE]] ->
+   !CHECK-SAME: map_entries({{.*}}%[[ARR_MAP]] ->
+   !$omp target is_device_ptr(p)
+      i = i + 1
+      arr(1) = i
+   !$omp end target
+   !CHECK: omp.terminator
+   !CHECK: }
+end subroutine omp_target_is_device_ptr
 
 
 !===============================================================================
@@ -605,8 +637,8 @@ subroutine omp_target_parallel_do
    !CHECK: %[[C0:.*]] = arith.constant 0 : index
    !CHECK: %[[SUB:.*]] = arith.subi %[[C1024]], %[[C1]] : index
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[SUB]] : index) extent(%[[C1024]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_0_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_0_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
+   !CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
       !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[ARG_0]](%{{.*}}) {uniq_name = "_QFomp_target_parallel_doEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: omp.parallel
       !$omp target parallel do map(tofrom: a)
@@ -642,12 +674,12 @@ subroutine target_unstructured
    integer :: i = 1
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    integer :: j = 11
-   !CHECK-NO-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-   !CHECK-NO-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "j"}
-   !CHECK-NO-FPRIV: omp.target map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-NO-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !fir.ref<i32>
+   !CHECK-NO-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("j") -> !fir.ref<i32>
+   !CHECK-NO-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
    !CHECK-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
    !CHECK-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
-   !CHECK-FPRIV: omp.target map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
       !CHECK-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG_2]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG_3]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -664,3 +696,87 @@ subroutine target_unstructured
    !$omp end target
    !CHECK: }
 end subroutine target_unstructured
+
+!===============================================================================
+! Target `device` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_device() {
+subroutine omp_target_device
+  integer            :: dev32
+  integer(kind=8)    :: dev64
+  integer(kind=2)    :: dev16
+
+  dev32 = 1
+  dev64 = 2_8
+  dev16 = 3_2
+
+  !$omp target device(dev32)
+  !$omp end target
+  ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV32]] : i32)
+
+  !$omp target device(dev64)
+  !$omp end target
+  ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV64]] : i64)
+
+  !$omp target device(dev16)
+  !$omp end target
+  ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV16]] : i16)
+
+  !$omp target device(2)
+  !$omp end target
+  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
+  ! CHECK: omp.target kernel_type(generic) device(%[[C2]] : i32)
+
+  !$omp target device(5_8)
+  !$omp end target
+  ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
+  ! CHECK: omp.target kernel_type(generic) device(%[[C5]] : i64)
+
+end subroutine omp_target_device
+
+!===============================================================================
+! Target data `device` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_data_device() {
+subroutine omp_target_data_device
+  integer            :: dev32
+  integer(kind=8)    :: dev64
+  integer(kind=2)    :: dev16
+  integer            :: x
+
+  dev32 = 1
+  dev64 = 2_8
+  dev16 = 3_2
+  x = 0
+
+  !$omp target data device(dev32) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: omp.target_data device(%[[DEV32]] : i32)
+
+  !$omp target data device(dev64) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+  ! CHECK: omp.target_data device(%[[DEV64]] : i64)
+
+  !$omp target data device(dev16) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
+  ! CHECK: omp.target_data device(%[[DEV16]] : i16)
+
+  !$omp target data device(2) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
+  ! CHECK: omp.target_data device(%[[C2]] : i32)
+
+  !$omp target data device(5_8) map(tofrom: x)
+  !$omp end target data
+  ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
+  ! CHECK: omp.target_data device(%[[C5]] : i64)
+
+end subroutine omp_target_data_device

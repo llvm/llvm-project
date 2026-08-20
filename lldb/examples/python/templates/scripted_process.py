@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Any, Optional, Union
 
 import lldb
 import json, struct, signal
@@ -12,14 +13,20 @@ class ScriptedProcess(metaclass=ABCMeta):
     overwritten by the inheriting class.
     """
 
-    capabilities = None
-    memory_regions = None
-    loaded_images = None
-    threads = None
-    metadata = None
+    capabilities: Optional[dict[str, bool]] = None
+    memory_regions: Optional[list[lldb.SBMemoryRegionInfo]] = None
+    loaded_images: Optional[list[dict]] = None
+    threads: Optional[dict[int, "lldb.plugins.scripted_process.ScriptedThread"]] = None
+    metadata: Optional[dict[str, Any]] = None
+
+    target: lldb.SBTarget
+    args: lldb.SBStructuredData
+    arch: str
+    dbg: lldb.SBDebugger
+    pid: int
 
     @abstractmethod
-    def __init__(self, exe_ctx, args):
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         """Construct a scripted process.
 
         Args:
@@ -45,7 +52,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.capabilities = {}
         self.pid = 42
 
-    def get_capabilities(self):
+    def get_capabilities(self) -> dict[str, bool]:
         """Get a dictionary containing the process capabilities.
 
         Returns:
@@ -55,7 +62,9 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.capabilities
 
-    def get_memory_region_containing_address(self, addr):
+    def get_memory_region_containing_address(
+        self, addr: int
+    ) -> Optional[lldb.SBMemoryRegionInfo]:
         """Get the memory region for the scripted process, containing a
             specific address.
 
@@ -69,7 +78,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return None
 
-    def get_threads_info(self):
+    def get_threads_info(self) -> dict[int, "lldb.plugins.scripted_process.ScriptedThread"]:
         """Get the dictionary describing the process' Scripted Threads.
 
         Returns:
@@ -80,7 +89,9 @@ class ScriptedProcess(metaclass=ABCMeta):
         return self.threads
 
     @abstractmethod
-    def read_memory_at_address(self, addr, size, error):
+    def read_memory_at_address(
+        self, addr: int, size: int, error: lldb.SBError
+    ) -> lldb.SBData:
         """Get a memory buffer from the scripted process at a certain address,
             of a certain size.
 
@@ -95,7 +106,9 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         pass
 
-    def write_memory_at_address(self, addr, data, error):
+    def write_memory_at_address(
+        self, addr: int, data: lldb.SBData, error: lldb.SBError
+    ) -> int:
         """Write a buffer to the scripted process memory.
 
         Args:
@@ -112,7 +125,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         )
         return 0
 
-    def get_loaded_images(self):
+    def get_loaded_images(self) -> Optional[list[dict]]:
         """Get the list of loaded images for the scripted process.
 
         .. code-block:: python
@@ -131,7 +144,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.loaded_images
 
-    def get_process_id(self):
+    def get_process_id(self) -> int:
         """Get the scripted process identifier.
 
         Returns:
@@ -139,7 +152,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.pid
 
-    def launch(self):
+    def launch(self) -> lldb.SBError:
         """Simulate the scripted process launch.
 
         Returns:
@@ -147,7 +160,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return lldb.SBError()
 
-    def attach(self, attach_info):
+    def attach(self, attach_info: lldb.SBAttachInfo) -> lldb.SBError:
         """Simulate the scripted process attach.
 
         Args:
@@ -159,7 +172,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return lldb.SBError()
 
-    def resume(self, should_stop=True):
+    def resume(self, should_stop: bool = True) -> lldb.SBError:
         """Simulate the scripted process resume.
 
         Args:
@@ -181,7 +194,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         return lldb.SBError()
 
     @abstractmethod
-    def is_alive(self):
+    def is_alive(self) -> bool:
         """Check if the scripted process is alive.
 
         Returns:
@@ -190,7 +203,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_scripted_thread_plugin(self):
+    def get_scripted_thread_plugin(self) -> str:
         """Get scripted thread plugin name.
 
         Returns:
@@ -198,7 +211,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return None
 
-    def get_process_metadata(self):
+    def get_process_metadata(self) -> Optional[dict[str, Any]]:
         """Get some metadata for the scripted process.
 
         Returns:
@@ -207,7 +220,9 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.metadata
 
-    def create_breakpoint(self, addr, error):
+    def create_breakpoint(
+        self, addr: int, error: lldb.SBError
+    ) -> Union[lldb.SBBreakpoint, bool]:
         """Create a breakpoint in the scripted process from an address.
             This is mainly used with interactive scripted process debugging.
 
@@ -233,8 +248,28 @@ class ScriptedThread(metaclass=ABCMeta):
     overwritten by the inheriting class.
     """
 
+    target: lldb.SBTarget
+    arch: str
+    originating_process: Union["lldb.plugins.scripted_process.ScriptedProcess", lldb.SBProcess]
+    process: lldb.SBProcess
+    args: lldb.SBStructuredData
+    idx: int
+    tid: int
+    name: str
+    queue: str
+    state: int
+    stop_reason: dict[str, Any]
+    register_info: dict[str, Any]
+    register_ctx: dict[str, int]
+    frames: list[dict]
+    extended_info: list[dict]
+
     @abstractmethod
-    def __init__(self, process, args):
+    def __init__(
+        self,
+        process: Union["lldb.plugins.scripted_process.ScriptedProcess", lldb.SBProcess],
+        args: Optional[lldb.SBStructuredData],
+    ):
         """Construct a scripted thread.
 
         Args:
@@ -243,6 +278,7 @@ class ScriptedThread(metaclass=ABCMeta):
                 key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.arch = None
         self.originating_process = None
         self.process = None
         self.args = None
@@ -264,11 +300,14 @@ class ScriptedThread(metaclass=ABCMeta):
             and process.IsValid()
         ):
             self.target = process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
             self.originating_process = process
             self.process = self.target.GetProcess()
             self.get_register_info()
 
-    def get_thread_idx(self):
+    def get_thread_idx(self) -> int:
         """Get the scripted thread index.
 
         Returns:
@@ -276,7 +315,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.idx
 
-    def get_thread_id(self):
+    def get_thread_id(self) -> int:
         """Get the scripted thread identifier.
 
         Returns:
@@ -284,7 +323,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.tid
 
-    def get_name(self):
+    def get_name(self) -> str:
         """Get the scripted thread name.
 
         Returns:
@@ -292,7 +331,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.name
 
-    def get_state(self):
+    def get_state(self) -> int:
         """Get the scripted thread state type.
 
         .. code-block:: python
@@ -309,7 +348,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return lldb.eStateStopped
 
-    def get_queue(self):
+    def get_queue(self) -> str:
         """Get the scripted thread associated queue name.
             This method is optional.
 
@@ -319,7 +358,7 @@ class ScriptedThread(metaclass=ABCMeta):
         return self.queue
 
     @abstractmethod
-    def get_stop_reason(self):
+    def get_stop_reason(self) -> dict[str, Any]:
         """Get the dictionary describing the stop reason type with some data.
             This method is optional.
 
@@ -329,7 +368,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         pass
 
-    def get_stackframes(self):
+    def get_stackframes(self) -> list[dict]:
         """Get the list of stack frames for the scripted thread.
 
         .. code-block:: python
@@ -347,24 +386,40 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.frames
 
-    def get_register_info(self):
+    def get_register_info(self) -> dict[str, Any]:
+        """Get the register info dictionary describing the scripted thread's
+        registers. Lazily populated on first call from a per-architecture
+        general-purpose register layout keyed off `self.arch`.
+
+        Returns:
+            Dict: The register info dictionary with `sets` and `registers`
+            keys. `sets` is a list of register set names and `registers`
+            is a list of register descriptions.
+
+        Raises:
+            ValueError: If `self.arch` is not one of the architectures
+                the base class ships a register layout for.
+        """
         if self.register_info is None:
             self.register_info = dict()
-            if "x86_64" in self.originating_process.arch:
+            if "x86_64" in self.arch:
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = INTEL64_GPR
-            elif (
-                "arm64" in self.originating_process.arch
-                or self.originating_process.arch == "aarch64"
-            ):
+            elif "arm64" in self.arch or self.arch == "aarch64":
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM64_GPR
+            elif "arm" in self.arch or "thumb" in self.arch:
+                self.register_info["sets"] = ["General Purpose Registers"]
+                self.register_info["registers"] = ARM32_GPR
+            elif "hexagon" in self.arch:
+                self.register_info["sets"] = ["General Purpose Registers"]
+                self.register_info["registers"] = HEXAGON_GPR
             else:
-                raise ValueError("Unknown architecture", self.originating_process.arch)
+                raise ValueError("Unknown architecture", self.arch)
         return self.register_info
 
     @abstractmethod
-    def get_register_context(self):
+    def get_register_context(self) -> str:
         """Get the scripted thread register context
 
         Returns:
@@ -372,7 +427,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         pass
 
-    def get_extended_info(self):
+    def get_extended_info(self) -> list[dict]:
         """Get scripted thread extended information.
 
         Returns:
@@ -381,7 +436,7 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.extended_info
 
-    def get_scripted_frame_plugin(self):
+    def get_scripted_frame_plugin(self) -> Optional[str]:
         """Get scripted frame plugin name.
 
         Returns:
@@ -398,16 +453,31 @@ class ScriptedFrame(metaclass=ABCMeta):
     overwritten by the inheriting class.
     """
 
+    target: lldb.SBTarget
+    arch: str
+    originating_thread: Union["lldb.plugins.scripted_process.ScriptedThread", lldb.SBThread]
+    thread: lldb.SBThread
+    process: lldb.SBProcess
+    args: lldb.SBStructuredData
+    id: int
+    name: str
+    register_info: dict[str, Any]
+    register_ctx: dict[str, int]
+    variables: list[lldb.SBValue]
+
     @abstractmethod
-    def __init__(self, thread, args):
+    def __init__(
+        self, thread: Union["lldb.plugins.scripted_process.ScriptedThread", lldb.SBThread], args: lldb.SBStructuredData
+    ):
         """Construct a scripted frame.
 
         Args:
-            thread (ScriptedThread): The thread owning this frame.
+            thread (ScriptedThread/lldb.SBThread): The thread owning this frame.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
                 key/value pairs used by the scripted frame.
         """
         self.target = None
+        self.arch = None
         self.originating_thread = None
         self.thread = None
         self.args = None
@@ -417,19 +487,21 @@ class ScriptedFrame(metaclass=ABCMeta):
         self.register_ctx = {}
         self.variables = []
 
-        if (
-            isinstance(thread, ScriptedThread)
-            or isinstance(thread, lldb.SBThread)
-            and thread.IsValid()
+        if isinstance(thread, ScriptedThread) or (
+            isinstance(thread, lldb.SBThread) and thread.IsValid()
         ):
-            self.target = thread.target
             self.process = thread.process
+            self.target = self.process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
+            tid = thread.tid if isinstance(thread, ScriptedThread) else thread.id
             self.originating_thread = thread
-            self.thread = self.process.GetThreadByIndexID(thread.tid)
+            self.thread = self.process.GetThreadByID(tid)
             self.get_register_info()
 
     @abstractmethod
-    def get_id(self):
+    def get_id(self) -> int:
         """Get the scripted frame identifier.
 
         Returns:
@@ -437,7 +509,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         pass
 
-    def get_pc(self):
+    def get_pc(self) -> Optional[int]:
         """Get the scripted frame address.
 
         Returns:
@@ -445,7 +517,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return None
 
-    def get_symbol_context(self):
+    def get_symbol_context(self) -> Optional[lldb.SBSymbolContext]:
         """Get the scripted frame symbol context.
 
         Returns:
@@ -453,7 +525,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return None
 
-    def is_inlined(self):
+    def is_inlined(self) -> bool:
         """Check if the scripted frame is inlined.
 
         Returns:
@@ -461,7 +533,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return False
 
-    def is_artificial(self):
+    def is_artificial(self) -> bool:
         """Check if the scripted frame is artificial.
 
         Returns:
@@ -469,7 +541,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return True
 
-    def is_hidden(self):
+    def is_hidden(self) -> bool:
         """Check if the scripted frame is hidden.
 
         Returns:
@@ -477,7 +549,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return False
 
-    def get_function_name(self):
+    def get_function_name(self) -> str:
         """Get the scripted frame function name.
 
         Returns:
@@ -485,7 +557,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return self.name
 
-    def get_display_function_name(self):
+    def get_display_function_name(self) -> str:
         """Get the scripted frame display function name.
 
         Returns:
@@ -493,7 +565,9 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return self.get_function_name()
 
-    def get_variables(self, filters):
+    def get_variables(
+        self, filters: lldb.SBVariablesOptions
+    ) -> Optional[lldb.SBValueList]:
         """Get the scripted thread state type.
 
         Args:
@@ -504,13 +578,51 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return None
 
-    def get_register_info(self):
+    def get_register_info(self) -> dict[str, Any]:
+        """Get the register info dictionary describing the scripted frame's
+        registers. Delegates to the originating scripted thread when there
+        is one; otherwise lazily populates a per-architecture
+        general-purpose register layout keyed off `self.arch`.
+
+        Returns:
+            Dict: The register info dictionary with `sets` and `registers`
+            keys. `sets` is a list of register set names and `registers`
+            is a list of register descriptions.
+
+        Raises:
+            ValueError: If `self.arch` is not one of the architectures
+                the base class ships a register layout for.
+        """
         if self.register_info is None:
-            self.register_info = self.originating_thread.get_register_info()
+            if isinstance(self.originating_thread, ScriptedThread):
+                self.register_info = self.originating_thread.get_register_info()
+            elif isinstance(self.originating_thread, lldb.SBThread):
+                self.register_info = dict()
+                if "x86_64" in self.arch:
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = INTEL64_GPR
+                elif "arm64" in self.arch or self.arch == "aarch64":
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = ARM64_GPR
+                elif "arm" in self.arch or "thumb" in self.arch:
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = ARM32_GPR
+                elif "hexagon" in self.arch:
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = HEXAGON_GPR
+                elif "wasm" in self.arch:
+                    # WebAssembly is a stack machine with no general-purpose
+                    # register file, so there is no GPR layout to expose. Leave
+                    # the register info empty rather than raising, which would
+                    # otherwise prevent the scripted frame from constructing.
+                    self.register_info["sets"] = []
+                    self.register_info["registers"] = []
+                else:
+                    raise ValueError("Unknown architecture", self.arch)
         return self.register_info
 
     @abstractmethod
-    def get_register_context(self):
+    def get_register_context(self) -> str:
         """Get the scripted thread register context
 
         Returns:
@@ -519,10 +631,25 @@ class ScriptedFrame(metaclass=ABCMeta):
         pass
 
 class PassthroughScriptedProcess(ScriptedProcess):
+    """A reference `ScriptedProcess` subclass that forwards every request to
+    a "driving" process running in another target of the same debugger.
+    Useful as a starting point when the extension only needs to reshape or
+    filter data from a real underlying process."""
+
     driving_target = None
     driving_process = None
 
-    def __init__(self, exe_ctx, args, launched_driving_process=True):
+    def __init__(
+        self,
+        exe_ctx: lldb.SBExecutionContext,
+        args: lldb.SBStructuredData,
+        launched_driving_process: bool = True,
+    ):
+        """Construct a passthrough scripted process by looking up the driving
+        target's index in `args["driving_target_idx"]` and (unless
+        `launched_driving_process` is `False`) mirroring its threads and
+        loaded images into `self`.
+        """
         super().__init__(exe_ctx, args)
 
         self.driving_target = None
@@ -557,14 +684,18 @@ class PassthroughScriptedProcess(ScriptedProcess):
                     )
                     self.loaded_images.append({"path": path, "load_addr": load_addr})
 
-    def get_memory_region_containing_address(self, addr):
+    def get_memory_region_containing_address(
+        self, addr: int
+    ) -> Optional[lldb.SBMemoryRegionInfo]:
         mem_region = lldb.SBMemoryRegionInfo()
         error = self.driving_process.GetMemoryRegionInfo(addr, mem_region)
         if error.Fail():
             return None
         return mem_region
 
-    def read_memory_at_address(self, addr, size, error):
+    def read_memory_at_address(
+        self, addr: int, size: int, error: lldb.SBError
+    ) -> lldb.SBData:
         data = lldb.SBData()
         bytes_read = self.driving_process.ReadMemory(addr, size, error)
 
@@ -580,23 +711,33 @@ class PassthroughScriptedProcess(ScriptedProcess):
 
         return data
 
-    def write_memory_at_address(self, addr, data, error):
+    def write_memory_at_address(
+        self, addr: int, data: lldb.SBData, error: lldb.SBError
+    ) -> int:
         return self.driving_process.WriteMemory(
             addr, bytearray(data.uint8.all()), error
         )
 
-    def get_process_id(self):
+    def get_process_id(self) -> int:
         return self.driving_process.GetProcessID()
 
-    def is_alive(self):
+    def is_alive(self) -> bool:
         return True
 
-    def get_scripted_thread_plugin(self):
+    def get_scripted_thread_plugin(self) -> str:
         return f"{PassthroughScriptedThread.__module__}.{PassthroughScriptedThread.__name__}"
 
 
 class PassthroughScriptedThread(ScriptedThread):
-    def __init__(self, process, args):
+    """A reference `ScriptedThread` subclass that forwards every request to
+    a specific thread of a driving process. See `PassthroughScriptedProcess`
+    for the process-side counterpart."""
+
+    def __init__(
+        self,
+        process: Union["lldb.plugins.scripted_process.ScriptedProcess", lldb.SBProcess],
+        args: lldb.SBStructuredData,
+    ):
         super().__init__(process, args)
         driving_target_idx = args.GetValueForKey("driving_target_idx")
         thread_idx = args.GetValueForKey("thread_idx")
@@ -622,13 +763,13 @@ class PassthroughScriptedThread(ScriptedThread):
         if self.driving_thread:
             self.id = self.driving_thread.GetThreadID()
 
-    def get_thread_id(self):
+    def get_thread_id(self) -> int:
         return self.id
 
-    def get_name(self):
+    def get_name(self) -> str:
         return f"{PassthroughScriptedThread.__name__}.thread-{self.idx}"
 
-    def get_stop_reason(self):
+    def get_stop_reason(self) -> dict:
         stop_reason = {"type": lldb.eStopReasonInvalid, "data": {}}
 
         if (
@@ -640,12 +781,12 @@ class PassthroughScriptedThread(ScriptedThread):
 
             # TODO: Passthrough stop reason from driving process
             if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
-                if "arm64" in self.originating_process.arch:
+                if "arm64" in self.arch:
                     stop_reason["type"] = lldb.eStopReasonException
                     stop_reason["data"]["desc"] = (
                         self.driving_thread.GetStopDescription(100)
                     )
-                elif self.originating_process.arch == "x86_64":
+                elif self.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP
                 else:
@@ -653,7 +794,7 @@ class PassthroughScriptedThread(ScriptedThread):
 
         return stop_reason
 
-    def get_register_context(self):
+    def get_register_context(self) -> Optional[str]:
         if not self.driving_thread or self.driving_thread.GetNumFrames() == 0:
             return None
         frame = self.driving_thread.GetFrameAtIndex(0)
@@ -673,11 +814,10 @@ class PassthroughScriptedThread(ScriptedThread):
 
         return struct.pack(f"{len(self.register_ctx)}Q", *self.register_ctx.values())
 
-
-ARM64_GPR = [
+ARM32_GPR = [
     {
-        "name": "x0",
-        "bitsize": 64,
+        "name": "r0",
+        "bitsize": 32,
         "offset": 0,
         "encoding": "uint",
         "format": "hex",
@@ -688,480 +828,105 @@ ARM64_GPR = [
         "alt-name": "arg0",
     },
     {
-        "name": "x1",
-        "bitsize": 64,
-        "offset": 8,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 1,
-        "dwarf": 1,
-        "generic": "arg1",
-        "alt-name": "arg1",
-    },
-    {
-        "name": "x2",
-        "bitsize": 64,
-        "offset": 16,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 2,
-        "dwarf": 2,
-        "generic": "arg2",
-        "alt-name": "arg2",
-    },
-    {
-        "name": "x3",
-        "bitsize": 64,
-        "offset": 24,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 3,
-        "dwarf": 3,
-        "generic": "arg3",
-        "alt-name": "arg3",
-    },
-    {
-        "name": "x4",
-        "bitsize": 64,
-        "offset": 32,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 4,
-        "dwarf": 4,
-        "generic": "arg4",
-        "alt-name": "arg4",
-    },
-    {
-        "name": "x5",
-        "bitsize": 64,
-        "offset": 40,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 5,
-        "dwarf": 5,
-        "generic": "arg5",
-        "alt-name": "arg5",
-    },
-    {
-        "name": "x6",
-        "bitsize": 64,
-        "offset": 48,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 6,
-        "dwarf": 6,
-        "generic": "arg6",
-        "alt-name": "arg6",
-    },
-    {
-        "name": "x7",
-        "bitsize": 64,
-        "offset": 56,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 7,
-        "dwarf": 7,
-        "generic": "arg7",
-        "alt-name": "arg7",
-    },
-    {
-        "name": "x8",
-        "bitsize": 64,
-        "offset": 64,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 8,
-        "dwarf": 8,
-    },
-    {
-        "name": "x9",
-        "bitsize": 64,
-        "offset": 72,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 9,
-        "dwarf": 9,
-    },
-    {
-        "name": "x10",
-        "bitsize": 64,
-        "offset": 80,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 10,
-        "dwarf": 10,
-    },
-    {
-        "name": "x11",
-        "bitsize": 64,
-        "offset": 88,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 11,
-        "dwarf": 11,
-    },
-    {
-        "name": "x12",
-        "bitsize": 64,
-        "offset": 96,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 12,
-        "dwarf": 12,
-    },
-    {
-        "name": "x13",
-        "bitsize": 64,
-        "offset": 104,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 13,
-        "dwarf": 13,
-    },
-    {
-        "name": "x14",
-        "bitsize": 64,
-        "offset": 112,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 14,
-        "dwarf": 14,
-    },
-    {
-        "name": "x15",
-        "bitsize": 64,
-        "offset": 120,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 15,
-        "dwarf": 15,
-    },
-    {
-        "name": "x16",
-        "bitsize": 64,
-        "offset": 128,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 16,
-        "dwarf": 16,
-    },
-    {
-        "name": "x17",
-        "bitsize": 64,
-        "offset": 136,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 17,
-        "dwarf": 17,
-    },
-    {
-        "name": "x18",
-        "bitsize": 64,
-        "offset": 144,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 18,
-        "dwarf": 18,
-    },
-    {
-        "name": "x19",
-        "bitsize": 64,
-        "offset": 152,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 19,
-        "dwarf": 19,
-    },
-    {
-        "name": "x20",
-        "bitsize": 64,
-        "offset": 160,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 20,
-        "dwarf": 20,
-    },
-    {
-        "name": "x21",
-        "bitsize": 64,
-        "offset": 168,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 21,
-        "dwarf": 21,
-    },
-    {
-        "name": "x22",
-        "bitsize": 64,
-        "offset": 176,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 22,
-        "dwarf": 22,
-    },
-    {
-        "name": "x23",
-        "bitsize": 64,
-        "offset": 184,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 23,
-        "dwarf": 23,
-    },
-    {
-        "name": "x24",
-        "bitsize": 64,
-        "offset": 192,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 24,
-        "dwarf": 24,
-    },
-    {
-        "name": "x25",
-        "bitsize": 64,
-        "offset": 200,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 25,
-        "dwarf": 25,
-    },
-    {
-        "name": "x26",
-        "bitsize": 64,
-        "offset": 208,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 26,
-        "dwarf": 26,
-    },
-    {
-        "name": "x27",
-        "bitsize": 64,
-        "offset": 216,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 27,
-        "dwarf": 27,
-    },
-    {
-        "name": "x28",
-        "bitsize": 64,
-        "offset": 224,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 28,
-        "dwarf": 28,
-    },
-    {
-        "name": "x29",
-        "bitsize": 64,
-        "offset": 232,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 29,
-        "dwarf": 29,
-        "generic": "fp",
-        "alt-name": "fp",
-    },
-    {
-        "name": "x30",
-        "bitsize": 64,
-        "offset": 240,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 30,
-        "dwarf": 30,
-        "generic": "lr",
-        "alt-name": "lr",
-    },
-    {
-        "name": "sp",
-        "bitsize": 64,
-        "offset": 248,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 31,
-        "dwarf": 31,
-        "generic": "sp",
-        "alt-name": "sp",
-    },
-    {
-        "name": "pc",
-        "bitsize": 64,
-        "offset": 256,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 32,
-        "dwarf": 32,
-        "generic": "pc",
-        "alt-name": "pc",
-    },
-    {
-        "name": "cpsr",
+        "name": "r1",
         "bitsize": 32,
-        "offset": 264,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 33,
-        "dwarf": 33,
-    },
-]
-
-INTEL64_GPR = [
-    {
-        "name": "rax",
-        "bitsize": 64,
-        "offset": 0,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 0,
-        "dwarf": 0,
-    },
-    {
-        "name": "rbx",
-        "bitsize": 64,
-        "offset": 8,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 3,
-        "dwarf": 3,
-    },
-    {
-        "name": "rcx",
-        "bitsize": 64,
-        "offset": 16,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 2,
-        "dwarf": 2,
-        "generic": "arg4",
-        "alt-name": "arg4",
-    },
-    {
-        "name": "rdx",
-        "bitsize": 64,
-        "offset": 24,
+        "offset": 4,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 1,
         "dwarf": 1,
-        "generic": "arg3",
-        "alt-name": "arg3",
-    },
-    {
-        "name": "rdi",
-        "bitsize": 64,
-        "offset": 32,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 5,
-        "dwarf": 5,
         "generic": "arg1",
         "alt-name": "arg1",
     },
     {
-        "name": "rsi",
-        "bitsize": 64,
-        "offset": 40,
+        "name": "r2",
+        "bitsize": 32,
+        "offset": 8,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 2,
+        "dwarf": 2,
+        "generic": "arg2",
+        "alt-name": "arg2",
+    },
+    {
+        "name": "r3",
+        "bitsize": 32,
+        "offset": 12,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 3,
+        "dwarf": 3,
+        "generic": "arg3",
+        "alt-name": "arg3",
+    },
+    {
+        "name": "r4",
+        "bitsize": 32,
+        "offset": 16,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 4,
         "dwarf": 4,
-        "generic": "arg2",
-        "alt-name": "arg2",
     },
     {
-        "name": "rbp",
-        "bitsize": 64,
-        "offset": 48,
+        "name": "r5",
+        "bitsize": 32,
+        "offset": 20,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 5,
+        "dwarf": 5,
+    },
+    {
+        "name": "r6",
+        "bitsize": 32,
+        "offset": 24,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 6,
         "dwarf": 6,
-        "generic": "fp",
-        "alt-name": "fp",
     },
     {
-        "name": "rsp",
-        "bitsize": 64,
-        "offset": 56,
+        "name": "r7",
+        "bitsize": 32,
+        "offset": 28,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 7,
         "dwarf": 7,
-        "generic": "sp",
-        "alt-name": "sp",
     },
     {
         "name": "r8",
-        "bitsize": 64,
-        "offset": 64,
+        "bitsize": 32,
+        "offset": 32,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 8,
         "dwarf": 8,
-        "generic": "arg5",
-        "alt-name": "arg5",
     },
     {
         "name": "r9",
-        "bitsize": 64,
-        "offset": 72,
+        "bitsize": 32,
+        "offset": 36,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 9,
         "dwarf": 9,
-        "generic": "arg6",
-        "alt-name": "arg6",
     },
     {
         "name": "r10",
-        "bitsize": 64,
-        "offset": 80,
+        "bitsize": 32,
+        "offset": 40,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
@@ -1170,18 +935,20 @@ INTEL64_GPR = [
     },
     {
         "name": "r11",
-        "bitsize": 64,
-        "offset": 88,
+        "bitsize": 32,
+        "offset": 44,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 11,
         "dwarf": 11,
+        "generic": "fp",
+        "alt-name": "fp",
     },
     {
         "name": "r12",
-        "bitsize": 64,
-        "offset": 96,
+        "bitsize": 32,
+        "offset": 48,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
@@ -1189,80 +956,49 @@ INTEL64_GPR = [
         "dwarf": 12,
     },
     {
-        "name": "r13",
-        "bitsize": 64,
-        "offset": 104,
+        "name": "sp",
+        "bitsize": 32,
+        "offset": 52,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 13,
         "dwarf": 13,
+        "generic": "sp",
+        "alt-name": "r13",
     },
     {
-        "name": "r14",
-        "bitsize": 64,
-        "offset": 112,
+        "name": "lr",
+        "bitsize": 32,
+        "offset": 56,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 14,
         "dwarf": 14,
+        "generic": "lr",
+        "alt-name": "r14",
     },
     {
-        "name": "r15",
-        "bitsize": 64,
-        "offset": 120,
+        "name": "pc",
+        "bitsize": 32,
+        "offset": 60,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
         "gcc": 15,
         "dwarf": 15,
-    },
-    {
-        "name": "rip",
-        "bitsize": 64,
-        "offset": 128,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-        "gcc": 16,
-        "dwarf": 16,
         "generic": "pc",
-        "alt-name": "pc",
+        "alt-name": "r15",
     },
     {
-        "name": "rflags",
-        "bitsize": 64,
-        "offset": 136,
+        "name": "cpsr",
+        "bitsize": 32,
+        "offset": 64,
         "encoding": "uint",
         "format": "hex",
         "set": 0,
-        "generic": "flags",
-        "alt-name": "flags",
-    },
-    {
-        "name": "cs",
-        "bitsize": 64,
-        "offset": 144,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-    },
-    {
-        "name": "fs",
-        "bitsize": 64,
-        "offset": 152,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
-    },
-    {
-        "name": "gs",
-        "bitsize": 64,
-        "offset": 160,
-        "encoding": "uint",
-        "format": "hex",
-        "set": 0,
+        "dwarf": 128,
     },
 ]
 
@@ -1630,6 +1366,484 @@ ARM64_GPR = [
         "set": 0,
         "gcc": 33,
         "dwarf": 33,
+    },
+]
+
+HEXAGON_GPR = [
+    {
+        "name": "r0",
+        "bitsize": 32,
+        "offset": 0,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r1",
+        "bitsize": 32,
+        "offset": 4,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r2",
+        "bitsize": 32,
+        "offset": 8,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r3",
+        "bitsize": 32,
+        "offset": 12,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r4",
+        "bitsize": 32,
+        "offset": 16,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r5",
+        "bitsize": 32,
+        "offset": 20,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r6",
+        "bitsize": 32,
+        "offset": 24,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r7",
+        "bitsize": 32,
+        "offset": 28,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r8",
+        "bitsize": 32,
+        "offset": 32,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r9",
+        "bitsize": 32,
+        "offset": 36,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r10",
+        "bitsize": 32,
+        "offset": 40,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r11",
+        "bitsize": 32,
+        "offset": 44,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r12",
+        "bitsize": 32,
+        "offset": 48,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r13",
+        "bitsize": 32,
+        "offset": 52,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r14",
+        "bitsize": 32,
+        "offset": 56,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r15",
+        "bitsize": 32,
+        "offset": 60,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r16",
+        "bitsize": 32,
+        "offset": 64,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r17",
+        "bitsize": 32,
+        "offset": 68,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r18",
+        "bitsize": 32,
+        "offset": 72,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r19",
+        "bitsize": 32,
+        "offset": 76,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r20",
+        "bitsize": 32,
+        "offset": 80,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r21",
+        "bitsize": 32,
+        "offset": 84,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r22",
+        "bitsize": 32,
+        "offset": 88,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r23",
+        "bitsize": 32,
+        "offset": 92,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r24",
+        "bitsize": 32,
+        "offset": 96,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r25",
+        "bitsize": 32,
+        "offset": 100,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r26",
+        "bitsize": 32,
+        "offset": 104,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r27",
+        "bitsize": 32,
+        "offset": 108,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r28",
+        "bitsize": 32,
+        "offset": 112,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "r29",
+        "bitsize": 32,
+        "offset": 116,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+        "alt-name": "sp",
+    },
+    {
+        "name": "r30",
+        "bitsize": 32,
+        "offset": 120,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+        "alt-name": "fp",
+    },
+    {
+        "name": "r31",
+        "bitsize": 32,
+        "offset": 124,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+        "alt-name": "lr",
+    },
+    {
+        "name": "sa0",
+        "bitsize": 32,
+        "offset": 128,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "lc0",
+        "bitsize": 32,
+        "offset": 132,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "sa1",
+        "bitsize": 32,
+        "offset": 136,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "lc1",
+        "bitsize": 32,
+        "offset": 140,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "p3_0",
+        "bitsize": 32,
+        "offset": 144,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "m0",
+        "bitsize": 32,
+        "offset": 148,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "m1",
+        "bitsize": 32,
+        "offset": 152,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "usr",
+        "bitsize": 32,
+        "offset": 156,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "pc",
+        "bitsize": 32,
+        "offset": 160,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+        "generic": "pc",
+        "alt-name": "pc",
+    },
+    {
+        "name": "ugp",
+        "bitsize": 32,
+        "offset": 164,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "gp",
+        "bitsize": 32,
+        "offset": 168,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "cs0",
+        "bitsize": 32,
+        "offset": 172,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "cs1",
+        "bitsize": 32,
+        "offset": 176,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "framelimit",
+        "bitsize": 32,
+        "offset": 180,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
+    },
+    {
+        "name": "framekey",
+        "bitsize": 32,
+        "offset": 184,
+        "encoding": "uint",
+        "format": "hex",
+        "set": 0,
+        "gcc": 0,
+        "dwarf": 0,
     },
 ]
 

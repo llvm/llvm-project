@@ -47,7 +47,7 @@ namespace Fortran::semantics {
 ENUM_CLASS(OmpProperty, Required, Unique, Exclusive, Ultimate, Post)
 using OmpProperties = common::EnumSet<OmpProperty, OmpProperty_enumSize>;
 using OmpClauses =
-    common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+    llvm::omp::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
 struct OmpModifierDescriptor {
   // Modifier name for use in diagnostic messages.
@@ -80,20 +80,26 @@ DECLARE_DESCRIPTOR(parser::OmpCloseModifier);
 DECLARE_DESCRIPTOR(parser::OmpContextSelector);
 DECLARE_DESCRIPTOR(parser::OmpDeleteModifier);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpDepinfoModifier);
 DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
+DECLARE_DESCRIPTOR(parser::OmpDimsModifier);
 DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
 DECLARE_DESCRIPTOR(parser::OmpExpectation);
 DECLARE_DESCRIPTOR(parser::OmpFallbackModifier);
-DECLARE_DESCRIPTOR(parser::OmpInteropPreference);
 DECLARE_DESCRIPTOR(parser::OmpInteropType);
 DECLARE_DESCRIPTOR(parser::OmpIterator);
 DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
 DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
+DECLARE_DESCRIPTOR(parser::OmpLinearStep);
+DECLARE_DESCRIPTOR(parser::OmpLoopModifier);
+DECLARE_DESCRIPTOR(parser::OmpLowerBound);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);
 DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
+DECLARE_DESCRIPTOR(parser::OmpMemSpace);
 DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
+DECLARE_DESCRIPTOR(parser::OmpPreferType);
 DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
 DECLARE_DESCRIPTOR(parser::OmpPresentModifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
@@ -103,6 +109,7 @@ DECLARE_DESCRIPTOR(parser::OmpSelfModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpTraitsArray);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
 DECLARE_DESCRIPTOR(parser::OmpxHoldModifier);
 

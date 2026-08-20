@@ -38,6 +38,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -55,6 +56,13 @@ class IndexedInstrProfReader;
 namespace vfs {
 class FileSystem;
 }
+
+namespace abi {
+class ArgInfo;
+class IRTypeMapper;
+class TargetInfo;
+class TypeBuilder;
+} // namespace abi
 }
 
 namespace clang {
@@ -95,7 +103,9 @@ class CGOpenCLRuntime;
 class CGOpenMPRuntime;
 class CGCUDARuntime;
 class CGHLSLRuntime;
+class CGFunctionInfo;
 class CoverageMappingModuleGen;
+class QualTypeMapper;
 class TargetCodeGenInfo;
 
 enum ForDefinition_t : bool {
@@ -363,6 +373,18 @@ private:
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
+  /// Cached LLVMABI target lowering info, lazily constructed when the
+  /// experimental ABI lowering path is taken.
+  mutable std::unique_ptr<llvm::abi::TargetInfo> TheLLVMABITargetInfo;
+
+  /// Allocator and mappers used by the experimental LLVMABI-based lowering
+  /// path (gated on -fexperimental-abi-lowering). Constructed unconditionally
+  /// so the path can be entered without re-checking initialization, but the
+  /// caches stay empty when the flag is off.
+  llvm::BumpPtrAllocator AbiAlloc;
+  std::unique_ptr<QualTypeMapper> AbiMapper;
+  std::unique_ptr<llvm::abi::IRTypeMapper> AbiReverseMapper;
+
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
   // if TheTargetCodeGenInfo is NULL
@@ -456,6 +478,11 @@ private:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl*> DeferredVTables;
 
+  /// In incremental compilation, the set of vtable classes whose vtable
+  /// definitions were emitted into a previous PTU's module. Carried forward
+  /// by moveLazyEmissionStates() so later PTUs skip re-defining them.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> EmittedVTables;
+
   /// A queue of (optional) vtables that may be emitted opportunistically.
   std::vector<const CXXRecordDecl *> OpportunisticVTables;
 
@@ -529,6 +556,21 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
+  /// Pending MSVC __global_delete variants that may need forwarding bodies.
+  /// Maps each __global_delete wrapper alias to the corresponding global
+  /// ::operator delete FunctionDecl, in insertion order.
+  llvm::MapVector<llvm::GlobalAlias *, const FunctionDecl *>
+      PendingMSVCGlobalDeletes;
+
+  /// Whether this TU contains a direct use of global ::operator delete
+  /// (indicating that __global_delete forwarding bodies should be emitted).
+  bool HasDirectGlobalDelete = false;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -587,6 +629,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// Global variable for copyright pragma comment (if present).
+  llvm::GlobalVariable *LoadTimeCommentGlobal = nullptr;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -608,7 +653,6 @@ private:
   void createCUDARuntime();
   void createHLSLRuntime();
 
-  bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
@@ -664,6 +708,7 @@ private:
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
+  MetadataTypeMap CallGraphMetadataIdMap;
 
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
@@ -675,7 +720,8 @@ private:
   llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
       VTablePtrAuthInfos;
   std::optional<PointerAuthQualifier>
-  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
+  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass,
+                                 bool IsVTTEntry);
 
   AtomicOptions AtomicOpts;
 
@@ -716,6 +762,39 @@ public:
 
   /// Return true iff an Objective-C runtime has been configured.
   bool hasObjCRuntime() { return !!ObjCRuntime; }
+
+  /// Check if the precondition thunk optimization is enabled.
+  /// This checks runtime support and codegen options, but does NOT check
+  /// whether a specific method is eligible for thunks or inline preconditions.
+  ///
+  /// TODO: Add support for GNUStep as well, currently only supports NeXT
+  /// family.
+  bool isObjCDirectPreconditionThunkEnabled() const {
+    return getLangOpts().ObjCRuntime.allowsDirectDispatch() &&
+           getLangOpts().ObjCRuntime.isNeXTFamily() &&
+           getCodeGenOpts().ObjCDirectPreconditionThunk;
+  }
+
+  /// Check if a direct method should use precondition thunks at call sites.
+  /// Returns false if OMD is null, not a direct method, or variadic.
+  ///
+  /// Variadic methods use inline preconditions instead of thunks to avoid
+  /// musttail complexity across different architectures.
+  bool shouldHavePreconditionThunk(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && !OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
+
+  /// Check if a direct method should have inline precondition checks at call
+  /// sites.
+  /// Returns false if OMD is null, not a direct method, or not variadic.
+  ///
+  /// Variadic direct methods use inline preconditions rather than thunks
+  /// to avoid musttail complexity across different architectures.
+  bool shouldHavePreconditionInline(const ObjCMethodDecl *OMD) const {
+    return OMD && OMD->isDirectMethod() && OMD->isVariadic() &&
+           isObjCDirectPreconditionThunkEnabled();
+  }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
@@ -839,6 +918,22 @@ public:
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
   const ABIInfo &getABIInfo();
+
+  /// Lazily build and return the LLVMABI library's TargetInfo for the current
+  /// target. Used by the experimental ABI lowering path
+  /// (-fexperimental-abi-lowering).
+  const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
+
+  /// True when -fexperimental-abi-lowering is in effect AND the active target
+  /// has an LLVMABI implementation that supports the given LLVM calling
+  /// convention. Unsupported CCs fall back to the legacy ABIInfo path.
+  bool shouldUseLLVMABILowering(unsigned CallingConv) const;
+
+  /// Drive the experimental LLVMABI-based lowering path: map argument and
+  /// return types into the LLVMABI library, ask its target lowering to fill
+  /// in classification, and write the results back into FI.
+  void computeABIInfoUsingLib(CGFunctionInfo &FI);
+
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
 
@@ -1067,13 +1162,14 @@ public:
                                    GlobalDecl SchemaDecl, QualType SchemaType);
 
   uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
-  std::optional<CGPointerAuthInfo>
-  getVTablePointerAuthInfo(CodeGenFunction *Context,
-                           const CXXRecordDecl *Record,
-                           llvm::Value *StorageAddress);
+
+  std::optional<CGPointerAuthInfo> getVTablePointerAuthInfo(
+      CodeGenFunction *Context, const CXXRecordDecl *Record,
+      llvm::Value *StorageAddress, bool IsVTTEntry = false);
 
   std::optional<PointerAuthQualifier>
-  getVTablePointerAuthentication(const CXXRecordDecl *thisClass);
+  getVTablePointerAuthentication(const CXXRecordDecl *thisClass,
+                                 bool IsVTTEntry = false);
 
   CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
 
@@ -1216,6 +1312,9 @@ public:
   // to apply any ABI rules about which other constructors/destructors
   // are needed or if they are alias to each other.
   llvm::Function *codegenCXXStructor(GlobalDecl GD);
+
+  /// Emit a trap stub body for functions in ASTContext::CUDADeviceInvalidFuncs.
+  bool tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD, llvm::Function *Fn);
 
   /// Return the address of the constructor/destructor of the given type.
   llvm::Constant *
@@ -1368,6 +1467,9 @@ public:
   /// Print out an error that codegen doesn't support the specified stmt yet.
   void ErrorUnsupported(const Stmt *S, const char *Type);
 
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void ErrorUnsupported(const Stmt *S, llvm::StringRef Type);
+
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
 
@@ -1458,7 +1560,6 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
@@ -1468,6 +1569,11 @@ public:
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.
   llvm::GlobalVariable::LinkageTypes getVTableLinkage(const CXXRecordDecl *RD);
+
+  /// Returns true if a vtable with the given linkage may be emitted with more
+  /// than one address in the program, because the vtable is weak and the
+  /// target's ABI allows weak vtables to be duplicated across images.
+  bool mayVTableBeDuplicated(llvm::GlobalValue::LinkageTypes Linkage) const;
 
   /// Return the store size, in character units, of the given LLVM type.
   CharUnits GetTargetTypeStoreSize(llvm::Type *Ty) const;
@@ -1546,7 +1652,33 @@ public:
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
 
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Record a pending __global_delete variant that may need a forwarding body.
+  void addPendingGlobalDelete(llvm::GlobalAlias *GlobalDeleteAlias,
+                              const FunctionDecl *OperatorDeleteFD);
+
+  /// Get or create the MSVC-compatible __global_delete wrapper for the given
+  /// global ::operator delete, registering it as a pending variant so a
+  /// forwarding body can be emitted if this TU directly uses global
+  /// ::operator delete.
+  llvm::Constant *
+  getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD);
+
+  /// Note that global ::operator delete is directly used in this TU.
+  void noteDirectGlobalDelete();
+
+  /// Emit __global_delete forwarding bodies for any pending variants,
+  /// if this TU directly uses global ::operator delete.
+  void emitGlobalDeleteForwardingBodies();
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
+
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1631,6 +1763,11 @@ public:
   /// internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierForType(QualType T);
 
+  /// Create a metadata identifier for the Call Graph Section.
+  /// This is a generalized type identifier that is guaranteed to be an
+  /// MDString.
+  llvm::Metadata *CreateMetadataIdentifierForCallGraphType(QualType T);
+
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
@@ -1644,11 +1781,11 @@ public:
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
-  /// Create and attach type metadata if the function is a potential indirect
-  /// call target to support call graph section.
+  /// Create and attach callgraph metadata if the function is a potential
+  /// indirect call target to support call graph section.
   void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
 
-  /// Create and attach type metadata to the given call.
+  /// Create and attach callee_type metadata to the given call.
   void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
 
   /// Set type metadata to the given function.
@@ -1766,7 +1903,7 @@ public:
   bool shouldEmitConvergenceTokens() const {
     // TODO: this should probably become unconditional once the controlled
     // convergence becomes the norm.
-    return getTriple().isSPIRVLogical();
+    return getTriple().isSPIRVLogical() || getTriple().isDXIL();
   }
 
   void addUndefinedGlobalForTailCall(
@@ -1828,7 +1965,7 @@ public:
   // Helper to get the alignment for a variable.
   unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
     LangAS AS = GetGlobalVarAddressSpace(D);
-    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+    unsigned PAlign = Context.getLangOpts().RelativeCXXABIVTables
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;
@@ -1839,7 +1976,29 @@ public:
     return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
+  llvm::Constant *performAddrSpaceCast(llvm::Constant *Src,
+                                       llvm::Type *DestTy) {
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+  }
+
+  std::optional<llvm::Attribute::AttrKind>
+  StackProtectorAttribute(const Decl *D) const;
+
+  std::string getPFPFieldName(const FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
+
 private:
+  /// Translate an llvm::abi::ArgInfo (computed by the LLVMABI library) into
+  /// the clang ABIArgInfo consumed by the rest of CodeGen. Used by the
+  /// experimental ABI lowering path.
+  ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                               QualType Type);
+
+  /// Process #pragma comment(copyright, ...).
+  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
+
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -2013,6 +2172,19 @@ private:
   void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
                             ASTContext &Ctx);
 
+  /// Attach the "sycl-module-id" function attribute to \p Fn, to record the
+  /// module ID for the translation unit. This attribute is applied to SYCL
+  /// kernel entry point functions and functions declared with the
+  /// sycl_external attribute to enable them to be identified as entry points
+  /// by clang-sycl-linker during device-code splitting.
+  void addSYCLModuleIdAttr(llvm::Function *Fn);
+
+  /// Embed the finalized SYCL device binary named by -foffload-include-binary
+  /// into the host module.
+  /// \return the function that registers the binary with the runtime, or null
+  /// if the binary could not be read.
+  llvm::Function *embedSYCLDeviceBinary();
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
@@ -2041,7 +2213,12 @@ private:
                                     llvm::AttrBuilder &FuncAttrs);
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                               StringRef Suffix);
+                                               StringRef Suffix,
+                                               bool ForceString = false);
+
+  /// Emit deactivation symbols for any PFP fields whose offset is taken with
+  /// offsetof.
+  void emitPFPFieldsWithEvaluatedOffset();
 };
 
 }  // end namespace CodeGen

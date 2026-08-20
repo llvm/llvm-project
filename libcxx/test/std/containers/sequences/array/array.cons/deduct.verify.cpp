@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++17
+
 // <array>
-// UNSUPPORTED: c++03, c++11, c++14
 
 // template <class T, class... U>
 //   array(T, U...) -> array<T, 1 + sizeof...(U)>;
@@ -20,11 +21,9 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+void test() {
   {
     std::array arr{1, 2, 3L};
     // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}array'}}
   }
-
-  return 0;
 }

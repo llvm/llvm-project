@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -122,6 +124,7 @@ namespace {
     const TargetRegisterInfo *TRI = nullptr;
     const MachineFrameInfo *MFI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
+    const RegisterClassInfo *RegClassInfo = nullptr;
     TargetSchedModel SchedModel;
     bool PreRegAlloc = false;
     bool HasProfileData = false;
@@ -301,8 +304,10 @@ namespace {
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineRegisterClassInfoWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -310,17 +315,13 @@ namespace {
   class MachineLICM : public MachineLICMBase {
   public:
     static char ID;
-    MachineLICM() : MachineLICMBase(ID, false) {
-      initializeMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
+    MachineLICM() : MachineLICMBase(ID, false) {}
   };
 
   class EarlyMachineLICM : public MachineLICMBase {
   public:
     static char ID;
-    EarlyMachineLICM() : MachineLICMBase(ID, true) {
-      initializeEarlyMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
+    EarlyMachineLICM() : MachineLICMBase(ID, true) {}
   };
 
 } // end anonymous namespace
@@ -336,6 +337,7 @@ INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
                     "Machine Loop Invariant Code Motion", false, false)
@@ -345,6 +347,7 @@ INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
@@ -368,6 +371,13 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
                   .getManager()
                   .getResult<AAManager>(MF.getFunction())
            : &LegacyPass->getAnalysis<AAResultsWrapperPass>().getAAResults();
+
+  RegClassInfo =
+      MFAM != nullptr
+          ? &MFAM->getResult<MachineRegisterClassAnalysis>(MF)
+          : &LegacyPass->getAnalysis<MachineRegisterClassInfoWrapperPass>()
+                 .getRCI();
+
   MachineDomTreeUpdater DTU(GET_RESULT(MachineDominatorTree, getDomTree, ),
                             MachineDomTreeUpdater::UpdateStrategy::Lazy);
   MDTU = &DTU;
@@ -400,7 +410,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
     llvm::fill(RegPressure, 0);
     RegLimit.resize(NumRPS);
     for (unsigned i = 0, e = NumRPS; i != e; ++i)
-      RegLimit[i] = TRI->getRegPressureSetLimit(MF, i);
+      RegLimit[i] = RegClassInfo->getRegPressureSetLimit(i);
   }
 
   if (HoistConstLoads)
@@ -625,10 +635,12 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(
+              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(
+              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
@@ -837,24 +849,25 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
       continue;
 
     Scopes.push_back(Node);
-    unsigned NumChildren = Node->getNumChildren();
 
     // Don't hoist things out of a large switch statement.  This often causes
     // code to be hoisted that wasn't going to be executed, and increases
     // register pressure in a situation where it's likely to matter.
-    if (BB->succ_size() >= 25)
-      NumChildren = 0;
-
-    OpenChildren[Node] = NumChildren;
-    if (NumChildren) {
-      // Add children in reverse order as then the next popped worklist node is
-      // the first child of this node.  This means we ultimately traverse the
-      // DOM tree in exactly the same order as if we'd recursed.
-      for (MachineDomTreeNode *Child : reverse(Node->children())) {
-        ParentMap[Child] = Node;
-        WorkList.push_back(Child);
-      }
+    if (BB->succ_size() >= 25) {
+      OpenChildren[Node] = 0;
+      continue;
     }
+
+    // Add children in reverse order as then the next popped worklist node is
+    // the first child of this node.  This means we ultimately traverse the
+    // DOM tree in exactly the same order as if we'd recursed.
+    size_t WorkListStart = WorkList.size();
+    for (MachineDomTreeNode *Child : Node->children()) {
+      ParentMap[Child] = Node;
+      WorkList.push_back(Child);
+    }
+    std::reverse(WorkList.begin() + WorkListStart, WorkList.end());
+    OpenChildren[Node] = WorkList.size() - WorkListStart;
   }
 
   if (Scopes.size() == 0)

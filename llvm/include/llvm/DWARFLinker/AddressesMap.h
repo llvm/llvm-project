@@ -83,6 +83,52 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
+  /// The extent the linker gave a symbol, in source address space.
+  struct SymbolRange {
+    SymbolRange(uint64_t LowPC, uint64_t HighPC)
+        : LowPC(LowPC), HighPC(HighPC) {}
+    uint64_t LowPC;
+    uint64_t HighPC;
+  };
+
+  /// Returns the symbol range [LowPC, HighPC) containing \p Addr, if known.
+  virtual std::optional<SymbolRange> getSymbolRangeForAddress(uint64_t Addr) {
+    return std::nullopt;
+  }
+
+  /// Returns the linked address of the first symbol placed at or after
+  /// \p LinkedAddr, if one is known.
+  virtual std::optional<uint64_t>
+  getNextLinkedSymbolStart(uint64_t LinkedAddr) {
+    return std::nullopt;
+  }
+
+  /// Constrains the end of the code range starting at \p LowPC, whose addresses
+  /// shift by \p Adjustment in the output. \p HighPC is an address, not a
+  /// length.
+  ///
+  /// The linker places symbols independently, so a range overrunning the symbol
+  /// it starts in can cover a different one once linked. Only that overlap is
+  /// repaired.
+  uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
+                                    int64_t Adjustment) {
+    std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
+    if (!Symbol)
+      return HighPC;
+    assert(Symbol->LowPC <= LowPC && LowPC < Symbol->HighPC &&
+           "Symbol range must contain the address it was looked up for");
+    uint64_t LinkedSymbolHighPC = Symbol->HighPC + Adjustment;
+    assert(LinkedSymbolHighPC > Symbol->LowPC + Adjustment &&
+           "Adjusting a symbol range must preserve its order");
+    std::optional<uint64_t> NextStart =
+        getNextLinkedSymbolStart(LinkedSymbolHighPC);
+    if (!NextStart)
+      return HighPC;
+    assert(*NextStart >= LinkedSymbolHighPC &&
+           "A range must never be cut short of its own symbol");
+    return std::min(HighPC, *NextStart - Adjustment);
+  }
+
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
   /// \returns first is true if the expression has an operation referencing an
@@ -122,8 +168,7 @@ public:
       return std::make_pair(false, std::nullopt);
 
     // Parse 'exprloc' expression.
-    DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(*Expr, U->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 
@@ -142,7 +187,8 @@ public:
       case dwarf::DW_OP_const2s:
       case dwarf::DW_OP_const4s:
       case dwarf::DW_OP_const8s:
-        if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))
+        if (NextIt == Expression.end() ||
+            !dwarf::isTlsAddressOp(NextIt->getCode()))
           break;
         [[fallthrough]];
       case dwarf::DW_OP_addr: {
@@ -177,12 +223,6 @@ public:
     }
 
     return std::make_pair(HasLocationAddress, std::nullopt);
-  }
-
-protected:
-  inline bool isTlsAddressCode(uint8_t DW_OP_Code) {
-    return DW_OP_Code == dwarf::DW_OP_form_tls_address ||
-           DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
   }
 };
 

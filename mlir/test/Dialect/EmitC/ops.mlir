@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
-// RUN: mlir-opt %s -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -canonicalize | FileCheck -check-prefix=CANON %s
 
 // CHECK: emitc.include <"test.h">
 // CHECK: emitc.include "test.h"
@@ -9,9 +9,9 @@ emitc.include "test.h"
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
-  emitc.call_opaque "foo" (%1) {args = [
+  emitc.call_opaque "foo" (%1) <{args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
-  ]} : (i64) -> ()
+  ]}> : (i64) -> ()
   return
 }
 
@@ -49,14 +49,6 @@ func.func @c() {
   %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
   %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
   %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
-  return
-}
-
-func.func @a() {
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   return
 }
 
@@ -156,6 +148,15 @@ func.func @unary(%arg0: i32) {
   return
 }
 
+func.func @inc_dec(%arg0: !emitc.ptr<i32>) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %0 = emitc.pre_increment %v : !emitc.lvalue<i32>
+  %1 = emitc.post_increment %v : !emitc.lvalue<i32>
+  %2 = emitc.pre_decrement %v : !emitc.lvalue<i32>
+  %3 = emitc.post_decrement %v : !emitc.lvalue<i32>
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
@@ -186,6 +187,23 @@ func.func @test_assign(%arg1: f32) {
   return
 }
 
+// CHECK-LABEL: func.func @compound_assign
+// CHECK: emitc.add_assign
+// CHECK: emitc.sub_assign
+// CHECK: emitc.mul_assign
+// CHECK: emitc.div_assign
+// CHECK: emitc.rem_assign
+func.func @compound_assign(%arg0: i32, %arg1: !emitc.opaque<"number">) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %opaque = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"number">>
+  emitc.add_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.sub_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.mul_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.div_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.rem_assign %arg1 : !emitc.opaque<"number"> to %opaque : !emitc.lvalue<!emitc.opaque<"number">>
+  return
+}
+
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
   %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
   %q = emitc.expression %arg1, %c7 : (i32, i32) -> i32 {
@@ -207,6 +225,28 @@ func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
   %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
     %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
     %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
+}
+
+// CANON-LABEL:   func.func @test_expression_recurring_operands(
+// CANON-SAME:      %[[ARG0:.*]]: i32,
+// CANON-SAME:      %[[ARG1:.*]]: i32) -> i32 {
+// CANON:           %[[EXPRESSION_0:.*]] = emitc.expression %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32 {
+// CANON:             %[[VAL_0:.*]] = rem %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32
+// CANON:             %[[VAL_1:.*]] = add %[[VAL_0]], %[[ARG0]] : (i32, i32) -> i32
+// CANON:             %[[VAL_2:.*]] = mul %[[VAL_1]], %[[VAL_0]] : (i32, i32) -> i32
+// CANON:             yield %[[VAL_2]] : i32
+// CANON:           }
+// CANON:           return %[[EXPRESSION_0]] : i32
+// CANON:         }
+func.func @test_expression_recurring_operands(%arg0: i32, %arg1: i32) -> i32 {
+  %r = emitc.expression %arg0, %arg1, %arg0 : (i32, i32, i32) -> i32 {
+  ^bb0(%x: i32, %y: i32, %z: i32):
+    %a = emitc.rem %x, %y : (i32, i32) -> i32
+    %b = emitc.add %a, %z : (i32, i32) -> i32
     %c = emitc.mul %b, %a : (i32, i32) -> i32
     emitc.yield %c : i32
   }
@@ -301,6 +341,8 @@ func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1:
   %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
   %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
   %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %6 = emitc.load %arg0 : !emitc.lvalue<!emitc.opaque<"mystruct">>
+  %7 = "emitc.member" (%6) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
   return
 }
 
@@ -353,5 +395,15 @@ func.func @do(%arg0 : !emitc.ptr<i32>) {
     emitc.yield %r : i1
   }
 
+  return
+}
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  %1 = emitc.address_of %arg0 : !emitc.lvalue<i32>
+  return
+}
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  %1 = emitc.dereference %arg0 : !emitc.ptr<i32>
   return
 }

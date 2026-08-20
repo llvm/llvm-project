@@ -1,4 +1,7 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter -cse %s | FileCheck %s
+// Test the same patterns on generic convolution ops by first generalizing the
+// named ops. This avoids duplicating lit tests for linalg.generic conv ops.
+// RUN: mlir-opt --split-input-file --linalg-generalize-named-ops --transform-interpreter -cse %s | FileCheck %s
 
 ///----------------------------------------------------------------------------------------
 /// ATM, all tests in this file require masking. As the support for masking is
@@ -23,7 +26,7 @@ func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor(%input: tensor<1x8x?xi8>,
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [1, 8, 4, 1] : !transform.any_op
     transform.yield
   }
@@ -84,7 +87,7 @@ func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor_scalable(
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [1, 8, [4], 1] : !transform.any_op
     transform.yield
   }
@@ -145,7 +148,7 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dilation_2(
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [3, 2, [4], 2] : !transform.any_op
     transform.yield
   }

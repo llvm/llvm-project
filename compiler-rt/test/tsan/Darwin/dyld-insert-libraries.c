@@ -9,7 +9,7 @@
 //
 // RUN: env DYLD_INSERT_LIBRARIES=%t.dylib %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 //
-// XFAIL: ios
+// XFAIL: darwin-remote
 
 #include <assert.h>
 #include <pthread.h>

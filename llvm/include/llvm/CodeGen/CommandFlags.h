@@ -37,6 +37,8 @@ LLVM_ABI std::string getMArch();
 
 LLVM_ABI std::string getMCPU();
 
+LLVM_ABI std::string getMTune();
+
 LLVM_ABI std::vector<std::string> getMAttrs();
 
 LLVM_ABI Reloc::Model getRelocModel();
@@ -57,12 +59,6 @@ LLVM_ABI std::optional<CodeGenFileType> getExplicitFileType();
 LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
-
-LLVM_ABI bool getEnableNoInfsFPMath();
-
-LLVM_ABI bool getEnableNoNaNsFPMath();
-
-LLVM_ABI bool getEnableNoSignedZerosFPMath();
 
 LLVM_ABI bool getEnableNoTrappingFPMath();
 
@@ -141,9 +137,6 @@ LLVM_ABI bool getEnableStaticDataPartitioning();
 
 LLVM_ABI bool getEnableDebugEntryValues();
 
-LLVM_ABI bool getValueTrackingVariableLocations();
-LLVM_ABI std::optional<bool> getExplicitValueTrackingVariableLocations();
-
 LLVM_ABI bool getForceDwarfFrameSection();
 
 LLVM_ABI bool getXRayFunctionIndex();
@@ -164,6 +157,12 @@ LLVM_ABI SaveStatsMode getSaveStats();
 /// line options.
 struct RegisterCodeGenFlags {
   LLVM_ABI RegisterCodeGenFlags();
+};
+
+/// Tools that support subtarget tuning should create this object with static
+/// storage to register the -mtune command line option.
+struct RegisterMTuneFlag {
+  LLVM_ABI RegisterMTuneFlag();
 };
 
 /// Tools that support stats saving should create this object with static
@@ -188,31 +187,29 @@ InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 
+LLVM_ABI std::string getTuneCPUStr();
+
 LLVM_ABI std::string getFeaturesStr();
 
 LLVM_ABI std::vector<std::string> getFeatureList();
 
 LLVM_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F);
+/// Set function attributes of function \p F based on CPU, TuneCPU, Features,
+/// and command line flags.
+LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M);
-
-/// Should value-tracking variable locations / instruction referencing be
-/// enabled by default for this triple?
-LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
+/// TuneCPU, Features, and command line flags.
+LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Creates a TargetMachine instance with the options defined on the command
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    StringRef TargetTriple,
+    const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,

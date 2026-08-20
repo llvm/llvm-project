@@ -18,30 +18,34 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
 namespace optutils = clang::tidy::utils::options;
 
 /// The default value for the MinimumLength check option.
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
-                                                                    "iterator;"
-                                                                    "Iterator;"
-                                                                    "begin;"
-                                                                    "Begin;"
-                                                                    "end;"
-                                                                    "End;"
-                                                                    "first;"
-                                                                    "First;"
-                                                                    "last;"
-                                                                    "Last;"
-                                                                    "lhs;"
-                                                                    "LHS;"
-                                                                    "rhs;"
-                                                                    "RHS";
+static constexpr StringRef DefaultIgnoredParameterNames = "\"\";"
+                                                          "iterator;"
+                                                          "Iterator;"
+                                                          "begin;"
+                                                          "Begin;"
+                                                          "end;"
+                                                          "End;"
+                                                          "first;"
+                                                          "First;"
+                                                          "last;"
+                                                          "Last;"
+                                                          "lhs;"
+                                                          "LHS;"
+                                                          "rhs;"
+                                                          "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+static constexpr StringRef DefaultIgnoredParameterTypeSuffixes =
     "bool;"
     "Bool;"
     "_Bool;"
@@ -87,10 +91,6 @@ static constexpr bool DefaultSuppressParametersUsedTogether = true;
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
 
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::bugprone {
-
 using TheCheck = EasilySwappableParametersCheck;
 
 namespace filter {
@@ -105,6 +105,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 } // namespace filter
 
 namespace model {
+
+namespace {
 
 /// The language features involved in allowing the mix between two parameters.
 enum class MixFlags : unsigned char {
@@ -129,6 +131,9 @@ enum class MixFlags : unsigned char {
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ImplicitConversion)
 };
+
+} // namespace
+
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// Returns whether the SearchedFlag is turned on in the Data.
@@ -178,6 +183,8 @@ static inline std::string formatMixFlags(MixFlags F) {
 }
 
 #endif // NDEBUG
+
+namespace {
 
 /// The results of the steps of an Implicit Conversion Sequence is saved in
 /// an instance of this record.
@@ -271,7 +278,7 @@ struct ConversionSequence {
   /// the conversion sequence. This method does **NOT** return Begin and End.
   SmallVector<QualType, 4> getInvolvedTypesInSequence() const {
     SmallVector<QualType, 4> Ret;
-    auto EmplaceIfDifferent = [&Ret](QualType QT) {
+    const auto EmplaceIfDifferent = [&Ret](QualType QT) {
       if (QT.isNull())
         return;
       if (Ret.empty())
@@ -564,6 +571,8 @@ enum class ImplicitConversionModellingMode : unsigned char {
   /// standard conversion sequence.
   OneWaySingleStandardOnly
 };
+
+} // namespace
 
 static MixData
 isLRefEquallyBindingToType(const TheCheck &Check,
@@ -967,7 +976,7 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   // Get out the qualifiers of the original type. This will always be
   // re-applied to the WorkType to ensure it is the same qualification as the
   // original From was.
-  auto FastQualifiersToApply = static_cast<unsigned>(
+  const auto FastQualifiersToApply = static_cast<unsigned>(
       From.split().Quals.getAsOpaqueValue() & Qualifiers::FastMask);
 
   // LValue->RValue is irrelevant for the check, because it is a thing to be
@@ -1175,6 +1184,8 @@ public:
     }
 
     if (HowManyGoodConversions == 1) {
+      assert(BestConversion &&
+             "BestConversion must be set if HowManyGoodConversions is 1");
       LLVM_DEBUG(llvm::dbgs()
                  << "--- selectUserDefinedConv. Unique result. Flags: "
                  << formatMixFlags(BestConversion->Flags) << '\n');
@@ -1187,7 +1198,7 @@ public:
   }
 
 private:
-  llvm::SmallVector<PreparedConversion, 2> FlaggedConversions;
+  SmallVector<PreparedConversion, 2> FlaggedConversions;
   const TheCheck &Check;
 };
 
@@ -1552,14 +1563,13 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   }();
 
   LLVM_DEBUG(llvm::dbgs() << "\tType name is '" << NodeTypeName << "'\n");
-  if (!NodeTypeName.empty()) {
-    if (llvm::any_of(Check.IgnoredParameterTypeSuffixes,
-                     [NodeTypeName](StringRef E) {
-                       return !E.empty() && NodeTypeName.ends_with(E);
-                     })) {
-      LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
-      return true;
-    }
+  if (!NodeTypeName.empty() && llvm::any_of(Check.IgnoredParameterTypeSuffixes,
+                                            [NodeTypeName](StringRef E) {
+                                              return !E.empty() &&
+                                                     NodeTypeName.ends_with(E);
+                                            })) {
+    LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
+    return true;
   }
 
   return false;
@@ -1584,17 +1594,17 @@ using ParamToSmallPtrSetMap =
 template <typename MapTy, typename ElemTy>
 static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
                                             const ElemTy &E2) {
-  auto E1Iterator = Map.find(E1);
+  const auto E1Iterator = Map.find(E1);
   auto E2Iterator = Map.find(E2);
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
     return false;
 
-  for (const auto &E1SetElem : E1Iterator->second)
-    if (E2Iterator->second.contains(E1SetElem))
-      return true;
-
-  return false;
+  return llvm::any_of(E1Iterator->second, [&E2Iterator](const auto &E1SetElem) {
+    return E2Iterator->second.contains(E1SetElem);
+  });
 }
+
+namespace {
 
 /// Implements the heuristic that marks two parameters related if there is
 /// a usage for both in the same strict expression subtree. A strict
@@ -1626,7 +1636,7 @@ public:
   }
 
   bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr) {
-    if (auto *E = dyn_cast_or_null<Expr>(S)) {
+    if (const auto *E = dyn_cast_or_null<Expr>(S)) {
       bool RootSetInCurrentStackFrame = false;
       if (!CurrentExprOnlyTreeRoot) {
         CurrentExprOnlyTreeRoot = E;
@@ -1650,9 +1660,9 @@ public:
     if (!CurrentExprOnlyTreeRoot)
       return true;
 
-    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-      if (llvm::find(FD->parameters(), PVD))
-        ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
+    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        PVD && llvm::find(FD->parameters(), PVD))
+      ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
 
     return true;
   }
@@ -1667,7 +1677,7 @@ class PassedToSameFunction {
 
 public:
   void setup(const FunctionDecl *FD) {
-    auto ParamsAsArgsInFnCalls =
+    const auto ParamsAsArgsInFnCalls =
         match(functionDecl(forEachDescendant(
                   callExpr(forEachArgumentWithParam(
                                paramRefExpr(), parmVarDecl().bind("passed-to")))
@@ -1707,7 +1717,7 @@ class AccessedSameMemberOf {
 
 public:
   void setup(const FunctionDecl *FD) {
-    auto MembersCalledOnParams = match(
+    const auto MembersCalledOnParams = match(
         functionDecl(forEachDescendant(
             memberExpr(hasObjectExpression(paramRefExpr())).bind("mem-expr"))),
         *FD, FD->getASTContext());
@@ -1729,14 +1739,14 @@ public:
 /// Implements the heuristic that marks two parameters related if different
 /// ReturnStmts return them from the function.
 class Returned {
-  llvm::SmallVector<const ParmVarDecl *, SmallDataStructureSize> ReturnedParams;
+  SmallVector<const ParmVarDecl *, SmallDataStructureSize> ReturnedParams;
 
 public:
   void setup(const FunctionDecl *FD) {
     // TODO: Handle co_return.
-    auto ParamReturns = match(functionDecl(forEachDescendant(
-                                  returnStmt(hasReturnValue(paramRefExpr())))),
-                              *FD, FD->getASTContext());
+    const auto ParamReturns = match(functionDecl(forEachDescendant(returnStmt(
+                                        hasReturnValue(paramRefExpr())))),
+                                    *FD, FD->getASTContext());
     for (const auto &Match : ParamReturns) {
       const auto *ReturnedParam = Match.getNodeAs<ParmVarDecl>("param");
       assert(ReturnedParam);
@@ -1756,6 +1766,8 @@ public:
            llvm::is_contained(ReturnedParams, Param2);
   }
 };
+
+} // namespace
 
 } // namespace relatedness_heuristic
 
@@ -1952,7 +1964,7 @@ static inline bool needsToPrintTypeInDiagnostic(const model::Mix &M) {
 /// Returns whether a particular Mix between the two parameters should have
 /// implicit conversions elaborated.
 static inline bool needsToElaborateImplicitConversion(const model::Mix &M) {
-  return hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
+  return model::hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
 }
 
 namespace {
@@ -1988,7 +2000,7 @@ struct FormattedConversionSequence {
       Trivial = false;
     }
 
-    auto AddType = [&](StringRef ToAdd) {
+    const auto AddType = [&](StringRef ToAdd) {
       if (LastAddedType != ToAdd && ToAdd != SeqEndTypeStr) {
         OS << " -> '" << ToAdd << "'";
         LastAddedType = ToAdd.str();
@@ -2204,8 +2216,8 @@ void EasilySwappableParametersCheck::check(
         DiagText = "%0 adjacent parameters of %1 of similar type ('%2') are "
                    "easily swapped by mistake";
 
-      auto Diag = diag(First->getOuterLocStart(), DiagText)
-                  << static_cast<unsigned>(R.NumParamsChecked) << FD;
+      const auto Diag = diag(First->getOuterLocStart(), DiagText)
+                        << static_cast<unsigned>(R.NumParamsChecked) << FD;
       if (!NeedsAnyTypeNote)
         Diag << FirstParamTypeAsWritten;
 
@@ -2268,7 +2280,7 @@ void EasilySwappableParametersCheck::check(
           ExplicitlyPrintCommonType = true;
         }
 
-        auto Diag =
+        const auto Diag =
             diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
             << LTypeStr << RTypeStr;
         if (ExplicitlyPrintCommonType)
@@ -2299,7 +2311,7 @@ void EasilySwappableParametersCheck::check(
           DiagText = "'%0' and '%1' may be implicitly converted: %2, %3";
 
         {
-          auto Diag =
+          const auto Diag =
               diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
               << LTypeStr << RTypeStr;
 

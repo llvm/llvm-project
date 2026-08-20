@@ -34,7 +34,7 @@ TEST_F(AArch64GISelMITest, LowerRotates) {
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
 
-  LLT S32 = LLT::scalar(32);
+  LLT S32 = LLT::integer(32);
   auto Src = B.buildTrunc(S32, Copies[0]);
   auto Amt = B.buildTrunc(S32, Copies[1]);
   auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {S32}, {Src, Amt});
@@ -51,25 +51,25 @@ TEST_F(AArch64GISelMITest, LowerRotates) {
 
   auto CheckStr = R"(
   ; Check G_ROTR
-  CHECK: [[SRC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[AMT:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-  CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]]:_, [[AMT]]:_
-  CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMT]]:_, [[C1]]:_
-  CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[SRC]]:_, [[AND]]:_(s32)
-  CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]]:_, [[C1]]:_
-  CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SRC]]:_, [[AND1]]:_(s32)
+  CHECK: [[SRC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+  CHECK: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[C]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(i32) = G_AND [[AMT]]:_, [[C1]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[SRC]]:_, [[AND]]:_(i32)
+  CHECK: [[AND1:%[0-9]+]]:_(i32) = G_AND [[SUB]]:_, [[C1]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[SRC]]:_, [[AND1]]:_(i32)
   CHECK: G_OR [[LSHR]]:_, [[SHL]]:_
 
   ; Check G_ROTL
-  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-  CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]]:_, [[AMT]]:_
-  CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMT]]:_, [[C1]]:_
-  CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SRC]]:_, [[AND]]:_(s32)
-  CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]]:_, [[C1]]:_
-  CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[SRC]]:_, [[AND1]]:_(s32)
+  CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+  CHECK: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[C]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(i32) = G_AND [[AMT]]:_, [[C1]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[SRC]]:_, [[AND]]:_(i32)
+  CHECK: [[AND1:%[0-9]+]]:_(i32) = G_AND [[SUB]]:_, [[C1]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[SRC]]:_, [[AND1]]:_(i32)
   CHECK: G_OR [[SHL]]:_, [[LSHR]]:_
   )";
 
@@ -87,7 +87,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
 
-  LLT S24 = LLT::scalar(24);
+  LLT S24 = LLT::integer(24);
   auto Src = B.buildTrunc(S24, Copies[0]);
   auto Amt = B.buildTrunc(S24, Copies[1]);
   auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {S24}, {Src, Amt});
@@ -104,29 +104,29 @@ TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
 
   auto CheckStr = R"(
   ; Check G_ROTR
-  CHECK: [[SRC:%[0-9]+]]:_(s24) = G_TRUNC
-  CHECK: [[AMT:%[0-9]+]]:_(s24) = G_TRUNC
-  CHECK: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 0
-  CHECK: [[C1:%[0-9]+]]:_(s24) = G_CONSTANT i24 23
-  CHECK: [[C2:%[0-9]+]]:_(s24) = G_CONSTANT i24 24
-  CHECK: [[UREM:%[0-9]+]]:_(s24) = G_UREM [[AMT]]:_, [[C2]]:_
-  CHECK: [[LSHR:%[0-9]+]]:_(s24) = G_LSHR [[SRC]]:_, [[UREM]]:_(s24)
-  CHECK: [[SUB:%[0-9]+]]:_(s24) = G_SUB [[C1]]:_, [[UREM]]:_
-  CHECK: [[C4:%[0-9]+]]:_(s24) = G_CONSTANT i24 1
-  CHECK: [[SHL:%[0-9]+]]:_(s24) = G_SHL [[SRC]]:_, [[C4]]:_(s24)
-  CHECK: [[SHL2:%[0-9]+]]:_(s24) = G_SHL [[SHL]]:_, [[SUB]]:_(s24)
+  CHECK: [[SRC:%[0-9]+]]:_(i24) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(i24) = G_TRUNC
+  CHECK: [[C:%[0-9]+]]:_(i24) = G_CONSTANT i24 0
+  CHECK: [[C1:%[0-9]+]]:_(i24) = G_CONSTANT i24 23
+  CHECK: [[C2:%[0-9]+]]:_(i24) = G_CONSTANT i24 24
+  CHECK: [[UREM:%[0-9]+]]:_(i24) = G_UREM [[AMT]]:_, [[C2]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(i24) = G_LSHR [[SRC]]:_, [[UREM]]:_(i24)
+  CHECK: [[SUB:%[0-9]+]]:_(i24) = G_SUB [[C1]]:_, [[UREM]]:_
+  CHECK: [[C4:%[0-9]+]]:_(i24) = G_CONSTANT i24 1
+  CHECK: [[SHL:%[0-9]+]]:_(i24) = G_SHL [[SRC]]:_, [[C4]]:_(i24)
+  CHECK: [[SHL2:%[0-9]+]]:_(i24) = G_SHL [[SHL]]:_, [[SUB]]:_(i24)
   CHECK: G_OR [[LSHR]]:_, [[SHL2]]:_
 
   ; Check G_ROTL
-  CHECK: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 0
-  CHECK: [[C1:%[0-9]+]]:_(s24) = G_CONSTANT i24 23
-  CHECK: [[C2:%[0-9]+]]:_(s24) = G_CONSTANT i24 24
-  CHECK: [[UREM:%[0-9]+]]:_(s24) = G_UREM [[AMT]]:_, [[C2]]:_
-  CHECK: [[SHL:%[0-9]+]]:_(s24) = G_SHL [[SRC]]:_, [[UREM]]:_(s24)
-  CHECK: [[SUB:%[0-9]+]]:_(s24) = G_SUB [[C1]]:_, [[UREM]]:_
-  CHECK: [[C4:%[0-9]+]]:_(s24) = G_CONSTANT i24 1
-  CHECK: [[LSHR:%[0-9]+]]:_(s24) = G_LSHR [[SRC]]:_, [[C4]]:_(s24)
-  CHECK: [[LSHR2:%[0-9]+]]:_(s24) = G_LSHR [[LSHR]]:_, [[SUB]]:_(s24)
+  CHECK: [[C:%[0-9]+]]:_(i24) = G_CONSTANT i24 0
+  CHECK: [[C1:%[0-9]+]]:_(i24) = G_CONSTANT i24 23
+  CHECK: [[C2:%[0-9]+]]:_(i24) = G_CONSTANT i24 24
+  CHECK: [[UREM:%[0-9]+]]:_(i24) = G_UREM [[AMT]]:_, [[C2]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(i24) = G_SHL [[SRC]]:_, [[UREM]]:_(i24)
+  CHECK: [[SUB:%[0-9]+]]:_(i24) = G_SUB [[C1]]:_, [[UREM]]:_
+  CHECK: [[C4:%[0-9]+]]:_(i24) = G_CONSTANT i24 1
+  CHECK: [[LSHR:%[0-9]+]]:_(i24) = G_LSHR [[SRC]]:_, [[C4]]:_(i24)
+  CHECK: [[LSHR2:%[0-9]+]]:_(i24) = G_LSHR [[LSHR]]:_, [[SUB]]:_(i24)
   CHECK: G_OR [[SHL]]:_, [[LSHR2]]:_
   )";
 
@@ -144,7 +144,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
 
-  LLT S32 = LLT::scalar(32);
+  LLT S32 = LLT::integer(32);
   LLT V4S32 = LLT::fixed_vector(4, S32);
   auto SrcTrunc = B.buildTrunc(S32, Copies[0]);
   auto Src = B.buildSplatBuildVector(V4S32, SrcTrunc);
@@ -160,19 +160,19 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
             Helper.lower(*ROTR, 0, V4S32));
 
   auto CheckStr = R"(
-  CHECK: [[SRCTRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[SRC:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[SRCTRUNC]]
-  CHECK: [[AMTTRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[AMT:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[AMTTRUNC]]
-  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[ZERO:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]]
-  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-  CHECK: [[VEC31:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]]
-  CHECK: [[SUB:%[0-9]+]]:_(<4 x s32>) = G_SUB [[ZERO]]:_, [[AMT]]:_
-  CHECK: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[AMT]]:_, [[VEC31]]:_
-  CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[SRC]]:_, [[AND]]:_(<4 x s32>)
-  CHECK: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[SUB]]:_, [[VEC31]]:_
-  CHECK: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL [[SRC]]:_, [[AND1]]:_(<4 x s32>)
+  CHECK: [[SRCTRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[SRC:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[SRCTRUNC]]
+  CHECK: [[AMTTRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[AMTTRUNC]]
+  CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[ZERO:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]]
+  CHECK: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+  CHECK: [[VEC31:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C1]]
+  CHECK: [[SUB:%[0-9]+]]:_(<4 x i32>) = G_SUB [[ZERO]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(<4 x i32>) = G_AND [[AMT]]:_, [[VEC31]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(<4 x i32>) = G_LSHR [[SRC]]:_, [[AND]]:_(<4 x i32>)
+  CHECK: [[AND1:%[0-9]+]]:_(<4 x i32>) = G_AND [[SUB]]:_, [[VEC31]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(<4 x i32>) = G_SHL [[SRC]]:_, [[AND1]]:_(<4 x i32>)
   CHECK: G_OR [[LSHR]]:_, [[SHL]]:_
   )";
 
@@ -180,8 +180,8 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,
-// in which case it becomes CTTZ_ZERO_UNDEF with select.
+// Test CTTZ expansion when CTTZ_ZERO_POISON is legal or custom,
+// in which case it becomes CTTZ_ZERO_POISON with select.
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
   setUp();
   if (!TM)
@@ -189,24 +189,24 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).legalFor({{s32, s64}});
   });
   // Build Instr
   auto MIBCTTZ =
-      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(32)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::integer(32)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)));
+            Helper.lower(*MIBCTTZ, 0, LLT::integer(64)));
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF %0
-  CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
-  CHECK: [[SIXTY4:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-  CHECK: [[SEL:%[0-9]+]]:_(s32) = G_SELECT [[CMP]]:_(s1), [[SIXTY4]]:_, [[CZU]]
+  CHECK: [[CZU:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_POISON %0
+  CHECK: [[ZERO:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), %0:_(i64), [[ZERO]]
+  CHECK: [[SIXTY4:%[0-9]+]]:_(i32) = G_CONSTANT i32 64
+  CHECK: [[SEL:%[0-9]+]]:_(i32) = G_SELECT [[CMP]]:_(i1), [[SIXTY4]]:_, [[CZU]]
   )";
 
   // Check
@@ -225,7 +225,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
   });
   // Build Instr
   auto MIBCTTZ =
-      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(64)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::integer(64)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -234,12 +234,12 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[NEG1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  CHECK: [[NOT:%[0-9]+]]:_(s64) = G_XOR %0:_, [[NEG1]]
-  CHECK: [[SUB1:%[0-9]+]]:_(s64) = G_ADD %0:_, [[NEG1]]
-  CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[NOT]]:_, [[SUB1]]:_
-  CHECK: [[CST64:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-  CHECK: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND1]]:_
+  CHECK: [[NEG1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+  CHECK: [[NOT:%[0-9]+]]:_(i64) = G_XOR %0:_, [[NEG1]]
+  CHECK: [[SUB1:%[0-9]+]]:_(i64) = G_ADD %0:_, [[NEG1]]
+  CHECK: [[AND1:%[0-9]+]]:_(i64) = G_AND [[NOT]]:_, [[SUB1]]:_
+  CHECK: [[CST64:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
+  CHECK: [[CTLZ:%[0-9]+]]:_(i64) = G_CTLZ [[AND1]]:_
   CHECK: G_SUB [[CST64]]:_, [[CTLZ]]:_
   )";
 
@@ -259,23 +259,23 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
   });
   // Build Instr
   auto CTLZ =
-      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::scalar(32)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::integer(32)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            Helper.narrowScalar(*CTLZ, 1, LLT::scalar(32)));
+            Helper.narrowScalar(*CTLZ, 1, LLT::integer(32)));
 
   auto CheckStr = R"(
-  CHECK: [[UNMERGE_LO:%[0-9]+]]:_(s32), [[UNMERGE_HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %0:_(s64)
-  CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UNMERGE_HI]]:_(s32), [[ZERO]]:_
-  CHECK: [[CTLZ_LO:%[0-9]+]]:_(s32) = G_CTLZ [[UNMERGE_LO]]:_(s32)
-  CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ_LO]]:_, [[THIRTYTWO]]:_
-  CHECK: [[CTLZ_HI:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UNMERGE_HI]]:_(s32)
-  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTLZ_HI]]:_
+  CHECK: [[UNMERGE_LO:%[0-9]+]]:_(i32), [[UNMERGE_HI:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES %0:_(i64)
+  CHECK: [[ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[UNMERGE_HI]]:_(i32), [[ZERO]]:_
+  CHECK: [[CTLZ_LO:%[0-9]+]]:_(i32) = G_CTLZ [[UNMERGE_LO]]:_(i32)
+  CHECK: [[THIRTYTWO:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
+  CHECK: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[CTLZ_LO]]:_, [[THIRTYTWO]]:_
+  CHECK: [[CTLZ_HI:%[0-9]+]]:_(i32) = G_CTLZ_ZERO_POISON [[UNMERGE_HI]]:_(i32)
+  CHECK: %{{[0-9]+}}:_(i32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTLZ_HI]]:_
   )";
 
   // Check
@@ -294,23 +294,23 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   });
   // Build Instr
   auto CTTZ =
-      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(32)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::integer(32)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            Helper.narrowScalar(*CTTZ, 1, LLT::scalar(32)));
+            Helper.narrowScalar(*CTTZ, 1, LLT::integer(32)));
 
   auto CheckStr = R"(
-  CHECK: [[UNMERGE_LO:%[0-9]+]]:_(s32), [[UNMERGE_HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %0:_(s64)
-  CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(s32), [[ZERO]]:_
-  CHECK: [[CTTZ_HI:%[0-9]+]]:_(s32) = G_CTTZ [[UNMERGE_HI]]:_(s32)
-  CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTTZ_HI]]:_, [[THIRTYTWO]]:_
-  CHECK: [[CTTZ_LO:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UNMERGE_LO]]:_(s32)
-  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTTZ_LO]]:_
+  CHECK: [[UNMERGE_LO:%[0-9]+]]:_(i32), [[UNMERGE_HI:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES %0:_(i64)
+  CHECK: [[ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(i32), [[ZERO]]:_
+  CHECK: [[CTTZ_HI:%[0-9]+]]:_(i32) = G_CTTZ [[UNMERGE_HI]]:_(i32)
+  CHECK: [[THIRTYTWO:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
+  CHECK: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[CTTZ_HI]]:_, [[THIRTYTWO]]:_
+  CHECK: [[CTTZ_LO:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_POISON [[UNMERGE_LO]]:_(i32)
+  CHECK: %{{[0-9]+}}:_(i32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTTZ_LO]]:_
   )";
 
   // Check
@@ -329,7 +329,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
   });
   // Build
   auto MIBCTTZ =
-      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(64)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTTZ, {LLT::integer(64)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -339,11 +339,11 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[NEG1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  CHECK: [[NOT:%[0-9]+]]:_(s64) = G_XOR %0:_, [[NEG1]]
-  CHECK: [[SUB1:%[0-9]+]]:_(s64) = G_ADD %0:_, [[NEG1]]
-  CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[NOT]]:_, [[SUB1]]:_
-  CHECK: [[POP:%[0-9]+]]:_(s64) = G_CTPOP [[AND1]]
+  CHECK: [[NEG1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+  CHECK: [[NOT:%[0-9]+]]:_(i64) = G_XOR %0:_, [[NEG1]]
+  CHECK: [[SUB1:%[0-9]+]]:_(i64) = G_ADD %0:_, [[NEG1]]
+  CHECK: [[AND1:%[0-9]+]]:_(i64) = G_AND [[NOT]]:_, [[SUB1]]:_
+  CHECK: [[POP:%[0-9]+]]:_(i64) = G_CTPOP [[AND1]]
   )";
 
   // Check
@@ -363,8 +363,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
 
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s16}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -375,10 +375,10 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
             Helper.widenScalar(*MIBCTPOP, 1, s16));
 
   auto CheckStr = R"(
-  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
-  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
-  CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY [[CTPOP]]:_(s16)
+  CHECK: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC %0:_(i64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC]]:_(i8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(i16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(i16) = COPY [[CTPOP]]:_(i16)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -397,9 +397,9 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
 
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
-  LLT s32{LLT::scalar(32)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
+  LLT s32{LLT::integer(32)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s32}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -410,16 +410,16 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
             Helper.widenScalar(*MIBCTPOP, 1, s16));
 
   auto CheckStr = R"(
-  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
-  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
-  CHECK: [[COPY:%[0-9]+]]:_(s32) = G_ZEXT [[CTPOP]]:_(s16)
+  CHECK: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC %0:_(i64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC]]:_(i8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(i16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(i32) = G_ZEXT [[CTPOP]]:_(i16)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTTZ_ZERO_UNDEF expansion in terms of CTTZ
+// CTTZ_ZERO_POISON expansion in terms of CTTZ
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   setUp();
   if (!TM)
@@ -430,8 +430,8 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
     getActionDefinitionsBuilder(G_CTTZ).legalFor({{s64, s64}});
   });
   // Build
-  auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF,
-                              {LLT::scalar(64)}, {Copies[0]});
+  auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON,
+                              {LLT::integer(64)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -446,7 +446,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ expansion in terms of CTLZ_ZERO_UNDEF
+// CTLZ expansion in terms of CTLZ_ZERO_POISON
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
   setUp();
   if (!TM)
@@ -454,11 +454,11 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s64, s64}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).legalFor({{s64, s64}});
   });
   // Build
   auto MIBCTLZ =
-      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::scalar(64)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::integer(64)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -466,18 +466,18 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_UNDEF %0
-  CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
-  CHECK: [[SIXTY4:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-  CHECK: [[SEL:%[0-9]+]]:_(s64) = G_SELECT [[CMP]]:_(s1), [[SIXTY4]]:_, [[CZU]]
+  CHECK: [[CZU:%[0-9]+]]:_(i64) = G_CTLZ_ZERO_POISON %0
+  CHECK: [[ZERO:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), %0:_(i64), [[ZERO]]
+  CHECK: [[SIXTY4:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
+  CHECK: [[SEL:%[0-9]+]]:_(i64) = G_SELECT [[CMP]]:_(i1), [[SIXTY4]]:_, [[CZU]]
   )";
 
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ expansion in terms of CTLZ_ZERO_UNDEF if the latter is a libcall
+// CTLZ expansion in terms of CTLZ_ZERO_POISON if the latter is a libcall
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
   setUp();
   if (!TM)
@@ -485,11 +485,11 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).libcallFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).libcallFor({{s32, s64}});
   });
   // Build
   auto MIBCTLZ =
-      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::scalar(32)}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTLZ, {LLT::integer(32)}, {Copies[0]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -497,11 +497,11 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
             Helper.lower(*MIBCTLZ, 0, LLT::scalar(32)));
 
   auto CheckStr = R"(
-  CHECK: [[CZU:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF %0
-  CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %0:_(s64), [[ZERO]]
-  CHECK: [[THIRTY2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-  CHECK: [[SEL:%[0-9]+]]:_(s32) = G_SELECT [[CMP]]:_(s1), [[THIRTY2]]:_, [[CZU]]
+  CHECK: [[CZU:%[0-9]+]]:_(i32) = G_CTLZ_ZERO_POISON %0
+  CHECK: [[ZERO:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), %0:_(i64), [[ZERO]]
+  CHECK: [[THIRTY2:%[0-9]+]]:_(i32) = G_CONSTANT i32 64
+  CHECK: [[SEL:%[0-9]+]]:_(i32) = G_SELECT [[CMP]]:_(i1), [[THIRTY2]]:_, [[CZU]]
   )";
 
   // Check
@@ -520,7 +520,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
+  LLT s8{LLT::integer(8)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTLZ = B.buildInstr(TargetOpcode::G_CTLZ, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -530,19 +530,19 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Cst1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-  CHECK: [[Sh1:%[0-9]+]]:_(s8) = G_LSHR [[Trunc]]:_, [[Cst1]]:_
-  CHECK: [[Or1:%[0-9]+]]:_(s8) = G_OR [[Trunc]]:_, [[Sh1]]:_
-  CHECK: [[Cst2:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
-  CHECK: [[Sh2:%[0-9]+]]:_(s8) = G_LSHR [[Or1]]:_, [[Cst2]]:_
-  CHECK: [[Or2:%[0-9]+]]:_(s8) = G_OR [[Or1]]:_, [[Sh2]]:_
-  CHECK: [[Cst4:%[0-9]+]]:_(s8) = G_CONSTANT i8 4
-  CHECK: [[Sh4:%[0-9]+]]:_(s8) = G_LSHR [[Or2]]:_, [[Cst4]]:_
-  CHECK: [[Or4:%[0-9]+]]:_(s8) = G_OR [[Or2]]:_, [[Sh4]]:_
-  CHECK: [[CTPOP:%[0-9]+]]:_(s8) = G_CTPOP [[Or4]]:_
-  CHECK: [[Len:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
-  CHECK: [[Sub:%[0-9]+]]:_(s8) = G_SUB [[Len]]:_, [[CTPOP]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Cst1:%[0-9]+]]:_(i8) = G_CONSTANT i8 1
+  CHECK: [[Sh1:%[0-9]+]]:_(i8) = G_LSHR [[Trunc]]:_, [[Cst1]]:_
+  CHECK: [[Or1:%[0-9]+]]:_(i8) = G_OR [[Trunc]]:_, [[Sh1]]:_
+  CHECK: [[Cst2:%[0-9]+]]:_(i8) = G_CONSTANT i8 2
+  CHECK: [[Sh2:%[0-9]+]]:_(i8) = G_LSHR [[Or1]]:_, [[Cst2]]:_
+  CHECK: [[Or2:%[0-9]+]]:_(i8) = G_OR [[Or1]]:_, [[Sh2]]:_
+  CHECK: [[Cst4:%[0-9]+]]:_(i8) = G_CONSTANT i8 4
+  CHECK: [[Sh4:%[0-9]+]]:_(i8) = G_LSHR [[Or2]]:_, [[Cst4]]:_
+  CHECK: [[Or4:%[0-9]+]]:_(i8) = G_OR [[Or2]]:_, [[Sh4]]:_
+  CHECK: [[CTPOP:%[0-9]+]]:_(i8) = G_CTPOP [[Or4]]:_
+  CHECK: [[Len:%[0-9]+]]:_(i8) = G_CONSTANT i8 8
+  CHECK: [[Sub:%[0-9]+]]:_(i8) = G_SUB [[Len]]:_, [[CTPOP]]:_
   )";
 
   // Check
@@ -561,8 +561,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTLZ = B.buildInstr(TargetOpcode::G_CTLZ, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -572,35 +572,35 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[Ctlz:%[0-9]+]]:_(s16) = G_CTLZ [[Zext]]
-  CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-  CHECK: [[Sub:%[0-9]+]]:_(s16) = G_SUB [[Ctlz]]:_, [[Cst8]]:_
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Sub]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[Ctlz:%[0-9]+]]:_(i16) = G_CTLZ [[Zext]]
+  CHECK: [[Cst8:%[0-9]+]]:_(i16) = G_CONSTANT i16 8
+  CHECK: [[Sub:%[0-9]+]]:_(i16) = nuw G_SUB [[Ctlz]]:_, [[Cst8]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC [[Sub]]
   )";
 
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTLZ_ZERO_UNDEF widening.
-TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
+// CTLZ_ZERO_POISON widening.
+TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroPoison) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s16, s16}});
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).legalFor({{s16, s16}});
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTLZ_ZU =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {s8}, {MIBTrunc});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -608,12 +608,12 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-  CHECK: [[Shl:%[0-9]+]]:_(s16) = G_SHL [[Zext]]:_, [[Cst8]]:_
-  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Shl]]
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CtlzZu]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(i16) = G_ANYEXT [[Trunc]]
+  CHECK: [[Cst8:%[0-9]+]]:_(i16) = G_CONSTANT i16 8
+  CHECK: [[Shl:%[0-9]+]]:_(i16) = G_SHL [[Zext]]:_, [[Cst8]]:_
+  CHECK: [[CtlzZu:%[0-9]+]]:_(i16) = G_CTLZ_ZERO_POISON [[Shl]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC [[CtlzZu]]
   )";
 
   // Check
@@ -632,8 +632,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -643,44 +643,44 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[Ctpop:%[0-9]+]]:_(s16) = G_CTPOP [[Zext]]
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Ctpop]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[Ctpop:%[0-9]+]]:_(i16) = G_CTPOP [[Zext]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC [[Ctpop]]
   )";
 
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-// CTTZ_ZERO_UNDEF widening.
-TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
+// CTTZ_ZERO_POISON widening.
+TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_POISON) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s16, s16}});
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON).legalFor({{s16, s16}});
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto MIBCTTZ_ZERO_UNDEF =
-      B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {s8}, {MIBTrunc});
+  auto MIBCTTZ_ZERO_POISON =
+      B.buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_POISON, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
-  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[AnyExt]]
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CttzZu]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[AnyExt:%[0-9]+]]:_(i16) = G_ANYEXT [[Trunc]]
+  CHECK: [[CttzZu:%[0-9]+]]:_(i16) = G_CTTZ_ZERO_POISON [[AnyExt]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC [[CttzZu]]
   )";
 
   // Check
@@ -699,8 +699,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
   auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ, {s8}, {MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -710,12 +710,12 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
-  CHECK: [[Cst:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
-  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[AnyExt]]:_, [[Cst]]
-  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Or]]
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Cttz]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[AnyExt:%[0-9]+]]:_(i16) = G_ANYEXT [[Trunc]]
+  CHECK: [[Cst:%[0-9]+]]:_(i16) = G_CONSTANT i16 256
+  CHECK: [[Or:%[0-9]+]]:_(i16) = G_OR [[AnyExt]]:_, [[Cst]]
+  CHECK: [[Cttz:%[0-9]+]]:_(i16) = G_CTTZ_ZERO_POISON [[Or]]
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC [[Cttz]]
   )";
 
   // Check
@@ -733,10 +733,10 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBUAddO =
       B.buildInstr(TargetOpcode::G_UADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -746,13 +746,13 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[ADD:%[0-9]+]]:_(s16) = G_ADD [[LHS]]:_, [[RHS]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ADD]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[ADD]]:_(s16), [[ZEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[ADD:%[0-9]+]]:_(i16) = G_ADD [[LHS]]:_, [[RHS]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[ADD]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[ADD]]:_(i16), [[ZEXT]]:_
   CHECK: G_TRUNC [[ADD]]
   )";
 
@@ -772,10 +772,10 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBUSUBO =
       B.buildInstr(TargetOpcode::G_USUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -785,13 +785,13 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[SUB:%[0-9]+]]:_(s16) = G_SUB [[LHS]]:_, [[RHS]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[SUB]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[SUB]]:_(s16), [[ZEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[SUB:%[0-9]+]]:_(i16) = G_SUB [[LHS]]:_, [[RHS]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[SUB]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[SUB]]:_(i16), [[ZEXT]]:_
   CHECK: G_TRUNC [[SUB]]
   )";
 
@@ -811,10 +811,10 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBSAddO =
       B.buildInstr(TargetOpcode::G_SADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -824,13 +824,13 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[ADD:%[0-9]+]]:_(s16) = G_ADD [[LHS]]:_, [[RHS]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ADD]]
-  CHECK: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[ADD]]:_(s16), [[SEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[ADD:%[0-9]+]]:_(i16) = G_ADD [[LHS]]:_, [[RHS]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[ADD]]
+  CHECK: [[SEXT:%[0-9]+]]:_(i16) = G_SEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[ADD]]:_(i16), [[SEXT]]:_
   CHECK: G_TRUNC [[ADD]]
   )";
 
@@ -850,10 +850,10 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBSSUBO =
       B.buildInstr(TargetOpcode::G_SSUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -863,13 +863,13 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[SUB:%[0-9]+]]:_(s16) = G_SUB [[LHS]]:_, [[RHS]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[SUB]]
-  CHECK: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[SUB]]:_(s16), [[SEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[SUB:%[0-9]+]]:_(i16) = G_SUB [[LHS]]:_, [[RHS]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[SUB]]
+  CHECK: [[SEXT:%[0-9]+]]:_(i16) = G_SEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[SUB]]:_(i16), [[SEXT]]:_
   CHECK: G_TRUNC [[SUB]]
   )";
 
@@ -888,11 +888,11 @@ TEST_F(AArch64GISelMITest, WidenUADDE) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto CarryIn = B.buildUndef(LLT::scalar(1));
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto CarryIn = B.buildUndef(LLT::integer(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBUAddO = B.buildInstr(TargetOpcode::G_UADDE, {s8, CarryReg},
                                {MIBTrunc, MIBTrunc, CarryIn});
   AInfo Info(MF->getSubtarget());
@@ -902,14 +902,14 @@ TEST_F(AArch64GISelMITest, WidenUADDE) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   const char *CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[UADDE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UADDE]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[UADDE]]:_(s16), [[ZEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Implicit:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[UADDE:%[0-9]+]]:_(i16), [[CARRY:%[0-9]+]]:_(i1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[UADDE]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[UADDE]]:_(i16), [[ZEXT]]:_
   CHECK: G_TRUNC [[UADDE]]
   )";
 
@@ -928,11 +928,11 @@ TEST_F(AArch64GISelMITest, WidenUSUBE) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto CarryIn = B.buildUndef(LLT::scalar(1));
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto CarryIn = B.buildUndef(LLT::integer(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBUSUBE = B.buildInstr(TargetOpcode::G_USUBE, {s8, CarryReg},
                                {MIBTrunc, MIBTrunc, CarryIn});
   AInfo Info(MF->getSubtarget());
@@ -942,14 +942,14 @@ TEST_F(AArch64GISelMITest, WidenUSUBE) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   const char *CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[USUBE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[USUBE]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[USUBE]]:_(s16), [[ZEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Implicit:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_ZEXT [[Trunc]]
+  CHECK: [[USUBE:%[0-9]+]]:_(i16), [[CARRY:%[0-9]+]]:_(i1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[USUBE]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[USUBE]]:_(i16), [[ZEXT]]:_
   CHECK: G_TRUNC [[USUBE]]
   )";
 
@@ -968,11 +968,11 @@ TEST_F(AArch64GISelMITest, WidenSADDE) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto CarryIn = B.buildUndef(LLT::scalar(1));
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto CarryIn = B.buildUndef(LLT::integer(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBUAddO = B.buildInstr(TargetOpcode::G_SADDE, {s8, CarryReg},
                                {MIBTrunc, MIBTrunc, CarryIn});
   AInfo Info(MF->getSubtarget());
@@ -982,14 +982,14 @@ TEST_F(AArch64GISelMITest, WidenSADDE) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   const char *CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[SADDE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[SADDE]]
-  CHECK: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[SADDE]]:_(s16), [[SEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Implicit:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[SADDE:%[0-9]+]]:_(i16), [[CARRY:%[0-9]+]]:_(i1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[SADDE]]
+  CHECK: [[SEXT:%[0-9]+]]:_(i16) = G_SEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[SADDE]]:_(i16), [[SEXT]]:_
   CHECK: G_TRUNC [[SADDE]]
   )";
 
@@ -1008,11 +1008,11 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
   });
   // Build
   // Trunc it to s8.
-  LLT s8{LLT::scalar(8)};
-  LLT s16{LLT::scalar(16)};
+  LLT s8{LLT::integer(8)};
+  LLT s16{LLT::integer(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  auto CarryIn = B.buildUndef(LLT::scalar(1));
-  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto CarryIn = B.buildUndef(LLT::integer(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::integer(1));
   auto MIBSSUBE = B.buildInstr(TargetOpcode::G_SSUBE, {s8, CarryReg},
                                {MIBTrunc, MIBTrunc, CarryIn});
   AInfo Info(MF->getSubtarget());
@@ -1022,14 +1022,14 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   const char *CheckStr = R"(
-  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
-  CHECK: [[SSUBE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[SSUBE]]
-  CHECK: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[TRUNC1]]
-  CHECK: G_ICMP intpred(ne), [[SSUBE]]:_(s16), [[SEXT]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[Implicit:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[LHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(i16) = G_SEXT [[Trunc]]
+  CHECK: [[SSUBE:%[0-9]+]]:_(i16), [[CARRY:%[0-9]+]]:_(i1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[SSUBE]]
+  CHECK: [[SEXT:%[0-9]+]]:_(i16) = G_SEXT [[TRUNC1]]
+  CHECK: G_ICMP intpred(ne), [[SSUBE]]:_(i16), [[SEXT]]:_
   CHECK: G_TRUNC [[SSUBE]]
   )";
 
@@ -1047,12 +1047,11 @@ TEST_F(AArch64GISelMITest, WidenUMULOCondition) {
     getActionDefinitionsBuilder(G_ADD).legalFor({{s16, s16}});
   });
 
-  LLT s32 = LLT::scalar(32);
-  LLT s64 = LLT::scalar(64);
+  LLT s32 = LLT::integer(32);
+  LLT s64 = LLT::integer(64);
 
-  auto UMulo =
-    B.buildInstr(TargetOpcode::G_UMULO, {s64, LLT::scalar(1)},
-                 {Copies[0], Copies[1]});
+  auto UMulo = B.buildInstr(TargetOpcode::G_UMULO, {s64, LLT::integer(1)},
+                            {Copies[0], Copies[1]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -1062,10 +1061,10 @@ TEST_F(AArch64GISelMITest, WidenUMULOCondition) {
             Helper.widenScalar(*UMulo, 1, s32));
 
   auto CheckStr = R"(
-  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[ADD:%[0-9]+]]:_(s64), [[OVERFLOW:%[0-9]+]]:_(s32) = G_UMULO [[COPY0]]:_, [[COPY1]]:_
-  CHECK: {{[0-9]+}}:_(s1) = G_TRUNC [[OVERFLOW]]
+  CHECK: [[COPY0:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[ADD:%[0-9]+]]:_(i64), [[OVERFLOW:%[0-9]+]]:_(i32) = G_UMULO [[COPY0]]:_, [[COPY1]]:_
+  CHECK: {{[0-9]+}}:_(i1) = G_TRUNC [[OVERFLOW]]
   )";
 
   // Check
@@ -1077,12 +1076,12 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_UADDO, G_UADDE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1096,14 +1095,14 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
             Helper.narrowScalar(*UADDO, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[UADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[UADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[UADDO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[UADDO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UADDO0]]:_(s32), [[UADDO1]]:_(s32), [[UADDO2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[UADDO0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[UADDO1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[UADDO2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[UADDO:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[UADDO0]]:_(i32), [[UADDO1]]:_(i32), [[UADDO2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1114,12 +1113,12 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_USUBO, G_USUBE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1133,14 +1132,14 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
             Helper.narrowScalar(*USUBO, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[USUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[USUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[USUBO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[USUBO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBO0]]:_(s32), [[USUBO1]]:_(s32), [[USUBO2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[USUBO0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[USUBO1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[USUBO2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[USUBO:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[USUBO0]]:_(i32), [[USUBO1]]:_(i32), [[USUBO2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1151,12 +1150,12 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_UADDO, G_UADDE, G_SADDE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1170,14 +1169,14 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
             Helper.narrowScalar(*SADDO, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[SADDO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[SADDO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[SADDO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SADDO0]]:_(s32), [[SADDO1]]:_(s32), [[SADDO2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[SADDO0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[SADDO1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SADDO2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[SADDO:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[SADDO0]]:_(i32), [[SADDO1]]:_(i32), [[SADDO2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1188,12 +1187,12 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_USUBO, G_USUBE, G_SSUBE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1207,14 +1206,14 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
             Helper.narrowScalar(*SSUBO, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SSUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
-  CHECK: [[SSUBO1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[SSUBO2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[SSUBO:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SSUBO0]]:_(s32), [[SSUBO1]]:_(s32), [[SSUBO2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[SSUBO0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
+  CHECK: [[SSUBO1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SSUBO2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[SSUBO:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[SSUBO0]]:_(i32), [[SSUBO1]]:_(i32), [[SSUBO2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1225,12 +1224,12 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder(G_UADDE).legalFor(
-        {{LLT::scalar(32), LLT::scalar(1)}});
+        {{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1245,15 +1244,15 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
             Helper.narrowScalar(*UADDE, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[UADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[UADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[UADDE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[UADDE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UADDE0]]:_(s32), [[UADDE1]]:_(s32), [[UADDE2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[UADDE0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[UADDE1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[UADDE2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_UADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[UADDE:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[UADDE0]]:_(i32), [[UADDE1]]:_(i32), [[UADDE2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1264,12 +1263,12 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder(G_USUBE).legalFor(
-        {{LLT::scalar(32), LLT::scalar(1)}});
+        {{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1284,15 +1283,15 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
             Helper.narrowScalar(*USUBE, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[USUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[USUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[USUBE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[USUBE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBE0]]:_(s32), [[USUBE1]]:_(s32), [[USUBE2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[USUBE0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[USUBE1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[USUBE2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_USUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[USUBE:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[USUBE0]]:_(i32), [[USUBE1]]:_(i32), [[USUBE2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1303,12 +1302,12 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_SADDE, G_UADDE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1323,15 +1322,15 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
             Helper.narrowScalar(*SADDE, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[SADDE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[SADDE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[SADDE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SADDE0]]:_(s32), [[SADDE1]]:_(s32), [[SADDE2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[SADDE0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[SADDE1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_UADDE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SADDE2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_SADDE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[SADDE:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[SADDE0]]:_(i32), [[SADDE1]]:_(i32), [[SADDE2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1342,12 +1341,12 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT S96 = LLT::scalar(96);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT S96 = LLT::integer(96);
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_SSUBE, G_USUBE})
-        .legalFor({{LLT::scalar(32), LLT::scalar(1)}});
+        .legalFor({{LLT::integer(32), LLT::integer(1)}});
   });
 
   auto Op0 = B.buildUndef(S96);
@@ -1362,15 +1361,15 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
             Helper.narrowScalar(*SSUBE, 0, S32));
 
   const char *CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
-  CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
-  CHECK: [[SSUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
-  CHECK: [[SSUBE1:%[0-9]+]]:_(s32), [[CARRY1:%[0-9]+]]:_(s1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
-  CHECK: [[SSUBE2:%[0-9]+]]:_(s32), [[CARRY2:%[0-9]+]]:_(s1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
-  CHECK: [[SSUBE:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[SSUBE0]]:_(s32), [[SSUBE1]]:_(s32), [[SSUBE2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  CHECK: [[OP0_0:%[0-9]+]]:_(i32), [[OP0_1:%[0-9]+]]:_(i32), [[OP0_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]
+  CHECK: [[OP1_0:%[0-9]+]]:_(i32), [[OP1_1:%[0-9]+]]:_(i32), [[OP1_2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]
+  CHECK: [[SSUBE0:%[0-9]+]]:_(i32), [[CARRY0:%[0-9]+]]:_(i1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
+  CHECK: [[SSUBE1:%[0-9]+]]:_(i32), [[CARRY1:%[0-9]+]]:_(i1) = G_USUBE [[OP0_1]]:_, [[OP1_1]]:_, [[CARRY0]]:_
+  CHECK: [[SSUBE2:%[0-9]+]]:_(i32), [[CARRY2:%[0-9]+]]:_(i1) = G_SSUBE [[OP0_2]]:_, [[OP1_2]]:_, [[CARRY1]]:_
+  CHECK: [[SSUBE:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[SSUBE0]]:_(i32), [[SSUBE1]]:_(i32), [[SSUBE2]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1381,8 +1380,8 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
   if (!TM)
     GTEST_SKIP();
 
-  const LLT V2S32 = LLT::fixed_vector(2, 32);
-  const LLT V5S32 = LLT::fixed_vector(5, 32);
+  const LLT V2S32 = LLT::fixed_vector(2, LLT::integer(32));
+  const LLT V5S32 = LLT::fixed_vector(5, LLT::integer(32));
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1402,20 +1401,20 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
-  CHECK: [[VALUE0:%[0-9]+]]:_(s32), [[VALUE1:%[0-9]+]]:_(s32), [[VALUE2:%[0-9]+]]:_(s32), [[VALUE3:%[0-9]+]]:_(s32), [[VALUE4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]:_(<5 x s32>)
-  CHECK: [[VECTOR0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE0]]:_(s32), [[VALUE1]]:_(s32)
-  CHECK: [[VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE2]]:_(s32), [[VALUE3]]:_(s32)
-  CHECK: [[VALUE5:%[0-9]+]]:_(s32), [[VALUE6:%[0-9]+]]:_(s32), [[VALUE7:%[0-9]+]]:_(s32), [[VALUE8:%[0-9]+]]:_(s32), [[VALUE9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]:_(<5 x s32>)
-  CHECK: [[VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE5]]:_(s32), [[VALUE6]]:_(s32)
-  CHECK: [[VECTOR3:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE7]]:_(s32), [[VALUE8]]:_(s32)
-  CHECK: [[AND0:%[0-9]+]]:_(<2 x s32>) = G_AND [[VECTOR0]]:_, [[VECTOR2]]:_
-  CHECK: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[VECTOR1]]:_, [[VECTOR3]]:_
-  CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[VALUE4]]:_, [[VALUE9]]:_
-  CHECK: [[AND0_E0:%[0-9]+]]:_(s32), [[AND0_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND0]]:_(<2 x s32>)
-  CHECK: [[AND1_E0:%[0-9]+]]:_(s32), [[AND1_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND1]]:_(<2 x s32>)
-  CHECK: [[RESULT:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[AND0_E0]]:_(s32), [[AND0_E1]]:_(s32), [[AND1_E0]]:_(s32), [[AND1_E1]]:_(s32), [[AND2]]:_(s32)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(<5 x i32>) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(<5 x i32>) = G_IMPLICIT_DEF
+  CHECK: [[VALUE0:%[0-9]+]]:_(i32), [[VALUE1:%[0-9]+]]:_(i32), [[VALUE2:%[0-9]+]]:_(i32), [[VALUE3:%[0-9]+]]:_(i32), [[VALUE4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF0]]:_(<5 x i32>)
+  CHECK: [[VECTOR0:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[VALUE0]]:_(i32), [[VALUE1]]:_(i32)
+  CHECK: [[VECTOR1:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[VALUE2]]:_(i32), [[VALUE3]]:_(i32)
+  CHECK: [[VALUE5:%[0-9]+]]:_(i32), [[VALUE6:%[0-9]+]]:_(i32), [[VALUE7:%[0-9]+]]:_(i32), [[VALUE8:%[0-9]+]]:_(i32), [[VALUE9:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[IMP_DEF1]]:_(<5 x i32>)
+  CHECK: [[VECTOR2:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[VALUE5]]:_(i32), [[VALUE6]]:_(i32)
+  CHECK: [[VECTOR3:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[VALUE7]]:_(i32), [[VALUE8]]:_(i32)
+  CHECK: [[AND0:%[0-9]+]]:_(<2 x i32>) = G_AND [[VECTOR0]]:_, [[VECTOR2]]:_
+  CHECK: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[VECTOR1]]:_, [[VECTOR3]]:_
+  CHECK: [[AND2:%[0-9]+]]:_(i32) = G_AND [[VALUE4]]:_, [[VALUE9]]:_
+  CHECK: [[AND0_E0:%[0-9]+]]:_(i32), [[AND0_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[AND0]]:_(<2 x i32>)
+  CHECK: [[AND1_E0:%[0-9]+]]:_(i32), [[AND1_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[AND1]]:_(<2 x i32>)
+  CHECK: [[RESULT:%[0-9]+]]:_(<5 x i32>) = G_BUILD_VECTOR [[AND0_E0]]:_(i32), [[AND0_E1]]:_(i32), [[AND1_E0]]:_(i32), [[AND1_E1]]:_(i32), [[AND2]]:_(i32)
   )";
 
   // Check
@@ -1427,15 +1426,14 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT s32 = LLT::scalar(32);
-  LLT v2s32 = LLT::fixed_vector(2, 32);
-  LLT v6s32 = LLT::fixed_vector(6, 32);
+  LLT s32 = LLT::integer(32);
+  LLT v2s32 = LLT::fixed_vector(2, LLT::integer(32));
+  LLT v6s32 = LLT::fixed_vector(6, LLT::integer(32));
 
   LegalizerInfo LI;
   LI.getActionDefinitionsBuilder(TargetOpcode::G_AND)
     .legalFor({v6s32})
     .clampMinNumElements(0, s32, 6);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, LI, Observer, B);
@@ -1452,21 +1450,21 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
             Helper.moreElementsVector(*And, 0, v6s32));
 
   auto CheckStr = R"(
-  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
-  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
+  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x i32>) = G_BITCAST
+  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST
 
-  CHECK: [[BITCAST0_E0:%[0-9]+]]:_(s32), [[BITCAST0_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST0]]:_(<2 x s32>)
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[BITCAST0_LARGE:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[BITCAST0_E0]]:_(s32), [[BITCAST0_E1]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32)
+  CHECK: [[BITCAST0_E0:%[0-9]+]]:_(i32), [[BITCAST0_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST0]]:_(<2 x i32>)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[BITCAST0_LARGE:%[0-9]+]]:_(<6 x i32>) = G_BUILD_VECTOR [[BITCAST0_E0]]:_(i32), [[BITCAST0_E1]]:_(i32), [[IMP_DEF0]]:_(i32), [[IMP_DEF0]]:_(i32), [[IMP_DEF0]]:_(i32), [[IMP_DEF0]]:_(i32)
 
-  CHECK: [[BITCAST1_E0:%[0-9]+]]:_(s32), [[BITCAST1_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]]:_(<2 x s32>)
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[BITCAST1_LARGE:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[BITCAST1_E0]]:_(s32), [[BITCAST1_E1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32)
+  CHECK: [[BITCAST1_E0:%[0-9]+]]:_(i32), [[BITCAST1_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST1]]:_(<2 x i32>)
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[BITCAST1_LARGE:%[0-9]+]]:_(<6 x i32>) = G_BUILD_VECTOR [[BITCAST1_E0]]:_(i32), [[BITCAST1_E1]]:_(i32), [[IMP_DEF1]]:_(i32), [[IMP_DEF1]]:_(i32), [[IMP_DEF1]]:_(i32), [[IMP_DEF1]]:_(i32)
 
-  CHECK: [[AND:%[0-9]+]]:_(<6 x s32>) = G_AND [[BITCAST0_LARGE]]:_, [[BITCAST1_LARGE]]:_
+  CHECK: [[AND:%[0-9]+]]:_(<6 x i32>) = G_AND [[BITCAST0_LARGE]]:_, [[BITCAST1_LARGE]]:_
 
-  CHECK: [[AND_E0:%[0-9]+]]:_(s32), [[AND_E1:%[0-9]+]]:_(s32), [[AND_E2:%[0-9]+]]:_(s32), [[AND_E3:%[0-9]+]]:_(s32), [[AND_E4:%[0-9]+]]:_(s32), [[AND_E5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND]]:_(<6 x s32>)
-  CHECK: (<2 x s32>) = G_BUILD_VECTOR [[AND_E0]]:_(s32), [[AND_E1]]:_(s32)
+  CHECK: [[AND_E0:%[0-9]+]]:_(i32), [[AND_E1:%[0-9]+]]:_(i32), [[AND_E2:%[0-9]+]]:_(i32), [[AND_E3:%[0-9]+]]:_(i32), [[AND_E4:%[0-9]+]]:_(i32), [[AND_E5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[AND]]:_(<6 x i32>)
+  CHECK: (<2 x i32>) = G_BUILD_VECTOR [[AND_E0]]:_(i32), [[AND_E1]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1477,17 +1475,16 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT s1 = LLT::scalar(1);
-  LLT s32 = LLT::scalar(32);
-  LLT s64 = LLT::scalar(64);
-  LLT v2s32 = LLT::fixed_vector(2, 32);
-  LLT v5s32 = LLT::fixed_vector(5, 32);
+  LLT s1 = LLT::integer(1);
+  LLT s32 = LLT::integer(32);
+  LLT s64 = LLT::integer(64);
+  LLT v2s32 = LLT::fixed_vector(2, LLT::integer(32));
+  LLT v5s32 = LLT::fixed_vector(5, LLT::integer(32));
 
   LegalizerInfo LI;
   LI.getActionDefinitionsBuilder(TargetOpcode::G_PHI)
     .legalFor({v2s32})
     .clampMinNumElements(0, s32, 2);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   LLT PhiTy = v5s32;
   DummyGISelObserver Observer;
@@ -1541,28 +1538,28 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
             Helper.fewerElementsVector(*Phi, 0, v2s32));
 
   auto CheckStr = R"(
-  CHECK: [[INITVAL:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
-  CHECK: [[INITVAL_E0:%[0-9]+]]:_(s32), [[INITVAL_E1:%[0-9]+]]:_(s32), [[INITVAL_E2:%[0-9]+]]:_(s32), [[INITVAL_E3:%[0-9]+]]:_(s32), [[INITVAL_E4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INITVAL]]:_(<5 x s32>)
-  CHECK: [[INITVAL_E01:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INITVAL_E0]]:_(s32), [[INITVAL_E1]]:_(s32)
-  CHECK: [[INITVAL_E23:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INITVAL_E2]]:_(s32), [[INITVAL_E3]]:_(s32)
+  CHECK: [[INITVAL:%[0-9]+]]:_(<5 x i32>) = G_IMPLICIT_DEF
+  CHECK: [[INITVAL_E0:%[0-9]+]]:_(i32), [[INITVAL_E1:%[0-9]+]]:_(i32), [[INITVAL_E2:%[0-9]+]]:_(i32), [[INITVAL_E3:%[0-9]+]]:_(i32), [[INITVAL_E4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[INITVAL]]:_(<5 x i32>)
+  CHECK: [[INITVAL_E01:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[INITVAL_E0]]:_(i32), [[INITVAL_E1]]:_(i32)
+  CHECK: [[INITVAL_E23:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[INITVAL_E2]]:_(i32), [[INITVAL_E3]]:_(i32)
   CHECK: G_BRCOND
 
-  CHECK: [[MIDVAL:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
-  CHECK: [[MIDVAL_E0:%[0-9]+]]:_(s32), [[MIDVAL_E1:%[0-9]+]]:_(s32), [[MIDVAL_E2:%[0-9]+]]:_(s32), [[MIDVAL_E3:%[0-9]+]]:_(s32), [[MIDVAL_E4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MIDVAL]]:_(<5 x s32>)
-  CHECK: [[MIDVAL_E01:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[MIDVAL_E0]]:_(s32), [[MIDVAL_E1]]:_(s32)
-  CHECK: [[MIDVAL_E23:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[MIDVAL_E2]]:_(s32), [[MIDVAL_E3]]:_(s32)
+  CHECK: [[MIDVAL:%[0-9]+]]:_(<5 x i32>) = G_IMPLICIT_DEF
+  CHECK: [[MIDVAL_E0:%[0-9]+]]:_(i32), [[MIDVAL_E1:%[0-9]+]]:_(i32), [[MIDVAL_E2:%[0-9]+]]:_(i32), [[MIDVAL_E3:%[0-9]+]]:_(i32), [[MIDVAL_E4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[MIDVAL]]:_(<5 x i32>)
+  CHECK: [[MIDVAL_E01:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[MIDVAL_E0]]:_(i32), [[MIDVAL_E1]]:_(i32)
+  CHECK: [[MIDVAL_E23:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[MIDVAL_E2]]:_(i32), [[MIDVAL_E3]]:_(i32)
   CHECK: G_BR
 
-  CHECK: [[PHI0:%[0-9]+]]:_(<2 x s32>) = G_PHI [[INITVAL_E01]]:_(<2 x s32>), %bb.0, [[MIDVAL_E01]]:_(<2 x s32>), %bb.1
-  CHECK: [[PHI1:%[0-9]+]]:_(<2 x s32>) = G_PHI [[INITVAL_E23]]:_(<2 x s32>), %bb.0, [[MIDVAL_E23]]:_(<2 x s32>), %bb.1
-  CHECK: [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[INITVAL_E4]]:_(s32), %bb.0, [[MIDVAL_E4]]:_(s32), %bb.1
+  CHECK: [[PHI0:%[0-9]+]]:_(<2 x i32>) = G_PHI [[INITVAL_E01]]:_(<2 x i32>), %bb.0, [[MIDVAL_E01]]:_(<2 x i32>), %bb.1
+  CHECK: [[PHI1:%[0-9]+]]:_(<2 x i32>) = G_PHI [[INITVAL_E23]]:_(<2 x i32>), %bb.0, [[MIDVAL_E23]]:_(<2 x i32>), %bb.1
+  CHECK: [[PHI2:%[0-9]+]]:_(i32) = G_PHI [[INITVAL_E4]]:_(i32), %bb.0, [[MIDVAL_E4]]:_(i32), %bb.1
 
-  CHECK: [[OTHER_PHI:%[0-9]+]]:_(s64) = G_PHI
+  CHECK: [[OTHER_PHI:%[0-9]+]]:_(i64) = G_PHI
 
-  CHECK: [[UNMERGE0:%[0-9]+]]:_(s32), [[UNMERGE1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI0]]:_(<2 x s32>)
-  CHECK: [[UNMERGE2:%[0-9]+]]:_(s32), [[UNMERGE3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI1]]:_(<2 x s32>)
-  CHECK: [[BV:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[UNMERGE0]]:_(s32), [[UNMERGE1]]:_(s32), [[UNMERGE2]]:_(s32), [[UNMERGE3]]:_(s32), [[PHI2]]:_(s32)
-  CHECK: [[USE_OP:%[0-9]+]]:_(<5 x s32>) = G_AND [[BV]]:_, [[BV]]:_
+  CHECK: [[UNMERGE0:%[0-9]+]]:_(i32), [[UNMERGE1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[PHI0]]:_(<2 x i32>)
+  CHECK: [[UNMERGE2:%[0-9]+]]:_(i32), [[UNMERGE3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[PHI1]]:_(<2 x i32>)
+  CHECK: [[BV:%[0-9]+]]:_(<5 x i32>) = G_BUILD_VECTOR [[UNMERGE0]]:_(i32), [[UNMERGE1]]:_(i32), [[UNMERGE2]]:_(i32), [[UNMERGE3]]:_(i32), [[PHI2]]:_(i32)
+  CHECK: [[USE_OP:%[0-9]+]]:_(<5 x i32>) = G_AND [[BV]]:_, [[BV]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1575,24 +1572,24 @@ TEST_F(AArch64GISelMITest, LowerFNEG) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FSUB).legalFor({s64});
-  });
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_FSUB).legalFor({f64}); });
+
+  LLT F64 = LLT::float64();
+  auto BC0 = B.buildBitcast(F64, Copies[0]);
+  auto BC1 = B.buildBitcast(F64, Copies[1]);
 
   // Build Instr. Make sure FMF are preserved.
-  auto FAdd =
-    B.buildInstr(TargetOpcode::G_FADD, {LLT::scalar(64)}, {Copies[0], Copies[1]},
-                 MachineInstr::MIFlag::FmNsz);
+  auto FAdd = B.buildInstr(TargetOpcode::G_FADD, {F64}, {BC0, BC1},
+                           MachineInstr::MIFlag::FmNsz);
 
   // Should not propagate the flags of src instruction.
-  auto FNeg0 =
-    B.buildInstr(TargetOpcode::G_FNEG, {LLT::scalar(64)}, {FAdd.getReg(0)},
-                 {MachineInstr::MIFlag::FmArcp});
+  auto FNeg0 = B.buildInstr(TargetOpcode::G_FNEG, {F64}, {FAdd},
+                            {MachineInstr::MIFlag::FmArcp});
 
   // Preserve the one flag.
-  auto FNeg1 =
-    B.buildInstr(TargetOpcode::G_FNEG, {LLT::scalar(64)}, {Copies[0]},
-                 MachineInstr::MIFlag::FmNoInfs);
+  auto FNeg1 = B.buildInstr(TargetOpcode::G_FNEG, {F64}, {BC0},
+                            MachineInstr::MIFlag::FmNoInfs);
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
@@ -1600,17 +1597,21 @@ TEST_F(AArch64GISelMITest, LowerFNEG) {
   // Perform Legalization
   B.setInstr(*FNeg0);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            Helper.lower(*FNeg0, 0, LLT::scalar(64)));
+            Helper.lower(*FNeg0, 0, LLT::integer(64)));
   B.setInstr(*FNeg1);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            Helper.lower(*FNeg1, 0, LLT::scalar(64)));
+            Helper.lower(*FNeg1, 0, LLT::integer(64)));
 
   auto CheckStr = R"(
-  CHECK: [[FADD:%[0-9]+]]:_(s64) = nsz G_FADD %0:_, %1:_
-  CHECK: [[CONST0:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-  CHECK: [[FSUB0:%[0-9]+]]:_(s64) = G_XOR [[FADD]]:_, [[CONST0]]:_
-  CHECK: [[CONST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
-  CHECK: [[FSUB1:%[0-9]+]]:_(s64) = G_XOR %0:_, [[CONST1]]:_
+  CHECK: [[COPY0:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[COPY1:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[FADD:%[0-9]+]]:_(f64) = nsz G_FADD [[COPY0]]:_, [[COPY1]]:_
+  CHECK: [[COPY2:%[0-9]+]]:_(i64) = G_BITCAST [[FADD]]:_
+  CHECK: [[CONST0:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
+  CHECK: [[FSUB0:%[0-9]+]]:_(i64) = G_XOR [[COPY2]]:_, [[CONST0]]:_
+  CHECK: [[COPY3:%[0-9]+]]:_(i64) = G_BITCAST [[COPY0]]
+  CHECK: [[CONST1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
+  CHECK: [[FSUB1:%[0-9]+]]:_(i64) = G_XOR [[COPY3]]:_, [[CONST1]]:_
   )";
 
   // Check
@@ -1622,8 +1623,8 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT s64 = LLT::scalar(64);
-  LLT v2s32 = LLT::fixed_vector(2, 32);
+  LLT s64 = LLT::integer(64);
+  LLT v2s32 = LLT::fixed_vector(2, LLT::integer(32));
 
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
@@ -1673,32 +1674,32 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
             Helper.lower(*UMaxV, 0, v2s32));
 
   auto CheckStr = R"(
-  CHECK: [[CMP0:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), %0:_(s64), %1:_
-  CHECK: [[SMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP0]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP0:%[0-9]+]]:_(i1) = G_ICMP intpred(slt), %0:_(i64), %1:_
+  CHECK: [[SMIN:%[0-9]+]]:_(i64) = G_SELECT [[CMP0]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), %0:_(s64), %1:_
-  CHECK: [[SMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP1]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(sgt), %0:_(i64), %1:_
+  CHECK: [[SMAX:%[0-9]+]]:_(i64) = G_SELECT [[CMP1]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), %0:_(s64), %1:_
-  CHECK: [[UMIN:%[0-9]+]]:_(s64) = G_SELECT [[CMP2]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ult), %0:_(i64), %1:_
+  CHECK: [[UMIN:%[0-9]+]]:_(i64) = G_SELECT [[CMP2]]:_(i1), %0:_, %1:_
 
-  CHECK: [[CMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), %0:_(s64), %1:_
-  CHECK: [[UMAX:%[0-9]+]]:_(s64) = G_SELECT [[CMP3]]:_(s1), %0:_, %1:_
+  CHECK: [[CMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(ugt), %0:_(i64), %1:_
+  CHECK: [[UMAX:%[0-9]+]]:_(i64) = G_SELECT [[CMP3]]:_(i1), %0:_, %1:_
 
-  CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST %0:_(s64)
-  CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST %1:_(s64)
+  CHECK: [[VEC0:%[0-9]+]]:_(<2 x i32>) = G_BITCAST %0:_(i64)
+  CHECK: [[VEC1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST %1:_(i64)
 
-  CHECK: [[VCMP0:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(slt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[SMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP0]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP0:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(slt), [[VEC0]]:_(<2 x i32>), [[VEC1]]:_
+  CHECK: [[SMINV:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[VCMP0]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP1:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(sgt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[SMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP1]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP1:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(sgt), [[VEC0]]:_(<2 x i32>), [[VEC1]]:_
+  CHECK: [[SMAXV:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[VCMP1]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP2:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(ult), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[UMINV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP2]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP2:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(ult), [[VEC0]]:_(<2 x i32>), [[VEC1]]:_
+  CHECK: [[UMINV:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[VCMP2]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
 
-  CHECK: [[VCMP3:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(ugt), [[VEC0]]:_(<2 x s32>), [[VEC1]]:_
-  CHECK: [[UMAXV:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[VCMP3]]:_(<2 x s1>), [[VEC0]]:_, [[VEC1]]:_
+  CHECK: [[VCMP3:%[0-9]+]]:_(<2 x i1>) = G_ICMP intpred(ugt), [[VEC0]]:_(<2 x i32>), [[VEC1]]:_
+  CHECK: [[UMAXV:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[VCMP3]]:_(<2 x i1>), [[VEC0]]:_, [[VEC1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1709,8 +1710,8 @@ TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S32 = LLT::scalar(32);
-  LLT S16 = LLT::scalar(16);
+  LLT S32 = LLT::integer(32);
+  LLT S16 = LLT::integer(16);
   LLT V2S16 = LLT::fixed_vector(2, S16);
   LLT V2S32 = LLT::fixed_vector(2, S32);
 
@@ -1737,17 +1738,17 @@ TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
             Helper.widenScalar(*BV1, 1, S32));
 
   auto CheckStr = R"(
-  CHECK: [[K0:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-  CHECK-NEXT: [[K1:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
-  CHECK-NEXT: [[EXT_K0_0:%[0-9]+]]:_(s32) = G_ANYEXT [[K0]]
-  CHECK-NEXT: [[EXT_K1_0:%[0-9]+]]:_(s32) = G_ANYEXT [[K1]]
-  CHECK-NEXT: [[BV0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EXT_K0_0]]:_(s32), [[EXT_K1_0]]:_(s32)
-  CHECK-NEXT: [[BV0_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BV0]]
+  CHECK: [[K0:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+  CHECK-NEXT: [[K1:%[0-9]+]]:_(i16) = G_CONSTANT i16 2
+  CHECK-NEXT: [[EXT_K0_0:%[0-9]+]]:_(i32) = G_ANYEXT [[K0]]
+  CHECK-NEXT: [[EXT_K1_0:%[0-9]+]]:_(i32) = G_ANYEXT [[K1]]
+  CHECK-NEXT: [[BV0:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[EXT_K0_0]]:_(i32), [[EXT_K1_0]]:_(i32)
+  CHECK-NEXT: [[BV0_TRUNC:%[0-9]+]]:_(<2 x i16>) = G_TRUNC [[BV0]]
 
-  CHECK: [[EXT_K0_1:%[0-9]+]]:_(s32) = G_ANYEXT [[K0]]
-  CHECK-NEXT: [[EXT_K1_1:%[0-9]+]]:_(s32) = G_ANYEXT [[K1]]
+  CHECK: [[EXT_K0_1:%[0-9]+]]:_(i32) = G_ANYEXT [[K0]]
+  CHECK-NEXT: [[EXT_K1_1:%[0-9]+]]:_(i32) = G_ANYEXT [[K1]]
 
-  CHECK-NEXT: [[BV1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[EXT_K0_1]]:_(s32), [[EXT_K1_1]]:_(s32)
+  CHECK-NEXT: [[BV1:%[0-9]+]]:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[EXT_K0_1]]:_(i32), [[EXT_K1_1]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1758,13 +1759,13 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
   if (!TM)
     GTEST_SKIP();
 
-  const LLT S32 = LLT::scalar(32);
-  const LLT S24 = LLT::scalar(24);
-  const LLT S21 = LLT::scalar(21);
-  const LLT S16 = LLT::scalar(16);
-  const LLT S9 = LLT::scalar(9);
-  const LLT S8 = LLT::scalar(8);
-  const LLT S3 = LLT::scalar(3);
+  const LLT S32 = LLT::integer(32);
+  const LLT S24 = LLT::integer(24);
+  const LLT S21 = LLT::integer(21);
+  const LLT S16 = LLT::integer(16);
+  const LLT S9 = LLT::integer(9);
+  const LLT S8 = LLT::integer(8);
+  const LLT S3 = LLT::integer(3);
 
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder(G_UNMERGE_VALUES)
@@ -1814,45 +1815,45 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
             Helper.widenScalar(*Merge2, 1, S32));
 
   auto CheckStr = R"(
-  CHECK: [[K0:%[0-9]+]]:_(s3) = G_CONSTANT i3 0
-  CHECK-NEXT: [[K1:%[0-9]+]]:_(s3) = G_CONSTANT i3 1
-  CHECK-NEXT: [[K2:%[0-9]+]]:_(s3) = G_CONSTANT i3 2
-  CHECK-NEXT: [[K3:%[0-9]+]]:_(s3) = G_CONSTANT i3 3
-  CHECK-NEXT: [[K4:%[0-9]+]]:_(s3) = G_CONSTANT i3 -4
-  CHECK-NEXT: [[K5:%[0-9]+]]:_(s3) = G_CONSTANT i3 -3
-  CHECK-NEXT: [[K6:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
-  CHECK-NEXT: [[K7:%[0-9]+]]:_(s3) = G_CONSTANT i3 -1
-  CHECK-NEXT: [[IMPDEF0:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
-  CHECK-NEXT: [[MERGE0:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K0]]:_(s3), [[K1]]:_(s3), [[K2]]:_(s3)
-  CHECK-NEXT: [[MERGE1:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K3]]:_(s3), [[K4]]:_(s3), [[K5]]:_(s3)
-  CHECK-NEXT: [[MERGE2:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K6]]:_(s3), [[K7]]:_(s3), [[IMPDEF0]]:_(s3)
-  CHECK-NEXT: [[MERGE3:%[0-9]+]]:_(s27) = G_MERGE_VALUES [[MERGE0]]:_(s9), [[MERGE1]]:_(s9), [[MERGE2]]:_(s9)
-  CHECK-NEXT: (s24) = G_TRUNC [[MERGE3]]:_(s27)
+  CHECK: [[K0:%[0-9]+]]:_(i3) = G_CONSTANT i3 0
+  CHECK-NEXT: [[K1:%[0-9]+]]:_(i3) = G_CONSTANT i3 1
+  CHECK-NEXT: [[K2:%[0-9]+]]:_(i3) = G_CONSTANT i3 2
+  CHECK-NEXT: [[K3:%[0-9]+]]:_(i3) = G_CONSTANT i3 3
+  CHECK-NEXT: [[K4:%[0-9]+]]:_(i3) = G_CONSTANT i3 -4
+  CHECK-NEXT: [[K5:%[0-9]+]]:_(i3) = G_CONSTANT i3 -3
+  CHECK-NEXT: [[K6:%[0-9]+]]:_(i3) = G_CONSTANT i3 -2
+  CHECK-NEXT: [[K7:%[0-9]+]]:_(i3) = G_CONSTANT i3 -1
+  CHECK-NEXT: [[IMPDEF0:%[0-9]+]]:_(i3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[MERGE0:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K0]]:_(i3), [[K1]]:_(i3), [[K2]]:_(i3)
+  CHECK-NEXT: [[MERGE1:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K3]]:_(i3), [[K4]]:_(i3), [[K5]]:_(i3)
+  CHECK-NEXT: [[MERGE2:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K6]]:_(i3), [[K7]]:_(i3), [[IMPDEF0]]:_(i3)
+  CHECK-NEXT: [[MERGE3:%[0-9]+]]:_(i27) = G_MERGE_VALUES [[MERGE0]]:_(i9), [[MERGE1]]:_(i9), [[MERGE2]]:_(i9)
+  CHECK-NEXT: (i24) = G_TRUNC [[MERGE3]]:_(i27)
 
 
-  CHECK: [[K8:%[0-9]+]]:_(s3) = G_CONSTANT i3 0
-  CHECK-NEXT: [[K9:%[0-9]+]]:_(s3) = G_CONSTANT i3 1
-  CHECK-NEXT: [[K10:%[0-9]+]]:_(s3) = G_CONSTANT i3 2
-  CHECK-NEXT: [[K11:%[0-9]+]]:_(s3) = G_CONSTANT i3 3
-  CHECK-NEXT: [[K12:%[0-9]+]]:_(s3) = G_CONSTANT i3 -4
-  CHECK-NEXT: [[K13:%[0-9]+]]:_(s3) = G_CONSTANT i3 -3
-  CHECK-NEXT: [[K14:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
-  CHECK-NEXT: [[IMPDEF1:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
-  CHECK-NEXT: [[MERGE4:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K8]]:_(s3), [[K9]]:_(s3), [[K10]]:_(s3)
-  CHECK-NEXT: [[MERGE5:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K11]]:_(s3), [[K12]]:_(s3), [[K13]]:_(s3)
-  CHECK-NEXT: [[MERGE6:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K14]]:_(s3), [[IMPDEF1]]:_(s3), [[IMPDEF1]]:_(s3)
-  CHECK-NEXT: [[MERGE7:%[0-9]+]]:_(s27) = G_MERGE_VALUES [[MERGE4]]:_(s9), [[MERGE5]]:_(s9), [[MERGE6]]:_(s9)
-  CHECK-NEXT: (s21) = G_TRUNC [[MERGE7]]:_(s27)
+  CHECK: [[K8:%[0-9]+]]:_(i3) = G_CONSTANT i3 0
+  CHECK-NEXT: [[K9:%[0-9]+]]:_(i3) = G_CONSTANT i3 1
+  CHECK-NEXT: [[K10:%[0-9]+]]:_(i3) = G_CONSTANT i3 2
+  CHECK-NEXT: [[K11:%[0-9]+]]:_(i3) = G_CONSTANT i3 3
+  CHECK-NEXT: [[K12:%[0-9]+]]:_(i3) = G_CONSTANT i3 -4
+  CHECK-NEXT: [[K13:%[0-9]+]]:_(i3) = G_CONSTANT i3 -3
+  CHECK-NEXT: [[K14:%[0-9]+]]:_(i3) = G_CONSTANT i3 -2
+  CHECK-NEXT: [[IMPDEF1:%[0-9]+]]:_(i3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[MERGE4:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K8]]:_(i3), [[K9]]:_(i3), [[K10]]:_(i3)
+  CHECK-NEXT: [[MERGE5:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K11]]:_(i3), [[K12]]:_(i3), [[K13]]:_(i3)
+  CHECK-NEXT: [[MERGE6:%[0-9]+]]:_(i9) = G_MERGE_VALUES [[K14]]:_(i3), [[IMPDEF1]]:_(i3), [[IMPDEF1]]:_(i3)
+  CHECK-NEXT: [[MERGE7:%[0-9]+]]:_(i27) = G_MERGE_VALUES [[MERGE4]]:_(i9), [[MERGE5]]:_(i9), [[MERGE6]]:_(i9)
+  CHECK-NEXT: (i21) = G_TRUNC [[MERGE7]]:_(i27)
 
 
-  CHECK: [[K15:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  CHECK-NEXT: [[K16:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-  CHECK-NEXT: [[ZEXT_K15:[0-9]+]]:_(s32) = G_ZEXT [[K15]]:_(s8)
-  CHECK-NEXT: [[ZEXT_K16:[0-9]+]]:_(s32) = G_ZEXT [[K16]]:_(s8)
-  [[K16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT_K16]]:_, [[K16]]:_(s32)
-  [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT_K16]]:_, [[SHL]]:_
-  (s16) = G_TRUNC [[OR]]:_(s32)
+  CHECK: [[K15:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
+  CHECK-NEXT: [[K16:%[0-9]+]]:_(i8) = G_CONSTANT i8 1
+  CHECK-NEXT: [[ZEXT_K15:[0-9]+]]:_(i32) = G_ZEXT [[K15]]:_(i8)
+  CHECK-NEXT: [[ZEXT_K16:[0-9]+]]:_(i32) = G_ZEXT [[K16]]:_(i8)
+  [[K16:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT_K16]]:_, [[K16]]:_(i32)
+  [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT_K16]]:_, [[SHL]]:_
+  (i16) = G_TRUNC [[OR]]:_(i32)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1870,8 +1871,8 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
   B.setInsertPt(*EntryMBB, EntryMBB->end());
 
-  const LLT S32 = LLT::scalar(32);
-  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::integer(32);
+  const LLT S64 = LLT::integer(64);
   const LLT P0 = LLT::pointer(0, 64);
 
   auto Lo = B.buildTrunc(S32, Copies[0]);
@@ -1884,14 +1885,14 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
             Helper.widenScalar(*Merge, 1, S64));
 
   auto CheckStr = R"(
-   CHECK: [[TRUNC0:%[0-9]+]]:_(s32) = G_TRUNC
-   CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC
-   CHECK: [[ZEXT_TRUNC0:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC0]]
-   CHECK: [[ZEXT_TRUNC1:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]]
-   CHECK: [[SHIFT_AMT:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-   CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT_TRUNC1]]:_, [[SHIFT_AMT]]
-   CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT_TRUNC0]]:_, [[SHL]]
-   CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[OR]]:_(s64)
+   CHECK: [[TRUNC0:%[0-9]+]]:_(i32) = G_TRUNC
+   CHECK: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC
+   CHECK: [[ZEXT_TRUNC0:%[0-9]+]]:_(i64) = G_ZEXT [[TRUNC0]]
+   CHECK: [[ZEXT_TRUNC1:%[0-9]+]]:_(i64) = G_ZEXT [[TRUNC1]]
+   CHECK: [[SHIFT_AMT:%[0-9]+]]:_(i64) = G_CONSTANT i64 32
+   CHECK: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[ZEXT_TRUNC1]]:_, [[SHIFT_AMT]]
+   CHECK: [[OR:%[0-9]+]]:_(i64) = G_OR [[ZEXT_TRUNC0]]:_, [[SHL]]
+   CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[OR]]:_(i64)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
@@ -1908,22 +1909,22 @@ TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
   });
   // Build Instr
   auto MIB = B.buildInstr(
-      TargetOpcode::G_SEXT_INREG, {LLT::scalar(32)},
-      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::scalar(32)}, {Copies[0]}),
+      TargetOpcode::G_SEXT_INREG, {LLT::integer(32)},
+      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::integer(32)}, {Copies[0]}),
        uint64_t(8)});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   B.setInstr(*MIB);
-  ASSERT_TRUE(Helper.widenScalar(*MIB, 0, LLT::scalar(64)) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIB, 0, LLT::integer(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[T0:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[T1:%[0-9]+]]:_(s64) = G_ANYEXT [[T0]]:_(s32)
-  CHECK: [[T2:%[0-9]+]]:_(s64) = G_SEXT_INREG [[T1]]:_, 8
-  CHECK: [[T3:%[0-9]+]]:_(s32) = G_TRUNC [[T2]]:_(s64)
+  CHECK: [[T0:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[T1:%[0-9]+]]:_(i64) = G_ANYEXT [[T0]]:_(i32)
+  CHECK: [[T2:%[0-9]+]]:_(i64) = G_SEXT_INREG [[T1]]:_, 8
+  CHECK: [[T3:%[0-9]+]]:_(i32) = G_TRUNC [[T2]]:_(i64)
   )";
 
   // Check
@@ -1941,22 +1942,22 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
   });
   // Build Instr
   auto MIB = B.buildInstr(
-      TargetOpcode::G_SEXT_INREG, {LLT::scalar(16)},
-      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::scalar(16)}, {Copies[0]}),
+      TargetOpcode::G_SEXT_INREG, {LLT::integer(16)},
+      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::integer(16)}, {Copies[0]}),
        uint64_t(8)});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   B.setInstr(*MIB);
-  ASSERT_TRUE(Helper.narrowScalar(*MIB, 0, LLT::scalar(10)) ==
+  ASSERT_TRUE(Helper.narrowScalar(*MIB, 0, LLT::integer(10)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[T0:%[0-9]+]]:_(s16) = G_TRUNC
-  CHECK: [[T1:%[0-9]+]]:_(s10) = G_TRUNC [[T0]]:_(s16)
-  CHECK: [[T2:%[0-9]+]]:_(s10) = G_SEXT_INREG [[T1]]:_, 8
-  CHECK: [[T3:%[0-9]+]]:_(s16) = G_SEXT [[T2]]:_(s10)
+  CHECK: [[T0:%[0-9]+]]:_(i16) = G_TRUNC
+  CHECK: [[T1:%[0-9]+]]:_(i10) = G_TRUNC [[T0]]:_(i16)
+  CHECK: [[T2:%[0-9]+]]:_(i10) = G_SEXT_INREG [[T1]]:_, 8
+  CHECK: [[T3:%[0-9]+]]:_(i16) = G_SEXT [[T2]]:_(i10)
   )";
 
   // Check
@@ -1973,24 +1974,24 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
       A, { getActionDefinitionsBuilder(G_SEXT_INREG).legalForTypeWithAnyImm({s64}); });
   // Build Instr
   auto MIB = B.buildInstr(
-      TargetOpcode::G_SEXT_INREG, {LLT::scalar(32)},
-      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::scalar(32)}, {Copies[0]}),
+      TargetOpcode::G_SEXT_INREG, {LLT::integer(32)},
+      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::integer(32)}, {Copies[0]}),
        uint64_t(9)});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
   B.setInstr(*MIB);
-  ASSERT_TRUE(Helper.narrowScalar(*MIB, 0, LLT::scalar(8)) ==
+  ASSERT_TRUE(Helper.narrowScalar(*MIB, 0, LLT::integer(8)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[T0:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[T1:%[0-9]+]]:_(s8), [[T2:%[0-9]+]]:_(s8), [[T3:%[0-9]+]]:_(s8), [[T4:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[T0]]:_(s32)
-  CHECK: [[CST2:%[0-9]+]]:_(s8) = G_CONSTANT i8 7
-  CHECK: [[T5:%[0-9]+]]:_(s8) = G_SEXT_INREG [[T2]]:_, 1
-  CHECK: [[T6:%[0-9]+]]:_(s8) = G_ASHR [[T5]]:_, [[CST2]]:_
-  CHECK: [[T7:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[T1]]:_(s8), [[T5]]:_(s8), [[T6]]:_(s8), [[T6]]:_(s8)
+  CHECK: [[T0:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[T1:%[0-9]+]]:_(i8), [[T2:%[0-9]+]]:_(i8), [[T3:%[0-9]+]]:_(i8), [[T4:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[T0]]:_(i32)
+  CHECK: [[CST2:%[0-9]+]]:_(i8) = G_CONSTANT i8 7
+  CHECK: [[T5:%[0-9]+]]:_(i8) = G_SEXT_INREG [[T2]]:_, 1
+  CHECK: [[T6:%[0-9]+]]:_(i8) = G_ASHR [[T5]]:_, [[CST2]]:_
+  CHECK: [[T7:%[0-9]+]]:_(i32) = G_MERGE_VALUES [[T1]]:_(i8), [[T5]]:_(i8), [[T6]]:_(i8), [[T6]]:_(i8)
   )";
 
   // Check
@@ -2007,8 +2008,8 @@ TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
       A, { getActionDefinitionsBuilder(G_SEXT_INREG).legalForTypeWithAnyImm({s64}); });
   // Build Instr
   auto MIB = B.buildInstr(
-      TargetOpcode::G_SEXT_INREG, {LLT::scalar(32)},
-      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::scalar(32)}, {Copies[0]}),
+      TargetOpcode::G_SEXT_INREG, {LLT::integer(32)},
+      {B.buildInstr(TargetOpcode::G_TRUNC, {LLT::integer(32)}, {Copies[0]}),
        uint64_t(8)});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
@@ -2019,10 +2020,10 @@ TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
-  CHECK: [[T1:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[CST:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  CHECK: [[T2:%[0-9]+]]:_(s32) = G_SHL [[T1]]:_, [[CST]]:_
-  CHECK: [[T3:%[0-9]+]]:_(s32) = G_ASHR [[T2]]:_, [[CST]]:_
+  CHECK: [[T1:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[CST:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+  CHECK: [[T2:%[0-9]+]]:_(i32) = G_SHL [[T1]]:_, [[CST]]:_
+  CHECK: [[T3:%[0-9]+]]:_(i32) = G_ASHR [[T2]]:_, [[CST]]:_
   )";
 
   // Check
@@ -2036,21 +2037,23 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{s32, s16}, {s128, s64}});
+    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{f32, f16}, {f128, f64}});
   });
 
-  LLT S16{LLT::scalar(16)};
-  LLT S32{LLT::scalar(32)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S16, Copies[0]);
-  auto MIBFPExt1 =
-      B.buildInstr(TargetOpcode::G_FPEXT, {S32}, {MIBTrunc});
+  LLT I16{LLT::integer(16)};
+  LLT F16{LLT::float16()};
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(I16, Copies[0]);
+  auto BCF16 = B.buildBitcast(F16, MIBTrunc);
+  auto MIBFPExt1 = B.buildInstr(TargetOpcode::G_FPEXT, {F32}, {BCF16});
 
-  auto MIBFPExt2 =
-      B.buildInstr(TargetOpcode::G_FPEXT, {S128}, {Copies[1]});
+  auto BCF64 = B.buildBitcast(F64, Copies[1]);
+  auto MIBFPExt2 = B.buildInstr(TargetOpcode::G_FPEXT, {F128}, {BCF64});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
               Helper.libcall(*MIBFPExt1, DummyLocObserver));
@@ -2058,8 +2061,8 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
               Helper.libcall(*MIBFPExt2, DummyLocObserver));
   auto CheckStr = R"(
-  CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC
-  CHECK: $h0 = COPY [[TRUNC]]
+  CHECK: [[TRUNC2:%[0-9]+]]:_(f16) = G_BITCAST
+  CHECK: $h0 = COPY [[TRUNC2]]
   CHECK: BL &__extendhfsf2
   CHECK: $d0 = COPY
   CHECK: BL &__extenddftf2
@@ -2076,32 +2079,32 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{s16, s32}, {s64, s128}});
+    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor(
+        {{f16, f32}, {f64, f128}});
   });
 
-  LLT S16{LLT::scalar(16)};
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBFPTrunc1 =
-      B.buildInstr(TargetOpcode::G_FPTRUNC, {S16}, {MIBTrunc});
+  LLT F16{LLT::float16()};
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto MIBFPTrunc1 = B.buildInstr(TargetOpcode::G_FPTRUNC, {F16}, {BCF32});
 
-  auto MIBMerge = B.buildMergeLikeInstr(S128, {Copies[1], Copies[2]});
+  auto MIBMerge = B.buildMergeLikeInstr(F128, {Copies[1], Copies[2]});
 
-  auto MIBFPTrunc2 =
-      B.buildInstr(TargetOpcode::G_FPTRUNC, {S64}, {MIBMerge});
+  auto MIBFPTrunc2 = B.buildInstr(TargetOpcode::G_FPTRUNC, {F64}, {MIBMerge});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBFPTrunc1, DummyLocObserver));
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBFPTrunc2, DummyLocObserver));
   auto CheckStr = R"(
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &__truncsfhf2
   CHECK: $q0 = COPY
@@ -2118,14 +2121,13 @@ TEST_F(AArch64GISelMITest, LibcallSimple) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FADD).libcallFor({s16});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FADD).libcallFor({f16}); });
 
-  LLT S16{LLT::scalar(16)};
-  auto MIBTrunc = B.buildTrunc(S16, Copies[0]);
-  auto MIBFADD =
-      B.buildInstr(TargetOpcode::G_FADD, {S16}, {MIBTrunc, MIBTrunc});
+  LLT F16{LLT::float16()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(16), Copies[0]);
+  auto BCF16 = B.buildBitcast(F16, MIBTrunc);
+  auto MIBFADD = B.buildInstr(TargetOpcode::G_FADD, {F16}, {BCF16, BCF16});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
@@ -2146,23 +2148,22 @@ TEST_F(AArch64GISelMITest, LibcallMul) {
     getActionDefinitionsBuilder(G_MUL).libcallFor({s32, s64, s128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT I32{LLT::integer(32)};
+  LLT I64{LLT::integer(64)};
+  LLT I128{LLT::integer(128)};
+  auto MIBTrunc = B.buildTrunc(I32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(I128, Copies[0]);
 
   auto MIBMul32 =
-      B.buildInstr(TargetOpcode::G_MUL, {S32}, {MIBTrunc, MIBTrunc});
+      B.buildInstr(TargetOpcode::G_MUL, {I32}, {MIBTrunc, MIBTrunc});
   auto MIBMul64 =
-      B.buildInstr(TargetOpcode::G_MUL, {S64}, {Copies[0], Copies[0]});
-  auto MIBMul128 =
-      B.buildInstr(TargetOpcode::G_MUL, {S128}, {MIBExt, MIBExt});
+      B.buildInstr(TargetOpcode::G_MUL, {I64}, {Copies[0], Copies[0]});
+  auto MIBMul128 = B.buildInstr(TargetOpcode::G_MUL, {I128}, {MIBExt, MIBExt});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBMul32, DummyLocObserver));
@@ -2172,17 +2173,17 @@ TEST_F(AArch64GISelMITest, LibcallMul) {
             Helper.libcall(*MIBMul128, DummyLocObserver));
 
   auto CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i128) = G_ANYEXT
   CHECK: $w0 = COPY [[TRUNC]]
   CHECK: $w1 = COPY [[TRUNC]]
   CHECK: BL &__mulsi3
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__muldi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2204,9 +2205,9 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
     getActionDefinitionsBuilder(G_SREM).libcallFor({s32, s64, s128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
+  LLT S32{LLT::integer(32)};
+  LLT S64{LLT::integer(64)};
+  LLT S128{LLT::integer(128)};
   auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
   auto MIBExt = B.buildAnyExt(S128, Copies[0]);
 
@@ -2220,7 +2221,7 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBSRem32, DummyLocObserver));
@@ -2230,17 +2231,17 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
             Helper.libcall(*MIBSRem128, DummyLocObserver));
 
   auto CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i128) = G_ANYEXT
   CHECK: $w0 = COPY [[TRUNC]]
   CHECK: $w1 = COPY [[TRUNC]]
   CHECK: BL &__modsi3
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__moddi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2262,9 +2263,9 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
     getActionDefinitionsBuilder(G_UREM).libcallFor({s32, s64, s128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
+  LLT S32{LLT::integer(32)};
+  LLT S64{LLT::integer(64)};
+  LLT S128{LLT::integer(128)};
   auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
   auto MIBExt = B.buildAnyExt(S128, Copies[0]);
 
@@ -2278,7 +2279,7 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBURem32, DummyLocObserver));
@@ -2288,17 +2289,17 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
             Helper.libcall(*MIBURem128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i128) = G_ANYEXT
   CHECK: $w0 = COPY [[TRUNC]]
   CHECK: $w1 = COPY [[TRUNC]]
   CHECK: BL &__umodsi3
   CHECK: $x0 = COPY [[COPY]]
   CHECK: $x1 = COPY [[COPY]]
   CHECK: BL &__umoddi3
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
-  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: $x2 = COPY [[UV2]]
@@ -2310,34 +2311,34 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
+TEST_F(AArch64GISelMITest, LibcallCtlzZeroPoison) {
   setUp();
   if (!TM)
     GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .libcallFor({{s32, s32}, {s64, s64}, {s128, s128}});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
+  LLT S32{LLT::integer(32)};
+  LLT S64{LLT::integer(64)};
+  LLT S128{LLT::integer(128)};
   auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
   auto MIBExt = B.buildAnyExt(S128, Copies[0]);
 
   auto MIBCtlz32 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S32}, {MIBTrunc});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S32}, {MIBTrunc});
   auto MIBCtlz64 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S64}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S64}, {Copies[0]});
   auto MIBCtlz128 =
-      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S128}, {MIBExt});
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {S128}, {MIBExt});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBCtlz32, DummyLocObserver));
@@ -2347,14 +2348,14 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
             Helper.libcall(*MIBCtlz128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i128) = G_ANYEXT
   CHECK: $w0 = COPY [[TRUNC]]
   CHECK: BL &__clzsi2
   CHECK: $x0 = COPY [[COPY]]
   CHECK: BL &__clzdi2
-  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]]
   CHECK: $x0 = COPY [[UV]]
   CHECK: $x1 = COPY [[UV1]]
   CHECK: BL &__clzti2
@@ -2370,26 +2371,26 @@ TEST_F(AArch64GISelMITest, LibcallFAdd) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FADD).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FADD).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBAdd32 =
-      B.buildInstr(TargetOpcode::G_FADD, {S32}, {MIBTrunc, MIBTrunc});
-  auto MIBAdd64 =
-      B.buildInstr(TargetOpcode::G_FADD, {S64}, {Copies[0], Copies[0]});
-  auto MIBAdd128 = B.buildInstr(TargetOpcode::G_FADD, {S128}, {MIBExt, MIBExt});
+  auto MIBAdd32 = B.buildInstr(TargetOpcode::G_FADD, {F32}, {BCF32, BCF32});
+  auto MIBAdd64 = B.buildInstr(TargetOpcode::G_FADD, {F64}, {BCF64, BCF64});
+  auto MIBAdd128 = B.buildInstr(TargetOpcode::G_FADD, {F128}, {BCF128, BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBAdd32, DummyLocObserver));
@@ -2399,9 +2400,9 @@ TEST_F(AArch64GISelMITest, LibcallFAdd) {
             Helper.libcall(*MIBAdd128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &__addsf3
@@ -2423,26 +2424,26 @@ TEST_F(AArch64GISelMITest, LibcallFSub) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FSUB).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FSUB).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBSub32 =
-      B.buildInstr(TargetOpcode::G_FSUB, {S32}, {MIBTrunc, MIBTrunc});
-  auto MIBSub64 =
-      B.buildInstr(TargetOpcode::G_FSUB, {S64}, {Copies[0], Copies[0]});
-  auto MIBSub128 = B.buildInstr(TargetOpcode::G_FSUB, {S128}, {MIBExt, MIBExt});
+  auto MIBSub32 = B.buildInstr(TargetOpcode::G_FSUB, {F32}, {BCF32, BCF32});
+  auto MIBSub64 = B.buildInstr(TargetOpcode::G_FSUB, {F64}, {BCF64, BCF64});
+  auto MIBSub128 = B.buildInstr(TargetOpcode::G_FSUB, {F128}, {BCF128, BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBSub32, DummyLocObserver));
@@ -2452,9 +2453,9 @@ TEST_F(AArch64GISelMITest, LibcallFSub) {
             Helper.libcall(*MIBSub128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &__subsf3
@@ -2476,25 +2477,25 @@ TEST_F(AArch64GISelMITest, LibcallFMul) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FMUL).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FMUL).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBMul32 =
-      B.buildInstr(TargetOpcode::G_FMUL, {S32}, {MIBTrunc, MIBTrunc});
-  auto MIBMul64 =
-      B.buildInstr(TargetOpcode::G_FMUL, {S64}, {Copies[0], Copies[0]});
-  auto MIBMul128 = B.buildInstr(TargetOpcode::G_FMUL, {S128}, {MIBExt, MIBExt});
+  auto MIBMul32 = B.buildInstr(TargetOpcode::G_FMUL, {F32}, {BCF32, BCF32});
+  auto MIBMul64 = B.buildInstr(TargetOpcode::G_FMUL, {F64}, {BCF64, BCF64});
+  auto MIBMul128 = B.buildInstr(TargetOpcode::G_FMUL, {F128}, {BCF128, BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2505,9 +2506,9 @@ TEST_F(AArch64GISelMITest, LibcallFMul) {
             Helper.libcall(*MIBMul128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &__mulsf3
@@ -2529,26 +2530,26 @@ TEST_F(AArch64GISelMITest, LibcallFDiv) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FDIV).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FDIV).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBDiv32 =
-      B.buildInstr(TargetOpcode::G_FDIV, {S32}, {MIBTrunc, MIBTrunc});
-  auto MIBDiv64 =
-      B.buildInstr(TargetOpcode::G_FDIV, {S64}, {Copies[0], Copies[0]});
-  auto MIBDiv128 = B.buildInstr(TargetOpcode::G_FDIV, {S128}, {MIBExt, MIBExt});
+  auto MIBDiv32 = B.buildInstr(TargetOpcode::G_FDIV, {F32}, {BCF32, BCF32});
+  auto MIBDiv64 = B.buildInstr(TargetOpcode::G_FDIV, {F64}, {BCF64, BCF64});
+  auto MIBDiv128 = B.buildInstr(TargetOpcode::G_FDIV, {F128}, {BCF128, BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBDiv32, DummyLocObserver));
@@ -2558,9 +2559,9 @@ TEST_F(AArch64GISelMITest, LibcallFDiv) {
             Helper.libcall(*MIBDiv128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &__divsf3
@@ -2582,24 +2583,26 @@ TEST_F(AArch64GISelMITest, LibcallFExp) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FEXP).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FEXP).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBExp32 = B.buildInstr(TargetOpcode::G_FEXP, {S32}, {MIBTrunc});
-  auto MIBExp64 = B.buildInstr(TargetOpcode::G_FEXP, {S64}, {Copies[0]});
-  auto MIBExp128 = B.buildInstr(TargetOpcode::G_FEXP, {S128}, {MIBExt});
+  auto MIBExp32 = B.buildInstr(TargetOpcode::G_FEXP, {F32}, {BCF32});
+  auto MIBExp64 = B.buildInstr(TargetOpcode::G_FEXP, {F64}, {BCF64});
+  auto MIBExp128 = B.buildInstr(TargetOpcode::G_FEXP, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBExp32, DummyLocObserver));
@@ -2609,9 +2612,9 @@ TEST_F(AArch64GISelMITest, LibcallFExp) {
             Helper.libcall(*MIBExp128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &expf
   CHECK: $d0 = COPY [[COPY]]
@@ -2631,23 +2634,26 @@ TEST_F(AArch64GISelMITest, LibcallFExp2) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FEXP2).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FEXP2).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBExp232 = B.buildInstr(TargetOpcode::G_FEXP2, {S32}, {MIBTrunc});
-  auto MIBExp264 = B.buildInstr(TargetOpcode::G_FEXP2, {S64}, {Copies[0]});
-  auto MIBExp2128 = B.buildInstr(TargetOpcode::G_FEXP2, {S128}, {MIBExt});
+  auto MIBExp232 = B.buildInstr(TargetOpcode::G_FEXP2, {F32}, {BCF32});
+  auto MIBExp264 = B.buildInstr(TargetOpcode::G_FEXP2, {F64}, {BCF64});
+  auto MIBExp2128 = B.buildInstr(TargetOpcode::G_FEXP2, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBExp232, DummyLocObserver));
@@ -2657,9 +2663,9 @@ TEST_F(AArch64GISelMITest, LibcallFExp2) {
             Helper.libcall(*MIBExp2128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &exp2f
   CHECK: $d0 = COPY [[COPY]]
@@ -2678,24 +2684,26 @@ TEST_F(AArch64GISelMITest, LibcallFRem) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FREM).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBFRem32 = B.buildInstr(TargetOpcode::G_FREM, {S32}, {MIBTrunc});
-  auto MIBFRem64 = B.buildInstr(TargetOpcode::G_FREM, {S64}, {Copies[0]});
-  auto MIBFRem128 = B.buildInstr(TargetOpcode::G_FREM, {S128}, {MIBExt});
+  auto MIBFRem32 = B.buildInstr(TargetOpcode::G_FREM, {F32}, {BCF32});
+  auto MIBFRem64 = B.buildInstr(TargetOpcode::G_FREM, {F64}, {BCF64});
+  auto MIBFRem128 = B.buildInstr(TargetOpcode::G_FREM, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBFRem32, DummyLocObserver));
@@ -2705,9 +2713,9 @@ TEST_F(AArch64GISelMITest, LibcallFRem) {
             Helper.libcall(*MIBFRem128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &fmodf
   CHECK: $d0 = COPY [[COPY]]
@@ -2726,24 +2734,26 @@ TEST_F(AArch64GISelMITest, LibcallFPow) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FPOW).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FPOW).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBPow32 = B.buildInstr(TargetOpcode::G_FPOW, {S32}, {MIBTrunc});
-  auto MIBPow64 = B.buildInstr(TargetOpcode::G_FPOW, {S64}, {Copies[0]});
-  auto MIBPow128 = B.buildInstr(TargetOpcode::G_FPOW, {S128}, {MIBExt});
+  auto MIBPow32 = B.buildInstr(TargetOpcode::G_FPOW, {F32}, {BCF32});
+  auto MIBPow64 = B.buildInstr(TargetOpcode::G_FPOW, {F64}, {BCF64});
+  auto MIBPow128 = B.buildInstr(TargetOpcode::G_FPOW, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBPow32, DummyLocObserver));
@@ -2753,9 +2763,9 @@ TEST_F(AArch64GISelMITest, LibcallFPow) {
             Helper.libcall(*MIBPow128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &powf
   CHECK: $d0 = COPY [[COPY]]
@@ -2774,25 +2784,29 @@ TEST_F(AArch64GISelMITest, LibcallFMa) {
     GTEST_SKIP();
 
   // Declare your legalization info
-  DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FMA).libcallFor({s32, s64, s128});
-  });
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_FMA).libcallFor({f32, f64, f128}); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBMa32 = B.buildInstr(TargetOpcode::G_FMA, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBMa32 =
+      B.buildInstr(TargetOpcode::G_FMA, {F32}, {BCF32, BCF32, BCF32});
   auto MIBMa64 =
-      B.buildInstr(TargetOpcode::G_FMA, {S64}, {Copies[0], Copies[0]});
-  auto MIBMa128 = B.buildInstr(TargetOpcode::G_FMA, {S128}, {MIBExt, MIBExt});
+      B.buildInstr(TargetOpcode::G_FMA, {F64}, {BCF64, BCF64, BCF64});
+  auto MIBMa128 =
+      B.buildInstr(TargetOpcode::G_FMA, {F128}, {BCF128, BCF128, BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LostDebugLocObserver DummyLocObserver("");
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.libcall(*MIBMa32, DummyLocObserver));
@@ -2802,9 +2816,9 @@ TEST_F(AArch64GISelMITest, LibcallFMa) {
             Helper.libcall(*MIBMa128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &fmaf
   CHECK: $d0 = COPY [[COPY]]
@@ -2824,22 +2838,25 @@ TEST_F(AArch64GISelMITest, LibcallFCeil) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FCEIL).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FCEIL).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBCeil32 = B.buildInstr(TargetOpcode::G_FCEIL, {S32}, {MIBTrunc});
-  auto MIBCeil64 = B.buildInstr(TargetOpcode::G_FCEIL, {S64}, {Copies[0]});
-  auto MIBCeil128 = B.buildInstr(TargetOpcode::G_FCEIL, {S128}, {MIBExt});
+  auto MIBCeil32 = B.buildInstr(TargetOpcode::G_FCEIL, {F32}, {BCF32});
+  auto MIBCeil64 = B.buildInstr(TargetOpcode::G_FCEIL, {F64}, {BCF64});
+  auto MIBCeil128 = B.buildInstr(TargetOpcode::G_FCEIL, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2850,9 +2867,9 @@ TEST_F(AArch64GISelMITest, LibcallFCeil) {
             Helper.libcall(*MIBCeil128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &ceilf
   CHECK: $d0 = COPY [[COPY]]
@@ -2872,22 +2889,25 @@ TEST_F(AArch64GISelMITest, LibcallFFloor) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FFLOOR).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FFLOOR).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBFloor32 = B.buildInstr(TargetOpcode::G_FFLOOR, {S32}, {MIBTrunc});
-  auto MIBFloor64 = B.buildInstr(TargetOpcode::G_FFLOOR, {S64}, {Copies[0]});
-  auto MIBFloor128 = B.buildInstr(TargetOpcode::G_FFLOOR, {S128}, {MIBExt});
+  auto MIBFloor32 = B.buildInstr(TargetOpcode::G_FFLOOR, {F32}, {BCF32});
+  auto MIBFloor64 = B.buildInstr(TargetOpcode::G_FFLOOR, {F64}, {BCF64});
+  auto MIBFloor128 = B.buildInstr(TargetOpcode::G_FFLOOR, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2898,9 +2918,9 @@ TEST_F(AArch64GISelMITest, LibcallFFloor) {
             Helper.libcall(*MIBFloor128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &floorf
   CHECK: $d0 = COPY [[COPY]]
@@ -2920,22 +2940,25 @@ TEST_F(AArch64GISelMITest, LibcallFMinNum) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FMINNUM).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FMINNUM).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBMin32 = B.buildFMinNum(S32, MIBTrunc, MIBTrunc);
-  auto MIBMin64 = B.buildFMinNum(S64, Copies[0], Copies[0]);
-  auto MIBMin128 = B.buildFMinNum(S128, MIBExt, MIBExt);
+  auto MIBMin32 = B.buildFMinNum(F32, BCF32, BCF32);
+  auto MIBMin64 = B.buildFMinNum(F64, BCF64, BCF64);
+  auto MIBMin128 = B.buildFMinNum(F128, BCF128, BCF128);
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2946,9 +2969,9 @@ TEST_F(AArch64GISelMITest, LibcallFMinNum) {
             Helper.libcall(*MIBMin128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &fminf
@@ -2971,22 +2994,25 @@ TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FMAXNUM).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FMAXNUM).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBMax32 = B.buildFMaxNum(S32, MIBTrunc, MIBTrunc);
-  auto MIBMax64 = B.buildFMaxNum(S64, Copies[0], Copies[0]);
-  auto MIBMax128 = B.buildFMaxNum(S128, MIBExt, MIBExt);
+  auto MIBMax32 = B.buildFMaxNum(F32, BCF32, BCF32);
+  auto MIBMax64 = B.buildFMaxNum(F64, BCF64, BCF64);
+  auto MIBMax128 = B.buildFMaxNum(F128, BCF128, BCF128);
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2997,9 +3023,9 @@ TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
             Helper.libcall(*MIBMax128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: $s1 = COPY [[TRUNC]]
   CHECK: BL &fmaxf
@@ -3022,22 +3048,25 @@ TEST_F(AArch64GISelMITest, LibcallFSqrt) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FSQRT).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FSQRT).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBSqrt32 = B.buildInstr(TargetOpcode::G_FSQRT, {S32}, {MIBTrunc});
-  auto MIBSqrt64 = B.buildInstr(TargetOpcode::G_FSQRT, {S64}, {Copies[0]});
-  auto MIBSqrt128 = B.buildInstr(TargetOpcode::G_FSQRT, {S128}, {MIBExt});
+  auto MIBSqrt32 = B.buildInstr(TargetOpcode::G_FSQRT, {F32}, {BCF32});
+  auto MIBSqrt64 = B.buildInstr(TargetOpcode::G_FSQRT, {F64}, {BCF64});
+  auto MIBSqrt128 = B.buildInstr(TargetOpcode::G_FSQRT, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3048,9 +3077,9 @@ TEST_F(AArch64GISelMITest, LibcallFSqrt) {
             Helper.libcall(*MIBSqrt128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &sqrtf
   CHECK: $d0 = COPY [[COPY]]
@@ -3070,22 +3099,25 @@ TEST_F(AArch64GISelMITest, LibcallFRint) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FRINT).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FRINT).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
-  auto MIBRint32 = B.buildInstr(TargetOpcode::G_FRINT, {S32}, {MIBTrunc});
-  auto MIBRint64 = B.buildInstr(TargetOpcode::G_FRINT, {S64}, {Copies[0]});
-  auto MIBRint128 = B.buildInstr(TargetOpcode::G_FRINT, {S128}, {MIBExt});
+  auto MIBRint32 = B.buildInstr(TargetOpcode::G_FRINT, {F32}, {BCF32});
+  auto MIBRint64 = B.buildInstr(TargetOpcode::G_FRINT, {F64}, {BCF64});
+  auto MIBRint128 = B.buildInstr(TargetOpcode::G_FRINT, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3096,9 +3128,9 @@ TEST_F(AArch64GISelMITest, LibcallFRint) {
             Helper.libcall(*MIBRint128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &rintf
   CHECK: $d0 = COPY [[COPY]]
@@ -3118,25 +3150,28 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
-    getActionDefinitionsBuilder(G_FNEARBYINT).libcallFor({s32, s64, s128});
+    getActionDefinitionsBuilder(G_FNEARBYINT).libcallFor({f32, f64, f128});
   });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
-  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+  LLT F32{LLT::float32()};
+  LLT F64{LLT::float64()};
+  LLT F128{LLT::float128()};
+  auto MIBTrunc = B.buildTrunc(LLT::integer(32), Copies[0]);
+  auto MIBExt = B.buildAnyExt(LLT::integer(128), Copies[0]);
+  auto BCF32 = B.buildBitcast(F32, MIBTrunc);
+  auto BCF64 = B.buildBitcast(F64, Copies[0]);
+  auto BCF128 = B.buildBitcast(F128, MIBExt);
 
   auto MIBNearbyInt32 =
-      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S32}, {MIBTrunc});
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {F32}, {BCF32});
   auto MIBNearbyInt64 =
-      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S64}, {Copies[0]});
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {F64}, {BCF64});
   auto MIBNearbyInt128 =
-      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S128}, {MIBExt});
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {F128}, {BCF128});
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   LostDebugLocObserver DummyLocObserver("");
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3147,9 +3182,9 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
             Helper.libcall(*MIBNearbyInt128, DummyLocObserver));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: [[TRUNC:%[0-9]+]]:_(f32) = G_BITCAST
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[ANYEXT:%[0-9]+]]:_(f128) = G_BITCAST
   CHECK: $s0 = COPY [[TRUNC]]
   CHECK: BL &nearbyintf
   CHECK: $d0 = COPY [[COPY]]
@@ -3173,15 +3208,15 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
     getActionDefinitionsBuilder(G_EXTRACT).legalForTypeWithAnyImm({{s16, s32}});
   });
 
-  LLT S16{LLT::scalar(16)};
-  LLT S32{LLT::scalar(32)};
+  LLT S16{LLT::integer(16)};
+  LLT S32{LLT::integer(32)};
 
   auto MIBExtractS32 = B.buildExtract(S32, Copies[1], 32);
   auto MIBExtractS16 = B.buildExtract(S16, Copies[1], 0);
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*MIBExtractS32, 1, S32));
@@ -3190,11 +3225,11 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
             Helper.narrowScalar(*MIBExtractS16, 1, S32));
 
   const auto *CheckStr = R"(
-  CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES
-  CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[UV1]]
-  CHECK: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES
-  CHECK: [[EXTR:%[0-9]+]]:_(s16) = G_EXTRACT [[UV3]]:_(s32), 0
-  CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY [[EXTR]]
+  CHECK: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
+  CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY [[UV1]]
+  CHECK: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
+  CHECK: [[EXTR:%[0-9]+]]:_(s16) = G_EXTRACT [[UV3]]:_(i32), 0
+  CHECK: [[COPY:%[0-9]+]]:_(i16) = COPY [[EXTR]]
   )";
 
   // Check
@@ -3209,11 +3244,11 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
   // Declare your legalization info
   DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_INSERT).lower(); });
 
-  LLT S32{LLT::scalar(32)};
-  LLT S64{LLT::scalar(64)};
+  LLT S32{LLT::integer(32)};
+  LLT S64{LLT::integer(64)};
   LLT P0{LLT::pointer(0, 64)};
   LLT P1{LLT::pointer(1, 32)};
-  LLT V2S32{LLT::fixed_vector(2, 32)};
+  LLT V2S32{LLT::fixed_vector(2, LLT::integer(32))};
 
   auto TruncS32 = B.buildTrunc(S32, Copies[0]);
   auto IntToPtrP0 = B.buildIntToPtr(P0, Copies[0]);
@@ -3229,7 +3264,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertS64S32, 0, LLT{}));
@@ -3246,27 +3281,27 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertV2S32S32, 0, LLT{}));
 
-  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertV2S32P1, 0, LLT{}));
 
   const auto *CheckStr = R"(
-  CHECK: [[S64:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[S32:%[0-9]+]]:_(s32) = G_TRUNC [[S64]]
+  CHECK: [[S64:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[S32:%[0-9]+]]:_(i32) = G_TRUNC [[S64]]
   CHECK: [[P0:%[0-9]+]]:_(p0) = G_INTTOPTR [[S64]]
   CHECK: [[P1:%[0-9]+]]:_(p1) = G_INTTOPTR [[S32]]
-  CHECK: [[V2S32:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[S64]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[S32]]
-  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
-  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[S64]]:_, [[C]]:_
-  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[ZEXT]]:_
+  CHECK: [[V2S32:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[S64]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[S32]]
+  CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(i64) = G_AND [[S64]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(i64) = G_OR [[AND]]:_, [[ZEXT]]:_
 
   CHECK: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[P1]]
-  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]]
-  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
-  CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]]:_, [[C]]:_(s64)
-  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
-  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[S64]]:_, [[C]]:_
-  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
+  CHECK: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[PTRTOINT]]
+  CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT
+  CHECK: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[ZEXT]]:_, [[C]]:_(i64)
+  CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(i64) = G_AND [[S64]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(i64) = G_OR [[AND]]:_, [[SHL]]:_
 
   CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[P0]]
   CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[S32]]
@@ -3287,8 +3322,12 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
   CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
   CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[OR]]
 
-  CHECK: [[V2S32_E0:%[0-9]+]]:_(s32), [[V2S32_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[V2S32]]
-  CHECK: [[BV:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[V2S32_E0]]:_(s32), [[S32]]:_(s32)
+  CHECK: [[V2S32_E0:%[0-9]+]]:_(i32), [[V2S32_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[V2S32]]
+  CHECK: [[BV:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[V2S32_E0]]:_(i32), [[S32]]:_(i32)
+
+  CHECK: [[V2S32_E0:%[0-9]+]]:_(i32), [[V2S32_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[V2S32]]
+  CHECK: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[P1]]
+  CHECK: [[BV:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[PTRTOINT]]:_(i32), [[V2S32_E1]]:_(i32)
   )";
 
   // Check
@@ -3304,22 +3343,24 @@ TEST_F(AArch64GISelMITest, LowerFFloor) {
   // Declare your legalization info
   DefineLegalizerInfo(A, {});
   // Build Instr
-  auto Floor = B.buildFFloor(LLT::scalar(64), Copies[0], MachineInstr::MIFlag::FmNoInfs);
+  auto BitcastF64 = B.buildBitcast(LLT::float64(), Copies[0]);
+  auto Floor =
+      B.buildFFloor(LLT::float64(), BitcastF64, MachineInstr::MIFlag::FmNoInfs);
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*Floor, 0, LLT()));
 
   auto CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s64) = ninf G_INTRINSIC_TRUNC [[COPY]]
-  CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  CHECK: [[CMP0:%[0-9]+]]:_(s1) = ninf G_FCMP floatpred(olt), [[COPY]]:_(s64), [[ZERO]]:_
-  CHECK: [[CMP1:%[0-9]+]]:_(s1) = ninf G_FCMP floatpred(one), [[COPY]]:_(s64), [[TRUNC]]:_
-  CHECK: [[AND:%[0-9]+]]:_(s1) = G_AND [[CMP0]]:_, [[CMP1]]:_
-  CHECK: [[ITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[AND]]
+  CHECK: [[COPY:%[0-9]+]]:_(f64) = G_BITCAST
+  CHECK: [[TRUNC:%[0-9]+]]:_(f64) = ninf G_INTRINSIC_TRUNC [[COPY]]
+  CHECK: [[ZERO:%[0-9]+]]:_(f64) = G_FCONSTANT double 0.000000e+00
+  CHECK: [[CMP0:%[0-9]+]]:_(i1) = ninf G_FCMP floatpred(olt), [[COPY]]:_(f64), [[ZERO]]:_
+  CHECK: [[CMP1:%[0-9]+]]:_(i1) = ninf G_FCMP floatpred(one), [[COPY]]:_(f64), [[TRUNC]]:_
+  CHECK: [[AND:%[0-9]+]]:_(i1) = G_AND [[CMP0]]:_, [[CMP1]]:_
+  CHECK: [[ITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[AND]]
   = ninf G_FADD [[TRUNC]]:_, [[ITOFP]]:_
   )";
 
@@ -3336,36 +3377,64 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   DefineLegalizerInfo(A, {});
 
   // Make sure vector lowering doesn't assert.
-  auto Cast = B.buildBitcast(LLT::fixed_vector(2, 32), Copies[0]);
-  auto BSwap = B.buildBSwap(LLT::fixed_vector(2, 32), Cast);
+  auto Cast = B.buildBitcast(LLT::fixed_vector(2, LLT::integer(32)), Copies[0]);
+  auto BSwap = B.buildBSwap(LLT::fixed_vector(2, LLT::integer(32)), Cast);
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*BSwap, 0, LLT()));
 
   auto CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
-  CHECK: [[K24:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  CHECK: [[SPLAT24:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[K24]]:_(s32), [[K24]]:_(s32)
-  CHECK: [[SHL0:%[0-9]+]]:_(<2 x s32>) = G_SHL [[VEC]]:_, [[SPLAT24]]
-  CHECK: [[SHR0:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[VEC]]:_, [[SPLAT24]]
-  CHECK: [[OR0:%[0-9]+]]:_(<2 x s32>) = G_OR [[SHR0]]:_, [[SHL0]]:_
-  CHECK: [[KMASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 65280
-  CHECK: [[SPLATMASK:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[KMASK]]:_(s32), [[KMASK]]:_(s32)
-  CHECK: [[K8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  CHECK: [[SPLAT8:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[K8]]:_(s32), [[K8]]:_(s32)
-  CHECK: [[AND0:%[0-9]+]]:_(<2 x s32>) = G_AND [[VEC]]:_, [[SPLATMASK]]:_
-  CHECK: [[SHL1:%[0-9]+]]:_(<2 x s32>) = G_SHL [[AND0]]:_, [[SPLAT8]]
-  CHECK: [[OR1:%[0-9]+]]:_(<2 x s32>) = G_OR [[OR0]]:_, [[SHL1]]:_
-  CHECK: [[SHR1:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[VEC]]:_, [[SPLAT8]]
-  CHECK: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[SHR1]]:_, [[SPLATMASK]]:_
-  CHECK: [[BSWAP:%[0-9]+]]:_(<2 x s32>) = G_OR [[OR1]]:_, [[AND1]]:_
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[VEC:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]]
+  CHECK: [[K24:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+  CHECK: [[SPLAT24:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[K24]]:_(i32), [[K24]]:_(i32)
+  CHECK: [[SHL0:%[0-9]+]]:_(<2 x i32>) = G_SHL [[VEC]]:_, [[SPLAT24]]
+  CHECK: [[SHR0:%[0-9]+]]:_(<2 x i32>) = G_LSHR [[VEC]]:_, [[SPLAT24]]
+  CHECK: [[OR0:%[0-9]+]]:_(<2 x i32>) = G_OR [[SHR0]]:_, [[SHL0]]:_
+  CHECK: [[KMASK:%[0-9]+]]:_(i32) = G_CONSTANT i32 65280
+  CHECK: [[SPLATMASK:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[KMASK]]:_(i32), [[KMASK]]:_(i32)
+  CHECK: [[K8:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  CHECK: [[SPLAT8:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[K8]]:_(i32), [[K8]]:_(i32)
+  CHECK: [[AND0:%[0-9]+]]:_(<2 x i32>) = G_AND [[VEC]]:_, [[SPLATMASK]]:_
+  CHECK: [[SHL1:%[0-9]+]]:_(<2 x i32>) = G_SHL [[AND0]]:_, [[SPLAT8]]
+  CHECK: [[OR1:%[0-9]+]]:_(<2 x i32>) = G_OR [[OR0]]:_, [[SHL1]]:_
+  CHECK: [[SHR1:%[0-9]+]]:_(<2 x i32>) = G_LSHR [[VEC]]:_, [[SPLAT8]]
+  CHECK: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[SHR1]]:_, [[SPLATMASK]]:_
+  CHECK: [[BSWAP:%[0-9]+]]:_(<2 x i32>) = G_OR [[OR1]]:_, [[AND1]]:_
   )";
 
   // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test lowering of scalar s64 G_BSWAP.
+TEST_F(AArch64GISelMITest, LowerBSWAPScalarS64) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {});
+
+  auto BSwap = B.buildBSwap(LLT::integer(64), Copies[0]);
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*BSwap, 0, LLT()));
+
+  // Per-byte AND masks the lowering loop emits for i = 1, 2, 3:
+  //   0x000000000000FF00 =     65280
+  //   0x0000000000FF0000 =  16711680
+  //   0x00000000FF000000 = 4278190080
+  auto CheckStr = R"(
+  CHECK-DAG: G_CONSTANT i64 65280
+  CHECK-DAG: G_CONSTANT i64 16711680
+  CHECK-DAG: G_CONSTANT i64 4278190080
+  )";
+
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
@@ -3379,7 +3448,7 @@ TEST_F(AArch64GISelMITest, LowerSDIVREM) {
   DefineLegalizerInfo(
       A, { getActionDefinitionsBuilder(G_SDIVREM).lowerFor({s64}); });
 
-  LLT S64{LLT::scalar(64)};
+  LLT S64{LLT::integer(64)};
 
   // Build Instr
   auto SDivrem =
@@ -3392,8 +3461,8 @@ TEST_F(AArch64GISelMITest, LowerSDIVREM) {
             Helper.lower(*SDivrem, 0, S64));
 
   const auto *CheckStr = R"(
-  CHECK: [[DIV:%[0-9]+]]:_(s64) = G_SDIV %0:_, %1:_
-  CHECK: [[REM:%[0-9]+]]:_(s64) = G_SREM %0:_, %1:_
+  CHECK: [[DIV:%[0-9]+]]:_(i64) = G_SDIV %0:_, %1:_
+  CHECK: [[REM:%[0-9]+]]:_(i64) = G_SREM %0:_, %1:_
   )";
 
   // Check
@@ -3410,21 +3479,21 @@ TEST_F(AArch64GISelMITest, LowerUDIVREM) {
   DefineLegalizerInfo(
       A, { getActionDefinitionsBuilder(G_UDIVREM).lowerFor({s64}); });
 
-  LLT S64{LLT::scalar(64)};
+  LLT S64{LLT::integer(64)};
 
   // Build Instr
   auto UDivrem =
       B.buildInstr(TargetOpcode::G_UDIVREM, {S64, S64}, {Copies[0], Copies[1]});
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*UDivrem, 0, S64));
 
   const auto *CheckStr = R"(
-  CHECK: [[DIV:%[0-9]+]]:_(s64) = G_UDIV %0:_, %1:_
-  CHECK: [[REM:%[0-9]+]]:_(s64) = G_UREM %0:_, %1:_
+  CHECK: [[DIV:%[0-9]+]]:_(i64) = G_UDIV %0:_, %1:_
+  CHECK: [[REM:%[0-9]+]]:_(i64) = G_UREM %0:_, %1:_
   )";
 
   // Check
@@ -3442,8 +3511,8 @@ TEST_F(AArch64GISelMITest, LowerSelect) {
   // Declare your legalization info
   DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_SELECT).lower(); });
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
   auto Tst = B.buildTrunc(S1, Copies[0]);
   auto SrcA = B.buildTrunc(S32, Copies[1]);
   auto SrcB = B.buildTrunc(S32, Copies[2]);
@@ -3451,21 +3520,21 @@ TEST_F(AArch64GISelMITest, LowerSelect) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*SELECT, 0, S32));
 
   auto CheckStr = R"(
-  CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC
-  CHECK: [[TRUE:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[FALSE:%[0-9]+]]:_(s32) = G_TRUNC
-  CHECK: [[MSK:%[0-9]+]]:_(s32) = G_SEXT [[TST]]
-  CHECK: [[M:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  CHECK: [[NEGMSK:%[0-9]+]]:_(s32) = G_XOR [[MSK]]:_, [[M]]:_
-  CHECK: [[TVAL:%[0-9]+]]:_(s32) = G_AND [[TRUE]]:_, [[MSK]]:_
-  CHECK: [[FVAL:%[0-9]+]]:_(s32) = G_AND [[FALSE]]:_, [[NEGMSK]]:_
-  CHECK: [[RES:%[0-9]+]]:_(s32) = G_OR [[TVAL]]:_, [[FVAL]]:_
+  CHECK: [[TST:%[0-9]+]]:_(i1) = G_TRUNC
+  CHECK: [[TRUE:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[FALSE:%[0-9]+]]:_(i32) = G_TRUNC
+  CHECK: [[MSK:%[0-9]+]]:_(i32) = G_SEXT [[TST]]
+  CHECK: [[M:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
+  CHECK: [[NEGMSK:%[0-9]+]]:_(i32) = G_XOR [[MSK]]:_, [[M]]:_
+  CHECK: [[TVAL:%[0-9]+]]:_(i32) = G_AND [[TRUE]]:_, [[MSK]]:_
+  CHECK: [[FVAL:%[0-9]+]]:_(i32) = G_AND [[FALSE]]:_, [[NEGMSK]]:_
+  CHECK: [[RES:%[0-9]+]]:_(i32) = G_OR [[TVAL]]:_, [[FVAL]]:_
   )";
 
   // Check
@@ -3483,8 +3552,8 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
   // Check that widening G_UNMERGE_VALUES to a larger type than the source type
   // works as expected
   LLT P0{LLT::pointer(0, 64)};
-  LLT S32{LLT::scalar(32)};
-  LLT S96{LLT::scalar(96)};
+  LLT S32{LLT::integer(32)};
+  LLT S96{LLT::integer(96)};
 
   auto IntToPtr = B.buildIntToPtr(P0, Copies[0]);
   auto UnmergePtr = B.buildUnmerge(S32, IntToPtr);
@@ -3492,7 +3561,7 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
-  LegalizerHelper Helper(*MF, Info, Observer, B);
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
 
   // Perform Legalization
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -3502,19 +3571,19 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
             Helper.widenScalar(*UnmergeScalar, 0, S96));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
   CHECK: [[PTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]]
   CHECK: [[INT:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR]]
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[INT]]
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]]
-  CHECK: [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 32
-  CHECK: [[LSHR:%[0-9]+]]:_(s96) = G_LSHR [[ANYEXT]]:_, [[C]]
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]]
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[COPY]]
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]]
-  CHECK: [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 32
-  CHECK: [[LSHR:%[0-9]+]]:_(s96) = G_LSHR [[ANYEXT]]:_, [[C]]
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i96) = G_ANYEXT [[INT]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[ANYEXT]]
+  CHECK: [[C:%[0-9]+]]:_(i96) = G_CONSTANT i96 32
+  CHECK: [[LSHR:%[0-9]+]]:_(i96) = G_LSHR [[ANYEXT]]:_, [[C]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i96) = G_ANYEXT [[COPY]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[ANYEXT]]
+  CHECK: [[C:%[0-9]+]]:_(i96) = G_CONSTANT i96 32
+  CHECK: [[LSHR:%[0-9]+]]:_(i96) = G_LSHR [[ANYEXT]]:_, [[C]]
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]]
   )";
 
   // Check
@@ -3527,8 +3596,8 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
     GTEST_SKIP();
 
   LLT P0 = LLT::pointer(0, 64);
-  LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::fixed_vector(4, 8);
+  LLT S32 = LLT::integer(32);
+  LLT V4S8 = LLT::fixed_vector(4, LLT::integer(8));
   auto Ptr = B.buildUndef(P0);
 
   DefineLegalizerInfo(A, {});
@@ -3546,8 +3615,8 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 
   auto CheckStr = R"(
   CHECK: [[PTR:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD
-  CHECK: [[CAST:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[LOAD]]
+  CHECK: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD
+  CHECK: [[CAST:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[LOAD]]
 
   )";
 
@@ -3561,8 +3630,8 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
     GTEST_SKIP();
 
   LLT P0 = LLT::pointer(0, 64);
-  LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::fixed_vector(4, 8);
+  LLT S32 = LLT::integer(32);
+  LLT V4S8 = LLT::fixed_vector(4, LLT::integer(8));
   auto Ptr = B.buildUndef(P0);
 
   DefineLegalizerInfo(A, {});
@@ -3580,8 +3649,8 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
             Helper.bitcast(*Store, 0, S32));
 
   auto CheckStr = R"(
-  CHECK: [[VAL:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-  CHECK: [[CAST:%[0-9]+]]:_(s32) = G_BITCAST [[VAL]]
+  CHECK: [[VAL:%[0-9]+]]:_(<4 x i8>) = G_IMPLICIT_DEF
+  CHECK: [[CAST:%[0-9]+]]:_(i32) = G_BITCAST [[VAL]]
   CHECK: G_STORE [[CAST]]
   )";
 
@@ -3594,9 +3663,9 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S1 = LLT::scalar(1);
-  LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::fixed_vector(4, 8);
+  LLT S1 = LLT::integer(1);
+  LLT S32 = LLT::integer(32);
+  LLT V4S8 = LLT::fixed_vector(4, LLT::integer(8));
 
   DefineLegalizerInfo(A, {});
 
@@ -3614,26 +3683,26 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
             Helper.bitcast(*Select, 0, S32));
 
   auto CheckStr = R"(
-  CHECK: [[VAL0:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR
-  CHECK: [[VAL1:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR
-  CHECK: [[CAST0:%[0-9]+]]:_(s32) = G_BITCAST [[VAL0]]
-  CHECK: [[CAST1:%[0-9]+]]:_(s32) = G_BITCAST [[VAL1]]
-  CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT %{{[0-9]+}}:_(s1), [[CAST0]]:_, [[CAST1]]:_
-  CHECK: [[CAST2:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[SELECT]]
+  CHECK: [[VAL0:%[0-9]+]]:_(<4 x i8>) = G_BUILD_VECTOR
+  CHECK: [[VAL1:%[0-9]+]]:_(<4 x i8>) = G_BUILD_VECTOR
+  CHECK: [[CAST0:%[0-9]+]]:_(i32) = G_BITCAST [[VAL0]]
+  CHECK: [[CAST1:%[0-9]+]]:_(i32) = G_BITCAST [[VAL1]]
+  CHECK: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT %{{[0-9]+}}:_(i1), [[CAST0]]:_, [[CAST1]]:_
+  CHECK: [[CAST2:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[SELECT]]
   )";
 
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 
   // Doesn't make sense
-  auto VCond = B.buildUndef(LLT::fixed_vector(4, 1));
+  auto VCond = B.buildUndef(LLT::fixed_vector(4, LLT::integer(1)));
   auto VSelect = B.buildSelect(V4S8, VCond, Val0, Val1);
 
   B.setInsertPt(*EntryMBB, VSelect->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
             Helper.bitcast(*VSelect, 0, S32));
   EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
-            Helper.bitcast(*VSelect, 1, LLT::scalar(4)));
+            Helper.bitcast(*VSelect, 1, LLT::integer(4)));
 }
 
 TEST_F(AArch64GISelMITest, BitcastBitOps) {
@@ -3641,8 +3710,8 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::fixed_vector(4, 8);
+  LLT S32 = LLT::integer(32);
+  LLT V4S8 = LLT::fixed_vector(4, LLT::integer(8));
 
   DefineLegalizerInfo(A, {});
 
@@ -3668,20 +3737,20 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
             Helper.bitcast(*Xor, 0, S32));
 
   auto CheckStr = R"(
-  CHECK: [[VAL0:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR
-  CHECK: [[VAL1:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR
-  CHECK: [[CAST0:%[0-9]+]]:_(s32) = G_BITCAST [[VAL0]]
-  CHECK: [[CAST1:%[0-9]+]]:_(s32) = G_BITCAST [[VAL1]]
-  CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[CAST0]]:_, [[CAST1]]:_
-  CHECK: [[CAST_AND:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[AND]]
-  CHECK: [[CAST2:%[0-9]+]]:_(s32) = G_BITCAST [[VAL0]]
-  CHECK: [[CAST3:%[0-9]+]]:_(s32) = G_BITCAST [[VAL1]]
-  CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[CAST2]]:_, [[CAST3]]:_
-  CHECK: [[CAST_OR:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[OR]]
-  CHECK: [[CAST4:%[0-9]+]]:_(s32) = G_BITCAST [[VAL0]]
-  CHECK: [[CAST5:%[0-9]+]]:_(s32) = G_BITCAST [[VAL1]]
-  CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[CAST4]]:_, [[CAST5]]:_
-  CHECK: [[CAST_XOR:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[XOR]]
+  CHECK: [[VAL0:%[0-9]+]]:_(<4 x i8>) = G_BUILD_VECTOR
+  CHECK: [[VAL1:%[0-9]+]]:_(<4 x i8>) = G_BUILD_VECTOR
+  CHECK: [[CAST0:%[0-9]+]]:_(i32) = G_BITCAST [[VAL0]]
+  CHECK: [[CAST1:%[0-9]+]]:_(i32) = G_BITCAST [[VAL1]]
+  CHECK: [[AND:%[0-9]+]]:_(i32) = G_AND [[CAST0]]:_, [[CAST1]]:_
+  CHECK: [[CAST_AND:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[AND]]
+  CHECK: [[CAST2:%[0-9]+]]:_(i32) = G_BITCAST [[VAL0]]
+  CHECK: [[CAST3:%[0-9]+]]:_(i32) = G_BITCAST [[VAL1]]
+  CHECK: [[OR:%[0-9]+]]:_(i32) = G_OR [[CAST2]]:_, [[CAST3]]:_
+  CHECK: [[CAST_OR:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[OR]]
+  CHECK: [[CAST4:%[0-9]+]]:_(i32) = G_BITCAST [[VAL0]]
+  CHECK: [[CAST5:%[0-9]+]]:_(i32) = G_BITCAST [[VAL1]]
+  CHECK: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[CAST4]]:_, [[CAST5]]:_
+  CHECK: [[CAST_XOR:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[XOR]]
   )";
 
   // Check
@@ -3701,10 +3770,11 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   auto *RetTy = Type::getVoidTy(Ctx);
+  LegalizerHelper Helper(*MF, Info, Observer, B);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
-                          DummyLocObserver, nullptr));
+            Helper.createLibcall("abort", {{}, RetTy, 0}, {}, CallingConv::C,
+                                 DummyLocObserver, nullptr));
 
   auto CheckStr = R"(
   CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -3726,10 +3796,10 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
 
   // Make sure that G_IMPLICIT_DEF can be narrowed if the original size is not a
   // multiple of narrow size
-  LLT S32{LLT::scalar(32)};
-  LLT S48{LLT::scalar(48)};
-  LLT S64{LLT::scalar(64)};
-  LLT V2S64{{LLT::fixed_vector(2, 64)}};
+  LLT S32{LLT::integer(32)};
+  LLT S48{LLT::integer(48)};
+  LLT S64{LLT::integer(64)};
+  LLT V2S64{{LLT::fixed_vector(2, LLT::integer(64))}};
 
   auto Implicit1 = B.buildUndef(S64);
   auto Implicit2 = B.buildUndef(S64);
@@ -3759,21 +3829,21 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
             Helper.narrowScalar(*Implicit4, 0, S32));
 
   const auto *CheckStr = R"(
-  CHECK: [[DEF:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[DEF]]
+  CHECK: [[DEF:%[0-9]+]]:_(i48) = G_IMPLICIT_DEF
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[DEF]]
 
-  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]]:_(s32), [[DEF1]]
+  CHECK: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[DEF]]:_(i32), [[DEF1]]
 
-  CHECK: [[DEF:%[0-9]+]]:_(<2 x s48>) = G_IMPLICIT_DEF
-  CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[DEF]]
+  CHECK: [[DEF:%[0-9]+]]:_(<2 x i48>) = G_IMPLICIT_DEF
+  CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x i64>) = G_ANYEXT [[DEF]]
 
-  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[BV:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]]:_(s32), [[DEF1]]:_(s32), [[DEF2]]:_(s32), [[DEF3]]:_(s32)
+  CHECK: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[DEF2:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[DEF3:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[BV:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[DEF]]:_(i32), [[DEF1]]:_(i32), [[DEF2]]:_(i32), [[DEF3]]:_(i32)
   )";
 
   // Check
@@ -3789,10 +3859,10 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
   DefineLegalizerInfo(A, {});
 
   // Make sure that G_FREEZE is widened with anyext
-  LLT S64{LLT::scalar(64)};
-  LLT S128{LLT::scalar(128)};
-  LLT V2S32{LLT::fixed_vector(2, 32)};
-  LLT V2S64{LLT::fixed_vector(2, 64)};
+  LLT S64{LLT::integer(64)};
+  LLT S128{LLT::integer(128)};
+  LLT V2S32{LLT::fixed_vector(2, LLT::integer(32))};
+  LLT V2S64{LLT::fixed_vector(2, LLT::integer(64))};
 
   auto Vector = B.buildBitcast(V2S32, Copies[0]);
 
@@ -3814,16 +3884,16 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
             Helper.widenScalar(*FreezeVector, 0, V2S64));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]]
 
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[COPY]]
-  CHECK: [[FREEZE:%[0-9]+]]:_(s128) = G_FREEZE [[ANYEXT]]
-  CHECK: [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[FREEZE]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i128) = G_ANYEXT [[COPY]]
+  CHECK: [[FREEZE:%[0-9]+]]:_(i128) = G_FREEZE [[ANYEXT]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(i64) = G_TRUNC [[FREEZE]]
 
-  CHECK: [[ANYEXT1:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[BITCAST]]
-  CHECK: [[FREEZE1:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[ANYEXT1]]
-  CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[FREEZE1]]
+  CHECK: [[ANYEXT1:%[0-9]+]]:_(<2 x i64>) = G_ANYEXT [[BITCAST]]
+  CHECK: [[FREEZE1:%[0-9]+]]:_(<2 x i64>) = G_FREEZE [[ANYEXT1]]
+  CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x i32>) = G_TRUNC [[FREEZE1]]
   )";
 
   // Check
@@ -3839,13 +3909,13 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
   DefineLegalizerInfo(A, {});
 
   // Make sure that G_FREEZE is narrowed using unmerge/extract
-  LLT S32{LLT::scalar(32)};
-  LLT S33{LLT::scalar(33)};
-  LLT S48{LLT::scalar(48)};
-  LLT S64{LLT::scalar(64)};
-  LLT V2S16{LLT::fixed_vector(2, 16)};
-  LLT V3S16{LLT::fixed_vector(3, 16)};
-  LLT V4S16{LLT::fixed_vector(4, 16)};
+  LLT S32{LLT::integer(32)};
+  LLT S33{LLT::integer(33)};
+  LLT S48{LLT::integer(48)};
+  LLT S64{LLT::integer(64)};
+  LLT V2S16{LLT::fixed_vector(2, LLT::integer(16))};
+  LLT V3S16{LLT::fixed_vector(3, LLT::integer(16))};
+  LLT V4S16{LLT::fixed_vector(4, LLT::integer(16))};
 
   auto Trunc = B.buildTrunc(S33, {Copies[0]});
   auto Trunc1 = B.buildTrunc(S48, {Copies[0]});
@@ -3881,33 +3951,33 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
             Helper.moreElementsVector(*FreezeVector1, 0, V4S16));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[TRUNC:%[0-9]+]]:_(s33) = G_TRUNC [[COPY]]
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s48) = G_TRUNC [[COPY]]
-  CHECK: [[BITCAST:%[0-9]+]]:_(<3 x s16>) = G_BITCAST [[TRUNC1]]
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(i33) = G_TRUNC [[COPY]]
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i48) = G_TRUNC [[COPY]]
+  CHECK: [[BITCAST:%[0-9]+]]:_(<3 x i16>) = G_BITCAST [[TRUNC1]]
 
-  CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]]
-  CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[UV]]
-  CHECK: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[UV1]]
-  CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FREEZE]]:_(s32), [[FREEZE1]]
+  CHECK: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]]
+  CHECK: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[UV]]
+  CHECK: [[FREEZE1:%[0-9]+]]:_(i32) = G_FREEZE [[UV1]]
+  CHECK: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[FREEZE]]:_(i32), [[FREEZE1]]
 
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]]
-  CHECK: [[FREEZE2:%[0-9]+]]:_(s64) = G_FREEZE [[ANYEXT]]
-  CHECK: [[TRUNC1:%[0-9]+]]:_(s33) = G_TRUNC [[FREEZE2]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[TRUNC]]
+  CHECK: [[FREEZE2:%[0-9]+]]:_(i64) = G_FREEZE [[ANYEXT]]
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i33) = G_TRUNC [[FREEZE2]]
 
-  CHECK: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[BITCAST]]
-  CHECK: [[BV:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[UV2]]:_(s16), [[UV3]]:_(s16)
-  CHECK: [[FREEZE3:%[0-9]+]]:_(<2 x s16>) = G_FREEZE [[BV]]
-  CHECK: [[FREEZE4:%[0-9]+]]:_(s16) = G_FREEZE [[UV4]]
-  CHECK: [[FREEZE3_E0:%[0-9]+]]:_(s16), [[FREEZE3_E1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[FREEZE3]]
-  CHECK: [[BV1:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FREEZE3_E0]]:_(s16), [[FREEZE3_E1]]:_(s16), [[FREEZE4]]:_(s16)
+  CHECK: [[UV2:%[0-9]+]]:_(i16), [[UV3:%[0-9]+]]:_(i16), [[UV4:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[BITCAST]]
+  CHECK: [[BV:%[0-9]+]]:_(<2 x i16>) = G_BUILD_VECTOR [[UV2]]:_(i16), [[UV3]]:_(i16)
+  CHECK: [[FREEZE3:%[0-9]+]]:_(<2 x i16>) = G_FREEZE [[BV]]
+  CHECK: [[FREEZE4:%[0-9]+]]:_(i16) = G_FREEZE [[UV4]]
+  CHECK: [[FREEZE3_E0:%[0-9]+]]:_(i16), [[FREEZE3_E1:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[FREEZE3]]
+  CHECK: [[BV1:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[FREEZE3_E0]]:_(i16), [[FREEZE3_E1]]:_(i16), [[FREEZE4]]:_(i16)
 
-  CHECK: [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[BITCAST]]
-  CHECK: [[IMP_DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  CHECK: [[BV1:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV5]]:_(s16), [[UV6]]:_(s16), [[UV7]]:_(s16), [[IMP_DEF]]:_(s16)
-  CHECK: [[FREEZE5:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[BV1]]
-  CHECK: [[FREEZE5_E0:%[0-9]+]]:_(s16), [[FREEZE5_E1:%[0-9]+]]:_(s16), [[FREEZE5_E2:%[0-9]+]]:_(s16), [[FREEZE5_E3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[FREEZE5]]
-  CHECK: [[BV2:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FREEZE5_E0]]:_(s16), [[FREEZE5_E1]]:_(s16), [[FREEZE5_E2]]:_(s16)
+  CHECK: [[UV5:%[0-9]+]]:_(i16), [[UV6:%[0-9]+]]:_(i16), [[UV7:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[BITCAST]]
+  CHECK: [[IMP_DEF:%[0-9]+]]:_(i16) = G_IMPLICIT_DEF
+  CHECK: [[BV1:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[UV5]]:_(i16), [[UV6]]:_(i16), [[UV7]]:_(i16), [[IMP_DEF]]:_(i16)
+  CHECK: [[FREEZE5:%[0-9]+]]:_(<4 x i16>) = G_FREEZE [[BV1]]
+  CHECK: [[FREEZE5_E0:%[0-9]+]]:_(i16), [[FREEZE5_E1:%[0-9]+]]:_(i16), [[FREEZE5_E2:%[0-9]+]]:_(i16), [[FREEZE5_E3:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[FREEZE5]]
+  CHECK: [[BV2:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[FREEZE5_E0]]:_(i16), [[FREEZE5_E1]]:_(i16), [[FREEZE5_E2]]:_(i16)
   )";
 
   // Check
@@ -3922,10 +3992,10 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT S32{LLT::scalar(32)};
-  LLT V2S16{LLT::fixed_vector(2, 16)};
-  LLT V2S32{LLT::fixed_vector(2, 32)};
-  LLT V4S16{LLT::fixed_vector(4, 16)};
+  LLT S32{LLT::integer(32)};
+  LLT V2S16{LLT::fixed_vector(2, LLT::integer(16))};
+  LLT V2S32{LLT::fixed_vector(2, LLT::integer(32))};
+  LLT V4S16{LLT::fixed_vector(4, LLT::integer(16))};
 
   auto Vector1 = B.buildBitcast(V2S32, Copies[0]);
   auto Vector2 = B.buildBitcast(V4S16, Copies[0]);
@@ -3948,19 +4018,19 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
             Helper.fewerElementsVector(*FreezeVector2, 0, V2S16));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
-  CHECK: [[BITCAST1:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[COPY]]
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]]
+  CHECK: [[BITCAST1:%[0-9]+]]:_(<4 x i16>) = G_BITCAST [[COPY]]
 
-  CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]]
-  CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[UV]]
-  CHECK: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[UV1]]
-  CHECK: [[MV:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FREEZE]]:_(s32), [[FREEZE1]]
+  CHECK: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]]
+  CHECK: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[UV]]
+  CHECK: [[FREEZE1:%[0-9]+]]:_(i32) = G_FREEZE [[UV1]]
+  CHECK: [[MV:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[FREEZE]]:_(i32), [[FREEZE1]]
 
-  CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BITCAST1]]
-  CHECK: [[FREEZE2:%[0-9]+]]:_(<2 x s16>) = G_FREEZE [[UV]]
-  CHECK: [[FREEZE3:%[0-9]+]]:_(<2 x s16>) = G_FREEZE [[UV1]]
-  CHECK: [[MV:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[FREEZE2]]:_(<2 x s16>), [[FREEZE3]]
+  CHECK: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[BITCAST1]]
+  CHECK: [[FREEZE2:%[0-9]+]]:_(<2 x i16>) = G_FREEZE [[UV]]
+  CHECK: [[FREEZE3:%[0-9]+]]:_(<2 x i16>) = G_FREEZE [[UV1]]
+  CHECK: [[MV:%[0-9]+]]:_(<4 x i16>) = G_CONCAT_VECTORS [[FREEZE2]]:_(<2 x i16>), [[FREEZE3]]
   )";
 
   // Check
@@ -3975,8 +4045,8 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT V2S32{LLT::fixed_vector(2, 32)};
-  LLT V4S32{LLT::fixed_vector(4, 32)};
+  LLT V2S32{LLT::fixed_vector(2, LLT::integer(32))};
+  LLT V4S32{LLT::fixed_vector(4, LLT::integer(32))};
 
   auto Vector1 = B.buildBitcast(V2S32, Copies[0]);
   auto FreezeVector1 = B.buildInstr(TargetOpcode::G_FREEZE, {V2S32}, {Vector1});
@@ -3991,14 +4061,14 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
             Helper.moreElementsVector(*FreezeVector1, 0, V4S32));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
-  CHECK: [[BITCAST_E0:%[0-9]+]]:_(s32), [[BITCAST_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]]:_(<2 x s32>)
-  CHECK: [[IMP_DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  CHECK: [[BITCAST_LARGE:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[BITCAST_E0]]:_(s32), [[BITCAST_E1]]:_(s32), [[IMP_DEF]]:_(s32), [[IMP_DEF]]:_(s32)
-  CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[BITCAST_LARGE]]
-  CHECK: [[FREEZE_E0:%[0-9]+]]:_(s32), [[FREEZE_E1:%[0-9]+]]:_(s32), [[FREEZE_E2:%[0-9]+]]:_(s32), [[FREEZE_E3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE]]:_(<4 x s32>)
-  CHECK: (<2 x s32>) = G_BUILD_VECTOR [[FREEZE_E0]]:_(s32), [[FREEZE_E1]]:_(s32)
+  CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]]
+  CHECK: [[BITCAST_E0:%[0-9]+]]:_(i32), [[BITCAST_E1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]]:_(<2 x i32>)
+  CHECK: [[IMP_DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  CHECK: [[BITCAST_LARGE:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[BITCAST_E0]]:_(i32), [[BITCAST_E1]]:_(i32), [[IMP_DEF]]:_(i32), [[IMP_DEF]]:_(i32)
+  CHECK: [[FREEZE:%[0-9]+]]:_(<4 x i32>) = G_FREEZE [[BITCAST_LARGE]]
+  CHECK: [[FREEZE_E0:%[0-9]+]]:_(i32), [[FREEZE_E1:%[0-9]+]]:_(i32), [[FREEZE_E2:%[0-9]+]]:_(i32), [[FREEZE_E3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[FREEZE]]:_(<4 x i32>)
+  CHECK: (<2 x i32>) = G_BUILD_VECTOR [[FREEZE_E0]]:_(i32), [[FREEZE_E1]]:_(i32)
   )";
 
   // Check
@@ -4014,11 +4084,11 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   DefineLegalizerInfo(A, {});
 
   LLT P0{LLT::pointer(0, 64)};
-  LLT S64{LLT::scalar(64)};
-  LLT S16{LLT::scalar(16)};
-  LLT V2S16{LLT::fixed_vector(2, 16)};
-  LLT V3S16{LLT::fixed_vector(3, 16)};
-  LLT V8S16{LLT::fixed_vector(8, 16)};
+  LLT S64{LLT::integer(64)};
+  LLT S16{LLT::integer(16)};
+  LLT V2S16{LLT::fixed_vector(2, LLT::integer(16))};
+  LLT V3S16{LLT::fixed_vector(3, LLT::integer(16))};
+  LLT V8S16{LLT::fixed_vector(8, LLT::integer(16))};
 
   auto Ptr0 = B.buildIntToPtr(P0, Copies[0]);
   auto VectorV8 = B.buildLoad(V8S16, Ptr0, MachinePointerInfo(), Align(8));
@@ -4053,32 +4123,32 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
             Helper.fewerElementsVector(*InsertV8Constant7_1, 0, V3S16));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY0:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(i64) = COPY
   CHECK: [[PTR0:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY0]]
-  CHECK: [[VEC8:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[PTR0]]:_(p0) :: (load (<8 x s16>), align 8)
-  CHECK: [[INSERT_VAL:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]]
+  CHECK: [[VEC8:%[0-9]+]]:_(<8 x i16>) = G_LOAD [[PTR0]]:_(p0) :: (load (<8 x i16>), align 8)
+  CHECK: [[INSERT_VAL:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]]
 
 
-  CHECK: [[UNMERGE0:%[0-9]+]]:_(<2 x s16>), [[UNMERGE1:%[0-9]+]]:_(<2 x s16>), [[UNMERGE2:%[0-9]+]]:_(<2 x s16>), [[UNMERGE3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[VEC8]]
-  CHECK: [[ONE:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  CHECK: [[SUB_INSERT_7:%[0-9]+]]:_(<2 x s16>) = G_INSERT_VECTOR_ELT [[UNMERGE3]]:_, [[INSERT_VAL]]:_(s16), [[ONE]]
-  CHECK: [[INSERT_V8_7_0:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[UNMERGE0]]:_(<2 x s16>), [[UNMERGE1]]:_(<2 x s16>), [[UNMERGE2]]:_(<2 x s16>), [[SUB_INSERT_7]]:_(<2 x s16>)
+  CHECK: [[UNMERGE0:%[0-9]+]]:_(<2 x i16>), [[UNMERGE1:%[0-9]+]]:_(<2 x i16>), [[UNMERGE2:%[0-9]+]]:_(<2 x i16>), [[UNMERGE3:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[VEC8]]
+  CHECK: [[ONE:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  CHECK: [[SUB_INSERT_7:%[0-9]+]]:_(<2 x i16>) = G_INSERT_VECTOR_ELT [[UNMERGE3]]:_, [[INSERT_VAL]]:_(i16), [[ONE]]
+  CHECK: [[INSERT_V8_7_0:%[0-9]+]]:_(<8 x i16>) = G_CONCAT_VECTORS [[UNMERGE0]]:_(<2 x i16>), [[UNMERGE1]]:_(<2 x i16>), [[UNMERGE2]]:_(<2 x i16>), [[SUB_INSERT_7]]:_(<2 x i16>)
 
 
-  CHECK: [[UNMERGE1_0:%[0-9]+]]:_(s16), [[UNMERGE1_1:%[0-9]+]]:_(s16), [[UNMERGE1_2:%[0-9]+]]:_(s16), [[UNMERGE1_3:%[0-9]+]]:_(s16), [[UNMERGE1_4:%[0-9]+]]:_(s16), [[UNMERGE1_5:%[0-9]+]]:_(s16), [[UNMERGE1_6:%[0-9]+]]:_(s16), [[UNMERGE1_7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[VEC8]]:_(<8 x s16>)
-  CHECK: [[IMPDEF_S16:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  CHECK: [[BUILD0:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_0]]:_(s16), [[UNMERGE1_1]]:_(s16), [[UNMERGE1_2]]:_(s16)
-  CHECK: [[BUILD1:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_3]]:_(s16), [[UNMERGE1_4]]:_(s16), [[UNMERGE1_5]]:_(s16)
-  CHECK: [[BUILD2:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_6]]:_(s16), [[UNMERGE1_7]]:_(s16), [[IMPDEF_S16]]:_(s16)
-  CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-  CHECK: [[ONE_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  CHECK: [[SUB_INSERT_7_V3S16:%[0-9]+]]:_(<3 x s16>) = G_INSERT_VECTOR_ELT [[BUILD2]]:_, [[INSERT_VAL]]:_(s16), [[ONE_1]]
+  CHECK: [[UNMERGE1_0:%[0-9]+]]:_(i16), [[UNMERGE1_1:%[0-9]+]]:_(i16), [[UNMERGE1_2:%[0-9]+]]:_(i16), [[UNMERGE1_3:%[0-9]+]]:_(i16), [[UNMERGE1_4:%[0-9]+]]:_(i16), [[UNMERGE1_5:%[0-9]+]]:_(i16), [[UNMERGE1_6:%[0-9]+]]:_(i16), [[UNMERGE1_7:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[VEC8]]:_(<8 x i16>)
+  CHECK: [[IMPDEF_S16:%[0-9]+]]:_(i16) = G_IMPLICIT_DEF
+  CHECK: [[BUILD0:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[UNMERGE1_0]]:_(i16), [[UNMERGE1_1]]:_(i16), [[UNMERGE1_2]]:_(i16)
+  CHECK: [[BUILD1:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[UNMERGE1_3]]:_(i16), [[UNMERGE1_4]]:_(i16), [[UNMERGE1_5]]:_(i16)
+  CHECK: [[BUILD2:%[0-9]+]]:_(<3 x i16>) = G_BUILD_VECTOR [[UNMERGE1_6]]:_(i16), [[UNMERGE1_7]]:_(i16), [[IMPDEF_S16]]:_(i16)
+  CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x i16>) = G_IMPLICIT_DEF
+  CHECK: [[ONE_1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  CHECK: [[SUB_INSERT_7_V3S16:%[0-9]+]]:_(<3 x i16>) = G_INSERT_VECTOR_ELT [[BUILD2]]:_, [[INSERT_VAL]]:_(i16), [[ONE_1]]
 
-  CHECK: [[WIDE_CONCAT_DEAD:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x s16>), [[BUILD1]]:_(<3 x s16>), [[SUB_INSERT_7_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>)
-  CHECK: [[WIDE_CONCAT:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x s16>), [[BUILD1]]:_(<3 x s16>), [[SUB_INSERT_7_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>)
-  CHECK: [[INSERT_V8_7_1:%[0-9]+]]:_(<8 x s16>), %{{[0-9]+}}:_(<8 x s16>), %{{[0-9]+}}:_(<8 x s16>) = G_UNMERGE_VALUES [[WIDE_CONCAT]]:_(<24 x s16>)
+  CHECK: [[WIDE_CONCAT_DEAD:%[0-9]+]]:_(<24 x i16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x i16>), [[BUILD1]]:_(<3 x i16>), [[SUB_INSERT_7_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>)
+  CHECK: [[WIDE_CONCAT:%[0-9]+]]:_(<24 x i16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x i16>), [[BUILD1]]:_(<3 x i16>), [[SUB_INSERT_7_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>), [[IMPDEF_V3S16]]:_(<3 x i16>)
+  CHECK: [[INSERT_V8_7_1:%[0-9]+]]:_(<8 x i16>), %{{[0-9]+}}:_(<8 x i16>), %{{[0-9]+}}:_(<8 x i16>) = G_UNMERGE_VALUES [[WIDE_CONCAT]]:_(<24 x i16>)
 
 
   CHECK: G_STORE [[INSERT_V8_7_0]]
@@ -4097,9 +4167,9 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT S96{LLT::scalar(96)};
-  LLT S64{LLT::scalar(64)};
-  LLT S48{LLT::scalar(48)};
+  LLT S96{LLT::integer(96)};
+  LLT S64{LLT::integer(64)};
+  LLT S48{LLT::integer(48)};
 
   auto Src = B.buildAnyExt(S96, Copies[0]);
   auto Unmerge = B.buildUnmerge(S48, Src);
@@ -4111,22 +4181,22 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
   // Perform Legalization
   B.setInsertPt(*EntryMBB, Unmerge->getIterator());
 
-  // This should create unmerges to a GCD type (S16), then remerge to S48
+  // This should create unmerges to a GCD type (i16), then remerge to i48
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*Unmerge, 0, S64));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[COPY0]]
+  CHECK: [[COPY0:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[ANYEXT:%[0-9]+]]:_(i96) = G_ANYEXT [[COPY0]]
   CHECK: [[ANYEXT1:%[0-9]+]]:_(s192) = G_ANYEXT [[ANYEXT]]
-  CHECK: [[UNMERGE:%[0-9]+]]:_(s64), [[UNMERGE1:%[0-9]+]]:_(s64), [[UNMERGE2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT1]]
-  CHECK: [[UNMERGE3:%[0-9]+]]:_(s16), [[UNMERGE4:%[0-9]+]]:_(s16), [[UNMERGE5:%[0-9]+]]:_(s16), [[UNMERGE6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE]]
-  CHECK: [[UNMERGE7:%[0-9]+]]:_(s16), [[UNMERGE8:%[0-9]+]]:_(s16), [[UNMERGE9:%[0-9]+]]:_(s16), [[UNMERGE10:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE1]]
-  CHECK: [[UNMERGE11:%[0-9]+]]:_(s16), [[UNMERGE12:%[0-9]+]]:_(s16), [[UNMERGE13:%[0-9]+]]:_(s16), [[UNMERGE14:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE2]]
-  CHECK: [[MERGE:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE3]]:_(s16), [[UNMERGE4]]:_(s16), [[UNMERGE5]]:_(s16)
-  CHECK: [[MERGE1:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE6]]:_(s16), [[UNMERGE7]]:_(s16), [[UNMERGE8]]:_(s16)
+  CHECK: [[UNMERGE:%[0-9]+]]:_(i64), [[UNMERGE1:%[0-9]+]]:_(i64), [[UNMERGE2:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT1]]
+  CHECK: [[UNMERGE3:%[0-9]+]]:_(i16), [[UNMERGE4:%[0-9]+]]:_(i16), [[UNMERGE5:%[0-9]+]]:_(i16), [[UNMERGE6:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE]]
+  CHECK: [[UNMERGE7:%[0-9]+]]:_(i16), [[UNMERGE8:%[0-9]+]]:_(i16), [[UNMERGE9:%[0-9]+]]:_(i16), [[UNMERGE10:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE1]]
+  CHECK: [[UNMERGE11:%[0-9]+]]:_(i16), [[UNMERGE12:%[0-9]+]]:_(i16), [[UNMERGE13:%[0-9]+]]:_(i16), [[UNMERGE14:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[UNMERGE2]]
+  CHECK: [[MERGE:%[0-9]+]]:_(i48) = G_MERGE_VALUES [[UNMERGE3]]:_(i16), [[UNMERGE4]]:_(i16), [[UNMERGE5]]:_(i16)
+  CHECK: [[MERGE1:%[0-9]+]]:_(i48) = G_MERGE_VALUES [[UNMERGE6]]:_(i16), [[UNMERGE7]]:_(i16), [[UNMERGE8]]:_(i16)
   )";
 
   // Check
@@ -4141,7 +4211,7 @@ TEST_F(AArch64GISelMITest, moreElementsShuffle) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT S64{LLT::scalar(64)};
+  LLT S64{LLT::integer(64)};
   LLT V6S64 = LLT::fixed_vector(6, S64);
 
   auto V1 = B.buildBuildVector(V6S64, {Copies[0], Copies[1], Copies[0],
@@ -4161,24 +4231,24 @@ TEST_F(AArch64GISelMITest, moreElementsShuffle) {
             Helper.moreElementsVector(*Shuffle, 0, LLT::fixed_vector(8, S64)));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[BV1:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR
-  CHECK: [[BV2:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR
+  CHECK: [[COPY0:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[BV1:%[0-9]+]]:_(<6 x i64>) = G_BUILD_VECTOR
+  CHECK: [[BV2:%[0-9]+]]:_(<6 x i64>) = G_BUILD_VECTOR
 
-  CHECK: [[BV1_E0:%[0-9]+]]:_(s64), [[BV1_E1:%[0-9]+]]:_(s64), [[BV1_E2:%[0-9]+]]:_(s64), [[BV1_E3:%[0-9]+]]:_(s64), [[BV1_E4:%[0-9]+]]:_(s64), [[BV1_E5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BV1]]:_(<6 x s64>)
-  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  CHECK: [[BV1_LARGE:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[BV1_E0]]:_(s64), [[BV1_E1]]:_(s64), [[BV1_E2]]:_(s64), [[BV1_E3]]:_(s64), [[BV1_E4]]:_(s64), [[BV1_E5]]:_(s64), [[IMP_DEF0]]:_(s64), [[IMP_DEF0]]:_(s64)
+  CHECK: [[BV1_E0:%[0-9]+]]:_(i64), [[BV1_E1:%[0-9]+]]:_(i64), [[BV1_E2:%[0-9]+]]:_(i64), [[BV1_E3:%[0-9]+]]:_(i64), [[BV1_E4:%[0-9]+]]:_(i64), [[BV1_E5:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[BV1]]:_(<6 x i64>)
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
+  CHECK: [[BV1_LARGE:%[0-9]+]]:_(<8 x i64>) = G_BUILD_VECTOR [[BV1_E0]]:_(i64), [[BV1_E1]]:_(i64), [[BV1_E2]]:_(i64), [[BV1_E3]]:_(i64), [[BV1_E4]]:_(i64), [[BV1_E5]]:_(i64), [[IMP_DEF0]]:_(i64), [[IMP_DEF0]]:_(i64)
 
-  CHECK: [[BV2_E0:%[0-9]+]]:_(s64), [[BV2_E1:%[0-9]+]]:_(s64), [[BV2_E2:%[0-9]+]]:_(s64), [[BV2_E3:%[0-9]+]]:_(s64), [[BV2_E4:%[0-9]+]]:_(s64), [[BV2_E5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BV2]]:_(<6 x s64>)
-  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  CHECK: [[BV2_LARGE:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[BV2_E0]]:_(s64), [[BV2_E1]]:_(s64), [[BV2_E2]]:_(s64), [[BV2_E3]]:_(s64), [[BV2_E4]]:_(s64), [[BV2_E5]]:_(s64), [[IMP_DEF1]]:_(s64), [[IMP_DEF1]]:_(s64)
+  CHECK: [[BV2_E0:%[0-9]+]]:_(i64), [[BV2_E1:%[0-9]+]]:_(i64), [[BV2_E2:%[0-9]+]]:_(i64), [[BV2_E3:%[0-9]+]]:_(i64), [[BV2_E4:%[0-9]+]]:_(i64), [[BV2_E5:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[BV2]]:_(<6 x i64>)
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
+  CHECK: [[BV2_LARGE:%[0-9]+]]:_(<8 x i64>) = G_BUILD_VECTOR [[BV2_E0]]:_(i64), [[BV2_E1]]:_(i64), [[BV2_E2]]:_(i64), [[BV2_E3]]:_(i64), [[BV2_E4]]:_(i64), [[BV2_E5]]:_(i64), [[IMP_DEF1]]:_(i64), [[IMP_DEF1]]:_(i64)
 
-  CHECK: [[SHUF:%[0-9]+]]:_(<8 x s64>) = G_SHUFFLE_VECTOR [[BV1_LARGE]]:_(<8 x s64>), [[BV2_LARGE]]:_, shufflemask(3, 4, 9, 0, 1, 13, undef, undef)
+  CHECK: [[SHUF:%[0-9]+]]:_(<8 x i64>) = G_SHUFFLE_VECTOR [[BV1_LARGE]]:_(<8 x i64>), [[BV2_LARGE]]:_, shufflemask(3, 4, 9, 0, 1, 13, undef, undef)
 
-  CHECK: [[SHUF_E0:%[0-9]+]]:_(s64), [[SHUF_E1:%[0-9]+]]:_(s64), [[SHUF_E2:%[0-9]+]]:_(s64), [[SHUF_E3:%[0-9]+]]:_(s64), [[SHUF_E4:%[0-9]+]]:_(s64), [[SHUF_E5:%[0-9]+]]:_(s64), [[SHUF_E6:%[0-9]+]]:_(s64), [[SHUF_E7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[SHUF]]:_(<8 x s64>)
-  CHECK: (<6 x s64>) = G_BUILD_VECTOR [[SHUF_E0]]:_(s64), [[SHUF_E1]]:_(s64), [[SHUF_E2]]:_(s64), [[SHUF_E3]]:_(s64), [[SHUF_E4]]:_(s64), [[SHUF_E5]]:_(s64)
+  CHECK: [[SHUF_E0:%[0-9]+]]:_(i64), [[SHUF_E1:%[0-9]+]]:_(i64), [[SHUF_E2:%[0-9]+]]:_(i64), [[SHUF_E3:%[0-9]+]]:_(i64), [[SHUF_E4:%[0-9]+]]:_(i64), [[SHUF_E5:%[0-9]+]]:_(i64), [[SHUF_E6:%[0-9]+]]:_(i64), [[SHUF_E7:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[SHUF]]:_(<8 x i64>)
+  CHECK: (<6 x i64>) = G_BUILD_VECTOR [[SHUF_E0]]:_(i64), [[SHUF_E1]]:_(i64), [[SHUF_E2]]:_(i64), [[SHUF_E3]]:_(i64), [[SHUF_E4]]:_(i64), [[SHUF_E5]]:_(i64)
   )";
 
   // Check
@@ -4193,8 +4263,8 @@ TEST_F(AArch64GISelMITest, narrowScalarShiftByConstant) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT S64{LLT::scalar(64)};
-  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::integer(64)};
+  LLT S32{LLT::integer(32)};
 
   auto Constant = B.buildConstant(S64, 33);
   auto Trunc = B.buildTrunc(S32, Constant);
@@ -4212,16 +4282,16 @@ TEST_F(AArch64GISelMITest, narrowScalarShiftByConstant) {
             Helper.narrowScalarShift(*Shift, 0, S32));
 
   const auto *CheckStr = R"(
-  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
-  CHECK: [[THIRTY3:%[0-9]+]]:_(s64) = G_CONSTANT i64 33
-  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %4:_(s64)
-  CHECK: [[UNMERGE:%[0-9]+]]:_(s32), [[UNMERGE2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY0]]
-  CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[ONE:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  CHECK: [[SHIFT:%[0-9]+]]:_(s32) = G_SHL [[UNMERGE]]:_, [[ONE]]:_(s32)
-  CHECK: [[MERGE:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ZERO]]:_(s32), [[SHIFT]]:_(s32)
+  CHECK: [[COPY0:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(i64) = COPY
+  CHECK: [[THIRTY3:%[0-9]+]]:_(i64) = G_CONSTANT i64 33
+  CHECK: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %4:_(i64)
+  CHECK: [[UNMERGE:%[0-9]+]]:_(i32), [[UNMERGE2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY0]]
+  CHECK: [[ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  CHECK: [[ONE:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+  CHECK: [[SHIFT:%[0-9]+]]:_(i32) = G_SHL [[UNMERGE]]:_, [[ONE]]:_(i32)
+  CHECK: [[MERGE:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[ZERO]]:_(i32), [[SHIFT]]:_(i32)
   )";
 
   // Check
@@ -4233,10 +4303,10 @@ TEST_F(AArch64GISelMITest, MoreElementsSelect) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT s1 = LLT::scalar(1);
-  LLT s64 = LLT::scalar(64);
-  LLT v2s1 = LLT::fixed_vector(2, 1);
-  LLT v2s32 = LLT::fixed_vector(2, 32);
+  LLT s1 = LLT::integer(1);
+  LLT s64 = LLT::integer(64);
+  LLT v2s1 = LLT::fixed_vector(2, LLT::integer(1));
+  LLT v2s32 = LLT::fixed_vector(2, LLT::integer(32));
 
   LegalizerInfo LI;
   DummyGISelObserver Observer;
@@ -4261,18 +4331,112 @@ TEST_F(AArch64GISelMITest, MoreElementsSelect) {
             Helper.moreElementsVector(*Select, 1, v2s1));
 
   auto CheckStr = R"(
-  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
-  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
-  CHECK: [[ZERO0:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %{{[0-9]+}}:_(s64), [[ZERO0]]
-  CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x s1>) = G_IMPLICIT_DEF
-  CHECK: [[ZERO1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  CHECK: [[INSERT:%[0-9]+]]:_(<2 x s1>) = G_INSERT_VECTOR_ELT [[IMPDEF]]:_, [[CMP]]:_(s1), [[ZERO1]]
-  CHECK: [[SHUFFLE:%[0-9]+]]:_(<2 x s1>) = G_SHUFFLE_VECTOR [[INSERT]]:_(<2 x s1>), [[IMPDEF]]:_, shufflemask(0, 0)
-  CHECK: [[SELECT:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[SHUFFLE]]:_(<2 x s1>), [[BITCAST0]]:_, [[BITCAST1]]:_
+  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x i32>) = G_BITCAST
+  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST
+  CHECK: [[ZERO0:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), %{{[0-9]+}}:_(i64), [[ZERO0]]
+  CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x i1>) = G_IMPLICIT_DEF
+  CHECK: [[ZERO1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  CHECK: [[INSERT:%[0-9]+]]:_(<2 x i1>) = G_INSERT_VECTOR_ELT [[IMPDEF]]:_, [[CMP]]:_(i1), [[ZERO1]]
+  CHECK: [[SHUFFLE:%[0-9]+]]:_(<2 x i1>) = G_SHUFFLE_VECTOR [[INSERT]]:_(<2 x i1>), [[IMPDEF]]:_, shufflemask(0, 0)
+  CHECK: [[SELECT:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[SHUFFLE]]:_(<2 x i1>), [[BITCAST0]]:_, [[BITCAST1]]:_
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test that lowerIntrinsicRound with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerIntrinsicRoundExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto Round = B.buildInstr(TargetOpcode::G_INTRINSIC_ROUND, {F64}, {Src});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*Round, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFFloor with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFFloorExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto Floor = B.buildFFloor(F64, Src);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*Floor, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFMODF with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFMODFExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src = MRI->createGenericVirtualRegister(F64);
+  auto FMODF = B.buildInstr(TargetOpcode::G_FMODF, {F64, F64}, {Src});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FMODF, 0, LLT()));
+
+  LLT::setUseExtended(false);
+}
+
+// Test that lowerFMinimumMaximum with extended LLT float types doesn't crash
+// when computing the condition type (changeElementSize(1) on a float).
+TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT F64 = LLT::float64();
+  Register Src0 = MRI->createGenericVirtualRegister(F64);
+  Register Src1 = MRI->createGenericVirtualRegister(F64);
+  auto FMin = B.buildInstr(TargetOpcode::G_FMINIMUM, {F64}, {Src0, Src1},
+                           MachineInstr::FmNoNans | MachineInstr::FmNsz);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*FMin, 0, LLT()));
+
+  LLT::setUseExtended(false);
 }
 
 } // namespace

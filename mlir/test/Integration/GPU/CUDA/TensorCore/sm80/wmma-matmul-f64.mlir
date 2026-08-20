@@ -44,16 +44,17 @@ func.func @main() {
   gpu.host_register %2 : memref<*xf64>
   gpu.host_register %20 : memref<*xf64>
   gpu.host_register %33 : memref<*xf64>
+  gpu.host_register %34 : memref<*xf64>
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c32, %block_y = %c1, %block_z = %c1) {
-    %A = gpu.subgroup_mma_load_matrix %a[%c0, %c0] {leadDimension = 4 : index} : memref<8x4xf64> -> !gpu.mma_matrix<8x4xf64, "AOp">
-    %B = gpu.subgroup_mma_load_matrix %b[%c0, %c0] {leadDimension = 8 : index} : memref<4x8xf64> -> !gpu.mma_matrix<4x8xf64, "BOp">
-    %C = gpu.subgroup_mma_load_matrix %c[%c0, %c0] {leadDimension = 8 : index} : memref<8x8xf64> -> !gpu.mma_matrix<8x8xf64, "COp">
+    %A = gpu.subgroup_mma_load_matrix %a[%c0, %c0] leadDimension 4 : memref<8x4xf64> -> !gpu.mma_matrix<8x4xf64, "AOp">
+    %B = gpu.subgroup_mma_load_matrix %b[%c0, %c0] leadDimension 8 : memref<4x8xf64> -> !gpu.mma_matrix<4x8xf64, "BOp">
+    %C = gpu.subgroup_mma_load_matrix %c[%c0, %c0] leadDimension 8 : memref<8x8xf64> -> !gpu.mma_matrix<8x8xf64, "COp">
 
     %R = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<8x4xf64, "AOp">, !gpu.mma_matrix<4x8xf64, "BOp"> -> !gpu.mma_matrix<8x8xf64, "COp">
 
-    gpu.subgroup_mma_store_matrix %R, %d[%c0, %c0] {leadDimension = 8 : index}: !gpu.mma_matrix<8x8xf64, "COp">, memref<8x8xf64>
+    gpu.subgroup_mma_store_matrix %R, %d[%c0, %c0] leadDimension 8: !gpu.mma_matrix<8x8xf64, "COp">, memref<8x8xf64>
     gpu.terminator
   }
   // Print the memref after computation.

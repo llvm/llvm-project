@@ -1,4 +1,4 @@
-//===- ClangTidyForceLinker.h - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
 #include "clang-tidy-config.h"
-#include "llvm/Support/Compiler.h"
 
 namespace clang::tidy {
 
@@ -76,11 +75,6 @@ extern volatile int GoogleModuleAnchorSource;
 [[maybe_unused]] static int GoogleModuleAnchorDestination =
     GoogleModuleAnchorSource;
 
-// This anchor is used to force the linker to link the HICPPModule.
-extern volatile int HICPPModuleAnchorSource;
-[[maybe_unused]] static int HICPPModuleAnchorDestination =
-    HICPPModuleAnchorSource;
-
 // This anchor is used to force the linker to link the LinuxKernelModule.
 extern volatile int LinuxKernelModuleAnchorSource;
 [[maybe_unused]] static int LinuxKernelModuleAnchorDestination =
@@ -137,11 +131,6 @@ extern volatile int PortabilityModuleAnchorSource;
 extern volatile int ReadabilityModuleAnchorSource;
 [[maybe_unused]] static int ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
-
-// This anchor is used to force the linker to link the ZirconModule.
-extern volatile int ZirconModuleAnchorSource;
-[[maybe_unused]] static int ZirconModuleAnchorDestination =
-    ZirconModuleAnchorSource;
 
 } // namespace clang::tidy
 

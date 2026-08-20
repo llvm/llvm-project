@@ -40,6 +40,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -64,8 +65,10 @@ AnalysisKey LiveIntervalsAnalysis::Key;
 LiveIntervalsAnalysis::Result
 LiveIntervalsAnalysis::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  return Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
-                MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  auto Res = Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
+                    MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  LLVM_DEBUG(Res.dump());
+  return Res;
 }
 
 PreservedAnalyses
@@ -117,9 +120,8 @@ void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveIntervalsWrapperPass::LiveIntervalsWrapperPass() : MachineFunctionPass(ID) {
-  initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LiveIntervalsWrapperPass::LiveIntervalsWrapperPass()
+    : MachineFunctionPass(ID) {}
 
 LiveIntervals::~LiveIntervals() { clear(); }
 
@@ -290,6 +292,45 @@ void LiveIntervals::computeRegMasks() {
     // Compute the number of register mask instructions in this block.
     RMB.second = RegMaskSlots.size() - RMB.first;
   }
+}
+
+void LiveIntervals::reassignRegMaskSlots(MachineBasicBlock &Orig,
+                                         MachineBasicBlock &SplitBB) {
+  assert(&Orig != &SplitBB && "expected distinct blocks");
+  std::pair<unsigned, unsigned> &OrigRMB = RegMaskBlocks[Orig.getNumber()];
+  std::pair<unsigned, unsigned> &SplitRMB = RegMaskBlocks[SplitBB.getNumber()];
+
+  // RegMaskSlots is sorted, so the slots that moved are those at or after
+  // SplitBB's start index.
+  ArrayRef<SlotIndex> OrigSlots =
+      getRegMaskSlots().slice(OrigRMB.first, OrigRMB.second);
+  unsigned KeptCount = llvm::lower_bound(OrigSlots, getMBBStartIdx(&SplitBB)) -
+                       OrigSlots.begin();
+  if (KeptCount == OrigRMB.second)
+    return; // No regmask slots moved into SplitBB.
+
+  SplitRMB.first = OrigRMB.first + KeptCount;
+  SplitRMB.second = OrigRMB.second - KeptCount;
+  OrigRMB.second = KeptCount;
+}
+
+void LiveIntervals::insertMBBInMapsImpl(
+    MachineBasicBlock *MBB, [[maybe_unused]] bool AssumeRegMaskEmpty) {
+#ifdef EXPENSIVE_CHECKS
+  assert((!AssumeRegMaskEmpty ||
+          none_of(*MBB,
+                  [](const MachineInstr &MI) {
+                    return any_of(MI.operands(), [](const MachineOperand &MO) {
+                      return MO.isRegMask();
+                    });
+                  })) &&
+         "insertMBBInMaps expects a block with no regmask operands; use "
+         "LiveIntervals::splitAt() to split a block containing calls");
+#endif
+  Indexes->insertMBBInMaps(MBB);
+  assert(unsigned(MBB->getNumber()) == RegMaskBlocks.size() &&
+         "Blocks must be added in order.");
+  RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1459,9 +1500,17 @@ private:
         *(NewIdxOut + 1) = LiveRange::Segment(
             NewIdxDef.getRegSlot(), (NewIdxOut + 1)->end, OldIdxVNI);
         OldIdxVNI->def = NewIdxDef;
-        // Modify subsequent segments to be defined by the moved def OldIdxVNI.
-        for (auto *Idx = NewIdxOut + 2; Idx <= OldIdxOut; ++Idx)
+        // Retag the segments that were shifted down from [NewIdxOut + 2,
+        // OldIdxOut]. Retagging can make a segment touch another segment with
+        // the same value number, so merge as we go. Stop at the original end
+        // slot instead of using a segment count because merging may erase
+        // segments.
+        const SlotIndex RetagEnd = OldIdxOut->end;
+        for (LiveRange::iterator Idx = NewIdxOut + 2;
+             Idx != LR.end() && Idx->start < RetagEnd;) {
           Idx->valno = OldIdxVNI;
+          Idx = std::next(LR.mergeAdjacentSegments(Idx));
+        }
         // Aggressively remove all dead flags from the former dead definition.
         // Kill/dead flags shouldn't be used while live intervals exist; they
         // will be reinserted by VirtRegRewriter.

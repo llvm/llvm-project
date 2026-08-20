@@ -12,11 +12,20 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// it's the third operand of its MCInst form, so this predicate will not
+// be triggered by llvm-mca, which checks against MCInst.
+def VLDSX0Pred
+    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
+                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
 
 // This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
 // is enabled.
 def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+
+// This scheduling predicate is true when the subtarget is RV32 (i.e. Feature64Bit
+// is not enabled).
+def RV32SchedPred : NotSchedPred<FeatureSchedPredicate<Feature64Bit>>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
@@ -24,7 +33,6 @@ def isSEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDIW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 0>
                    ]>>>;
 
@@ -34,7 +42,6 @@ def isZEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADD_UW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
                      CheckRegOperand<2, X0>
                    ]>>>;
 
@@ -44,7 +51,6 @@ def isZEXT_B
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ANDI]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 255>
                    ]>>>;
 
@@ -137,12 +143,6 @@ def isScalarExtractInstr
                       !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
                      ])>>>;
 
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
-
 def isScalarInsertInstr
     : TIIPredicate<"isScalarInsertInstr",
                    MCReturnStatement<
@@ -177,11 +177,18 @@ def isFaultOnlyFirstLoad
                        !instances<Pseudo>(
                           "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
 
+def isLoadImmediate
+    : TIIPredicate<"isLoadImmediate",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>,
+                     CheckIsImmOperand<2>
+                   ]>>>;
+
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
@@ -191,7 +198,6 @@ def isLPAD
     : TIIPredicate<"isLPAD",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[AUIPC]>,
-                     CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
 
@@ -205,3 +211,50 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : TIIPredicate<"isBaseQCLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_LB,
+                       QC_E_LBU,
+                       QC_E_LH,
+                       QC_E_LHU,
+                       QC_E_LW
+                     ]>>>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : TIIPredicate<"isBaseQCStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_SB,
+                       QC_E_SH,
+                       QC_E_SW
+                     ]>>>;

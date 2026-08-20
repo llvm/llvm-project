@@ -15,7 +15,7 @@ define void @nested(i32 %tidx, i32 %tidy, ptr %array) #0 {
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC10_I:%.*]], [[CLEANUP_I:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[TMP0]]) ]
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ult i32 [[I_0_I]], 8
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp samesign ult i32 [[I_0_I]], 8
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[FOR_COND1_I_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.cond1.i.preheader:
 ; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp eq i32 [[I_0_I]], [[TIDX]]
@@ -23,7 +23,7 @@ define void @nested(i32 %tidx, i32 %tidy, ptr %array) #0 {
 ; CHECK:       for.cond1.i:
 ; CHECK-NEXT:    [[J_0_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY4_I:%.*]] ], [ 0, [[FOR_COND1_I_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[TMP1]]) ]
-; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp ult i32 [[J_0_I]], 8
+; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp samesign ult i32 [[J_0_I]], 8
 ; CHECK-NEXT:    br i1 [[CMP2_I]], label [[FOR_BODY4_I]], label [[CLEANUP_I_LOOPEXIT:%.*]]
 ; CHECK:       for.body4.i:
 ; CHECK-NEXT:    [[CMP6_I:%.*]] = icmp eq i32 [[J_0_I]], [[TIDY]]

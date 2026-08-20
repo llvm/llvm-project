@@ -8,7 +8,9 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -24,7 +26,7 @@ class AMDGPUABIInfo final : public DefaultABIInfo {
 private:
   static const unsigned MaxNumRegsForArgsRet = 16;
 
-  unsigned numRegsForType(QualType Ty) const;
+  uint64_t numRegsForType(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -78,20 +80,20 @@ bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
 }
 
 /// Estimate number of registers the type will use when passed in registers.
-unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
-  unsigned NumRegs = 0;
+uint64_t AMDGPUABIInfo::numRegsForType(QualType Ty) const {
+  uint64_t NumRegs = 0;
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     // Compute from the number of elements. The reported size is based on the
     // in-memory size, which includes the padding 4th element for 3-vectors.
     QualType EltTy = VT->getElementType();
-    unsigned EltSize = getContext().getTypeSize(EltTy);
+    uint64_t EltSize = getContext().getTypeSize(EltTy);
 
     // 16-bit element vectors should be passed as packed.
     if (EltSize == 16)
       return (VT->getNumElements() + 1) / 2;
 
-    unsigned EltNumRegs = (EltSize + 31) / 32;
+    uint64_t EltNumRegs = (EltSize + 31) / 32;
     return EltNumRegs * VT->getNumElements();
   }
 
@@ -264,7 +266,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     }
 
     if (NumRegsLeft > 0) {
-      unsigned NumRegs = numRegsForType(Ty);
+      uint64_t NumRegs = numRegsForType(Ty);
       if (NumRegsLeft >= NumRegs) {
         NumRegsLeft -= NumRegs;
         return ABIArgInfo::getDirect();
@@ -281,8 +283,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
   // Otherwise just do the default thing.
   ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
   if (!ArgInfo.isIndirect()) {
-    unsigned NumRegs = numRegsForType(Ty);
-    NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+    uint64_t NumRegs = numRegsForType(Ty);
+    NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
   }
 
   return ArgInfo;
@@ -304,16 +306,12 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
                                llvm::Instruction &AtomicInst,
                                const AtomicExpr *Expr = nullptr) const override;
@@ -349,8 +347,30 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+
+  // __launch_bounds__ only takes effect on kernels and is silently ignored on
+  // other functions The arguments are honored only if the equivalent native
+  // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
+  // used out; those take precedence.
+  const auto *LaunchBounds =
+      IsHIPKernel ? FD->getAttr<CUDALaunchBoundsAttr>() : nullptr;
+  unsigned LBMaxThreads = 0;
+  unsigned LBMinWaves = 0;
+  if (LaunchBounds) {
+    LBMaxThreads = LaunchBounds->getMaxThreads()
+                       ->EvaluateKnownConstInt(M.getContext())
+                       .getExtValue();
+    if (const Expr *MinBlocks = LaunchBounds->getMinBlocks()) {
+      LBMinWaves =
+          MinBlocks->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    }
+  }
+
   if (ReqdWGS || FlatWGS) {
     M.handleAMDGPUFlatWorkGroupSizeAttr(F, FlatWGS, ReqdWGS);
+  } else if (LBMaxThreads > 0) {
+    F->addFnAttr("amdgpu-flat-work-group-size",
+                 "1," + llvm::utostr(LBMaxThreads));
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -363,8 +383,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
     M.handleAMDGPUWavesPerEUAttr(F, Attr);
+  } else if (LBMinWaves > 0) {
+    // HIP reinterprets the second argument as the minimum waves per EU.
+    //
+    // TODO: The third argument (maxclusterrank) could be used if the AMDGPU
+    // "clusters" feature is supported for the current subtarget.
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(LBMinWaves));
+  }
 
   if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();
@@ -439,13 +466,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     return;
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (FD) {
+  if (FD)
     setFunctionDeclAttributes(FD, F, M);
-    if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
-      F->setCallingConv(getDeviceKernelCallingConv());
-  }
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
+  if (getABIInfo().getCodeGenOpts().AMDGPUExpandWaitcntProfiling)
+    F->addFnAttr("amdgpu-expand-waitcnt-profiling");
 }
 
 unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
@@ -468,6 +494,16 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
+}
+
+LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 LangAS
@@ -494,55 +530,21 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
-llvm::SyncScope::ID
-AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                            SyncScope Scope,
-                                            llvm::AtomicOrdering Ordering,
-                                            llvm::LLVMContext &Ctx) const {
-  std::string Name;
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    Name = "wavefront";
-    break;
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    Name = "cluster";
-    break;
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    Name = "agent";
-    break;
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    Name = "";
-    break;
-  }
+StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &LangOpts, SyncScope Scope,
+    llvm::AtomicOrdering Ordering) const {
 
   // OpenCL assumes by default that atomic scopes are per-address space for
   // non-sequentially consistent operations.
-  if (Scope >= SyncScope::OpenCLWorkGroup &&
-      Scope <= SyncScope::OpenCLSubGroup &&
-      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
-    if (!Name.empty())
-      Name = Twine(Twine(Name) + Twine("-")).str();
+  bool IsOneAs = (Scope >= SyncScope::OpenCLWorkGroup &&
+                  Scope <= SyncScope::OpenCLSubGroup &&
+                  Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-    Name = Twine(Twine(Name) + Twine("one-as")).str();
-  }
-
-  return Ctx.getOrInsertSyncScopeID(Name);
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -566,6 +568,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
+
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
 
   if (!RMW)
     return;
@@ -738,15 +742,15 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   auto Eval = [&](Expr *E) {
     return E->EvaluateKnownConstInt(getContext()).getExtValue();
   };
-  if (FlatWGS) {
+  if (ReqdWGS) {
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
+  } else if (FlatWGS) {
     Min = Eval(FlatWGS->getMin());
     Max = Eval(FlatWGS->getMax());
   }
-  if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
-                Eval(ReqdWGS->getZDim());
 
-  if (Min != 0) {
+  if (Min != 0 || ReqdWGS) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
     if (MinThreadsVal)

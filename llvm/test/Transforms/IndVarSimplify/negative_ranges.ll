@@ -11,7 +11,7 @@ define i32 @test_01(ptr %p, ptr %s) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], [[END]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i32 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[SIDE_EXIT]]
@@ -58,7 +58,7 @@ define i32 @test_02(ptr %p, ptr %s) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[IV]], [[END]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i32 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[SIDE_EXIT]]

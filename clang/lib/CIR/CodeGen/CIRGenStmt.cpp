@@ -19,7 +19,10 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
+#include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -84,6 +87,63 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
   return result;
 }
 
+mlir::LogicalResult
+CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
+
+  bool noinline = inNoInlineAttributedStmt;
+  bool alwaysinline = inAlwaysInlineAttributedStmt;
+  const CallExpr *musttail = mustTailCall;
+
+  for (const Attr *attr : s.getAttrs()) {
+    switch (attr->getKind()) {
+    default:
+      break;
+    case attr::NoMerge:
+    case attr::NoConvergent:
+    case attr::Atomic:
+    case attr::AMDGPUAvailableVisible:
+    case attr::HLSLControlFlowHint:
+      cgm.errorNYI(s.getSourceRange(),
+                   "Unimplemented statement attribute: ", attr->getKind());
+      break;
+    case attr::NoInline:
+      noinline = true;
+      alwaysinline = false;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
+      noinline = false;
+      break;
+    case attr::MustTail: {
+      const Stmt *sub = s.getSubStmt();
+      const ReturnStmt *ret = cast<ReturnStmt>(sub);
+      musttail = cast<CallExpr>(ret->getRetValue()->IgnoreParens());
+      break;
+    }
+    case attr::CXXAssume: {
+      const Expr *assumptionExpr = cast<CXXAssumeAttr>(attr)->getAssumption();
+      if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
+          !assumptionExpr->HasSideEffects(getContext())) {
+        mlir::Value assumptionValue = emitCheckedArgForAssume(assumptionExpr);
+        cir::AssumeOp::create(builder, getLoc(s.getSourceRange()),
+                              assumptionValue, cir::AssumeBundleKind::None,
+                              mlir::ValueRange{});
+      }
+    } break;
+    }
+  }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
+  SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
+  SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
+
+  SaveAndRestore save_musttail(mustTailCall, musttail);
+
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+}
+
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
                                                      Address *lastValue,
                                                      AggValueSlot slot) {
@@ -120,6 +180,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::BreakStmtClass:
   case Stmt::NullStmtClass:
@@ -159,6 +220,14 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
+  case Stmt::CoroutineBodyStmtClass:
+    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
+  case Stmt::IndirectGotoStmtClass:
+    return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
+  case Stmt::CoreturnStmtClass:
+    return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -191,106 +260,215 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::MSAsmStmtClass:
     return emitAsmStmt(cast<AsmStmt>(*s));
   case Stmt::OMPScopeDirectiveClass:
+    return emitOMPScopeDirective(cast<OMPScopeDirective>(*s));
   case Stmt::OMPErrorDirectiveClass:
+    return emitOMPErrorDirective(cast<OMPErrorDirective>(*s));
+  case Stmt::OMPParallelDirectiveClass:
+    return emitOMPParallelDirective(cast<OMPParallelDirective>(*s));
+  case Stmt::OMPTaskwaitDirectiveClass:
+    return emitOMPTaskwaitDirective(cast<OMPTaskwaitDirective>(*s));
+  case Stmt::OMPTaskyieldDirectiveClass:
+    return emitOMPTaskyieldDirective(cast<OMPTaskyieldDirective>(*s));
+  case Stmt::OMPBarrierDirectiveClass:
+    return emitOMPBarrierDirective(cast<OMPBarrierDirective>(*s));
+  case Stmt::OMPMetaDirectiveClass:
+    return emitOMPMetaDirective(cast<OMPMetaDirective>(*s));
+  case Stmt::OMPCanonicalLoopClass:
+    return emitOMPCanonicalLoop(cast<OMPCanonicalLoop>(*s));
+  case Stmt::OMPSimdDirectiveClass:
+    return emitOMPSimdDirective(cast<OMPSimdDirective>(*s));
+  case Stmt::OMPTileDirectiveClass:
+    return emitOMPTileDirective(cast<OMPTileDirective>(*s));
+  case Stmt::OMPUnrollDirectiveClass:
+    return emitOMPUnrollDirective(cast<OMPUnrollDirective>(*s));
+  case Stmt::OMPFuseDirectiveClass:
+    return emitOMPFuseDirective(cast<OMPFuseDirective>(*s));
+  case Stmt::OMPForDirectiveClass:
+    return emitOMPForDirective(cast<OMPForDirective>(*s));
+  case Stmt::OMPForSimdDirectiveClass:
+    return emitOMPForSimdDirective(cast<OMPForSimdDirective>(*s));
+  case Stmt::OMPSectionsDirectiveClass:
+    return emitOMPSectionsDirective(cast<OMPSectionsDirective>(*s));
+  case Stmt::OMPSectionDirectiveClass:
+    return emitOMPSectionDirective(cast<OMPSectionDirective>(*s));
+  case Stmt::OMPSingleDirectiveClass:
+    return emitOMPSingleDirective(cast<OMPSingleDirective>(*s));
+  case Stmt::OMPMasterDirectiveClass:
+    return emitOMPMasterDirective(cast<OMPMasterDirective>(*s));
+  case Stmt::OMPCriticalDirectiveClass:
+    return emitOMPCriticalDirective(cast<OMPCriticalDirective>(*s));
+  case Stmt::OMPParallelForDirectiveClass:
+    return emitOMPParallelForDirective(cast<OMPParallelForDirective>(*s));
+  case Stmt::OMPParallelForSimdDirectiveClass:
+    return emitOMPParallelForSimdDirective(
+        cast<OMPParallelForSimdDirective>(*s));
+  case Stmt::OMPParallelMasterDirectiveClass:
+    return emitOMPParallelMasterDirective(cast<OMPParallelMasterDirective>(*s));
+  case Stmt::OMPParallelSectionsDirectiveClass:
+    return emitOMPParallelSectionsDirective(
+        cast<OMPParallelSectionsDirective>(*s));
+  case Stmt::OMPTaskDirectiveClass:
+    return emitOMPTaskDirective(cast<OMPTaskDirective>(*s));
+  case Stmt::OMPTaskgroupDirectiveClass:
+    return emitOMPTaskgroupDirective(cast<OMPTaskgroupDirective>(*s));
+  case Stmt::OMPFlushDirectiveClass:
+    return emitOMPFlushDirective(cast<OMPFlushDirective>(*s));
+  case Stmt::OMPDepobjDirectiveClass:
+    return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
+  case Stmt::OMPScanDirectiveClass:
+    return emitOMPScanDirective(cast<OMPScanDirective>(*s));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    return emitOMPOrderedStandaloneDirective(
+        cast<OMPOrderedStandaloneDirective>(*s));
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    return emitOMPOrderedBlockAssocDirective(
+        cast<OMPOrderedBlockAssocDirective>(*s));
+  case Stmt::OMPAtomicDirectiveClass:
+    return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
+  case Stmt::OMPTargetDirectiveClass:
+    return emitOMPTargetDirective(cast<OMPTargetDirective>(*s));
+  case Stmt::OMPTeamsDirectiveClass:
+    return emitOMPTeamsDirective(cast<OMPTeamsDirective>(*s));
+  case Stmt::OMPCancellationPointDirectiveClass:
+    return emitOMPCancellationPointDirective(
+        cast<OMPCancellationPointDirective>(*s));
+  case Stmt::OMPCancelDirectiveClass:
+    return emitOMPCancelDirective(cast<OMPCancelDirective>(*s));
+  case Stmt::OMPTargetDataDirectiveClass:
+    return emitOMPTargetDataDirective(cast<OMPTargetDataDirective>(*s));
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+    return emitOMPTargetEnterDataDirective(
+        cast<OMPTargetEnterDataDirective>(*s));
+  case Stmt::OMPTargetExitDataDirectiveClass:
+    return emitOMPTargetExitDataDirective(cast<OMPTargetExitDataDirective>(*s));
+  case Stmt::OMPTargetParallelDirectiveClass:
+    return emitOMPTargetParallelDirective(cast<OMPTargetParallelDirective>(*s));
+  case Stmt::OMPTargetParallelForDirectiveClass:
+    return emitOMPTargetParallelForDirective(
+        cast<OMPTargetParallelForDirective>(*s));
+  case Stmt::OMPTaskLoopDirectiveClass:
+    return emitOMPTaskLoopDirective(cast<OMPTaskLoopDirective>(*s));
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+    return emitOMPTaskLoopSimdDirective(cast<OMPTaskLoopSimdDirective>(*s));
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+    return emitOMPMaskedTaskLoopDirective(cast<OMPMaskedTaskLoopDirective>(*s));
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+    return emitOMPMaskedTaskLoopSimdDirective(
+        cast<OMPMaskedTaskLoopSimdDirective>(*s));
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+    return emitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*s));
+  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+    return emitOMPMasterTaskLoopSimdDirective(
+        cast<OMPMasterTaskLoopSimdDirective>(*s));
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    return emitOMPParallelGenericLoopDirective(
+        cast<OMPParallelGenericLoopDirective>(*s));
+  case Stmt::OMPParallelMaskedDirectiveClass:
+    return emitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*s));
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+    return emitOMPParallelMaskedTaskLoopDirective(
+        cast<OMPParallelMaskedTaskLoopDirective>(*s));
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+    return emitOMPParallelMaskedTaskLoopSimdDirective(
+        cast<OMPParallelMaskedTaskLoopSimdDirective>(*s));
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+    return emitOMPParallelMasterTaskLoopDirective(
+        cast<OMPParallelMasterTaskLoopDirective>(*s));
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+    return emitOMPParallelMasterTaskLoopSimdDirective(
+        cast<OMPParallelMasterTaskLoopSimdDirective>(*s));
+  case Stmt::OMPDistributeDirectiveClass:
+    return emitOMPDistributeDirective(cast<OMPDistributeDirective>(*s));
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+    return emitOMPDistributeParallelForDirective(
+        cast<OMPDistributeParallelForDirective>(*s));
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+    return emitOMPDistributeParallelForSimdDirective(
+        cast<OMPDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPDistributeSimdDirectiveClass:
+    return emitOMPDistributeSimdDirective(cast<OMPDistributeSimdDirective>(*s));
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+    return emitOMPTargetParallelGenericLoopDirective(
+        cast<OMPTargetParallelGenericLoopDirective>(*s));
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+    return emitOMPTargetParallelForSimdDirective(
+        cast<OMPTargetParallelForSimdDirective>(*s));
+  case Stmt::OMPTargetSimdDirectiveClass:
+    return emitOMPTargetSimdDirective(cast<OMPTargetSimdDirective>(*s));
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+    return emitOMPTargetTeamsGenericLoopDirective(
+        cast<OMPTargetTeamsGenericLoopDirective>(*s));
+  case Stmt::OMPTargetUpdateDirectiveClass:
+    return emitOMPTargetUpdateDirective(cast<OMPTargetUpdateDirective>(*s));
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+    return emitOMPTeamsDistributeDirective(
+        cast<OMPTeamsDistributeDirective>(*s));
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+    return emitOMPTeamsDistributeSimdDirective(
+        cast<OMPTeamsDistributeSimdDirective>(*s));
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+    return emitOMPTeamsDistributeParallelForSimdDirective(
+        cast<OMPTeamsDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+    return emitOMPTeamsDistributeParallelForDirective(
+        cast<OMPTeamsDistributeParallelForDirective>(*s));
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    return emitOMPTeamsGenericLoopDirective(
+        cast<OMPTeamsGenericLoopDirective>(*s));
+  case Stmt::OMPTargetTeamsDirectiveClass:
+    return emitOMPTargetTeamsDirective(cast<OMPTargetTeamsDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+    return emitOMPTargetTeamsDistributeDirective(
+        cast<OMPTargetTeamsDistributeDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+    return emitOMPTargetTeamsDistributeParallelForDirective(
+        cast<OMPTargetTeamsDistributeParallelForDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+    return emitOMPTargetTeamsDistributeParallelForSimdDirective(
+        cast<OMPTargetTeamsDistributeParallelForSimdDirective>(*s));
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    return emitOMPTargetTeamsDistributeSimdDirective(
+        cast<OMPTargetTeamsDistributeSimdDirective>(*s));
+  case Stmt::OMPInteropDirectiveClass:
+    return emitOMPInteropDirective(cast<OMPInteropDirective>(*s));
+  case Stmt::OMPDispatchDirectiveClass:
+    return emitOMPDispatchDirective(cast<OMPDispatchDirective>(*s));
+  case Stmt::OMPGenericLoopDirectiveClass:
+    return emitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*s));
+  case Stmt::OMPReverseDirectiveClass:
+    return emitOMPReverseDirective(cast<OMPReverseDirective>(*s));
+  case Stmt::OMPSplitDirectiveClass:
+    return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
+  case Stmt::OMPInterchangeDirectiveClass:
+    return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
+  case Stmt::OMPAssumeDirectiveClass:
+    return emitOMPAssumeDirective(cast<OMPAssumeDirective>(*s));
+  case Stmt::OMPMaskedDirectiveClass:
+    return emitOMPMaskedDirective(cast<OMPMaskedDirective>(*s));
+  case Stmt::OMPStripeDirectiveClass:
+    return emitOMPStripeDirective(cast<OMPStripeDirective>(*s));
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::CoroutineBodyStmtClass:
-    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
-  case Stmt::CoreturnStmtClass:
-  case Stmt::IndirectGotoStmtClass:
-  case Stmt::OMPParallelDirectiveClass:
-  case Stmt::OMPTaskwaitDirectiveClass:
-  case Stmt::OMPTaskyieldDirectiveClass:
-  case Stmt::OMPBarrierDirectiveClass:
-  case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::SEHTryStmtClass:
-  case Stmt::OMPMetaDirectiveClass:
-  case Stmt::OMPCanonicalLoopClass:
-  case Stmt::OMPSimdDirectiveClass:
-  case Stmt::OMPTileDirectiveClass:
-  case Stmt::OMPUnrollDirectiveClass:
-  case Stmt::OMPFuseDirectiveClass:
-  case Stmt::OMPForDirectiveClass:
-  case Stmt::OMPForSimdDirectiveClass:
-  case Stmt::OMPSectionsDirectiveClass:
-  case Stmt::OMPSectionDirectiveClass:
-  case Stmt::OMPSingleDirectiveClass:
-  case Stmt::OMPMasterDirectiveClass:
-  case Stmt::OMPCriticalDirectiveClass:
-  case Stmt::OMPParallelForDirectiveClass:
-  case Stmt::OMPParallelForSimdDirectiveClass:
-  case Stmt::OMPParallelMasterDirectiveClass:
-  case Stmt::OMPParallelSectionsDirectiveClass:
-  case Stmt::OMPTaskDirectiveClass:
-  case Stmt::OMPTaskgroupDirectiveClass:
-  case Stmt::OMPFlushDirectiveClass:
-  case Stmt::OMPDepobjDirectiveClass:
-  case Stmt::OMPScanDirectiveClass:
-  case Stmt::OMPOrderedDirectiveClass:
-  case Stmt::OMPAtomicDirectiveClass:
-  case Stmt::OMPTargetDirectiveClass:
-  case Stmt::OMPTeamsDirectiveClass:
-  case Stmt::OMPCancellationPointDirectiveClass:
-  case Stmt::OMPCancelDirectiveClass:
-  case Stmt::OMPTargetDataDirectiveClass:
-  case Stmt::OMPTargetEnterDataDirectiveClass:
-  case Stmt::OMPTargetExitDataDirectiveClass:
-  case Stmt::OMPTargetParallelDirectiveClass:
-  case Stmt::OMPTargetParallelForDirectiveClass:
-  case Stmt::OMPTaskLoopDirectiveClass:
-  case Stmt::OMPTaskLoopSimdDirectiveClass:
-  case Stmt::OMPMaskedTaskLoopDirectiveClass:
-  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPMasterTaskLoopDirectiveClass:
-  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
-  case Stmt::OMPParallelGenericLoopDirectiveClass:
-  case Stmt::OMPParallelMaskedDirectiveClass:
-  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
-  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
-  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
-  case Stmt::OMPDistributeDirectiveClass:
-  case Stmt::OMPDistributeParallelForDirectiveClass:
-  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPDistributeSimdDirectiveClass:
-  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
-  case Stmt::OMPTargetParallelForSimdDirectiveClass:
-  case Stmt::OMPTargetSimdDirectiveClass:
-  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
-  case Stmt::OMPTargetUpdateDirectiveClass:
-  case Stmt::OMPTeamsDistributeDirectiveClass:
-  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
-  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
-  case Stmt::OMPTeamsGenericLoopDirectiveClass:
-  case Stmt::OMPTargetTeamsDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
-  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
-  case Stmt::OMPInteropDirectiveClass:
-  case Stmt::OMPDispatchDirectiveClass:
-  case Stmt::OMPGenericLoopDirectiveClass:
-  case Stmt::OMPReverseDirectiveClass:
-  case Stmt::OMPInterchangeDirectiveClass:
-  case Stmt::OMPAssumeDirectiveClass:
-  case Stmt::OMPMaskedDirectiveClass:
-  case Stmt::OMPStripeDirectiveClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::DeferStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
+  case Stmt::CapturedStmtClass:
+    llvm_unreachable("CapturedStmt must be handled by the parent directive");
   }
 
   llvm_unreachable("Unexpected statement class");
@@ -329,6 +507,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
     return emitReturnStmt(cast<ReturnStmt>(*s));
+  case Stmt::AttributedStmtClass:
+    return emitAttributedStmt(cast<AttributedStmt>(*s));
   }
 
   return mlir::success();
@@ -346,8 +526,8 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
-static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
-                          mlir::Location loc) {
+void CIRGenFunction::terminateStructuredRegionBody(mlir::Region &r,
+                                                   mlir::Location loc) {
   if (r.empty())
     return;
 
@@ -458,7 +638,14 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
         s.getNRVOCandidate()->isNRVOVariable()) {
       assert(!cir::MissingFeatures::openMP());
-      assert(!cir::MissingFeatures::nrvo());
+      // Apply the named return value optimization for this return statement,
+      // which means doing nothing: the appropriate result has already been
+      // constructed into the NRVO variable.
+
+      // If there is an NRVO flag for this variable, set it to 1 into indicate
+      // that the cleanup code should not destroy the variable.
+      if (auto nrvoFlag = nrvoFlags[s.getNRVOCandidate()])
+        builder.createFlagStore(loc, true, nrvoFlag);
     } else if (!rv) {
       // No return expression. Do nothing.
     } else if (rv->getType()->isVoidType()) {
@@ -503,37 +690,33 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   if (!createNewScope) {
     handleReturnVal();
   } else {
-    mlir::Location scopeLoc =
-        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
-    // First create cir.scope and later emit it's body. Otherwise all CIRGen
-    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
-    // look into parents, which are all unlinked.
-    mlir::OpBuilder::InsertPoint scopeBody;
-    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                         [&](mlir::OpBuilder &b, mlir::Location loc) {
-                           scopeBody = b.saveInsertionPoint();
-                         });
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(scopeBody);
-      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
-                                            builder.getInsertionBlock()};
-      handleReturnVal();
-    }
+    FullExprCleanupScope fullExprScope(*this, rv);
+    handleReturnVal();
   }
 
   cleanupScope.forceCleanup();
 
-  // In CIR we might have returns in different scopes.
-  // FIXME(cir): cleanup code is handling actual return emission, the logic
-  // should try to match traditional codegen more closely (to the extent which
-  // is possible).
-  auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
-  emitBranchThroughCleanup(loc, returnBlock(retBlock));
+  // Classic codegen emits a branch through any cleanups before continuing to
+  // a shared return block. Because CIR handles branching through cleanups
+  // during the CFG flattening phase, we can just emit the return statement
+  // directly.
+  // TODO(cir): Eliminate this redundant load and the store above when we can.
+  if (fnRetAlloca) {
+    // Load the value from `__retval` and return it via the `cir.return` op.
+    cir::AllocaOp retAlloca =
+        mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                     *fnRetAlloca);
 
-  // Insert the new block to continue codegen after branch to ret block.
+    cir::ReturnOp::create(builder, loc, {value});
+  } else {
+    cir::ReturnOp::create(builder, loc);
+  }
+
+  // Insert the new block to continue codegen after the return statement.
+  // This will get deleted if we don't populate it. This handles the case of
+  // unreachable statements below a return.
   builder.createBlock(builder.getBlock()->getParent());
-
   return mlir::success();
 }
 
@@ -552,6 +735,26 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
   // Insert the new block to continue codegen after goto.
   builder.createBlock(builder.getBlock()->getParent());
 
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  // An indirect goto with an active cleanup may leave its scope.  Determining
+  // whether its dynamic destination requires cleanup is not implemented.
+  if (ehStack.stable_begin() != prologueCleanupDepth) {
+    cgm.errorNYI(s.getSourceRange(), "indirect goto with active cleanup");
+    return mlir::success();
+  }
+
+  mlir::Value val = emitScalarExpr(s.getTarget());
+  // Emit a symbolic indirect goto.  GotoSolver resolves it into the shared
+  // indirect-branch block after FlattenCFG merges regions, so this stays valid
+  // even when the goto sits inside a nested scope.
+  cir::IndirectGotoOp::create(builder, getLoc(s.getSourceRange()), val);
+
+  // The indirect goto ends the block; open a fresh one so codegen can resume.
+  builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
 
@@ -582,10 +785,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
 
   builder.setInsertionPointToEnd(labelBlock);
   cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
-  builder.setInsertionPointToEnd(labelBlock);
-
   //  FIXME: emit debug info for labels, incrementProfileCounter
-  assert(!cir::MissingFeatures::ehstackBranches());
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
   return mlir::success();
@@ -640,7 +840,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   // If the substmt is default stmt or case stmt, try to handle the special case
   // to make it into the simple form. e.g.
   //
-  //  swtich () {
+  //  switch () {
   //    case 1:
   //    default:
   //      ...
@@ -690,6 +890,11 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
+
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // as an int later on.
+  if (isa<cir::BoolType>(condType))
+    condType = builder.getUIntNTy(1);
 
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
@@ -751,11 +956,6 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
       return mlir::failure();
 
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -771,6 +971,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
           // https://en.cppreference.com/w/cpp/language/for
           // In C++ the scope of the init-statement and the scope of
           // statement are one and the same.
+          RunCleanupsScope bodyScope(*this);
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
@@ -804,7 +1005,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -819,48 +1020,66 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // In the classic codegen, if there are any cleanups between here and the
-    // loop-exit scope, a block is created to stage the loop exit. We probably
-    // already do the right thing because of ScopeOp, but we need more testing
-    // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
 
-    forOp = builder.createFor(
-        getLoc(s.getSourceRange()),
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
-          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-          mlir::Value condVal;
-          if (s.getCond()) {
-            // If the for statement has a condition scope,
-            // emit the local variable declaration.
-            if (s.getConditionVariable())
-              emitDecl(*s.getConditionVariable());
-            // C99 6.8.5p2/p4: The first substatement is executed if the
-            // expression compares unequal to 0. The condition must be a
-            // scalar type.
-            condVal = evaluateExprAsBool(s.getCond());
-          } else {
-            condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
-          }
-          builder.createCondition(condVal);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // The scope of the for loop body is nested within the scope of the
-          // for loop's init-statement and condition.
-          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
-            loopRes = mlir::failure();
-          emitStopPoint(&s);
-        },
-        /*stepBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (s.getInc())
-            if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
-              loopRes = mlir::failure();
-          builder.createYield(loc);
-        });
+    // If the condition variable has a non-trivial destructor, its lifetime is
+    // a single iteration, so capture its cleanup and emit it into the loop's
+    // per-iteration cleanup region. This scope is constructed after the
+    // init-statement so its cleanups are not captured.
+    const VarDecl *condVar = s.getConditionVariable();
+    bool needsCondCleanup =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
+    // We will also need cleanup if lifetime markers are enabled.
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
+
+    auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+      assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+      mlir::Value condVal;
+      if (s.getCond()) {
+        // If the for statement declares a condition variable, emit that here.
+        if (condVar)
+          emitLoopConditionVariable(*condVar, loopCondScope);
+        // C99 6.8.5p2/p4: The first substatement is executed if the
+        // expression compares unequal to 0. The condition must be a
+        // scalar type.
+        condVal = evaluateExprAsBool(s.getCond());
+      } else {
+        condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+      }
+      builder.createCondition(condVal);
+    };
+    auto bodyBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      // The scope of the for loop body is nested within the scope of the
+      // for loop's init-statement and condition.
+      RunCleanupsScope bodyScope(*this);
+      if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+        loopRes = mlir::failure();
+      emitStopPoint(&s);
+    };
+    auto stepBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      if (s.getInc())
+        if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
+          loopRes = mlir::failure();
+      builder.createYield(loc);
+    };
+
+    if (needsCondCleanup) {
+      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
+                                         ? cir::CleanupKind::All
+                                         : cir::CleanupKind::Normal;
+      forOp = builder.createFor(
+          getLoc(s.getSourceRange()), condBuilder, bodyBuilder, stepBuilder,
+          /*cleanupBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            loopCondScope.emitIntoLoopCleanupRegion(loc);
+            builder.createYield(loc);
+          },
+          cleanupKind);
+    } else {
+      forOp = builder.createFor(getLoc(s.getSourceRange()), condBuilder,
+                                bodyBuilder, stepBuilder);
+    }
     return loopRes;
   };
 
@@ -876,7 +1095,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(forOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -887,11 +1106,6 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -908,6 +1122,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the do-while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -927,7 +1142,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(doWhileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -938,36 +1153,53 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::requiresCleanups());
 
-    whileOp = builder.createWhile(
-        getLoc(s.getSourceRange()),
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
-          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-          mlir::Value condVal;
-          // If the for statement has a condition scope,
-          // emit the local variable declaration.
-          if (s.getConditionVariable())
-            emitDecl(*s.getConditionVariable());
-          // C99 6.8.5p2/p4: The first substatement is executed if the
-          // expression compares unequal to 0. The condition must be a
-          // scalar type.
-          condVal = evaluateExprAsBool(s.getCond());
-          builder.createCondition(condVal);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // The scope of the while loop body is a nested scope.
-          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
-            loopRes = mlir::failure();
-          emitStopPoint(&s);
-        });
+    // If the condition variable has a non-trivial destructor, its lifetime is
+    // a single iteration, so capture its cleanup and emit it into the loop's
+    // per-iteration cleanup region.
+    const VarDecl *condVar = s.getConditionVariable();
+    bool needsCondCleanup =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
+    // We will also need cleanup if lifetime markers are enabled.
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
+
+    auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+      assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+      // If the while statement declares a condition variable, emit that here.
+      if (condVar)
+        emitLoopConditionVariable(*condVar, loopCondScope);
+      // C99 6.8.5p2/p4: The first substatement is executed if the
+      // expression compares unequal to 0. The condition must be a
+      // scalar type.
+      mlir::Value condVal = evaluateExprAsBool(s.getCond());
+      builder.createCondition(condVal);
+    };
+    auto bodyBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      // The scope of the while loop body is a nested scope.
+      RunCleanupsScope bodyScope(*this);
+      if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+        loopRes = mlir::failure();
+      emitStopPoint(&s);
+    };
+
+    if (needsCondCleanup) {
+      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
+                                         ? cir::CleanupKind::All
+                                         : cir::CleanupKind::Normal;
+      whileOp = builder.createWhile(
+          getLoc(s.getSourceRange()), condBuilder, bodyBuilder,
+          /*cleanupBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            loopCondScope.emitIntoLoopCleanupRegion(loc);
+            builder.createYield(loc);
+          },
+          cleanupKind);
+    } else {
+      whileOp = builder.createWhile(getLoc(s.getSourceRange()), condBuilder,
+                                    bodyBuilder);
+    }
     return loopRes;
   };
 
@@ -983,7 +1215,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
+  terminateStructuredRegionBody(whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }
 
@@ -1002,10 +1234,41 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
 
   auto *compoundStmt = cast<CompoundStmt>(s);
 
-  mlir::Block *swtichBlock = builder.getBlock();
-  for (auto *c : compoundStmt->body()) {
+  ArrayRef<Stmt *> body{compoundStmt->body_begin(), compoundStmt->body_end()};
+
+  mlir::Block *switchBlock = builder.getBlock();
+
+  // Any statements appearing before the first case statement are 'unassociated'
+  // with anything. So we have to create them FIRST in their own block. After
+  // that, the 'case' regions will take care of future ones.
+  if (!body.empty() && !isa<SwitchCase>(body.front())) {
+    builder.setInsertionPointToEnd(switchBlock);
+    {
+      // This is needed to handle cleanups in a compound statement before the
+      // first case statement.
+      RunCleanupsScope preCaseScope(*this);
+      while (!body.empty() && !isa<SwitchCase>(body.front())) {
+
+        auto *c = body.front();
+        if (mlir::failed(
+                emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
+          return mlir::failure();
+
+        body = body.drop_front();
+      }
+    }
+
+    // Now that we've emitted ALL of the statements, we can create a new block
+    // for the actual case statements/etc to appear.
+    mlir::Block *lastBlock = builder.getBlock();
+    switchBlock = builder.createBlock(switchBlock->getParent());
+    builder.setInsertionPointToEnd(lastBlock);
+    cir::BrOp::create(builder, getLoc(s->getSourceRange()), switchBlock);
+  }
+
+  for (auto *c : body) {
     if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
-      builder.setInsertionPointToEnd(swtichBlock);
+      builder.setInsertionPointToEnd(switchBlock);
       // Reset insert point automatically, so that we can attach following
       // random stmt to the region of previous built case op to try to make
       // the being generated `cir.switch` to be in simple form.
@@ -1041,6 +1304,13 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
       emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
+
+    // Coerce bool values to an i1. There is no real sensible reason we need to
+    // represent a 'switch' of scoped-enum-with-bool-backing-type specially
+    // here.  It is a rarely used thing, and would result in a lot of work to
+    // properly handle this everywhere.
+    if (isa<cir::BoolType>(condV.getType()))
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
 
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());
@@ -1078,8 +1348,10 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);
   for (auto caseOp : cases)
-    terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
-  terminateBody(builder, swop.getBody(), swop.getLoc());
+    terminateStructuredRegionBody(caseOp.getCaseRegion(), caseOp.getLoc());
+  terminateStructuredRegionBody(swop.getBody(), swop.getLoc());
+
+  swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
 
   return res;
 }
@@ -1089,15 +1361,31 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   if (rv.isScalar()) {
     builder.createStore(loc, rv.getValue(), returnValue);
   } else if (rv.isAggregate()) {
-    LValue dest = makeAddrLValue(returnValue, ty);
-    LValue src = makeAddrLValue(rv.getAggregateAddress(), ty);
-    emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    Address rvAddr = rv.getAggregateAddress();
+    // If the aggregate is already in the return slot (e.g. a callee was
+    // invoked through a ReturnValueSlot bound to returnValue), the copy is
+    // a no-op.  Calling emitAggregateCopy here would also incorrectly
+    // require the type to have a trivial copy/move.
+    if (rvAddr.getPointer() != returnValue.getPointer()) {
+      LValue dest = makeAddrLValue(returnValue, ty);
+      LValue src = makeAddrLValue(rvAddr, ty);
+      emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+    }
   } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+    assert(rv.isComplex() && "Unknown rvalue kind?");
+    builder.createStore(loc, rv.getComplexValue(), returnValue);
   }
-  mlir::Block *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
-  assert(!cir::MissingFeatures::emitBranchThroughCleanup());
-  cir::BrOp::create(builder, loc, retBlock);
-  if (ehStack.stable_begin() != currentCleanupStackDepth)
-    cgm.errorNYI(loc, "return of r-value with cleanup stack");
+
+  // Classic codegen emits a branch through any cleanups before continuing to
+  // a shared return block. Because CIR handles branching through cleanups
+  // during the CFG flattening phase, we can just emit the return statement
+  // directly.
+  // TODO(cir): Eliminate this redundant load and the store above when we can.
+  // Load the value from `__retval` and return it via the `cir.return` op.
+  cir::AllocaOp retAlloca =
+      mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+  auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                   *fnRetAlloca);
+
+  cir::ReturnOp::create(builder, loc, {value});
 }

@@ -32,7 +32,7 @@
 
 using namespace libunwind;
 
-/// internal object to represent this processes address space
+/// internal object to represent this process's address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;
 
 _LIBUNWIND_EXPORT unw_addr_space_t unw_local_addr_space =
@@ -131,35 +131,34 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       {
         // It is only valid to set the IP within the current function. This is
         // important for ptrauth, otherwise the IP cannot be correctly signed.
-        // The current signature of `value` is via the schema:
-        //   __ptrauth(ptrauth_key_return_address, <<sp>>, 0)
-        // For this to be generally usable we manually re-sign it to the
-        // directly supported schema:
-        //   __ptrauth(ptrauth_key_return_address, 1, 0)
-        unw_word_t
-              __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1,
-                                                 0) authenticated_value;
-        unw_word_t opaque_value = (uint64_t)ptrauth_auth_and_resign(
-            (void *)value, ptrauth_key_return_address, sp,
-            ptrauth_key_return_address, &authenticated_value);
-        memmove(reinterpret_cast<void *>(&authenticated_value),
-                reinterpret_cast<void *>(&opaque_value),
-                sizeof(authenticated_value));
-        if (authenticated_value < info.start_ip ||
-            authenticated_value > info.end_ip)
-          _LIBUNWIND_ABORT("PC vs frame info mismatch");
+        //
+        // However many JITs do not configure CFI frames, so we cannot actually
+        // enforce this - at least not without an extremely expensive syscall.
+        //
+        // For the forseeable future this will need to be a debug only assertion
+        // so we just strip and assert to avoid the unnecessary auths in release
+        // builds.
+        unw_word_t stripped_value = (unw_word_t)ptrauth_strip(
+            (void *)value, ptrauth_key_return_address);
+        if (stripped_value < info.start_ip && stripped_value > info.end_ip)
+          _LIBUNWIND_LOG("Badly behaved use of unw_set_reg: moving IP(0x%zX) "
+                         "outside of CFI bounds function (0x%zX, 0x%zX)",
+                         stripped_value, info.start_ip, info.end_ip);
 
         // PC should have been signed with the sp, so we verify that
-        // roundtripping does not fail.
+        // roundtripping does not fail. The `ptrauth_auth_and_resign` is
+        // guaranteed to trap on authentication failure even without FPAC
+        // feature.
         pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
         if (ptrauth_auth_and_resign((void *)pc, ptrauth_key_return_address, sp,
                                     ptrauth_key_return_address,
                                     sp) != (void *)pc) {
-          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%zX, 0x%zX)->0x%zX\n",
-                         pc, sp,
-                         (pint_t)ptrauth_auth_data(
-                             (void *)pc, ptrauth_key_return_address, sp));
-          _LIBUNWIND_ABORT("Bad unwind through arm64e");
+          _LIBUNWIND_LOG(
+              "Bad unwind with PAuth-enabled ABI (0x%zX, 0x%zX)->0x%zX\n", pc,
+              sp,
+              (pint_t)ptrauth_auth_data((void *)pc, ptrauth_key_return_address,
+                                        sp));
+          _LIBUNWIND_ABORT("Bad unwind with PAuth-enabled ABI");
         }
       }
 #endif
@@ -303,7 +302,7 @@ _LIBUNWIND_HIDDEN int __unw_is_fpreg(unw_cursor_t *cursor,
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_fpreg, unw_is_fpreg)
 
-/// Checks if a register is a floating-point register.
+/// Get name of specified register at cursor position in stack frame.
 _LIBUNWIND_HIDDEN const char *__unw_regname(unw_cursor_t *cursor,
                                             unw_regnum_t regNum) {
   _LIBUNWIND_TRACE_API("__unw_regname(cursor=%p, regNum=%d)",

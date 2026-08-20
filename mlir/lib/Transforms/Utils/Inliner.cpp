@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DebugLog.h"
@@ -354,7 +355,7 @@ static std::string getNodeName(CallOpInterface op) {
   return "_unnamed_callee_";
 }
 
-/// Return true if the specified `inlineHistoryID`  indicates an inline history
+/// Return true if the specified `inlineHistoryID` indicates an inline history
 /// that already includes `node`.
 static bool inlineHistoryIncludes(
     CallGraphNode *node, std::optional<size_t> inlineHistoryID,
@@ -419,6 +420,9 @@ struct InlinerInterfaceImpl : public InlinerInterface {
 
 namespace mlir {
 
+using CallGraphEdge = std::pair<CallGraphNode *, CallGraphNode *>;
+using BlockedEdges = DenseSet<CallGraphEdge>;
+
 class Inliner::Impl {
 public:
   Impl(Inliner &inliner) : inliner(inliner) {}
@@ -453,7 +457,8 @@ private:
   /// Attempt to inline calls within the given scc. This function returns
   /// success if any calls were inlined, failure otherwise.
   LogicalResult inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
-                                 CGUseList &useList, CallGraphSCC &currentSCC);
+                                 CGUseList &useList, CallGraphSCC &currentSCC,
+                                 BlockedEdges &blockedEdges);
 
   /// Returns true if the given call should be inlined.
   bool shouldInline(ResolvedCall &resolvedCall);
@@ -471,10 +476,14 @@ LogicalResult Inliner::Impl::inlineSCC(InlinerInterfaceImpl &inlinerIface,
   // hit the maximum iteration count. Simplifying early helps to refine the cost
   // model, and in future iterations may devirtualize new calls.
   unsigned iterationCount = 0;
+  // Optimization may replace calls, preventing exact provenance tracking.
+  // Conservatively retain proven recursive graph edges across iterations.
+  BlockedEdges blockedEdges;
   do {
     if (failed(optimizeSCC(inlinerIface.cg, useList, currentSCC, context)))
       return failure();
-    if (failed(inlineCallsInSCC(inlinerIface, useList, currentSCC)))
+    if (failed(
+            inlineCallsInSCC(inlinerIface, useList, currentSCC, blockedEdges)))
       break;
   } while (++iterationCount < inliner.config.getMaxInliningIterations());
   return success();
@@ -580,7 +589,8 @@ Inliner::Impl::optimizeCallable(CallGraphNode *node,
 /// success if any calls were inlined, failure otherwise.
 LogicalResult
 Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
-                                CGUseList &useList, CallGraphSCC &currentSCC) {
+                                CGUseList &useList, CallGraphSCC &currentSCC,
+                                BlockedEdges &blockedEdges) {
   CallGraph &cg = inlinerIface.cg;
   auto &calls = inlinerIface.calls;
 
@@ -604,17 +614,17 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     }
   }
 
-  // When inlining a callee produces new call sites, we want to keep track of
-  // the fact that they were inlined from the callee. This allows us to avoid
-  // infinite inlining.
+  // When inlining a callee produces new call sites, remember that they came
+  // from the callee to avoid recursively inlining through a cycle.
   using InlineHistoryT = std::optional<size_t>;
   SmallVector<std::pair<CallGraphNode *, InlineHistoryT>, 8> inlineHistory;
   std::vector<InlineHistoryT> callHistory(calls.size(), InlineHistoryT{});
+  BlockedEdges newlyBlockedEdges;
 
   LLVM_DEBUG({
     LDBG() << "* Inliner: Initial calls in SCC are: {";
-    for (unsigned i = 0, e = calls.size(); i < e; ++i)
-      LDBG() << "  " << i << ". " << calls[i].call << ",";
+    for (unsigned I = 0, E = calls.size(); I < E; ++I)
+      LDBG() << "  " << I << ". " << calls[I].call << ",";
     LDBG() << "}";
   });
 
@@ -629,7 +639,11 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     InlineHistoryT inlineHistoryID = callHistory[i];
     bool inHistory =
         inlineHistoryIncludes(it.targetNode, inlineHistoryID, inlineHistory);
-    bool doInline = !inHistory && shouldInline(it);
+    auto edge = std::make_pair(it.sourceNode, it.targetNode);
+    if (inHistory)
+      newlyBlockedEdges.insert(edge);
+    bool doInline =
+        !inHistory && !blockedEdges.contains(edge) && shouldInline(it);
     CallOpInterface call = it.call;
     LLVM_DEBUG({
       if (doInline)
@@ -657,8 +671,7 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     }
     inlinedAnyCalls = true;
 
-    // Create a inline history entry for this inlined call, so that we remember
-    // that new callsites came about due to inlining Callee.
+    // Record that the new callsites came from inlining the callee.
     InlineHistoryT newInlineHistoryID{inlineHistory.size()};
     inlineHistory.push_back(std::make_pair(it.targetNode, inlineHistoryID));
 
@@ -695,6 +708,9 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     currentSCC.remove(node);
     inlinerIface.markForDeletion(node);
   }
+  // Delay blocking until the next iteration so independent calls on the same
+  // edge in the current worklist retain their inlining opportunities.
+  blockedEdges.insert(newlyBlockedEdges.begin(), newlyBlockedEdges.end());
   calls.clear();
   return success(inlinedAnyCalls);
 }

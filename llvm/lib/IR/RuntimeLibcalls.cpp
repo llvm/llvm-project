@@ -9,8 +9,10 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -24,6 +26,7 @@ using namespace RTLIB;
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+#define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
 #include "llvm/IR/RuntimeLibcalls.inc"
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
@@ -38,13 +41,16 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   if (ExceptionModel == ExceptionHandling::None)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
+  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+               TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
   switch (VecLib) {
   case VectorLibrary::SLEEFGNUABI:
     for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
+         {RTLIB::impl__ZGVnN2vv_fmod, RTLIB::impl__ZGVnN4vv_fmodf,
+          RTLIB::impl__ZGVsMxvv_fmod, RTLIB::impl__ZGVsMxvv_fmodf,
+          RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
           RTLIB::impl__ZGVsNxvl8_modf, RTLIB::impl__ZGVsNxvl4_modff,
           RTLIB::impl__ZGVnN2vl8l8_sincos, RTLIB::impl__ZGVnN4vl4l4_sincosf,
           RTLIB::impl__ZGVsNxvl8l8_sincos, RTLIB::impl__ZGVsNxvl4l4_sincosf,
@@ -54,39 +60,68 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
       setAvailable(Impl);
     break;
   case VectorLibrary::ArmPL:
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_armpl_vmodfq_f64, RTLIB::impl_armpl_vmodfq_f32,
-          RTLIB::impl_armpl_svmodf_f64_x, RTLIB::impl_armpl_svmodf_f32_x,
-          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
-          RTLIB::impl_armpl_svsincos_f64_x, RTLIB::impl_armpl_svsincos_f32_x,
-          RTLIB::impl_armpl_vsincospiq_f32, RTLIB::impl_armpl_vsincospiq_f64,
-          RTLIB::impl_armpl_svsincospi_f32_x,
-          RTLIB::impl_armpl_svsincospi_f64_x})
+    for (RTLIB::LibcallImpl Impl : {RTLIB::impl_armpl_svfmod_f32_x,
+                                    RTLIB::impl_armpl_svfmod_f64_x,
+                                    RTLIB::impl_armpl_vfmodq_f32,
+                                    RTLIB::impl_armpl_vfmodq_f64,
+                                    RTLIB::impl_armpl_vmodfq_f64,
+                                    RTLIB::impl_armpl_vmodfq_f32,
+                                    RTLIB::impl_armpl_svmodf_f64_x,
+                                    RTLIB::impl_armpl_svmodf_f32_x,
+                                    RTLIB::impl_armpl_vsincosq_f64,
+                                    RTLIB::impl_armpl_vsincosq_f32,
+                                    RTLIB::impl_armpl_svsincos_f64_x,
+                                    RTLIB::impl_armpl_svsincos_f32_x,
+                                    RTLIB::impl_armpl_vsincospiq_f32,
+                                    RTLIB::impl_armpl_vsincospiq_f64,
+                                    RTLIB::impl_armpl_svsincospi_f32_x,
+                                    RTLIB::impl_armpl_svsincospi_f64_x,
+                                    RTLIB::impl_armpl_svpow_f32_x,
+                                    RTLIB::impl_armpl_svpow_f64_x,
+                                    RTLIB::impl_armpl_vpowq_f32,
+                                    RTLIB::impl_armpl_vpowq_f64,
+                                    RTLIB::impl_armpl_svcbrt_f32_x,
+                                    RTLIB::impl_armpl_svcbrt_f64_x,
+                                    RTLIB::impl_armpl_vcbrtq_f32,
+                                    RTLIB::impl_armpl_vcbrtq_f64})
       setAvailable(Impl);
 
     for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32})
+         {RTLIB::impl_armpl_vfmodq_f32, RTLIB::impl_armpl_vfmodq_f64,
+          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
+          RTLIB::impl_armpl_vpowq_f32, RTLIB::impl_armpl_vpowq_f64,
+          RTLIB::impl_armpl_vcbrtq_f32, RTLIB::impl_armpl_vcbrtq_f64})
       setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
-
+    break;
+  case VectorLibrary::AMDLIBM:
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_amd_vrd2_sincos, RTLIB::impl_amd_vrd4_sincos,
+          RTLIB::impl_amd_vrd8_sincos, RTLIB::impl_amd_vrs4_sincosf,
+          RTLIB::impl_amd_vrs8_sincosf, RTLIB::impl_amd_vrs16_sincosf})
+      setAvailable(Impl);
     break;
   default:
     break;
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
-    : RuntimeLibcallsInfo(M.getTargetTriple()) {
-  // TODO: Consider module flags
-}
+// TODO: Consider the remaining module flags.
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
+                                         ExceptionHandling ExceptionModel,
+                                         EABI EABIVersion, StringRef ABIName,
+                                         VectorLibrary VecLib)
+    : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
+                          EABIVersion, ABIName, VecLib) {}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName) {
+                                       EABI EABIVersion, StringRef ABIName,
+                                       LongDoubleFormat LongDoubleFormat) {
   setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName);
+                              ABIName, LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -113,23 +148,6 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
-  switch (TT.getOS()) {
-  case Triple::MacOSX:
-    return !TT.isMacOSXVersionLT(10, 9);
-  case Triple::IOS:
-    return !TT.isOSVersionLT(7, 0);
-  case Triple::DriverKit:
-  case Triple::TvOS:
-  case Triple::WatchOS:
-  case Triple::XROS:
-  case Triple::BridgeOS:
-    return true;
-  default:
-    return false;
-  }
-}
-
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index
 /// size of the default address space. This matches TargetLibraryInfo and should
 /// be kept in sync.
@@ -143,10 +161,10 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    RTLIB::LibcallImpl LibcallImpl) const {
   // TODO: NoCallback probably unsafe in general
   static constexpr Attribute::AttrKind CommonFnAttrs[] = {
-      Attribute::MustProgress, Attribute::NoCallback, Attribute::NoFree,
-      Attribute::NoSync,       Attribute::NoUnwind,   Attribute::WillReturn};
+      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
+      Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
-      Attribute::MustProgress, Attribute::NoUnwind, Attribute::WillReturn};
+      Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
@@ -277,6 +295,64 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                                   fcNegNormal));
     return {FuncTy, Attrs};
   }
+  case RTLIB::impl__ZGVnN2vv_fmod:
+  case RTLIB::impl__ZGVnN4vv_fmodf:
+  case RTLIB::impl__ZGVsMxvv_fmod:
+  case RTLIB::impl__ZGVsMxvv_fmodf:
+  case RTLIB::impl_armpl_vfmodq_f32:
+  case RTLIB::impl_armpl_vfmodq_f64:
+  case RTLIB::impl_armpl_svfmod_f32_x:
+  case RTLIB::impl_armpl_svfmod_f64_x:
+  case RTLIB::impl_armpl_vpowq_f32:
+  case RTLIB::impl_armpl_vpowq_f64:
+  case RTLIB::impl_armpl_svpow_f32_x:
+  case RTLIB::impl_armpl_svpow_f64_x:
+  case RTLIB::impl_armpl_vcbrtq_f32:
+  case RTLIB::impl_armpl_vcbrtq_f64:
+  case RTLIB::impl_armpl_svcbrt_f32_x:
+  case RTLIB::impl_armpl_svcbrt_f64_x: {
+    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vv_fmodf ||
+                 LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
+                 LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
+                 LibcallImpl == RTLIB::impl_armpl_vfmodq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_vpowq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||
+                 LibcallImpl == RTLIB::impl_armpl_vcbrtq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x;
+
+    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsMxvv_fmod ||
+                      LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
+                      LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svfmod_f64_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svpow_f64_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svcbrt_f64_x;
+
+    bool HasOneArg = LibcallImpl == RTLIB::impl_armpl_vcbrtq_f32 ||
+                     LibcallImpl == RTLIB::impl_armpl_vcbrtq_f64 ||
+                     LibcallImpl == RTLIB::impl_armpl_svcbrt_f32_x ||
+                     LibcallImpl == RTLIB::impl_armpl_svcbrt_f64_x;
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    unsigned EC = IsF32 ? 4 : 2;
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
+
+    SmallVector<Type *, 3> ArgTys(HasOneArg ? 1 : 2, VecTy);
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
+
+    FunctionType *FuncTy = FunctionType::get(VecTy, ArgTys, false);
+    return {FuncTy, Attrs};
+  }
   case RTLIB::impl__ZGVnN2vl8_modf:
   case RTLIB::impl__ZGVnN4vl4_modff:
   case RTLIB::impl__ZGVsNxvl8_modf:
@@ -397,12 +473,20 @@ bool RuntimeLibcallsInfo::hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
   /// FIXME: This should be generated by tablegen and support the argument at an
   /// arbitrary position
   switch (Impl) {
+  case RTLIB::impl_armpl_svfmod_f32_x:
+  case RTLIB::impl_armpl_svfmod_f64_x:
   case RTLIB::impl_armpl_svmodf_f64_x:
   case RTLIB::impl_armpl_svmodf_f32_x:
   case RTLIB::impl_armpl_svsincos_f32_x:
   case RTLIB::impl_armpl_svsincos_f64_x:
   case RTLIB::impl_armpl_svsincospi_f32_x:
   case RTLIB::impl_armpl_svsincospi_f64_x:
+  case RTLIB::impl__ZGVsMxvv_fmod:
+  case RTLIB::impl__ZGVsMxvv_fmodf:
+  case RTLIB::impl_armpl_svpow_f32_x:
+  case RTLIB::impl_armpl_svpow_f64_x:
+  case RTLIB::impl_armpl_svcbrt_f32_x:
+  case RTLIB::impl_armpl_svcbrt_f64_x:
     return true;
   default:
     return false;

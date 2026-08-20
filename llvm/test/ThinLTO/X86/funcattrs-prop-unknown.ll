@@ -8,14 +8,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-NOT: ; Function Attrs:
-; CHECK: define i32 @indirect(ptr captures(none) %0) {
+; CHECK: define i32 @indirect(ptr captures(none) %0)
 define i32 @indirect(ptr captures(none)) {
   %2 = tail call i32 %0()
   ret i32 %2
 }
 
 ; CHECK-NOT: ; Function Attrs:
-; CHECK: define ptr @inlineasm() {
+; CHECK: define ptr @inlineasm()
 define ptr @inlineasm() {
 entry:
   %0 = tail call ptr asm sideeffect "lea ff_h264_cabac_tables(%rip), $0", "=&r,~{dirflag},~{fpsr},~{flags}"()
@@ -23,7 +23,7 @@ entry:
 }
 
 ; CHECK-NOT: ; Function Attrs:
-; CHECK: define void @selectcallee() {
+; CHECK: define void @selectcallee()
 define void @selectcallee() {
     ; Test calls that aren't handled either as direct or indirect.
     call void getelementptr (i8, ptr @f, i64 ptrtoint (ptr @g to i64))()

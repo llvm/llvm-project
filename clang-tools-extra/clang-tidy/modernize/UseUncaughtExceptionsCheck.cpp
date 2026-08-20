@@ -29,7 +29,7 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl_ref_expr"),
       this);
 
-  auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
+  const auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
       declRefExpr(hasDeclaration(functionDecl(hasName(MatchText)))))));
 
   // CallExpr: warning, fix-it.
@@ -69,8 +69,9 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
     EndLoc = U->getNameInfo().getEndLoc();
   }
 
-  auto Diag = diag(BeginLoc, "'std::uncaught_exception' is deprecated, use "
-                             "'std::uncaught_exceptions' instead");
+  const auto Diag =
+      diag(BeginLoc, "'std::uncaught_exception' is deprecated, use "
+                     "'std::uncaught_exceptions' instead");
 
   if (!BeginLoc.isMacroID()) {
     StringRef Text =
@@ -80,9 +81,8 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
     Text.consume_back("()");
     const int TextLength = Text.size();
 
-    if (WarnOnly) {
+    if (WarnOnly)
       return;
-    }
 
     if (!C) {
       Diag << FixItHint::CreateInsertion(BeginLoc.getLocWithOffset(TextLength),

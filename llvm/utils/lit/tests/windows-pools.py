@@ -1,7 +1,7 @@
 # Create a directory with 20 files and check the number of pools and workers per pool that lit will use.
 
 # RUN: rm -Rf %t.dir && mkdir -p %t.dir
-# RUN: %python -c "for i in range(20): open(rf'%t.dir/file{i}.txt', 'w').write('RUN:')"
+# RUN: %{python} -c "for i in range(20): open(rf'%t.dir/file{i}.txt', 'w').write('RUN:')"
 
 # RUN:  echo "import lit.formats" > %t.dir/lit.cfg
 # RUN:  echo "config.name = \"top-level-suite\"" >> %t.dir/lit.cfg

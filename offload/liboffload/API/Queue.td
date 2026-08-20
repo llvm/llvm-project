@@ -11,13 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 def olCreateQueue : Function {
-    let desc = "Create a queue for the given device.";
-    let details = [];
+    let desc = "Create a queue for the given device within the given context.";
+    let details = [
+        "The queue is scoped to `Context` and `Device` must belong to it.",
+        "The queue can only operate on resources (memory allocations, programs) that were created in the same context."
+    ];
     let params = [
+        Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
         Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
         Param<"ol_queue_handle_t*", "Queue", "output pointer for the created queue", PARAM_OUT>
     ];
-    let returns = [];
+    let returns = [
+        Return<"OL_ERRC_INVALID_DEVICE", [
+            "Device does not belong to `Context`"
+        ]>
+    ];
 }
 
 def olDestroyQueue : Function {
@@ -61,6 +69,7 @@ def ol_queue_info_t : Enum {
   let is_typed = 1;
   let etors = [
     TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
+    TaggedEtor<"CONTEXT", "ol_context_handle_t", "The handle of the context associated with the queue.">,
     TaggedEtor<"EMPTY", "bool", "True if the queue is known to be empty. May be unconditionally false if the device does not support status queries.">,
   ];
 }
@@ -124,4 +133,16 @@ def olLaunchHostFunction : Function {
     Param<"void *", "UserData", "a pointer that will be passed verbatim to the callback function", PARAM_IN_OPTIONAL>,
   ];
   let returns = [];
+}
+
+def olQueryQueue : Function {
+    let desc = "Query for queue work completion in a non-blocking manner.";
+    let details = [
+      "The function checks if a queue work has completed enqueued work without blocking the calling thread."
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"bool *", "IsQueueWorkCompleted", " A flag indicating if the queue work has completed", PARAM_OUT_OPTIONAL>
+    ];
+    let returns = [];
 }

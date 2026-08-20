@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float128 ldexpf128(float128 x, int exp) {
+LIBC_INLINE constexpr float128 ldexpf128(float128 x, int exp) {
   return fputil::ldexp(x, exp);
 }
 
@@ -29,6 +29,6 @@ LIBC_INLINE static constexpr float128 ldexpf128(float128 x, int exp) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_LDEXPF128_H

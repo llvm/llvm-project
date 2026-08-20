@@ -60,6 +60,16 @@ public:
   virtual void AdjustBreakpointAddress(const Symbol &func,
                                        Address &addr) const {}
 
+  /// If \a addr falls within the non-executable header at a function's start,
+  /// return the address of the first instruction past the header. Otherwise
+  /// return \a addr unchanged.
+  ///
+  /// Some formats begin a function with bytes that are part of the function but
+  /// are not executable instructions, so an address at the raw function start
+  /// cannot hold a breakpoint and cannot be disassembled. This is specifically
+  /// used for WebAssembly, where a function begins with a local variable
+  /// declaration header.
+  virtual Address SkipFunctionHeader(Address addr) const { return addr; }
 
   /// Get \a load_addr as a callable code load address for this target
   ///
@@ -137,6 +147,18 @@ public:
       lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
       std::shared_ptr<const UnwindPlan> current_unwindplan) {
     return lldb::UnwindPlanSP();
+  }
+
+  /// Returns whether a given byte sequence is a valid trap instruction for the
+  /// architecture. Some architectures feature instructions that have immediates
+  /// that can take on any value, resulting in a family of valid byte sequences.
+  /// If the observed byte sequence is shorter than the reference then they are
+  /// considered not to match, even if the initial bytes would match.
+  virtual bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                                      llvm::ArrayRef<uint8_t> observed) const {
+    if (reference.size() > observed.size())
+      return false;
+    return !std::memcmp(reference.data(), observed.data(), reference.size());
   }
 };
 

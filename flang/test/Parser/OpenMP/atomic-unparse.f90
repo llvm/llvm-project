@@ -4,6 +4,7 @@ program main
    implicit none
    integer :: i, j = 10
    integer :: k
+   logical :: l1, l2, l3, l4
 !READ
 !$omp atomic read
    i = j
@@ -151,7 +152,7 @@ program main
    if (i .eq. j + 1) then
       i = j
    end if
-   
+
 !$omp atomic compare acquire
    if (i .eq. j) then
       i = k
@@ -178,7 +179,59 @@ program main
    if (i .eq. k) then
       i = j
    end if
-   
+
+!$omp atomic compare weak
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic weak compare
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic compare seq_cst weak
+   if (i .eq. k) then
+      i = j
+   end if
+
+!COMPARE CAPTURE
+!$omp atomic compare capture
+   k = i
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic capture compare
+   k = i
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic capture compare weak
+   k = i
+   if (i < j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   end if
+   k = i
+!$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   else
+      k = i
+   end if
+!$omp end atomic
+
+!COMPARE CAPTURE LOGICAL
+!$omp atomic compare capture
+   if (l1 .eqv. l2) l1 = l3
+   l4 = l1
+!$omp end atomic
+
 !ATOMIC
 !$omp atomic
    i = j
@@ -279,6 +332,27 @@ end program main
 !CHECK: !$OMP ATOMIC COMPARE FAIL(RELAXED)
 !CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE
 !CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE ACQUIRE
+!CHECK: !$OMP ATOMIC COMPARE WEAK
+!CHECK: !$OMP ATOMIC WEAK COMPARE
+!CHECK: !$OMP ATOMIC COMPARE SEQ_CST WEAK
+
+!COMPARE CAPTURE
+
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC CAPTURE COMPARE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC CAPTURE COMPARE WEAK
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+
+!COMPARE CAPTURE LOGICAL
+
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
 
 !ATOMIC
 !CHECK: !$OMP ATOMIC

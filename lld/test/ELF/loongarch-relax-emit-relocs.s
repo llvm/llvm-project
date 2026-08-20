@@ -16,17 +16,39 @@
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs --no-relax %t.64.o -o %t.64.norelax
 # RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s --check-prefix=NORELAX
 
-# RELAX:      00010000 <_start>:
-# RELAX-NEXT:   pcaddi $a0, 0
-# RELAX-NEXT:     R_LARCH_RELAX _start
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:     R_LARCH_PCREL20_S2 _start
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:   pcaddi $a0, -1
-# RELAX-NEXT:     R_LARCH_RELAX _start
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:     R_LARCH_PCREL20_S2 _start
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX32:     00010000 <_start>:
+# RELAX32-NEXT:  pcaddu12i $a0, 0
+# RELAX32-NEXT:    R_LARCH_PCADD_HI20 _start
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX32-NEXT:  addi.w $a0, $a0, 0
+# RELAX32-NEXT:    R_LARCH_PCADD_LO12 .Lpcadd_hi0
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX32:     00010008 <.Lpcadd_hi1>:
+# RELAX32-NEXT:  pcaddu12i $a0, 16
+# RELAX32-NEXT:    R_LARCH_GOT_PCADD_HI20 _start
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX32-NEXT:  ld.w $a0, $a0, 0
+# RELAX32-NEXT:    R_LARCH_GOT_PCADD_LO12 .Lpcadd_hi1
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
+
+# RELAX64:     00010000 <_start>:
+# RELAX64-NEXT:  pcaddi $a0, 0
+# RELAX64-NEXT:    R_LARCH_RELAX _start
+# RELAX64-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:    R_LARCH_PCREL20_S2 _start
+# RELAX64-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:  pcaddi $a0, -1
+# RELAX64-NEXT:    R_LARCH_RELAX _start
+# RELAX64-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:    R_LARCH_PCREL20_S2 _start
+# RELAX64-NEXT:    R_LARCH_RELAX *ABS*
+
+# RELAX32-NEXT:  bl  -16
+# RELAX32-NEXT:    R_LARCH_B26 _start
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
+# RELAX32-NEXT:  b   -20
+# RELAX32-NEXT:    R_LARCH_B26 _start
+# RELAX32-NEXT:    R_LARCH_RELAX *ABS*
 
 # RELAX64-NEXT:  bl  -8
 # RELAX64-NEXT:    R_LARCH_B26 _start
@@ -39,16 +61,34 @@
 # RELAX-NEXT:     R_LARCH_TLS_LE_HI20 a
 # RELAX-NEXT:   ori       $a0, $a0, 0
 # RELAX-NEXT:     R_LARCH_TLS_LE_LO12 a
-# RELAX-NEXT:   pcaddi    $a0, [[#]]
-# RELAX-NEXT:     R_LARCH_RELAX a
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:     R_LARCH_TLS_GD_PCREL20_S2 a
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:   pcaddi    $a0, [[#]]
-# RELAX-NEXT:     R_LARCH_RELAX a
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:     R_LARCH_TLS_LD_PCREL20_S2 a
-# RELAX-NEXT:     R_LARCH_RELAX *ABS*
+
+# RELAX32:     00010020 <.Lpcadd_hi2>:
+# RELAX32-NEXT:   pcaddu12i    $a0, 16
+# RELAX32-NEXT:     R_LARCH_TLS_GD_PCADD_HI20 a
+# RELAX32-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX32-NEXT:   addi.w $a0, $a0, -20
+# RELAX32-NEXT:     R_LARCH_TLS_GD_PCADD_LO12 .Lpcadd_hi2
+# RELAX32-NEXT:     R_LARCH_RELAX *ABS*
+
+# RELAX32:     00010028 <.Lpcadd_hi3>:
+# RELAX32-NEXT:   pcaddu12i    $a0, 16
+# RELAX32-NEXT:     R_LARCH_TLS_LD_PCADD_HI20 a
+# RELAX32-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX32-NEXT:   addi.w $a0, $a0, -40
+# RELAX32-NEXT:     R_LARCH_TLS_LD_PCADD_LO12 .Lpcadd_hi3
+# RELAX32-NEXT:     R_LARCH_RELAX *ABS*
+
+# RELAX64-NEXT:   pcaddi    $a0, [[#]]
+# RELAX64-NEXT:     R_LARCH_RELAX a
+# RELAX64-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:     R_LARCH_TLS_GD_PCREL20_S2 a
+# RELAX64-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:   pcaddi    $a0, [[#]]
+# RELAX64-NEXT:     R_LARCH_RELAX a
+# RELAX64-NEXT:     R_LARCH_RELAX *ABS*
+# RELAX64-NEXT:     R_LARCH_TLS_LD_PCREL20_S2 a
+# RELAX64-NEXT:     R_LARCH_RELAX *ABS*
+
 # RELAX-NEXT:   addi.{{[dw]}} $a0, $tp, 0
 # RELAX-NEXT:     R_LARCH_RELAX a
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
@@ -57,15 +97,11 @@
 # RELAX-NEXT:     R_LARCH_TLS_LE_LO12_R a
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
 
-# RELAX32-NEXT:  nop
-# RELAX32-NEXT:    R_LARCH_ALIGN *ABS*+0xc
-# RELAX32-NEXT:  ret
-
-# RELAX64-NEXT:  nop
-# RELAX64-NEXT:    R_LARCH_ALIGN *ABS*+0xc
-# RELAX64-NEXT:  nop
-# RELAX64-NEXT:  nop
-# RELAX64-NEXT:  ret
+# RELAX-NEXT:  nop
+# RELAX-NEXT:    R_LARCH_ALIGN *ABS*+0xc
+# RELAX-NEXT:  nop
+# RELAX-NEXT:  nop
+# RELAX-NEXT:  ret
 
 # NORELAX:      <_start>:
 # NORELAX-NEXT:   pcalau12i $a0, 0
@@ -195,6 +231,9 @@ _start:
 .ifdef ELF64
   call36 _start
   tail36 $a0, _start
+.else
+  call30 _start
+  tail30 $a0, _start
 .endif
 
   la.tls.le $a0, a  # without R_LARCH_RELAX reloaction

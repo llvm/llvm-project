@@ -23,6 +23,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -80,8 +81,9 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
 /// dialect attributes.
-static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
-  static const SmallVector<unsigned> convertibleMetadata = {
+static SmallVector<unsigned>
+getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
+  SmallVector<unsigned> convertibleMetadata = {
       llvm::LLVMContext::MD_prof,
       llvm::LLVMContext::MD_tbaa,
       llvm::LLVMContext::MD_access_group,
@@ -91,11 +93,19 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
       llvm::LLVMContext::MD_mmra,
-      context.getMDKindID(vecTypeHintMDName),
-      context.getMDKindID(workGroupSizeHintMDName),
-      context.getMDKindID(reqdWorkGroupSizeMDName),
-      context.getMDKindID(intelReqdSubGroupSizeMDName)};
+      llvmContext.getMDKindID(vecTypeHintMDName),
+      llvmContext.getMDKindID(workGroupSizeHintMDName),
+      llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
+      llvmContext.getMDKindID(intelReqdSubGroupSizeMDName)};
   return convertibleMetadata;
+}
+
+/// Extracts an LLVM metadata constant as an unsigned 64-bit integer.
+static std::optional<uint64_t> getUInt64Metadata(llvm::Metadata *metadata) {
+  auto *constant = llvm::mdconst::dyn_extract<llvm::ConstantInt>(metadata);
+  if (!constant)
+    return std::nullopt;
+  return constant->getValue().tryZExtValue();
 }
 
 /// Converts the given profiling metadata `node` to an MLIR profiling attribute
@@ -111,27 +121,45 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
   if (!name)
     return failure();
+  StringRef profName = name->getString();
 
   // Handle function entry count metadata.
-  if (name->getString() == llvm::MDProfLabels::FunctionEntryCount) {
-
-    // TODO support function entry count metadata with GUID fields.
-    if (node->getNumOperands() != 2)
+  if (profName == llvm::MDProfLabels::FunctionEntryCount ||
+      profName == llvm::MDProfLabels::SyntheticFunctionEntryCount) {
+    if (node->getNumOperands() < 2)
       return failure();
 
-    llvm::ConstantInt *entryCount =
-        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
-    if (!entryCount)
+    bool isSynthetic =
+        profName == llvm::MDProfLabels::SyntheticFunctionEntryCount;
+    ProfileCountType profileCountType =
+        isSynthetic ? ProfileCountType::Synthetic : ProfileCountType::Real;
+
+    std::optional<uint64_t> entryCountValue =
+        getUInt64Metadata(node->getOperand(1));
+    if (!entryCountValue)
       return failure();
+
+    SmallVector<uint64_t> importGUIDValues;
+    importGUIDValues.reserve(node->getNumOperands() - 2);
+    for (unsigned idx = 2, e = node->getNumOperands(); idx < e; ++idx) {
+      std::optional<uint64_t> guidValue =
+          getUInt64Metadata(node->getOperand(idx));
+      if (!guidValue)
+        return failure();
+      importGUIDValues.push_back(*guidValue);
+    }
+
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
-      funcOp.setFunctionEntryCount(entryCount->getZExtValue());
+      funcOp.setFunctionEntryCountAttr(
+          FunctionEntryCountAttr::get(builder.getContext(), *entryCountValue,
+                                      profileCountType, importGUIDValues));
       return success();
     }
     return op->emitWarning()
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (name->getString() != llvm::MDProfLabels::BranchWeights)
+  if (profName != llvm::MDProfLabels::BranchWeights)
     return failure();
   // The branch_weights metadata must have at least 2 operands.
   if (node->getNumOperands() < 2)
@@ -276,7 +304,7 @@ static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
         branchOp.setLoopAnnotationAttr(attr);
         return success();
       })
-      .Default([](auto) { return failure(); });
+      .Default(failure());
 }
 
 /// Looks up all the alias scope attributes that map to the alias scope nodes
@@ -505,9 +533,9 @@ public:
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
-  ArrayRef<unsigned>
-  getSupportedMetadata(llvm::LLVMContext &context) const final {
-    return getSupportedMetadataImpl(context);
+  SmallVector<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &llvmContext) const final {
+    return getSupportedMetadataImpl(llvmContext);
   }
 };
 } // namespace

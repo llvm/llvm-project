@@ -181,12 +181,13 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
 static bool anyDescendantIsLocal(const Stmt *Statement) {
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Statement)) {
     const ValueDecl *Decl = DeclRef->getDecl();
-    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl)) {
-      if (Var->isLocalVarDeclOrParm())
-        return true;
-    }
-  } else if (isa<CXXThisExpr>(Statement))
+    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl);
+        Var && Var->isLocalVarDeclOrParm())
+      return true;
+
+  } else if (isa<CXXThisExpr>(Statement)) {
     return true;
+  }
 
   return any_of(Statement->children(), anyDescendantIsLocal);
 }
@@ -365,10 +366,11 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
     if (B.Kind == BK_Placeholder) {
       Stream << "std::forward<decltype(" << B.UsageIdentifier << ")>";
       Stream << "(" << B.UsageIdentifier << ")";
-    } else if (B.CM != CM_None)
+    } else if (B.CM != CM_None) {
       Stream << B.UsageIdentifier;
-    else
+    } else {
       Stream << B.SourceTokens;
+    }
 
     Delimiter = ", ";
   }
@@ -376,12 +378,10 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
 
 static bool isPlaceHolderIndexRepeated(const ArrayRef<BindArgument> Args) {
   llvm::SmallSet<size_t, 4> PlaceHolderIndices;
-  for (const BindArgument &B : Args) {
-    if (B.PlaceHolderIndex) {
-      if (!PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
-        return true;
-    }
-  }
+  for (const BindArgument &B : Args)
+    if (B.PlaceHolderIndex &&
+        !PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
+      return true;
   return false;
 }
 
@@ -389,7 +389,7 @@ static std::vector<const FunctionDecl *>
 findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates;
 
-  for (const clang::CXXMethodDecl *Method : RecordDecl->methods()) {
+  for (const CXXMethodDecl *Method : RecordDecl->methods()) {
     const OverloadedOperatorKind OOK = Method->getOverloadedOperator();
 
     if (OOK != OverloadedOperatorKind::OO_Call)
@@ -402,7 +402,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   }
 
   // Find templated operator(), if any.
-  for (const clang::Decl *D : RecordDecl->decls()) {
+  for (const Decl *D : RecordDecl->decls()) {
     const auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
     if (!FTD)
       continue;
@@ -512,7 +512,7 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
 
   const auto *CE = dyn_cast<CXXConstructExpr>(NoTemporaries);
   const auto *FC = dyn_cast<CXXFunctionalCastExpr>(NoTemporaries);
-  if ((isa<CallExpr>(NoTemporaries)) || (CE && (CE->getNumArgs() > 0)) ||
+  if (isa<CallExpr>(NoTemporaries) || (CE && (CE->getNumArgs() > 0)) ||
       (FC && (FC->getCastKind() == CK_ConstructorConversion)))
     // CE is something that looks like a call, with arguments - either
     // a function call or a constructor invocation.
@@ -651,7 +651,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("bind");
 
   LambdaProperties LP = getLambdaProperties(Result);
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getBeginLoc(),
            formatv("prefer a lambda to {0}::bind", LP.BindNamespace).str());
   if (!LP.IsFixitSupported)
@@ -672,9 +672,8 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
   Stream << " { ";
 
-  if (LP.Callable.DoesReturn) {
+  if (LP.Callable.DoesReturn)
     Stream << "return ";
-  }
 
   if (LP.Callable.Type == CT_Function) {
     StringRef SourceTokens = LP.Callable.SourceTokens;

@@ -608,6 +608,11 @@ TEST(SelectionTest, CommonAncestor) {
         template <typename T> void g(D<[[^T]]> auto abc) {}
       )cpp",
        "TemplateTypeParmTypeLoc"},
+      {R"cpp(
+        const unsigned WALDO = 64;
+        struct alignas([[WA^LDO]]) foo {};
+      )cpp",
+       "DeclRefExpr"},
   };
 
   for (const Case &C : Cases) {
@@ -658,6 +663,24 @@ TEST(SelectionTest, InjectedClassName) {
   ASSERT_EQ("CXXRecordDecl", nodeKind(T.commonAncestor())) << T;
   auto *D = dyn_cast<CXXRecordDecl>(T.commonAncestor()->ASTNode.get<Decl>());
   EXPECT_FALSE(D->isInjectedClassName());
+}
+
+TEST(SelectionTest, PseudoDestructorMissingTypeInfo) {
+  llvm::StringLiteral Code = R"cpp(
+    struct A { ~A(); };
+    void b(const A *y) {
+      y->~decltype(A())();
+    }
+  )cpp";
+  auto AST = TestTU::withCode(Code).build();
+  bool Seen = false;
+  // No crash.
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), 0,
+                            Code.size(), [&](SelectionTree) {
+                              Seen = true;
+                              return true;
+                            });
+  EXPECT_TRUE(Seen);
 }
 
 TEST(SelectionTree, Metrics) {

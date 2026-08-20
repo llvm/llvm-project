@@ -45,6 +45,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -76,7 +77,7 @@ struct __has_storage_type<vector<bool, _Allocator> > {
 };
 
 template <class _Allocator>
-class vector<bool, _Allocator> {
+class _LIBCPP_WARN_UNUSED vector<bool, _Allocator> {
 public:
   using __self _LIBCPP_NODEBUG         = vector;
   using value_type                     = bool;
@@ -151,9 +152,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~vector() { __destroy_vector (*this)(); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit vector(size_type __n);
-#if _LIBCPP_STD_VER >= 14
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit vector(size_type __n, const allocator_type& __a);
-#endif
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector(size_type __n, const value_type& __v);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   vector(size_type __n, const value_type& __v, const allocator_type& __a);
@@ -604,7 +603,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n)
   }
 }
 
-#if _LIBCPP_STD_VER >= 14
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, const allocator_type& __a)
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
@@ -614,7 +612,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, co
     __size_ = __n;
   }
 }
-#endif
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, const value_type& __x)
@@ -740,13 +737,10 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocat
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
-    : __begin_(__v.__begin_),
-      __size_(__v.__size_),
-      __cap_(__v.__cap_),
+    : __begin_(std::__exchange(__v.__begin_, nullptr)),
+      __size_(std::__exchange(__v.__size_, 0)),
+      __cap_(std::__exchange(__v.__cap_, 0)),
       __alloc_(std::move(__v.__alloc_)) {
-  __v.__begin_ = nullptr;
-  __v.__size_  = 0;
-  __v.__cap_   = 0;
 }
 
 template <class _Allocator>
@@ -754,14 +748,13 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator_type>& __a)
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__a == allocator_type(__v.__alloc_)) {
-    this->__begin_ = __v.__begin_;
-    this->__size_  = __v.__size_;
-    this->__cap_   = __v.__cap_;
-    __v.__begin_   = nullptr;
-    __v.__cap_ = __v.__size_ = 0;
+    __begin_ = std::__exchange(__v.__begin_, nullptr);
+    __size_  = std::__exchange(__v.__size_, 0);
+    __cap_   = std::__exchange(__v.__cap_, 0);
   } else if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    __size_ = __v.__size_;
+    std::copy_n(__v.__begin_, __external_cap_to_internal(__v.size()), __begin_);
   }
 }
 
@@ -786,11 +779,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::__move_assign(vecto
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   __vdeallocate();
   __move_assign_alloc(__c);
-  this->__begin_ = __c.__begin_;
-  this->__size_  = __c.__size_;
-  this->__cap_   = __c.__cap_;
-  __c.__begin_   = nullptr;
-  __c.__cap_ = __c.__size_ = 0;
+  __begin_ = std::__exchange(__c.__begin_, nullptr);
+  __size_  = std::__exchange(__c.__size_, 0);
+  __cap_   = std::__exchange(__c.__cap_, 0);
 }
 
 template <class _Allocator>
@@ -856,7 +847,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
       this->__throw_length_error();
     vector __v(this->get_allocator());
     __v.__vallocate(__n);
-    __v.__construct_at_end(this->begin(), this->end(), this->size());
+    __v.__size_ = __size_;
+    std::copy_n(__begin_, __external_cap_to_internal(__size_), __v.__begin_);
     swap(__v);
   }
 }
@@ -1048,25 +1040,16 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::swap(vector& __x)
 }
 
 template <class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __sz, value_type __x) {
-  size_type __cs = size();
-  if (__cs < __sz) {
-    iterator __r;
-    size_type __c = capacity();
-    size_type __n = __sz - __cs;
-    if (__n <= __c && __cs <= __c - __n) {
-      __r = end();
-      __size_ += __n;
-    } else {
-      vector __v(get_allocator());
-      __v.reserve(__recommend(__size_ + __n));
-      __v.__size_ = __size_ + __n;
-      __r         = std::copy(cbegin(), cend(), __v.begin());
-      swap(__v);
-    }
-    std::fill_n(__r, __n, __x);
-  } else
-    __size_ = __sz;
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __new_size, value_type __x) {
+  size_type __current_size = size();
+  if (__new_size < __current_size) {
+    __size_ = __new_size;
+    return;
+  }
+
+  reserve(__new_size);
+  std::fill_n(end(), __new_size - __current_size, __x);
+  __size_ = __new_size;
 }
 
 template <class _Allocator>

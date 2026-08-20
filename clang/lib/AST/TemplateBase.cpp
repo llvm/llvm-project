@@ -258,6 +258,32 @@ TemplateArgument::CreatePackCopy(ASTContext &Context,
   return TemplateArgument(Args.copy(Context));
 }
 
+StringRef TemplateArgument::getKindName() const {
+  switch (getKind()) {
+  case TemplateArgument::Null:
+    return "null";
+  case TemplateArgument::Type:
+    return "type";
+  case TemplateArgument::Declaration:
+    return "decl";
+  case TemplateArgument::NullPtr:
+    return "nullptr";
+  case TemplateArgument::Integral:
+    return "integral";
+  case TemplateArgument::Template:
+    return "template";
+  case TemplateArgument::TemplateExpansion:
+    return "template expansion";
+  case TemplateArgument::Expression:
+    return "expression";
+  case TemplateArgument::Pack:
+    return "pack";
+  case TemplateArgument::StructuralValue:
+    return "structural value";
+  }
+  llvm_unreachable("unhandled ArgKind");
+}
+
 TemplateArgumentDependence TemplateArgument::getDependence() const {
   auto Deps = TemplateArgumentDependence::None;
   switch (getKind()) {
@@ -626,9 +652,13 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
     return getSourceExpression()->getSourceRange();
 
   case TemplateArgument::Declaration:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceDeclExpression()->getSourceRange();
 
   case TemplateArgument::NullPtr:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceNullPtrExpression()->getSourceRange();
 
   case TemplateArgument::Type:
@@ -650,12 +680,18 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
     return SourceRange(getTemplateNameLoc(), getTemplateEllipsisLoc());
 
   case TemplateArgument::Integral:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceIntegralExpression()->getSourceRange();
 
   case TemplateArgument::StructuralValue:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceStructuralValueExpression()->getSourceRange();
 
   case TemplateArgument::Pack:
+    return SourceRange(LocInfo.getTrivialLoc());
+
   case TemplateArgument::Null:
     return SourceRange();
   }
@@ -737,21 +773,19 @@ clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
   Pointer = Template;
 }
 
-const ASTTemplateArgumentListInfo *
-ASTTemplateArgumentListInfo::Create(const ASTContext &C,
-                                    const TemplateArgumentListInfo &List) {
-  std::size_t size = totalSizeToAlloc<TemplateArgumentLoc>(List.size());
-  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
-  return new (Mem) ASTTemplateArgumentListInfo(List);
+clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
+    ASTContext &Ctx, SourceLocation TrivialLoc) {
+  if constexpr (EmbedLocInPointer)
+    Pointer = reinterpret_cast<LocOrPointer>(static_cast<uintptr_t>(
+        (TrivialLoc.getRawEncoding() + 1u) << LowBitsRequired));
+  else
+    Pointer = new (Ctx) SourceLocation(TrivialLoc);
 }
 
 const ASTTemplateArgumentListInfo *
 ASTTemplateArgumentListInfo::Create(const ASTContext &C,
-                                    const ASTTemplateArgumentListInfo *List) {
-  if (!List)
-    return nullptr;
-  std::size_t size =
-      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
+                                    const TemplateArgumentListInfo &List) {
+  std::size_t size = totalSizeToAlloc<TemplateArgumentLoc>(List.size());
   void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
@@ -765,17 +799,6 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
-}
-
-ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
-    const ASTTemplateArgumentListInfo *Info) {
-  LAngleLoc = Info->getLAngleLoc();
-  RAngleLoc = Info->getRAngleLoc();
-  NumTemplateArgs = Info->getNumTemplateArgs();
-
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(

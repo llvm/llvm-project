@@ -42,12 +42,12 @@ let Attributes = [NoThrow] in {
   def writeeflags_u64 : X86Builtin<"void(unsigned long long int)">;
 }
 
-let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
   def cvttss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
   def cvttsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
 }
@@ -60,7 +60,7 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVector
   def vec_set_v2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, long long int, _Constant int)">;
 }
 
-let Features = "crc32", Attributes = [NoThrow, Const] in {
+let Features = "crc32", Attributes = [NoThrow, Const, Constexpr] in {
   def crc32di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
@@ -239,17 +239,13 @@ let Features = "amx-complex", Attributes = [NoThrow] in {
   def tcmmrlfp16ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
 }
 
-let Features = "amx-avx512,avx10.2", Attributes = [NoThrow] in {
+let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def tcvtrowd2ps_internal : X86Builtin<"_Vector<16, float>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2bf16h_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2bf16l_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2phh_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2phl_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tilemovrow_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
-}
-
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
 }
 
 let Features = "amx-fp8", Attributes = [NoThrow] in {
@@ -297,13 +293,19 @@ let Features = "amx-complex", Attributes = [NoThrow] in {
   def tcmmrlfp16ps : X86Builtin<"void(_Constant unsigned char, _Constant unsigned char, _Constant unsigned char)">;
 }
 
-let Features = "amx-avx512,avx10.2", Attributes = [NoThrow] in {
+let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def tcvtrowd2ps : X86Builtin<"_Vector<16, float>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2bf16h : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2bf16l : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2phh : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2phl : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tilemovrow : X86Builtin<"_Vector<16, int>(_Constant unsigned char, unsigned int)">;
+  def tcvtrowd2psi : X86Builtin<"_Vector<16, float>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2bf16hi : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2bf16li : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2phhi : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2phli : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tilemovrowi : X86Builtin<"_Vector<16, int>(_Constant unsigned char, _Constant unsigned int)">;
 }
 
 let Features = "amx-fp16", Attributes = [NoThrow] in {
@@ -315,10 +317,6 @@ let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbhf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphbf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
-}
-
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps : X86Builtin<"void(_Constant unsigned char, _Constant unsigned char, _Constant unsigned char)">;
 }
 
 let Features = "prefetchi", Attributes = [NoThrow, Const] in {

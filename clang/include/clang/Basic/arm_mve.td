@@ -598,7 +598,7 @@ foreach half = [ "b", "t" ] in {
   } // params = [f16], pnt = PNT_None
 } // loop over half = "b", "t"
 
-multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi, IRBuilderBase itof> {
+multiclass float_int_conversions<Type FScalar, Type IScalar, Builder ftoi, Builder itof> {
   defvar FVector = VecOf<FScalar>;
   defvar IVector = VecOf<IScalar>;
 
@@ -700,7 +700,8 @@ let params = [s16, s32] in {
 
 multiclass vrnd<IRIntBase ir_int, string suffix> {
   let params = T.Float in {
-    def "": Intrinsic<Vector, (args Vector:$a), (ir_int $a)>;
+    def "": Intrinsic<Vector, (args Vector:$a),
+                              (strictFPAlt<ir_int, IRInt<"vrint"#suffix, [Vector]>> $a)>;
     defm "": IntrinsicMX<Vector, (args Vector:$a, Predicate:$pred),
         (IRInt<"vrint"#suffix#"_predicated", [Vector, Predicate]>
             $a, $pred, $inactive)>;
@@ -783,15 +784,15 @@ let params = T.Unsigned in {
 }
 let params = T.Float in {
   def vminnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRIntBase<"minnum", [Vector]> $a, $b)>;
+                                 (fminnm $a, $b)>;
   def vmaxnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRIntBase<"maxnum", [Vector]> $a, $b)>;
+                                 (fmaxnm $a, $b)>;
   def vminnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                  (IRIntBase<"minnum", [Vector]>
+                                  (fminnm
                                    (IRIntBase<"fabs", [Vector]> $a),
                                    (IRIntBase<"fabs", [Vector]> $b))>;
   def vmaxnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                  (IRIntBase<"maxnum", [Vector]>
+                                  (fmaxnm
                                    (IRIntBase<"fabs", [Vector]> $a),
                                    (IRIntBase<"fabs", [Vector]> $b))>;
 }

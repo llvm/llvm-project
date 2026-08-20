@@ -43,6 +43,12 @@ template <class... ChildMatchers>
   return Field(&DocumentSymbol::children, UnorderedElementsAre(ChildrenM...));
 }
 
+template <typename... Tags>
+::testing::Matcher<DocumentSymbol> withSymbolTags(Tags... tags) {
+  // Matches the tags vector ignoring element order.
+  return Field(&DocumentSymbol::tags, UnorderedElementsAre(tags...));
+}
+
 std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
                                           int Limit = 0) {
   auto SymbolInfos = getWorkspaceSymbols(Query, Limit, TU.index().get(),
@@ -106,8 +112,30 @@ TEST(WorkspaceSymbols, Unnamed) {
               ElementsAre(AllOf(qName("UnnamedStruct"),
                                 withKind(SymbolKind::Variable))));
   EXPECT_THAT(getSymbols(TU, "InUnnamed"),
-              ElementsAre(AllOf(qName("(anonymous struct)::InUnnamed"),
+              ElementsAre(AllOf(qName("(unnamed struct)::InUnnamed"),
                                 withKind(SymbolKind::Field))));
+}
+
+TEST(WorkspaceSymbols, TypeAlias) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    struct Struct {};
+    class Class {};
+    class Container {
+      using StructAlias = Struct;
+      using ClassAlias = Class;
+    };
+  )cpp";
+  EXPECT_THAT(
+      getSymbols(TU, "Struct"),
+      UnorderedElementsAre(AllOf(qName("Struct"), withKind(SymbolKind::Struct)),
+                           AllOf(qName("Container::StructAlias"),
+                                 withKind(SymbolKind::Struct))));
+  EXPECT_THAT(
+      getSymbols(TU, "Class"),
+      UnorderedElementsAre(
+          AllOf(qName("Class"), withKind(SymbolKind::Class)),
+          AllOf(qName("Container::ClassAlias"), withKind(SymbolKind::Class))));
 }
 
 TEST(WorkspaceSymbols, InMainFile) {
@@ -656,15 +684,16 @@ TEST(DocumentSymbols, Enums) {
       getSymbols(TU.build()),
       ElementsAre(
           AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                children(AllOf(withName("Red"), withDetail("(unnamed)")))),
+                children(AllOf(withName("Red"), withDetail("(unnamed enum)")))),
           AllOf(withName("Color"), withDetail("enum"),
                 children(AllOf(withName("Green"), withDetail("Color")))),
           AllOf(withName("Color2"), withDetail("enum"),
                 children(AllOf(withName("Yellow"), withDetail("Color2")))),
-          AllOf(withName("ns"),
-                children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                               children(AllOf(withName("Black"),
-                                              withDetail("(unnamed)"))))))));
+          AllOf(
+              withName("ns"),
+              children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
+                             children(AllOf(withName("Black"),
+                                            withDetail("(unnamed enum)"))))))));
 }
 
 TEST(DocumentSymbols, Macro) {
@@ -1129,6 +1158,196 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
               UnorderedElementsAre(withName("Helpers"), withName("helpA"),
                                    withName("(unnamed group)"),
                                    withName("Core"), withName("coreMethod")));
+}
+
+TEST(DocumentSymbolsTest, SymbolTagsMustContainPublicAbstract) {
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class A {
+      public:
+        virtual void f1() = 0;
+    };
+
+    class B : public A {
+      public:
+        virtual void f2() = 0;
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(withName("A"),
+                        children(AllOf(withName("f1"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Abstract)))),
+                  AllOf(withName("B"),
+                        children(AllOf(withName("f2"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Abstract))))));
+}
+
+TEST(DocumentSymbolsTest, SymbolTagsMustContainPublicVirtualAndOverrides) {
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class A {
+      public:
+        virtual void f1() {};
+    };
+
+    class B : public A {
+      public:
+        void f1() override {}
+    };
+
+    class C : public B {
+      public:
+        void f1() override {}
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(
+              withName("A"),
+              children(AllOf(
+                  withName("f1"),
+                  withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                                 SymbolTag::Definition, SymbolTag::Virtual)))),
+          AllOf(withName("B"),
+                children(AllOf(withName("f1"),
+                               withSymbolTags(SymbolTag::Public,
+                                              SymbolTag::Declaration,
+                                              SymbolTag::Definition,
+                                              SymbolTag::Overrides)))),
+          AllOf(withName("C"),
+                children(AllOf(withName("f1"),
+                               withSymbolTags(SymbolTag::Public,
+                                              SymbolTag::Declaration,
+                                              SymbolTag::Definition,
+                                              SymbolTag::Overrides))))));
+}
+
+TEST(DocumentSymbolsTest,
+     SymbolTagsMustContainPublicAbstractImplementsOverridesAndFinal) {
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class A {
+      public:
+        virtual void f1() = 0;
+    };
+
+    class B : public A {
+      public:
+        void f1() override {}
+    };
+
+    class C : public B {
+      public:
+        void f1() override {}
+    };
+
+    class D : public C {
+      public:
+        void f1() final override {}
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(withName("A"),
+                        children(AllOf(withName("f1"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Abstract)))),
+                  AllOf(withName("B"),
+                        children(AllOf(withName("f1"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
+                                                      SymbolTag::Implements)))),
+                  AllOf(withName("C"),
+                        children(AllOf(withName("f1"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
+                                                      SymbolTag::Overrides)))),
+                  AllOf(withName("D"),
+                        children(AllOf(withName("f1"),
+                                       withSymbolTags(SymbolTag::Public,
+                                                      SymbolTag::Declaration,
+                                                      SymbolTag::Definition,
+                                                      SymbolTag::Final))))));
+}
+
+TEST(DocumentSymbolsTest, SymbolTagsCompilation) {
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class A {
+      public:
+        virtual ~A() = default;
+        virtual void f1() = 0;
+        void f2() const;
+      protected:
+        void f3(){}
+      private:
+        static void f4(){}
+    };
+
+    void A::f2() const {}
+
+    class B final: public A {
+      public:
+        void f1() final {}
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(
+              withName("A"),
+              withSymbolTags(SymbolTag::Abstract, SymbolTag::Declaration,
+                             SymbolTag::Definition),
+              children(
+                  AllOf(withName("~A"),
+                        withSymbolTags(SymbolTag::Public, SymbolTag::Virtual,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)),
+                  AllOf(withName("f1"), withSymbolTags(SymbolTag::Public,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::Abstract)),
+                  AllOf(withName("f2"), withSymbolTags(SymbolTag::Public,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::ReadOnly)),
+                  AllOf(withName("f3"), withSymbolTags(SymbolTag::Protected,
+                                                       SymbolTag::Declaration,
+                                                       SymbolTag::Definition)),
+                  AllOf(withName("f4"),
+                        withSymbolTags(SymbolTag::Private, SymbolTag::Static,
+                                       SymbolTag::Declaration,
+                                       SymbolTag::Definition)))),
+          AllOf(withName("A::f2"),
+                withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                               SymbolTag::Definition, SymbolTag::ReadOnly)),
+          AllOf(withName("B"),
+                withSymbolTags(SymbolTag::Final, SymbolTag::Declaration,
+                               SymbolTag::Definition),
+                children(AllOf(
+                    withName("f1"),
+                    withSymbolTags(SymbolTag::Public, SymbolTag::Declaration,
+                                   SymbolTag::Definition, SymbolTag::Final,
+                                   SymbolTag::Implements))))));
 }
 
 } // namespace

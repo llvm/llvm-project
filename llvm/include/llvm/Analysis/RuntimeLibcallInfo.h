@@ -11,6 +11,8 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Pass.h"
+#include <optional>
+#include <string>
 
 namespace llvm {
 
@@ -20,18 +22,26 @@ public:
   using Result = RTLIB::RuntimeLibcallsInfo;
 
   RuntimeLibraryAnalysis() = default;
-  RuntimeLibraryAnalysis(RTLIB::RuntimeLibcallsInfo &&BaselineInfoImpl)
-      : LibcallsInfo(std::move(BaselineInfoImpl)) {}
-  explicit RuntimeLibraryAnalysis(const Triple &T) : LibcallsInfo(T) {}
+  RuntimeLibraryAnalysis(ExceptionHandling ExceptionModel,
+                         EABI EABIVersion = EABI::Default,
+                         StringRef ABIName = "",
+                         VectorLibrary VecLib = VectorLibrary::NoLibrary)
+      : ExceptionModel(ExceptionModel), EABIVersion(EABIVersion),
+        ABIName(ABIName.str()), VecLib(VecLib) {}
 
-  LLVM_ABI RTLIB::RuntimeLibcallsInfo run(const Module &M,
-                                          ModuleAnalysisManager &);
+  RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
 private:
   friend AnalysisInfoMixin<RuntimeLibraryAnalysis>;
-  LLVM_ABI static AnalysisKey Key;
+  static AnalysisKey Key;
 
-  std::optional<RTLIB::RuntimeLibcallsInfo> LibcallsInfo;
+  // FIXME: These are TargetOptions values that are not yet represented in the
+  // IR, copied here so run() can forward them to the RuntimeLibcallsInfo Module
+  // constructor. Delete each one as they are migrated to module flags.
+  ExceptionHandling ExceptionModel = ExceptionHandling::None;
+  EABI EABIVersion = EABI::Default;
+  std::string ABIName;
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 };
 
 class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
@@ -41,12 +51,17 @@ class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
 public:
   static char ID;
   RuntimeLibraryInfoWrapper();
-  explicit RuntimeLibraryInfoWrapper(const Triple &T);
-  explicit RuntimeLibraryInfoWrapper(const RTLIB::RuntimeLibcallsInfo &RTLCI);
+  RuntimeLibraryInfoWrapper(ExceptionHandling ExceptionModel,
+                            EABI EABIVersion = EABI::Default,
+                            StringRef ABIName = "",
+                            VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   const RTLIB::RuntimeLibcallsInfo &getRTLCI(const Module &M) {
-    ModuleAnalysisManager DummyMAM;
-    RTLCI = RTLA.run(M, DummyMAM);
+    if (!RTLCI) {
+      ModuleAnalysisManager DummyMAM;
+      RTLCI = RTLA.run(M, DummyMAM);
+    }
+
     return *RTLCI;
   }
 

@@ -265,7 +265,8 @@ struct FoldLessThanOpF32ToI1 : public OpRewritePattern<test::LessThanOp> {
 
     Attribute operandAttrs[2] = {lhsAttr, rhsAttr};
     TypedAttr res = cast_or_null<TypedAttr>(
-        constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+        constFoldBinaryOp<FloatAttr, FloatAttr, FloatAttr::ValueType,
+                          FloatAttr::ValueType, void, IntegerAttr>(
             operandAttrs, op.getType(), [](APFloat lhs, APFloat rhs) -> APInt {
               return APInt(1, lhs < rhs);
             }));
@@ -383,7 +384,8 @@ struct CloneRegionBeforeOp : public RewritePattern {
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_cloned", rewriter.getUnitAttr()); });
     return success();
   }
 };
@@ -433,6 +435,33 @@ public:
     }
 
     return failure();
+  }
+};
+
+/// Creates and immediately erases an operation and a block.
+class CreateAndEraseOpAndBlock : public RewritePattern {
+public:
+  CreateAndEraseOpAndBlock(MLIRContext *context)
+      : RewritePattern("test.create_and_erase_op_and_block", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasAttr("was_rewritten"))
+      return failure();
+
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.transient_op", op->getContext()).getIdentifier(),
+        ValueRange(), TypeRange());
+    rewriter.eraseOp(newOp);
+
+    Block *newBlock = rewriter.createBlock(op->getParentRegion());
+    rewriter.eraseBlock(newBlock);
+
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_rewritten", rewriter.getUnitAttr()); });
+    return success();
   }
 };
 
@@ -708,8 +737,8 @@ struct TestWalkPatternDriver final
 
     // Patterns for testing the WalkPatternRewriteDriver.
     patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
-                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
-        &getContext());
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock,
+                 CreateAndEraseOpAndBlock>(&getContext());
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),
@@ -744,10 +773,13 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
     for (int j = 0; j < e; ++j) {
       std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferredReturnTypes;
+      // Only pass properties if the op's properties type matches OpTy's.
+      PropertyRef properties = op->getPropertiesStorage();
+      if (properties.getTypeID() != TypeID::get<typename OpTy::Properties>())
+        properties = PropertyRef();
       if (succeeded(OpTy::inferReturnTypes(
               context, std::nullopt, values, op->getDiscardableAttrDictionary(),
-              op->getPropertiesStorage(), op->getRegions(),
-              inferredReturnTypes))) {
+              properties, op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
         // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());
@@ -1038,6 +1070,38 @@ struct TestUndoPropertiesModification : public ConversionPattern {
       return failure();
     rewriter.modifyOpInPlace(
         op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
+    return success();
+  }
+};
+
+/// A pattern that tests the undo mechanism for a block move if the block was
+/// moved to a detached region. The block is first moved to a detached region
+/// and then a new operation is created with that region. During rollback, first
+/// the `CreateOperationRewrite` is rolled back, causing the block to be
+/// orphaned, i.e., removed from the region. Only then the `MoveBlockRewrite` is
+/// rolled back, which now can't access the region anymore. The test ensures
+/// that the rollback still works and doesn't try to access the orphaned block's
+/// containing region, leading to segfault.
+struct TestUndoMoveDetachedBlock : public ConversionPattern {
+  TestUndoMoveDetachedBlock(MLIRContext *ctx)
+      : ConversionPattern("test.undo_detached_block_move", /*benefit=*/1, ctx) {
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    // Create an illegal operation to trigger rollback.
+    OperationState state(op->getLoc(), "test.illegal_op_created_after_move",
+                         operands, op->getResultTypes(), {}, BlockRange());
+    // Create detached region.
+    Region *newRegion = state.addRegion();
+    // Move blocks to the still detached region
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -1495,7 +1559,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Split F32 into F16,F16.
     if (t.isF32()) {
-      results.assign(2, Float16Type::get(t.getContext()));
+      results.append(2, Float16Type::get(t.getContext()));
       return success();
     }
 
@@ -1548,7 +1612,7 @@ struct TestLegalizePatternDriver
         TestUpdateConsumerType, TestNonRootReplacement,
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification, TestEraseOp,
+        TestUndoPropertiesModification, TestUndoMoveDetachedBlock, TestEraseOp,
         TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
@@ -2092,7 +2156,7 @@ struct TestTypeConversionDriver
           }
 
           conversionCallStack.push_back(type);
-          auto popConversionCallStack = llvm::make_scope_exit(
+          llvm::scope_exit popConversionCallStack(
               [&conversionCallStack]() { conversionCallStack.pop_back(); });
 
           // If the type is on the call stack more than once (it is there at

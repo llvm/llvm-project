@@ -51,7 +51,7 @@ bb2:                                              ; preds = %bb2, %bb1
 !8 = !DILocation(line: 1, column: 1, scope: !5)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-; CHECK: [[META1]] = !DIFile(filename: "llvm/test/Transforms/IndVarSimplify/debugloc-rem-subst.ll", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}debugloc-rem-subst.ll", directory: {{.*}})
 ; CHECK: [[DBG5]] = distinct !DISubprogram(name: "widget", linkageName: "widget", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
 ; CHECK: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 ; CHECK: [[META7]] = !{}

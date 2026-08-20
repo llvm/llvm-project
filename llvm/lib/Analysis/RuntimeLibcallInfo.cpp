@@ -15,16 +15,19 @@ AnalysisKey RuntimeLibraryAnalysis::Key;
 
 RTLIB::RuntimeLibcallsInfo
 RuntimeLibraryAnalysis::run(const Module &M, ModuleAnalysisManager &) {
-  if (!LibcallsInfo)
-    LibcallsInfo = RTLIB::RuntimeLibcallsInfo(M);
-  return *LibcallsInfo;
+  return RTLIB::RuntimeLibcallsInfo(M, ExceptionModel, EABIVersion, ABIName,
+                                    VecLib);
 }
 
 INITIALIZE_PASS(RuntimeLibraryInfoWrapper, "runtime-library-info",
                 "Runtime Library Function Analysis", false, true)
 
-RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper()
-    : ImmutablePass(ID), RTLA(RTLIB::RuntimeLibcallsInfo(Triple())) {}
+RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper() : ImmutablePass(ID) {}
+
+RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper(
+    ExceptionHandling ExceptionModel, EABI EABIVersion, StringRef ABIName,
+    VectorLibrary VecLib)
+    : ImmutablePass(ID), RTLA(ExceptionModel, EABIVersion, ABIName, VecLib) {}
 
 char RuntimeLibraryInfoWrapper::ID = 0;
 

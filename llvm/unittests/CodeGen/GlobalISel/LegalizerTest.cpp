@@ -68,8 +68,8 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
   GISelValueTracking VT(*MF);
 
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
+  LegalizerMFResult Result = legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -77,8 +77,8 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
   StringRef CheckString = R"(
     CHECK:      %vptr:_(p0) = COPY $x4
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load (s8))
-    CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
+    CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(i64)
     CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load (s8) from unknown-address + 1)
     CHECK-NEXT: %v:_(<2 x s8>) = G_BUILD_VECTOR_TRUNC [[LOAD_0]]:_(s16), [[LOAD_1]]:_(s16)
     CHECK-NEXT: $h4 = COPY %v:_(<2 x s8>)
@@ -160,8 +160,8 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   //  pair(s) of artifacts that could be immediately combined out. After that
   //  the process follows def-use chains, making them shorter at each step, thus
   //  combining everything that can be combined in O(n) time.
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
+  LegalizerMFResult Result = legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -200,8 +200,8 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
   GISelValueTracking VT(*MF);
 
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
-      *MF, LI, {&LocObserver}, LocObserver, B, &VT);
+  LegalizerMFResult Result = legalizeMachineFunction(
+      *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
   EXPECT_TRUE(Result.Changed);
@@ -209,8 +209,8 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   StringRef CheckString = R"(
     CHECK:      %vptr:_(p0) = COPY $x4
     CHECK-NEXT: [[LOAD_0:%[0-9]+]]:_(s16) = G_LOAD %vptr:_(p0) :: (load (s8))
-    CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(s64)
+    CHECK-NEXT: [[OFFSET_1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    CHECK-NEXT: [[VPTR_1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %vptr:_, [[OFFSET_1]]:_(i64)
     CHECK-NEXT: [[LOAD_1:%[0-9]+]]:_(s16) = G_LOAD [[VPTR_1]]:_(p0) :: (load (s8) from unknown-address + 1)
     CHECK-NEXT: [[V0_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD_0]]:_(s16)
     CHECK-NEXT: [[FF_MASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 255

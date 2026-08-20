@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "orc"
@@ -49,7 +50,7 @@ SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
   std::vector<sys::MemoryBlock> MBsToReset;
-  auto ResetMBs = make_scope_exit([&]() {
+  llvm::scope_exit ResetMBs([&]() {
     for (auto &MB : MBsToReset)
       sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
                                                sys::Memory::MF_WRITE);
@@ -207,6 +208,21 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&deinitializeWrapper);
   M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
       ExecutorAddr::fromPtr(&releaseWrapper);
+
+  {
+    // Also provide SimpleNativeMemoryMap symbols for compatibility.
+    // FIXME: We should codify a "simple" memory manager interface and make
+    // SimpleExecutorMemoryManager its LLVM-based implementation, and
+    // SimpleNativeMemoryMap its ORC-runtime implementation.
+    namespace sps_ci = rt::sps_ci;
+    M[sps_ci::SimpleNativeMemoryMapInstanceName] = ExecutorAddr::fromPtr(this);
+    M[sps_ci::MemMgrReserve::Name] = ExecutorAddr::fromPtr(reserveWrapper);
+    M[sps_ci::MemMgrInitialize::Name] =
+        ExecutorAddr::fromPtr(initializeWrapper);
+    M[sps_ci::MemMgrDeinitialize::Name] =
+        ExecutorAddr::fromPtr(deinitializeWrapper);
+    M[sps_ci::MemMgrRelease::Name] = ExecutorAddr::fromPtr(releaseWrapper);
+  }
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>
@@ -306,46 +322,44 @@ SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
   return getRegionInfo(*Slab, A, Context);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
-      handle(ArgData, ArgSize,
+  return shared::WrapperFunction<rt::sps_ci::MemMgrReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::reserve))
-          .release();
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
-  return shared::
-      WrapperFunction<rt::SPSSimpleRemoteMemoryMapInitializeSignature>::handle(
+  return shared::WrapperFunction<rt::sps_ci::MemMgrInitialize::SPSSig>::handle(
              ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::initialize))
-          .release();
+      .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
                                                  size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSSimpleRemoteMemoryMapDeinitializeSignature>::
+  return shared::WrapperFunction<rt::sps_ci::MemMgrDeinitialize::SPSSig>::
       handle(ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::deinitialize))
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::
-      handle(ArgData, ArgSize,
+  return shared::WrapperFunction<rt::sps_ci::MemMgrRelease::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorMemoryManager::release))
-          .release();
+      .release();
 }
 
 } // namespace rt_bootstrap

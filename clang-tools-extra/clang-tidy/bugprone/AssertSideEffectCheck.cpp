@@ -24,7 +24,7 @@ namespace clang::tidy::bugprone {
 namespace {
 
 AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
-               clang::ast_matchers::internal::Matcher<NamedDecl>,
+               ast_matchers::internal::Matcher<NamedDecl>,
                IgnoredFunctionsMatcher) {
   const Expr *E = &Node;
 
@@ -34,15 +34,14 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
            OC == UO_PreDec;
   }
 
-  if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *Op = dyn_cast<BinaryOperator>(E))
     return Op->isAssignmentOp();
-  }
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (const auto *MethodDecl =
-            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee()))
-      if (MethodDecl->isConst())
-        return false;
+            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee());
+        MethodDecl && MethodDecl->isConst())
+      return false;
 
     const OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
     return OpKind == OO_Equal || OpKind == OO_PlusEqual ||
@@ -104,13 +103,13 @@ void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
-  auto IgnoredFunctionsMatcher =
-      matchers::matchesAnyListedName(IgnoredFunctions);
+  const auto IgnoredFunctionsMatcher =
+      matchers::matchesAnyListedRegexName(IgnoredFunctions);
 
-  auto DescendantWithSideEffect =
+  const auto DescendantWithSideEffect =
       traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(
                             CheckFunctionCalls, IgnoredFunctionsMatcher))));
-  auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
+  const auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
   Finder->addMatcher(
       stmt(
           anyOf(conditionalOperator(ConditionWithSideEffect),

@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.td"
 include "mlir/Interfaces/AlignmentAttrInterface.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -133,7 +134,8 @@ class AllocLikeOp<string mnemonic,
   }];
 
   let assemblyFormat = [{
-    `(`$dynamicSizes`)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
+    `(`$dynamicSizes`)` (`` `[` $symbolOperands^ `]`)?
+    (`alignment` `=` $alignment^)? attr-dict `:` type($memref)
   }];
 
   let hasCanonicalizer = 1;
@@ -149,7 +151,9 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       Pure,
       ViewLikeOpInterface,
       SameOperandsAndResultType,
-      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                ["reifyDimOfResult"]>
     ]> {
   let summary =
       "assumption that gives alignment information to the input memref";
@@ -258,7 +262,7 @@ def MemRef_AllocOp : AllocLikeOp<"alloc", DefaultResource, [
     boundary.
 
     ```mlir
-    %0 = memref.alloc()[%s] {alignment = 8} :
+    %0 = memref.alloc()[%s] alignment = 8 :
       memref<8x64xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
     ```
   }];
@@ -317,7 +321,7 @@ def MemRef_ReallocOp : MemRef_Op<"realloc",
     aligned_realloc.
 
     ```mlir
-    %3 = memref.realloc %src {alignment = 8} : memref<64xf32> to memref<124xf32>
+    %3 = memref.realloc %src alignment = 8 : memref<64xf32> to memref<124xf32>
     ```
 
     Referencing the memref through the old SSA value after realloc is undefined
@@ -357,7 +361,8 @@ def MemRef_ReallocOp : MemRef_Op<"realloc",
   }];
 
   let assemblyFormat = [{
-    $source (`(` $dynamicResultSize^ `)`)? attr-dict
+    $source (`(` $dynamicResultSize^ `)`)?
+    (`alignment` `=` $alignment^)? attr-dict
     `:` type($source) `to` type(results)
   }];
 
@@ -418,7 +423,8 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
 
 def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
       [AutomaticAllocationScope,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
        RecursiveMemoryEffects,
        NoRegionArguments]> {
@@ -696,7 +702,8 @@ def MemRef_DimOp : MemRef_Op<"dim", [
 // DmaStartOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
+def MemRef_DmaStartOp : MemRef_Op<"dma_start", [
+    IndexedMemCopyOpInterface]> {
   let summary = "non-blocking DMA operation that starts a transfer";
   let description = [{
     Syntax:
@@ -775,6 +782,13 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
       return {(*this)->operand_begin() + 1,
               (*this)->operand_begin() + 1 + getSrcMemRefRank()};
     }
+    // Alias to getSrcMemRef() for uniformity with other DMA-like ops.
+    ::mlir::TypedValue<::mlir::MemRefType> getSrc() {
+      // This can be called before op verifaciton, so we guarad against bad variadics.
+      if ((*this)->getOperands().empty())
+        return nullptr;
+      return ::llvm::dyn_cast<::mlir::TypedValue<::mlir::MemRefType>>(getSrcMemRef());
+    }
 
     // Returns the destination MemRefType for this DMA operations.
     Value getDstMemRef() { return getOperand(1 + getSrcMemRefRank()); }
@@ -783,6 +797,16 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     unsigned getDstMemRefRank() {
       return ::llvm::cast<MemRefType>(getDstMemRef().getType()).getRank();
     }
+    // Alias to getDstMemRef() for uniformity with other DMA-like ops.
+    ::mlir::TypedValue<::mlir::MemRefType> getDst() {
+      // Guardrails since this runs before the op verifier and the DMA op doesn't use ODS to define operands.
+      if (!getSrc())
+        return nullptr;
+      if ((*this)->getNumOperands() < (1 + getSrcMemRefRank() + 1))
+        return nullptr;
+      return ::llvm::dyn_cast<::mlir::TypedValue<::mlir::MemRefType>>(getDstMemRef());
+    }
+
     unsigned getSrcMemorySpace() {
       return ::llvm::cast<MemRefType>(getSrcMemRef().getType()).getMemorySpaceAsInt();
     }
@@ -872,6 +896,10 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
       effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
                            SideEffects::DefaultResource::get());
     }
+
+    void setMemrefsAndIndices(RewriterBase& rewriter,
+      Value newSrc, ValueRange newSrcIndices,
+      Value newDst, ValueRange newDstIndices);
   }];
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
@@ -1063,7 +1091,8 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
       SingleBlockImplicitTerminator<"AtomicYieldOp">,
       TypesMatchWith<"result type matches element type of memref",
                      "memref", "result",
-                     "::llvm::cast<MemRefType>($_self).getElementType()">
+                     "::llvm::cast<MemRefType>($_self).getElementType()">,
+      DeclareOpInterfaceMethods<IndexedAccessOpInterface, ["getAccessedMemref"]>,
     ]> {
   let summary = "atomic read-modify-write operation with a region";
   let description = [{
@@ -1188,7 +1217,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
     memref.global "private" @x : memref<2xf32> = dense<[0.0, 2.0]>
 
     // Private variable with an initial value and an alignment (power of 2).
-    memref.global "private" @x : memref<2xf32> = dense<[0.0, 2.0]> {alignment = 64}
+    memref.global "private" @x : memref<2xf32> = dense<[0.0, 2.0]> alignment = 64
 
     // Declaration of an external variable.
     memref.global "private" @y : memref<4xi32>
@@ -1213,7 +1242,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
        (`constant` $constant^)?
        $sym_name `:`
        custom<GlobalMemrefOpTypeAndInitialValue>($type, $initial_value)
-       attr-dict
+       (`alignment` `=` $alignment^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -1240,7 +1269,8 @@ def LoadOp : MemRef_Op<"load",
       DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<IndexedAccessOpInterface, ["getAccessedMemref"]>]> {
   let summary = "load operation";
   let description = [{
     The `load` op reads an element from a memref at the specified indices.
@@ -1248,16 +1278,26 @@ def LoadOp : MemRef_Op<"load",
     The number of indices must match the rank of the memref. The indices must
     be in-bounds: `0 <= idx < dim_size`.
 
-    Lowerings of `memref.load` may emit attributes, e.g. `inbouds` + `nuw`
-    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
-    behavior if indices are out of bounds or if computing the offset in the
-    memref would cause signed overflow of the `index` type.
+    Lowerings of `memref.load` may emit no-wrap flags on
+    `llvm.getelementptr` when converting to LLVM. The `inbounds` flag is
+    always emitted (valid since indices are guaranteed in-bounds) and causes
+    undefined behavior if that precondition is violated. The `nuw` flag is
+    emitted only when all strides of the memref are statically non-negative;
+    with negative strides, `nuw` would propagate to intermediate `mul`
+    operations and cause unsigned overflow (poison) even for in-bounds
+    indices.
 
     The single result of `memref.load` is a value with the same type as the
     element type of the memref.
 
     A set `nontemporal` attribute indicates that this load is not expected to
     be reused in the cache. For details, refer to the
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
+
+    A set `invariant` attribute indicates that the referenced memory location
+    contains the same value at all points in the program where it is
+    dereferenceable, so the load may be treated as invariant. For details, refer
+    to the
     [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
     An optional `alignment` attribute allows to specify the byte alignment of the
@@ -1276,7 +1316,8 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$invariant);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
@@ -1318,9 +1359,16 @@ def LoadOp : MemRef_Op<"load",
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 
-  let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
+  let assemblyFormat = [{
+    $memref `[` $indices `]`
+    oilist(
+      `alignment` `(` $alignment `)` |
+      `nontemporal` `(` custom<BoolAttr>($nontemporal) `)` |
+      `invariant` `(` custom<BoolAttr>($invariant) `)`
+    )
+    attr-dict `:` type($memref)
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1401,7 +1449,10 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
+def MemRef_PrefetchOp : MemRef_Op<"prefetch", [
+      DeclareOpInterfaceMethods<IndexedAccessOpInterface,
+                                ["getAccessedMemref", "getAccessedType"]>
+    ]> {
   let summary = "prefetch operation";
   let description = [{
     The "prefetch" op prefetches data from a memref location described with
@@ -1469,6 +1520,12 @@ def MemRef_ReinterpretCastOp
 
     Consecutive `reinterpret_cast` operations on memref's with static
     dimensions.
+
+    This operation is intended for cases where the user can guarantee the
+    validity of the constructed descriptor. Neither static nor runtime
+    verification check that the resulting descriptor is in-bounds. Accessing
+    memory outside the underlying allocation through the resulting memref is
+    undefined behavior.
 
     We distinguish between *underlying memory* — the sequence of elements as
     they appear in the contiguous memory of the memref — and the
@@ -1726,15 +1783,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
                        "dynamically-sized shape", [MemRead]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
-  let builders = [OpBuilder<
-     (ins "MemRefType":$resultType, "Value":$operand, "Value":$shape), [{
-       $_state.addOperands(operand);
-       $_state.addOperands(shape);
-       $_state.addTypes(resultType);
-     }]>];
-
   let extraClassDeclaration = [{
-    MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
     Value getViewSource() { return getSource(); }
   }];
 
@@ -1821,10 +1870,11 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
 
     The representation for the output shape supports a partially-static
     specification via attributes specified through the `static_output_shape`
-    argument.  A special sentinel value `ShapedType::kDynamic` encodes that the
-    corresponding entry has a dynamic value.  There must be exactly as many SSA
-    inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
-    `static_output_shape`.
+    argument. A special sentinel value `ShapedType::kDynamic` encodes that the
+    corresponding entry has a dynamic value. Both the number of SSA inputs in
+    `output_shape` and the number of `ShapedType::kDynamic` entries in
+    `static_output_shape` match the number of dynamic dimensions in the result
+    type.
 
     Note: This op currently assumes that the inner strides are of the
     source/result layout map are the faster-varying ones.
@@ -2017,7 +2067,8 @@ def MemRef_StoreOp : MemRef_Op<"store",
       DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<IndexedAccessOpInterface, ["getAccessedMemref"]>]> {
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.
@@ -2025,10 +2076,14 @@ def MemRef_StoreOp : MemRef_Op<"store",
     The number of indices must match the rank of the memref. The indices must
     be in-bounds: `0 <= idx < dim_size`.
 
-    Lowerings of `memref.store` may emit attributes, e.g. `inbouds` + `nuw`
-    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
-    behavior if indices are out of bounds or if computing the offset in the
-    memref would cause signed overflow of the `index` type.
+    Lowerings of `memref.store` may emit no-wrap flags on
+    `llvm.getelementptr` when converting to LLVM. The `inbounds` flag is
+    always emitted (valid since indices are guaranteed in-bounds) and causes
+    undefined behavior if that precondition is violated. The `nuw` flag is
+    emitted only when all strides of the memref are statically non-negative;
+    with negative strides, `nuw` would propagate to intermediate `mul`
+    operations and cause unsigned overflow (poison) even for in-bounds
+    indices.
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
@@ -2080,10 +2135,14 @@ def MemRef_StoreOp : MemRef_Op<"store",
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
+    $value `,` $memref `[` $indices `]`
+    oilist(
+      `alignment` `(` $alignment `)` |
+      `nontemporal` `(` custom<BoolAttr>($nontemporal) `)`
+    )
+    attr-dict `:` type($memref)
   }];
 }
 
@@ -2136,8 +2195,10 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The offset, size and stride operands must be in-bounds with respect to the
     source memref. When possible, the static operation verifier will detect
     out-of-bounds subviews. Subviews that cannot be confirmed to be in-bounds
-    or out-of-bounds based on compile-time information are valid. However,
-    performing an out-of-bounds subview at runtime is undefined behavior.
+    or out-of-bounds based on compile-time information are valid. The
+    `-generate-runtime-verification` pass can insert runtime bound checks.
+    Otherwise, performing an out-of-bounds subview at runtime is undefined
+    behavior.
 
     Example 1:
 
@@ -2456,6 +2517,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     /// The result of a view is always a memref.
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
 
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
+
     /// Returns the dynamic sizes for this view operation. This is redundant
     /// with `sizes` but needed in template implementations. More specifically:
     /// ```
@@ -2487,7 +2551,8 @@ def AtomicRMWOp : MemRef_Op<"atomic_rmw", [
       AllTypesMatch<["value", "result"]>,
       TypesMatchWith<"value type matches element type of memref",
                      "memref", "value",
-                     "::llvm::cast<MemRefType>($_self).getElementType()">
+                     "::llvm::cast<MemRefType>($_self).getElementType()">,
+      DeclareOpInterfaceMethods<IndexedAccessOpInterface, ["getAccessedMemref"]>
     ]> {
   let summary = "atomic read-modify-write operation";
   let description = [{

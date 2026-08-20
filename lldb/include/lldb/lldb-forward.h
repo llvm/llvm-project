@@ -22,6 +22,7 @@ class AddressRange;
 class AddressRanges;
 class AddressRangeList;
 class AddressResolver;
+class ProcessAddress;
 class ArchSpec;
 class Architecture;
 class Args;
@@ -44,6 +45,7 @@ class BreakpointSite;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class BugReporter;
 class CXXSyntheticChildren;
 struct CacheSignature;
 class CallFrameInfo;
@@ -79,6 +81,7 @@ class Disassembler;
 class DumpValueObjectOptions;
 class DynamicCheckerFunctions;
 class DynamicLoader;
+class DynamicRegisterInfo;
 class Editline;
 class EmulateInstruction;
 class Environment;
@@ -186,17 +189,22 @@ class RichManglingContext;
 class SaveCoreOptions;
 class Scalar;
 class ScriptInterpreter;
+class ScriptInterpreterBridge;
 class ScriptInterpreterLocker;
 class ScriptedFrameInterface;
 class ScriptedFrameProviderInterface;
 class ScriptedMetadata;
 class ScriptedBreakpointInterface;
+class ScriptedCommandInterface;
+class ScriptedHookInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
-class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
 class ScriptedThreadPlanInterface;
+class ScriptedStackFrameRecognizerInterface;
+class ScriptedStringSummaryInterface;
 class ScriptedSyntheticChildren;
+class ScriptedSyntheticChildrenInterface;
 class SearchFilter;
 class Section;
 class SectionList;
@@ -342,12 +350,15 @@ typedef std::shared_ptr<lldb_private::CompileUnit> CompUnitSP;
 typedef std::shared_ptr<lldb_private::DataBuffer> DataBufferSP;
 typedef std::shared_ptr<lldb_private::WritableDataBuffer> WritableDataBufferSP;
 typedef std::shared_ptr<lldb_private::DataExtractor> DataExtractorSP;
+typedef std::unique_ptr<lldb_private::DataExtractor> DataExtractorUP;
 typedef std::shared_ptr<lldb_private::Debugger> DebuggerSP;
 typedef std::weak_ptr<lldb_private::Debugger> DebuggerWP;
 typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
 typedef std::unique_ptr<lldb_private::DynamicCheckerFunctions>
     DynamicCheckerFunctionsUP;
 typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
+typedef std::shared_ptr<lldb_private::DynamicRegisterInfo>
+    DynamicRegisterInfoSP;
 typedef std::shared_ptr<lldb_private::Event> EventSP;
 typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
 typedef std::shared_ptr<lldb_private::EventDataStructuredData>
@@ -422,14 +433,22 @@ typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
-typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
-    ScriptedStopHookInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
+    ScriptedHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
     ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedBreakpointInterface>
     ScriptedBreakpointInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedStackFrameRecognizerInterface>
+    ScriptedStackFrameRecognizerInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedCommandInterface>
+    ScriptedCommandInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedStringSummaryInterface>
+    ScriptedStringSummaryInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildrenInterface>
+    ScriptedSyntheticChildrenInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
@@ -439,6 +458,7 @@ typedef std::unique_ptr<lldb_private::SourceManager> SourceManagerUP;
 typedef std::shared_ptr<lldb_private::StackFrame> StackFrameSP;
 typedef std::weak_ptr<lldb_private::StackFrame> StackFrameWP;
 typedef std::shared_ptr<lldb_private::StackFrameList> StackFrameListSP;
+typedef std::weak_ptr<lldb_private::StackFrameList> StackFrameListWP;
 typedef std::shared_ptr<lldb_private::StackFrameRecognizer>
     StackFrameRecognizerSP;
 typedef std::unique_ptr<lldb_private::StackFrameRecognizerManager>

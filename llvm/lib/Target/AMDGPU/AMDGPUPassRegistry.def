@@ -17,6 +17,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
+MODULE_PASS("amdgpu-asm-printer-begin", AMDGPUAsmPrinterBeginPass())
+MODULE_PASS("amdgpu-asm-printer-end", AMDGPUAsmPrinterEndPass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
@@ -30,7 +32,7 @@ MODULE_PASS("amdgpu-preload-kernel-arguments", AMDGPUPreloadKernelArgumentsPass(
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
 MODULE_PASS("amdgpu-lower-exec-sync", AMDGPULowerExecSyncPass())
-MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
+MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass())
 #undef MODULE_PASS
 
 #ifndef MODULE_PASS_WITH_PARAMS
@@ -43,6 +45,12 @@ MODULE_PASS_WITH_PARAMS(
     },
     parseAMDGPUAttributorPassOptions, "closed-world")
 #undef MODULE_PASS_WITH_PARAMS
+
+#ifndef CGSCC_PASS
+#define CGSCC_PASS(NAME, CREATE_PASS)
+#endif
+CGSCC_PASS("amdgpu-attributor-cgscc", AMDGPUAttributorCGSCCPass(*this))
+#undef CGSCC_PASS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
@@ -101,11 +109,15 @@ FUNCTION_PASS_WITH_PARAMS(
 #endif
 
 MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(*static_cast<const GCNTargetMachine *>(this)))
+MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass())
 #undef MACHINE_FUNCTION_ANALYSIS
 
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("amdgpu-asm-printer", AMDGPUAsmPrinterPass())
+MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering",
+                      AMDGPUGlobalISelDivergenceLoweringPass())
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())
@@ -122,6 +134,7 @@ MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
 MACHINE_FUNCTION_PASS("amdgpu-wait-sgpr-hazards", AMDGPUWaitSGPRHazardsPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
+MACHINE_FUNCTION_PASS("print<amdgpu-next-use-analysis>", AMDGPUNextUseAnalysisPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
@@ -151,7 +164,6 @@ MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 // Global ISel passes
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-prelegalizer-combiner", AMDGPUPreLegalizerCombinerPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-postlegalizer-combiner", AMDGPUPostLegalizerCombinerPass())
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering", AMDGPUGlobalISelDivergenceLoweringPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbankselect", AMDGPURegBankSelectPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbanklegalize", AMDGPURegBankLegalizePass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbank-combiner", AMDGPURegBankCombinerPass())

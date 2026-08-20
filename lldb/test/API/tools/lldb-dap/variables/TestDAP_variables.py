@@ -3,390 +3,271 @@ Test lldb-dap variables request
 """
 
 import os
+from typing import List, Optional
 
-import lldbdap_testcase
+from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap.types import (
+    EvaluateContext,
+    LaunchArgs,
+    VariablesArgs,
+)
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, ExpectEval, ExpectVar
 
 
-def make_buffer_verify_dict(start_idx, count, offset=0):
-    verify_dict = {}
-    for i in range(start_idx, start_idx + count):
-        verify_dict["[%i]" % (i)] = {"type": "int", "value": str(i + offset)}
-    return verify_dict
+def make_expected_buffer(start_idx, count, offset=0):
+    return {
+        f"[{i}]": ExpectVar(type="int", value=str(i + offset))
+        for i in range(start_idx, start_idx + count)
+    }
 
 
-class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
-    def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
-        if "equals" in verify_dict:
-            verify = verify_dict["equals"]
-            for key in verify:
-                verify_value = verify[key]
-                actual_value = actual[key]
-                self.assertEqual(
-                    verify_value,
-                    actual_value,
-                    '"%s" keys don\'t match (%s != %s) from:\n%s'
-                    % (key, actual_value, verify_value, actual),
-                )
-        if "startswith" in verify_dict:
-            verify = verify_dict["startswith"]
-            for key in verify:
-                verify_value = verify[key]
-                actual_value = actual[key]
-                startswith = actual_value.startswith(verify_value)
-                self.assertTrue(
-                    startswith,
-                    ('"%s" value "%s" doesn\'t start with "%s")')
-                    % (key, actual_value, verify_value),
-                )
-        if "matches" in verify_dict:
-            verify = verify_dict["matches"]
-            for key in verify:
-                verify_value = verify[key]
-                actual_value = actual[key]
-                self.assertRegex(
-                    actual_value,
-                    verify_value,
-                    ('"%s" value "%s" doesn\'t match pattern "%s")')
-                    % (key, actual_value, verify_value),
-                )
-        if "contains" in verify_dict:
-            verify = verify_dict["contains"]
-            for key in verify:
-                contains_array = verify[key]
-                actual_value = actual[key]
-                self.assertIsInstance(contains_array, list)
-                for verify_value in contains_array:
-                    self.assertIn(verify_value, actual_value)
-        if "missing" in verify_dict:
-            missing = verify_dict["missing"]
-            for key in missing:
-                self.assertNotIn(
-                    key, actual, 'key "%s" is not expected in %s' % (key, actual)
-                )
-        isReadOnly = verify_dict.get("readOnly", False)
-        attributes = actual.get("presentationHint", {}).get("attributes", [])
-        self.assertEqual(
-            isReadOnly, "readOnly" in attributes, "%s %s" % (verify_dict, actual)
-        )
-        hasVariablesReference = "variablesReference" in actual
-        varRef = None
-        if hasVariablesReference:
-            # Remember variable references in case we want to test further
-            # by using the evaluate name.
-            varRef = actual["variablesReference"]
-            if varRef != 0 and varref_dict is not None:
-                if expression is None:
-                    evaluateName = actual["evaluateName"]
-                else:
-                    evaluateName = expression
-                varref_dict[evaluateName] = varRef
-        if (
-            "hasVariablesReference" in verify_dict
-            and verify_dict["hasVariablesReference"]
-        ):
-            self.assertTrue(hasVariablesReference, "verify variable reference")
-        if "children" in verify_dict:
-            self.assertTrue(
-                hasVariablesReference and varRef is not None and varRef != 0,
-                ("children verify values specified for " "variable without children"),
-            )
+class TestDAP_variables(DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
 
-            response = self.dap_server.request_variables(varRef)
-            self.verify_variables(
-                verify_dict["children"], response["body"]["variables"], varref_dict
-            )
-
-    def verify_variables(self, verify_dict, variables, varref_dict=None):
-        for variable in variables:
-            name = variable["name"]
-            if not name.startswith("std::"):
-                self.assertIn(
-                    name, verify_dict, 'variable "%s" in verify dictionary' % (name)
-                )
-                self.verify_values(verify_dict[name], variable, varref_dict)
-
-    def darwin_dwarf_missing_obj(self, initCommands):
+    def darwin_dwarf_missing_obj(self, initCommands: Optional[List[str]]):
         self.build(debug_info="dwarf")
         program = self.getBuildArtifact("a.out")
         main_obj = self.getBuildArtifact("main.o")
         self.assertTrue(os.path.exists(main_obj))
-        # Delete the main.o file that contains the debug info so we force an
-        # error when we run to main and try to get variables
-        os.unlink(main_obj)
 
-        self.create_debug_adapter()
+        # Delete the main.o file that contains the debug info so we force an
+        # error when we run to main and try to get variables.
+        os.unlink(main_obj)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
-        self.launch(program, initCommands=initCommands)
+        session = self.create_session()
+        with session.configure(
+            LaunchArgs(program=program, initCommands=initCommands)
+        ) as ctx:
+            breakpoint_ids = session.resolve_function_breakpoints(["main"])
+            self.assertEqual(len(breakpoint_ids), 1, "expect one breakpoint")
 
-        functions = ["main"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
-        self.continue_to_breakpoints(breakpoint_ids)
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        frame = session.thread_context_from(thread_id).top_frame()
 
-        locals = self.dap_server.get_local_variables()
-
-        verify_locals = {
-            "<error>": {
-                "equals": {"type": "const char *"},
-                "contains": {
-                    "value": [
-                        "debug map object file ",
-                        'main.o" containing debug info does not exist, debug info will not be loaded',
-                    ]
-                },
-            },
-        }
-        varref_dict = {}
-        self.verify_variables(verify_locals, locals, varref_dict)
+        var_args = VariablesArgs(variablesReference=frame.locals.variablesReference)
+        error_response = session.send_request(var_args).error()
+        error_body = self.expect_not_none(error_response.body)
+        error_message = self.expect_not_none(error_body.error)
+        self.assertEqual(
+            f'debug map object file "{main_obj}" containing debug info does not exist, debug info will not be loaded',
+            error_message.format,
+        )
+        self.assertTrue(error_message.showUser)
 
     def do_test_scopes_variables_setVariable_evaluate(
         self, enableAutoVariableSummaries: bool
     ):
-        """
-        Tests the "scopes", "variables", "setVariable", and "evaluate" packets.
-        """
+        """Tests the "scopes", "variables", "setVariable", and "evaluate" packets."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(
-            program, enableAutoVariableSummaries=enableAutoVariableSummaries
-        )
+        session = self.build_and_create_session()
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        breakpoint2_line = line_number(source, "// breakpoint 2")
+        breakpoint3_line = line_number(source, "// breakpoint 3")
+
+        launch_args = LaunchArgs(
+            program=program, enableAutoVariableSummaries=enableAutoVariableSummaries
         )
-        self.continue_to_breakpoints(breakpoint_ids)
-        locals = self.dap_server.get_local_variables()
-        globals = self.dap_server.get_global_variables()
-        buffer_children = make_buffer_verify_dict(0, 16)
-        verify_locals = {
-            "argc": {
-                "equals": {
-                    "type": "int",
-                    "value": "1",
+        with session.configure(launch_args) as ctx:
+            breakpoint_ids = session.resolve_source_breakpoints(
+                source, [breakpoint1_line, breakpoint2_line, breakpoint3_line]
+            )
+
+        bp1, bp2, bp3 = breakpoint_ids
+        stop_event = session.verify_stopped_on_breakpoint(bp1, after=ctx.process_event)
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        frame = session.top_frame_from(thread_id)
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        global_vars = session.get_variables(frame.globals.variablesReference)
+
+        buffer_children = make_expected_buffer(0, 16)
+        expect_locals = {
+            "argc": ExpectVar(type="int", value="1"),
+            "argv": ExpectVar(type="const char **", startswith="0x", has_var_ref=True),
+            "pt": ExpectVar(
+                type="PointType",
+                has_var_ref=True,
+                read_only=True,
+                children={
+                    "x": ExpectVar(type="int", value="11"),
+                    "y": ExpectVar(type="int", value="22"),
+                    "buffer": ExpectVar(read_only=True, children=buffer_children),
                 },
-            },
-            "argv": {
-                "equals": {"type": "const char **"},
-                "startswith": {"value": "0x"},
-                "hasVariablesReference": True,
-            },
-            "pt": {
-                "equals": {
-                    "type": "PointType",
-                },
-                "hasVariablesReference": True,
-                "children": {
-                    "x": {"equals": {"type": "int", "value": "11"}},
-                    "y": {"equals": {"type": "int", "value": "22"}},
-                    "buffer": {"children": buffer_children, "readOnly": True},
-                },
-                "readOnly": True,
-            },
-            "x": {"equals": {"type": "int"}},
+            ),
+            "valid_str": ExpectVar(),
+            "malformed_str": ExpectVar(),
+            "x": ExpectVar(type="int"),
         }
 
-        verify_globals = {
-            "s_local": {"equals": {"type": "float", "value": "2.25"}},
+        s_global = ExpectVar(type="int", value="234")
+        g_global = ExpectVar(type="int", value="123")
+        expect_globals = {
+            "s_local": ExpectVar(type="float", value="2.25"),
         }
-        s_global = {"equals": {"type": "int", "value": "234"}}
-        g_global = {"equals": {"type": "int", "value": "123"}}
         if lldbplatformutil.getHostPlatform() == "windows":
-            verify_globals["::s_global"] = s_global
-            verify_globals["g_global"] = g_global
+            expect_globals["::s_global"] = s_global
+            expect_globals["g_global"] = g_global
         else:
-            verify_globals["s_global"] = s_global
-            verify_globals["::g_global"] = g_global
+            expect_globals["s_global"] = s_global
+            expect_globals["::g_global"] = g_global
 
-        varref_dict = {}
-        self.verify_variables(verify_locals, locals, varref_dict)
-        self.verify_variables(verify_globals, globals, varref_dict)
-        # pprint.PrettyPrinter(indent=4).pprint(varref_dict)
+        session.verify_variables(local_vars, expect_locals)
+        session.verify_variables(global_vars, expect_globals)
+
+        pt_var = frame.locals["pt"]
+        pt_buffer = pt_var["buffer"]
+
         # We need to test the functionality of the "variables" request as it
         # has optional parameters like "start" and "count" to limit the number
-        # of variables that are fetched
-        varRef = varref_dict["pt.buffer"]
-        response = self.dap_server.request_variables(varRef)
-        self.verify_variables(buffer_children, response["body"]["variables"])
-        # Verify setting start=0 in the arguments still gets all children
-        response = self.dap_server.request_variables(varRef, start=0)
-        self.verify_variables(buffer_children, response["body"]["variables"])
-        # Verify setting count=0 in the arguments still gets all children.
-        # If count is zero, it means to get all children.
-        response = self.dap_server.request_variables(varRef, count=0)
-        self.verify_variables(buffer_children, response["body"]["variables"])
-        # Verify setting count to a value that is too large in the arguments
-        # still gets all children, and no more
-        response = self.dap_server.request_variables(varRef, count=1000)
-        self.verify_variables(buffer_children, response["body"]["variables"])
-        # Verify setting the start index and count gets only the children we
-        # want
-        response = self.dap_server.request_variables(varRef, start=5, count=5)
-        self.verify_variables(
-            make_buffer_verify_dict(5, 5), response["body"]["variables"]
-        )
-        # Verify setting the start index to a value that is out of range
-        # results in an empty list
-        response = self.dap_server.request_variables(varRef, start=32, count=1)
+        # of variables that are fetched.
+        var_ref = pt_buffer.variablesReference
+        children = session.get_variables(var_ref)
+        session.verify_variables(children, buffer_children)
+        # start=0 still gets all children.
+        children = session.get_variables(var_ref, start=0)
+        session.verify_variables(children, buffer_children)
+        # count=0 gets all children.
+        children = session.get_variables(var_ref, count=0)
+        session.verify_variables(children, buffer_children)
+        # An oversized count gets all children, no more.
+        children = session.get_variables(var_ref, count=1000)
+        session.verify_variables(children, buffer_children)
+        # start and count gets only the children we want.
+        children = session.get_variables(var_ref, start=5, count=5)
+        session.verify_variables(children, make_expected_buffer(5, 5))
+        # An out-of-range start gets an empty list.
+        children = session.get_variables(var_ref, start=32, count=1)
         self.assertEqual(
-            len(response["body"]["variables"]),
-            0,
-            "verify we get no variable back for invalid start",
+            len(children), 0, "verify we get no variables back for an invalid start"
         )
 
-        # Test evaluate
+        # Test evaluate.
+        if enableAutoVariableSummaries:
+            pt_summary = "{x:11, y:22, buffer:{...}}"
+            buf_summary = "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+        else:
+            pt_summary = "PointType"
+            buf_summary = "int[16]"
+
         expressions = {
-            "pt.x": {
-                "equals": {"result": "11", "type": "int"},
-                "hasVariablesReference": False,
-            },
-            "pt.buffer[2]": {
-                "equals": {"result": "2", "type": "int"},
-                "hasVariablesReference": False,
-            },
-            "pt": {
-                "equals": {"type": "PointType"},
-                "startswith": {
-                    "result": (
-                        "{x:11, y:22, buffer:{...}}"
-                        if enableAutoVariableSummaries
-                        else "PointType @ 0x"
-                    )
-                },
-                "hasVariablesReference": True,
-            },
-            "pt.buffer": {
-                "equals": {"type": "int[16]"},
-                "startswith": {
-                    "result": (
-                        "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
-                        if enableAutoVariableSummaries
-                        else "int[16] @ 0x"
-                    )
-                },
-                "hasVariablesReference": True,
-            },
-            "argv": {
-                "equals": {"type": "const char **"},
-                "startswith": {"result": "0x"},
-                "hasVariablesReference": True,
-            },
-            "argv[0]": {
-                "equals": {"type": "const char *"},
-                "startswith": {"result": "0x"},
-                "hasVariablesReference": True,
-            },
-            "2+3": {
-                "equals": {"result": "5", "type": "int"},
-                "hasVariablesReference": False,
-            },
+            "pt.x": ExpectEval(type="int", result="11", has_var_ref=False),
+            "pt.buffer[2]": ExpectEval(type="int", result="2", has_var_ref=False),
+            "pt": ExpectEval(type="PointType", startswith=pt_summary, has_var_ref=True),
+            "pt.buffer": ExpectEval(
+                type="int[16]",
+                startswith=buf_summary,
+                has_var_ref=True,
+            ),
+            "argv": ExpectEval(type="const char **", startswith="0x", has_var_ref=True),
+            "argv[0]": ExpectEval(
+                type="const char *", startswith="0x", has_var_ref=True
+            ),
+            "2+3": ExpectEval(type="int", result="5", has_var_ref=False),
         }
-        for expression in expressions:
-            response = self.dap_server.request_evaluate(expression)
-            self.verify_values(expressions[expression], response["body"])
+        for expression, expected in expressions.items():
+            expr_result = frame.evaluate(expression)
+            session.verify_evaluate(expr_result, expected)
 
-        # Test setting variables
-        self.set_local("argc", 123)
-        argc = self.get_local_as_int("argc")
-        self.assertEqual(argc, 123, "verify argc was set to 123 (123 != %i)" % (argc))
+        # Test setting variables.
+        self.expect_success(frame.locals.set("argc", 123))
+        argc = frame.locals["argc"].value_as_int
+        self.assertEqual(argc, 123, f"verify argc was set to 123 (123 != {argc})")
 
-        self.set_local("argv", 0x1234)
-        argv = self.get_local_as_int("argv")
+        self.expect_success(frame.locals.set("argv", 0x1234))
+        argv = frame.locals["argv"].value_as_int
         self.assertEqual(
-            argv, 0x1234, "verify argv was set to 0x1234 (0x1234 != %#x)" % (argv)
+            argv, 0x1234, f"verify argv was set to 0x1234 (0x1234 != {argv:#x})"
         )
 
-        # Set a variable value whose name is synthetic, like a variable index
-        # and verify the value by reading it
+        # Test hexadecimal format.
+        hex_set = self.expect_success(frame.locals.set("argc", 42, is_hex=True))
+        self.assertEqual(hex_set.body.type, "int")
+        self.assertEqual(hex_set.body.value, "0x0000002a")
+        self.expect_success(frame.locals.set("argc", 123))
+
+        # Set a variable whose name is synthetic (an array index) and verify
+        # the value by reading it back.
         variable_value = 100
-        response = self.set_variable(varRef, "[0]", variable_value)
-        # Verify dap sent the correct response
-        verify_response = {
-            "type": "int",
-            "value": str(variable_value),
-        }
-        for key, value in verify_response.items():
-            self.assertEqual(value, response["body"][key])
+        set_result = self.expect_success(pt_buffer.set("[0]", variable_value))
+        self.assertEqual(set_result.body.type, "int")
+        self.assertEqual(set_result.body.value, str(variable_value))
 
-        response = self.dap_server.request_variables(varRef, start=0, count=1)
-        self.verify_variables(
-            make_buffer_verify_dict(0, 1, variable_value), response["body"]["variables"]
-        )
+        pt_buffer_ref = pt_buffer.variablesReference
+        children = session.get_variables(pt_buffer_ref, start=0, count=1)
+        session.verify_variables(children, make_expected_buffer(0, 1, variable_value))
+        # Update the new value in the buffer expectations so subsequent
+        # verifications stay consistent.
+        buffer_children["[0]"].value = str(variable_value)
 
-        # Set a variable value whose name is a real child value, like "pt.x"
-        # and verify the value by reading it
-        varRef = varref_dict["pt"]
-        self.set_variable(varRef, "x", 111)
-        response = self.dap_server.request_variables(varRef, start=0, count=1)
-        value = response["body"]["variables"][0]["value"]
-        self.assertEqual(
-            value, "111", "verify pt.x got set to 111 (111 != %s)" % (value)
-        )
+        # Set a variable whose name is a real child value (e.g. "pt.x") and
+        # verify the value by reading it back.
+        pt_var_ref = pt_var.variablesReference
+        self.expect_success(pt_var.set("x", "g_global - 12"))
+        children = session.get_variables(pt_var_ref, start=0, count=1)
+        value = children[0].value
+        self.assertEqual(value, "111", f"verify pt.x got set to 111 (111 != {value})")
 
-        # We check shadowed variables and that a new get_local_variables request
-        # gets the right data
-        breakpoint2_line = line_number(source, "// breakpoint 2")
-        lines = [breakpoint2_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
+        # Continue to the second breakpoint to check shadowed variables and the new
+        # local variables is update to the new values.
+        session.continue_to_breakpoint(bp2)
+        frame = session.top_frame_from(thread_id)
 
-        verify_locals["argc"]["equals"]["value"] = "123"
-        verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "72"}}
+        expect_locals["argc"].value = "123"
+        # Build a child dict with `pt.x` updated to its new value.
+        pt_children = self.expect_not_none(expect_locals["pt"].children)
+        pt_children["x"].value = "111"
+        expect_locals["x @ main.cpp:27"] = ExpectVar(type="int", value="89")
+        expect_locals["x @ main.cpp:29"] = ExpectVar(type="int", value="42")
+        expect_locals["x @ main.cpp:31"] = ExpectVar(type="int", value="72")
 
-        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
+        local_variables = session.get_variables(frame.locals.variablesReference)
+        session.verify_variables(local_variables, expect_locals)
 
-        # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.set_local("x2", 9)["success"])
-        self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
+        # Renaming a variable with and without the differentiator suffix.
+        self.expect_error(frame.locals.set("x2", 9))
+        self.expect_error(frame.locals.set("x @ main.cpp:0", 9))
 
-        self.assertTrue(self.set_local("x @ main.cpp:19", 19)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:21", 21)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:23", 23)["success"])
+        self.expect_success(frame.locals.set("x @ main.cpp:27", 19))
+        self.expect_success(frame.locals.set("x @ main.cpp:29", 21))
+        self.expect_success(frame.locals.set("x @ main.cpp:31", 23))
 
-        # The following should have no effect
-        self.assertFalse(self.set_local("x @ main.cpp:23", "invalid")["success"])
+        # An invalid value should have no effect.
+        self.expect_error(frame.locals.set("x @ main.cpp:31", "invalid"))
 
-        verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
-        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "23"
+        expect_locals["x @ main.cpp:27"].value = "19"
+        expect_locals["x @ main.cpp:29"].value = "21"
+        expect_locals["x @ main.cpp:31"].value = "23"
 
-        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        session.verify_variables(local_vars, expect_locals)
 
-        # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.set_local("x", 22)["success"])
-        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
+        # The plain `x` variable should refer to the innermost x.
+        self.expect_success(frame.locals.set("x", 22))
+        expect_locals["x @ main.cpp:31"].value = "22"
 
-        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        session.verify_variables(local_vars, expect_locals)
 
-        # In breakpoint 3, there should be no shadowed variables
-        breakpoint3_line = line_number(source, "// breakpoint 3")
-        lines = [breakpoint3_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
+        # At breakpoint 3 there should be no shadowed variables.
+        session.continue_to_breakpoint(bp3)
+        frame = session.top_frame_from(thread_id)
 
-        locals = self.dap_server.get_local_variables()
-        names = [var["name"] for var in locals]
-        # The first shadowed x shouldn't have a suffix anymore
-        verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
-        self.assertNotIn("x @ main.cpp:19", names)
-        self.assertNotIn("x @ main.cpp:21", names)
-        self.assertNotIn("x @ main.cpp:23", names)
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        names = [var.name for var in local_vars]
+        # The first shadowed `x` shouldn't have a suffix anymore.
+        expect_locals["x"] = ExpectVar(type="int", value="19")
+        self.assertNotIn("x @ main.cpp:27", names)
+        self.assertNotIn("x @ main.cpp:29", names)
+        self.assertNotIn("x @ main.cpp:31", names)
 
-        self.verify_variables(verify_locals, locals)
+        session.verify_variables(local_vars, expect_locals)
+        session.continue_to_exit()
 
     @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
@@ -395,82 +276,83 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
+    def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(
+        self,
+    ):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=True
         )
 
     @skipIfWindows
     def do_test_scopes_and_evaluate_expansion(self, enableAutoVariableSummaries: bool):
-        """
-        Tests the evaluated expression expands successfully after "scopes" packets
-        and permanent expressions persist.
-        """
+        """Test that an evaluated expression expands successfully after "scopes"
+        packets, and that permanent expressions persist across resumes."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(
-            program, enableAutoVariableSummaries=enableAutoVariableSummaries
-        )
+        session = self.build_and_create_session()
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+
+        launch_args = LaunchArgs(
+            program=program, enableAutoVariableSummaries=enableAutoVariableSummaries
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        with session.configure(launch_args) as ctx:
+            lines = [
+                line_number(source, "// breakpoint 1"),
+                line_number(source, "// breakpoint 3"),
+                line_number(source, "// breakpoint 6"),
+                line_number(source, "// breakpoint 7"),
+                line_number(source, "// breakpoint 8"),
+            ]
+            breakpoint_ids = session.resolve_source_breakpoints(source, lines)
 
-        # Verify locals
-        locals = self.dap_server.get_local_variables()
-        buffer_children = make_buffer_verify_dict(0, 32)
-        verify_locals = {
-            "argc": {
-                "equals": {"type": "int", "value": "1"},
-                "missing": ["indexedVariables"],
-            },
-            "argv": {
-                "equals": {"type": "const char **"},
-                "startswith": {"value": "0x"},
-                "hasVariablesReference": True,
-                "missing": ["indexedVariables"],
-            },
-            "pt": {
-                "equals": {"type": "PointType"},
-                "hasVariablesReference": True,
-                "missing": ["indexedVariables"],
-                "children": {
-                    "x": {
-                        "equals": {"type": "int", "value": "11"},
-                        "missing": ["indexedVariables"],
-                    },
-                    "y": {
-                        "equals": {"type": "int", "value": "22"},
-                        "missing": ["indexedVariables"],
-                    },
-                    "buffer": {
-                        "children": buffer_children,
-                        "equals": {"indexedVariables": 16},
-                        "readOnly": True,
-                    },
+        bp1, bp3, bp6, bp7, bp8 = breakpoint_ids
+        stop_event = session.verify_stopped_on_breakpoint(bp1, after=ctx.process_event)
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        frame = session.thread_context_from(thread_id).top_frame()
+
+        # Verify locals.
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        buffer_children = make_expected_buffer(0, 32)
+        expect_locals: dict[str, ExpectVar] = {
+            "argc": ExpectVar(type="int", value="1", has_indexed_variables=False),
+            "argv": ExpectVar(
+                type="const char **",
+                startswith="0x",
+                has_var_ref=True,
+                has_indexed_variables=False,
+            ),
+            "pt": ExpectVar(
+                type="PointType",
+                has_var_ref=True,
+                read_only=True,
+                has_indexed_variables=False,
+                children={
+                    "x": ExpectVar(type="int", value="11", has_indexed_variables=False),
+                    "y": ExpectVar(type="int", value="22", has_indexed_variables=False),
+                    "buffer": ExpectVar(
+                        indexed_variables=16,
+                        read_only=True,
+                        children=buffer_children,
+                    ),
                 },
-                "readOnly": True,
-            },
-            "x": {
-                "equals": {"type": "int"},
-                "missing": ["indexedVariables"],
-            },
+            ),
+            "valid_str": ExpectVar(
+                type="const char *",
+                matches=r'0x\w+ "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃"',
+            ),
+            "malformed_str": ExpectVar(
+                type="const char *",
+                matches=r'0x\w+ "lone trailing \\x81\\x82 bytes"',
+            ),
+            "x": ExpectVar(type="int", has_indexed_variables=False),
         }
-        self.verify_variables(verify_locals, locals)
+        session.verify_variables(local_vars, expect_locals)
 
-        # Evaluate expandable expression twice: once permanent (from repl)
-        # the other temporary (from other UI).
-        expandable_expression = {
-            "name": "pt",
-            "context": {
-                "repl": {
-                    "equals": {"type": "PointType"},
-                    "equals": {
-                        "result": """(PointType) $0 = {
+        expandable_name = "pt"
+        if enableAutoVariableSummaries:
+            pt_summary = "{x:11, y:22, buffer:{...}}"
+        else:
+            pt_summary = "PointType"
+        repl_result = """(PointType) $0 = {
   x = 11
   y = 22
   buffer = {
@@ -492,111 +374,190 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     [15] = 15
   }
 }"""
-                    },
-                    "missing": ["indexedVariables"],
-                    "hasVariablesReference": True,
-                },
-                "hover": {
-                    "equals": {"type": "PointType"},
-                    "startswith": {
-                        "result": (
-                            "{x:11, y:22, buffer:{...}}"
-                            if enableAutoVariableSummaries
-                            else "PointType @ 0x"
-                        )
-                    },
-                    "missing": ["indexedVariables"],
-                    "hasVariablesReference": True,
-                },
-                "watch": {
-                    "equals": {"type": "PointType"},
-                    "startswith": {
-                        "result": (
-                            "{x:11, y:22, buffer:{...}}"
-                            if enableAutoVariableSummaries
-                            else "PointType @ 0x"
-                        )
-                    },
-                    "missing": ["indexedVariables"],
-                    "hasVariablesReference": True,
-                },
-                "variables": {
-                    "equals": {"type": "PointType"},
-                    "startswith": {
-                        "result": (
-                            "{x:11, y:22, buffer:{...}}"
-                            if enableAutoVariableSummaries
-                            else "PointType @ 0x"
-                        )
-                    },
-                    "missing": ["indexedVariables"],
-                    "hasVariablesReference": True,
-                },
-            },
-            "children": {
-                "x": {"equals": {"type": "int", "value": "11"}},
-                "y": {"equals": {"type": "int", "value": "22"}},
-                "buffer": {"children": buffer_children, "readOnly": True},
-            },
+
+        expandable_children: dict[str, ExpectVar] = {
+            "x": ExpectVar(type="int", value="11"),
+            "y": ExpectVar(type="int", value="22"),
+            "buffer": ExpectVar(read_only=True, children=buffer_children),
+        }
+        expected_contexts_evals: dict[EvaluateContext, ExpectEval] = {
+            "repl": ExpectEval(
+                type="PointType",
+                result=repl_result,
+                has_var_ref=True,
+                has_indexed_variables=False,
+                children=expandable_children,
+            ),
+            "hover": ExpectEval(
+                type="PointType",
+                startswith=pt_summary,
+                has_var_ref=True,
+                has_indexed_variables=False,
+                children=expandable_children,
+            ),
+            "watch": ExpectEval(
+                type="PointType",
+                startswith=pt_summary,
+                has_var_ref=True,
+                has_indexed_variables=False,
+                children=expandable_children,
+            ),
+            "variables": ExpectEval(
+                type="PointType",
+                startswith=pt_summary,
+                has_var_ref=True,
+                has_indexed_variables=False,
+                children=expandable_children,
+            ),
         }
 
-        # Evaluate from known contexts.
-        expr_varref_dict = {}
-        for context, verify_dict in expandable_expression["context"].items():
-            response = self.dap_server.request_evaluate(
-                expandable_expression["name"],
-                frameIndex=0,
-                threadId=None,
-                context=context,
+        # Evaluate from each known context.
+        permanent_expandable_ref: Optional[int] = None
+        temporary_expandable_ref: Optional[int] = None
+        for context, expected_eval in expected_contexts_evals.items():
+            result = session.evaluate(
+                expandable_name, frameId=frame.id, context=context
             )
-            self.verify_values(
-                verify_dict,
-                response["body"],
-                expr_varref_dict,
-                expandable_expression["name"],
-            )
+
+            if context == "repl":  # Save the variablesReference.
+                permanent_expandable_ref = result.variablesReference
+            else:
+                temporary_expandable_ref = result.variablesReference
+
+            session.verify_evaluate(result, expected_eval)
 
         # Evaluate locals again.
-        locals = self.dap_server.get_local_variables()
-        self.verify_variables(verify_locals, locals)
+        local_vars = session.get_variables(frame.locals.variablesReference)
+        session.verify_variables(local_vars, expect_locals)
 
-        # Verify the evaluated expressions before second locals evaluation
-        # can be expanded.
-        var_ref = expr_varref_dict[expandable_expression["name"]]
-        response = self.dap_server.request_variables(var_ref)
-        self.verify_variables(
-            expandable_expression["children"], response["body"]["variables"]
+        # The previously evaluated expression should still expand.
+        var_ref = self.expect_not_none(temporary_expandable_ref)
+        session.verify_variables(session.get_variables(var_ref), expandable_children)
+
+        session.continue_to_breakpoint(bp6)
+        frame = session.top_frame_from(thread_id)
+        if enableAutoVariableSummaries:
+            my_var_value = '{name:"hello world!", x:42, y:7}'
+        else:
+            my_var_value = "(unnamed struct)"
+        session.verify_variable(
+            frame.locals["my_var"].variable,
+            ExpectVar(
+                type="(unnamed struct)",
+                value=my_var_value,
+                evaluate_name="my_var",
+                read_only=True,
+            ),
         )
 
-        # Continue to breakpoint 3, permanent variable should still exist
-        # after resume.
-        breakpoint3_line = line_number(source, "// breakpoint 3")
-        lines = [breakpoint3_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
+        session.continue_to_breakpoint(bp7)
+        frame = session.top_frame_from(thread_id)
 
-        var_ref = expr_varref_dict[expandable_expression["name"]]
-        response = self.dap_server.request_variables(var_ref)
-        self.verify_variables(
-            expandable_expression["children"], response["body"]["variables"]
+        home_var = frame.locals["home"]
+        session.verify_variable(
+            home_var.variable,
+            ExpectVar(
+                type="MySock",
+                value="MySock",
+                evaluate_name="home",
+                read_only=True,
+            ),
         )
 
-        # Test that frame scopes have corresponding presentation hints.
-        frame_id = self.dap_server.get_stackFrame()["id"]
-        scopes = self.dap_server.request_scopes(frame_id)["body"]["scopes"]
+        anon_var = home_var["(anonymous)"]
+        if enableAutoVariableSummaries:
+            anon_value_re = r"{ipv4:.*, ipv6:.*}"
+        else:
+            anon_value_re = r"MySock::\(anonymous union\)"
+        session.verify_variable(
+            anon_var.variable,
+            ExpectVar(
+                type="MySock::(anonymous union)",
+                matches=anon_value_re,
+                read_only=True,
+                has_evaluate_name=False,
+            ),
+        )
+        inner_union_vars = session.get_variables(anon_var.variablesReference)
+        session.verify_variables(
+            inner_union_vars,
+            {
+                "ipv4": ExpectVar(
+                    type="unsigned char[4]",
+                    evaluate_name="home.ipv4",
+                    read_only=True,
+                ),
+                "ipv6": ExpectVar(
+                    type="unsigned char[6]",
+                    evaluate_name="home.ipv6",
+                    read_only=True,
+                ),
+            },
+        )
 
-        scope_names = [scope["name"] for scope in scopes]
-        self.assertIn("Locals", scope_names)
-        self.assertIn("Registers", scope_names)
+        session.continue_to_breakpoint(bp8)
+        frame = session.top_frame_from(thread_id)
 
-        for scope in scopes:
-            if scope["name"] == "Locals":
-                self.assertEqual(scope.get("presentationHint"), "locals")
-            if scope["name"] == "Registers":
-                self.assertEqual(scope.get("presentationHint"), "registers")
+        if enableAutoVariableSummaries:
+            e_value = "{lo:10, hi:11}"
+        else:
+            e_value = "example"
+        e_var = frame.locals["e"]
+        session.verify_variable(
+            e_var.variable,
+            ExpectVar(
+                type="example",
+                value=e_value,
+                evaluate_name="e",
+                read_only=True,
+            ),
+        )
+        inner_bitfields_struct = session.get_variables(e_var.variablesReference)
+        session.verify_variables(
+            inner_bitfields_struct,
+            {
+                "lo": ExpectVar(
+                    type="unsigned int",
+                    value="10",
+                    evaluate_name="e.lo",
+                    variables_reference=0,
+                ),
+                "(anonymous)": ExpectVar(type="int", value="0", variables_reference=0),
+                "hi": ExpectVar(
+                    type="unsigned int",
+                    value="11",
+                    evaluate_name="e.hi",
+                    variables_reference=0,
+                ),
+            },
+        )
+
+        # Continue to breakpoint 3. The permanent variable should still exist after the resume.
+        session.continue_to_breakpoint(bp3)
+        frame = session.top_frame_from(thread_id)
+
+        permanent_ref = self.expect_not_none(permanent_expandable_ref)
+        permanent_ref_children = session.get_variables(permanent_ref)
+        session.verify_variables(permanent_ref_children, expandable_children)
+
+        # The frame's scopes should carry corresponding presentation hints.
+        self.assertEqual(frame.globals.scope.name, "Globals")
+        self.assertEqual(frame.locals.scope.name, "Locals")
+        self.assertEqual(frame.locals.scope.presentationHint, "locals")
+        self.assertEqual(frame.registers.scope.name, "Registers")
+        self.assertEqual(frame.registers.scope.presentationHint, "registers")
+
+        # An invalid variablesReference should produce a clear error.
+        for wrong_var_ref in (-6000, -1, 4000):
+            var_args = VariablesArgs(variablesReference=wrong_var_ref)
+            response = session.send_request(var_args).error()
+
+            error_body = self.expect_not_none(response.body)
+            error_msg = self.expect_not_none(error_body.error)
+            self.assertTrue(
+                error_msg.format.startswith("invalid variablesReference"),
+                f"seen error message: {error_msg.format}",
+            )
 
     def test_scopes_and_evaluate_expansion(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)
@@ -605,115 +566,108 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=True)
 
     def do_test_indexedVariables(self, enableSyntheticChildDebugging: bool):
-        """
-        Tests that arrays and lldb.SBValue objects that have synthetic child
-        providers have "indexedVariables" key/value pairs. This helps the IDE
-        not to fetch too many children all at once.
-        """
+        """Test that arrays and `lldb.SBValue` objects with synthetic child
+        providers expose `indexedVariables`. This lets the IDE avoid fetching
+        too many children at once."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(
-            program, enableSyntheticChildDebugging=enableSyntheticChildDebugging
-        )
+        session = self.build_and_create_session()
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 4")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        breakpoint_line = line_number(source, "// breakpoint 4")
+
+        launch_args = LaunchArgs(
+            program=program,
+            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        with session.configure(launch_args) as ctx:
+            breakpoint_ids = session.resolve_source_breakpoints(
+                source, [breakpoint_line]
+            )
 
-        # Verify locals
-        locals = self.dap_server.get_local_variables()
-        # The vector variables might have one additional entry from the fake
-        # "[raw]" child.
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+        thread_id = self.expect_not_none(stop_event.body.threadId)
+        frame = session.thread_context_from(thread_id).top_frame()
+
+        # Verify locals. Vector variables can have one extra entry from the
+        # fake "[raw]" child.
+        local_vars = session.get_variables(frame.locals.variablesReference)
         raw_child_count = 1 if enableSyntheticChildDebugging else 0
-        verify_locals = {
-            "small_array": {"equals": {"indexedVariables": 5}, "readOnly": True},
-            "large_array": {"equals": {"indexedVariables": 200}, "readOnly": True},
-            "small_vector": {
-                "equals": {"indexedVariables": 5 + raw_child_count},
-                "readOnly": True,
-            },
-            "large_vector": {
-                "equals": {"indexedVariables": 200 + raw_child_count},
-                "readOnly": True,
-            },
-            "pt": {"missing": ["indexedVariables"], "readOnly": True},
+        expect_locals: dict[str, ExpectVar] = {
+            "small_array": ExpectVar(indexed_variables=5, read_only=True),
+            "large_array": ExpectVar(indexed_variables=200, read_only=True),
+            "small_vector": ExpectVar(
+                indexed_variables=5 + raw_child_count, read_only=True
+            ),
+            "large_vector": ExpectVar(
+                indexed_variables=200 + raw_child_count, read_only=True
+            ),
+            "pt": ExpectVar(read_only=True, has_indexed_variables=False),
         }
-        self.verify_variables(verify_locals, locals)
+        session.verify_variables(local_vars, expect_locals)
 
-        # We also verify that we produce a "[raw]" fake child with the real
-        # SBValue for the synthetic type.
-        verify_children = {
-            "[0]": {"equals": {"type": "int", "value": "0"}},
-            "[1]": {"equals": {"type": "int", "value": "0"}},
-            "[2]": {"equals": {"type": "int", "value": "0"}},
-            "[3]": {"equals": {"type": "int", "value": "0"}},
-            "[4]": {"equals": {"type": "int", "value": "0"}},
+        # Verify we produce a "[raw]" fake child carrying the real SBValue
+        # for the synthetic type.
+        expect_children: dict[str, ExpectVar] = {
+            f"[{i}]": ExpectVar(type="int", value="0") for i in range(5)
         }
         if enableSyntheticChildDebugging:
-            verify_children["[raw]"] = {
-                "contains": {"type": ["vector"]},
-                "readOnly": True,
-            }
+            expect_children["[raw]"] = ExpectVar(
+                type="std::vector<int>", value="size=5", read_only=True
+            )
 
-        children = self.dap_server.request_variables(locals[2]["variablesReference"])[
-            "body"
-        ]["variables"]
-        self.verify_variables(verify_children, children)
+        small_vector = frame.locals["small_vector"]
+        children = session.get_variables(small_vector.variablesReference)
+        session.verify_variables(children, expect_children)
+
+        if enableSyntheticChildDebugging:
+            raw_child = next(c for c in children if c.name == "[raw]")
+            self.assertEqual(
+                raw_child.evaluateName,
+                "small_vector",
+                "'evaluateName' for '[raw]' field should be the original variable name.",
+            )
+            raw_children = session.get_variables(raw_child.variablesReference)
+            self.assertGreater(
+                len(raw_children),
+                0,
+                "Expected std::vector to contain a raw underlying value with internal properties.",
+            )
 
     @skipIfWindows
     def test_return_variables(self):
-        """
-        Test the stepping out of a function with return value show the variable correctly.
-        """
+        """Stepping out of a function with a return value should expose the
+        returned value as a local."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
-        return_name = "(Return Value)"
-        verify_locals = {
-            return_name: {"equals": {"type": "int", "value": "300"}},
-            "argc": {},
-            "argv": {},
-            "pt": {"readOnly": True},
-            "x": {},
-            "return_result": {"equals": {"type": "int"}},
-        }
+        session = self.build_and_create_session()
 
         function_name = "test_return_variable"
-        breakpoint_ids = self.set_function_breakpoints([function_name])
+        with session.configure(LaunchArgs(program=program)) as ctx:
+            [bp_id] = session.resolve_function_breakpoints([function_name])
 
-        self.assertEqual(len(breakpoint_ids), 1)
-        self.continue_to_breakpoints(breakpoint_ids)
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_id, after=ctx.process_event
+        )
+        thread_ctx = session.thread_context_from(stop_event)
+        thread_ctx.step_out()
 
-        threads = self.dap_server.get_threads()
-        for thread in threads:
-            if thread.get("reason") == "breakpoint":
-                thread_id = thread["id"]
+        frame = thread_ctx.top_frame()
+        local_vars = session.get_variables(frame.locals.variablesReference)
 
-                self.stepOut(threadId=thread_id)
+        return_name = "(Return Value)"
+        expect_locals: dict[str, ExpectVar] = {
+            return_name: ExpectVar(type="int", value="300", read_only=True),
+            "argc": ExpectVar(),
+            "argv": ExpectVar(),
+            "pt": ExpectVar(read_only=True),
+            "valid_str": ExpectVar(),
+            "malformed_str": ExpectVar(),
+            "x": ExpectVar(),
+            "return_result": ExpectVar(type="int"),
+        }
+        session.verify_variables(local_vars, expect_locals)
 
-                local_variables = self.dap_server.get_local_variables()
-                varref_dict = {}
-
-                # `verify_variable` function only checks if the local variables
-                # are in the `verify_dict` passed  this will cause this test to pass
-                # even if there is no return value.
-                local_variable_names = [
-                    variable["name"] for variable in local_variables
-                ]
-                self.assertIn(
-                    return_name,
-                    local_variable_names,
-                    "return variable is not in local variables",
-                )
-
-                self.verify_variables(verify_locals, local_variables, varref_dict)
-                break
-
-        self.assertFalse(self.set_local("(Return Value)", 20)["success"])
+        self.expect_error(frame.locals.set("(Return Value)", 20))
 
     @skipIfWindows
     def test_indexedVariables(self):
@@ -726,58 +680,51 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIfAsan  # FIXME this fails with a non-asan issue on green dragon.
     def test_registers(self):
-        """
-        Test that registers whose byte size is the size of a pointer on
-        the current system get formatted as lldb::eFormatAddressInfo. This
-        will show the pointer value followed by a description of the address
-        itself. To test this we attempt to find the PC value in the general
-        purpose registers, and since we will be stopped in main.cpp, verify
-        that the value for the PC starts with a pointer and is followed by
-        a description that contains main.cpp.
-        """
+        """Test that registers whose byte size is the size of a pointer on
+        the current system get formatted as `lldb::eFormatAddressInfo`. The
+        formatted value should be a pointer followed by a description of the
+        address. To test this we look for the PC value in the general purpose
+        registers, and since we will be stopped in main.cpp, verify that its
+        value starts with a pointer and is followed by a description that
+        contains main.cpp."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            source = "main.cpp"
+            breakpoint1_line = line_number(source, "// breakpoint 1")
+            breakpoint_ids = session.resolve_source_breakpoints(
+                source, [breakpoint1_line]
+            )
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
         )
-        self.continue_to_breakpoints(breakpoint_ids)
 
-        pc_name = None
+        pc_name: Optional[str] = None
         arch = self.getArchitecture()
-        if arch == "x86_64":
-            pc_name = "rip"
-        elif arch == "x86":
+        if arch in ("x86", "x86_64"):
             pc_name = "rip"
         elif arch.startswith("arm"):
             pc_name = "pc"
 
         if pc_name is None:
-            return
-        # Verify locals
-        reg_sets = self.dap_server.get_registers()
-        for reg_set in reg_sets:
-            if reg_set["name"] == "General Purpose Registers":
-                varRef = reg_set["variablesReference"]
-                regs = self.dap_server.request_variables(varRef)["body"]["variables"]
-                for reg in regs:
-                    if reg["name"] == pc_name:
-                        value = reg["value"]
-                        self.assertTrue(value.startswith("0x"))
-                        self.assertIn("a.out`main + ", value)
-                        self.assertIn("at main.cpp:", value)
+            self.skipTest(f"unknown program counter name for architecture: {arch}")
+
+        # Verify locals.
+        top_frame = session.top_frame_from(stop_event)
+        gpr_reg_set = top_frame.registers["General Purpose Registers"]
+        pc_reg = gpr_reg_set[pc_name].variable
+
+        self.assertTrue(pc_reg.value.startswith("0x"))
+        self.assertIn("a.out`main + ", pc_reg.value)
+        self.assertIn("at main.cpp:", pc_reg.value)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
         the .o file for main.cpp, that we get a variable named "<error>"
-        whose value matches the appriopriate error. Errors when getting
+        whose value matches the appropriate error. Errors when getting
         variables are returned in the LLDB API when the user should be
         notified of issues that can easily be solved by rebuilding or
         changing compiler options and are designed to give better feedback
@@ -786,12 +733,12 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.darwin_dwarf_missing_obj(None)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj_with_symbol_ondemand_enabled(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
         the .o file for main.cpp, that we get a variable named "<error>"
-        whose value matches the appriopriate error. Test with symbol_ondemand_enabled.
+        whose value matches the appropriate error. Test with symbol.load-on-demand enabled.
         """
         initCommands = ["settings set symbols.load-on-demand true"]
         self.darwin_dwarf_missing_obj(initCommands)
@@ -799,38 +746,79 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     @no_debug_info_test
     @skipIfWindows
     def test_value_format(self):
+        """Test that toggling a variable's value format between decimal and
+        hexadecimal works."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            source = "main.cpp"
+            breakpoint1_line = line_number(source, "// breakpoint 1")
+            breakpoint_ids = session.resolve_source_breakpoints(
+                source, [breakpoint1_line]
+            )
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+
+        thread_ctx = session.thread_context_from(stop_event)
+        top_frame = thread_ctx.top_frame()
+        # Verify locals with decimal value format.
+        var_pt = top_frame.locals.with_format(is_hex=False)["pt"]
+        self.assertEqual(var_pt["x"].value, "11")
+        self.assertEqual(var_pt["y"].value, "22")
+
+        # Verify locals with hex value format.
+        var_pt = top_frame.locals.with_format(is_hex=True)["pt"]
+        self.assertEqual(var_pt["x"].value, "0x0000000b")
+        self.assertEqual(var_pt["y"].value, "0x00000016")
+
+        # Toggle back and verify decimal value format again.
+        var_pt = top_frame.locals.with_format(is_hex=False)["pt"]
+        self.assertEqual(var_pt["x"].value, "11")
+        self.assertEqual(var_pt["y"].value, "22")
+
+    @skipIfWindows
+    def test_variable_id_uniqueness_simple(self):
         """
-        Test that toggle variables value format between decimal and hexical works.
+        Simple regression test for variable ID uniqueness across frames.
+        Ensures variable IDs are not reused between different scopes/frames.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            source = "main.cpp"
+            bp_line = line_number(source, "// breakpoint 3")
+            [bp_id] = session.resolve_source_breakpoints(source, [bp_line])
 
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_id, after=ctx.process_event
         )
-        self.continue_to_breakpoints(breakpoint_ids)
+        frames = session.thread_context_from(stop_event).frames()
+        self.assertGreaterEqual(len(frames), 2, "need at least 2 frames")
 
-        # Verify locals value format decimal
-        is_hex = False
-        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEqual(var_pt_x["value"], "11")
-        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEqual(var_pt_y["value"], "22")
+        # Collect scope reference that has children.
+        scope_refs = [
+            scope.variablesReference
+            for frame in frames[:3]
+            for scope in frame.scopes()
+            if scope.variablesReference != 0
+        ]
+        self.assertGreater(len(scope_refs), 0, "should have found variable references")
 
-        # Verify locals value format hexical
-        is_hex = True
-        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEqual(var_pt_x["value"], "0x0000000b")
-        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEqual(var_pt_y["value"], "0x00000016")
+        seen_refs: set[int] = set()
+        # Verify scope references are unique.
+        for scope_ref in scope_refs:
+            self.assertNotIn(scope_ref, seen_refs, f"{scope_ref=} was reused!")
+            seen_refs.add(scope_ref)
 
-        # Toggle and verify locals value format decimal again
-        is_hex = False
-        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEqual(var_pt_x["value"], "11")
-        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEqual(var_pt_y["value"], "22")
+        # Verify variable references are unique.
+        for scope_ref in scope_refs:
+            for var in session.get_variables(scope_ref):
+                var_ref = var.variablesReference
+                if var_ref != 0:
+                    self.assertNotIn(
+                        var_ref,
+                        seen_refs,
+                        f"variable {var.name} {var_ref=} was reused!",
+                    )
+                    seen_refs.add(var_ref)

@@ -46,6 +46,7 @@ enum LanguageID : uint16_t {
   ALL_OCL_LANGUAGES = 0x800, // builtin for OCL languages.
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
   C23_LANG = 0x2000,         // builtin requires C23 or later.
+  C2Y_LANG = 0x4000,         // builtin requires C2y or later.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -95,6 +96,12 @@ struct Info {
   ///
   /// Must be provided the `Shard` for this `Info` object.
   std::string getName(const InfosShard &Shard) const;
+
+  // Builtin non-null attribute modes.
+  // NonOptimizing: attaches Clang's `_Nonnull` type qualifier to parameters.
+  // Optimizing: emits the classic GNU-style `nonnull` attribute for
+  // optimization.
+  enum class NonNullMode { NonOptimizing, Optimizing };
 };
 
 /// A constexpr function to construct an infos array from X-macros.
@@ -392,6 +399,11 @@ public:
   /// callback callee argument and the callback payload arguments.
   bool performsCallback(unsigned ID,
                         llvm::SmallVectorImpl<int> &Encoding) const;
+
+  /// Return true if this builtin has parameters that must be non-null.
+  /// The parameter indices are appended into 'Indxs'.
+  bool isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                 Info::NonNullMode &Mode) const;
 
   /// Return true if this function has no side effects and doesn't
   /// read memory, except for possibly errno or raising FP exceptions.

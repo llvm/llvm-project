@@ -21,32 +21,8 @@
 namespace clang {
 namespace targets {
 
-static const unsigned ZOSAddressMap[] = {
-    0, // Default
-    0, // opencl_global
-    0, // opencl_local
-    0, // opencl_constant
-    0, // opencl_private
-    0, // opencl_generic
-    0, // opencl_global_device
-    0, // opencl_global_host
-    0, // cuda_device
-    0, // cuda_constant
-    0, // cuda_shared
-    0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
-    0, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    1, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
-    0, // hlsl_constant
-    0, // hlsl_private
-    0, // hlsl_device
-    0, // hlsl_input
-    0  // wasm_funcref
+static constexpr LangASMap ZOSAddressMap = {
+    {LangAS::ptr32_uptr, 1},
 };
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
@@ -81,21 +57,17 @@ public:
         AddrSpaceMap = &ZOSAddressMap;
       }
       TLSSupported = false;
+      HasBuiltinZOSVaList = true;
+
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in some details:
-      // - name mangling is GOFF.
-      // - 32 bit pointers, either as default or special address space
-      resetDataLayout("E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
-                      "a:8:16-n32:64");
     } else {
       // Support _Float16.
       HasFloat16 = true;
       TLSSupported = true;
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
-                      "-v128:64-a:8:16-n32:64");
     }
+    resetDataLayout();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
 
     // True if the backend supports operations on the half LLVM IR type.
@@ -110,8 +82,6 @@ public:
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -170,6 +140,8 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (getTriple().isOSzOS())
+      return TargetInfo::CharPtrBuiltinVaList;
     return TargetInfo::SystemZBuiltinVaList;
   }
 
@@ -189,7 +161,7 @@ public:
     fillValidCPUList(Values);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }

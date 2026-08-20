@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -41,6 +42,28 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
+inline StringRef getTMATensorReductionOpName(TMAReductionOp Op) {
+  switch (Op) {
+  case TMAReductionOp::ADD:
+    return "add";
+  case TMAReductionOp::MIN:
+    return "min";
+  case TMAReductionOp::MAX:
+    return "max";
+  case TMAReductionOp::INC:
+    return "inc";
+  case TMAReductionOp::DEC:
+    return "dec";
+  case TMAReductionOp::AND:
+    return "and";
+  case TMAReductionOp::OR:
+    return "or";
+  case TMAReductionOp::XOR:
+    return "xor";
+  }
+  llvm_unreachable("invalid TMA tensorreduction operation");
+}
+
 // Enum to represent the cta_group::1 and
 // cta_group::2 variants in TMA/TCGEN05 family of
 // PTX instructions.
@@ -50,7 +73,13 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
-enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
 
 enum class Tcgen05CollectorUsageOp : uint8_t {
   DISCARD = 0,
@@ -59,9 +88,78 @@ enum class Tcgen05CollectorUsageOp : uint8_t {
   USE = 3,
 };
 
-void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
+};
 
-void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
+enum class TensormapElemType : uint8_t {
+  U8 = 0,
+  U16 = 1,
+  U32 = 2,
+  S32 = 3,
+  U64 = 4,
+  S64 = 5,
+  F16 = 6,
+  F32 = 7,
+  F32_FTZ = 8,
+  F64 = 9,
+  BF16 = 10,
+  TF32 = 11,
+  TF32_FTZ = 12,
+  B4x16 = 13,
+  B4x16_p64 = 14,
+  B6x16_p32 = 15,
+};
+
+enum class TensormapInterleaveLayout : uint8_t {
+  NO_INTERLEAVE = 0,
+  INTERLEAVE_16B = 1,
+  INTERLEAVE_32B = 2,
+};
+
+enum class TensormapSwizzleMode : uint8_t {
+  NO_SWIZZLE = 0,
+  SWIZZLE_32B = 1,
+  SWIZZLE_64B = 2,
+  SWIZZLE_128B = 3,
+  SWIZZLE_96B = 4,
+};
+
+enum class TensormapSwizzleAtomicity : uint8_t {
+  SWIZZLE_ATOMICITY_16B = 0,
+  SWIZZLE_ATOMICITY_32B = 1,
+  SWIZZLE_ATOMICITY_32B_FLIP_8B = 2,
+  SWIZZLE_ATOMICITY_64B = 3,
+};
+
+enum class TensormapFillMode : uint8_t {
+  ZERO_FILL = 0,
+  OOB_NAN_FILL = 1,
+};
+
+LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
+                                           const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
+
+LLVM_ABI void printTensormapElemType(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
+LLVM_ABI void printTensormapInterleaveLayout(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleMode(raw_ostream &OS,
+                                        const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {

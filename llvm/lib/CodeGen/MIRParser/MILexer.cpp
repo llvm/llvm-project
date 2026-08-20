@@ -242,6 +242,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
       .Case("negate_ra_sign_state_with_pc",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
+      .Case("llvm_set_ra_state", MIToken::kw_cfi_set_ra_state)
+      .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
+      .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
+      .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
@@ -266,10 +272,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
+      .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -292,6 +300,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
+      .Case("mmra", MIToken::kw_mmra)
+      .Case("lr-split", MIToken::kw_lr_split)
       .Default(MIToken::Identifier);
 }
 
@@ -331,6 +341,23 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
   if (C.peek() == '.') {
     C.advance(); // Skip '.'
     ++StringOffset;
+    // The name is quoted if it is not a plain identifier.
+    if (C.peek() == '"') {
+      Cursor R = lexStringConstant(C, ErrorCallback);
+      if (!R) {
+        ErrorCallback(C.location(),
+                      "unable to parse quoted string from opening quote");
+        Token.reset(MIToken::Error, Range.remaining());
+        return Range;
+      }
+      MIToken::TokenKind Kind = IsReference ? MIToken::MachineBasicBlock
+                                            : MIToken::MachineBasicBlockLabel;
+      Token.reset(Kind, Range.upto(R))
+          .setIntegerValue(APSInt(Number))
+          .setOwnedStringValue(
+              unescapeQuotedString(Range.upto(R).drop_front(StringOffset)));
+      return R;
+    }
     while (isIdentifierChar(C.peek()))
       C.advance();
   }
@@ -596,6 +623,22 @@ static Cursor maybeLexHexadecimalLiteral(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
+  if (C.peek() != 'f')
+    return std::nullopt;
+  if (C.peek(1) != '0' || (C.peek(2) != 'x' && C.peek(2) != 'X'))
+    return std::nullopt;
+  Cursor Range = C;
+  C.advance(3);
+  while (isxdigit(C.peek()))
+    C.advance();
+  StringRef StrVal = Range.upto(C);
+  if (StrVal.size() <= 3)
+    return std::nullopt;
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -616,6 +659,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!alias.scope", MIToken::md_alias_scope)
       .Case("!noalias", MIToken::md_noalias)
       .Case("!range", MIToken::md_range)
+      .Case("!mem.cache_hint", MIToken::md_mem_cache_hint)
       .Case("!DIExpression", MIToken::md_diexpr)
       .Case("!DILocation", MIToken::md_dilocation)
       .Case("!noalias.addrspace", MIToken::md_noalias_addrspace)
@@ -732,6 +776,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexFloatHexBits(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();

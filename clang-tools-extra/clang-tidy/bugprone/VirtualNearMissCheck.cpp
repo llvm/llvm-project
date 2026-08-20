@@ -97,10 +97,9 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     const bool IsItself =
         DRD->getCanonicalDecl() == DerivedMD->getParent()->getCanonicalDecl();
     bool HasPublicAccess = false;
-    for (const auto &Path : Paths) {
+    for (const auto &Path : Paths)
       if (Path.Access == AS_public)
         HasPublicAccess = true;
-    }
     if (!HasPublicAccess && !IsItself)
       return false;
     // End checking conversion from D to B.
@@ -134,12 +133,11 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
   if (NumParamA != NumParamB)
     return false;
 
-  for (unsigned I = 0; I < NumParamA; I++) {
+  for (unsigned I = 0; I < NumParamA; I++)
     if (getDecayedType(BaseMD->getParamDecl(I)->getType().getCanonicalType()) !=
         getDecayedType(
             DerivedMD->getParamDecl(I)->getType().getCanonicalType()))
       return false;
-  }
   return true;
 }
 
@@ -194,8 +192,8 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
-  auto Key = std::make_pair(BaseMD, DerivedRD);
-  auto Iter = OverriddenMap.find(Key);
+  const std::pair Key(BaseMD, DerivedRD);
+  const auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;
 
@@ -243,23 +241,22 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
 
         const unsigned EditDistance = BaseMD->getName().edit_distance(
             DerivedMD->getName(), EditDistanceThreshold);
-        if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
-          if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
-            // A "virtual near miss" is found.
-            auto Range = CharSourceRange::getTokenRange(
-                SourceRange(DerivedMD->getLocation()));
+        if (EditDistance > 0 && EditDistance <= EditDistanceThreshold &&
+            checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
+          // A "virtual near miss" is found.
+          const auto Range = CharSourceRange::getTokenRange(
+              SourceRange(DerivedMD->getLocation()));
 
-            const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
-                                  !DerivedMD->isTemplateInstantiation();
-            auto Diag =
-                diag(DerivedMD->getBeginLoc(),
-                     "method '%0' has a similar name and the same signature as "
-                     "virtual method '%1'; did you mean to override it?")
-                << DerivedMD->getQualifiedNameAsString()
-                << BaseMD->getQualifiedNameAsString();
-            if (ApplyFix)
-              Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
-          }
+          const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
+                                !DerivedMD->isTemplateInstantiation();
+          const auto Diag =
+              diag(DerivedMD->getBeginLoc(),
+                   "method '%0' has a similar name and the same signature as "
+                   "virtual method '%1'; did you mean to override it?")
+              << DerivedMD->getQualifiedNameAsString()
+              << BaseMD->getQualifiedNameAsString();
+          if (ApplyFix)
+            Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
         }
       }
     }

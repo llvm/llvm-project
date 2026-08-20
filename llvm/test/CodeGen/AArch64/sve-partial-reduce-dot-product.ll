@@ -177,25 +177,25 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-SVE2-LABEL: udot_8to64:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-SVE2-NEXT:    uaddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-NEXT:    uaddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-NEXT:    uadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-I8MM-LABEL: udot_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0: // %entry
 ; CHECK-SVE2-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-SVE2-I8MM-NEXT:    uaddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-I8MM-NEXT:    uaddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-I8MM-NEXT:    uadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: udot_8to64:
 ; CHECK-SME:       // %bb.0: // %entry
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-SME-NEXT:    uaddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    uaddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    uadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -210,25 +210,25 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-SVE2-LABEL: sdot_8to64:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-SVE2-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-I8MM-LABEL: sdot_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0: // %entry
 ; CHECK-SVE2-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-SVE2-I8MM-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-I8MM-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-I8MM-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: sdot_8to64:
 ; CHECK-SME:       // %bb.0: // %entry
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-SME-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
 entry:
   %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -284,17 +284,17 @@ define <vscale x 4 x i64> @usdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i
 ; CHECK-SVE2-I8MM-LABEL: usdot_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0: // %entry
 ; CHECK-SVE2-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    usdot z4.s, z2.b, z3.b
-; CHECK-SVE2-I8MM-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-I8MM-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-I8MM-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: usdot_8to64:
 ; CHECK-SME:       // %bb.0: // %entry
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    usdot z4.s, z2.b, z3.b
-; CHECK-SME-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -350,17 +350,17 @@ define <vscale x 4 x i64> @sudot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i
 ; CHECK-SVE2-I8MM-LABEL: sudot_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0: // %entry
 ; CHECK-SVE2-I8MM-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    usdot z4.s, z3.b, z2.b
-; CHECK-SVE2-I8MM-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SVE2-I8MM-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SVE2-I8MM-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: sudot_8to64:
 ; CHECK-SME:       // %bb.0: // %entry
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    usdot z4.s, z3.b, z2.b
-; CHECK-SME-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
 entry:
   %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -470,27 +470,27 @@ define <vscale x 4 x i64> @udot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ; CHECK-SVE2:       // %bb.0:
 ; CHECK-SVE2-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-SVE2-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    udot z3.s, z2.b, z4.b
-; CHECK-SVE2-NEXT:    uaddwb z0.d, z0.d, z3.s
-; CHECK-SVE2-NEXT:    uaddwt z0.d, z0.d, z3.s
+; CHECK-SVE2-NEXT:    uadalp z0.d, p0/m, z3.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-I8MM-LABEL: udot_no_bin_op_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0:
 ; CHECK-SVE2-I8MM-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-SVE2-I8MM-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    udot z3.s, z2.b, z4.b
-; CHECK-SVE2-I8MM-NEXT:    uaddwb z0.d, z0.d, z3.s
-; CHECK-SVE2-I8MM-NEXT:    uaddwt z0.d, z0.d, z3.s
+; CHECK-SVE2-I8MM-NEXT:    uadalp z0.d, p0/m, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: udot_no_bin_op_8to64:
 ; CHECK-SME:       // %bb.0:
 ; CHECK-SME-NEXT:    mov z3.b, #1 // =0x1
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-SME-NEXT:    uaddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    uaddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    uadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
   %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   %partial.reduce = tail call <vscale x 4 x i64> @llvm.vector.partial.reduce.add.nxv4i64.nxv16i64(<vscale x 4 x i64> %acc, <vscale x 16 x i64> %a.ext)
@@ -502,27 +502,27 @@ define <vscale x 4 x i64> @sdot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ; CHECK-SVE2:       // %bb.0:
 ; CHECK-SVE2-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-SVE2-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    sdot z3.s, z2.b, z4.b
-; CHECK-SVE2-NEXT:    saddwb z0.d, z0.d, z3.s
-; CHECK-SVE2-NEXT:    saddwt z0.d, z0.d, z3.s
+; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z3.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-I8MM-LABEL: sdot_no_bin_op_8to64:
 ; CHECK-SVE2-I8MM:       // %bb.0:
 ; CHECK-SVE2-I8MM-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-SVE2-I8MM-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    sdot z3.s, z2.b, z4.b
-; CHECK-SVE2-I8MM-NEXT:    saddwb z0.d, z0.d, z3.s
-; CHECK-SVE2-I8MM-NEXT:    saddwt z0.d, z0.d, z3.s
+; CHECK-SVE2-I8MM-NEXT:    sadalp z0.d, p0/m, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: sdot_no_bin_op_8to64:
 ; CHECK-SME:       // %bb.0:
 ; CHECK-SME-NEXT:    mov z3.b, #1 // =0x1
 ; CHECK-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-SME-NEXT:    saddwb z0.d, z0.d, z4.s
-; CHECK-SME-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-SME-NEXT:    sadalp z0.d, p0/m, z4.s
 ; CHECK-SME-NEXT:    ret
   %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   %partial.reduce = tail call <vscale x 4 x i64> @llvm.vector.partial.reduce.add.nxv4i64.nxv16i64(<vscale x 4 x i64> %acc, <vscale x 16 x i64> %a.ext)
@@ -1298,4 +1298,44 @@ entry:
   %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, splat(i32 256)
   %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mult)
   ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) "target-features"="+dotprod" {
+; CHECK-SVE2-LABEL: udot_v16i8tov2i32:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    fmov d0, d0
+; CHECK-SVE2-NEXT:    mov z2.b, #1 // =0x1
+; CHECK-SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE2-NEXT:    udot z0.s, z1.b, z2.b
+; CHECK-SVE2-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-SVE2-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SVE2-NEXT:    ret
+;
+; CHECK-SVE2-I8MM-LABEL: udot_v16i8tov2i32:
+; CHECK-SVE2-I8MM:       // %bb.0: // %entry
+; CHECK-SVE2-I8MM-NEXT:    fmov d0, d0
+; CHECK-SVE2-I8MM-NEXT:    mov z2.b, #1 // =0x1
+; CHECK-SVE2-I8MM-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE2-I8MM-NEXT:    udot z0.s, z1.b, z2.b
+; CHECK-SVE2-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-SVE2-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SVE2-I8MM-NEXT:    ret
+;
+; CHECK-SME-LABEL: udot_v16i8tov2i32:
+; CHECK-SME:       // %bb.0: // %entry
+; CHECK-SME-NEXT:    uunpklo z2.h, z1.b
+; CHECK-SME-NEXT:    ptrue p0.s
+; CHECK-SME-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-SME-NEXT:    uunpklo z1.h, z1.b
+; CHECK-SME-NEXT:    uadalp z0.s, p0/m, z2.h
+; CHECK-SME-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-SME-NEXT:    uadalp z0.s, p0/m, z2.h
+; CHECK-SME-NEXT:    uadalp z0.s, p0/m, z1.h
+; CHECK-SME-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-SME-NEXT:    uadalp z0.s, p0/m, z1.h
+; CHECK-SME-NEXT:    ret
+entry:
+    %input.wide = zext <16 x i8> %input to <16 x i32>
+    %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> %acc, <16 x i32> %input.wide)
+    ret <2 x i32> %partial.reduce
 }

@@ -21,13 +21,16 @@ static bool isDefinedAsZero(Value val) {
 
   // Check whether val is a constant scalar / vector splat / tensor splat float
   // or integer zero.
-  if (matchPattern(val, m_AnyZeroFloat()) || matchPattern(val, m_Zero()))
+  if (isZeroIntegerOrFloat(val))
     return true;
 
-  return TypeSwitch<Operation *, bool>(val.getDefiningOp())
+  auto *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  return TypeSwitch<Operation *, bool>(defOp)
       .Case<linalg::FillOp, linalg::CopyOp>([&](auto op) {
-        return op && op.getInputs().size() == 1 &&
-               isDefinedAsZero(op.getInputs()[0]);
+        return op.getInputs().size() == 1 && isDefinedAsZero(op.getInputs()[0]);
       })
       .Default([&](auto) { return false; });
 }

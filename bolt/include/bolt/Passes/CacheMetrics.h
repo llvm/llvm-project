@@ -13,6 +13,7 @@
 #ifndef BOLT_PASSES_CACHEMETRICS_H
 #define BOLT_PASSES_CACHEMETRICS_H
 
+#include "bolt/Core/BinaryContext.h"
 #include <vector>
 
 namespace llvm {
@@ -20,12 +21,10 @@ namespace llvm {
 class raw_ostream;
 
 namespace bolt {
-class BinaryFunction;
 namespace CacheMetrics {
 
 /// Calculate and print various metrics related to instruction cache performance
-void printAll(raw_ostream &OS,
-              const std::vector<BinaryFunction *> &BinaryFunctions);
+void printAll(raw_ostream &OS, const BinaryFunctionListType &BinaryFunctions);
 
 } // namespace CacheMetrics
 } // namespace bolt

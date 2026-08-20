@@ -32,8 +32,8 @@ void SignedCharMisuseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 // Create a matcher for char -> integer cast.
-BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
-    bool IsSigned, const Matcher<clang::QualType> &IntegerType,
+BindableMatcher<Stmt> SignedCharMisuseCheck::charCastExpression(
+    bool IsSigned, const Matcher<QualType> &IntegerType,
     const std::string &CastBindName) const {
   // We can ignore typedefs which are some kind of integer types
   // (e.g. typedef char sal_Int8). In this case, we don't need to

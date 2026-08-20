@@ -27,6 +27,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct Callable {
   void operator()(int);

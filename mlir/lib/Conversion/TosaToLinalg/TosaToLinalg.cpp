@@ -28,6 +28,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <type_traits>
 
@@ -119,7 +120,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ReciprocalOp>(op) && isa<FloatType>(elementTy)) {
     auto one =
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, args[0]);
+    return arith::DivFOp::create(rewriter, loc, one, args[0]);
   }
 
   // tosa::MulOp
@@ -139,8 +140,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                           "Cannot have shift value for float");
         return nullptr;
       }
-      return arith::MulFOp::create(rewriter, loc, resultTypes, args[0],
-                                   args[1]);
+      return arith::MulFOp::create(rewriter, loc, args[0], args[1]);
     }
 
     if (isa<IntegerType>(elementTy)) {
@@ -200,13 +200,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (hasInZp && hasOutZp && !inZp && !outZp) {
-        auto constant = arith::ConstantOp::create(
-            rewriter, loc, IntegerAttr::get(elementTy, 0));
-        return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
-                                     args[0]);
-      }
-
       Value zpAddValue;
       Type intermediateType;
       // Compute the maximum value that can occur in the intermediate buffer.
@@ -221,14 +214,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
-        // represent it. We assume 48-bit numbers may be supported further in
-        // the pipeline.
+        // represent it.
         if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
           intermediateBitWidth = 16;
         } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
           intermediateBitWidth = 32;
-        } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-          intermediateBitWidth = 48;
         }
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
@@ -236,18 +226,22 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-        auto arg1 =
-            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[1]);
-        auto arg2 =
-            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[2]);
+        Value arg1 = args[1];
+        Value arg2 = args[2];
+        // Avoid verifier-invalid no-op sign-extends; only widen when needed.
+        if (arg1.getType() != intermediateType)
+          arg1 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg1);
+        if (arg2.getType() != intermediateType)
+          arg2 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg2);
         zpAddValue =
             arith::AddIOp::create(rewriter, loc, intermediateType, arg1, arg2);
       }
 
       // The negation can be applied by doing:
       //  outputValue = inZp + outZp - inputValue
-      auto ext =
-          arith::ExtSIOp::create(rewriter, loc, intermediateType, args[0]);
+      Value ext = args[0];
+      if (ext.getType() != intermediateType)
+        ext = arith::ExtSIOp::create(rewriter, loc, intermediateType, ext);
       auto sub = arith::SubIOp::create(rewriter, loc, zpAddValue, ext);
 
       // Clamp to the negation range.
@@ -259,7 +253,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
           APInt::getSignedMaxValue(inputBitWidth).getSExtValue());
       auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
 
-      // Truncate to the final value.
+      // Truncate to the final value, skipping no-op trunci when widths match.
+      if (clamp.getType() == elementTy)
+        return clamp;
       return arith::TruncIOp::create(rewriter, loc, elementTy, clamp);
     }
   }
@@ -541,8 +537,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
     auto negate = arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
     auto exp = mlir::math::ExpOp::create(rewriter, loc, resultTypes, negate);
-    auto added = arith::AddFOp::create(rewriter, loc, resultTypes, exp, one);
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, added);
+    auto added = arith::AddFOp::create(rewriter, loc, exp, one);
+    return arith::DivFOp::create(rewriter, loc, one, added);
   }
 
   // tosa::CastOp
@@ -1570,15 +1566,15 @@ public:
 
     if (isMultiplierConstant && isShiftConstant) {
       // explicit cast is required here
-      shiftValues = llvm::to_vector(llvm::map_range(
+      shiftValues = llvm::map_to_vector(
           shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
             return static_cast<int32_t>(attr.getInt());
-          }));
-      multiplierValues = llvm::to_vector(
-          llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
-                          [](IntegerAttr attr) -> int32_t {
-                            return static_cast<int32_t>(attr.getInt());
-                          }));
+          });
+      multiplierValues =
+          llvm::map_to_vector(multiplierElems.getValues<IntegerAttr>(),
+                              [](IntegerAttr attr) -> int32_t {
+                                return static_cast<int32_t>(attr.getInt());
+                              });
 
       // If we shift by more than the bitwidth, this just sets to 0.
       for (int i = 0, s = multiplierValues.size(); i < s; i++) {
@@ -2039,10 +2035,12 @@ public:
         val = arith::AddIOp::create(b, val, offset);
         index = arith::FloorDivSIOp::create(b, val, scaleN);
 
-        // rx = x % scale_n
-        // dx = rx / scale_n
-        Value r = arith::RemSIOp::create(b, val, scaleN);
+        // rx = x - ix * scale_n (x % scale_n, if values are positive)
+        Value scaledIndex = arith::MulIOp::create(b, index, scaleN);
+        Value r = arith::SubIOp::create(b, val, scaledIndex);
         Value rFp = arith::SIToFPOp::create(b, floatTy, r);
+
+        // dx = rx / scale_n
         Value scaleNfp = arith::UIToFPOp::create(b, floatTy, scaleN);
         delta = arith::DivFOp::create(b, rFp, scaleNfp);
       };
@@ -2061,7 +2059,7 @@ public:
         //  dx = x - ix * scale_n;
         Value val = arith::MulIOp::create(b, in, scaleD);
         val = arith::AddIOp::create(b, val, offset);
-        index = arith::DivSIOp::create(b, val, scaleN);
+        index = arith::FloorDivSIOp::create(b, val, scaleN);
         delta = arith::MulIOp::create(b, index, scaleN);
         delta = arith::SubIOp::create(b, val, delta);
       };
@@ -2829,10 +2827,18 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     auto dimW = rewriter.createOrFold<tensor::DimOp>(loc, input, 2);
 
     // Constants and dimension sizes
+    auto zeroFloat = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(elementType));
     auto twoPiAttr = rewriter.getFloatAttr(elementType, 6.283185307179586);
     auto twoPi = arith::ConstantOp::create(rewriter, loc, twoPiAttr);
+
+    auto zeroIndex = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto twoIndex = arith::ConstantIndexOp::create(rewriter, loc, 2);
+
     auto constH = castIndexToFloat(rewriter, loc, elementType, dimH);
     auto constW = castIndexToFloat(rewriter, loc, elementType, dimW);
+    auto halfH = index::DivUOp::create(rewriter, loc, dimH, twoIndex);
+    auto halfW = index::DivUOp::create(rewriter, loc, dimW, twoIndex);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange args) {
       Value valReal = args[0];
@@ -2862,14 +2868,37 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
       auto sumXY = arith::AddFOp::create(builder, loc, yComponent, xComponent);
       auto angle = arith::MulFOp::create(builder, loc, twoPi, sumXY);
 
+      // We will check the indices to see if this is a position that should use
+      // a 0.0 weight for the imaginary value computation following the TOSA
+      // specification with `tosa_extra_multiplies=true`.
+      //
+      // These are the relevant locations: (0,0), (0,W/2), (H/2,0), (H/2, W/2).
+      auto iyIs0 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                         iyRem, zeroIndex);
+      auto iyIsHalfH = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, iyRem, halfH);
+      auto ixIs0 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                         ixRem, zeroIndex);
+      auto ixIsHalfW = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, ixRem, halfW);
+
+      auto iyIsSinSkippable =
+          arith::OrIOp::create(builder, loc, iyIs0, iyIsHalfH);
+      auto ixIsSinSkippable =
+          arith::OrIOp::create(builder, loc, ixIs0, ixIsHalfW);
+      auto shouldSkipSin = arith::AndIOp::create(builder, loc, iyIsSinSkippable,
+                                                 ixIsSinSkippable);
+
       // realComponent = valReal * cos(angle)
-      // imagComponent = valReal * sin(angle)
+      // imagComponent = valReal * (shouldSkipSin ? 0.0 : sin(angle))
       auto cosAngle = math::CosOp::create(builder, loc, angle);
       auto sinAngle = math::SinOp::create(builder, loc, angle);
+      auto imagWeight = arith::SelectOp::create(builder, loc, shouldSkipSin,
+                                                zeroFloat, sinAngle);
       auto realComponent =
           arith::MulFOp::create(builder, loc, valReal, cosAngle);
       auto imagComponent =
-          arith::MulFOp::create(builder, loc, valReal, sinAngle);
+          arith::MulFOp::create(builder, loc, valReal, imagWeight);
 
       // outReal = sumReal + realComponent
       // outImag = sumImag - imagComponent

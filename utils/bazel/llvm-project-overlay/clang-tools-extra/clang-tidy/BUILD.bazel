@@ -160,6 +160,8 @@ clang_tidy_library(
     name = "google",
     deps = [
         ":lib",
+        ":misc",
+        ":modernize",
         ":readability",
         ":utils",
     ],
@@ -170,6 +172,7 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":misc",
         ":utils",
     ],
 )
@@ -199,6 +202,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+        "//clang:analysis",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -286,15 +290,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "zircon",
-    deps = [
-        ":fuchsia",
-        ":lib",
-        ":utils",
-    ],
-)
-
-clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
         ":bugprone",
@@ -346,20 +341,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "hicpp",
-    deps = [
-        ":bugprone",
-        ":cppcoreguidelines",
-        ":google",
-        ":lib",
-        ":misc",
-        ":modernize",
-        ":performance",
-        ":readability",
-    ],
-)
-
-clang_tidy_library(
     name = "plugin",
     deps = [":lib"],
 )
@@ -376,7 +357,6 @@ CHECKS = [
     ":darwin",
     ":fuchsia",
     ":google",
-    ":hicpp",
     ":linuxkernel",
     ":llvm",
     ":llvmlibc",
@@ -387,7 +367,6 @@ CHECKS = [
     ":performance",
     ":portability",
     ":readability",
-    ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
     "//conditions:default": [],

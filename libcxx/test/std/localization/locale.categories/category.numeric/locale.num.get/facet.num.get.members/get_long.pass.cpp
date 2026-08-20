@@ -16,10 +16,11 @@
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <locale>
-#include <ios>
 #include <cassert>
+#include <ios>
 #include <limits>
 #include <streambuf>
+#include <string>
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -669,6 +670,102 @@ int main(int, char**)
       assert(err == ios.failbit);
       assert(v == std::numeric_limits<long>::min());
     }
+
+  { // Check that auto-detection of the base works properly
+    ios.flags(ios.flags() & ~std::ios::basefield);
+    { // zeroes
+      {
+        v                          = -1;
+        const char str[]           = "0";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 1), ios, err, v);
+        assert(base(iter) == str + 1);
+        assert(err == ios.eofbit);
+        assert(v == 0);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "00";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 2), ios, err, v);
+        assert(base(iter) == str + 2);
+        assert(err == ios.eofbit);
+        assert(v == 0);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "0x0";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 3), ios, err, v);
+        assert(base(iter) == str + 3);
+        assert(err == ios.eofbit);
+        assert(v == 0);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "0X0";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 3), ios, err, v);
+        assert(base(iter) == str + 3);
+        assert(err == ios.eofbit);
+        assert(v == 0);
+      }
+    }
+    { // first character after base is out of range
+      {
+        v                          = -1;
+        const char str[]           = "08";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 2), ios, err, v);
+        assert(base(iter) == str + 1);
+        assert(err == ios.goodbit);
+        assert(v == 0);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "1a";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 2), ios, err, v);
+        assert(base(iter) == str + 1);
+        assert(err == ios.goodbit);
+        assert(v == 1);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "0xg";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 3), ios, err, v);
+        assert(base(iter) == str + 2);
+        assert(err == ios.failbit);
+        assert(v == 0);
+      }
+      {
+        v                          = -1;
+        const char str[]           = "0Xg";
+        std::ios_base::iostate err = ios.goodbit;
+
+        cpp17_input_iterator<const char*> iter =
+            f.get(cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + 3), ios, err, v);
+        assert(base(iter) == str + 2);
+        assert(err == ios.failbit);
+        assert(v == 0);
+      }
+    }
+  }
 
   return 0;
 }

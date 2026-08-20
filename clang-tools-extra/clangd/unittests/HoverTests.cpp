@@ -57,6 +57,137 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      {R"cpp(
+          // Best foo ever.
+          void [[fo^o]](auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x, auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x, auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"auto"}, std::string("y"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          void [[fo^o]](C<int> auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(C<int> auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"C<int> auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x, C<int> auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x, C<int> auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"C<int> auto"}, std::string("y"), std::nullopt},
+         };
+       }},
       // Inside namespace
       {R"cpp(
           namespace ns1 { namespace ns2 {
@@ -885,6 +1016,26 @@ class Foo final {})cpp";
          HI.Parameters.emplace();
          HI.AccessSpecifier = "public";
        }},
+      {// Getter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            float [[^y]]() { return Y; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.\n\nAn int named Y";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
+       }},
       {// Setter
        R"cpp(
           struct X { int Y; void [[^setY]](float v) { Y = v; } };
@@ -935,6 +1086,29 @@ class Foo final {})cpp";
          HI.Definition = "void setY(float v)";
          HI.LocalScope = "X::";
          HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y;
+            void [[^setY]](float v) { Y = v; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.\n\nAn int named Y";
          HI.Type = "void (float)";
          HI.ReturnType = "void";
          HI.Parameters.emplace();
@@ -1606,6 +1780,18 @@ TEST(Hover, NoHover) {
   }
 }
 
+TEST(Hover, OffsetOfBuiltin) {
+  Annotations T(R"cpp(
+    struct Foo { int x; };
+    int y = __builtin_o^ffsetof(Foo, x);
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Name, "expression");
+  EXPECT_EQ(H->Kind, index::SymbolKind::Unknown);
+}
+
 TEST(Hover, All) {
   struct {
     const char *const Code;
@@ -1832,6 +2018,50 @@ TEST(Hover, All) {
             HI.LocalScope = "Foo::";
             HI.Type = "int";
             HI.Definition = "int x";
+          }},
+      {
+          R"cpp(// Field, offsetof
+            struct Foo { int x; int y; };
+            int z = __builtin_offsetof(Foo, ^[[x]]);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "x";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Foo::";
+            HI.Type = "int";
+            HI.Definition = "int x";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// Outer field, nested offsetof designator
+            struct Inner { int c; };
+            struct A { Inner B; };
+            int z = __builtin_offsetof(A, ^[[B]].c);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "B";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "A::";
+            HI.Type = "Inner";
+            HI.Definition = "Inner B";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// Inner field, nested offsetof designator
+            struct Inner { int c; };
+            struct A { Inner B; };
+            int z = __builtin_offsetof(A, B.^[[c]]);
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "c";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Inner::";
+            HI.Type = "int";
+            HI.Definition = "int c";
+            HI.Value = "0";
           }},
       {
           R"cpp(// Method call
@@ -4201,6 +4431,56 @@ brief doc
 ### Details
 
 longer doc)"},
+      {[](HoverInfo &HI) {
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "@brief brief doc\n"
+                            "@unknown command is treated as an inline command";
+         HI.Definition = "int foo(int a)";
+         HI.ReturnType = "int";
+         HI.Name = "foo";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "int";
+         HI.Parameters->back().Name = "a";
+       },
+       R"(### function `foo`
+
+---
+→ `int`
+
+Parameters:
+
+- `int a`
+
+@brief brief doc  
+@unknown command is treated as an inline command
+
+---
+```cpp
+int foo(int a)
+```)",
+       R"(### function
+
+---
+```cpp
+int foo(int a)
+```
+
+---
+### Brief
+
+brief doc
+**@unknown** command is treated as an inline command
+
+---
+### Parameters
+
+- `int a`
+
+---
+### Returns
+
+`int`)"},
   };
 
   for (const auto &C : Cases) {
@@ -4231,13 +4511,13 @@ TEST(Hover, ParseDocumentation) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4249,7 +4529,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo    \nbar",
-                   "foo    \nbar",
+                   "foo  \nbar",
                    "foo    \nbar",
                    "foo\nbar",
                },
@@ -4261,25 +4541,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4291,25 +4571,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4321,7 +4601,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo. \nbar",
-                   "foo.   \nbar",
+                   "foo.  \nbar",
                    "foo.   \nbar",
                    "foo.\nbar",
                },
@@ -4333,7 +4613,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4351,7 +4631,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "`not\nparsed`",
-                   "\\`not\nparsed\\`",
+                   "\\`not parsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
                },
@@ -4973,6 +5253,22 @@ TEST(Hover, FunctionParameters) {
        "### param\n\n---\n```cpp\n// In foo\nint b\n```\n\n---\nthis is "
        "\\<b>doc\\</b> \\<html-tag attribute/> \\<another-html-tag "
        "attribute=\"value\">for\\</another-html-tag> `b`\n\n---\nType: `int`"},
+      {R"cpp(/// Function doc
+      /// @param a the next command is an
+      /// @unknown command.
+      void foo(int [[^a]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int a";
+         HI.Documentation = "the next command is an\n @unknown command.";
+       },
+       "### param\n\n---\n```cpp\n// In foo\nint a\n```\n\n---\nthe next "
+       "command is an\n**@unknown** command.\n\n---\nType: `int`"},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -5012,6 +5308,207 @@ TEST(Hover, FunctionParameters) {
     EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
     EXPECT_EQ(H->SymRange, Expected.SymRange);
     EXPECT_EQ(H->Value, Expected.Value);
+  }
+}
+
+static void configureHLSL(TestTU &TU, bool EnableMatrix = false) {
+  TU.Filename = "TestTU.hlsl";
+  TU.ExtraArgs.push_back("-x");
+  TU.ExtraArgs.push_back("hlsl");
+  if (EnableMatrix)
+    TU.ExtraArgs.push_back("-fenable-matrix");
+  TU.ExtraArgs.push_back("--target=dxil-pc-shadermodel6.3-library");
+}
+
+TEST(Hover, HLSLVectorAndMatrixSwizzle) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+      {
+          R"hlsl(
+            typedef float float3 __attribute__((ext_vector_type(3)));
+            void main() {
+              float3 v;
+              float3 s = v.^[[xyz]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "xyz";
+            HI.Type = "float3";
+          }},
+      {
+          R"hlsl(
+            typedef float float3 __attribute__((ext_vector_type(3)));
+            typedef float float2 __attribute__((ext_vector_type(2)));
+            void main() {
+              float3 v;
+              float2 s = v.^[[xy]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "xy";
+            HI.Type = "float2";
+          }},
+      {
+          R"hlsl(
+            typedef float float4x4 __attribute__((matrix_type(4, 4)));
+            void main() {
+              float4x4 m;
+              float e = m.^[[_m00]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "_m00";
+            HI.Type = "float";
+          }},
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    configureHLSL(TU, /*EnableMatrix=*/true);
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+    SCOPED_TRACE(H->present(MarkupKind::PlainText));
+    EXPECT_EQ(H->Name, Expected.Name);
+    EXPECT_EQ(H->Type, Expected.Type);
+    EXPECT_EQ(H->SymRange, Expected.SymRange);
+  }
+}
+
+TEST(Hover, HLSLInvalidMatrixSwizzleNoCrash) {
+  Annotations T(R"hlsl(
+    typedef float float2x2 __attribute__((matrix_type(2, 2)));
+    void main() {
+      float2x2 m;
+      float bad = m.^[[_m22]]; // out of bounds for a 2x2 matrix /*error-ok*/
+    }
+  )hlsl");
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU, /*EnableMatrix=*/true);
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  EXPECT_FALSE(H);
+}
+
+TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
+  Annotations T(R"hlsl(
+    typedef float float3 __attribute__((ext_vector_type(3)));
+    void main() {
+      float3 v;
+      float bad = v.^[[w]]; // 'w' is not a valid component for a 3-component vector /*error-ok*/
+    }
+  )hlsl");
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  EXPECT_FALSE(H);
+}
+
+TEST(Hover, AttributedStmt) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedName;
+    bool IsHLSL;
+    bool ExpectDocumentation;
+  } Cases[] = {
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [^unroll]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "unroll", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [l^oop]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "loop", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [b^ranch]
+           if (true) {}
+         }
+       )hlsl",
+       "branch", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [f^latten]
+           if (true) {}
+         }
+       )hlsl",
+       "flatten", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^likely]] if (true) {}
+         }
+       )cpp",
+       "likely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^unlikely]] if (true) {}
+         }
+       )cpp",
+       "unlikely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           switch (1) {
+           case 1:
+             [[^fallthrough]];
+           case 2:
+             break;
+           }
+         }
+       )cpp",
+       "fallthrough", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code,
+                  Annotations::Markers().setRangeBegin("{{").setRangeEnd("}}"));
+    TestTU TU = TestTU::withCode(T.code());
+    if (Case.IsHLSL)
+      configureHLSL(TU);
+    else
+      TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+    if (Case.ExpectDocumentation) {
+      EXPECT_FALSE(H->Documentation.empty());
+    }
+  }
+}
+TEST(Hover, HLSLRegisterAttributeRange) {
+  Annotations T(R"hlsl(
+    Texture2D tex : [[^register]]([[^t1]]);
+  )hlsl");
+
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+
+  auto AST = TU.build();
+
+  for (const auto &P : T.points()) {
+    auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "register");
+    EXPECT_FALSE(H->Documentation.empty());
   }
 }
 

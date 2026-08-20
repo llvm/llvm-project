@@ -571,7 +571,7 @@ Error Inliner::runOnFunctions(BinaryContext &BC) {
     InliningCandidates.clear();
     findInliningCandidates(BC);
 
-    std::vector<BinaryFunction *> ConsideredFunctions;
+    BinaryFunctionListType ConsideredFunctions;
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &Function = BFI.second;
       if (!shouldOptimize(Function))

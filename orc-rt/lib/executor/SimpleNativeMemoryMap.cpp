@@ -14,9 +14,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
-#include "orc-rt/SPSAllocAction.h"
-#include "orc-rt/SPSMemoryFlags.h"
-#include <sstream>
+#include "orc-rt/Session.h"
+#include "orc-rt/StringExtras.h"
+
+#include <optional>
 
 #if defined(__APPLE__) || defined(__linux__)
 #include "Unix/NativeMemoryAPIs.inc"
@@ -26,55 +27,33 @@
 
 namespace orc_rt {
 
-struct SPSSimpleNativeMemoryMapSegment;
+Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
+                              const char *InstanceName,
+                              SimpleSymbolTable::MutatorFn AddInterface) {
 
-template <>
-class SPSSerializationTraits<
-    SPSSimpleNativeMemoryMapSegment,
-    SimpleNativeMemoryMap::InitializeRequest::Segment> {
-  using SPSType =
-      SPSTuple<SPSAllocGroup, SPSExecutorAddr, uint64_t, SPSSequence<char>>;
+  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
 
-public:
-  static bool
-  deserialize(SPSInputBuffer &IB,
-              SimpleNativeMemoryMap::InitializeRequest::Segment &S) {
-    AllocGroup AG;
-    ExecutorAddr Address;
-    uint64_t Size;
-    span<const char> Content;
-    if (!SPSType::AsArgList::deserialize(IB, AG, Address, Size, Content))
-      return false;
-    if (Size > std::numeric_limits<size_t>::max())
-      return false;
-    S = {AG, Address.toPtr<char *>(), static_cast<size_t>(Size), Content};
-    return true;
-  }
-};
+  SimpleSymbolTable SNMMST;
+  if (auto Err = AddInterface(SNMMST))
+    return Err;
+  std::pair<const char *, const void *> InstanceSym[] = {
+      {InstanceName, static_cast<const void *>(Instance.get())}};
+  if (auto Err = SNMMST.addUnique(InstanceSym))
+    return std::move(Err);
 
-struct SPSSimpleNativeMemoryMapInitializeRequest;
+  if (auto Err = ST.addUnique(SNMMST))
+    return std::move(Err);
 
-template <>
-class SPSSerializationTraits<SPSSimpleNativeMemoryMapInitializeRequest,
-                             SimpleNativeMemoryMap::InitializeRequest> {
-  using SPSType = SPSTuple<SPSSequence<SPSSimpleNativeMemoryMapSegment>,
-                           SPSSequence<SPSAllocActionPair>>;
-
-public:
-  static bool deserialize(SPSInputBuffer &IB,
-                          SimpleNativeMemoryMap::InitializeRequest &FR) {
-    return SPSType::AsArgList::deserialize(IB, FR.Segments, FR.AAPs);
-  }
-};
+  return std::move(Instance);
+}
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
-  // FIXME: Get page size from session object.
-  if (Size % (64 * 1024)) {
+  if (Size % S.processInfo().pageSize()) {
     return OnComplete(make_error<StringError>(
-        (std::ostringstream()
-         << "SimpleNativeMemoryMap error: reserved size " << std::hex << Size
-         << " is not a page-size multiple")
+        (StringOutputStream() << "SimpleNativeMemoryMap error: reserved size "
+                              << hex(Size) << " is not a page-size multiple")
             .str()));
   }
 
@@ -105,15 +84,16 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   }
 
   if (!SI) {
-    std::ostringstream ErrMsg;
-    ErrMsg << "SimpleNativeMemoryMap error: release called on unrecognized "
-              "address "
-           << Addr;
-    return OnComplete(make_error<StringError>(ErrMsg.str()));
+    return OnComplete(make_error<StringError>(
+        (StringOutputStream()
+         << "SimpleNativeMemoryMap error: release called on unrecognized "
+            "address "
+         << Addr)
+            .str()));
   }
 
   for (auto &[Addr, DAAs] : SI->DeallocActions)
-    runDeallocActions(std::move(DAAs));
+    runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
 
   OnComplete(hostOSMemoryRelease(Addr, SI->Size));
 }
@@ -136,11 +116,11 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
 
     if (S.Content.size() > S.Size) {
       return OnComplete(make_error<StringError>(
-          (std::ostringstream()
+          (StringOutputStream()
            << "For segment [" << (void *)S.Address << ".."
            << (void *)(S.Address + S.Size) << "), "
-           << " content size (" << std::hex << S.Content.size()
-           << ") exceeds segment size (" << S.Size << ")")
+           << " content size (" << hex(S.Content.size())
+           << ") exceeds segment size (" << hex(S.Size) << ")")
               .str()));
     }
 
@@ -173,12 +153,13 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
                                 "finalization requires at least "
                                 "one standard-lifetime segment"));
 
-  auto DeallocActions = runFinalizeActions(std::move(IR.AAPs));
+  auto DeallocActions =
+      runFinalizeActions(std::move(IR.AAPs), ReportErrorsViaSession(S));
   if (!DeallocActions)
     return OnComplete(DeallocActions.takeError());
 
   if (auto Err = recordDeallocActions(Base, std::move(*DeallocActions))) {
-    runDeallocActions(std::move(*DeallocActions));
+    runDeallocActions(std::move(*DeallocActions), ReportErrorsViaSession(S));
     return OnComplete(std::move(Err));
   }
 
@@ -200,19 +181,19 @@ void SimpleNativeMemoryMap::deinitialize(OnDeinitializeCompleteFn &&OnComplete,
     auto I = SI->DeallocActions.find(Base);
     if (I == SI->DeallocActions.end()) {
       Lock.unlock();
-      std::ostringstream ErrMsg;
-      ErrMsg
-          << "SimpleNativeMemoryMap deinitialize error: no deallocate actions "
-             "registered for segment base address "
-          << Base;
-      return OnComplete(make_error<StringError>(ErrMsg.str()));
+      return OnComplete(make_error<StringError>(
+          (StringOutputStream()
+           << "SimpleNativeMemoryMap deinitialize error: no deallocate actions "
+              "registered for segment base address "
+           << Base)
+              .str()));
     }
 
     DAAs = std::move(I->second);
     SI->DeallocActions.erase(I);
   }
 
-  runDeallocActions(std::move(DAAs));
+  runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
   OnComplete(Error::success());
 }
 
@@ -222,14 +203,15 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::detach(ResourceManager::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete,
+                                     bool ShutdownRequested) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
-  OnComplete(Error::success());
+  OnComplete();
 }
 
-void SimpleNativeMemoryMap::shutdown(ResourceManager::OnCompleteFn OnComplete) {
-  // TODO: Establish a clear order to run dealloca actions across slabs,
+void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
+  // TODO: Establish a clear order to run deallocate actions across slabs,
   // object boundaries.
 
   // Collect slab base addresses for removal.
@@ -246,9 +228,8 @@ void SimpleNativeMemoryMap::shutdown(ResourceManager::OnCompleteFn OnComplete) {
 void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
                                         std::vector<void *> Addrs,
                                         bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 
@@ -275,9 +256,8 @@ void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
 void SimpleNativeMemoryMap::deinitializeNext(
     OnDeinitializeCompleteFn &&OnComplete, std::vector<void *> Addrs,
     bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 
@@ -301,10 +281,10 @@ void SimpleNativeMemoryMap::deinitializeNext(
       NextAddr);
 }
 
-void SimpleNativeMemoryMap::shutdownNext(
-    ResourceManager::OnCompleteFn OnComplete, std::vector<void *> Bases) {
+void SimpleNativeMemoryMap::shutdownNext(Service::OnCompleteFn OnComplete,
+                                         std::vector<void *> Bases) {
   if (Bases.empty())
-    return OnComplete(Error::success());
+    return OnComplete();
 
   auto *Base = Bases.back();
   Bases.pop_back();
@@ -322,10 +302,11 @@ void SimpleNativeMemoryMap::shutdownNext(
 }
 
 Error SimpleNativeMemoryMap::makeBadSlabError(void *Base, const char *Op) {
-  std::ostringstream ErrMsg;
-  ErrMsg << "SimpleNativeMemoryMap " << Op << " error: segment base address "
-         << Base << " does not fall within an allocated slab";
-  return make_error<StringError>(ErrMsg.str());
+  return make_error<StringError>((StringOutputStream()
+                                  << "SimpleNativeMemoryMap " << Op
+                                  << " error: segment base address " << Base
+                                  << " does not fall within an allocated slab")
+                                     .str());
 }
 
 SimpleNativeMemoryMap::SlabInfo *
@@ -356,54 +337,13 @@ Error SimpleNativeMemoryMap::recordDeallocActions(
   auto I = SI->DeallocActions.find(Base);
   if (I != SI->DeallocActions.end()) {
     Lock.unlock();
-    std::ostringstream ErrMsg;
-    ErrMsg << "SimpleNativeMemoryMap initialize error: segment base address "
-              "reused in subsequent initialize call";
-    return make_error<StringError>(ErrMsg.str());
+    return make_error<StringError>(
+        "SimpleNativeMemoryMap initialize error: segment base address "
+        "reused in subsequent initialize call");
   }
 
   SI->DeallocActions[Base] = std::move(DeallocActions);
   return Error::success();
-}
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize);
-  SPSWrapperFunction<Sig>::handle(
-      S, CallId, Return, ArgBytes,
-      WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve));
-}
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
-  SPSWrapperFunction<Sig>::handle(S, CallId, Return, ArgBytes,
-                                  WrapperFunction::handleWithAsyncMethod(
-                                      &SimpleNativeMemoryMap::releaseMultiple));
-}
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSExpected<SPSExecutorAddr>(
-      SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
-  SPSWrapperFunction<Sig>::handle(S, CallId, Return, ArgBytes,
-                                  WrapperFunction::handleWithAsyncMethod(
-                                      &SimpleNativeMemoryMap::initialize));
-}
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
-  SPSWrapperFunction<Sig>::handle(
-      S, CallId, Return, ArgBytes,
-      WrapperFunction::handleWithAsyncMethod(
-          &SimpleNativeMemoryMap::deinitializeMultiple));
 }
 
 } // namespace orc_rt

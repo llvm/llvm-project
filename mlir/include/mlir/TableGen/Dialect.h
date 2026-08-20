@@ -54,6 +54,10 @@ public:
   // Returns the dialects extra class declaration code.
   std::optional<StringRef> getExtraClassDeclaration() const;
 
+  /// Returns true if this dialect uses strict properties in declarative
+  /// assembly formats.
+  bool useStrictPropertiesInAssemblyFormat() const;
+
   /// Returns true if this dialect has a canonicalizer.
   bool hasCanonicalizer() const;
 
@@ -87,10 +91,6 @@ public:
   /// Returns true if this dialect can be extended at runtime with new
   /// operations or types.
   bool isExtensible() const;
-
-  /// Default to use properties for storing Attributes for operations in this
-  /// dialect.
-  bool usePropertiesForAttributes() const;
 
   const llvm::DagInit *getDiscardableAttributes() const;
 

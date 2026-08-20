@@ -39,8 +39,17 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
 
   let dependentDialects = [
     "func::FuncDialect",
-    "tensor::TensorDialect",
-    "tosa::TosaDialect",
+    "tensor::TensorDialect"
+  ];
+
+  let options = [
+    Option<"foldShapeExpressions", "fold-shape-expressions", "bool",
+           /*default=*/"false",
+           "Fold TOSA shape operations when they have known input values">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           /*default=*/"false",
+           "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+           "be inserted at the I/O boundaries.">
   ];
 }
 
@@ -80,7 +89,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">
+             "sections of the specifciation">,
+      Option<"validateFunctionSignature", "validate-function-signature", "bool",
+             /*default=*/"true",
+             "Verify if the function signature is valid for TOSA dialect, i.e. all "
+             "function arguments and return types are tosa-conformant tensor types">,
    ];
 }
 
@@ -175,6 +188,17 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 }
 
+def TosaDowngrade1p1To1p0Pass
+    : Pass<"tosa-downgrade-1-1-to-1-0", "func::FuncOp"> {
+  let summary = "Downgrade TOSA 1.1 specification constructs to TOSA 1.0";
+  let description = [{
+    Rewrites constructs which are only compatible in TOSA specification 1.1 and
+    above to their TOSA 1.0 counterparts where possible. Downgrading is best-effort
+    and validation should be performed afterwards to ensure compatibility with
+    the TOSA 1.0 specification.
+  }];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
@@ -193,8 +217,50 @@ def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
+  ];
+}
+
+def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
+  let summary = "Narrow F64 TOSA operations to F32";
+  let description = [{
+    This pass narrows TOSA operations with 64-bit floating-point tensor types to
+    32-bit floating-point tensor types. While TOSA itself has no double
+    precision support, upstream conversions or frontends may still materialize
+    F64 tensors temporarily, so this pass removes them before handing off to a
+    TOSA backend.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless or whether the narrowing"
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+      "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect"
+  ];
+}
+
+def TosaInputShape : Pass<"tosa-experimental-input-shape", "func::FuncOp"> {
+  let summary = "Override dynamic function arguments to specified static shapes.";
+  let description = [{
+    Pass that overrides the dynamic input shapes of function arguments to
+    specified static shapes. If a specified static shape conflicts with the
+    static dimensions in an original input shape, an error is reported.
+  }];
+
+  let constructor = "tosa::createTosaInputShapePass()";
+  let dependentDialects = [
+    "tensor::TensorDialect"
+  ];
+  let options = [
+    ListOption<"args", "args", "std::string",
+          "Comma-separated list of shape descriptions. Each description contains the "
+          "argument name, a colon, and a shape with dimensions separated by x ">
   ];
 }
 

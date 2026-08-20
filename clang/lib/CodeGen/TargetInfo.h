@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 namespace llvm {
 class Constant;
@@ -32,7 +33,37 @@ class Value;
 }
 
 namespace clang {
+class CXXRecordDecl;
 class Decl;
+
+/// Collapses a clang sync scope onto the target-neutral llvm::AtomicScope.
+inline llvm::AtomicScope getAtomicScope(SyncScope S) {
+  switch (S) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return llvm::AtomicScope::Single;
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return llvm::AtomicScope::Wavefront;
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return llvm::AtomicScope::Workgroup;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    return llvm::AtomicScope::Cluster;
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return llvm::AtomicScope::Device;
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return llvm::AtomicScope::System;
+  }
+  llvm_unreachable("Invalid sync scope");
+}
 
 namespace CodeGen {
 class ABIInfo;
@@ -318,44 +349,27 @@ public:
   virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                           const VarDecl *D) const;
 
-  /// Get the AST address space for alloca.
-  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
-
-  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, llvm::Type *DestTy,
-                               bool IsNonNull = false) const;
-
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the LLVM value to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, LangAS SrcAddr,
-                                            llvm::Type *DestTy,
-                                            bool IsNonNull = false) const;
-
-  /// Perform address space cast of a constant expression of pointer type.
-  /// \param V is the LLVM constant to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
-                                               llvm::Constant *V,
-                                               LangAS SrcAddr,
-                                               llvm::Type *DestTy) const;
+  /// Get the address space for an indirect (sret) return of the given type.
+  /// The default falls back to the alloca AS.
+  virtual LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const {
+    return LangAS::Default;
+  }
 
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;
   }
 
-  /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                                 SyncScope Scope,
-                                                 llvm::AtomicOrdering Ordering,
-                                                 llvm::LLVMContext &Ctx) const;
+  /// Get the syncscope used in LLVM IR as a string
+  virtual StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                        SyncScope Scope,
+                                        llvm::AtomicOrdering Ordering) const;
+
+  /// Get the syncscope used in LLVM IR as a SyncScope ID.
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const;
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
@@ -591,6 +605,10 @@ createSparcV9TargetCodeGenInfo(CodeGenModule &CGM);
 std::unique_ptr<TargetCodeGenInfo>
 createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
                                bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSystemZ_ZOS_TargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                                    bool SoftFloatABI);
 
 std::unique_ptr<TargetCodeGenInfo>
 createTCETargetCodeGenInfo(CodeGenModule &CGM);

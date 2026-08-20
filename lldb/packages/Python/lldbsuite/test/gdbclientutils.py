@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import ctypes
 import errno
 import io
+import re
 import threading
 import socket
 import traceback
@@ -22,15 +23,18 @@ def checksum(message):
     return check % 256
 
 
-def frame_packet(message):
+def frame_packet(message, prefix):
     """
     Create a framed packet that's ready to send over the GDB connection
     channel.
 
-    Framing includes surrounding the message between $ and #, and appending
-    a two character hex checksum.
+    Framing means:
+    * Attaching the prefix. Which is usually '$' but for notifications will be
+      '%'.
+    * Appending a '#'.
+    * Adding a two character hex checksum.
     """
-    return "$%s#%02x" % (message, checksum(message))
+    return "%s%s#%02x" % (prefix, message, checksum(message))
 
 
 def escape_binary(message):
@@ -77,9 +81,83 @@ def hex_decode_bytes(hex_bytes):
     return out
 
 
+def parse_memory_read_packet(packet):
+    """
+    Parse a memory-read packet ("m<addr>,<len>" or "x<addr>,<len>") into its
+    (addr, length) integers, or return None if it isn't a memory read.
+    """
+    if not packet or packet[0] not in ("m", "x"):
+        return None
+    try:
+        addr, length = [int(x, 16) for x in packet[1:].split(",")]
+    except ValueError:
+        return None
+    return addr, length
+
+
+def parse_memory_read_ranges(packet: str) -> List[Tuple[int, int]]:
+    """
+    Parse every (addr, length) a memory-read packet asks the stub for, and return
+    an empty list if the packet isn't a memory read.  Unlike
+    parse_memory_read_packet this also covers "MultiMemRead", which carries
+    several ranges in one packet.
+    """
+    single = parse_memory_read_packet(packet)
+    if single is not None:
+        return [single]
+
+    prefix = "MultiMemRead:ranges:"
+    if not packet or not packet.startswith(prefix):
+        return []
+    body = packet[len(prefix) :]
+    end = body.find(";")
+    if end < 0:
+        return []
+    try:
+        numbers = [int(n, 16) for n in body[:end].split(",")]
+    except ValueError:
+        return []
+    if len(numbers) % 2:
+        return []
+    return list(zip(numbers[0::2], numbers[1::2]))
+
+
 class PacketDirection(Enum):
     RECV = "recv"
     SEND = "send"
+
+
+# A line in a "log enable gdb-remote packets" file, e.g.
+#   <  22> send packet: $x100000,40#ad
+#   <   6> read packet: $OK#9a
+# The leading "<...>" size column is optional; the body is the framed packet
+# between "$" and the "#" checksum.
+_PACKET_LOG_RE = re.compile(
+    r"(?P<direction>send|read) packet: \$(?P<body>.*)#[0-9a-fA-F]{2}"
+)
+
+
+def parse_packet_log(lines):
+    """
+    Parse the lines of a "log enable gdb-remote packets" file into a list of
+    (PacketDirection, body) tuples, where body is the packet contents.
+
+    "send packet:" lines (client -> stub) map to PacketDirection.SEND and
+    "read packet:" lines (stub -> client) map to PacketDirection.RECV, matching
+    the perspective of the client whose log this is.
+    """
+    out = []
+    for line in lines:
+        m = _PACKET_LOG_RE.search(line)
+        if not m:
+            continue
+        direction = (
+            PacketDirection.SEND
+            if m.group("direction") == "send"
+            else PacketDirection.RECV
+        )
+        out.append((direction, m.group("body")))
+    return out
 
 
 class PacketLog:
@@ -170,10 +248,10 @@ class MockGDBServerResponder:
             register, value = packet[1:].split("=")
             return self.writeRegister(int(register, 16), value)
         if packet[0] == "m":
-            addr, length = [int(x, 16) for x in packet[1:].split(",")]
+            addr, length = parse_memory_read_packet(packet)
             return self.readMemory(addr, length)
         if packet[0] == "x":
-            addr, length = [int(x, 16) for x in packet[1:].split(",")]
+            addr, length = parse_memory_read_packet(packet)
             return self.x(addr, length)
         if packet[0] == "M":
             location, encoded_data = packet[1:].split(":")
@@ -264,31 +342,31 @@ class MockGDBServerResponder:
 
         return self.other(packet)
 
-    def qsProcessInfo(self):
+    def qsProcessInfo(self) -> str:
         return "E04"
 
-    def qfProcessInfo(self, packet):
+    def qfProcessInfo(self, packet) -> str:
         return "E04"
 
-    def jGetLoadedDynamicLibrariesInfos(self, packet):
+    def jGetLoadedDynamicLibrariesInfos(self, packet) -> str:
         return ""
 
-    def qGetWorkingDir(self):
+    def qGetWorkingDir(self) -> str:
         return "2f"
 
-    def qOffsets(self):
+    def qOffsets(self) -> str:
         return ""
 
-    def qProcessInfo(self):
+    def qProcessInfo(self) -> str:
         return ""
 
-    def qHostInfo(self):
+    def qHostInfo(self) -> str:
         return "ptrsize:8;endian:little;"
 
-    def qEcho(self, num: int):
+    def qEcho(self, num: int) -> str:
         return "E04"
 
-    def qQueryGDBServer(self):
+    def qQueryGDBServer(self) -> str:
         return "E04"
 
     def interrupt(self):
@@ -300,10 +378,10 @@ class MockGDBServerResponder:
     def vCont(self, packet):
         raise self.UnexpectedPacketException()
 
-    def A(self, packet):
+    def A(self, packet) -> str:
         return ""
 
-    def D(self, packet):
+    def D(self, packet) -> str:
         return "OK"
 
     def readRegisters(self) -> str:
@@ -312,40 +390,40 @@ class MockGDBServerResponder:
     def readRegister(self, register: int) -> str:
         return "00000000"
 
-    def writeRegisters(self, registers_hex):
+    def writeRegisters(self, registers_hex) -> str:
         return "OK"
 
-    def writeRegister(self, register, value_hex):
+    def writeRegister(self, register, value_hex) -> str:
         return "OK"
 
-    def readMemory(self, addr, length):
+    def readMemory(self, addr, length) -> str:
         return "00" * length
 
-    def x(self, addr, length):
+    def x(self, addr, length) -> str:
         return ""
 
-    def writeMemory(self, addr, data_hex):
+    def writeMemory(self, addr, data_hex) -> str:
         return "OK"
 
-    def qSymbol(self, symbol_args):
+    def qSymbol(self, symbol_args) -> str:
         return "OK"
 
-    def qSupported(self, client_supported):
+    def qSupported(self, client_supported) -> str:
         return "qXfer:features:read+;PacketSize=3fff;QStartNoAckMode+"
 
-    def qfThreadInfo(self):
+    def qfThreadInfo(self) -> str:
         return "l"
 
-    def qsThreadInfo(self):
+    def qsThreadInfo(self) -> str:
         return "l"
 
-    def qC(self):
+    def qC(self) -> str:
         return "QC0"
 
-    def QEnableErrorStrings(self):
+    def QEnableErrorStrings(self) -> str:
         return "OK"
 
-    def haltReason(self):
+    def haltReason(self) -> str:
         # SIGINT is 2, return type is 2 digit hex string
         return "S02"
 
@@ -360,50 +438,50 @@ class MockGDBServerResponder:
     def vAttach(self, pid):
         raise self.UnexpectedPacketException()
 
-    def selectThread(self, op, thread_id):
+    def selectThread(self, op, thread_id) -> str:
         return "OK"
 
-    def setBreakpoint(self, packet):
+    def setBreakpoint(self, packet) -> str:
         raise self.UnexpectedPacketException()
 
-    def threadStopInfo(self, threadnum):
+    def threadStopInfo(self, threadnum) -> str:
         return ""
 
-    def other(self, packet):
+    def other(self, packet) -> str:
         # empty string means unsupported
         return ""
 
-    def QThreadSuffixSupported(self):
+    def QThreadSuffixSupported(self) -> str:
         return ""
 
-    def QListThreadsInStopReply(self):
+    def QListThreadsInStopReply(self) -> str:
         return ""
 
-    def qMemoryRegionInfo(self, addr):
+    def qMemoryRegionInfo(self, addr) -> str:
         return ""
 
-    def qPathComplete(self):
+    def qPathComplete(self) -> str:
         return ""
 
-    def vFile(self, packet):
+    def vFile(self, packet) -> str:
         return ""
 
-    def vRun(self, packet):
+    def vRun(self, packet) -> str:
         return ""
 
     def qLaunchGDBServer(self, host):
         raise self.UnexpectedPacketException()
 
-    def qLaunchSuccess(self):
+    def qLaunchSuccess(self) -> str:
         return ""
 
-    def QEnvironment(self, packet):
+    def QEnvironment(self, packet) -> str:
         return "OK"
 
-    def QEnvironmentHexEncoded(self, packet):
+    def QEnvironmentHexEncoded(self, packet) -> str:
         return "OK"
 
-    def qRegisterInfo(self, num):
+    def qRegisterInfo(self, num) -> str:
         return ""
 
     def k(self):
@@ -694,9 +772,9 @@ class MockGDBServer:
         self._receivedDataOffset = 0
         return packet
 
-    def _sendPacket(self, packet: str):
+    def _sendPacket(self, packet: str, prefix="$"):
         assert self._socket is not None
-        framed_packet = seven.bitcast_to_bytes(frame_packet(packet))
+        framed_packet = seven.bitcast_to_bytes(frame_packet(packet, prefix))
         self._socket.sendall(framed_packet)
 
     def _handlePacket(self, packet):

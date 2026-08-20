@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -79,6 +80,7 @@ namespace CodeGen {
 class CodeGenModule;
 class CodeGenFunction;
 class LValue;
+class AggValueSlot;
 
 class CGHLSLOffsetInfo {
   SmallVector<uint32_t> Offsets;
@@ -122,20 +124,15 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Saturate, saturate)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Sign, sign)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Step, step)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Radians, radians)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupThreadId, thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupId, group_id)
@@ -144,12 +141,24 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddI8Packed, dot4add_i8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllEqual, wave_all_equal)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitXor, wave_reduce_xor)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitAnd, wave_reduce_and)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMin, wave_reduce_umin)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,
+                                   quad_read_across_diagonal)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
@@ -157,8 +166,23 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetBasePointer,
+                                   resource_getbasepointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
                                    resource_getpointer)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Sample, resource_sample)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleClamp, resource_sample_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBias, resource_samplebias)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBiasClamp, resource_samplebias_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGrad, resource_samplegrad)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGradClamp, resource_samplegrad_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleLevel, resource_samplelevel)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmp, resource_samplecmp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpClamp, resource_samplecmp_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpLevelZero,
+                                   resource_samplecmplevelzero)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Gather, resource_gather)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GatherCmp, resource_gather_cmp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
@@ -166,64 +190,92 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(AllMemoryBarrier, all_memory_barrier)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(AllMemoryBarrierWithGroupSync,
+                                   all_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DeviceMemoryBarrier, device_memory_barrier)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DeviceMemoryBarrierWithGroupSync,
+                                   device_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrier, group_memory_barrier)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsXY, resource_getdimensions_xy)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsLevelsXY,
+                                   resource_getdimensions_levels_xy)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(LoadLevel, resource_load_level)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLod, resource_calculate_lod)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLodUnclamped,
+                                   resource_calculate_lod_unclamped)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdyFine, ddy_fine)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
 
 protected:
+  using SemanticSignatures =
+      llvm::SmallVectorImpl<llvm::hlsl::SemanticSignatureElement>;
+
   CodeGenModule &CGM;
 
-  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
+                                      const FunctionDecl *FD, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       HLSLAppliedSemanticAttr *Semantic,
-                                      std::optional<unsigned> Index);
+                                      std::optional<unsigned> Index,
+                                      SemanticSignatures &Signature);
 
   void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                const clang::DeclaratorDecl *Decl,
                                HLSLAppliedSemanticAttr *Semantic,
-                               std::optional<unsigned> Index);
+                               std::optional<unsigned> Index,
+                               SemanticSignatures &Signature);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
-                                        HLSLAppliedSemanticAttr *Semantic);
+                                        HLSLAppliedSemanticAttr *Semantic,
+                                        SemanticSignatures &Signature);
 
   void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                                  llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
-                                 HLSLAppliedSemanticAttr *Semantic);
+                                 HLSLAppliedSemanticAttr *Semantic,
+                                 SemanticSignatures &Signature);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleStructSemanticLoad(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
+      SemanticSignatures &Signature);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
+      SemanticSignatures &Signature);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> end,
+                     SemanticSignatures &Signature);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
-                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
+                      SemanticSignatures &Signature);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -258,14 +310,25 @@ public:
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
 
+  bool emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
+                               AggValueSlot &DestSlot);
+  std::optional<LValue>
+  emitGlobalResourceArrayAsLValue(CodeGenFunction &CGF,
+                                  const VarDecl *ArrayDecl);
+
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
 
-  bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
-                      QualType CType);
+  RawAddress createBufferMatrixTempAddress(const LValue &LV,
+                                           CodeGenFunction &CGF);
+
+  bool emitBufferCopy(CodeGenFunction &CGF, const Expr *E, const LValue &SrcLV,
+                      AggValueSlot &DestSlot);
 
   LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
+  std::optional<LValue> emitResourceMemberExpr(CodeGenFunction &CGF,
+                                               const MemberExpr *E);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
@@ -277,27 +340,42 @@ private:
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
 
-  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B,
+                                         const FunctionDecl *FD,
+                                         llvm::Type *Type,
+                                         const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic,
-                                        std::optional<unsigned> Index);
-  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        std::optional<unsigned> Index,
+                                        SemanticSignatures &Signature);
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
+                                    const FunctionDecl *FD, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
-                                    std::optional<unsigned> Index);
+                                    std::optional<unsigned> Index,
+                                    SemanticSignatures &Signature);
 
   void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                  const clang::DeclaratorDecl *Decl,
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
-                                 std::optional<unsigned> Index);
+                                 std::optional<unsigned> Index,
+                                 SemanticSignatures &Signature);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
-                             std::optional<unsigned> Index);
+                             std::optional<unsigned> Index,
+                             SemanticSignatures &Signature);
+
+  bool initializeGlobalResourceArray(CodeGenFunction &CGF,
+                                     const VarDecl *ArrayDecl,
+                                     AggValueSlot &DestSlot);
 
   llvm::Triple::ArchType getArch();
 

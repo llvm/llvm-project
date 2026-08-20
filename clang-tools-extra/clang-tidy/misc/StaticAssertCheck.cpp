@@ -31,7 +31,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                  cxxNullPtrLiteralExpr(), gnuNullExpr(), NegatedString))
           .bind("isAlwaysFalse");
-  auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
+  const auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
       IsAlwaysFalse, cStyleCastExpr(has(ignoringParenImpCasts(IsAlwaysFalse)))
                          .bind("castExpr")));
   auto AssertExprRoot = anyOf(
@@ -56,7 +56,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
                                    ignoringParenCasts(AssertExprRoot))))))),
            unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
-  auto Condition =
+  const auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(
                 hasDeclaration(functionDecl(hasName("__builtin_expect"))),
                 hasArgument(0, AssertCondition))),
@@ -159,12 +159,11 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
     return {};
 
   unsigned int ParenCount = 1;
-  while (ParenCount && !Lexer.LexFromRawLexer(Token)) {
+  while (ParenCount && !Lexer.LexFromRawLexer(Token))
     if (Token.is(tok::l_paren))
       ++ParenCount;
     else if (Token.is(tok::r_paren))
       --ParenCount;
-  }
 
   return Token.getLocation();
 }

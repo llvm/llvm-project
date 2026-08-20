@@ -62,10 +62,14 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     UsedRegs.addLiveOuts(MBB);
 
     auto InstUpToI = MBB.end();
-    while (InstUpToI != I)
+    while (InstUpToI != I) {
       // The pre-decrement is on purpose here.
       // We want to have the liveness right before I.
-      UsedRegs.stepBackward(*--InstUpToI);
+      --InstUpToI;
+      if (InstUpToI->isDebugInstr())
+        continue;
+      UsedRegs.stepBackward(*InstUpToI);
+    }
 
     if (UsedRegs.available(ARM::CPSR)) {
       BuildMI(MBB, I, DL, get(ARM::tMOVSr), DestReg)
@@ -145,7 +149,7 @@ void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator I,
                                            Register DestReg, int FI,
                                            const TargetRegisterClass *RC,
-                                           Register VReg,
+                                           Register VReg, unsigned SubReg,
                                            MachineInstr::MIFlag Flags) const {
   assert((RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
           (DestReg.isPhysical() && isARMLowRegister(DestReg))) &&

@@ -5,10 +5,10 @@
 ! or SAME_TYPE_AS, every specification inquiry reference is a constant
 ! expression, and the value does not depend on the value of a variable.
 !
-! C754 Each type-param-value within a component-def-stmt shall be a colon or 
-! a specification expression in which there are no references to specification 
+! C754 Each type-param-value within a component-def-stmt shall be a colon or
+! a specification expression in which there are no references to specification
 ! functions or the intrinsic functions ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF,
-! PRESENT, or SAME_TYPE_AS, every specification inquiry reference is a 
+! PRESENT, or SAME_TYPE_AS, every specification inquiry reference is a
 ! constant expression, and the value does not depend on the value of a variable.
 impure function impureFunc()
   integer :: impureFunc
@@ -59,6 +59,10 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   real, dimension(iVolatileStmtFunc()) :: arrayVarWithVolatile
     !ERROR: Invalid specification expression: reference to impure function 'iimpurestmtfunc'
   real, dimension(iImpureStmtFunc()) :: arrayVarWithImpureFunction
+  ! The entity-decl's array-spec overrides the DIMENSION attribute's, but the
+  ! attribute's bound remains a specification expression that must be valid.
+    !ERROR: Invalid specification expression: reference to impure function 'iimpurestmtfunc'
+  real, dimension(iImpureStmtFunc()) :: overriddenArrayVar(3)
     !ERROR: Invalid specification expression: reference to statement function 'ipurestmtfunc'
   real, dimension(iPureStmtFunc()) :: arrayVarWithPureFunction
   real, dimension(iabs(iArg)) :: arrayVarWithIntrinsic

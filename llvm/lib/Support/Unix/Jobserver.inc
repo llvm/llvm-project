@@ -19,14 +19,6 @@
 #include <unistd.h>
 
 namespace {
-/// Returns true if the given file descriptor is a FIFO (named pipe).
-bool isFifo(int FD) {
-  struct stat StatBuf;
-  if (::fstat(FD, &StatBuf) != 0)
-    return false;
-  return S_ISFIFO(StatBuf.st_mode);
-}
-
 /// Returns true if the given file descriptors are valid.
 bool areFdsValid(int ReadFD, int WriteFD) {
   if (ReadFD == -1 || WriteFD == -1)
@@ -75,7 +67,7 @@ JobserverClientImpl::JobserverClientImpl(const JobserverConfig &Config) {
   case JobserverConfig::PosixFifo:
     // Open the FIFO for reading. It must be non-blocking and close-on-exec.
     ReadFD = ::open(Config.Path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-    if (ReadFD < 0 || !isFifo(ReadFD)) {
+    if (ReadFD < 0) {
       if (ReadFD >= 0)
         ::close(ReadFD);
       ReadFD = -1;

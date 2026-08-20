@@ -8,7 +8,7 @@ function(check_entrypoint_deps entrypoint_deps)
   set(fq_deps_list "")
   list(APPEND fq_deps_list ${ARGN})
 
-  #don't warn for deps that are allowed, such as errno
+  # don't warn for deps that are allowed, such as errno
   set(ALLOWED_DEPS
     "libc.src.errno.errno"
     "libc.src.setjmp.longjmp"
@@ -54,17 +54,17 @@ function(create_object_library fq_target_name)
   if(ADD_OBJECT_ALIAS)
     if(ADD_OBJECT_SRCS OR ADD_OBJECT_HDRS)
       message(FATAL_ERROR
-              "${fq_target_name}: object library alias cannot have SRCS and/or HDRS.")
+        "${fq_target_name}: object library alias cannot have SRCS and/or HDRS.")
     endif()
     list(LENGTH fq_deps_list depends_size)
     if(NOT ${depends_size} EQUAL 1)
       message(FATAL_ERROR
-              "${fq_targe_name}: object library alias should have exactly one DEPENDS.")
+        "${fq_targe_name}: object library alias should have exactly one DEPENDS.")
     endif()
     add_library(
       ${fq_target_name}
       ALIAS
-      ${fq_deps_list}
+        ${fq_deps_list}
     )
     return()
   endif()
@@ -87,14 +87,15 @@ function(create_object_library fq_target_name)
     ${fq_target_name}
     EXCLUDE_FROM_ALL
     OBJECT
-    ${ADD_OBJECT_SRCS}
-    ${ADD_OBJECT_HDRS}
+      ${ADD_OBJECT_SRCS}
+      ${ADD_OBJECT_HDRS}
   )
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
-  #loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.
+  # loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.
   if(LIBC_CMAKE_VERBOSE_LOGGING)
     set(entrypoint_deps "")
     if(NOT "${fq_deps_list}" STREQUAL "")
@@ -142,14 +143,14 @@ function(create_object_library fq_target_name)
     PROPERTIES
       OBJECT_FILES "$<TARGET_OBJECTS:${target_objects}>"
   )
-endfunction(create_object_library)
+endfunction()
 
 function(add_object_library target_name)
   add_target_with_flags(
     ${target_name}
     CREATE_TARGET create_object_library
     ${ARGN})
-endfunction(add_object_library)
+endfunction()
 
 
 # A rule for entrypoint object targets.
@@ -170,7 +171,7 @@ function(create_entrypoint_object fq_target_name)
     "ADD_ENTRYPOINT_OBJ"
     "ALIAS;REDIRECTED" # Optional argument
     "NAME;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS" # Multi value arguments
     ${ARGN}
   )
 
@@ -208,12 +209,12 @@ function(create_entrypoint_object fq_target_name)
 
     if(SHOW_INTERMEDIATE_OBJECTS)
       message(STATUS "Adding entrypoint object ${fq_target_name} as an alias of"
-              " ${fq_dep_name}")
+        " ${fq_dep_name}")
     endif()
 
     if(NOT TARGET ${fq_dep_name})
       message(WARNING "Aliasee ${fq_dep_name} for entrypoint alias ${target_name} missing; "
-                      "Target ${target_name} will be ignored.")
+        "Target ${target_name} will be ignored.")
       return()
     endif()
 
@@ -233,7 +234,7 @@ function(create_entrypoint_object fq_target_name)
         ${internal_target_name}
         EXCLUDE_FROM_ALL
         OBJECT
-        ${object_file_raw}
+          ${object_file_raw}
       )
     endif()
 
@@ -242,7 +243,7 @@ function(create_entrypoint_object fq_target_name)
       ${fq_target_name}
       EXCLUDE_FROM_ALL
       OBJECT
-      ${object_file}
+        ${object_file}
     )
     add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
@@ -270,7 +271,7 @@ function(create_entrypoint_object fq_target_name)
   list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
 
-  #loop through the deps, check if any have the TARGET_TYPE of entrypoint_target_type, and print a warning if they do.
+  # loop through the deps, check if any have the TARGET_TYPE of entrypoint_target_type, and print a warning if they do.
   if(LIBC_CMAKE_VERBOSE_LOGGING)
     set(entrypoint_deps "")
     if(NOT "${fq_deps_list}" STREQUAL "")
@@ -299,8 +300,8 @@ function(create_entrypoint_object fq_target_name)
     # A future change should switch this to a normal static library.
     EXCLUDE_FROM_ALL
     OBJECT
-    ${ADD_ENTRYPOINT_OBJ_SRCS}
-    ${ADD_ENTRYPOINT_OBJ_HDRS}
+      ${ADD_ENTRYPOINT_OBJ_SRCS}
+      ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
   target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
   target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
@@ -314,8 +315,8 @@ function(create_entrypoint_object fq_target_name)
     # an archive (like libc.a).
     EXCLUDE_FROM_ALL
     OBJECT
-    ${ADD_ENTRYPOINT_OBJ_SRCS}
-    ${ADD_ENTRYPOINT_OBJ_HDRS}
+      ${ADD_ENTRYPOINT_OBJ_SRCS}
+      ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
   target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
@@ -328,7 +329,7 @@ function(create_entrypoint_object fq_target_name)
   # known problematic ones on the entrypoints that implement them.
   if(LIBC_TARGET_OS_IS_GPU)
     set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
-                      memset strcmp strstr)
+      memset strcmp strstr)
     if(${ADD_ENTRYPOINT_OBJ_NAME} IN_LIST libc_builtins)
       target_compile_options(${fq_target_name} PRIVATE -fno-builtin-${ADD_ENTRYPOINT_OBJ_NAME})
     endif()
@@ -364,7 +365,7 @@ function(create_entrypoint_object fq_target_name)
   if(LLVM_LIBC_ENABLE_LINTING AND TARGET ${internal_target_name})
     if(NOT LLVM_LIBC_CLANG_TIDY)
       message(FATAL_ERROR "Something is wrong!  LLVM_LIBC_ENABLE_LINTING is "
-              "ON but LLVM_LIBC_CLANG_TIDY is not set.")
+        "ON but LLVM_LIBC_CLANG_TIDY is not set.")
     endif()
 
     # We only want a second invocation of clang-tidy to run
@@ -399,13 +400,13 @@ function(create_entrypoint_object fq_target_name)
       # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
       # these.
       COMMAND ${LLVM_LIBC_CLANG_TIDY}
-              "--extra-arg=-fno-caret-diagnostics" --quiet
-              # Path to directory containing compile_commands.json
-              -p ${PROJECT_BINARY_DIR}
-              ${ADD_ENTRYPOINT_OBJ_SRCS}
-      # See above: this might be a second invocation of clang-tidy depending on
-      # the conditions above.
-      ${restrict_system_headers_check_invocation}
+        "--extra-arg=-fno-caret-diagnostics" --quiet
+        # Path to directory containing compile_commands.json
+        -p ${PROJECT_BINARY_DIR}
+        ${ADD_ENTRYPOINT_OBJ_SRCS}
+        # See above: this might be a second invocation of clang-tidy depending on
+        # the conditions above.
+        ${restrict_system_headers_check_invocation}
       # We have two options for running commands, add_custom_command and
       # add_custom_target. We don't want to run the linter unless source files
       # have changed. add_custom_target explicitly runs everytime therefore we
@@ -419,7 +420,7 @@ function(create_entrypoint_object fq_target_name)
     add_dependencies(libc-lint ${fq_target_name}.__lint__)
   endif()
 
-endfunction(create_entrypoint_object)
+endfunction()
 
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
@@ -440,7 +441,7 @@ function(add_entrypoint_object target_name)
     CREATE_TARGET create_entrypoint_object
     ${ADD_ENTRYPOINT_OBJ_UNPARSED_ARGUMENTS}
   )
-endfunction(add_entrypoint_object)
+endfunction()
 
 # A rule for external entrypoint targets.
 # Usage:
@@ -453,7 +454,7 @@ function(add_entrypoint_external target_name)
     "ADD_ENTRYPOINT_EXT"
     "" # No optional arguments
     "" # No single value arguments
-    "DEPENDS"  # Multi value arguments
+    "DEPENDS" # Multi value arguments
     ${ARGN}
   )
   get_fq_target_name(${target_name} fq_target_name)
@@ -468,7 +469,7 @@ function(add_entrypoint_external target_name)
       "DEPS" "${ADD_ENTRYPOINT_EXT_DEPENDS}"
   )
 
-endfunction(add_entrypoint_external)
+endfunction()
 
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,

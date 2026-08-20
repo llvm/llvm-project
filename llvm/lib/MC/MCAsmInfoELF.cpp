@@ -40,11 +40,12 @@ bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
   return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
 }
 
-MCAsmInfoELF::MCAsmInfoELF() {
+MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   HasIdentDirective = true;
+  HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";
-  PrivateGlobalPrefix = ".L";
-  PrivateLabelPrefix = ".L";
+  InternalSymbolPrefix = ".L";
 }
 
 static void printName(raw_ostream &OS, StringRef Name) {
@@ -199,6 +200,8 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
     OS << "llvm_cfi_jump_table";
   else if (Sec.Type == ELF::SHT_LLVM_CALL_GRAPH)
     OS << "llvm_call_graph";
+  else if (Sec.Type == ELF::SHT_LLVM_DYNDBG_ELF)
+    OS << "llvm_dyndbg_elf";
   else
     OS << "0x" << Twine::utohexstr(Sec.Type);
 

@@ -20,7 +20,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
@@ -79,6 +79,8 @@ struct CognitiveComplexity final {
     PenalizeNesting = 1U << 2,
 
     All = Increment | PenalizeNesting | IncrementNesting,
+
+    LLVM_MARK_AS_BITMASK_ENUM(PenalizeNesting),
   };
 
   // The helper struct used to record one increment occurrence, with all the
@@ -113,10 +115,11 @@ struct CognitiveComplexity final {
       } else if (C == Criteria::IncrementNesting) {
         Increment = 0; // Unused in this message.
         MsgId = 3;
-      } else
+      } else {
         llvm_unreachable("should not get to here.");
+      }
 
-      return std::make_pair(MsgId, Increment);
+      return {MsgId, Increment};
     }
   };
 
@@ -150,7 +153,7 @@ struct CognitiveComplexity final {
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
 // not static.
-static const std::array<const StringRef, 4> Msgs = {{
+static constexpr std::array<StringRef, 4> Msgs = {{
     // B1 + B2 + B3
     "+%0, including nesting penalty of %1, nesting level increased to %2",
 
@@ -164,32 +167,6 @@ static const std::array<const StringRef, 4> Msgs = {{
     "nesting level increased to %2",
 }};
 
-// Criteria is a bitset, thus a few helpers are needed.
-static CognitiveComplexity::Criteria
-operator|(CognitiveComplexity::Criteria LHS,
-          CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
-                                                    llvm::to_underlying(RHS));
-}
-static CognitiveComplexity::Criteria
-operator&(CognitiveComplexity::Criteria LHS,
-          CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
-                                                    llvm::to_underlying(RHS));
-}
-static CognitiveComplexity::Criteria &
-operator|=(CognitiveComplexity::Criteria &LHS,
-           CognitiveComplexity::Criteria RHS) {
-  LHS = operator|(LHS, RHS);
-  return LHS;
-}
-static CognitiveComplexity::Criteria &
-operator&=(CognitiveComplexity::Criteria &LHS,
-           CognitiveComplexity::Criteria RHS) {
-  LHS = operator&(LHS, RHS);
-  return LHS;
-}
-
 void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
                                   Criteria C) {
   C &= Criteria::All;
@@ -198,9 +175,7 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
   Details.emplace_back(Loc, Nesting, C);
   const Detail &D = Details.back();
 
-  unsigned MsgId = 0;
-  unsigned short Increase = 0;
-  std::tie(MsgId, Increase) = D.process();
+  const auto [MsgId, Increase] = D.process();
 
   Total += Increase;
 }
@@ -550,14 +525,12 @@ void FunctionCognitiveComplexityCheck::check(
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {
-    unsigned MsgId = 0;          // The id of the message to output.
-    unsigned short Increase = 0; // How much of an increment?
-    std::tie(MsgId, Increase) = Detail.process();
+    auto [MsgId, Increase] = Detail.process();
     assert(MsgId < Msgs.size() && "MsgId should always be valid");
     // Increase, on the other hand, can be 0.
 
     diag(Detail.Loc, Msgs[MsgId], DiagnosticIDs::Note)
-        << (unsigned)Increase << (unsigned)Detail.Nesting << 1 + Detail.Nesting;
+        << Increase << Detail.Nesting << 1 + Detail.Nesting;
   }
 }
 

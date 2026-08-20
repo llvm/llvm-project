@@ -11,14 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
+#include <utility>
 
 namespace clang {
 
@@ -26,9 +36,6 @@ SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
 bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {
-  // position of memory order and scope arguments in the builtin
-  unsigned OrderIndex, ScopeIndex;
-
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
   llvm::StringMap<bool> CallerFeatureMap;
@@ -38,12 +45,20 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_async_lds:
   case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_async_lds:
   case AMDGPU::BI__builtin_amdgcn_load_to_lds:
-  case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
+  case AMDGPU::BI__builtin_amdgcn_load_async_to_lds:
+  case AMDGPU::BI__builtin_amdgcn_global_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_global_load_async_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
     Expr *ArgExpr = TheCall->getArg(SizeIdx);
+    // Check for instantiation-dependent expressions (e.g., involving template
+    // parameters). These will be checked again during template instantiation.
+    if (ArgExpr->isInstantiationDependent())
+      return false;
     [[maybe_unused]] ExprResult R =
         SemaRef.VerifyIntegerConstantExpression(ArgExpr, &Size);
     assert(!R.isInvalid());
@@ -68,6 +83,23 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
   }
+  case AMDGPU::BI__builtin_amdgcn_uicmp:
+  case AMDGPU::BI__builtin_amdgcn_uicmpl:
+  case AMDGPU::BI__builtin_amdgcn_sicmp:
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+    // These builtins are deprecated in favor of
+    // __builtin_amdgcn_ballot_{w32|w64}. Suggest the replacement matching the
+    // wavefront size of the calling function.
+    bool IsWave32 = Builtin::evaluateRequiredTargetFeatures("wavefrontsize32",
+                                                            CallerFeatureMap);
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << getASTContext().BuiltinInfo.getQuotedName(BuiltinID)
+        << (IsWave32 ? "__builtin_amdgcn_ballot_w32"
+                     : "__builtin_amdgcn_ballot_w64");
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;
@@ -75,13 +107,80 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
-    OrderIndex = 2;
-    ScopeIndex = 3;
-    break;
-  case AMDGPU::BI__builtin_amdgcn_fence:
-    OrderIndex = 0;
-    ScopeIndex = 1;
-    break;
+  case AMDGPU::BI__builtin_amdgcn_fence: {
+    bool IsFence = BuiltinID == AMDGPU::BI__builtin_amdgcn_fence;
+    unsigned OrderIndex = IsFence ? 0 : 2;
+    unsigned ScopeIndex = IsFence ? 1 : 3;
+    Expr *OrderExpr = TheCall->getArg(OrderIndex);
+    Expr *ScopeExpr = TheCall->getArg(ScopeIndex);
+
+    // Checks requiring constant evaluation are deferred until instantiation.
+    if (OrderExpr->isInstantiationDependent() ||
+        ScopeExpr->isInstantiationDependent())
+      return false;
+
+    Expr::EvalResult OrderResult;
+    if (!OrderExpr->EvaluateAsInt(OrderResult, getASTContext()))
+      return Diag(OrderExpr->getExprLoc(), diag::err_typecheck_expect_int)
+             << OrderExpr->getType();
+    uint64_t Ord = OrderResult.Val.getInt().getZExtValue();
+
+    // Check validity of memory ordering as per C11 / C++11's memory model.
+    // Only fence needs check. Atomic dec/inc allow all memory orders.
+    if (!llvm::isValidAtomicOrderingCABI(Ord))
+      return Diag(OrderExpr->getBeginLoc(),
+                  diag::warn_atomic_op_has_invalid_memory_order)
+             << 0 << OrderExpr->getSourceRange();
+    switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
+    case llvm::AtomicOrderingCABI::relaxed:
+    case llvm::AtomicOrderingCABI::consume:
+      if (IsFence)
+        return Diag(OrderExpr->getBeginLoc(),
+                    diag::warn_atomic_op_has_invalid_memory_order)
+               << 0 << OrderExpr->getSourceRange();
+      break;
+    case llvm::AtomicOrderingCABI::acquire:
+    case llvm::AtomicOrderingCABI::release:
+    case llvm::AtomicOrderingCABI::acq_rel:
+    case llvm::AtomicOrderingCABI::seq_cst:
+      break;
+    }
+
+    Expr::EvalResult ScopeResult;
+    // Check that sync scope is a constant literal
+    if (!ScopeExpr->EvaluateAsConstantExpr(ScopeResult, getASTContext()))
+      return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
+             << ScopeExpr->getType();
+
+    return false;
+  }
+  case AMDGPU::BI__builtin_amdgcn_s_setreg:
+    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
+                                           /*High=*/UINT16_MAX);
+  case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
+      return true;
+
+    bool IsGFX12Plus = Builtin::evaluateRequiredTargetFeatures(
+        "gfx12-insts", CallerFeatureMap);
+
+    // gfx11 -> gfx12 changed the interpretation of the bitmask. gfx12 inverted
+    // the intepretation for export_ready, but shifted the used bit by 1. Thus
+    // waiting for the export_ready event can use a value of 2 universally.
+    if (((IsGFX12Plus && !Result[1]) || (!IsGFX12Plus && Result[0])) ||
+        Result.getZExtValue() > 2) {
+      Expr *ArgExpr = TheCall->getArg(0);
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::warn_amdgpu_s_wait_event_mask_no_effect_target)
+          << ArgExpr->getSourceRange();
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::note_amdgpu_s_wait_event_suggested_value)
+          << ArgExpr->getSourceRange();
+    }
+
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
@@ -104,6 +203,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+    return checkAVLoadStore(TheCall, /*IsStore=*/false);
+  case AMDGPU::BI__builtin_amdgcn_av_store_b128:
+    return checkAVLoadStore(TheCall, /*IsStore=*/true);
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
@@ -112,6 +215,13 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
+  case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
+    return checkAtomicMonitorLoad(TheCall);
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
@@ -194,7 +304,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
-  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
     StringRef FeatureList(
         getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
@@ -207,7 +318,40 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
+    // Compilain about dmask values which are too huge to fully fit into 4 bits
+    // (which is the actual size of the dmask in corresponding HW instructions).
+    constexpr unsigned DMaskArgNo = 0;
+    constexpr int Low = 0;
+    constexpr int High = 15;
+    if (SemaRef.BuiltinConstantArg(TheCall, DMaskArgNo, Result) ||
+        SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, Low, High,
+                                        /* RangeIsError = */ true))
+      return true;
+
+    // Dmask indicates which elements should be returned and it is not possible
+    // to return more values than there are elements in return type.
+    int NumElementsInRetTy = 1;
+    const Type *RetTy = TheCall->getType().getTypePtr();
+    if (auto *VTy = dyn_cast<VectorType>(RetTy))
+      NumElementsInRetTy = VTy->getNumElements();
+    int NumActiveBitsInDMask =
+        llvm::popcount(static_cast<uint8_t>(Result.getExtValue()));
+    if (NumActiveBitsInDMask > NumElementsInRetTy) {
+      Diag(TheCall->getBeginLoc(),
+           diag::err_amdgcn_dmask_has_too_many_bits_set);
+      return true;
+    }
+
+    // For gather, only one bit can be set indicating which exact component to
+    // return.
+    bool ExtraGatherChecks =
+        (BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 ||
+         BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32) &&
+        SemaRef.BuiltinConstantArgPower2(TheCall, 0);
+
+    return ExtraGatherChecks ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
@@ -251,73 +395,68 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
-           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
-           (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
+    // Complain about dmask values which are too huge to fully fit into 4 bits
+    // (which is the actual size of the dmask in corresponding HW instructions).
+    constexpr unsigned DMaskArgNo = 1;
+    return SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, /*Low=*/0,
+                                           /*High=*/15,
+                                           /*RangeIsError=*/true) ||
+           SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result) ||
+           SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result);
   }
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
+  case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8: {
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 7, 8))
+        return true;
+      if (TheCall->getNumArgs() == 7)
+        return false;
+    } else if (BuiltinID ==
+               AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 8, 9))
+        return true;
+      if (TheCall->getNumArgs() == 8)
+        return false;
+    }
+    // Check if the last argument (clamp operand) is a constant and is
+    // convertible to bool.
+    Expr *ClampArg = TheCall->getArg(TheCall->getNumArgs() - 1);
+    // 1) Ensure clamp argument is a constant expression
+    llvm::APSInt ClampValue;
+    if (!SemaRef.VerifyIntegerConstantExpression(ClampArg, &ClampValue)
+             .isUsable())
+      return true;
+    // 2) Check if the argument can be converted to bool type
+    if (!SemaRef.Context.hasSameType(ClampArg->getType(),
+                                     SemaRef.Context.BoolTy)) {
+      // Try to convert to bool
+      QualType BoolTy = SemaRef.Context.BoolTy;
+      ExprResult ClampExpr(ClampArg);
+      SemaRef.CheckSingleAssignmentConstraints(BoolTy, ClampExpr);
+      if (ClampExpr.isInvalid())
+        return true;
+    }
+    return false;
+  }
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x32_f16:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x32_bf16:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
+                                           /*High=*/0) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
+                                           /*High=*/0);
   default:
     return false;
   }
-
-  ExprResult Arg = TheCall->getArg(OrderIndex);
-  auto ArgExpr = Arg.get();
-  Expr::EvalResult ArgResult;
-
-  if (!ArgExpr->EvaluateAsInt(ArgResult, getASTContext()))
-    return Diag(ArgExpr->getExprLoc(), diag::err_typecheck_expect_int)
-           << ArgExpr->getType();
-  auto Ord = ArgResult.Val.getInt().getZExtValue();
-
-  // Check validity of memory ordering as per C11 / C++11's memory model.
-  // Only fence needs check. Atomic dec/inc allow all memory orders.
-  if (!llvm::isValidAtomicOrderingCABI(Ord))
-    return Diag(ArgExpr->getBeginLoc(),
-                diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << ArgExpr->getSourceRange();
-  switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
-  case llvm::AtomicOrderingCABI::relaxed:
-  case llvm::AtomicOrderingCABI::consume:
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
-      return Diag(ArgExpr->getBeginLoc(),
-                  diag::warn_atomic_op_has_invalid_memory_order)
-             << 0 << ArgExpr->getSourceRange();
-    break;
-  case llvm::AtomicOrderingCABI::acquire:
-  case llvm::AtomicOrderingCABI::release:
-  case llvm::AtomicOrderingCABI::acq_rel:
-  case llvm::AtomicOrderingCABI::seq_cst:
-    break;
-  }
-
-  Arg = TheCall->getArg(ScopeIndex);
-  ArgExpr = Arg.get();
-  Expr::EvalResult ArgResult1;
-  // Check that sync scope is a constant literal
-  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, getASTContext()))
-    return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
-           << ArgExpr->getType();
-
-  return false;
 }
 
-bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
-  bool Fail = false;
-
-  // First argument is a global or generic pointer.
-  Expr *PtrArg = TheCall->getArg(0);
-  QualType PtrTy = PtrArg->getType()->getPointeeType();
-  unsigned AS = getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
-  if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
-      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
-    Fail = true;
-    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
-        << PtrArg->getSourceRange();
-  }
-
-  // Check atomic ordering
-  Expr *AtomicOrdArg = TheCall->getArg(IsStore ? 2 : 1);
+bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
+                                            bool MayStore) {
   Expr::EvalResult AtomicOrdArgRes;
-  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
+  if (!E->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
     llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
   auto Ord =
       llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
@@ -325,22 +464,88 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
   // Atomic ordering cannot be acq_rel in any case, acquire for stores or
   // release for loads.
   if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
-      (Ord == llvm::AtomicOrderingCABI::acq_rel) ||
-      Ord == (IsStore ? llvm::AtomicOrderingCABI::acquire
-                      : llvm::AtomicOrderingCABI::release)) {
-    return Diag(AtomicOrdArg->getBeginLoc(),
-                diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << AtomicOrdArg->getSourceRange();
+      (!(MayLoad && MayStore) && (Ord == llvm::AtomicOrderingCABI::acq_rel)) ||
+      (!MayLoad && Ord == llvm::AtomicOrderingCABI::acquire) ||
+      (!MayStore && Ord == llvm::AtomicOrderingCABI::release)) {
+    return Diag(E->getBeginLoc(), diag::warn_atomic_op_has_invalid_memory_order)
+           << 0 << E->getSourceRange();
   }
 
-  // Last argument is a string literal
-  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
-    Fail = true;
+  return false;
+}
+
+// Check that the first argument to TheCall is a global or generic pointer.
+static bool checkGlobalOrFlatPointerArg(SemaAMDGPU &S, CallExpr *TheCall) {
+  Expr *PtrArg = TheCall->getArg(0);
+  QualType PtrTy = PtrArg->getType()->getPointeeType();
+  unsigned AS =
+      S.getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
+  if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
+      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
+    return S.Diag(TheCall->getBeginLoc(),
+                  diag::err_amdgcn_global_or_flat_pointer_required)
+           << PtrArg->getSourceRange();
+  }
+  return false;
+}
+
+static bool checkScopeAsInt(SemaAMDGPU &S, Expr *Scope) {
+  if (Scope->isValueDependent())
+    return false;
+  auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+  if (std::optional<llvm::APSInt> Result =
+          Scope->getIntegerConstantExpr(S.SemaRef.Context)) {
+    if (!ScopeModel->isValid(Result->getZExtValue())) {
+      return S.Diag(Scope->getBeginLoc(),
+                    diag::err_atomic_op_has_invalid_sync_scope)
+             << Scope->getSourceRange();
+    }
+  }
+  return false;
+}
+
+bool SemaAMDGPU::checkAVLoadStore(CallExpr *TheCall, bool IsStore) {
+  if (checkGlobalOrFlatPointerArg(*this, TheCall))
+    return true;
+
+  Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+  return checkScopeAsInt(*this, Scope);
+}
+
+bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
+  bool Fail = checkGlobalOrFlatPointerArg(*this, TheCall);
+
+  Expr *AO = TheCall->getArg(IsStore ? 2 : 1);
+  Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+
+  if (AO->isValueDependent() || Scope->isValueDependent())
+    return false;
+
+  // Check atomic ordering
+  Fail |=
+      checkAtomicOrderingCABIArg(TheCall->getArg(IsStore ? 2 : 1),
+                                 /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
+
+  // Last argument is the syncscope as a string literal.
+  if (!isa<StringLiteral>(Scope->IgnoreParenImpCasts())) {
     Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-        << Arg->getSourceRange();
+        << Scope->getSourceRange();
+    Fail = true;
   }
 
+  return Fail;
+}
+
+bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
+  Expr *AO = TheCall->getArg(1);
+  Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+
+  if (AO->isValueDependent() || Scope->isValueDependent())
+    return false;
+
+  bool Fail = checkAtomicOrderingCABIArg(AO, /*MayLoad=*/true,
+                                         /*MayStore=*/false);
+  Fail |= checkScopeAsInt(*this, Scope);
   return Fail;
 }
 
@@ -502,6 +707,8 @@ void SemaAMDGPU::handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumSGPR = 0;
   Expr *NumSGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumSGPRExpr, NumSGPR))
@@ -512,6 +719,8 @@ void SemaAMDGPU::handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  Diag(AL.getLoc(), diag::warn_amdgpu_num_reg_attr_deprecated) << AL;
+
   uint32_t NumVGPR = 0;
   Expr *NumVGPRExpr = AL.getArgAsExpr(0);
   if (!SemaRef.checkUInt32Argument(AL, NumVGPRExpr, NumVGPR))
@@ -584,4 +793,394 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
+Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
+  CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
+  ASTContext &Ctx = getASTContext();
+  QualType BoolTy = Ctx.getLogicalOperationType();
+  SourceLocation Loc = CE->getExprLoc();
+
+  if (!CE->getBuiltinCallee())
+    return *ExpandedPredicates
+                .insert(SemaRef.BuildBoolLiteral(Loc, false).get())
+                .first;
+
+  bool P = false;
+  unsigned BI = CE->getBuiltinCallee();
+  if (Ctx.BuiltinInfo.isAuxBuiltinID(BI))
+    BI = Ctx.BuiltinInfo.getAuxBuiltinID(BI);
+
+  if (BI == AMDGPU::BI__builtin_amdgcn_processor_is) {
+    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
+    if (!GFX) {
+      Diag(Loc, diag::err_amdgcn_processor_is_arg_not_literal);
+      return nullptr;
+    }
+
+    StringRef N = GFX->getString();
+    const TargetInfo &TI = Ctx.getTargetInfo();
+    if (llvm::AMDGPU::parseArchAMDGCN(N) == llvm::AMDGPU::GK_NONE) {
+      Diag(Loc, diag::err_amdgcn_processor_is_arg_invalid_value) << N;
+      SmallVector<StringRef, 64> ValidList;
+      llvm::AMDGPU::fillValidArchListAMDGCN(ValidList);
+      if (!ValidList.empty())
+        Diag(Loc, diag::note_amdgcn_processor_is_valid_options)
+            << llvm::join(ValidList, ", ");
+      return nullptr;
+    }
+    if (TI.getTriple().isSPIRV()) {
+      CE->setType(BoolTy);
+      return *ExpandedPredicates.insert(CE).first;
+    }
+
+    P = TI.isProcessorName(N);
+  } else {
+    Expr *Arg = CE->getArg(0);
+    if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {
+      Diag(Loc, diag::err_amdgcn_is_invocable_arg_invalid_value) << Arg;
+      return nullptr;
+    }
+
+    if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+      CE->setType(BoolTy);
+      return *ExpandedPredicates.insert(CE).first;
+    }
+
+    auto *FD = cast<FunctionDecl>(Arg->getReferencedDeclOfCallee());
+
+    StringRef RF = Ctx.BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
+    llvm::StringMap<bool> CF;
+    Ctx.getFunctionFeatureMap(CF, FD);
+
+    P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
+  }
+
+  return *ExpandedPredicates.insert(SemaRef.BuildBoolLiteral(Loc, P).get())
+              .first;
+}
+
+bool SemaAMDGPU::IsPredicate(Expr *E) const {
+  return ExpandedPredicates.contains(E);
+}
+
+void SemaAMDGPU::AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD) {
+  PotentiallyUnguardedBuiltinUsers.insert(FD);
+}
+
+bool SemaAMDGPU::HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const {
+  return PotentiallyUnguardedBuiltinUsers.contains(FD);
+}
+
+namespace {
+/// This class implements -Wamdgpu-unguarded-builtin-usage.
+///
+/// This is done with a traversal of the AST of a function that includes a
+/// call to a target specific builtin. Whenever we encounter an \c if of the
+/// form: \c if(__builtin_amdgcn_is_invocable), we consider the then statement
+/// guarded.
+class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
+  // TODO: this could eventually be extended to consider what happens when there
+  //       are multiple target architectures specified via target("arch=gfxXXX")
+  //       target("arch=gfxyyy") etc., as well as feature disabling via "-XXX".
+  Sema &SemaRef;
+
+  SmallVector<StringRef> TargetFeatures;
+  SmallVector<std::pair<SourceLocation, StringRef>> CurrentGFXIP;
+  SmallVector<unsigned> GuardedBuiltins;
+
+  static Expr *FindPredicate(Expr *Cond) {
+    if (auto *CE = dyn_cast<CallExpr>(Cond)) {
+      if (CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_is_invocable ||
+          CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is)
+        return Cond;
+    } else if (auto *UO = dyn_cast<UnaryOperator>(Cond)) {
+      return FindPredicate(UO->getSubExpr());
+    } else if (auto *BO = dyn_cast<BinaryOperator>(Cond)) {
+      if ((Cond = FindPredicate(BO->getLHS())))
+        return Cond;
+      return FindPredicate(BO->getRHS());
+    }
+    return nullptr;
+  }
+
+  bool EnterPredicateGuardedContext(CallExpr *P);
+  void ExitPredicateGuardedContext(bool WasProcessorCheck);
+  bool TraverseGuardedStmt(Stmt *S, CallExpr *P);
+
+public:
+  DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef) {
+    if (auto *TAT = SemaRef.getCurFunctionDecl(true)->getAttr<TargetAttr>()) {
+      // We use the somewhat misnamed x86 accessors because they provide exactly
+      // what we require.
+      TAT->getX86AddedFeatures(TargetFeatures);
+      if (auto GFXIP = TAT->getX86Architecture())
+        CurrentGFXIP.emplace_back(TAT->getLocation(), *GFXIP);
+    }
+  }
+
+  bool TraverseLambdaExpr(LambdaExpr *LE) override {
+    if (SemaRef.AMDGPU().HasPotentiallyUnguardedBuiltinUsage(
+            LE->getCallOperator()))
+      return true; // We have already handled this.
+    return DynamicRecursiveASTVisitor::TraverseLambdaExpr(LE);
+  }
+
+  bool TraverseStmt(Stmt *S) override {
+    if (!S)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseStmt(S);
+  }
+
+  void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
+
+  bool TraverseIfStmt(IfStmt *If) override {
+    if (auto *CE = dyn_cast_or_null<CallExpr>(FindPredicate(If->getCond())))
+      return TraverseGuardedStmt(If, CE);
+    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
+  }
+
+  bool TraverseCaseStmt(CaseStmt *CS) override {
+    return TraverseStmt(CS->getSubStmt());
+  }
+
+  bool TraverseConditionalOperator(ConditionalOperator *CO) override {
+    if (auto *CE = dyn_cast_or_null<CallExpr>(FindPredicate(CO->getCond())))
+      return TraverseGuardedStmt(CO, CE);
+    return DynamicRecursiveASTVisitor::TraverseConditionalOperator(CO);
+  }
+
+  bool VisitAsmStmt(AsmStmt *ASM) override;
+  bool VisitCallExpr(CallExpr *CE) override;
+};
+
+bool DiagnoseUnguardedBuiltins::EnterPredicateGuardedContext(CallExpr *P) {
+  bool IsProcessorCheck =
+      P->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is;
+
+  if (IsProcessorCheck) {
+    StringRef G = cast<clang::StringLiteral>(P->getArg(0))->getString();
+    // TODO: handle generic ISAs.
+    if (!CurrentGFXIP.empty() && G != CurrentGFXIP.back().second) {
+      SemaRef.Diag(P->getExprLoc(),
+                   diag::err_amdgcn_conflicting_is_processor_options)
+          << P;
+      SemaRef.Diag(CurrentGFXIP.back().first,
+                   diag::note_amdgcn_previous_is_processor_guard);
+    }
+    CurrentGFXIP.emplace_back(P->getExprLoc(), G);
+  } else {
+    auto *FD = cast<FunctionDecl>(
+        cast<DeclRefExpr>(P->getArg(0))->getReferencedDeclOfCallee());
+    GuardedBuiltins.push_back(FD->getBuiltinID());
+  }
+
+  return IsProcessorCheck;
+}
+
+void DiagnoseUnguardedBuiltins::ExitPredicateGuardedContext(bool WasProcCheck) {
+  if (WasProcCheck)
+    CurrentGFXIP.pop_back();
+  else
+    GuardedBuiltins.pop_back();
+}
+
+inline std::pair<Stmt *, Stmt *> GetTraversalOrder(Stmt *S) {
+  std::pair<Stmt *, Stmt *> Ordered;
+  Expr *Condition = nullptr;
+
+  if (auto *CO = dyn_cast<ConditionalOperator>(S)) {
+    Condition = CO->getCond();
+    Ordered = {CO->getTrueExpr(), CO->getFalseExpr()};
+  } else if (auto *If = dyn_cast<IfStmt>(S)) {
+    Condition = If->getCond();
+    Ordered = {If->getThen(), If->getElse()};
+  }
+
+  if (auto *UO = dyn_cast<UnaryOperator>(Condition))
+    if (UO->getOpcode() == UnaryOperatorKind::UO_LNot)
+      std::swap(Ordered.first, Ordered.second);
+
+  return Ordered;
+}
+
+bool DiagnoseUnguardedBuiltins::TraverseGuardedStmt(Stmt *S, CallExpr *P) {
+  assert(S && "Unexpected missing Statement!");
+  assert(P && "Unexpected missing Predicate!");
+
+  auto [Guarded, Unguarded] = GetTraversalOrder(S);
+
+  bool WasProcessorCheck = EnterPredicateGuardedContext(P);
+
+  bool Continue = TraverseStmt(Guarded);
+
+  ExitPredicateGuardedContext(WasProcessorCheck);
+
+  return Continue && TraverseStmt(Unguarded);
+}
+
+bool DiagnoseUnguardedBuiltins::VisitAsmStmt(AsmStmt *ASM) {
+  // TODO: should we check if the ASM is valid for the target? Can we?
+  if (!CurrentGFXIP.empty())
+    return true;
+
+  std::string S = ASM->generateAsmString(SemaRef.getASTContext());
+  SemaRef.Diag(ASM->getAsmLoc(), diag::warn_amdgcn_unguarded_asm_stmt) << S;
+  SemaRef.Diag(ASM->getAsmLoc(), diag::note_amdgcn_unguarded_asm_silence) << S;
+
+  return true;
+}
+
+bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
+  unsigned ID = CE->getBuiltinCallee();
+  Builtin::Context &BInfo = SemaRef.getASTContext().BuiltinInfo;
+
+  if (!ID)
+    return true;
+  if (!BInfo.isTSBuiltin(ID))
+    return true;
+  if (ID == AMDGPU::BI__builtin_amdgcn_processor_is ||
+      ID == AMDGPU::BI__builtin_amdgcn_is_invocable)
+    return true;
+  if (llvm::find(GuardedBuiltins, ID) != GuardedBuiltins.end())
+    return true;
+
+  StringRef FL(BInfo.getRequiredFeatures(ID));
+  llvm::StringMap<bool> FeatureMap;
+  if (CurrentGFXIP.empty()) {
+    for (auto &&F : TargetFeatures)
+      FeatureMap[F] = true;
+    for (auto &&GID : GuardedBuiltins)
+      for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
+        FeatureMap[F] = true;
+  } else {
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgpu,
+                                     llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                     llvm::Triple::AMDHSA);
+    llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
+                                       FeatureMap);
+  }
+
+  FunctionDecl *BI = CE->getDirectCallee();
+  SourceLocation BICallLoc = CE->getExprLoc();
+  if (Builtin::evaluateRequiredTargetFeatures(FL, FeatureMap)) {
+    SemaRef.Diag(BICallLoc, diag::warn_amdgcn_unguarded_builtin) << BI;
+    SemaRef.Diag(BICallLoc, diag::note_amdgcn_unguarded_builtin_silence) << BI;
+  } else {
+    StringRef GFXIP = CurrentGFXIP.empty() ? "" : CurrentGFXIP.back().second;
+    SemaRef.Diag(BICallLoc, diag::err_amdgcn_incompatible_builtin)
+        << BI << FL << !CurrentGFXIP.empty() << GFXIP;
+    if (!CurrentGFXIP.empty())
+      SemaRef.Diag(CurrentGFXIP.back().first,
+                   diag::note_amdgcn_previous_is_processor_guard);
+  }
+
+  return true;
+}
+} // Unnamed namespace
+
+void SemaAMDGPU::DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD) {
+  DiagnoseUnguardedBuiltins(SemaRef).IssueDiagnostics(FD->getBody());
+}
+
+bool SemaAMDGPU::checkAMDGPUTypeSupport(QualType Ty, SourceLocation Loc) {
+  ASTContext &Ctx = getASTContext();
+  llvm::Triple TT = Ctx.getTargetInfo().getTriple();
+  const Type *BaseTy = Ty->getPointeeOrArrayElementType();
+
+  if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+    // The AMDGPU named barrier type requires special handling in the back-end
+    // and is not supported for SPIR-V
+    if (BaseTy->isAMDGPUNamedBarrierType()) {
+      SemaRef.Diag(Loc, diag::err_amdgpu_target_ext_type_unsupported)
+          << Ty << TT.str();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static FieldDecl *getNamedBarrierField(const RecordDecl *R) {
+  for (FieldDecl *FD : R->fields()) {
+    QualType FDTy = FD->getType();
+    if (FDTy->isAMDGPUNamedBarrierTypeOrWrapper())
+      return FD;
+  }
+
+  return nullptr;
+}
+
+void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
+  ASTContext &Context = getASTContext();
+  if (R->isInvalidDecl())
+    return;
+
+  if (!Context.getTargetInfo().hasAMDGPUTypes() &&
+      (!Context.getAuxTargetInfo() ||
+       !Context.getAuxTargetInfo()->hasAMDGPUTypes()))
+    return;
+
+  bool IsWrapper = false;
+  std::function<void()> DiagWrapperNote;
+
+  // First, check if this is a named barrier wrapper by virtue of the class
+  // declaring a named barrier field. This covers both C and C++.
+  if (FieldDecl *NamedBarrField = getNamedBarrierField(R)) {
+    // If this record contains a named barrier field, it must have only one
+    // field.
+    if (R->getNumFields() > 1) {
+      SemaRef.Diag(NamedBarrField->getLocation(),
+                   diag::err_amdgpu_invalid_field_not_a_wrapper)
+          << NamedBarrField->getType();
+      SemaRef.Diag(
+          R->getLocation(),
+          diag::note_amdgpu_not_a_named_barrier_wrapper_too_many_fields)
+          << R->getDeclName();
+      return;
+    }
+
+    IsWrapper = true;
+    DiagWrapperNote = [this, R, NamedBarrField]() {
+      SemaRef.Diag(NamedBarrField->getLocation(),
+                   diag::note_amdgpu_named_barrier_reason_field)
+          << R->getDeclName() << NamedBarrField->getDeclName();
+    };
+  }
+
+  // Then, for C++ classes, check if this is a named barrier wrapper by virtue
+  // of inheriting one.
+  const auto *CxxR = dyn_cast<CXXRecordDecl>(R);
+  if (CxxR && !IsWrapper) {
+    for (CXXBaseSpecifier BS : CxxR->bases()) {
+      const RecordDecl *Base = BS.getType()->getAsRecordDecl();
+      if (!Base || !Base->hasAttr<AMDGPUNamedBarrierWrapperAttr>())
+        continue;
+
+      IsWrapper = true;
+      DiagWrapperNote = [this, BS, R]() {
+        // Print using the CXXBaseSpecifier type as it includes the template
+        // parameters.
+        SemaRef.Diag(BS.getBeginLoc(),
+                     diag::note_amdgpu_named_barrier_reason_inherited)
+            << R->getDeclName() << BS.getType();
+      };
+    }
+  }
+
+  if (!IsWrapper)
+    return;
+
+  // Set the attribute even if the wrapper may be found to be invalid later.
+  R->addAttr(
+      AMDGPUNamedBarrierWrapperAttr::CreateImplicit(Context, SourceRange()));
+
+  // This is a wrapper CXXRecordDecl, it must have a C++11 standard layout.
+  if (CxxR && !CxxR->isCXX11StandardLayout()) {
+    SemaRef.Diag(R->getLocation(),
+                 diag::err_amdgpu_named_barrier_wrapper_non_standard_layout)
+        << R->getDeclName();
+    assert(DiagWrapperNote &&
+           "IsWrapper is set but no context diagnostic provided");
+    DiagWrapperNote();
+  }
+}
 } // namespace clang

@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -scf-for-loop-peeling=skip-partial=false -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-NO-SKIP
 
+
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s1 - (-s0 + s1) mod s2)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @fully_dynamic_bounds(
@@ -357,9 +358,15 @@ func.func @regression(%arg0: memref<i64>, %arg1: index) {
 // -----
 
 // Regression test: Make sure that we do not crash.
-// The step is 0, the loop will be eliminated.
+
 // CHECK-LABEL: func @zero_step(
-//       CHECK-NOT:   scf.for
+//       CHECK:   %[[c0:.*]] = arith.constant 0
+//       CHECK:   %[[c1:.*]] = arith.constant 1
+//       CHECK:   %[[poison:.*]] = ub.poison
+//       CHECK:   scf.for %{{.*}} = %[[c0]] to %[[poison]] step %[[c0]]
+//       CHECK:     arith.index_cast
+//       CHECK:   scf.for %{{.*}} = %[[poison]] to %[[c1]] step %[[c0]]
+//       CHECK:     arith.index_cast
 func.func @zero_step(%arg0: memref<i64>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -370,4 +377,3 @@ func.func @zero_step(%arg0: memref<i64>) {
   }
   return
 }
-

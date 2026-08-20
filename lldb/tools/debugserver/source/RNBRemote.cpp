@@ -481,6 +481,9 @@ void RNBRemote::CreatePacketTable() {
                      "jGetSharedCacheInfo", "Replies with JSON data about the "
                                             "location and uuid of the shared "
                                             "cache in the inferior process."));
+  t.push_back(Packet(
+      json_multi_breakpoint, &RNBRemote::HandlePacket_jMultiBreakpoint, NULL,
+      "jMultiBreakpoint", "Set/remove multiple breakpoints at once"));
   t.push_back(Packet(start_noack_mode, &RNBRemote::HandlePacket_QStartNoAckMode,
                      NULL, "QStartNoAckMode",
                      "Request that " DEBUGSERVER_PROGRAM_NAME
@@ -876,6 +879,13 @@ rnb_err_t RNBRemote::SendErrorPacket(std::string errcode,
     errcode += cstring_to_asciihex_string(errmsg.c_str());
   }
   return SendPacket(errcode);
+}
+
+rnb_err_t RNBRemote::SendErrorPacket(uint32_t errcode,
+                                     const std::string &errmsg) {
+  char error_str[8];
+  snprintf(error_str, sizeof(error_str), "E%02x", errcode);
+  return SendErrorPacket(error_str, errmsg);
 }
 
 /* Get a packet via gdb remote protocol.
@@ -2723,6 +2733,90 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
   }
 }
 
+// The total stack-memory budget we expedite for frame 0, in bytes.  Sized to
+// cover the common case (locals, spilled register arguments, and stack-passed
+// parameters) while bounding the per-frame cost.
+static const nub_size_t k_expedite_stack_window = 1024;
+
+// Bytes reserved for the above-fp "stack-passed parameters" window,
+// [fp + 2*ptr_size, fp + 2*ptr_size + k_expedite_stack_arg_size).
+static const nub_size_t k_expedite_stack_arg_size = 160;
+
+static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
+              "above-fp arg window must fit within the total stack budget");
+
+// A single contiguous chunk of expedited memory.
+struct ExpeditedMemory {
+  nub_addr_t addr;
+  std::vector<uint8_t> bytes;
+};
+
+// Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
+static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
+                                  uint64_t sp, uint64_t fp,
+                                  nub_size_t ptr_size) {
+  static const uint64_t k_expedite_max_frame_size = 8 * 1024 * 1024; // 8 MB
+
+  if (sp == 0 || fp == 0 || fp <= sp)
+    return false;
+  if (fp - sp > k_expedite_max_frame_size)
+    return false;
+
+  const nub_size_t rec = 2 * ptr_size;
+  uint8_t bytes[2 * sizeof(uint64_t)];
+  if (DNBProcessMemoryRead(pid, fp, rec, bytes) != rec)
+    return false;
+
+  uint64_t prev_fp =
+      (ptr_size == 4) ? ((uint32_t *)bytes)[0] : ((uint64_t *)bytes)[0];
+  // The saved previous fp must chain upward (stack grows down).
+  return prev_fp > fp;
+}
+
+// Read the innermost frame's stack memory.
+static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
+                                                             nub_thread_t tid) {
+  std::vector<ExpeditedMemory> chunks;
+  DNBRegisterValue sp_value;
+  DNBRegisterValue fp_value;
+  if (!DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_SP, &sp_value) ||
+      !DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_FP, &fp_value))
+    return chunks;
+
+  const nub_size_t ptr_size = sp_value.info.size;
+  uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
+  uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
+
+  auto read_range = [&](uint64_t start, uint64_t length) {
+    if (length == 0)
+      return;
+    std::vector<uint8_t> buf(length);
+    if (DNBProcessMemoryRead(pid, start, length, buf.data()) != length)
+      return;
+    chunks.push_back({start, std::move(buf)});
+  };
+
+  if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
+    // above-fp: stack-passed params, skipping the already-expedited frame
+    // record.
+    read_range(fp + 2 * ptr_size, k_expedite_stack_arg_size);
+
+    // below-fp: locals + spilled register args, clamped at $sp so a small frame
+    // reads only [sp, fp).
+    uint64_t below = std::min<uint64_t>(fp - sp, k_expedite_stack_window -
+                                                     k_expedite_stack_arg_size);
+    read_range(fp - below, below);
+    return chunks;
+  }
+
+  // Frameless / cannot validate $fp: expedite a single window anchored at $sp.
+  if (sp != 0)
+    read_range(sp, k_expedite_stack_window);
+  return chunks;
+}
+
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
   const nub_process_t pid = m_ctx.ProcessID();
   if (pid == INVALID_NUB_PROCESS)
@@ -2830,9 +2924,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2902,11 +2995,12 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
                                            g_reg_entries[reg].nub_info.reg,
                                            reg_value.get()))
-          continue;
-
-        debugserver_regnum_with_fixed_width_hex_register_value(
-            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
-            std::nullopt);
+          // base16(regnum):<no value>; means a register that cannot be fetched.
+          ostrm << RAWHEX8(g_reg_entries[reg].debugserver_regnum) << ":;";
+        else
+          debugserver_regnum_with_fixed_width_hex_register_value(
+              ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+              std::nullopt);
       }
     }
 
@@ -2978,6 +3072,38 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
         append_hex_value(ostrm, stack_memory.second.bytes,
                          stack_memory.second.length, false);
+        ostrm << ';';
+      }
+    }
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -3265,6 +3391,73 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   for (const std::vector<uint8_t> &buffer : buffers)
     binary_encode_data_vector(reply_stream, buffer);
 
+  return SendPacket(reply_stream.str());
+}
+
+rnb_err_t RNBRemote::HandlePacket_jMultiBreakpoint(const char *p) {
+  const std::string_view packet_name("jMultiBreakpoint:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiBreakpoint packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  JSONParser parser(packet.cbegin());
+  JSONValue::SP parsed = parser.ParseJSONValue();
+  if (!parsed || parsed->GetKind() != JSONValue::Kind::Object)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a JSON dictionary");
+
+  auto *request_dict = static_cast<JSONObject *>(parsed.get());
+  JSONValue::SP request_array_sp =
+      request_dict->GetObject("breakpoint_requests");
+
+  if (!request_array_sp ||
+      request_array_sp->GetKind() != JSONValue::Kind::Array)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  auto *request_array = static_cast<JSONArray *>(request_array_sp.get());
+  std::vector<std::string> requests;
+  requests.reserve(request_array->GetNumElements());
+  for (JSONValue::SP value : request_array->Elements()) {
+    if (!value || value->GetKind() != JSONValue::Kind::String)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                    "MultiBreakpoint had a non-string entry");
+    auto *request_str = static_cast<JSONString *>(value.get());
+    requests.push_back(request_str->GetData());
+  }
+
+  auto reply_array = std::make_shared<JSONGenerator::Array>();
+  for (const std::string &request : requests) {
+    BreakpointResult result = ExecuteBreakpointRequest(request.c_str());
+    std::string reply_str;
+    switch (result.kind) {
+    case BreakpointResult::Kind::OK:
+      reply_str = "OK";
+      break;
+    case BreakpointResult::Kind::Error: {
+      char error_str[8];
+      snprintf(error_str, sizeof(error_str), "E%02x", result.error_code);
+      reply_str = error_str;
+      break;
+    }
+    case BreakpointResult::Kind::IllFormed:
+    case BreakpointResult::Kind::Unimplemented:
+      reply_str = "E03";
+      break;
+    }
+    reply_array->AddItem(std::make_shared<JSONGenerator::String>(reply_str));
+  }
+
+  JSONGenerator::Dictionary reply_dict;
+  reply_dict.AddItem("results", reply_array);
+  std::ostringstream reply_stream;
+  reply_dict.DumpBinaryEscaped(reply_stream);
   return SendPacket(reply_stream.str());
 }
 
@@ -3622,6 +3815,9 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
     reply << "memory-tagging+;";
 
   reply << "MultiMemRead+;";
+  reply << "jMultiBreakpoint+;";
+  // The stopped thread's frame 0 stack memory is expedited in jThreadsInfo.
+  reply << "ExpediteStack+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -4006,20 +4202,27 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             process_username + "'";
           return SendErrorPacket("E96", msg);
         }
+        // The remaining checks can only guess at the cause from the session
+        // environment. When debugserver does have an error of its own, fold in
+        // the actual message so it's never lost.
+        auto with_err_str = [&err_str](std::string explanation) -> std::string {
+          if (err_str[0] != '\0')
+            return explanation + " (" + std::string(err_str) + ")";
+          return explanation;
+        };
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
                       "non-interactive session");
-          return SendErrorPacket("E96", "developer mode is "
-                                        "not enabled on this machine "
-                                        "and this is a non-interactive "
-                                        "debug session.");
+          return SendErrorPacket(
+              "E96", with_err_str("developer mode is not enabled on this "
+                                  "machine and this is a non-interactive "
+                                  "debug session."));
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
-          return SendErrorPacket("E96", "this is a "
-                                        "non-interactive debug session, "
-                                        "cannot get permission to debug "
-                                        "processes.");
+          return SendErrorPacket(
+              "E96", with_err_str("this is a non-interactive debug session, "
+                                  "cannot get permission to debug processes."));
         }
       }
 
@@ -4077,38 +4280,35 @@ rnb_err_t RNBRemote::HandlePacket_T(const char *p) {
   return SendPacket("OK");
 }
 
-rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+RNBRemote::BreakpointResult RNBRemote::ExecuteBreakpointRequest(const char *p) {
   if (p == NULL || *p == '\0')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in z packet");
+    return BreakpointResult::CreateIllFormed("No thread specified in z packet");
 
   if (!m_ctx.HasValidProcessID())
-    return SendErrorPacket("E15");
+    return BreakpointResult::CreateError(0x15);
 
   char packet_cmd = *p++;
   char break_type = *p++;
 
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   char *c = NULL;
   nub_process_t pid = m_ctx.ProcessID();
   errno = 0;
   nub_addr_t addr = strtoull(p, &c, 16);
   if (errno != 0 && addr == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid address in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid address in z packet");
   p = c;
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   errno = 0;
   auto byte_size = strtoul(p, &c, 16);
   if (errno != 0 && byte_size == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid length in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid length in z packet");
 
   if (packet_cmd == 'Z') {
     // set
@@ -4116,18 +4316,12 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // set software breakpoint
     case '1': // set hardware breakpoint
     {
-      // gdb can send multiple Z packets for the same address and
-      // these calls must be ref counted.
       bool hardware = (break_type == '1');
 
       if (DNBBreakpointSet(pid, addr, byte_size, hardware)) {
-        // We successfully created a breakpoint, now lets full out
-        // a ref count structure with the breakID and add it to our
-        // map.
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the software breakpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4145,10 +4339,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
         watch_flags = WATCH_TYPE_READ | WATCH_TYPE_WRITE;
 
       if (DNBWatchpointSet(pid, addr, byte_size, watch_flags, hardware)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the watchpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4161,9 +4354,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // remove software breakpoint
     case '1': // remove hardware breakpoint
       if (DNBBreakpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4171,9 +4364,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '3': // remove read watchpoint
     case '4': // remove access watchpoint
       if (DNBWatchpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4181,7 +4374,23 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
       break;
     }
   }
-  return HandlePacket_UNIMPLEMENTED(p);
+  return BreakpointResult::CreateUnimplemented();
+}
+
+rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+  BreakpointResult result = ExecuteBreakpointRequest(p);
+  switch (result.kind) {
+  case BreakpointResult::Kind::OK:
+    return SendPacket("OK");
+  case BreakpointResult::Kind::Error:
+    return SendErrorPacket(result.error_code);
+  case BreakpointResult::Kind::IllFormed:
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  result.message.c_str());
+  case BreakpointResult::Kind::Unimplemented:
+    return HandlePacket_UNIMPLEMENTED(p);
+  }
+  assert(false && "unhandled BreakpointResult kind");
 }
 
 // Extract the thread number from the thread suffix that might be appended to
@@ -5424,6 +5633,53 @@ get_integer_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, and sets the 'value'
 // argument to the value found.
 
+static bool get_string_value_for_key_name_from_json(const char *key,
+                                                    const char *json_string,
+                                                    std::string &value) {
+  value.clear();
+  std::string key_with_quotes = "\"";
+  key_with_quotes += key;
+  key_with_quotes += "\"";
+  const char *c = strstr(json_string, key_with_quotes.c_str());
+  if (!c)
+    return false;
+
+  c += key_with_quotes.size();
+
+  while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+    c++;
+
+  if (*c == ':') {
+    c++;
+
+    while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+      c++;
+
+    if (*c == '\0')
+      return false;
+
+    bool escaped_char = false;
+    while (*++c != '\0') {
+      if (escaped_char) {
+        value += *c;
+        escaped_char = false;
+        continue;
+      }
+      if (*c == '\\') {
+        value += *c;
+        escaped_char = true;
+        continue;
+      }
+      if (*c == '"')
+        break;
+
+      value += *c;
+    }
+    return true;
+  }
+  return false;
+}
+
 static bool get_boolean_value_for_key_name_from_json(const char *key,
                                                      const char *json_string,
                                                      bool &value) {
@@ -5656,15 +5912,30 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               new JSONGenerator::Dictionary());
 
           for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+            bool include_reg = false;
             // Expedite all registers in the first register set that aren't
-            // contained in other registers
+            // contained in other registers.
             if (g_reg_entries[reg].nub_info.set == 1 &&
-                g_reg_entries[reg].nub_info.value_regs == NULL) {
+                g_reg_entries[reg].nub_info.value_regs == NULL)
+              include_reg = true;
+            // Include the SME state register values, whether we can
+            // fetch the value or not.
+            if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+              include_reg = true;
+
+            if (include_reg) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get())) {
+                // Indicate unavailable registers as having an empty value
+                // string.
+                std::ostringstream reg_num;
+                reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
+                registers_dict_sp->AddStringItem(reg_num.str(), "");
                 continue;
-
+              }
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii
@@ -5681,9 +5952,10 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         // frame pointer chain.
         StackMemoryMap stack_mmap;
         ReadStackMemory(pid, tid, stack_mmap);
-        if (!stack_mmap.empty()) {
-          JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
 
+        JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+
+        if (!stack_mmap.empty()) {
           for (const auto &stack_memory : stack_mmap) {
             JSONGenerator::DictionarySP stack_memory_sp(
                 new JSONGenerator::Dictionary());
@@ -5692,7 +5964,47 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
                 "bytes", stack_memory.second.bytes, stack_memory.second.length);
             memory_array_sp->AddItem(stack_memory_sp);
           }
+        }
+
+        // Also expedite the innermost frame's stack memory of the thread that
+        // stopped.
+        if (tid == DNBProcessGetCurrentThread(pid)) {
+          std::vector<ExpeditedMemory> frame_zero_chunks =
+              ReadFrameZeroStackMemory(pid, tid);
+
+          for (const auto &chunk : frame_zero_chunks) {
+            JSONGenerator::DictionarySP frame_zero_sp(
+                new JSONGenerator::Dictionary());
+            frame_zero_sp->AddIntegerItem("address", chunk.addr);
+            frame_zero_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
+                                                    chunk.bytes.size());
+            memory_array_sp->AddItem(frame_zero_sp);
+          }
+        }
+
+        if (!memory_array_sp->empty())
           thread_dict_sp->AddItem("memory", memory_array_sp);
+
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
+
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
         }
       }
 
@@ -6015,14 +6327,31 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
     bool report_load_commands = true;
     get_boolean_value_for_key_name_from_json("report_load_commands", p,
                                              report_load_commands);
+    DNBBinaryInformationLevel info_level = eBinaryInformationLevelFull;
+    if (!report_load_commands)
+      info_level = eBinaryInformationLevelAddrOnly;
+
+    std::string level_str;
+    if (get_string_value_for_key_name_from_json("information-level", p,
+                                                level_str)) {
+      if (level_str == "address-only")
+        info_level = eBinaryInformationLevelAddrOnly;
+      else if (level_str == "address-name")
+        info_level = eBinaryInformationLevelAddrName;
+      else if (level_str == "address-name-uuid")
+        info_level = eBinaryInformationLevelAddrNameUUID;
+      else if (level_str == "full")
+        info_level = eBinaryInformationLevelFull;
+    }
 
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, info_level);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
-      json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
+      json_sp =
+          DNBGetLibrariesInfoForAddresses(pid, info_level, macho_addresses);
     }
 
     if (json_sp.get()) {

@@ -144,6 +144,8 @@ namespace clang {
     void VisitFriendDecl(FriendDecl *D);
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
+    void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
+    void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -194,30 +196,13 @@ namespace clang {
       Record.AddSourceLocation(typeParams->getRAngleLoc());
     }
 
-    /// Collect the first declaration from each module file that provides a
-    /// declaration of D.
-    void CollectFirstDeclFromEachModule(
-        const Decl *D, bool IncludeLocal,
-        llvm::MapVector<ModuleFile *, const Decl *> &Firsts) {
-
-      // FIXME: We can skip entries that we know are implied by others.
-      for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
-        if (R->isFromASTFile())
-          Firsts[Writer.Chain->getOwningModuleFile(R)] = R;
-        else if (IncludeLocal)
-          Firsts[nullptr] = R;
-      }
-    }
-
     /// Add to the record the first declaration from each module file that
     /// provides a declaration of D. The intent is to provide a sufficient
     /// set such that reloading this set will load all current redeclarations.
     void AddFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
-      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
-      CollectFirstDeclFromEachModule(D, IncludeLocal, Firsts);
-
-      for (const auto &F : Firsts)
-        Record.AddDeclRef(F.second);
+      auto Firsts = Writer.CollectFirstDeclFromEachModule(D, IncludeLocal);
+      for (const auto &[_, First] : Firsts)
+        Record.AddDeclRef(First);
     }
 
     template <typename T> bool shouldSkipWritingSpecializations(T *Spec) {
@@ -272,18 +257,17 @@ namespace clang {
       assert((isa<ClassTemplateSpecializationDecl>(D) ||
               isa<VarTemplateSpecializationDecl>(D) || isa<FunctionDecl>(D)) &&
              "Must not be called with other decls");
-      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
-      CollectFirstDeclFromEachModule(D, /*IncludeLocal*/ true, Firsts);
-
-      for (const auto &F : Firsts) {
-        if (shouldSkipWritingSpecializations(F.second))
+      auto Firsts =
+          Writer.CollectFirstDeclFromEachModule(D, /*IncludeLocal=*/true);
+      for (const auto &[_, First] : Firsts) {
+        if (shouldSkipWritingSpecializations(First))
           continue;
 
         if (isa<ClassTemplatePartialSpecializationDecl,
-                VarTemplatePartialSpecializationDecl>(F.second))
-          PartialSpecsInMap.push_back(F.second);
+                VarTemplatePartialSpecializationDecl>(First))
+          PartialSpecsInMap.push_back(First);
         else
-          SpecsInMap.push_back(F.second);
+          SpecsInMap.push_back(First);
       }
     }
 
@@ -379,7 +363,8 @@ namespace clang {
 // compilation of that unit, not by its users. (Inline variables are still
 // emitted in module users.)
 static bool shouldVarGenerateHereOnly(const VarDecl *VD) {
-  if (VD->getStorageDuration() != SD_Static)
+  if (VD->getStorageDuration() != SD_Static &&
+      VD->getStorageDuration() != SD_Thread)
     return false;
 
   if (VD->getDescribedVarTemplate())
@@ -525,7 +510,10 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   // store it as 0b001111, which takes 6 bits only now.
   DeclBits.addBits((uint64_t)D->getModuleOwnershipKind(), /*BitWidth=*/3);
   DeclBits.addBit(D->isThisDeclarationReferenced());
-  DeclBits.addBit(D->isUsed(false));
+  // If we're writing a BMI for a named module unit, we can treat all decls as in
+  // the BMI as used. Otherwise, the consumer need to mark it as used again, this
+  // simply waste time.
+  DeclBits.addBit(Writer.isWritingStdCXXNamedModules() ? true : D->isUsed(false));
   DeclBits.addBits(D->getAccess(), /*BitWidth=*/2);
   DeclBits.addBit(D->isImplicit());
   DeclBits.addBit(D->getDeclContext() != D->getLexicalDeclContext());
@@ -911,6 +899,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       if (DeletedMessage)
         Record.AddStmt(DeletedMessage);
 
+      Record.push_back(FDI->getFPFeatures().getAsOpaqueInt());
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -931,6 +921,10 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
           Writer.GetDeclRef(D));
     }
   }
+
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
 
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
@@ -1783,6 +1777,12 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     Record.AddDeclRef(Inherited.getConstructor());
   }
 
+  ArrayRef<CXXDefaultArgExpr *> CtorClosureDefaultArgs =
+      D->getCtorClosureDefaultArgs();
+  Record.push_back((unsigned)CtorClosureDefaultArgs.size());
+  for (CXXDefaultArgExpr *Arg : CtorClosureDefaultArgs)
+    Record.writeStmtRef(Arg);
+
   VisitCXXMethodDecl(D);
   Code = serialization::DECL_CXX_CONSTRUCTOR;
 }
@@ -1794,6 +1794,8 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   if (D->getOperatorDelete())
     Record.AddStmt(D->getOperatorDeleteThisArg());
   Record.AddDeclRef(D->getOperatorGlobalDelete());
+  Record.AddDeclRef(D->getArrayOperatorDelete());
+  Record.AddDeclRef(D->getGlobalArrayOperatorDelete());
 
   Code = serialization::DECL_CXX_DESTRUCTOR;
 }
@@ -1829,9 +1831,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1839,26 +1838,47 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  for (unsigned i = 0; i < D->NumTPLists; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
-  Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  // Record the number of template parameter lists here to simplify memory
+  // allocation during deserialization.
+  Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  Record.push_back(D->getNumTemplateParameters());
-  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
-    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
-  Record.push_back(D->getFriendDecl() != nullptr);
-  if (D->getFriendDecl())
-    Record.AddDeclRef(D->getFriendDecl());
-  else
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    Record.AddTemplateParameterList(TPL);
+  FriendTemplateDeclKind Kind;
+  if (D->getFriendType()) {
+    Kind = D->Template.isNull() ? FTDK_Type : FTDK_Dependent;
+  } else if (D->Template.isNull()) {
+    assert(D->getFriendDecl());
+    Kind = FTDK_Decl;
+  } else {
+    Kind = FTDK_Template;
+  }
+  Record.push_back(Kind);
+  switch (Kind) {
+  case FTDK_Type:
     Record.AddTypeSourceInfo(D->getFriendType());
-  Record.AddSourceLocation(D->getFriendLoc());
+    break;
+  case FTDK_Dependent:
+    Record.AddTypeSourceInfo(D->getFriendType());
+    Record.AddTemplateName(D->Template);
+    break;
+  case FTDK_Decl:
+    Record.AddDeclRef(D->getFriendDecl());
+    break;
+  case FTDK_Template:
+    Record.AddTemplateName(D->Template);
+    break;
+  }
+  Record.AddDeclRef(D->getNextFriend());
+  Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 
@@ -1978,6 +1998,10 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
       Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
+
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
 
@@ -2046,6 +2070,10 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     // When reading, we'll add it to the folding set of the following template.
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
+
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
 
   Code = serialization::DECL_VAR_TEMPLATE_SPECIALIZATION;
 }
@@ -2186,6 +2214,39 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Record.AddStmt(D->getMessage());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_STATIC_ASSERT;
+}
+
+void ASTDeclWriter::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // Trailing-object flags must be the first thing written so the reader can
+  // allocate the right amount of trailing storage in CreateDeserialized.
+  unsigned Flags = 0;
+  if (D->hasTrailingQualifier())
+    Flags |= ExplicitInstantiationDecl::HasQualifierFlag;
+  if (D->hasTrailingArgsAsWritten())
+    Flags |= ExplicitInstantiationDecl::HasArgsAsWrittenFlag;
+  Record.push_back(Flags);
+
+  VisitDecl(D);
+  Record.AddDeclRef(D->getSpecialization());
+  Record.AddSourceLocation(D->getExternLoc());
+  Record.AddSourceLocation(D->getNameLoc());
+  Record.AddTypeSourceInfo(D->getRawTypeSourceInfo());
+  Record.push_back(D->getTemplateSpecializationKind());
+  // Trailing objects.
+  if (D->hasTrailingQualifier())
+    Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
+  if (const auto *Args = D->getTrailingArgsInfo())
+    Record.AddASTTemplateArgumentListInfo(Args);
+  Code = serialization::DECL_EXPLICIT_INSTANTIATION;
+}
+
+void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
+  VisitDecl(D);
+  Record.AddStmt(D->getExpansionPattern());
+  Record.AddStmt(D->getInstantiations());
+  Record.AddDeclRef(D->getIndexTemplateParm());
+  Code = serialization::DECL_EXPANSION_STMT;
 }
 
 /// Emit the DeclContext part of a declaration context decl.
@@ -2935,6 +2996,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   // CXXOperatorCallExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Operator Kind
+  Abv->Add(BitCodeAbbrevOp(0));                       // IsReversed
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   CXXOperatorCallExprAbbrev = Stream.EmitAbbrev(std::move(Abv));
 

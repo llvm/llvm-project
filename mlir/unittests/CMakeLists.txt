@@ -5,6 +5,7 @@ function(add_mlir_unittest test_dirname)
   add_unittest(MLIRUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
+add_subdirectory(ABI)
 add_subdirectory(Analysis)
 add_subdirectory(Bytecode)
 add_subdirectory(Conversion)

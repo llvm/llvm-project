@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/pthread/pthread_attr_destroy.h"
 #include "src/pthread/pthread_attr_getdetachstate.h"
 #include "src/pthread/pthread_attr_getguardsize.h"
@@ -17,6 +18,7 @@
 #include "src/pthread/pthread_attr_setstack.h"
 #include "src/pthread/pthread_attr_setstacksize.h"
 #include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_getunique_np.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_self.h"
 
@@ -27,6 +29,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/threads/thread.h"
 
 #include "test/IntegrationTest/test.h"
@@ -178,6 +181,9 @@ static void run_success_config(int detachstate, size_t guardsize,
                                            reinterpret_cast<void *>(th_arg)),
             0);
   ASSERT_ERRNO_SUCCESS();
+  pthread_id_np_t id;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getunique_np(&tid, &id), 0);
+  ASSERT_NE(id, 0);
 
   if (detachstate == PTHREAD_CREATE_JOINABLE) {
     void *th_ret;

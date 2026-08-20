@@ -240,4 +240,297 @@ entry:
   ret <8 x half> %0
 }
 
+
+define arm_aapcs_vfpcc <8 x half> @test_vminnmq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vminnmq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vminnmq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vminnmq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vmaxnmq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vmaxnmq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vmaxnmq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vmaxnmq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vminnmaq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vminnmaq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  %1 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vminnmaq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vminnmaq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %1 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vmaxnmaq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vmaxnmaq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  %1 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vmaxnmaq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vmaxnmaq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %1 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %2
+}
+
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndnq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndnq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintn.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrintn.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndnq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndnq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintn.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrintn.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndxq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndxq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintx.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrintx.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndxq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndxq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintx.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrintx.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndaq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndaq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrinta.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrinta.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndaq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndaq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrinta.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrinta.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndzq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndzq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintz.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrintz.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndzq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndzq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintz.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrintz.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndmq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndmq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintm.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrintm.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndmq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndmq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintm.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrintm.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vrndpq_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_vrndpq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintp.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vrintp.v8f16(<8 x half> %a)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vrndpq_f32(<4 x float> %a) #0 {
+; CHECK-LABEL: test_vrndpq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrintp.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vrintp.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+
+
+
+define arm_aapcs_vfpcc <8 x half> @test_vcvtq_f16_s16(<8 x i16> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_f16_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.f16.s16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vcvt.fp.int.v8f16.v8i16(<8 x i16> %a, i32 0)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vcvtq_f16_u16(<8 x i16> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_f16_u16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.f16.u16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.vcvt.fp.int.v8f16.v8i16(<8 x i16> %a, i32 1)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvtq_f32_s32(<4 x i32> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_f32_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vcvt.fp.int.v4f32.v4i32(<4 x i32> %a, i32 0)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvtq_f32_u32(<4 x i32> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_f32_u32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.f32.u32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vcvt.fp.int.v4f32.v4i32(<4 x i32> %a, i32 1)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vcvtq_s16_f16(<8 x half> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_s16_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.s16.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x i16> @llvm.arm.mve.vcvt.int.fp.v8i16.v8f16(<8 x half> %a, i32 0)
+  ret <8 x i16> %0
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vcvtq_s32_f32(<4 x float> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_s32_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.s32.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x i32> @llvm.arm.mve.vcvt.int.fp.v4i32.v4f32(<4 x float> %a, i32 0)
+  ret <4 x i32> %0
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vcvtq_u16_f16(<8 x half> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_u16_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.u16.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x i16> @llvm.arm.mve.vcvt.int.fp.v8i16.v8f16(<8 x half> %a, i32 1)
+  ret <8 x i16> %0
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vcvtq_u32_f32(<4 x float> noundef %a) #0 {
+; CHECK-LABEL: test_vcvtq_u32_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvt.u32.f32 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x i32> @llvm.arm.mve.vcvt.int.fp.v4i32.v4f32(<4 x float> %a, i32 1)
+  ret <4 x i32> %0
+}
+
 attributes #0 = { strictfp }

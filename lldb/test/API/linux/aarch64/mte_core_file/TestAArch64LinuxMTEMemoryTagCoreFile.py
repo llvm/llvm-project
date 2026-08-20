@@ -154,7 +154,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             ],
         )
 
-        # For the intial alignment of start/end to granule boundaries the tag manager
+        # For the initial alignment of start/end to granule boundaries the tag manager
         # is used, so this reads 1 tag as it would normally.
         self.expect(
             "memory tag read {addr} {addr}+1".format(addr=self.MTE_BUF_ADDR),
@@ -251,6 +251,25 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
                     "TCF: 0 = TCF_NONE, 1 = TCF_SYNC, 2 = TCF_ASYNC, 3 = TCF_ASYMM"
                 ],
             )
+
+    @skipIfLLVMTargetMissing("AArch64")
+    @skipIfXmlSupportMissing
+    def test_mte_ctrl_multiple_core_files(self):
+        """Core files from machines with different hardware features should
+        show different fields, even when loaded into the same session."""
+
+        # This core is from a machine with MTE but not store only MTE.
+        core_path = self.getSourcePath(
+            os.path.join("..", "non_address_bit_memory_access", "corefile")
+        )
+        self.runCmd(f"target create --core {core_path}")
+        self.expect(
+            "register read mte_ctrl", substrs=["STORE_ONLY = 0"], matching=False
+        )
+
+        # This core is from a machine with both MTE and store only MTE.
+        self.runCmd("target create --core core.mte")
+        self.expect("register read mte_ctrl", substrs=["STORE_ONLY = 0"])
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_mte_no_tags(self):

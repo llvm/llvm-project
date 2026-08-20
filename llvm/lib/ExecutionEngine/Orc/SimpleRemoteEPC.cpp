@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -23,65 +26,11 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 #endif // NDEBUG
 }
 
-Expected<tpctypes::DylibHandle>
-SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  return EPCDylibMgr->open(DylibPath, 0);
-}
-
-/// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
-/// all the requests.
-/// FIXME: The dylib manager should support multiple LookupRequests natively.
-static void
-lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<DylibManager::LookupRequest> Request,
-                         std::vector<tpctypes::LookupResult> Result,
-                         DylibManager::SymbolLookupCompleteFn Complete) {
-  if (Request.empty())
-    return Complete(std::move(Result));
-
-  auto &Element = Request.front();
-  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
-                       [&DylibMgr, Request, Complete = std::move(Complete),
-                        Result = std::move(Result)](auto R) mutable {
-                         if (!R)
-                           return Complete(R.takeError());
-                         Result.push_back({});
-                         Result.back().reserve(R->size());
-                         llvm::append_range(Result.back(), *R);
-
-                         lookupSymbolsAsyncHelper(
-                             DylibMgr, Request.drop_front(), std::move(Result),
-                             std::move(Complete));
-                       });
-}
-
-void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                                         SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
-}
-
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
+  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
           RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
-          RunAsVoidFunctionAddr, Result, VoidFnAddr))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                    int Arg) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
-          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
@@ -116,10 +65,25 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
     }
 
     if (H)
-      H(shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+      H(shared::WrapperFunctionBuffer::createOutOfBandError("disconnecting"));
 
     getExecutionSession().reportError(std::move(Err));
   }
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SimpleRemoteEPC::createDefaultMemoryManager() {
+  return sps::createEPCGenericJITLinkMemoryManager(getExecutionSession());
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SimpleRemoteEPC::createDefaultDylibMgr() {
+  return sps::createEPCGenericDylibManager(getExecutionSession());
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SimpleRemoteEPC::createDefaultMemoryAccess() {
+  return sps::createEPCGenericMemoryAccess(getExecutionSession());
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -133,7 +97,7 @@ Error SimpleRemoteEPC::disconnect() {
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                ExecutorAddr TagAddr,
-                               SimpleRemoteEPCArgBytesVector ArgBytes) {
+                               shared::WrapperFunctionBuffer ArgBytes) {
 
   LLVM_DEBUG({
     dbgs() << "SimpleRemoteEPC::handleMessage: opc = ";
@@ -202,47 +166,12 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 
   for (auto &KV : TmpPending)
     KV.second(
-        shared::WrapperFunctionResult::createOutOfBandError("disconnecting"));
+        shared::WrapperFunctionBuffer::createOutOfBandError("disconnecting"));
 
   std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
   DisconnectErr = joinErrors(std::move(DisconnectErr), std::move(Err));
   Disconnected = true;
   DisconnectCV.notify_all();
-}
-
-Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
-}
-
-Expected<std::unique_ptr<MemoryAccess>>
-SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
-  EPCGenericMemoryAccess::FuncAddrs FAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
-           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
-           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
-           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
-           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
-           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
-           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
-           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
-           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
-           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
-           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);
 }
 
 Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
@@ -282,7 +211,7 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
 }
 
 Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
-                                   SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                   shared::WrapperFunctionBuffer ArgBytes) {
   if (SeqNo != 0)
     return make_error<StringError>("Setup packet SeqNo not zero",
                                    inconvertibleErrorCode());
@@ -300,12 +229,12 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   PendingCallWrapperResults.erase(I);
 
   auto WFR =
-      shared::WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   SetupMsgHandler(std::move(WFR));
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup(Setup S) {
+Error SimpleRemoteEPC::setup() {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -314,7 +243,7 @@ Error SimpleRemoteEPC::setup(Setup S) {
   // Prepare a handler for the setup packet.
   PendingCallWrapperResults[0] =
     RunInPlace()(
-      [&](shared::WrapperFunctionResult SetupMsgBytes) {
+      [&](shared::WrapperFunctionBuffer SetupMsgBytes) {
         if (const char *ErrMsg = SetupMsgBytes.getOutOfBandError()) {
           EIP.set_value(
               make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
@@ -361,45 +290,19 @@ Error SimpleRemoteEPC::setup(Setup S) {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
-  if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName},
-           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
-           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
+  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[rt::DispatchCtxName] =
+      BootstrapSymbols[ExecutorSessionObjectName];
+
+  if (auto Err =
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
     return Err;
-
-  if (auto DM =
-          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
-    EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
-  else
-    return DM.takeError();
-
-  // Set a default CreateMemoryManager if none is specified.
-  if (!S.CreateMemoryManager)
-    S.CreateMemoryManager = createDefaultMemoryManager;
-
-  if (auto MemMgr = S.CreateMemoryManager(*this)) {
-    OwnedMemMgr = std::move(*MemMgr);
-    this->MemMgr = OwnedMemMgr.get();
-  } else
-    return MemMgr.takeError();
-
-  // Set a default CreateMemoryAccess if none is specified.
-  if (!S.CreateMemoryAccess)
-    S.CreateMemoryAccess = createDefaultMemoryAccess;
-
-  if (auto MemAccess = S.CreateMemoryAccess(*this)) {
-    OwnedMemAccess = std::move(*MemAccess);
-    this->MemAccess = OwnedMemAccess.get();
-  } else
-    return MemAccess.takeError();
 
   return Error::success();
 }
 
 Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                                    SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                    shared::WrapperFunctionBuffer ArgBytes) {
   IncomingWFRHandler SendResult;
 
   if (TagAddr)
@@ -419,32 +322,32 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
   }
 
   auto WFR =
-      shared::WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   SendResult(std::move(WFR));
   return Error::success();
 }
 
 void SimpleRemoteEPC::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
+    shared::WrapperFunctionBuffer ArgBytes) {
   assert(ES && "No ExecutionSession attached");
   D->dispatch(makeGenericNamedTask(
-      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
+      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() mutable {
         ES->runJITDispatchHandler(
-            [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
+            [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
               if (auto Err =
                       sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
-            TagAddr, ArgBytes);
+            TagAddr, std::move(ArgBytes));
       },
       "callWrapper task"));
 }
 
-Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
+Error SimpleRemoteEPC::handleHangup(shared::WrapperFunctionBuffer ArgBytes) {
   using namespace llvm::orc::shared;
-  auto WFR = WrapperFunctionResult::copyFrom(ArgBytes.data(), ArgBytes.size());
+  auto WFR = WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
   if (const char *ErrMsg = WFR.getOutOfBandError())
     return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 

@@ -5,19 +5,6 @@ import platform
 import shlex
 import subprocess
 
-import lit.formats
-
-# Choose between lit's internal shell pipeline runner and a real shell.  If
-# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if use_lit_shell:
-    # 0 is external, "" is default, and everything else is internal.
-    execute_external = use_lit_shell == "0"
-else:
-    # Otherwise we default to internal on Windows and external elsewhere, as
-    # bash on Windows is usually very slow.
-    execute_external = not sys.platform in ["win32"]
-
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
@@ -40,11 +27,7 @@ def get_library_path(file):
     )
     if not cmd.stdout:
         lit_config.fatal("Couldn't find the library path for '%s'" % file)
-    dir = cmd.stdout.read().strip()
-    if sys.platform in ["win32"] and execute_external:
-        # Don't pass dosish path separator to msys bash.exe.
-        dir = dir.replace("\\", "/")
-    return dir
+    return cmd.stdout.read().strip()
 
 
 def get_libgcc_file_name():
@@ -57,11 +40,7 @@ def get_libgcc_file_name():
     )
     if not cmd.stdout:
         lit_config.fatal("Couldn't find the library path for '%s'" % file)
-    dir = cmd.stdout.read().strip()
-    if sys.platform in ["win32"] and execute_external:
-        # Don't pass dosish path separator to msys bash.exe.
-        dir = dir.replace("\\", "/")
-    return dir
+    return cmd.stdout.read().strip()
 
 
 # Setup config name.
@@ -87,9 +66,6 @@ elif config.target_os == "Windows":
     base_lib = os.path.join(
         config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix
     )
-    if sys.platform in ["win32"] and execute_external:
-        # Don't pass dosish path separator to msys bash.exe.
-        base_lib = base_lib.replace("\\", "/")
     config.substitutions.append(
         (
             "%librt ",
@@ -101,22 +77,49 @@ else:
     base_lib = os.path.join(
         config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix
     )
-    if sys.platform in ["win32"] and execute_external:
-        # Don't pass dosish path separator to msys bash.exe.
-        base_lib = base_lib.replace("\\", "/")
     if config.target_os == "Haiku":
         config.substitutions.append(("%librt ", base_lib + " -lroot "))
     else:
-        config.substitutions.append(("%librt ", base_lib + " -lc -lm "))
+        linker_supports_start_group = get_required_attr(
+            config, "linker_supports_start_group"
+        )
+        if "spirv" in config.target_arch:
+            builtins_bitcode_library = os.path.join(
+                config.compiler_rt_libdir,
+                "libclang_rt.builtins%s.bc" % config.target_suffix,
+            )
+            librt_flags = (
+                "-Xclang -mlink-builtin-bitcode -Xclang "
+                + builtins_bitcode_library
+                + " "
+            )
+            libc_bitcode_library = os.path.join(
+                config.llvm_shlib_dir, config.target_triple, "libcbitcode.bc"
+            )
+            if os.path.exists(libc_bitcode_library):
+                librt_flags += (
+                    "-Xclang -mlink-builtin-bitcode -Xclang "
+                    + libc_bitcode_library
+                    + " "
+                )
+            config.substitutions.append(("%librt ", librt_flags))
+        # Check if the linker supports --start-group and --end-group
+        # For nvptx64 target, it falls back to the default.
+        elif linker_supports_start_group and "nvptx" not in config.target_arch:
+            config.substitutions.append(
+                (
+                    "%librt ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                )
+            )
+        else:
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
 
-builtins_build_crt = get_required_attr(config, "builtins_build_crt")
-if builtins_build_crt:
+builtins_test_crt = get_required_attr(config, "builtins_test_crt")
+if builtins_test_crt:
     base_obj = os.path.join(
         config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
     )
-    if sys.platform in ["win32"] and execute_external:
-        # Don't pass dosish path separator to msys bash.exe.
-        base_obj = base_obj.replace("\\", "/")
 
     config.substitutions.append(("%crtbegin", base_obj % "crtbegin"))
     config.substitutions.append(("%crtend", base_obj % "crtend"))
@@ -139,9 +142,6 @@ if builtins_build_crt:
 builtins_source_dir = os.path.join(
     get_required_attr(config, "compiler_rt_src_root"), "lib", "builtins"
 )
-if sys.platform in ["win32"] and execute_external:
-    # Don't pass dosish path separator to msys bash.exe.
-    builtins_source_dir = builtins_source_dir.replace("\\", "/")
 builtins_lit_source_dir = get_required_attr(config, "builtins_lit_source_dir")
 
 extra_link_flags = ["-nodefaultlibs"]
@@ -158,7 +158,7 @@ clang_builtins_cxxflags = clang_builtins_static_cxxflags
 
 # FIXME: Right now we don't compile the C99 complex builtins when using
 # clang-cl. Fix that.
-if not is_msvc:
+if not is_msvc and config.target_arch not in ("amdgcn", "nvptx64"):
     config.available_features.add("c99-complex")
 
 builtins_is_msvc = get_required_attr(config, "builtins_is_msvc")

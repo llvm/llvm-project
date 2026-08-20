@@ -23,18 +23,28 @@ struct TestOperationEqualPass
     ModuleOp module = getOperation();
     // Expects two operations at the top-level:
     int opCount = module.getBody()->getOperations().size();
-    if (opCount != 2) {
+    if (module->hasAttr("test.includes_setup")) {
+      if (opCount < 2) {
+        module.emitError()
+            << "expected at least 2 top-level ops in the module, got "
+            << opCount;
+        return signalPassFailure();
+      }
+    } else if (opCount != 2) {
       module.emitError() << "expected 2 top-level ops in the module, got "
                          << opCount;
       return signalPassFailure();
     }
+    Operation *second = &module.getBody()->back();
+    Operation *first = second->getPrevNode();
 
-    Operation *first = &module.getBody()->front();
     llvm::outs() << first->getName().getStringRef() << " with attr "
                  << first->getDiscardableAttrDictionary();
     OperationEquivalence::Flags flags{};
     if (!first->hasAttr("strict_loc_check"))
       flags |= OperationEquivalence::IgnoreLocations;
+    if (first->hasAttr("ignore_commutativity"))
+      flags |= OperationEquivalence::IgnoreCommutativity;
     if (OperationEquivalence::isEquivalentTo(first, &module.getBody()->back(),
                                              flags))
       llvm::outs() << " compares equals.\n";

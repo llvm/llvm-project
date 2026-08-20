@@ -56,7 +56,7 @@ extern "C" hipError_t hipLaunchKernel_spt(const void *func, dim3 gridDim,
 extern "C" unsigned __llvmPushCallConfiguration(dim3 gridDim, dim3 blockDim,
                                      size_t sharedMem = 0, void *stream = 0);
 extern "C" unsigned llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
-                          void **args, size_t sharedMem = 0, void *stream = 0);
+                          void *args, size_t sharedMem = 0, void *stream = 0);
 #else
 typedef struct cudaStream *cudaStream_t;
 typedef enum cudaError {} cudaError_t;
@@ -72,7 +72,13 @@ extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
 extern "C" cudaError_t cudaLaunchKernel_ptsz(const void *func, dim3 gridDim,
                                         dim3 blockDim, void **args,
                                         size_t sharedMem, cudaStream_t stream);
-
+extern "C" __device__ cudaError_t cudaLaunchDevice(void *func,
+                                                   void *parameterBuffer,
+                                                   dim3 gridDim, dim3 blockDim,
+                                                   unsigned int sharedMem,
+                                                   cudaStream_t stream);
+extern "C" __device__ void *cudaGetParameterBuffer(size_t alignment,
+                                                   size_t size);
 #endif
 
 extern "C" __device__ int printf(const char*, ...);

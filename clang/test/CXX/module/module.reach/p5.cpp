@@ -13,5 +13,5 @@ export using Y = X;
 //--- B.cppm
 export module B;
 import A;
-Y y; // OK, definition of X is reachable
+Y y; // OK, definition of Y is reachable
 X x; // expected-error {{unknown type name 'X'}}

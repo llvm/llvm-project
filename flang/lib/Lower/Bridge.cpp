@@ -12,18 +12,17 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertCall.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
-#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
@@ -31,6 +30,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/LoopAnnotation.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -38,18 +38,17 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/Exceptions.h"
 #include "flang/Optimizer/Builder/Runtime/Main.h"
-#include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -67,6 +66,7 @@
 #include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -222,6 +222,115 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
+/// Emit a single fir.use_stmt from preserved frontend USE metadata.
+static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
+                          mlir::OpBuilder &builder, mlir::Location loc,
+                          const Fortran::semantics::PreservedUseStmt &stmt,
+                          const Fortran::semantics::Scope &lookupScope) {
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::StringAttr moduleNameAttr =
+      mlir::StringAttr::get(context, stmt.moduleName);
+
+  // Helper function to get mangled name for a symbol
+  auto getMangledName = [&](const std::string &localName) -> std::string {
+    Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
+    const auto *sym = lookupScope.FindSymbol(charBlock);
+    if (!sym)
+      return "";
+
+    const auto &ultimateSym = sym->GetUltimate();
+
+    // Skip cases which can cause mangleName to fail.
+    if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
+      return "";
+
+    if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+      return "";
+
+    if (const auto *generic =
+            ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
+      if (!generic->specific())
+        return "";
+    }
+
+    return converter.mangleName(ultimateSym);
+  };
+
+  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+  llvm::SmallVector<mlir::Attribute> renameAttrs;
+
+  for (const auto &name : stmt.onlyNames) {
+    std::string mangledName = getMangledName(name);
+    if (!mangledName.empty())
+      onlySymbolAttrs.push_back(
+          mlir::FlatSymbolRefAttr::get(context, mangledName));
+  }
+
+  for (const auto &local : stmt.renames) {
+    std::string mangledName = getMangledName(local);
+    if (!mangledName.empty()) {
+      auto localAttr = mlir::StringAttr::get(context, local);
+      auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+      renameAttrs.push_back(
+          fir::UseRenameAttr::get(context, localAttr, symbolRef));
+    }
+  }
+
+  mlir::ArrayAttr onlySymbolsAttr =
+      onlySymbolAttrs.empty() ? mlir::ArrayAttr()
+                              : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+  mlir::ArrayAttr renamesAttr =
+      renameAttrs.empty() ? mlir::ArrayAttr()
+                          : mlir::ArrayAttr::get(context, renameAttrs);
+  mlir::BoolAttr hasOnlyWithRenamesAttr =
+      mlir::BoolAttr::get(context, stmt.hasOnlyWithRenames);
+
+  fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                         renamesAttr, hasOnlyWithRenamesAttr);
+}
+
+/// Emit fir.module_debug_imports for USE statements in a module. The operation
+/// is emitted for every module, even one with no USE statement, because its
+/// location is also what tells AddDebugInfo the line of the MODULE statement.
+static void
+emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
+                       mlir::OpBuilder &builder, mlir::Location loc,
+                       const Fortran::lower::pft::ModuleLikeUnit &mod) {
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+
+  const Fortran::semantics::Scope &modScope = mod.getScope();
+  const Fortran::semantics::Symbol *modSym = modScope.symbol();
+  if (!modSym)
+    return;
+
+  mlir::ModuleOp mlirModule = converter.getModuleOp();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+
+  auto op = fir::ModuleDebugImportsOp::create(
+      builder, loc,
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+  mlir::Region &region = op.getUses();
+  mlir::Block *block = new mlir::Block();
+  region.push_back(block);
+  builder.setInsertionPointToStart(block);
+  for (const auto &stmt : mod.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, stmt, modScope);
+  fir::FirEndOp::create(builder, loc);
+}
+
+/// Emit `fir.use_stmt` operations for USE statements that appear in the given
+/// function unit.
+static void
+emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &builder, mlir::Location loc,
+                           const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  const Fortran::semantics::Scope &scope = funit.getScope();
+  for (const auto &preservedStmt : funit.preservedUseStmts)
+    emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
+}
+
 /// Helper class to generate the runtime type info global data and the
 /// fir.type_info operations that contain the dipatch tables (if any).
 /// The type info global data is required to describe the derived type to the
@@ -307,7 +416,11 @@ private:
     if (!insertPointIfCreated.isSet())
       return; // fir.type_info was already built in a previous call.
 
-    // Set init, destroy, and nofinal attributes.
+    // Set abstract, init, destroy, and nofinal attributes.
+    const Fortran::semantics::Symbol &dtSymbol = info.typeSpec.typeSymbol();
+    if (dtSymbol.attrs().test(Fortran::semantics::Attr::ABSTRACT))
+      dt->setAttr(dt.getAbstractAttrName(), builder.getUnitAttr());
+
     if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
                                                 /*ignorePointer=*/false))
       dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
@@ -331,10 +444,14 @@ private:
         if (details.numPrivatesNotOverridden() > 0)
           tbpName += "."s + std::to_string(details.numPrivatesNotOverridden());
         std::string bindingName = converter.mangleName(details.symbol());
-        fir::DTEntryOp::create(
+        auto dtEntry = fir::DTEntryOp::create(
             builder, info.loc,
             mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
+        // Propagate DEFERRED attribute on the binding to fir.dt_entry.
+        if (binding.get().attrs().test(Fortran::semantics::Attr::DEFERRED))
+          dtEntry->setAttr(fir::DTEntryOp::getDeferredAttrNameStr(),
+                           builder.getUnitAttr());
       }
       fir::FirEndOp::create(builder, info.loc);
     }
@@ -409,10 +526,11 @@ public:
 
     // - Declare all functions that have definitions so that definition
     //   signatures prevail over call site signatures.
-    // - Define module variables and OpenMP/OpenACC declarative constructs so
-    //   they are available before lowering any function that may use them.
+    // - Module variables are lowered once all the function declarations are
+    // available.
     bool hasMainProgram = false;
-    const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
+    llvm::SmallVector<const Fortran::semantics::Symbol *>
+        globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
       for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
         Fortran::common::visit(
@@ -421,26 +539,36 @@ public:
                   if (f.isMainProgram())
                     hasMainProgram = true;
                   declareFunction(f);
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = f.getScope().symbol();
+                  globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                  lowerModuleDeclScope(m);
                   for (Fortran::lower::pft::ContainedUnit &unit :
                        m.containedUnitList)
                     if (auto *f =
                             std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                                &unit))
+                                &unit)) {
                       declareFunction(*f);
+                      globalOmpRequiresSymbols.push_back(
+                          f->getScope().symbol());
+                    }
+                  globalOmpRequiresSymbols.push_back(m.getScope().symbol());
                 },
                 [&](Fortran::lower::pft::BlockDataUnit &b) {
-                  if (!globalOmpRequiresSymbol)
-                    globalOmpRequiresSymbol = b.symTab.symbol();
+                  globalOmpRequiresSymbols.push_back(b.symTab.symbol());
                 },
                 [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
                 [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
             },
             u);
+      }
+    });
+
+    // Lower module declaration scopes now that all function
+    // declarations are available with their final signatures.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        if (auto *m = std::get_if<Fortran::lower::pft::ModuleLikeUnit>(&u))
+          lowerModuleDeclScope(*m);
       }
     });
 
@@ -468,6 +596,16 @@ public:
           u);
     }
 
+    // Declare any `acc routine` bind(name) targets not otherwise declared, so a
+    // live symbol exists for later passes. No-op for targets already lowered in
+    // this unit.
+    if (getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::OpenACC))
+      createBuilderOutsideOfFuncOpAndDo([&]() {
+        Fortran::lower::materializeOpenACCRoutineBindTargets(*this,
+                                                             getModuleOp());
+      });
+
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
@@ -477,15 +615,18 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::Coarray));
+        fir::runtime::genMain(
+            *builder, toLocation(), bridge.getEnvironmentDefaults(),
+            (getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDA) &&
+             getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDAInit)),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::Coarray),
+            bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
-    finalizeOpenMPLowering(globalOmpRequiresSymbol);
+    finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
   /// Declare a function.
@@ -681,11 +822,11 @@ public:
               Fortran::lower::StatementContext &context,
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (lowerToHighLevelFIR())
-      return Fortran::lower::convertExprToAddress(loc, *this, expr,
-                                                  localSymbols, context);
-    return Fortran::lower::createSomeExtendedAddress(loc, *this, expr,
-                                                     localSymbols, context);
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprAddr of coarray reference.");
+    return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
+                                                context);
   }
 
   fir::ExtendedValue
@@ -693,21 +834,21 @@ public:
                Fortran::lower::StatementContext &context,
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (lowerToHighLevelFIR())
-      return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
-                                                context);
-    return Fortran::lower::createSomeExtendedExpression(loc, *this, expr,
-                                                        localSymbols, context);
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprValue of coarray reference.");
+    return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
+                                              context);
   }
 
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
-    if (lowerToHighLevelFIR())
-      return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
-                                              stmtCtx);
-    return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
-                                          stmtCtx);
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprBox of coarray reference.");
+    return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
+                                            stmtCtx);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -1036,7 +1177,7 @@ public:
                                                       fir::LocationKind::Base));
 
         // Gather include location information if any.
-        Fortran::parser::ProvenanceRange *prov = &*provenance;
+        std::optional<Fortran::parser::ProvenanceRange> prov = provenance;
         while (prov) {
           if (std::optional<Fortran::parser::ProvenanceRange> include =
                   cooked->allSources().GetInclusionInfo(*prov)) {
@@ -1046,9 +1187,9 @@ public:
               locAttrs.push_back(fir::LocationKindAttr::get(
                   &getMLIRContext(), fir::LocationKind::Inclusion));
             }
-            prov = &*include;
+            prov = include;
           } else {
-            prov = nullptr;
+            prov.reset();
           }
         }
         if (locs.size() > 1) {
@@ -1112,6 +1253,13 @@ public:
         activeConstructStack.back().eval.isA<Fortran::parser::BlockConstruct>())
       return activeConstructStack.back().stmtCtx;
     return bridge.fctCtx();
+  }
+
+  Fortran::lower::StatementContext &getCudaCleanupCtx() override final {
+    if (!activeConstructStack.empty() &&
+        activeConstructStack.back().eval.isA<Fortran::parser::BlockConstruct>())
+      return activeConstructStack.back().stmtCtx;
+    return bridge.cudaCleanupCtx();
   }
 
   /// Initializes values for STAT and ERRMSG
@@ -1251,56 +1399,51 @@ private:
                Fortran::lower::SymMap *symMap = nullptr,
                bool forceHlfirBase = false) {
     symMap = symMap ? symMap : &localSymbols;
-    if (lowerToHighLevelFIR()) {
-      if (std::optional<fir::FortranVariableOpInterface> var =
-              symMap->lookupVariableDefinition(sym)) {
-        auto exv = hlfir::translateToExtendedValue(toLocation(), *builder, *var,
-                                                   forceHlfirBase);
-        return exv.match(
-            [](mlir::Value x) -> Fortran::lower::SymbolBox {
-              return Fortran::lower::SymbolBox::Intrinsic{x};
-            },
-            [](auto x) -> Fortran::lower::SymbolBox { return x; });
-      }
-
-      // Entry character result represented as an argument pair
-      // needs to be represented in the symbol table even before
-      // we can create DeclareOp for it. The temporary mapping
-      // is EmboxCharOp that conveys the address and length information.
-      // After mapSymbolAttributes is done, the mapping is replaced
-      // with the new DeclareOp, and the following table lookups
-      // do not reach here.
-      if (sym.IsFuncResult())
-        if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
-          if (declTy->category() ==
-              Fortran::semantics::DeclTypeSpec::Category::Character)
-            return symMap->lookupSymbol(sym);
-
-      // Procedure dummies are not mapped with an hlfir.declare because
-      // they are not "variable" (cannot be assigned to), and it would
-      // make hlfir.declare more complex than it needs to to allow this.
-      // Do a regular lookup.
-      if (Fortran::semantics::IsProcedure(sym))
-        return symMap->lookupSymbol(sym);
-
-      // Commonblock names are not variables, but in some lowerings (like
-      // OpenMP) it is useful to maintain the address of the commonblock in an
-      // MLIR value and query it. hlfir.declare need not be created for these.
-      if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
-        return symMap->lookupSymbol(sym);
-
-      // For symbols to be privatized in OMP, the symbol is mapped to an
-      // instance of `SymbolBox::Intrinsic` (i.e. a direct mapping to an MLIR
-      // SSA value). This MLIR SSA value is the block argument to the
-      // `omp.private`'s `alloc` block. If this is the case, we return this
-      // `SymbolBox::Intrinsic` value.
-      if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-        return v;
-
-      return {};
+    if (std::optional<fir::FortranVariableOpInterface> var =
+            symMap->lookupVariableDefinition(sym)) {
+      auto exv = hlfir::translateToExtendedValue(toLocation(), *builder, *var,
+                                                 forceHlfirBase);
+      return exv.match(
+          [](mlir::Value x) -> Fortran::lower::SymbolBox {
+            return Fortran::lower::SymbolBox::Intrinsic{x};
+          },
+          [](auto x) -> Fortran::lower::SymbolBox { return x; });
     }
+
+    // Entry character result represented as an argument pair
+    // needs to be represented in the symbol table even before
+    // we can create DeclareOp for it. The temporary mapping
+    // is EmboxCharOp that conveys the address and length information.
+    // After mapSymbolAttributes is done, the mapping is replaced
+    // with the new DeclareOp, and the following table lookups
+    // do not reach here.
+    if (sym.IsFuncResult())
+      if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+        if (declTy->category() ==
+            Fortran::semantics::DeclTypeSpec::Category::Character)
+          return symMap->lookupSymbol(sym);
+
+    // Procedure dummies are not mapped with an hlfir.declare because
+    // they are not "variable" (cannot be assigned to), and it would
+    // make hlfir.declare more complex than it needs to to allow this.
+    // Do a regular lookup.
+    if (Fortran::semantics::IsProcedure(sym))
+      return symMap->lookupSymbol(sym);
+
+    // Commonblock names are not variables, but in some lowerings (like
+    // OpenMP) it is useful to maintain the address of the commonblock in an
+    // MLIR value and query it. hlfir.declare need not be created for these.
+    if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
+      return symMap->lookupSymbol(sym);
+
+    // For symbols to be privatized in OMP, the symbol is mapped to an
+    // instance of `SymbolBox::Intrinsic` (i.e. a direct mapping to an MLIR
+    // SSA value). This MLIR SSA value is the block argument to the
+    // `omp.private`'s `alloc` block. If this is the case, we return this
+    // `SymbolBox::Intrinsic` value.
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
       return v;
+
     return {};
   }
 
@@ -1324,13 +1467,9 @@ private:
                  fir::ExtendedValue val, bool forced = false) {
     if (!forced && lookupSymbol(sym))
       return false;
-    if (lowerToHighLevelFIR()) {
-      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val,
-                                       fir::FortranVariableFlagsEnum::None,
-                                       forced);
-    } else {
-      localSymbols.addSymbol(sym, val, forced);
-    }
+    Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val,
+                                     fir::FortranVariableFlagsEnum::None,
+                                     forced);
     return true;
   }
 
@@ -1339,17 +1478,12 @@ private:
                const Fortran::lower::SymbolBox &rhs_sb,
                Fortran::semantics::Symbol::Flags flags) {
     mlir::Location loc = genLocation(sym.name());
-    if (lowerToHighLevelFIR())
-      copyVarHLFIR(loc, lhs_sb, rhs_sb, flags);
-    else
-      copyVarFIR(loc, sym, lhs_sb, rhs_sb);
+    copyVarHLFIR(loc, lhs_sb, rhs_sb, flags);
   }
 
   void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
                     Fortran::lower::SymbolBox src,
                     Fortran::semantics::Symbol::Flags flags) {
-    assert(lowerToHighLevelFIR());
-
     bool isBoxAllocatable = dst.match(
         [](const fir::MutableBoxValue &box) { return box.isAllocatable(); },
         [](const fir::FortranVariableOpInterface &box) {
@@ -1373,7 +1507,6 @@ private:
   void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
                     Fortran::lower::SymbolBox src, bool isAllocatable,
                     bool isPointer, Fortran::semantics::Symbol::Flags flags) {
-    assert(lowerToHighLevelFIR());
     hlfir::Entity lhs{dst.getAddr()};
     hlfir::Entity rhs{src.getAddr()};
 
@@ -1421,28 +1554,44 @@ private:
       builder->genIfThen(loc, isAllocated)
           .genThen([&]() { copyData(lhs, rhs); })
           .end();
+    } else if (!isAllocatable &&
+               flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn) &&
+               hlfir::mayHaveAllocatableComponent(lhs.getType())) {
+      // For copyin of derived types with allocatable components where the
+      // variable itself is not allocatable: the threadprivate copy's
+      // allocatable component descriptors may be uninitialized (e.g.,
+      // zero-filled by the OpenMP runtime). Use temporary_lhs semantics
+      // which routes through AssignTemporary at runtime. AssignTemporary
+      // first initializes the LHS descriptor metadata (setting
+      // attribute=CFI_attribute_allocatable, base_addr=nullptr for
+      // allocatable components via the Initialize runtime call), then
+      // performs the assignment with MaybeReallocate semantics for proper
+      // deep copy of allocatable components.
+      //
+      // On the master thread, the LHS and RHS resolve to the same
+      // threadprivate storage, so we must skip the temporary_lhs path
+      // (which would destroy the source data via Initialize before the
+      // copy). Use a runtime address comparison to distinguish threads.
+      mlir::Value lhsAddr =
+          fir::ConvertOp::create(*builder, loc, builder->getIndexType(), lhs);
+      mlir::Value rhsAddr =
+          fir::ConvertOp::create(*builder, loc, builder->getIndexType(), rhs);
+      mlir::Value sameAddr = mlir::arith::CmpIOp::create(
+          *builder, loc, mlir::arith::CmpIPredicate::eq, lhsAddr, rhsAddr);
+      builder->genIfThenElse(loc, sameAddr)
+          .genThen([&]() {
+            // Master thread: lhs and rhs are the same, nothing to do.
+          })
+          .genElse([&]() {
+            hlfir::Entity r = hlfir::loadTrivialScalar(loc, *builder, rhs);
+            hlfir::AssignOp::create(*builder, loc, r, lhs,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
+          })
+          .end();
     } else {
       copyData(lhs, rhs);
-    }
-  }
-
-  void copyVarFIR(mlir::Location loc, const Fortran::semantics::Symbol &sym,
-                  const Fortran::lower::SymbolBox &lhs_sb,
-                  const Fortran::lower::SymbolBox &rhs_sb) {
-    assert(!lowerToHighLevelFIR());
-    fir::ExtendedValue lhs = symBoxToExtendedValue(lhs_sb);
-    fir::ExtendedValue rhs = symBoxToExtendedValue(rhs_sb);
-    mlir::Type symType = genType(sym);
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(symType)) {
-      Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
-                                                stmtCtx);
-      stmtCtx.finalizeAndReset();
-    } else if (lhs.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
-    } else {
-      auto loadVal = fir::LoadOp::create(*builder, loc, fir::getBase(rhs));
-      fir::StoreOp::create(*builder, loc, loadVal, fir::getBase(lhs));
     }
   }
 
@@ -1527,6 +1676,20 @@ private:
 
   void genBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
+    if (!accRegionExitStack.empty()) {
+      mlir::Region *curRegion = builder->getBlock()->getParent();
+      if (targetBlock->getParent() != curRegion) {
+        auto &exitInfo = accRegionExitStack.back();
+        int exitId = exitInfo.nextId++;
+        exitInfo.exits.push_back({exitId, targetBlock});
+        mlir::Value id = builder->createIntegerConstant(
+            toLocation(), builder->getI32Type(), exitId);
+        fir::StoreOp::create(*builder, toLocation(), id, exitInfo.selector);
+        Fortran::lower::genOpenACCRegionExitBranch(*builder, toLocation(),
+                                                   targetBlock);
+        return;
+      }
+    }
     mlir::cf::BranchOp::create(*builder, toLocation(), targetBlock);
   }
 
@@ -1561,6 +1724,48 @@ private:
         createFIRExpr(toLocation(), Fortran::semantics::GetExpr(expr), stmtCtx);
     stmtCtx.finalizeAndReset();
     genConditionalBranch(cond, trueTarget->block, falseTarget->block);
+  }
+
+  void
+  genDoWhileAsSCFWhile(const Fortran::parser::ScalarLogicalExpr &whileCondition,
+                       Fortran::lower::pft::Evaluation &doConstructEval,
+                       Fortran::lower::pft::Evaluation &doStmtEval) {
+    mlir::Location loc = toLocation();
+
+    auto scfWhile =
+        mlir::scf::WhileOp::create(*builder, loc,
+                                   /*resultTypes=*/mlir::TypeRange{},
+                                   /*inits=*/mlir::ValueRange{});
+
+    // Fill the "before" region: compute condition.
+    mlir::Block *beforeBlock =
+        builder->createBlock(&scfWhile.getBefore(), scfWhile.getBefore().end());
+    builder->setInsertionPointToStart(beforeBlock);
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value cond = createFIRExpr(
+        loc, Fortran::semantics::GetExpr(whileCondition), stmtCtx);
+    stmtCtx.finalizeAndReset();
+    cond = builder->createConvert(loc, builder->getI1Type(), cond);
+    mlir::scf::ConditionOp::create(*builder, loc, cond, mlir::ValueRange{});
+
+    // Fill the "after" region: loop body.
+    mlir::Block *afterBlock =
+        builder->createBlock(&scfWhile.getAfter(), scfWhile.getAfter().end());
+    builder->setInsertionPointToStart(afterBlock);
+
+    // Lower nested evaluations excluding the loop control statement (the
+    // NonLabelDoStmt) and the EndDoStmt.
+    auto iter = doConstructEval.getNestedEvaluations().begin();
+    auto end = doConstructEval.getNestedEvaluations().end();
+    assert(iter != end && "malformed DoConstruct evaluation list");
+    ++iter; // skip the NonLabelDoStmt
+    assert(iter != end && "malformed DoConstruct evaluation list");
+    auto endDoIter = std::prev(end);
+    for (; iter != endDoIter; ++iter)
+      genFIR(*iter, /*unstructuredContext=*/false);
+
+    mlir::scf::YieldOp::create(*builder, loc);
+    builder->setInsertionPointAfter(scfWhile);
   }
 
   /// Return the nearest active ancestor construct of \p eval, or nullptr.
@@ -1783,11 +1988,20 @@ private:
   void genExitRoutine(bool earlyReturn, mlir::ValueRange retval = {}) {
     if (blockIsUnterminated()) {
       bridge.openAccCtx().finalizeAndKeep();
+      if (bridge.cudaCleanupCtx().hasCode()) {
+        mlir::Location loc = toLocation();
+        mlir::Value active =
+            fir::runtime::cuda::genDeviceIsActive(*builder, loc);
+        builder->genIfThen(loc, active)
+            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
+            .end();
+      }
       bridge.fctCtx().finalizeAndKeep();
       mlir::func::ReturnOp::create(*builder, toLocation(), retval);
     }
     if (!earlyReturn) {
       bridge.openAccCtx().pop();
+      bridge.cudaCleanupCtx().pop();
       bridge.fctCtx().pop();
     }
   }
@@ -1934,6 +2148,9 @@ private:
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                 stmt.typedCall->setAlwaysInline(true);
               },
+              [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                stmt.typedCall->setAlwaysInline(true);
+              },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
                 stmt.typedCall->setInlineHint(true);
               },
@@ -1944,21 +2161,15 @@ private:
           dir->u);
     }
 
-    if (lowerToHighLevelFIR()) {
-      std::optional<mlir::Type> resultType;
-      if (stmt.typedCall->hasAlternateReturns())
-        resultType = builder->getIndexType();
-      auto hlfirRes = Fortran::lower::convertCallToHLFIR(
-          toLocation(), *this, *stmt.typedCall, resultType, localSymbols,
-          stmtCtx);
-      if (hlfirRes)
-        res = *hlfirRes;
-    } else {
-      // Call statement lowering shares code with function call lowering.
-      res = Fortran::lower::createSubroutineCall(
-          *this, *stmt.typedCall, explicitIterSpace, implicitIterSpace,
-          localSymbols, stmtCtx, /*isUserDefAssignment=*/false);
-    }
+    std::optional<mlir::Type> resultType;
+    if (stmt.typedCall->hasAlternateReturns())
+      resultType = builder->getIndexType();
+    auto hlfirRes =
+        Fortran::lower::convertCallToHLFIR(toLocation(), *this, *stmt.typedCall,
+                                           resultType, localSymbols, stmtCtx);
+    if (hlfirRes)
+      res = *hlfirRes;
+
     stmtCtx.finalizeAndReset();
     if (!res)
       return; // "Normal" subroutine call.
@@ -1967,8 +2178,9 @@ private:
     llvm::SmallVector<int64_t> indexList;
     llvm::SmallVector<Fortran::parser::Label> labelList;
     int64_t index = 0;
+    const auto &call{std::get<Fortran::parser::Call>(stmt.t)};
     for (const Fortran::parser::ActualArgSpec &arg :
-         std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.call.t)) {
+         std::get<std::list<Fortran::parser::ActualArgSpec>>(call.t)) {
       const auto &actual = std::get<Fortran::parser::ActualArg>(arg.t);
       if (const auto *altReturn =
               std::get_if<Fortran::parser::AltReturnSpec>(&actual.u)) {
@@ -2051,8 +2263,8 @@ private:
       }
     }
     if (!labelList.empty()) {
-      auto selectExpr =
-          fir::LoadOp::create(*builder, loc, getSymbolAddress(symbol));
+      mlir::Value selectExpr = hlfir::loadTrivialScalar(
+          loc, *builder, hlfir::Entity{getSymbolAddress(symbol)});
       // Add a default error target in case the goto is nonconforming.
       mlir::Block *errorBlock =
           builder->getBlock()->splitBlock(builder->getInsertionPoint());
@@ -2072,6 +2284,11 @@ private:
     switch (rOpr.v) {
     case Fortran::parser::ReductionOperator::Operator::Plus:
       return fir::ReduceOperationEnum::Add;
+    case Fortran::parser::ReductionOperator::Operator::Minus:
+      // '-' is not a valid reduction operator for DO CONCURRENT REDUCE or
+      // !$CUF KERNEL DO REDUCE; both are rejected during semantic checking
+      // before lowering is reached, so it is never lowered here.
+      llvm_unreachable("minus is not a valid reduction operator");
     case Fortran::parser::ReductionOperator::Operator::Multiply:
       return fir::ReduceOperationEnum::Multiply;
     case Fortran::parser::ReductionOperator::Operator::And:
@@ -2284,6 +2501,9 @@ private:
                 [&](const Fortran::parser::CompilerDirective::ForceInline &) {
                   callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
                 },
+                [&](const Fortran::parser::CompilerDirective::InlineAlways &) {
+                  callOp.setInlineAttr(fir::FortranInlineEnum::always_inline);
+                },
                 [&](const auto &) {}},
             dir->u);
       }
@@ -2324,13 +2544,67 @@ private:
             // In some loops, the HLFIR AssignOp operation can be translated
             // into FIR operation(s) containing StoreOp. It is therefore
             // necessary to forward the AccessGroups attribute.
-            assignOp.getOperation()->setAttr("access_groups", attrs);
+            assignOp.getOperation()->setAttr(fir::getAccessGroupsAttrName(),
+                                             attrs);
+          } else if (hlfir::RegionAssignOp regionAssignOp =
+                         mlir::dyn_cast<hlfir::RegionAssignOp>(op)) {
+            // User defined assignment, WHERE and FORALL assignments are
+            // abstracted via hlfir.region_assign at that stage. Set the
+            // access group on it so that it can later be propagated to
+            // hlfir.assign/fir.store/fir.loads created to implement it.
+            regionAssignOp.getOperation()->setAttr(
+                fir::getAccessGroupsAttrName(), attrs);
           } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
             callOp.setAccessGroupsAttr(attrs);
           }
         });
       }
     }
+  }
+
+  /// Wrap an unstructured construct's CFG in a self-contained
+  /// scf.execute_region and set the builder insertion point inside it. Returns
+  /// the created op (null if the construct isn't wrappable).
+  mlir::scf::ExecuteRegionOp
+  wrapUnstructuredConstruct(Fortran::lower::pft::Evaluation &eval,
+                            mlir::Block *&savedExitBlock) {
+    if (!Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()))
+      return nullptr;
+
+    mlir::Location loc = toLocation();
+    auto wrapOp =
+        mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
+                                           /*noInline=*/builder->getUnitAttr());
+    ++wrapUnstructuredCount;
+    mlir::Block *entry = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(entry);
+    createEmptyBlocks(eval.getNestedEvaluations());
+    mlir::Block *yieldBlock = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(yieldBlock);
+    mlir::scf::YieldOp::create(*builder, loc);
+
+    if (eval.constructExit) {
+      savedExitBlock = eval.constructExit->block;
+      eval.constructExit->block = yieldBlock;
+    }
+
+    builder->setInsertionPointToEnd(entry);
+    return wrapOp;
+  }
+
+  /// Finalize a wrap created by wrapUnstructuredConstruct: restore the
+  /// original exit block and set the insertion point after the wrap op.
+  void closeUnstructuredWrap(mlir::scf::ExecuteRegionOp wrapOp,
+                             Fortran::lower::pft::Evaluation &eval,
+                             mlir::Block *savedExitBlock) {
+    if (!wrapOp)
+      return;
+
+    if (eval.constructExit)
+      eval.constructExit->block = savedExitBlock;
+
+    builder->setInsertionPointAfter(wrapOp);
   }
 
   /// Generate FIR for a DO construct. There are six variants:
@@ -2342,13 +2616,23 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
 
-    // Loops with induction variables inside OpenACC compute constructs
-    // need special handling to ensure that the IVs are privatized.
-    if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+    // If this do-loop was absorbed by a collapse clause on a parent acc.loop,
+    // skip generating any loop — just lower the body.  The IV value is
+    // already available from the parent acc.loop's block argument.
+    if (Fortran::lower::isCollapsedDoConstruct(doConstruct)) {
+      auto iter = eval.getNestedEvaluations().begin();
+      for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+        genFIR(*iter, unstructuredContext);
+      return;
+    }
+
+    // Loops with induction variables inside OpenACC compute constructs or
+    // explicit `!$acc routine` procedures need special handling to ensure that
+    // the IVs are privatized.
+    if (Fortran::lower::shouldLowerDoConstructAsAccLoop(*builder)) {
       // Open up a new scope for the loop variables.
       localSymbols.pushScope();
-      auto scopeGuard =
-          llvm::make_scope_exit([&]() { localSymbols.popScope(); });
+      llvm::scope_exit scopeGuard([&]() { localSymbols.popScope(); });
 
       mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
@@ -2388,21 +2672,72 @@ private:
       // blocks, created in outermost to innermost order.
       return beginBlock = beginBlock->splitBlock(beginBlock->end());
     };
-    mlir::Block *headerBlock =
-        unstructuredContext ? createNextBeginBlock() : nullptr;
+    // headerBlock is computed per-branch below, after wrapping, so that
+    // beginBlock can be corrected to the scf entry when wrapping occurs.
+    mlir::Block *headerBlock = nullptr;
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
+
+    mlir::Block *savedExitBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp = nullptr;
+
+    // Helper: called after maybeStartBlock(preheaderBlock) to create the
+    // scf.execute_region (if the construct is wrappable) and then update
+    // beginBlock/bodyBlock/exitBlock so that all loop structure lands inside
+    // the newly created region.
+    auto maybeWrapAndRecalc = [&]() {
+      wrapOp = unstructuredContext
+                   ? wrapUnstructuredConstruct(eval, savedExitBlock)
+                   : nullptr;
+      if (wrapOp) {
+        LLVM_DEBUG({
+          llvm::dbgs() << "[wrap-unstructured] wrapped DO at ";
+          wrapOp.getLoc().print(llvm::dbgs());
+          llvm::dbgs() << "\n";
+        });
+        // After wrapping, the builder is positioned at the scf entry block.
+        // createEmptyBlocks (called inside wrapUnstructuredConstruct) may have
+        // allocated a dedicated preheader block inside the scf region and
+        // stored it in doStmtEval.block.  If so, branch to it from scf_entry
+        // and use it as beginBlock; otherwise use scf_entry directly.
+        mlir::Block *newPreheader = doStmtEval.block;
+        if (newPreheader && newPreheader != preheaderBlock) {
+          beginBlock = newPreheader;
+          maybeStartBlock(beginBlock);
+        } else {
+          beginBlock = builder->getBlock();
+        }
+        bodyBlock = doStmtEval.lexicalSuccessor->block;
+        exitBlock = doStmtEval.parentConstruct->constructExit->block;
+      }
+      headerBlock = createNextBeginBlock();
+    };
+
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
     if (infiniteLoop) {
       assert(unstructuredContext && "infinite loop must be unstructured");
+      // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
+      // but call it for uniformity so wrapOp stays null.
+      maybeWrapAndRecalc();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
                         &loopControl->u))) {
+      // Optionally lower a restricted subset of DO WHILE loops directly to
+      // scf.while. This subset excludes early-exit constructs (EXIT/CYCLE/GOTO,
+      // etc.) by requiring that the loop body is structured (as decided by the
+      // PFT branch analysis), allowing the loop to exit only when the condition
+      // becomes false.
+      if (!unstructuredContext) {
+        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
+        return;
+      }
+
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
+      maybeWrapAndRecalc();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -2410,10 +2745,11 @@ private:
                        &loopControl->u)) {
       // Non-concurrent increment loop.
       IncrementLoopInfo &info = incrementLoopNestInfo.emplace_back(
-          *bounds->name.thing.symbol, bounds->lower, bounds->upper,
-          bounds->step);
+          *bounds->Name().thing.symbol, bounds->Lower(), bounds->Upper(),
+          bounds->Step());
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
         info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
             Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
@@ -2430,6 +2766,7 @@ private:
           std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
         for (IncrementLoopInfo &info : incrementLoopNestInfo) {
           // The original loop body provides the body and latch blocks of the
           // innermost dimension. The (first) body block of a non-innermost
@@ -2494,6 +2831,8 @@ private:
     for (IncrementLoopInfo &info : incrementLoopNestInfo)
       if (auto loopOp = mlir::dyn_cast_if_present<fir::DoLoopOp>(info.loopOp))
         attachAttributesToDoLoopOperations(loopOp, doStmtEval.dirs);
+
+    closeUnstructuredWrap(wrapOp, eval, savedExitBlock);
   }
 
   /// Generate FIR to evaluate loop control values (lower, upper and step).
@@ -2501,8 +2840,9 @@ private:
                               const IncrementLoopInfo &info,
                               bool *isConst = nullptr) {
     mlir::Location loc = toLocation();
-    mlir::Type controlType = info.isStructured() ? builder->getIndexType()
-                                                 : info.getLoopVariableType();
+    mlir::Type controlType = info.isStructured() && info.isConcurrent
+                                 ? builder->getIndexType()
+                                 : info.getLoopVariableType();
     Fortran::lower::StatementContext stmtCtx;
     if (expr) {
       if (isConst)
@@ -2518,133 +2858,19 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
-  // For unroll directives without a value, force full unrolling.
-  // For unroll directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling.
-  mlir::LLVM::LoopUnrollAttr
-  genLoopUnrollAttr(std::optional<std::uint64_t> directiveArg) {
-    mlir::BoolAttr falseAttr =
-        mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::BoolAttr trueAttr = mlir::BoolAttr::get(builder->getContext(), true);
-    mlir::IntegerAttr countAttr;
-    mlir::BoolAttr fullUnrollAttr;
-    bool shouldUnroll = true;
-    if (directiveArg.has_value()) {
-      auto unrollingFactor = directiveArg.value();
-      if (unrollingFactor == 0 || unrollingFactor == 1) {
-        shouldUnroll = false;
-      } else {
-        countAttr =
-            builder->getIntegerAttr(builder->getI64Type(), unrollingFactor);
-      }
-    } else {
-      fullUnrollAttr = trueAttr;
-    }
-
-    mlir::BoolAttr disableAttr = shouldUnroll ? falseAttr : trueAttr;
-    return mlir::LLVM::LoopUnrollAttr::get(
-        builder->getContext(), /*disable=*/disableAttr, /*count=*/countAttr, {},
-        /*full=*/fullUnrollAttr, {}, {}, {});
-  }
-
-  // Enabling unroll and jamming directive without a value.
-  // For directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling and
-  // jamming.
-  mlir::LLVM::LoopUnrollAndJamAttr
-  genLoopUnrollAndJamAttr(std::optional<std::uint64_t> count) {
-    mlir::BoolAttr falseAttr =
-        mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::BoolAttr trueAttr = mlir::BoolAttr::get(builder->getContext(), true);
-    mlir::IntegerAttr countAttr;
-    bool shouldUnroll = true;
-    if (count.has_value()) {
-      auto unrollingFactor = count.value();
-      if (unrollingFactor == 0 || unrollingFactor == 1) {
-        shouldUnroll = false;
-      } else {
-        countAttr =
-            builder->getIntegerAttr(builder->getI64Type(), unrollingFactor);
-      }
-    }
-
-    mlir::BoolAttr disableAttr = shouldUnroll ? falseAttr : trueAttr;
-    return mlir::LLVM::LoopUnrollAndJamAttr::get(
-        builder->getContext(), /*disable=*/disableAttr, /*count*/ countAttr, {},
-        {}, {}, {}, {});
-  }
-
-  // Enabling loop vectorization attribute.
-  mlir::LLVM::LoopVectorizeAttr
-  genLoopVectorizeAttr(mlir::BoolAttr disableAttr) {
-    mlir::LLVM::LoopVectorizeAttr va;
-    if (disableAttr)
-      va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
-                                              /*disable=*/disableAttr, {}, {},
-                                              {}, {}, {}, {});
-    return va;
-  }
-
   void addLoopAnnotationAttr(
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
-    mlir::BoolAttr disableVecAttr;
-    mlir::LLVM::LoopUnrollAttr ua;
-    mlir::LLVM::LoopUnrollAndJamAttr uja;
-    llvm::SmallVector<mlir::LLVM::AccessGroupAttr> aga;
-    bool has_attrs = false;
-    for (const auto *dir : dirs) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::Unroll &u) {
-                ua = genLoopUnrollAttr(u.v);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::UnrollAndJam &u) {
-                uja = genLoopUnrollAndJamAttr(u.v);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), true);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
-                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
-                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                aga.push_back(
-                    mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
-                has_attrs = true;
-              },
-              [&](const auto &) {}},
-          dir->u);
-    }
-    mlir::LLVM::LoopVectorizeAttr va = genLoopVectorizeAttr(disableVecAttr);
-    mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
-        /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {},
-        /*parallelAccesses*/ aga);
-    if (has_attrs) {
-      if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
-        loopOp.setLoopAnnotationAttr(la);
+    mlir::LLVM::LoopAnnotationAttr la =
+        Fortran::lower::genLoopAnnotationAttr(builder->getContext(), dirs);
+    if (!la)
+      return;
+    if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
+      loopOp.setLoopAnnotationAttr(la);
 
-      if (auto doConcurrentOp =
-              mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
-        doConcurrentOp.setLoopAnnotationAttr(la);
-    }
+    if (auto doConcurrentOp =
+            mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
+      doConcurrentOp.setLoopAnnotationAttr(la);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -2699,19 +2925,18 @@ private:
         if (genDoConcurrent)
           continue;
 
-        // The loop variable is a doLoop op argument.
-        mlir::Type loopVarType = info.getLoopVariableType();
+        // Lower the loop without the secondary-induction iter_arg so memory
+        // recurrences (e.g. reductions) stay visible to later analyses. The DO
+        // variable is recomputed from the induction variable in the body; its
+        // post-loop value is materialized in genFIRIncrementLoopEnd.
         auto loopOp = fir::DoLoopOp::create(
             *builder, loc, lowerValue, upperValue, stepValue,
-            /*unordered=*/false,
-            /*finalCountValue=*/false,
-            builder->createConvert(loc, loopVarType, lowerValue));
+            /*unordered=*/false, /*finalCountValue=*/false,
+            /*iterArgs=*/mlir::ValueRange{});
         info.loopOp = loopOp;
         builder->setInsertionPointToStart(loopOp.getBody());
-        mlir::Value loopValue = loopOp.getRegionIterArgs()[0];
-
-        // Update the loop variable value in case it has non-index references.
-        fir::StoreOp::create(*builder, loc, loopValue, info.loopVariable);
+        fir::StoreOp::create(*builder, loc, loopOp.getInductionVar(),
+                             info.loopVariable);
         addLoopAnnotationAttr(info, dirs);
         continue;
       }
@@ -2852,23 +3077,31 @@ private:
           continue;
         }
 
-        // End fir.do_loop.
-        // Decrement tripVariable.
+        // End fir.do_loop. The loop carries no secondary-induction iter_arg, so
+        // materialize the Fortran post-loop value lb + tripCount*step after the
+        // loop for later uses of the DO variable. Compute it in the loop's
+        // index type (matching how the loop counts iterations) so the trip
+        // arithmetic does not overflow the DO variable's type for empty
+        // range-extreme loops.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
-        builder->setInsertionPointToEnd(doLoopOp.getBody());
-        // Step loopVariable to help optimizations such as vectorization.
-        // Induction variable elimination will clean up as necessary.
-        mlir::Value step = builder->createConvert(
-            loc, info.getLoopVariableType(), doLoopOp.getStep());
-        mlir::Value loopVar =
-            fir::LoadOp::create(*builder, loc, info.loopVariable);
-        mlir::Value loopVarInc =
-            mlir::arith::AddIOp::create(*builder, loc, loopVar, step, iofAttr);
-        fir::ResultOp::create(*builder, loc, loopVarInc);
         builder->setInsertionPointAfter(doLoopOp);
-        // The loop control variable may be used after the loop.
-        fir::StoreOp::create(*builder, loc, doLoopOp.getResult(0),
-                             info.loopVariable);
+        mlir::Type idxTy = builder->getIndexType();
+        mlir::Value lb =
+            builder->createConvert(loc, idxTy, doLoopOp.getLowerBound());
+        mlir::Value ub =
+            builder->createConvert(loc, idxTy, doLoopOp.getUpperBound());
+        mlir::Value st = builder->createConvert(loc, idxTy, doLoopOp.getStep());
+        mlir::Value zero = builder->createIntegerConstant(loc, idxTy, 0);
+        mlir::Value trip = mlir::arith::SubIOp::create(*builder, loc, ub, lb);
+        trip = mlir::arith::AddIOp::create(*builder, loc, trip, st);
+        trip = mlir::arith::DivSIOp::create(*builder, loc, trip, st);
+        mlir::Value empty = mlir::arith::CmpIOp::create(
+            *builder, loc, mlir::arith::CmpIPredicate::slt, trip, zero);
+        trip = mlir::arith::SelectOp::create(*builder, loc, empty, zero, trip);
+        mlir::Value last = mlir::arith::MulIOp::create(*builder, loc, trip, st);
+        last = mlir::arith::AddIOp::create(*builder, loc, lb, last);
+        last = builder->createConvert(loc, info.getLoopVariableType(), last);
+        fir::StoreOp::create(*builder, loc, last, info.loopVariable);
         continue;
       }
 
@@ -2938,7 +3171,34 @@ private:
       return;
     }
 
-    // Unstructured branch sequence.
+    // Start a new block before generating the scf.execute_region op if needed.
+    // This avoids generating the region directly after a terminator (e.g. a
+    // conditional branch from a parent construct).  A non-null firstStmt.block
+    // here is a landing pad the enclosing wrap's createEmptyBlocks pre-
+    // allocated for us — startNewFunction runs resetEvaluationBlocks before
+    // each entry-point pass, so we can trust the pointer isn't stale from a
+    // previous pass.
+    if (Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()) &&
+        eval.hasNestedEvaluations()) {
+      Fortran::lower::pft::Evaluation &firstStmt =
+          eval.getFirstNestedEvaluation();
+      if (firstStmt.block)
+        maybeStartBlock(firstStmt.block);
+    }
+
+    mlir::Block *savedExitBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp =
+        wrapUnstructuredConstruct(eval, savedExitBlock);
+
+    if (wrapOp) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "[wrap-unstructured] wrapped IF at ";
+        wrapOp.getLoc().print(llvm::dbgs());
+        llvm::dbgs() << "\n";
+      });
+    }
+
     llvm::SmallVector<Fortran::lower::pft::Evaluation *> exits, fallThroughs;
     collectFinalEvaluations(eval, exits, fallThroughs);
 
@@ -2970,6 +3230,8 @@ private:
         }
       }
     }
+
+    closeUnstructuredWrap(wrapOp, eval, savedExitBlock);
   }
 
   void genCaseOrRankConstruct() {
@@ -3004,158 +3266,11 @@ private:
     genFIR(stmt.statement);
   }
 
-  /// Force the binding of an explicit symbol. This is used to bind and re-bind
-  /// a concurrent control symbol to its value.
-  void forceControlVariableBinding(const Fortran::semantics::Symbol *sym,
-                                   mlir::Value inducVar) {
-    mlir::Location loc = toLocation();
-    assert(sym && "There must be a symbol to bind");
-    mlir::Type toTy = genType(*sym);
-    // FIXME: this should be a "per iteration" temporary.
-    mlir::Value tmp =
-        builder->createTemporary(loc, toTy, toStringRef(sym->name()),
-                                 llvm::ArrayRef<mlir::NamedAttribute>{
-                                     fir::getAdaptToByRefAttr(*builder)});
-    mlir::Value cast = builder->createConvert(loc, toTy, inducVar);
-    fir::StoreOp::create(*builder, loc, cast, tmp);
-    addSymbol(*sym, tmp, /*force=*/true);
-  }
-
-  /// Process a concurrent header for a FORALL. (Concurrent headers for DO
-  /// CONCURRENT loops are lowered elsewhere.)
-  void genFIR(const Fortran::parser::ConcurrentHeader &header) {
-    llvm::SmallVector<mlir::Value> lows;
-    llvm::SmallVector<mlir::Value> highs;
-    llvm::SmallVector<mlir::Value> steps;
-    if (explicitIterSpace.isOutermostForall()) {
-      // For the outermost forall, we evaluate the bounds expressions once.
-      // Contrastingly, if this forall is nested, the bounds expressions are
-      // assumed to be pure, possibly dependent on outer concurrent control
-      // variables, possibly variant with respect to arguments, and will be
-      // re-evaluated.
-      mlir::Location loc = toLocation();
-      mlir::Type idxTy = builder->getIndexType();
-      Fortran::lower::StatementContext &stmtCtx =
-          explicitIterSpace.stmtContext();
-      auto lowerExpr = [&](auto &e) {
-        return fir::getBase(genExprValue(e, stmtCtx));
-      };
-      for (const Fortran::parser::ConcurrentControl &ctrl :
-           std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t)) {
-        const Fortran::lower::SomeExpr *lo =
-            Fortran::semantics::GetExpr(std::get<1>(ctrl.t));
-        const Fortran::lower::SomeExpr *hi =
-            Fortran::semantics::GetExpr(std::get<2>(ctrl.t));
-        auto &optStep =
-            std::get<std::optional<Fortran::parser::ScalarIntExpr>>(ctrl.t);
-        lows.push_back(builder->createConvert(loc, idxTy, lowerExpr(*lo)));
-        highs.push_back(builder->createConvert(loc, idxTy, lowerExpr(*hi)));
-        steps.push_back(
-            optStep.has_value()
-                ? builder->createConvert(
-                      loc, idxTy,
-                      lowerExpr(*Fortran::semantics::GetExpr(*optStep)))
-                : builder->createIntegerConstant(loc, idxTy, 1));
-      }
-    }
-    auto lambda = [&, lows, highs, steps]() {
-      // Create our iteration space from the header spec.
-      mlir::Location loc = toLocation();
-      mlir::Type idxTy = builder->getIndexType();
-      llvm::SmallVector<fir::DoLoopOp> loops;
-      Fortran::lower::StatementContext &stmtCtx =
-          explicitIterSpace.stmtContext();
-      auto lowerExpr = [&](auto &e) {
-        return fir::getBase(genExprValue(e, stmtCtx));
-      };
-      const bool outermost = !lows.empty();
-      std::size_t headerIndex = 0;
-      for (const Fortran::parser::ConcurrentControl &ctrl :
-           std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t)) {
-        const Fortran::semantics::Symbol *ctrlVar =
-            std::get<Fortran::parser::Name>(ctrl.t).symbol;
-        mlir::Value lb;
-        mlir::Value ub;
-        mlir::Value by;
-        if (outermost) {
-          assert(headerIndex < lows.size());
-          if (headerIndex == 0)
-            explicitIterSpace.resetInnerArgs();
-          lb = lows[headerIndex];
-          ub = highs[headerIndex];
-          by = steps[headerIndex++];
-        } else {
-          const Fortran::lower::SomeExpr *lo =
-              Fortran::semantics::GetExpr(std::get<1>(ctrl.t));
-          const Fortran::lower::SomeExpr *hi =
-              Fortran::semantics::GetExpr(std::get<2>(ctrl.t));
-          auto &optStep =
-              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(ctrl.t);
-          lb = builder->createConvert(loc, idxTy, lowerExpr(*lo));
-          ub = builder->createConvert(loc, idxTy, lowerExpr(*hi));
-          by = optStep.has_value()
-                   ? builder->createConvert(
-                         loc, idxTy,
-                         lowerExpr(*Fortran::semantics::GetExpr(*optStep)))
-                   : builder->createIntegerConstant(loc, idxTy, 1);
-        }
-        auto lp = fir::DoLoopOp::create(
-            *builder, loc, lb, ub, by, /*unordered=*/true,
-            /*finalCount=*/false, explicitIterSpace.getInnerArgs());
-        if ((!loops.empty() || !outermost) && !lp.getRegionIterArgs().empty())
-          fir::ResultOp::create(*builder, loc, lp.getResults());
-        explicitIterSpace.setInnerArgs(lp.getRegionIterArgs());
-        builder->setInsertionPointToStart(lp.getBody());
-        forceControlVariableBinding(ctrlVar, lp.getInductionVar());
-        loops.push_back(lp);
-      }
-      if (outermost)
-        explicitIterSpace.setOuterLoop(loops[0]);
-      explicitIterSpace.appendLoops(loops);
-      if (const auto &mask =
-              std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
-                  header.t);
-          mask.has_value()) {
-        mlir::Type i1Ty = builder->getI1Type();
-        fir::ExtendedValue maskExv =
-            genExprValue(*Fortran::semantics::GetExpr(mask.value()), stmtCtx);
-        mlir::Value cond =
-            builder->createConvert(loc, i1Ty, fir::getBase(maskExv));
-        auto ifOp = fir::IfOp::create(*builder, loc,
-                                      explicitIterSpace.innerArgTypes(), cond,
-                                      /*withElseRegion=*/true);
-        fir::ResultOp::create(*builder, loc, ifOp.getResults());
-        builder->setInsertionPointToStart(&ifOp.getElseRegion().front());
-        fir::ResultOp::create(*builder, loc, explicitIterSpace.getInnerArgs());
-        builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
-      }
-    };
-    // Push the lambda to gen the loop nest context.
-    explicitIterSpace.pushLoopNest(lambda);
-  }
-
   void genFIR(const Fortran::parser::ForallAssignmentStmt &stmt) {
     Fortran::common::visit([&](const auto &x) { genFIR(x); }, stmt.u);
   }
 
-  void genFIR(const Fortran::parser::EndForallStmt &) {
-    if (!lowerToHighLevelFIR())
-      cleanupExplicitSpace();
-  }
-
-  template <typename A>
-  void prepareExplicitSpace(const A &forall) {
-    if (!explicitIterSpace.isActive())
-      analyzeExplicitSpace(forall);
-    localSymbols.pushScope();
-    explicitIterSpace.enter();
-  }
-
-  /// Cleanup all the FORALL context information when we exit.
-  void cleanupExplicitSpace() {
-    explicitIterSpace.leave();
-    localSymbols.popScope();
-  }
+  void genFIR(const Fortran::parser::EndForallStmt &) {}
 
   /// Generate FIR for a FORALL statement.
   void genFIR(const Fortran::parser::ForallStmt &stmt) {
@@ -3164,30 +3279,19 @@ private:
             Fortran::common::Indirection<Fortran::parser::ConcurrentHeader>>(
             stmt.t)
             .value();
-    if (lowerToHighLevelFIR()) {
-      mlir::OpBuilder::InsertionGuard guard(*builder);
-      Fortran::lower::SymMapScope scope(localSymbols);
-      genForallNest(concurrentHeader);
-      genFIR(std::get<Fortran::parser::UnlabeledStatement<
-                 Fortran::parser::ForallAssignmentStmt>>(stmt.t)
-                 .statement);
-      return;
-    }
-    prepareExplicitSpace(stmt);
-    genFIR(concurrentHeader);
+    mlir::OpBuilder::InsertionGuard guard(*builder);
+    Fortran::lower::SymMapScope scope(localSymbols);
+    genForallNest(concurrentHeader);
     genFIR(std::get<Fortran::parser::UnlabeledStatement<
                Fortran::parser::ForallAssignmentStmt>>(stmt.t)
                .statement);
-    cleanupExplicitSpace();
   }
 
   /// Generate FIR for a FORALL construct.
   void genFIR(const Fortran::parser::ForallConstruct &forall) {
+    setCurrentPositionAt(forall);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    if (lowerToHighLevelFIR())
-      localSymbols.pushScope();
-    else
-      prepareExplicitSpace(forall);
+    localSymbols.pushScope();
     genNestedStatement(
         std::get<
             Fortran::parser::Statement<Fortran::parser::ForallConstructStmt>>(
@@ -3205,10 +3309,8 @@ private:
     genNestedStatement(
         std::get<Fortran::parser::Statement<Fortran::parser::EndForallStmt>>(
             forall.t));
-    if (lowerToHighLevelFIR()) {
-      localSymbols.popScope();
-      builder->restoreInsertionPoint(insertPt);
-    }
+    localSymbols.popScope();
+    builder->restoreInsertionPoint(insertPt);
   }
 
   /// Lower the concurrent header specification.
@@ -3218,10 +3320,7 @@ private:
             Fortran::common::Indirection<Fortran::parser::ConcurrentHeader>>(
             stmt.t)
             .value();
-    if (lowerToHighLevelFIR())
-      genForallNest(concurrentHeader);
-    else
-      genFIR(concurrentHeader);
+    genForallNest(concurrentHeader);
   }
 
   /// Generate hlfir.forall and hlfir.forall_mask nest given a Forall
@@ -3304,11 +3403,56 @@ private:
 
   void attachDirectiveToLoop(const Fortran::parser::CompilerDirective &dir,
                              Fortran::lower::pft::Evaluation *e) {
-    while (e->isDirective())
-      e = e->lexicalSuccessor;
+    auto attachToDoStmt = [&](Fortran::lower::pft::Evaluation *doEval) {
+      if (doEval && doEval->isA<Fortran::parser::NonLabelDoStmt>())
+        doEval->dirs.push_back(&dir);
+    };
 
-    if (e->isA<Fortran::parser::NonLabelDoStmt>())
-      e->dirs.push_back(&dir);
+    // Dive into an OpenACC loop/combined construct to find its NonLabelDoStmt.
+    auto findDoStmtInOpenACC = [](Fortran::lower::pft::Evaluation *eval)
+        -> Fortran::lower::pft::Evaluation * {
+      const auto *acc = eval->getIf<Fortran::parser::OpenACCConstruct>();
+      if (!acc)
+        return nullptr;
+      if (!std::holds_alternative<Fortran::parser::OpenACCLoopConstruct>(
+              acc->u) &&
+          !std::holds_alternative<Fortran::parser::OpenACCCombinedConstruct>(
+              acc->u))
+        return nullptr;
+      if (!eval->hasNestedEvaluations())
+        return nullptr;
+      for (Fortran::lower::pft::Evaluation &nested :
+           eval->getNestedEvaluations()) {
+        if (nested.isA<Fortran::parser::DoConstruct>() &&
+            nested.hasNestedEvaluations())
+          return &nested.getFirstNestedEvaluation();
+      }
+      return nullptr;
+    };
+
+    while (e->isDirective()) {
+      if (Fortran::lower::pft::Evaluation *doStmt = findDoStmtInOpenACC(e)) {
+        attachToDoStmt(doStmt);
+        return;
+      }
+      e = e->lexicalSuccessor;
+      if (!e)
+        return;
+    }
+
+    attachToDoStmt(e);
+  }
+
+  void markCurrentFuncAsAlwaysInline(
+      const Fortran::parser::CompilerDirective::InlineAlways &dir) {
+    mlir::func::FuncOp func = builder->getFunction();
+    if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
+      const std::string symName =
+          currentFunctionUnit->getSubprogramSymbol().name().ToString();
+      if (dir.v.value().ToString() == symName) {
+        func->setAttr("llvm.always_inline", builder->getUnitAttr());
+      }
+    }
   }
 
   void
@@ -3339,6 +3483,9 @@ private:
             [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
               attachDirectiveToLoop(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::VectorLength &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
             [&](const Fortran::parser::CompilerDirective::Unroll &) {
               attachDirectiveToLoop(dir, &eval);
             },
@@ -3364,9 +3511,36 @@ private:
               attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
-              TODO(getCurrentLocation(), "!$dir prefetch");
+              for (const auto &p : prefetch.v) {
+                Fortran::evaluate::ExpressionAnalyzer ea{
+                    bridge.getSemanticsContext()};
+                Fortran::lower::SomeExpr expr{*ea.Analyze(
+                    std::get<Fortran::parser::DataRef>(p.value().u))};
+                Fortran::lower::StatementContext stmtCtx;
+                mlir::Location loc = genLocation(dir.source);
+                hlfir::Entity var = Fortran::lower::convertExprToHLFIR(
+                    loc, *this, expr, localSymbols, stmtCtx);
+                mlir::Value memRef =
+                    hlfir::genVariableRawAddress(loc, *builder, var);
+
+                // TODO: Don't use default value, instead get the following
+                //       info from the directive
+                uint32_t isRead{0}, localityHint{3}, isData{1};
+                fir::PrefetchOp::create(*builder, loc, memRef, isRead,
+                                        localityHint, isData);
+              }
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::InlineAlways
+                    &inlineAlways) {
+              if (inlineAlways.v.has_value())
+                markCurrentFuncAsAlwaysInline(inlineAlways);
+              else
+                attachInliningDirectiveToStmt(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
@@ -3374,8 +3548,30 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    setCurrentPositionAt(acc);
+    Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    localSymbols.pushScope();
+
+    // Cache constructs should not push/pop a scope because they need to update
+    // the symbol map for subsequent statements in the same loop body.
+    bool isCacheConstruct =
+        std::holds_alternative<Fortran::parser::OpenACCCacheConstruct>(acc.u);
+
+    if (!isCacheConstruct)
+      localSymbols.pushScope();
+    // Allocate exit selector for GOTO jump table if the construct is
+    // unstructured (may contain GOTOs that exit the ACC region).
+    bool needsExitSelector = getEval().lowerAsUnstructured();
+    if (needsExitSelector) {
+      AccRegionExitInfo exitInfo;
+      exitInfo.selector =
+          builder->createTemporary(toLocation(), builder->getI32Type());
+      mlir::Value zero = builder->createIntegerConstant(
+          toLocation(), builder->getI32Type(), 0);
+      fir::StoreOp::create(*builder, toLocation(), zero, exitInfo.selector);
+      accRegionExitStack.push_back(std::move(exitInfo));
+    }
+
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
@@ -3384,6 +3580,13 @@ private:
     const Fortran::parser::OpenACCCombinedConstruct *accCombined =
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
+    // TODO: Determining curEval here re-walks the nested evaluations to the
+    // collapse/DO CONCURRENT depth that the construct absorbs, mirroring the
+    // descent genOpenACCConstruct already performs (visitLoopControl in
+    // OpenACC.cpp). That duplication is fragile and couples this code to
+    // genOpenACCConstruct's internals. Move the responsibility for determining
+    // curEval into genOpenACCConstruct -- where the absorbed evaluations are
+    // actually decided -- and return it from there.
     Fortran::lower::pft::Evaluation *curEval = &getEval();
     // Determine collapse depth/force and loopCount
     bool collapseForce = false;
@@ -3412,8 +3615,15 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++)
-          curEval = &*std::next(curEval->getNestedEvaluations().begin());
+        // A DO CONCURRENT holds all controls in one construct; the per-level
+        // descent would overshoot into its body and drop it.
+        const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
+        if (!(outerDo && outerDo->IsDoConcurrent()))
+          for (uint64_t i = 1; i < loopCount; i++) {
+            if (!curEval->hasNestedEvaluations())
+              break;
+            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+          }
       }
     }
 
@@ -3440,9 +3650,8 @@ private:
           }
           prologue.push_back(&*it);
         }
-        // Semantics guarantees collapseDepth does not exceed nest depth
-        // so childLoop must be found here.
-        assert(childLoop && "Expected inner DoConstruct for collapse");
+        if (!childLoop)
+          break;
         parent = childLoop;
         innermostLoopEval = childLoop;
       }
@@ -3463,19 +3672,42 @@ private:
       sink(prologue);
 
       // Lower innermost loop body, skipping sunk
-      for (Fortran::lower::pft::Evaluation &e :
-           innermostLoopEval->getNestedEvaluations())
-        if (!sunk.contains(&e))
-          genFIR(e);
+      if (innermostLoopEval && innermostLoopEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             innermostLoopEval->getNestedEvaluations())
+          if (!sunk.contains(&e))
+            genFIR(e);
 
       sink(epilogue);
     } else {
       // Normal lowering
-      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-        genFIR(e);
+      if (curEval->hasNestedEvaluations())
+        for (Fortran::lower::pft::Evaluation &e :
+             curEval->getNestedEvaluations())
+          genFIR(e);
     }
-    localSymbols.popScope();
+    if (!isCacheConstruct)
+      localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
+
+    // Generate jump table for GOTO exits from the ACC region.
+    if (needsExitSelector) {
+      auto exitInfo = accRegionExitStack.pop_back_val();
+      if (!exitInfo.exits.empty()) {
+        mlir::Location loc = toLocation();
+        mlir::Value sel = fir::LoadOp::create(*builder, loc, exitInfo.selector);
+        for (auto &[id, target] : exitInfo.exits) {
+          mlir::Value idVal =
+              builder->createIntegerConstant(loc, builder->getI32Type(), id);
+          mlir::Value cmp = mlir::arith::CmpIOp::create(
+              *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
+          mlir::Block *nextBlock =
+              builder->getBlock()->splitBlock(builder->getBlock()->end());
+          mlir::cf::CondBranchOp::create(*builder, loc, cmp, target, nextBlock);
+          builder->setInsertionPointToEnd(nextBlock);
+        }
+      }
+    }
 
     if (accLoop && exitCond) {
       Fortran::lower::pft::FunctionLikeUnit *funit =
@@ -3490,6 +3722,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
+    setCurrentPositionAt(accDecl);
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
                                    bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
@@ -3501,6 +3734,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    setCurrentPositionAt(kernel);
     Fortran::lower::SymMapScope scope(localSymbols);
     const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
         std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
@@ -3675,7 +3909,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, idxTy, toStringRef(name.symbol->name()));
+              loc, genType(*name.symbol), toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
@@ -3710,22 +3944,22 @@ private:
         assert(bounds && "Expected bounds on the loop construct");
 
         Fortran::semantics::Symbol &ivSym =
-            bounds->name.thing.symbol->GetUltimate();
+            bounds->Name().thing.symbol->GetUltimate();
         ivValues.push_back(getSymbolAddress(ivSym));
 
         lbs.push_back(builder->createConvert(
             crtLoc, idxTy,
             fir::getBase(genExprValue(
-                *Fortran::semantics::GetExpr(bounds->lower), stmtCtx))));
+                *Fortran::semantics::GetExpr(bounds->Lower()), stmtCtx))));
         ubs.push_back(builder->createConvert(
             crtLoc, idxTy,
             fir::getBase(genExprValue(
-                *Fortran::semantics::GetExpr(bounds->upper), stmtCtx))));
-        if (bounds->step)
+                *Fortran::semantics::GetExpr(bounds->Upper()), stmtCtx))));
+        if (auto &step = bounds->Step())
           steps.push_back(builder->createConvert(
               crtLoc, idxTy,
-              fir::getBase(genExprValue(
-                  *Fortran::semantics::GetExpr(bounds->step), stmtCtx))));
+              fir::getBase(
+                  genExprValue(*Fortran::semantics::GetExpr(step), stmtCtx))));
         else // If `step` is not present, assume it is `1`.
           steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
 
@@ -3759,8 +3993,9 @@ private:
 
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
-      for (int64_t i = 1; i < nestedLoops; i++)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+      if (!outerDoConstruct->IsDoConcurrent())
+        for (int64_t i = 1; i < nestedLoops; i++)
+          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
 
     // Generate loop body
@@ -3772,6 +4007,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    setCurrentPositionAt(omp);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
                        getEval(), omp);
@@ -3783,6 +4019,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
+    setCurrentPositionAt(ompDecl);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     // Register if a declare target construct intended for a target device was
     // found
@@ -3880,16 +4117,17 @@ private:
         }
         const auto &caseRange =
             std::get<Fortran::parser::CaseValueRange::Range>(caseValueRange.u);
-        if (caseRange.lower && caseRange.upper) {
+        const auto &[lower, upper]{caseRange.t};
+        if (lower && upper) {
           attrList.push_back(fir::ClosedIntervalAttr::get(context));
-          addValue(*caseRange.lower);
-          addValue(*caseRange.upper);
-        } else if (caseRange.lower) {
+          addValue(*lower);
+          addValue(*upper);
+        } else if (lower) {
           attrList.push_back(fir::LowerBoundAttr::get(context));
-          addValue(*caseRange.lower);
+          addValue(*lower);
         } else {
           attrList.push_back(fir::UpperBoundAttr::get(context));
-          addValue(*caseRange.upper);
+          addValue(*upper);
         }
       }
     }
@@ -3962,12 +4200,7 @@ private:
   fir::ExtendedValue
   genAssociateSelector(const Fortran::lower::SomeExpr &selector,
                        Fortran::lower::StatementContext &stmtCtx) {
-    if (lowerToHighLevelFIR())
-      return genExprAddr(selector, stmtCtx);
-    return Fortran::lower::isArraySectionWithoutVectorSubscript(selector)
-               ? Fortran::lower::createSomeArrayBox(*this, selector,
-                                                    localSymbols, stmtCtx)
-               : genExprAddr(selector, stmtCtx);
+    return genExprAddr(selector, stmtCtx);
   }
 
   void genFIR(const Fortran::parser::AssociateConstruct &) {
@@ -4038,30 +4271,48 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
+    setCurrentPositionAt(construct);
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    bool unstructuredContext = eval.lowerAsUnstructured();
 
-    for (Fortran::lower::pft::Evaluation &e :
-         getEval().getNestedEvaluations()) {
-      if (e.getIf<Fortran::parser::ChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else if (e.getIf<Fortran::parser::EndChangeTeamStmt>()) {
-        maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
-        genFIR(e);
-      } else {
-        genFIR(e);
-      }
-    }
+    // CHANGE TEAM statement
+    Fortran::lower::pft::Evaluation &changeTeamStmtEval =
+        eval.getFirstNestedEvaluation();
+    auto *changeTeamStmt =
+        changeTeamStmtEval.getIf<Fortran::parser::ChangeTeamStmt>();
+    assert(changeTeamStmt && "ChangeTeamStmt not found");
+    mif::ChangeTeamOp changeOp =
+        genChangeTeamStmt(*this, changeTeamStmtEval, *changeTeamStmt);
+    mlir::Block *entryBlock = changeOp.getBody();
+    builder->setInsertionPointToStart(entryBlock);
+
+    if (unstructuredContext)
+      Fortran::lower::createEmptyRegionBlocks<mif::EndTeamOp>(
+          *builder, eval.getNestedEvaluations());
+    builder->setInsertionPointToStart(entryBlock);
+
+    // CHANGE TEAM body code.
+    auto iter = eval.getNestedEvaluations().begin()++;
+    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+      genFIR(*iter, unstructuredContext);
+
+    // END TEAM statement
+    Fortran::lower::pft::Evaluation &endTeamEval = *iter;
+    auto *endTeamStmt = endTeamEval.getIf<Fortran::parser::EndChangeTeamStmt>();
+    assert(endTeamStmt && "EndChangeTeamStmt not found");
+    if (unstructuredContext)
+      maybeStartBlock(endTeamEval.block);
+
+    mlir::Block &endBody = changeOp.getRegion().back();
+    builder->setInsertionPointToEnd(&endBody);
+    genEndChangeTeamStmt(*this, endTeamEval, *endTeamStmt);
+    assert(mlir::isa_and_nonnull<mif::EndTeamOp>(endBody.getTerminator()) &&
+           "missing end team terminator");
+    builder->setInsertionPointAfter(changeOp.getOperation());
+
     popActiveConstruct();
-  }
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    genChangeTeamStmt(*this, getEval(), stmt);
-  }
-  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
@@ -4285,10 +4536,6 @@ private:
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
-    const auto selectorIsVolatile = [&selector]() {
-      return fir::isa_volatile_type(fir::getBase(selector).getType());
-    };
-
     const auto &typeCaseList =
         std::get<std::list<Fortran::parser::SelectTypeConstruct::TypeCase>>(
             selectTypeConstruct.t);
@@ -4416,10 +4663,8 @@ private:
         };
 
         mlir::Type baseTy = fir::getBase(selector).getType();
-        bool isPointer = fir::isPointerType(baseTy);
-        bool isAllocatable = fir::isAllocatableType(baseTy);
-        bool isArray =
-            mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrOrBoxEleTy(baseTy));
+        auto selectorBoxType = llvm::cast<fir::BaseBoxType>(baseTy);
+        const bool isArray = selectorBoxType.isArray();
         const fir::BoxValue *selectorBox = selector.getBoxOf<fir::BoxValue>();
         if (std::holds_alternative<Fortran::parser::Default>(guard.u)) {
           // CLASS DEFAULT
@@ -4429,72 +4674,55 @@ private:
           // TYPE IS
           fir::ExactTypeAttr attr =
               mlir::dyn_cast<fir::ExactTypeAttr>(typeGuardAttr);
-          mlir::Value exactValue;
-          mlir::Type addrTy = attr.getType();
-          if (isArray) {
-            auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-                fir::dyn_cast_ptrOrBoxEleTy(baseTy));
-            addrTy = fir::SequenceType::get(seqTy.getShape(), attr.getType());
-          }
-          if (isPointer)
-            addrTy = fir::PointerType::get(addrTy);
-          if (isAllocatable)
-            addrTy = fir::HeapType::get(addrTy);
+          fir::BaseBoxType newBoxType =
+              selectorBoxType.getBoxTypeWithNewElementType(
+                  attr.getType(), /*polymorphic=*/false);
+          mlir::Type addrTy =
+              newBoxType.getBaseAddressType(/*dropHeapOrPtr=*/true);
+
+          mlir::Value rawPointer = fir::BoxAddrOp::create(
+              *builder, loc, addrTy, fir::getBase(selector));
           if (std::holds_alternative<Fortran::parser::IntrinsicTypeSpec>(
                   typeSpec->u)) {
-            mlir::Type refTy =
-                fir::ReferenceType::get(addrTy, selectorIsVolatile());
-            if (isPointer || isAllocatable)
-              refTy = addrTy;
-            exactValue = fir::BoxAddrOp::create(*builder, loc, refTy,
-                                                fir::getBase(selector));
             const Fortran::semantics::IntrinsicTypeSpec *intrinsic =
                 typeSpec->declTypeSpec->AsIntrinsic();
             if (isArray) {
-              mlir::Value exact = fir::ConvertOp::create(
-                  *builder, loc,
-                  fir::BoxType::get(addrTy, selectorIsVolatile()),
-                  fir::getBase(selector));
-              addAssocEntitySymbol(selectorBox->clone(exact));
+              mlir::Value boxCast = fir::ConvertOp::create(
+                  *builder, loc, newBoxType, fir::getBase(selector));
+              addAssocEntitySymbol(selectorBox->clone(boxCast));
             } else if (intrinsic->category() ==
                        Fortran::common::TypeCategory::Character) {
               auto charTy = mlir::dyn_cast<fir::CharacterType>(attr.getType());
               mlir::Value charLen =
                   fir::factory::CharacterExprHelper(*builder, loc)
                       .readLengthFromBox(fir::getBase(selector), charTy);
-              addAssocEntitySymbol(fir::CharBoxValue(exactValue, charLen));
+              addAssocEntitySymbol(fir::CharBoxValue(rawPointer, charLen));
             } else {
-              addAssocEntitySymbol(exactValue);
+              addAssocEntitySymbol(rawPointer);
             }
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
-            exactValue = fir::ConvertOp::create(
-                *builder, loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
-                fir::getBase(selector));
-            addAssocEntitySymbol(selectorBox->clone(exactValue));
+            if (isArray) {
+              mlir::Value boxCast = fir::ConvertOp::create(
+                  *builder, loc, newBoxType, fir::getBase(selector));
+              addAssocEntitySymbol(selectorBox->clone(boxCast));
+            } else {
+              addAssocEntitySymbol(rawPointer);
+            }
           }
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                        guard.u)) {
           // CLASS IS
           fir::SubclassAttr attr =
               mlir::dyn_cast<fir::SubclassAttr>(typeGuardAttr);
-          mlir::Type addrTy = attr.getType();
-          if (isArray) {
-            auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-                fir::dyn_cast_ptrOrBoxEleTy(baseTy));
-            addrTy = fir::SequenceType::get(seqTy.getShape(), attr.getType());
-          }
-          if (isPointer)
-            addrTy = fir::PointerType::get(addrTy);
-          if (isAllocatable)
-            addrTy = fir::HeapType::get(addrTy);
-          mlir::Type classTy =
-              fir::ClassType::get(addrTy, selectorIsVolatile());
-          if (classTy == baseTy) {
+          fir::BaseBoxType newClassType =
+              selectorBoxType.getBoxTypeWithNewElementType(
+                  attr.getType(), /*polymorphic=*/true);
+          if (newClassType == baseTy) {
             addAssocEntitySymbol(selector);
           } else {
             mlir::Value derived = fir::ConvertOp::create(
-                *builder, loc, classTy, fir::getBase(selector));
+                *builder, loc, newClassType, fir::getBase(selector));
             addAssocEntitySymbol(selectorBox->clone(derived));
           }
         }
@@ -4688,97 +4916,11 @@ private:
     genLockStatement(*this, stmt);
   }
 
-  fir::ExtendedValue
-  genInitializerExprValue(const Fortran::lower::SomeExpr &expr,
-                          Fortran::lower::StatementContext &stmtCtx) {
-    return Fortran::lower::createSomeInitializerExpression(
-        toLocation(), *this, expr, localSymbols, stmtCtx);
-  }
-
-  /// Return true if the current context is a conditionalized and implied
-  /// iteration space.
-  bool implicitIterationSpace() { return !implicitIterSpace.empty(); }
-
-  /// Return true if context is currently an explicit iteration space. A scalar
-  /// assignment expression may be contextually within a user-defined iteration
-  /// space, transforming it into an array expression.
-  bool explicitIterationSpace() { return explicitIterSpace.isActive(); }
-
-  /// Generate an array assignment.
-  /// This is an assignment expression with rank > 0. The assignment may or may
-  /// not be in a WHERE and/or FORALL context.
-  /// In a FORALL context, the assignment may be a pointer assignment and the \p
-  /// lbounds and \p ubounds parameters should only be used in such a pointer
-  /// assignment case. (If both are None then the array assignment cannot be a
-  /// pointer assignment.)
-  void genArrayAssignment(
-      const Fortran::evaluate::Assignment &assign,
-      Fortran::lower::StatementContext &localStmtCtx,
-      std::optional<llvm::SmallVector<mlir::Value>> lbounds = std::nullopt,
-      std::optional<llvm::SmallVector<mlir::Value>> ubounds = std::nullopt) {
-
-    Fortran::lower::StatementContext &stmtCtx =
-        explicitIterationSpace()
-            ? explicitIterSpace.stmtContext()
-            : (implicitIterationSpace() ? implicitIterSpace.stmtContext()
-                                        : localStmtCtx);
-    if (Fortran::lower::isWholeAllocatable(assign.lhs)) {
-      // Assignment to allocatables may require the lhs to be
-      // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
-      Fortran::lower::createAllocatableArrayAssignment(
-          *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-          localSymbols, stmtCtx);
-      return;
-    }
-
-    if (lbounds) {
-      // Array of POINTER entities, with elemental assignment.
-      if (!Fortran::lower::isWholePointer(assign.lhs))
-        fir::emitFatalError(toLocation(), "pointer assignment to non-pointer");
-
-      Fortran::lower::createArrayOfPointerAssignment(
-          *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-          *lbounds, ubounds, localSymbols, stmtCtx);
-      return;
-    }
-
-    if (!implicitIterationSpace() && !explicitIterationSpace()) {
-      // No masks and the iteration space is implied by the array, so create a
-      // simple array assignment.
-      Fortran::lower::createSomeArrayAssignment(*this, assign.lhs, assign.rhs,
-                                                localSymbols, stmtCtx);
-      return;
-    }
-
-    // If there is an explicit iteration space, generate an array assignment
-    // with a user-specified iteration space and possibly with masks. These
-    // assignments may *appear* to be scalar expressions, but the scalar
-    // expression is evaluated at all points in the user-defined space much like
-    // an ordinary array assignment. More specifically, the semantics inside the
-    // FORALL much more closely resembles that of WHERE than a scalar
-    // assignment.
-    // Otherwise, generate a masked array assignment. The iteration space is
-    // implied by the lhs array expression.
-    Fortran::lower::createAnyMaskedArrayAssignment(
-        *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-        localSymbols, stmtCtx);
-  }
-
-#if !defined(NDEBUG)
-  static bool isFuncResultDesignator(const Fortran::lower::SomeExpr &expr) {
-    const Fortran::semantics::Symbol *sym =
-        Fortran::evaluate::GetFirstSymbol(expr);
-    return sym && sym->IsFuncResult();
-  }
-#endif
-
   inline fir::MutableBoxValue
   genExprMutableBox(mlir::Location loc,
                     const Fortran::lower::SomeExpr &expr) override final {
-    if (lowerToHighLevelFIR())
-      return Fortran::lower::convertExprToMutableBox(loc, *this, expr,
-                                                     localSymbols);
-    return Fortran::lower::createMutableBox(loc, *this, expr, localSymbols);
+    return Fortran::lower::convertExprToMutableBox(loc, *this, expr,
+                                                   localSymbols);
   }
 
   // Create the [newRank] array with the lower bounds to be passed to the
@@ -4803,61 +4945,6 @@ private:
     llvm::SmallVector<mlir::Value> shapes = {ext};
     mlir::Value shapeOp = builder->genShape(loc, shapes);
     return fir::EmboxOp::create(*builder, loc, boxTy, boundArray, shapeOp);
-  }
-
-  // Generate pointer assignment with possibly empty bounds-spec. R1035: a
-  // bounds-spec is a lower bound value.
-  void genNoHLFIRPointerAssignment(
-      mlir::Location loc, const Fortran::evaluate::Assignment &assign,
-      const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-    Fortran::lower::StatementContext stmtCtx;
-
-    assert(!lowerToHighLevelFIR() && "code should not be called with HFLIR");
-    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
-      TODO(loc, "procedure pointer assignment");
-
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
-    // Delegate pointer association to unlimited polymorphic pointer
-    // to the runtime. element size, type code, attribute and of
-    // course base_addr might need to be updated.
-    if (lhsType && lhsType->IsPolymorphic()) {
-      if (explicitIterationSpace())
-        TODO(loc, "polymorphic pointer assignment in FORALL");
-      llvm::SmallVector<mlir::Value> lbounds;
-      for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
-        lbounds.push_back(
-            fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-      fir::MutableBoxValue lhsMutableBox = genExprMutableBox(loc, assign.lhs);
-      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-              assign.rhs)) {
-        fir::factory::disassociateMutableBox(*builder, loc, lhsMutableBox);
-        return;
-      }
-      mlir::Value lhs = lhsMutableBox.getAddr();
-      mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
-      if (!lbounds.empty()) {
-        mlir::Value boundsDesc = createLboundArray(lbounds, loc);
-        Fortran::lower::genPointerAssociateLowerBounds(*builder, loc, lhs, rhs,
-                                                       boundsDesc);
-        return;
-      }
-      Fortran::lower::genPointerAssociate(*builder, loc, lhs, rhs);
-      return;
-    }
-
-    llvm::SmallVector<mlir::Value> lbounds;
-    for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
-      lbounds.push_back(fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-    if (explicitIterationSpace()) {
-      // Pointer assignment in FORALL context. Copy the rhs box value
-      // into the lhs box variable.
-      genArrayAssignment(assign, stmtCtx, lbounds);
-      return;
-    }
-    fir::MutableBoxValue lhs = genExprMutableBox(loc, assign.lhs);
-    Fortran::lower::associateMutableBox(*this, loc, lhs, assign.rhs, lbounds,
-                                        stmtCtx);
   }
 
   void genPointerAssignment(mlir::Location loc,
@@ -5043,75 +5130,6 @@ private:
     return fir::EmboxOp::create(*builder, loc, boxTy, boundArray, shapeOp);
   }
 
-  // Pointer assignment with bounds-remapping. R1036: a bounds-remapping is a
-  // pair, lower bound and upper bound.
-  void genNoHLFIRPointerAssignment(
-      mlir::Location loc, const Fortran::evaluate::Assignment &assign,
-      const Fortran::evaluate::Assignment::BoundsRemapping &boundExprs) {
-    assert(!lowerToHighLevelFIR() && "code should not be called with HFLIR");
-    Fortran::lower::StatementContext stmtCtx;
-    llvm::SmallVector<mlir::Value> lbounds;
-    llvm::SmallVector<mlir::Value> ubounds;
-    for (const std::pair<Fortran::evaluate::ExtentExpr,
-                         Fortran::evaluate::ExtentExpr> &pair : boundExprs) {
-      const Fortran::evaluate::ExtentExpr &lbExpr = pair.first;
-      const Fortran::evaluate::ExtentExpr &ubExpr = pair.second;
-      lbounds.push_back(fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-      ubounds.push_back(fir::getBase(genExprValue(toEvExpr(ubExpr), stmtCtx)));
-    }
-
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
-    std::optional<Fortran::evaluate::DynamicType> rhsType =
-        assign.rhs.GetType();
-    // Polymorphic lhs/rhs need more care. See F2018 10.2.2.3.
-    if ((lhsType && lhsType->IsPolymorphic()) ||
-        (rhsType && rhsType->IsPolymorphic())) {
-      if (explicitIterationSpace())
-        TODO(loc, "polymorphic pointer assignment in FORALL");
-
-      fir::MutableBoxValue lhsMutableBox = genExprMutableBox(loc, assign.lhs);
-      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-              assign.rhs)) {
-        fir::factory::disassociateMutableBox(*builder, loc, lhsMutableBox);
-        return;
-      }
-      mlir::Value lhs = lhsMutableBox.getAddr();
-      mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
-      mlir::Value boundsDesc = createBoundArray(lbounds, ubounds, loc);
-      Fortran::lower::genPointerAssociateRemapping(
-          *builder, loc, lhs, rhs, boundsDesc,
-          lhsType && rhsType && !lhsType->IsPolymorphic() &&
-              rhsType->IsPolymorphic());
-      return;
-    }
-    if (explicitIterationSpace()) {
-      // Pointer assignment in FORALL context. Copy the rhs box value
-      // into the lhs box variable.
-      genArrayAssignment(assign, stmtCtx, lbounds, ubounds);
-      return;
-    }
-    fir::MutableBoxValue lhs = genExprMutableBox(loc, assign.lhs);
-    if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-            assign.rhs)) {
-      fir::factory::disassociateMutableBox(*builder, loc, lhs);
-      return;
-    }
-    // Do not generate a temp in case rhs is an array section.
-    fir::ExtendedValue rhs =
-        Fortran::lower::isArraySectionWithoutVectorSubscript(assign.rhs)
-            ? Fortran::lower::createSomeArrayBox(*this, assign.rhs,
-                                                 localSymbols, stmtCtx)
-            : genExprAddr(assign.rhs, stmtCtx);
-    fir::factory::associateMutableBoxWithRemap(*builder, loc, lhs, rhs, lbounds,
-                                               ubounds);
-    if (explicitIterationSpace()) {
-      mlir::ValueRange inners = explicitIterSpace.getInnerArgs();
-      if (!inners.empty())
-        fir::ResultOp::create(*builder, loc, inners);
-    }
-  }
-
   /// Given converted LHS and RHS of the assignment, materialize any
   /// implicit conversion of the RHS to the LHS type. The front-end
   /// usually already makes those explicit, except for non-standard
@@ -5149,13 +5167,58 @@ private:
     return false;
   }
 
+  // Return true if the right-hand side of the assignment is a reference to a
+  // function whose result carries a managed, unified, or device CUDA data
+  // attribute. Such a result may be produced by an asynchronous kernel, so
+  // consuming it in an assignment must be a synchronizing data transfer rather
+  // than a plain host assignment. A whole-allocatable left-hand side is
+  // excluded: it has reallocation semantics and is performed on the host, and
+  // so is a scalar character result: it carries its length outside of a
+  // descriptor, so a transfer would copy raw bytes instead of padding or
+  // truncating the destination.
+  bool
+  isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
+    if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
+      return false;
+    if (assign.rhs.Rank() == 0)
+      if (std::optional<Fortran::evaluate::DynamicType> type{
+              assign.rhs.GetType()})
+        if (type->category() == Fortran::common::TypeCategory::Character)
+          return false;
+    const Fortran::evaluate::ProcedureRef *procRef =
+        Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
+    if (!procRef)
+      return false;
+    auto procedure =
+        Fortran::evaluate::characteristics::Procedure::Characterize(
+            procRef->proc(), getFoldingContext(), /*emitError=*/false);
+    if (!procedure || !procedure->functionResult ||
+        !procedure->functionResult->cudaDataAttr)
+      return false;
+    Fortran::common::CUDADataAttr attr =
+        *procedure->functionResult->cudaDataAttr;
+    return attr == Fortran::common::CUDADataAttr::Managed ||
+           attr == Fortran::common::CUDADataAttr::Unified ||
+           attr == Fortran::common::CUDADataAttr::Device;
+  }
+
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
                            hlfir::Entity &lhs, hlfir::Entity &rhs,
                            bool isWholeAllocatableAssignment,
                            bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
-    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
+    // A managed/unified/device function result is not visible to the symbol
+    // collection used by HasCUDADeviceAttrs (a ProcedureRef contributes no
+    // symbols), so treat such a result as a device side for transfer direction.
+    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs) ||
+                       isCUDAFunctionResultTransfer(assign);
+    mlir::UnitAttr hasManagedOrUnifedSymbols =
+        (Fortran::evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign.lhs) >
+             0 ||
+         Fortran::evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign.rhs) > 0)
+            ? mlir::UnitAttr::get(builder.getContext())
+            : nullptr;
 
     auto getRefFromValue = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
@@ -5185,9 +5248,14 @@ private:
     mlir::Value rhsVal = getRefFromValue(rhs.getBase());
     mlir::Value lhsVal = getRefFromValue(lhs.getBase());
     // Get shape from the rhs if available otherwise get it from lhs.
-    mlir::Value shape = getShapeFromDecl(rhs.getBase());
-    if (!shape)
-      shape = getShapeFromDecl(lhs.getBase());
+    mlir::Value shape;
+    if (fir::isa_ref_type(rhsVal.getType()) ||
+        fir::isa_ref_type(lhsVal.getType())) {
+      if (mlir::Value rhsShape = getShapeFromDecl(rhs.getBase()))
+        shape = rhsShape;
+      else
+        shape = getShapeFromDecl(lhs.getBase());
+    }
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -5201,46 +5269,56 @@ private:
         // Special case if the rhs is a constant.
         if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
           cuf::DataTransferOp::create(builder, loc, base, lhsVal, shape,
-                                      transferKindAttr);
+                                      transferKindAttr,
+                                      hasManagedOrUnifedSymbols);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
           cuf::DataTransferOp::create(builder, loc, associate.getBase(), lhsVal,
-                                      shape, transferKindAttr);
+                                      shape, transferKindAttr,
+                                      hasManagedOrUnifedSymbols);
           hlfir::EndAssociateOp::create(builder, loc, associate);
         }
       } else {
         cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                    transferKindAttr);
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
       }
       return;
     }
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
-      if (auto elementalOp = Fortran::lower::isTransferWithConversion(rhs)) {
+      auto [firstElOp, elOp] = Fortran::lower::isTransferWithConversion(rhs);
+      if (firstElOp) {
         mlir::OpBuilder::InsertionGuard insertionGuard(builder);
         auto designateOp =
-            *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
-        builder.setInsertionPoint(elementalOp);
+            *firstElOp.getBody()->getOps<hlfir::DesignateOp>().begin();
+        builder.setInsertionPoint(firstElOp);
         // Create a temp to transfer the rhs before applying the conversion.
         hlfir::Entity entity{designateOp.getMemref()};
         auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
         auto transferKindAttr = cuf::DataTransferKindAttr::get(
             builder.getContext(), cuf::DataTransferKind::DeviceHost);
         cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
-                                    /*shape=*/mlir::Value{}, transferKindAttr);
+                                    /*shape=*/mlir::Value{}, transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
         designateOp.getMemrefMutable().assign(temp);
-        builder.setInsertionPointAfter(elementalOp);
-        hlfir::AssignOp::create(builder, loc, elementalOp, lhs,
+        builder.setInsertionPointAfter(elOp);
+        hlfir::AssignOp::create(builder, loc, elOp, lhs,
                                 isWholeAllocatableAssignment,
                                 keepLhsLengthInAllocatableAssignment);
         return;
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
@@ -5249,7 +5327,7 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr);
+                                  transferKindAttr, hasManagedOrUnifedSymbols);
       return;
     }
     llvm_unreachable("Unhandled CUDA data transfer");
@@ -5317,8 +5395,9 @@ private:
         getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::DoConcurrentOffload));
 
-    bool isCUDATransfer =
-        IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
+    bool isCUDATransfer = (IsCUDADataTransfer(assign.lhs, assign.rhs) ||
+                           isCUDAFunctionResultTransfer(assign)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         isCUDATransfer &&
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
@@ -5327,17 +5406,29 @@ private:
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
+    if (Fortran::evaluate::ExtractCoarrayRef(assign.lhs) ||
+        Fortran::evaluate::ExtractCoarrayRef(assign.rhs))
+      TODO(loc, "coarray: assignment");
+
     // Gather some information about the assignment that will impact how it is
     // lowered.
-    const bool isWholeAllocatableAssignment =
+    const bool lhsIsWholeAllocatable =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
-        Fortran::lower::isWholeAllocatable(assign.lhs) &&
-        bridge.getLoweringOptions().getReallocateLHS();
+        Fortran::lower::isWholeAllocatable(assign.lhs);
+    std::optional<Fortran::evaluate::DynamicType> lhsType =
+        assign.lhs.GetType();
+    // Polymorphic allocatable LHS always requires reallocation semantics
+    // regardless of -fno-realloc-lhs: assignment to a polymorphic variable
+    // is a F2003+ feature that requires dynamic type tracking, which cannot
+    // be safely skipped.  A warning is emitted by the semantics phase.
+    const bool lhsIsPolymorphic =
+        lhsType.has_value() && lhsType->IsPolymorphic();
+    const bool isWholeAllocatableAssignment =
+        lhsIsWholeAllocatable &&
+        (bridge.getLoweringOptions().getReallocateLHS() || lhsIsPolymorphic);
     const bool isUserDefAssignToPointerOrAllocatable =
         userDefinedAssignment &&
         firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
-    std::optional<Fortran::evaluate::DynamicType> lhsType =
-        assign.lhs.GetType();
     const bool keepLhsLengthInAllocatableAssignment =
         isWholeAllocatableAssignment && lhsType.has_value() &&
         lhsType->category() == Fortran::common::TypeCategory::Character &&
@@ -5347,8 +5438,18 @@ private:
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
+      const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
+      std::optional<Fortran::lower::SomeExpr> rewritten;
+      if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
+                                                            assign.rhs)) {
+        rewritten =
+            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+        if (rewritten)
+          rhsExpr = &*rewritten;
+      }
       hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.rhs, localSymbols, stmtCtx);
+          loc, *this, *rhsExpr, localSymbols, stmtCtx);
       // Load trivial scalar RHS to allow the loads to be hoisted outside of
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.
@@ -5398,9 +5499,22 @@ private:
           if (lhs.getDefiningOp())
             attachInlineAttributes(*lhs.getDefiningOp(), dirs);
         }
-        hlfir::AssignOp::create(builder, loc, rhs, lhs,
-                                isWholeAllocatableAssignment,
-                                keepLhsLengthInAllocatableAssignment);
+        if (isCUDATransfer && hasCUDAImplicitTransfer &&
+            Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs)) {
+          auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, lhs);
+          hlfir::AssignOp::create(builder, loc, rhs, temp,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+          auto transferKindAttr = cuf::DataTransferKindAttr::get(
+              builder.getContext(), cuf::DataTransferKind::HostDevice);
+          cuf::DataTransferOp::create(builder, loc, temp, lhs,
+                                      /*shape=*/mlir::Value{},
+                                      transferKindAttr);
+        } else {
+          hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+        }
       }
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
@@ -5474,233 +5588,23 @@ private:
                 const llvm::ArrayRef<const Fortran::parser::CompilerDirective *>
                     &dirs = {}) {
     mlir::Location loc = toLocation();
-    if (lowerToHighLevelFIR()) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::evaluate::Assignment::Intrinsic &) {
-                genDataAssignment(assign, /*userDefinedAssignment=*/nullptr,
-                                  dirs);
-              },
-              [&](const Fortran::evaluate::ProcedureRef &procRef) {
-                genDataAssignment(assign, /*userDefinedAssignment=*/&procRef,
-                                  dirs);
-              },
-              [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-                genPointerAssignment(loc, assign);
-              },
-              [&](const Fortran::evaluate::Assignment::BoundsRemapping
-                      &boundExprs) { genPointerAssignment(loc, assign); },
-          },
-          assign.u);
-      return;
-    }
-    if (explicitIterationSpace()) {
-      Fortran::lower::createArrayLoads(*this, explicitIterSpace, localSymbols);
-      explicitIterSpace.genLoopNest();
-    }
-    Fortran::lower::StatementContext stmtCtx;
     Fortran::common::visit(
         Fortran::common::visitors{
-            // [1] Plain old assignment.
             [&](const Fortran::evaluate::Assignment::Intrinsic &) {
-              const Fortran::semantics::Symbol *sym =
-                  Fortran::evaluate::GetLastSymbol(assign.lhs);
-
-              if (!sym)
-                TODO(loc, "assignment to pointer result of function reference");
-
-              std::optional<Fortran::evaluate::DynamicType> lhsType =
-                  assign.lhs.GetType();
-              assert(lhsType && "lhs cannot be typeless");
-              std::optional<Fortran::evaluate::DynamicType> rhsType =
-                  assign.rhs.GetType();
-
-              // Assignment to/from polymorphic entities are done with the
-              // runtime.
-              if (lhsType->IsPolymorphic() ||
-                  lhsType->IsUnlimitedPolymorphic() ||
-                  (rhsType && (rhsType->IsPolymorphic() ||
-                               rhsType->IsUnlimitedPolymorphic()))) {
-                mlir::Value lhs;
-                if (Fortran::lower::isWholeAllocatable(assign.lhs))
-                  lhs = genExprMutableBox(loc, assign.lhs).getAddr();
-                else
-                  lhs = fir::getBase(genExprBox(loc, assign.lhs, stmtCtx));
-                mlir::Value rhs =
-                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
-                if ((lhsType->IsPolymorphic() ||
-                     lhsType->IsUnlimitedPolymorphic()) &&
-                    Fortran::lower::isWholeAllocatable(assign.lhs))
-                  fir::runtime::genAssignPolymorphic(*builder, loc, lhs, rhs);
-                else
-                  fir::runtime::genAssign(*builder, loc, lhs, rhs);
-                return;
-              }
-
-              // Note: No ad-hoc handling for pointers is required here. The
-              // target will be assigned as per 2018 10.2.1.3 p2. genExprAddr
-              // on a pointer returns the target address and not the address of
-              // the pointer variable.
-
-              if (assign.lhs.Rank() > 0 || explicitIterationSpace()) {
-                if (isDerivedCategory(lhsType->category()) &&
-                    Fortran::semantics::IsFinalizable(
-                        lhsType->GetDerivedTypeSpec()))
-                  TODO(loc, "derived-type finalization with array assignment");
-                // Array assignment
-                // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                genArrayAssignment(assign, stmtCtx);
-                return;
-              }
-
-              // Scalar assignment
-              const bool isNumericScalar =
-                  isNumericScalarCategory(lhsType->category());
-              const bool isVector =
-                  isDerivedCategory(lhsType->category()) &&
-                  lhsType->GetDerivedTypeSpec().IsVectorType();
-              fir::ExtendedValue rhs = (isNumericScalar || isVector)
-                                           ? genExprValue(assign.rhs, stmtCtx)
-                                           : genExprAddr(assign.rhs, stmtCtx);
-              const bool lhsIsWholeAllocatable =
-                  Fortran::lower::isWholeAllocatable(assign.lhs);
-              std::optional<fir::factory::MutableBoxReallocation> lhsRealloc;
-              std::optional<fir::MutableBoxValue> lhsMutableBox;
-
-              // Set flag to know if the LHS needs finalization. Polymorphic,
-              // unlimited polymorphic assignment will be done with genAssign.
-              // Assign runtime function performs the finalization.
-              bool needFinalization = !lhsType->IsPolymorphic() &&
-                                      !lhsType->IsUnlimitedPolymorphic() &&
-                                      (isDerivedCategory(lhsType->category()) &&
-                                       Fortran::semantics::IsFinalizable(
-                                           lhsType->GetDerivedTypeSpec()));
-
-              auto lhs = [&]() -> fir::ExtendedValue {
-                if (lhsIsWholeAllocatable) {
-                  lhsMutableBox = genExprMutableBox(loc, assign.lhs);
-                  // Finalize if needed.
-                  if (needFinalization) {
-                    mlir::Value isAllocated =
-                        fir::factory::genIsAllocatedOrAssociatedTest(
-                            *builder, loc, *lhsMutableBox);
-                    builder->genIfThen(loc, isAllocated)
-                        .genThen([&]() {
-                          fir::runtime::genDerivedTypeDestroy(
-                              *builder, loc, fir::getBase(*lhsMutableBox));
-                        })
-                        .end();
-                    needFinalization = false;
-                  }
-
-                  llvm::SmallVector<mlir::Value> lengthParams;
-                  if (const fir::CharBoxValue *charBox = rhs.getCharBox())
-                    lengthParams.push_back(charBox->getLen());
-                  else if (fir::isDerivedWithLenParameters(rhs))
-                    TODO(loc, "assignment to derived type allocatable with "
-                              "LEN parameters");
-                  lhsRealloc = fir::factory::genReallocIfNeeded(
-                      *builder, loc, *lhsMutableBox,
-                      /*shape=*/{}, lengthParams);
-                  return lhsRealloc->newValue;
-                }
-                return genExprAddr(assign.lhs, stmtCtx);
-              }();
-
-              if (isNumericScalar || isVector) {
-                // Fortran 2018 10.2.1.3 p8 and p9
-                // Conversions should have been inserted by semantic analysis,
-                // but they can be incorrect between the rhs and lhs. Correct
-                // that here.
-                mlir::Value addr = fir::getBase(lhs);
-                mlir::Value val = fir::getBase(rhs);
-                // A function with multiple entry points returning different
-                // types tags all result variables with one of the largest
-                // types to allow them to share the same storage. Assignment
-                // to a result variable of one of the other types requires
-                // conversion to the actual type.
-                mlir::Type toTy = genType(assign.lhs);
-
-                // If Cray pointee, need to handle the address
-                // Array is handled in genCoordinateOp.
-                if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee) &&
-                    sym->Rank() == 0) {
-                  // get the corresponding Cray pointer
-
-                  const Fortran::semantics::Symbol &ptrSym =
-                      Fortran::semantics::GetCrayPointer(*sym);
-                  fir::ExtendedValue ptr =
-                      getSymbolExtendedValue(ptrSym, nullptr);
-                  mlir::Value ptrVal = fir::getBase(ptr);
-                  mlir::Type ptrTy = genType(ptrSym);
-
-                  fir::ExtendedValue pte =
-                      getSymbolExtendedValue(*sym, nullptr);
-                  mlir::Value pteVal = fir::getBase(pte);
-                  mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
-                      loc, *builder, ptrVal, ptrTy, pteVal.getType());
-                  addr = fir::LoadOp::create(*builder, loc, cnvrt);
-                }
-                mlir::Value cast =
-                    isVector ? val
-                             : builder->convertWithSemantics(loc, toTy, val);
-                if (fir::dyn_cast_ptrEleTy(addr.getType()) != toTy) {
-                  assert(isFuncResultDesignator(assign.lhs) && "type mismatch");
-                  addr = builder->createConvert(
-                      toLocation(), builder->getRefType(toTy), addr);
-                }
-                fir::StoreOp::create(*builder, loc, cast, addr);
-              } else if (isCharacterCategory(lhsType->category())) {
-                // Fortran 2018 10.2.1.3 p10 and p11
-                fir::factory::CharacterExprHelper{*builder, loc}.createAssign(
-                    lhs, rhs);
-              } else if (isDerivedCategory(lhsType->category())) {
-                // Handle parent component.
-                if (Fortran::lower::isParentComponent(assign.lhs)) {
-                  if (!mlir::isa<fir::BaseBoxType>(fir::getBase(lhs).getType()))
-                    lhs = fir::getBase(builder->createBox(loc, lhs));
-                  lhs = Fortran::lower::updateBoxForParentComponent(*this, lhs,
-                                                                    assign.lhs);
-                }
-
-                // Fortran 2018 10.2.1.3 p13 and p14
-                // Recursively gen an assignment on each element pair.
-                fir::factory::genRecordAssignment(*builder, loc, lhs, rhs,
-                                                  needFinalization);
-              } else {
-                llvm_unreachable("unknown category");
-              }
-              if (lhsIsWholeAllocatable) {
-                assert(lhsRealloc.has_value());
-                fir::factory::finalizeRealloc(*builder, loc, *lhsMutableBox,
-                                              /*lbounds=*/{},
-                                              /*takeLboundsIfRealloc=*/false,
-                                              *lhsRealloc);
-              }
+              genDataAssignment(assign, /*userDefinedAssignment=*/nullptr,
+                                dirs);
             },
-
-            // [2] User defined assignment. If the context is a scalar
-            // expression then call the procedure.
             [&](const Fortran::evaluate::ProcedureRef &procRef) {
-              Fortran::lower::StatementContext &ctx =
-                  explicitIterationSpace() ? explicitIterSpace.stmtContext()
-                                           : stmtCtx;
-              Fortran::lower::createSubroutineCall(
-                  *this, procRef, explicitIterSpace, implicitIterSpace,
-                  localSymbols, ctx, /*isUserDefAssignment=*/true);
+              genDataAssignment(assign, /*userDefinedAssignment=*/&procRef,
+                                dirs);
             },
-
             [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-              return genNoHLFIRPointerAssignment(loc, assign, lbExprs);
+              genPointerAssignment(loc, assign);
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping
-                    &boundExprs) {
-              return genNoHLFIRPointerAssignment(loc, assign, boundExprs);
-            },
+                    &boundExprs) { genPointerAssignment(loc, assign); },
         },
         assign.u);
-    if (explicitIterationSpace())
-      Fortran::lower::createArrayMergeStores(*this, explicitIterSpace);
   }
 
   // Is the insertion point of the builder directly or indirectly set
@@ -5722,27 +5626,19 @@ private:
   bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
+    setCurrentPositionAt(c);
     mlir::Location loc = getCurrentLocation();
-    hlfir::WhereOp whereOp;
+    auto whereOp = hlfir::WhereOp::create(*builder, loc);
+    builder->createBlock(&whereOp.getMaskRegion());
 
-    if (!lowerToHighLevelFIR()) {
-      implicitIterSpace.growStack();
-    } else {
-      whereOp = hlfir::WhereOp::create(*builder, loc);
-      builder->createBlock(&whereOp.getMaskRegion());
-    }
-
-    // Lower the where mask. For HLFIR, this is done in the hlfir.where mask
-    // region.
+    // Lower the where mask in the hlfir.where mask region.
     genNestedStatement(
         std::get<
             Fortran::parser::Statement<Fortran::parser::WhereConstructStmt>>(
             c.t));
 
-    // Lower WHERE body. For HLFIR, this is done in the hlfir.where body
-    // region.
-    if (whereOp)
-      builder->createBlock(&whereOp.getBody());
+    // Lower WHERE body in the hlfir.where body region.
+    builder->createBlock(&whereOp.getBody());
 
     for (const auto &body :
          std::get<std::list<Fortran::parser::WhereBodyConstruct>>(c.t))
@@ -5760,12 +5656,10 @@ private:
         std::get<Fortran::parser::Statement<Fortran::parser::EndWhereStmt>>(
             c.t));
 
-    if (whereOp) {
-      // For HLFIR, create fir.end terminator in the last hlfir.elsewhere, or
-      // in the hlfir.where if it had no elsewhere.
-      fir::FirEndOp::create(*builder, loc);
-      builder->setInsertionPointAfter(whereOp);
-    }
+    // Create fir.end terminator in the last hlfir.elsewhere, or in the
+    // hlfir.where if it had no elsewhere.
+    fir::FirEndOp::create(*builder, loc);
+    builder->setInsertionPointAfter(whereOp);
   }
   void genFIR(const Fortran::parser::WhereBodyConstruct &body) {
     Fortran::common::visit(
@@ -5797,27 +5691,21 @@ private:
   void genFIR(const Fortran::parser::WhereConstructStmt &stmt) {
     const Fortran::semantics::SomeExpr *maskExpr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::LogicalExpr>(stmt.t));
-    if (lowerToHighLevelFIR())
-      lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
-    else
-      implicitIterSpace.append(maskExpr);
+    lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    setCurrentPositionAt(ew);
     mlir::Location loc = getCurrentLocation();
-    hlfir::ElseWhereOp elsewhereOp;
-    if (lowerToHighLevelFIR()) {
-      elsewhereOp = hlfir::ElseWhereOp::create(*builder, loc);
-      // Lower mask in the mask region.
-      builder->createBlock(&elsewhereOp.getMaskRegion());
-    }
+    auto elsewhereOp = hlfir::ElseWhereOp::create(*builder, loc);
+    // Lower mask in the mask region.
+    builder->createBlock(&elsewhereOp.getMaskRegion());
     genNestedStatement(
         std::get<
             Fortran::parser::Statement<Fortran::parser::MaskedElsewhereStmt>>(
             ew.t));
 
-    // For HLFIR, lower the body in the hlfir.elsewhere body region.
-    if (elsewhereOp)
-      builder->createBlock(&elsewhereOp.getBody());
+    // Lower the body in the hlfir.elsewhere body region.
+    builder->createBlock(&elsewhereOp.getBody());
 
     for (const auto &body :
          std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
@@ -5826,17 +5714,13 @@ private:
   void genFIR(const Fortran::parser::MaskedElsewhereStmt &stmt) {
     const auto *maskExpr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::LogicalExpr>(stmt.t));
-    if (lowerToHighLevelFIR())
-      lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
-    else
-      implicitIterSpace.append(maskExpr);
+    lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
-    if (lowerToHighLevelFIR()) {
-      auto elsewhereOp =
-          hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
-      builder->createBlock(&elsewhereOp.getBody());
-    }
+    setCurrentPositionAt(ew);
+    auto elsewhereOp =
+        hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
+    builder->createBlock(&elsewhereOp.getBody());
     genNestedStatement(
         std::get<Fortran::parser::Statement<Fortran::parser::ElsewhereStmt>>(
             ew.t));
@@ -5844,35 +5728,22 @@ private:
          std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
       genFIR(body);
   }
-  void genFIR(const Fortran::parser::ElsewhereStmt &stmt) {
-    if (!lowerToHighLevelFIR())
-      implicitIterSpace.append(nullptr);
-  }
-  void genFIR(const Fortran::parser::EndWhereStmt &) {
-    if (!lowerToHighLevelFIR())
-      implicitIterSpace.shrinkStack();
-  }
+  void genFIR(const Fortran::parser::ElsewhereStmt &stmt) {}
+  void genFIR(const Fortran::parser::EndWhereStmt &) {}
 
   void genFIR(const Fortran::parser::WhereStmt &stmt) {
     Fortran::lower::StatementContext stmtCtx;
     const auto &assign = std::get<Fortran::parser::AssignmentStmt>(stmt.t);
     const auto *mask = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::LogicalExpr>(stmt.t));
-    if (lowerToHighLevelFIR()) {
-      mlir::Location loc = getCurrentLocation();
-      auto whereOp = hlfir::WhereOp::create(*builder, loc);
-      builder->createBlock(&whereOp.getMaskRegion());
-      lowerWhereMaskToHlfir(loc, mask);
-      builder->createBlock(&whereOp.getBody());
-      genAssignment(*assign.typedAssignment->v);
-      fir::FirEndOp::create(*builder, loc);
-      builder->setInsertionPointAfter(whereOp);
-      return;
-    }
-    implicitIterSpace.growStack();
-    implicitIterSpace.append(mask);
+    mlir::Location loc = getCurrentLocation();
+    auto whereOp = hlfir::WhereOp::create(*builder, loc);
+    builder->createBlock(&whereOp.getMaskRegion());
+    lowerWhereMaskToHlfir(loc, mask);
+    builder->createBlock(&whereOp.getBody());
     genAssignment(*assign.typedAssignment->v);
-    implicitIterSpace.shrinkStack();
+    fir::FirEndOp::create(*builder, loc);
+    builder->setInsertionPointAfter(whereOp);
   }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
@@ -6037,9 +5908,10 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
+  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {}  // nop
+  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {} // nop
 
   /// Generate FIR for Evaluation \p eval.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -6052,6 +5924,17 @@ private:
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
+
+    // Add scope for constructs inside acc.loop to properly contain symbol
+    // bindings (e.g., from cache directive) within the construct.
+    bool needsAccScope =
+        eval.isConstruct() && Fortran::lower::isInOpenACCLoop(*builder);
+    if (needsAccScope)
+      localSymbols.pushScope();
+    llvm::scope_exit popAccScope([&]() {
+      if (needsAccScope)
+        localSymbols.popScope();
+    });
 
     // Generate evaluation specific code. Even nop calls should usually reach
     // here in case they start a new block or require generation of a generic
@@ -6106,7 +5989,7 @@ private:
 
     // Always generate fir.dummy_scope even if there are no arguments.
     // It is currently used to create proper TBAA forest.
-    if (lowerToHighLevelFIR()) {
+    {
       mlir::Value scopeOp = fir::DummyScopeOp::create(*builder, toLocation());
       setDummyArgsScope(scopeOp);
     }
@@ -6205,6 +6088,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     bridge.fctCtx().pushScope();
+    bridge.cudaCleanupCtx().pushScope();
     bridge.openAccCtx().pushScope();
     const Fortran::semantics::Scope &scope = funit.getScope();
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
@@ -6222,6 +6106,8 @@ private:
     builder->setComplexDivisionToRuntimeFlag(
         bridge.getLoweringOptions().getComplexDivisionToRuntime());
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
@@ -6243,6 +6129,9 @@ private:
 
     mapDummiesAndResults(funit, callee);
 
+    // Emit USE statement operations for debug info generation
+    emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
+
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
       funit.parentHostAssoc().internalProcedureBindings(*this, localSymbols);
@@ -6261,18 +6150,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
@@ -6361,6 +6253,10 @@ private:
     // with dummy_scope operands.
     resetRegisteredDummySymbols();
 
+    // Clear any Evaluation::block pointers left over from a previous
+    // entry-point pass over this shared PFT.
+    resetEvaluationBlocks(funit.evaluationList);
+
     // Create most function blocks in advance.
     createEmptyBlocks(funit.evaluationList);
 
@@ -6387,6 +6283,18 @@ private:
       genBranch(alternateEntryEval->lexicalSuccessor->block);
   }
 
+  /// Recursively null every Evaluation::block in \p evaluationList.  Called
+  /// once per entry-point pass over a shared PFT so a later pass never sees
+  /// block pointers that belong to a prior pass's function or wrap region.
+  void resetEvaluationBlocks(
+      std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.block = nullptr;
+      if (eval.evaluationList)
+        resetEvaluationBlocks(*eval.evaluationList);
+    }
+  }
+
   /// Create global blocks for the current function. This eliminates the
   /// distinction between forward and backward targets when generating
   /// branches. A block is "global" if it can be the target of a GOTO or
@@ -6404,7 +6312,17 @@ private:
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
-        if (eval.lowerAsUnstructured()) {
+        if (Fortran::lower::pft::isWrappableConstruct(
+                eval, bridge.getSemanticsContext())) {
+          // The wrap owns internal blocks; only create the entry block here
+          // so the enclosing CFG can branch to it.
+          if (eval.hasNestedEvaluations()) {
+            Fortran::lower::pft::Evaluation &constructStmt =
+                eval.getFirstNestedEvaluation();
+            if (constructStmt.isNewBlock)
+              constructStmt.block = builder->createBlock(region);
+          }
+        } else if (eval.lowerAsUnstructured()) {
           createEmptyBlocks(eval.getNestedEvaluations());
         } else if (eval.hasNestedEvaluations()) {
           // A structured construct that is a target starts a new block.
@@ -6502,6 +6420,8 @@ private:
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
@@ -6561,7 +6481,8 @@ private:
       return;
     for (const auto &scope : intrinsicModuleScope->children()) {
       llvm::StringRef modName = toStringRef(scope.symbol()->name());
-      if (modName != "__fortran_ieee_exceptions")
+      if (modName != "__fortran_ieee_exceptions" &&
+          modName != "iso_fortran_env")
         continue;
       for (auto &var : Fortran::lower::pft::getScopeVariableList(scope)) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();
@@ -6583,8 +6504,21 @@ private:
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
       startNewFunction(funit); // the entry point for lowering this procedure
+      wrapUnstructuredCount = 0;
+
       for (Fortran::lower::pft::Evaluation &eval : funit.evaluationList)
         genFIR(eval);
+
+      if (wrapUnstructuredCount > 0) {
+        LLVM_DEBUG({
+          llvm::dbgs()
+              << "[wrap-unstructured] summary: " << wrapUnstructuredCount
+              << " execute_region(s) wrapping unstructured constructs at ";
+          toLocation().print(llvm::dbgs());
+          llvm::dbgs() << "\n";
+        });
+      }
+
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
@@ -6598,6 +6532,7 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
+    emitModuleDebugImports(*this, *builder, toLocation(), mod);
     auto &scopeVariableListMap =
         Fortran::lower::pft::getScopeVariableListMap(mod);
     for (const auto &var : Fortran::lower::pft::getScopeVariableList(
@@ -6621,7 +6556,6 @@ private:
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
       }
-
       Fortran::lower::defineModuleVariable(*this, var);
     }
     for (auto &eval : mod.evaluationList)
@@ -6672,216 +6606,7 @@ private:
     return Fortran::evaluate::GetShape(foldingContext, expr);
   }
 
-  //===--------------------------------------------------------------------===//
-  // Analysis on a nested explicit iteration space.
-  //===--------------------------------------------------------------------===//
-
-  void analyzeExplicitSpace(const Fortran::parser::ConcurrentHeader &header) {
-    explicitIterSpace.pushLevel();
-    for (const Fortran::parser::ConcurrentControl &ctrl :
-         std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t)) {
-      const Fortran::semantics::Symbol *ctrlVar =
-          std::get<Fortran::parser::Name>(ctrl.t).symbol;
-      explicitIterSpace.addSymbol(ctrlVar);
-    }
-    if (const auto &mask =
-            std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
-                header.t);
-        mask.has_value())
-      analyzeExplicitSpace(*Fortran::semantics::GetExpr(*mask));
-  }
-  template <bool LHS = false, typename A>
-  void analyzeExplicitSpace(const Fortran::evaluate::Expr<A> &e) {
-    explicitIterSpace.exprBase(&e, LHS);
-  }
-  void analyzeExplicitSpace(const Fortran::evaluate::Assignment *assign) {
-    auto analyzeAssign = [&](const Fortran::lower::SomeExpr &lhs,
-                             const Fortran::lower::SomeExpr &rhs) {
-      analyzeExplicitSpace</*LHS=*/true>(lhs);
-      analyzeExplicitSpace(rhs);
-    };
-    Fortran::common::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::evaluate::ProcedureRef &procRef) {
-              // Ensure the procRef expressions are the one being visited.
-              assert(procRef.arguments().size() == 2);
-              const Fortran::lower::SomeExpr *lhs =
-                  procRef.arguments()[0].value().UnwrapExpr();
-              const Fortran::lower::SomeExpr *rhs =
-                  procRef.arguments()[1].value().UnwrapExpr();
-              assert(lhs && rhs &&
-                     "user defined assignment arguments must be expressions");
-              analyzeAssign(*lhs, *rhs);
-            },
-            [&](const auto &) { analyzeAssign(assign->lhs, assign->rhs); }},
-        assign->u);
-    explicitIterSpace.endAssign();
-  }
-  void analyzeExplicitSpace(const Fortran::parser::ForallAssignmentStmt &stmt) {
-    Fortran::common::visit([&](const auto &s) { analyzeExplicitSpace(s); },
-                           stmt.u);
-  }
-  void analyzeExplicitSpace(const Fortran::parser::AssignmentStmt &s) {
-    analyzeExplicitSpace(s.typedAssignment->v.operator->());
-  }
-  void analyzeExplicitSpace(const Fortran::parser::PointerAssignmentStmt &s) {
-    analyzeExplicitSpace(s.typedAssignment->v.operator->());
-  }
-  void analyzeExplicitSpace(const Fortran::parser::WhereConstruct &c) {
-    analyzeExplicitSpace(
-        std::get<
-            Fortran::parser::Statement<Fortran::parser::WhereConstructStmt>>(
-            c.t)
-            .statement);
-    for (const Fortran::parser::WhereBodyConstruct &body :
-         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(c.t))
-      analyzeExplicitSpace(body);
-    for (const Fortran::parser::WhereConstruct::MaskedElsewhere &e :
-         std::get<std::list<Fortran::parser::WhereConstruct::MaskedElsewhere>>(
-             c.t))
-      analyzeExplicitSpace(e);
-    if (const auto &e =
-            std::get<std::optional<Fortran::parser::WhereConstruct::Elsewhere>>(
-                c.t);
-        e.has_value())
-      analyzeExplicitSpace(e.operator->());
-  }
-  void analyzeExplicitSpace(const Fortran::parser::WhereConstructStmt &ws) {
-    const Fortran::lower::SomeExpr *exp = Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(ws.t));
-    addMaskVariable(exp);
-    analyzeExplicitSpace(*exp);
-  }
-  void analyzeExplicitSpace(
-      const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
-    analyzeExplicitSpace(
-        std::get<
-            Fortran::parser::Statement<Fortran::parser::MaskedElsewhereStmt>>(
-            ew.t)
-            .statement);
-    for (const Fortran::parser::WhereBodyConstruct &e :
-         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
-      analyzeExplicitSpace(e);
-  }
-  void analyzeExplicitSpace(const Fortran::parser::WhereBodyConstruct &body) {
-    Fortran::common::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::common::Indirection<
-                Fortran::parser::WhereConstruct> &wc) {
-              analyzeExplicitSpace(wc.value());
-            },
-            [&](const auto &s) { analyzeExplicitSpace(s.statement); }},
-        body.u);
-  }
-  void analyzeExplicitSpace(const Fortran::parser::MaskedElsewhereStmt &stmt) {
-    const Fortran::lower::SomeExpr *exp = Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(stmt.t));
-    addMaskVariable(exp);
-    analyzeExplicitSpace(*exp);
-  }
-  void
-  analyzeExplicitSpace(const Fortran::parser::WhereConstruct::Elsewhere *ew) {
-    for (const Fortran::parser::WhereBodyConstruct &e :
-         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew->t))
-      analyzeExplicitSpace(e);
-  }
-  void analyzeExplicitSpace(const Fortran::parser::WhereStmt &stmt) {
-    const Fortran::lower::SomeExpr *exp = Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(stmt.t));
-    addMaskVariable(exp);
-    analyzeExplicitSpace(*exp);
-    const std::optional<Fortran::evaluate::Assignment> &assign =
-        std::get<Fortran::parser::AssignmentStmt>(stmt.t).typedAssignment->v;
-    assert(assign.has_value() && "WHERE has no statement");
-    analyzeExplicitSpace(assign.operator->());
-  }
-  void analyzeExplicitSpace(const Fortran::parser::ForallStmt &forall) {
-    analyzeExplicitSpace(
-        std::get<
-            Fortran::common::Indirection<Fortran::parser::ConcurrentHeader>>(
-            forall.t)
-            .value());
-    analyzeExplicitSpace(std::get<Fortran::parser::UnlabeledStatement<
-                             Fortran::parser::ForallAssignmentStmt>>(forall.t)
-                             .statement);
-    analyzeExplicitSpacePop();
-  }
-  void
-  analyzeExplicitSpace(const Fortran::parser::ForallConstructStmt &forall) {
-    analyzeExplicitSpace(
-        std::get<
-            Fortran::common::Indirection<Fortran::parser::ConcurrentHeader>>(
-            forall.t)
-            .value());
-  }
-  void analyzeExplicitSpace(const Fortran::parser::ForallConstruct &forall) {
-    analyzeExplicitSpace(
-        std::get<
-            Fortran::parser::Statement<Fortran::parser::ForallConstructStmt>>(
-            forall.t)
-            .statement);
-    for (const Fortran::parser::ForallBodyConstruct &s :
-         std::get<std::list<Fortran::parser::ForallBodyConstruct>>(forall.t)) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::common::Indirection<
-                  Fortran::parser::ForallConstruct> &b) {
-                analyzeExplicitSpace(b.value());
-              },
-              [&](const Fortran::parser::WhereConstruct &w) {
-                analyzeExplicitSpace(w);
-              },
-              [&](const auto &b) { analyzeExplicitSpace(b.statement); }},
-          s.u);
-    }
-    analyzeExplicitSpacePop();
-  }
-
-  void analyzeExplicitSpacePop() { explicitIterSpace.popLevel(); }
-
-  void addMaskVariable(Fortran::lower::FrontEndExpr exp) {
-    // Note: use i8 to store bool values. This avoids round-down behavior found
-    // with sequences of i1. That is, an array of i1 will be truncated in size
-    // and be too small. For example, a buffer of type fir.array<7xi1> will have
-    // 0 size.
-    mlir::Type i64Ty = builder->getIntegerType(64);
-    mlir::TupleType ty = fir::factory::getRaggedArrayHeaderType(*builder);
-    mlir::Type buffTy = ty.getType(1);
-    mlir::Type shTy = ty.getType(2);
-    mlir::Location loc = toLocation();
-    mlir::Value hdr = builder->createTemporary(loc, ty);
-    // FIXME: Is there a way to create a `zeroinitializer` in LLVM-IR dialect?
-    // For now, explicitly set lazy ragged header to all zeros.
-    // auto nilTup = builder->createNullConstant(loc, ty);
-    // fir::StoreOp::create(*builder, loc, nilTup, hdr);
-    mlir::Type i32Ty = builder->getIntegerType(32);
-    mlir::Value zero = builder->createIntegerConstant(loc, i32Ty, 0);
-    mlir::Value zero64 = builder->createIntegerConstant(loc, i64Ty, 0);
-    mlir::Value flags = fir::CoordinateOp::create(
-        *builder, loc, builder->getRefType(i64Ty), hdr, zero);
-    fir::StoreOp::create(*builder, loc, zero64, flags);
-    mlir::Value one = builder->createIntegerConstant(loc, i32Ty, 1);
-    mlir::Value nullPtr1 = builder->createNullConstant(loc, buffTy);
-    mlir::Value var = fir::CoordinateOp::create(
-        *builder, loc, builder->getRefType(buffTy), hdr, one);
-    fir::StoreOp::create(*builder, loc, nullPtr1, var);
-    mlir::Value two = builder->createIntegerConstant(loc, i32Ty, 2);
-    mlir::Value nullPtr2 = builder->createNullConstant(loc, shTy);
-    mlir::Value shape = fir::CoordinateOp::create(
-        *builder, loc, builder->getRefType(shTy), hdr, two);
-    fir::StoreOp::create(*builder, loc, nullPtr2, shape);
-    implicitIterSpace.addMaskVariable(exp, var, shape, hdr);
-    explicitIterSpace.outermostContext().attachCleanup(
-        [builder = this->builder, hdr, loc]() {
-          fir::runtime::genRaggedArrayDeallocate(loc, *builder, hdr);
-        });
-  }
-
   void createRuntimeTypeInfoGlobals() {}
-
-  bool lowerToHighLevelFIR() const {
-    return bridge.getLoweringOptions().getLowerToHighLevelFIR();
-  }
 
   // Returns the mangling prefix for the given constant expression.
   std::string getConstantExprManglePrefix(mlir::Location loc,
@@ -6929,7 +6654,8 @@ private:
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
-      const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+          &globalOmpRequiresSymbol) {
     if (!ompDeferredDeclareTarget.empty()) {
       bool deferredDeviceFuncFound =
           Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
@@ -6938,9 +6664,10 @@ private:
     }
 
     // Set the module attribute related to OpenMP requires directives
-    if (ompDeviceCodeFound)
-      Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
-                                        globalOmpRequiresSymbol);
+    if (ompDeviceCodeFound) {
+      for (const Fortran::semantics::Symbol *sym : globalOmpRequiresSymbol)
+        Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(), sym);
+    }
   }
 
   /// Record fir.dummy_scope operation for this function.
@@ -6984,18 +6711,25 @@ private:
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
 
+  /// Counter of `scf.execute_region` ops created when
+  /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
+  /// currently-lowered function.
+  unsigned wrapUnstructuredCount = 0;
+
   // Stack to manage object deallocation and finalization at construct exits.
   llvm::SmallVector<ConstructContext> activeConstructStack;
+
+  /// Track GOTO exits from ACC regions for jump table generation.
+  struct AccRegionExitInfo {
+    mlir::Value selector{}; // alloca i32 for exit selector
+    llvm::SmallVector<std::pair<int, mlir::Block *>> exits; // {id, target}
+    int nextId = 1;
+  };
+  llvm::SmallVector<AccRegionExitInfo> accRegionExitStack;
 
   /// BLOCK name mangling component map
   int blockId = 0;
   Fortran::lower::mangle::ScopeBlockIdMap scopeBlockIdMap;
-
-  /// FORALL statement/construct context
-  Fortran::lower::ExplicitIterSpace explicitIterSpace;
-
-  /// WHERE statement/construct mask expression stack
-  Fortran::lower::ImplicitIterSpace implicitIterSpace;
 
   /// Tuple of host associated variables
   mlir::Value hostAssocTuple;
@@ -7072,7 +6806,7 @@ void Fortran::lower::LoweringBridge::lower(
     const Fortran::parser::Program &prg,
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   std::unique_ptr<Fortran::lower::pft::Program> pft =
-      Fortran::lower::createPFT(prg, semanticsContext);
+      Fortran::lower::createPFT(prg, semanticsContext, getLoweringOptions());
   FirConverter converter{*this};
   converter.run(*pft);
 }
@@ -7160,8 +6894,11 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
+  fir::setRelocationModel(*module, cgOpts.getRelocationModel());
+  fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }

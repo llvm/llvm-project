@@ -284,6 +284,10 @@ export namespace std {
 
   } // namespace chrono
 
+#if _LIBCPP_STD_VER >= 26
+  using std::hash;
+#endif
+
 } // namespace std
 export namespace std::inline literals::inline chrono_literals {
   // [time.duration.literals], suffixes for duration literals

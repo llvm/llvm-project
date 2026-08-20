@@ -51,6 +51,13 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SystemOperands.td"
 
 //===----------------------------------------------------------------------===//
+// LFI rewriter metadata consumed by AArch64MCLFIRewriter. Must follow
+// AArch64SystemOperands.td due to use of SearchableTable.td.
+//===----------------------------------------------------------------------===//
+
+include "AArch64LFI.td"
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 
@@ -60,13 +67,14 @@ include "AArch64SystemOperands.td"
 
 class AArch64Unsupported { list<Predicate> F; }
 
-let F = [HasSVE2p1, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
+let F = [HasSVE2p1, HasSVE2p1_or_SME, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSVE2, HasSVE2_or_SME, HasNonStreamingSVE2_or_SME2, HasSSVE_FP8FMA, HasSMEF8F16,
+                       HasSSVE_FP8DOT2, HasSSVE_FP8DOT4,
                        HasSMEF8F32, HasSVEAES, HasSVESHA3, HasSVESM4, HasSVEBitPerm,
-                       HasSVEB16B16],
+                       HasSVEB16B16, HasSVEBFSCALE],
                        SVE2p1Unsupported.F);
 }
 
@@ -95,13 +103,15 @@ def SME2p1Unsupported : AArch64Unsupported {
 
 def SME2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSME2, HasNonStreamingSVE2_or_SME2, HasSVE2p1_or_SME2, HasSSVE_FP8FMA,
+                      HasSSVE_FP8DOT2, HasSSVE_FP8DOT4,
                       HasSMEF8F16, HasSMEF8F32, HasSMEF16F16_or_SMEF8F16, HasSMEB16B16,
-                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2],
+                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2, HasSME2andIsNonStreamingSafe],
                       SME2p1Unsupported.F);
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64],
+  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64,
+                       HasSMEandIsNonStreamingSafe],
                       SME2Unsupported.F);
 }
 
@@ -117,6 +127,9 @@ include "AArch64SchedA53.td"
 include "AArch64SchedA55.td"
 include "AArch64SchedA510.td"
 include "AArch64SchedA57.td"
+include "AArch64SchedC1Nano.td"
+include "AArch64SchedC1Ultra.td"
+include "AArch64SchedC1Premium.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
@@ -128,6 +141,7 @@ include "AArch64SchedThunderX2T99.td"
 include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
+include "AArch64SchedHIP12.td"
 include "AArch64SchedAmpere1.td"
 include "AArch64SchedAmpere1B.td"
 include "AArch64SchedNeoverseN1.td"
@@ -137,6 +151,7 @@ include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
 include "AArch64SchedNeoverseV3.td"
 include "AArch64SchedNeoverseV3AE.td"
+include "AArch64SchedOlympus.td"
 include "AArch64SchedOryon.td"
 
 include "AArch64Processors.td"

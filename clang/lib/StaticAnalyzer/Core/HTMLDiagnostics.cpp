@@ -22,6 +22,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -257,6 +259,9 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
 
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
@@ -782,6 +787,10 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
                                   FileID FID) {
+  // Add line numbers first, so that tags inserted later at end-of-line
+  // offsets (e.g. pop-up closing tags) end up inside the row.
+  html::EscapeText(R, FID);
+  html::AddLineNumbers(R, FID);
 
   // Process the path.
   // Maintain the counts of extra note pieces separately.
@@ -872,10 +881,6 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
 
   // Add the <table> start tag of pop-up pieces based on the stored ranges.
   HandlePopUpPieceStartTag(R, PopUpRanges);
-
-  // Add line numbers, header, footer, etc.
-  html::EscapeText(R, FID);
-  html::AddLineNumbers(R, FID);
 
   addArrowSVGs(R, FID, ArrowIndices);
 
@@ -1092,8 +1097,11 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   os << "</div></td></tr>";
 
-  // Insert the new html.
+  // Insert the new html after the newline, so that the bubble's row lands
+  // between the current line's row and the next line's row.
   unsigned DisplayPos = LineEnd - FileStart;
+  if (LineEnd != FileEnd)
+    ++DisplayPos;
   SourceLocation Loc =
     SM.getLocForStartOfFile(LPosInfo.first).getLocWithOffset(DisplayPos);
 
@@ -1250,35 +1258,15 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   SourceManager &SM = R.getSourceMgr();
   const LangOptions &LangOpts = R.getLangOpts();
 
-  SourceLocation InstantiationStart = SM.getExpansionLoc(Range.getBegin());
-  unsigned StartLineNo = SM.getExpansionLineNumber(InstantiationStart);
-
-  SourceLocation InstantiationEnd = SM.getExpansionLoc(Range.getEnd());
-  unsigned EndLineNo = SM.getExpansionLineNumber(InstantiationEnd);
-
-  if (EndLineNo < StartLineNo)
+  std::optional<CharSourceRange> FileRange = getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(Range), BugFileID, SM);
+  if (!FileRange)
     return;
 
-  if (SM.getFileID(InstantiationStart) != BugFileID ||
-      SM.getFileID(InstantiationEnd) != BugFileID)
-    return;
-
-  // Compute the column number of the end.
-  unsigned EndColNo = SM.getExpansionColumnNumber(InstantiationEnd);
-  unsigned OldEndColNo = EndColNo;
-
-  if (EndColNo) {
-    // Add in the length of the token, so that we cover multi-char tokens.
-    EndColNo += Lexer::MeasureTokenLength(Range.getEnd(), SM, LangOpts)-1;
-  }
-
-  // Highlight the range.  Make the span tag the outermost tag for the
-  // selected range.
-
-  SourceLocation E =
-    InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
-
-  html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
+  CharSourceRange CharRange = Lexer::getAsCharRange(*FileRange, SM, LangOpts);
+  html::HighlightRange(R, CharRange.getBegin(), CharRange.getEnd(),
+                       HighlightStart, HighlightEnd,
+                       /*IsTokenRange=*/false);
 }
 
 StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {

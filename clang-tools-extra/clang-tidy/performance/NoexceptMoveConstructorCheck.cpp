@@ -11,7 +11,7 @@
 
 using namespace clang::ast_matchers;
 
-// FixItHint - comment added to fix list.rst generation in add_new_check.py.
+// FixItHint - comment added to fix list.md generation in add_new_check.py.
 // Do not remove. Fixes are generated in base class.
 
 namespace clang::tidy::performance {
@@ -30,7 +30,7 @@ DiagnosticBuilder NoexceptMoveConstructorCheck::reportMissingNoexcept(
   return diag(FuncDecl->getLocation(),
               "move %select{assignment operator|constructor}0s should "
               "be marked noexcept")
-         << CXXConstructorDecl::classof(FuncDecl);
+         << isa<CXXConstructorDecl>(FuncDecl);
 }
 
 void NoexceptMoveConstructorCheck::reportNoexceptEvaluatedToFalse(
@@ -38,7 +38,7 @@ void NoexceptMoveConstructorCheck::reportNoexceptEvaluatedToFalse(
   diag(NoexceptExpr->getExprLoc(),
        "noexcept specifier on the move %select{assignment "
        "operator|constructor}0 evaluates to 'false'")
-      << CXXConstructorDecl::classof(FuncDecl);
+      << isa<CXXConstructorDecl>(FuncDecl);
 }
 
 } // namespace clang::tidy::performance

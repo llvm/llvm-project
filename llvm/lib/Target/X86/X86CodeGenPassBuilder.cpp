@@ -11,55 +11,281 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86ISelDAGToDAG.h"
+#include "X86AsmPrinter.h"
 #include "X86TargetMachine.h"
 
+#include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
+#include "llvm/CodeGen/MachineCombiner.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Transforms/CFGuard.h"
 
 using namespace llvm;
 
+extern cl::opt<bool> X86EnableMachineCombinerPass;
+
 namespace {
 
-class X86CodeGenPassBuilder
-    : public CodeGenPassBuilder<X86CodeGenPassBuilder, X86TargetMachine> {
+class X86CodeGenPassBuilder : public CodeGenPassBuilder {
+  using Base = CodeGenPassBuilder;
+
+  X86TargetMachine &getTM() const {
+    return static_cast<X86TargetMachine &>(TM);
+  }
+
 public:
   explicit X86CodeGenPassBuilder(X86TargetMachine &TM,
                                  const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
-  void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
+
+  void addIRPasses(PassManagerWrapper &PMW) override;
+  void addPreISel(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addILPOpts(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
+  void addPreRegAlloc(PassManagerWrapper &PMW) override;
+  // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
+  // it is available to support AMX.
+  void addPostRegAlloc(PassManagerWrapper &PMW) override;
+  void addPreSched2(PassManagerWrapper &PMW) override;
+  void addPreEmitPass(PassManagerWrapper &PMW) override;
+  void addPreEmitPass2(PassManagerWrapper &PMW) override;
+  // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
+  // once it is available to support AMX.
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
-void X86CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
-  // TODO: Add passes pre instruction selection.
+void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
+  addFunctionPass(AtomicExpandPass(TM), PMW);
+
+  // We add both pass anyway and when these two passes run, one will be a
+  // no-op based on the optimization level/attributes.
+  addFunctionPass(X86LowerAMXIntrinsicsPass(&TM), PMW);
+  addFunctionPass(X86LowerAMXTypePass(&TM), PMW);
+
+  Base::addIRPasses(PMW);
+
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addFunctionPass(InterleavedAccessPass(TM), PMW);
+    addFunctionPass(X86PartialReductionPass(&getTM()), PMW);
+  }
+
+  // Add passes that handle indirect branch removal and insertion of a retpoline
+  // thunk. These will be a no-op unless a function subtarget has the retpoline
+  // feature enabled.
+  addFunctionPass(IndirectBrExpandPass(TM), PMW);
+
+  // Add Control Flow Guard checks.
+  const Triple &TT = TM.getTargetTriple();
+  if (TT.isOSWindows())
+    addFunctionPass(CFGuardPass(), PMW);
+
+  if (TM.Options.JMCInstrument) {
+    flushFPMsToMPM(PMW);
+    addModulePass(JMCInstrumenterPass(), PMW);
+  }
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
-                                          CreateMCStreamer) const {
-  // TODO: Add AsmPrinter.
+void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
+  // Only add this pass for 32-bit x86 Windows.
+  const Triple &TT = TM.getTargetTriple();
+  if (TT.isOSWindows() && TT.isX86_32()) {
+    flushFPMsToMPM(PMW);
+    addModulePass(X86WinEHStatePass(), PMW);
+  }
 }
 
-Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
-  // TODO: Add instruction selector related passes.
-  addPass(X86ISelDAGToDAGPass(TM));
+Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86ISelDAGToDAGPass(getTM()), PMW);
+
+  // For ELF, cleanup any local-dynamic TLS accesses
+  if (TM.getTargetTriple().isOSBinFormatELF() &&
+      getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(X86CleanupLocalDynamicTLSPass(), PMW);
+  }
+
+  addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
+  addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(EarlyIfConverterPass(), PMW);
+  if (X86EnableMachineCombinerPass)
+    addMachineFunctionPass(MachineCombinerPass(), PMW);
+  addMachineFunctionPass(X86CmovConversionPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
+  Base::addMachineSSAOptimization(PMW);
+}
+
+void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(LiveRangeShrinkPass(), PMW);
+    addMachineFunctionPass(X86FixupSetCCPass(), PMW);
+    addMachineFunctionPass(X86CallFrameOptimizationPass(), PMW);
+    addMachineFunctionPass(X86AvoidStoreForwardingBlocksPass(), PMW);
+  }
+
+  addMachineFunctionPass(X86SuppressAPXForRelocationPass(), PMW);
+  addMachineFunctionPass(X86SpeculativeLoadHardeningPass(), PMW);
+  addMachineFunctionPass(X86FlagsCopyLoweringPass(), PMW);
+  addMachineFunctionPass(X86DynAllocaExpanderPass(), PMW);
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PreTileConfigPass(), PMW);
+  else
+    addMachineFunctionPass(X86FastPreTileConfigPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86LowerTileCopyPass(), PMW);
+  addMachineFunctionPass(X86FPStackifierPass(), PMW);
+  // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
+  // to using the Speculative Execution Side Effect Suppression pass for
+  // mitigation. This is to prevent slow downs due to
+  // analyses needed by the LVIHardening pass when compiling at -O0.
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(X86LoadValueInjectionLoadHardeningPass(), PMW);
+  }
+}
+
+void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86ExpandPseudoPass(), PMW);
+  addMachineFunctionPass(MachineKCFIPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO(boomanaiden154): Add X86ExecutionDomainFixPass here once it has
+    // been ported.
+    addMachineFunctionPass(BreakFalseDepsPass(), PMW);
+  }
+
+  addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
+  addMachineFunctionPass(X86InsertVZeroUpperPass(), PMW);
+
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
+    // TODO(boomanaiden154): Add X86PadShortFunctionsPass here once it has been
+    // ported.
+    addMachineFunctionPass(X86FixupLEAsPass(), PMW);
+    addMachineFunctionPass(X86FixupInstTuningPass(), PMW);
+    addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);
+  }
+  addMachineFunctionPass(X86CompressEVEXPass(), PMW);
+  addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
+  const Triple &TT = TM.getTargetTriple();
+  const MCAsmInfo &MAI = TM.getMCAsmInfo();
+
+  // The X86 Speculative Execution Pass must run after all control
+  // flow graph modifying passes. As a result it was listed to run right before
+  // the X86 Retpoline Thunks pass. The reason it must run after control flow
+  // graph modifications is that the model of LFENCE in LLVM has to be updated
+  // (FIXME: https://bugs.llvm.org/show_bug.cgi?id=45167). Currently the
+  // placement of this pass was hand checked to ensure that the subsequent
+  // passes don't move the code around the LFENCEs in a way that will hurt the
+  // correctness of this pass. This placement has been shown to work based on
+  // hand inspection of the codegen output.
+  addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
+                         PMW);
+  // TODO(boomanaiden154): Add X86IndirectThunksPass here
+  // once it has been ported.
+  addMachineFunctionPass(X86ReturnThunksPass(), PMW);
+
+  // Insert extra int3 instructions after trailing call instructions to avoid
+  // issues in the unwinder.
+  if (TT.isOSWindows() && TT.isX86_64())
+    addMachineFunctionPass(X86AvoidTrailingCallPass(), PMW);
+
+  // Verify basic block incoming and outgoing cfa offset and register values and
+  // correct CFA calculation rule where needed by inserting appropriate CFI
+  // instructions.
+  if (!TT.isOSDarwin() &&
+      (!TT.isOSWindows() ||
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+    // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
+    // ported.
+  }
+
+  if (TT.isOSWindows()) {
+    // Identify valid longjmp targets for Windows Control Flow Guard.
+    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
+    // ported.
+    // Identify valid eh continuation targets for Windows EHCont Guard.
+    // TODO(boomanaiden154): Add EHContGuardTargetsPass when it has been
+    // ported.
+  }
+
+  addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
+
+  // Insert pseudo probe annotation for callsite profiling
+  // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
+  // ported.
+
+  // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
+  // also CALL_RVMARKER.
+  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
+  // ported.
+
+  // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
+  // after all real instructions have been added to the epilog.
+  if (TT.isOSWindows() && TT.isX86_64()) {
+    addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
+  }
+}
+
+void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
+  addModulePass(X86AsmPrinterBeginPass(), PMW, /*Force=*/true);
+}
+
+void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(X86AsmPrinterPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
+  addModulePass(X86AsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
 
-void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opt, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }

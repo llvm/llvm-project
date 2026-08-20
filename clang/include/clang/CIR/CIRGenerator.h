@@ -32,6 +32,7 @@ class CIRGenModule;
 
 namespace mlir {
 class MLIRContext;
+class ModuleOp;
 } // namespace mlir
 namespace cir {
 class CIRGenerator : public clang::ASTConsumer {
@@ -81,6 +82,9 @@ public:
   void HandleTagDeclDefinition(clang::TagDecl *d) override;
   void HandleTagDeclRequiredDefinition(const clang::TagDecl *D) override;
   void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *D) override;
+  void
+  HandleOpenACCRoutineReference(const clang::FunctionDecl *FD,
+                                const clang::OpenACCRoutineDecl *RD) override;
   void CompleteTentativeDefinition(clang::VarDecl *d) override;
   void HandleVTable(clang::CXXRecordDecl *rd) override;
 

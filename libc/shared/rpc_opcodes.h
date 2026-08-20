@@ -53,6 +53,7 @@ typedef enum {
   LIBC_LAST = 0xFFFFFFFF,
 } rpc_opcode_t;
 
+#undef LLVM_LIBC_RPC_BASE
 #undef LLVM_LIBC_OPCODE
 
 #endif // LLVM_LIBC_SHARED_RPC_OPCODES_H

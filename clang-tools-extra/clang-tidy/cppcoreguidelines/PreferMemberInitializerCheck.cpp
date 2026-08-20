@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferMemberInitializerCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
@@ -67,7 +67,7 @@ static bool canAdvanceAssignment(AssignedLevel Level) {
 static void updateAssignmentLevel(
     const FieldDecl *Field, const Expr *Init, const CXXConstructorDecl *Ctor,
     llvm::DenseMap<const FieldDecl *, AssignedLevel> &AssignedFields) {
-  auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
+  const auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
 
   if (!canAdvanceAssignment(It->second))
     // fast path for already decided field.
@@ -95,10 +95,14 @@ static void updateAssignmentLevel(
   }
 }
 
+namespace {
+
 struct AssignmentPair {
   const FieldDecl *Field;
   const Expr *Init;
 };
+
+} // namespace
 
 static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
@@ -180,11 +184,10 @@ void PreferMemberInitializerCheck::check(
     if (isNoReturnCallStatement(S))
       return;
 
-    if (const auto *CondOp = dyn_cast<ConditionalOperator>(S)) {
-      if (isNoReturnCallStatement(CondOp->getLHS()) ||
-          isNoReturnCallStatement(CondOp->getRHS()))
-        return;
-    }
+    if (const auto *CondOp = dyn_cast<ConditionalOperator>(S);
+        CondOp && (isNoReturnCallStatement(CondOp->getLHS()) ||
+                   isNoReturnCallStatement(CondOp->getRHS())))
+      return;
 
     std::optional<AssignmentPair> AssignmentToMember =
         isAssignmentToMemberOf(Class, S, Ctor);
@@ -213,9 +216,9 @@ void PreferMemberInitializerCheck::check(
         continue;
       if (Init->getMember() == Field) {
         HasInitAlready = true;
-        if (isa<ImplicitValueInitExpr>(Init->getInit()))
+        if (isa<ImplicitValueInitExpr>(Init->getInit())) {
           InsertPos = Init->getRParenLoc();
-        else {
+        } else {
           ReplaceRange = Init->getInit()->getSourceRange();
           AddBrace = isa<InitListExpr>(Init->getInit());
         }
@@ -247,12 +250,12 @@ void PreferMemberInitializerCheck::check(
           // comma.
           InsertPrefix = ", ";
         } else {
-          InsertPos = Lexer::getLocForEndOfToken(
-              Ctor->getTypeSourceInfo()
-                  ->getTypeLoc()
-                  .getAs<clang::FunctionTypeLoc>()
-                  .getLocalRangeEnd(),
-              0, *Result.SourceManager, getLangOpts());
+          InsertPos = Lexer::getLocForEndOfToken(Ctor->getTypeSourceInfo()
+                                                     ->getTypeLoc()
+                                                     .getAs<FunctionTypeLoc>()
+                                                     .getLocalRangeEnd(),
+                                                 0, *Result.SourceManager,
+                                                 getLangOpts());
 
           // If this is first time in the loop, there are no initializers so
           // `:` declares member initialization list. If this is a
@@ -265,15 +268,16 @@ void PreferMemberInitializerCheck::check(
     }
 
     SourceLocation SemiColonEnd;
-    if (auto NextToken = Lexer::findNextToken(
+    if (auto NextToken = utils::lexer::findNextTokenSkippingComments(
             S->getEndLoc(), *Result.SourceManager, getLangOpts()))
       SemiColonEnd = NextToken->getEndLoc();
     else
       InvalidFix = true;
 
-    auto Diag = diag(S->getBeginLoc(), "%0 should be initialized in a member"
-                                       " initializer of the constructor")
-                << Field;
+    const auto Diag =
+        diag(S->getBeginLoc(), "%0 should be initialized in a member"
+                               " initializer of the constructor")
+        << Field;
     if (InvalidFix)
       continue;
     const StringRef NewInit = Lexer::getSourceText(

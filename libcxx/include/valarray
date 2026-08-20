@@ -13,6 +13,8 @@
 /*
     valarray synopsis
 
+#include <initializer_list>
+
 namespace std
 {
 
@@ -21,6 +23,8 @@ class valarray
 {
 public:
     typedef T value_type;
+    typedef unspecified iterator;
+    typedef unspecified const_iterator;
 
     // construct/destroy:
     valarray();
@@ -90,6 +94,10 @@ public:
     valarray& operator>>=(const valarray& v);
 
     // member functions:
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
     void swap(valarray& v) noexcept;
 
     size_t size() const;
@@ -334,11 +342,6 @@ template<class T> valarray<T> sqrt (const valarray<T>& x);
 template<class T> valarray<T> tan (const valarray<T>& x);
 template<class T> valarray<T> tanh (const valarray<T>& x);
 
-template <class T> unspecified1 begin(valarray<T>& v);
-template <class T> unspecified2 begin(const valarray<T>& v);
-template <class T> unspecified1 end(valarray<T>& v);
-template <class T> unspecified2 end(const valarray<T>& v);
-
 }  // std
 
 */
@@ -373,6 +376,13 @@ template <class T> unspecified2 end(const valarray<T>& v);
 // [valarray.syn]
 #  include <initializer_list>
 
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
@@ -381,6 +391,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 class valarray;
@@ -396,9 +407,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI slice(size_t __start, size_t __size, size_t __stride)
       : __start_(__start), __size_(__size), __stride_(__stride) {}
 
-  _LIBCPP_HIDE_FROM_ABI size_t start() const { return __start_; }
-  _LIBCPP_HIDE_FROM_ABI size_t size() const { return __size_; }
-  _LIBCPP_HIDE_FROM_ABI size_t stride() const { return __stride_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t start() const { return __start_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const { return __size_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t stride() const { return __stride_; }
 
 #  if _LIBCPP_STD_VER >= 20
 
@@ -418,18 +429,6 @@ template <class _Tp>
 class mask_array;
 template <class _Tp>
 class indirect_array;
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp* begin(valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI const _Tp* begin(const valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp* end(valarray<_Tp>& __v);
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI const _Tp* end(const valarray<_Tp>& __v);
 
 template <class _Op, class _A0>
 struct _UnaryOp {
@@ -786,6 +785,9 @@ public:
   typedef _Tp value_type;
   typedef _Tp __result_type;
 
+  using iterator       = _Tp*;
+  using const_iterator = const _Tp*;
+
 private:
   value_type* __begin_;
   value_type* __end_;
@@ -793,7 +795,7 @@ private:
 public:
   // construct/destroy:
   _LIBCPP_HIDE_FROM_ABI valarray() : __begin_(nullptr), __end_(nullptr) {}
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit valarray(size_t __n);
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit valarray(size_t __n);
   _LIBCPP_HIDE_FROM_ABI valarray(const value_type& __x, size_t __n);
   valarray(const value_type* __p, size_t __n);
   valarray(const valarray& __v);
@@ -805,7 +807,7 @@ public:
   valarray(const gslice_array<value_type>& __ga);
   valarray(const mask_array<value_type>& __ma);
   valarray(const indirect_array<value_type>& __ia);
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 ~valarray();
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 ~valarray();
 
   // assignment:
   valarray& operator=(const valarray& __v);
@@ -822,36 +824,41 @@ public:
   _LIBCPP_HIDE_FROM_ABI valarray& operator=(const __val_expr<_ValExpr>& __v);
 
   // element access:
-  _LIBCPP_HIDE_FROM_ABI const value_type& operator[](size_t __i) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const value_type& operator[](size_t __i) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "valarray::operator[] index out of bounds");
     return __begin_[__i];
   }
 
-  _LIBCPP_HIDE_FROM_ABI value_type& operator[](size_t __i) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI value_type& operator[](size_t __i) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "valarray::operator[] index out of bounds");
     return __begin_[__i];
   }
 
   // subset operations:
-  _LIBCPP_HIDE_FROM_ABI __val_expr<__slice_expr<const valarray&> > operator[](slice __s) const;
-  _LIBCPP_HIDE_FROM_ABI slice_array<value_type> operator[](slice __s);
-  _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> > operator[](const gslice& __gs) const;
-  _LIBCPP_HIDE_FROM_ABI gslice_array<value_type> operator[](const gslice& __gs);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __val_expr<__slice_expr<const valarray&> > operator[](slice __s) const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI slice_array<value_type> operator[](slice __s);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> >
+  operator[](const gslice& __gs) const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI gslice_array<value_type> operator[](const gslice& __gs);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> > operator[](gslice&& __gs) const;
-  _LIBCPP_HIDE_FROM_ABI gslice_array<value_type> operator[](gslice&& __gs);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> > operator[](gslice&& __gs) const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI gslice_array<value_type> operator[](gslice&& __gs);
 #  endif // _LIBCPP_CXX03_LANG
+  [[__nodiscard__]]
   _LIBCPP_HIDE_FROM_ABI __val_expr<__mask_expr<const valarray&> > operator[](const valarray<bool>& __vb) const;
-  _LIBCPP_HIDE_FROM_ABI mask_array<value_type> operator[](const valarray<bool>& __vb);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mask_array<value_type> operator[](const valarray<bool>& __vb);
 #  ifndef _LIBCPP_CXX03_LANG
+  [[__nodiscard__]]
   _LIBCPP_HIDE_FROM_ABI __val_expr<__mask_expr<const valarray&> > operator[](valarray<bool>&& __vb) const;
-  _LIBCPP_HIDE_FROM_ABI mask_array<value_type> operator[](valarray<bool>&& __vb);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mask_array<value_type> operator[](valarray<bool>&& __vb);
 #  endif // _LIBCPP_CXX03_LANG
+  [[__nodiscard__]]
   _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> > operator[](const valarray<size_t>& __vs) const;
-  _LIBCPP_HIDE_FROM_ABI indirect_array<value_type> operator[](const valarray<size_t>& __vs);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI indirect_array<value_type> operator[](const valarray<size_t>& __vs);
 #  ifndef _LIBCPP_CXX03_LANG
+  [[__nodiscard__]]
   _LIBCPP_HIDE_FROM_ABI __val_expr<__indirect_expr<const valarray&> > operator[](valarray<size_t>&& __vs) const;
-  _LIBCPP_HIDE_FROM_ABI indirect_array<value_type> operator[](valarray<size_t>&& __vs);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI indirect_array<value_type> operator[](valarray<size_t>&& __vs);
 #  endif // _LIBCPP_CXX03_LANG
 
   // unary operators:
@@ -903,18 +910,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI valarray& operator>>=(const _Expr& __v);
 
   // member functions:
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() { return __begin_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator end() { return __end_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const { return __begin_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const { return __end_; }
+
   _LIBCPP_HIDE_FROM_ABI void swap(valarray& __v) _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI size_t size() const { return static_cast<size_t>(__end_ - __begin_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const { return static_cast<size_t>(__end_ - __begin_); }
 
-  _LIBCPP_HIDE_FROM_ABI value_type sum() const;
-  _LIBCPP_HIDE_FROM_ABI value_type min() const;
-  _LIBCPP_HIDE_FROM_ABI value_type max() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI value_type sum() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI value_type min() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI value_type max() const;
 
-  valarray shift(int __i) const;
-  valarray cshift(int __i) const;
-  valarray apply(value_type __f(value_type)) const;
-  valarray apply(value_type __f(const value_type&)) const;
+  [[__nodiscard__]] valarray shift(int __i) const;
+  [[__nodiscard__]] valarray cshift(int __i) const;
+  [[__nodiscard__]] valarray apply(value_type __f(value_type)) const;
+  [[__nodiscard__]] valarray apply(value_type __f(const value_type&)) const;
   void resize(size_t __n, value_type __x = value_type());
 
 private:
@@ -934,18 +946,6 @@ private:
   friend class __indirect_expr;
   template <class>
   friend class __val_expr;
-
-  template <class _Up>
-  friend _Up* begin(valarray<_Up>& __v);
-
-  template <class _Up>
-  friend const _Up* begin(const valarray<_Up>& __v);
-
-  template <class _Up>
-  friend _Up* end(valarray<_Up>& __v);
-
-  template <class _Up>
-  friend const _Up* end(const valarray<_Up>& __v);
 
   _LIBCPP_HIDE_FROM_ABI void __clear(size_t __capacity);
   valarray& __assign_range(const value_type* __f, const value_type* __l);
@@ -1249,11 +1249,11 @@ public:
 
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI size_t start() const { return __1d_.size() ? __1d_[0] : 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t start() const { return __1d_.size() ? __1d_[0] : 0; }
 
-  _LIBCPP_HIDE_FROM_ABI valarray<size_t> size() const { return __size_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI valarray<size_t> size() const { return __size_; }
 
-  _LIBCPP_HIDE_FROM_ABI valarray<size_t> stride() const { return __stride_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI valarray<size_t> stride() const { return __stride_; }
 
 private:
   void __init(size_t __start);
@@ -3106,7 +3106,7 @@ operator>=(const typename _Expr::value_type& __x, const _Expr& __y) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__abs_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__abs_expr<typename _Expr::value_type>, _Expr> >
 abs(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__abs_expr<value_type>, _Expr> _Op;
@@ -3114,7 +3114,7 @@ abs(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__acos_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__acos_expr<typename _Expr::value_type>, _Expr> >
 acos(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__acos_expr<value_type>, _Expr> _Op;
@@ -3122,7 +3122,7 @@ acos(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__asin_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__asin_expr<typename _Expr::value_type>, _Expr> >
 asin(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__asin_expr<value_type>, _Expr> _Op;
@@ -3130,7 +3130,7 @@ asin(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__atan_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__atan_expr<typename _Expr::value_type>, _Expr> >
 atan(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__atan_expr<value_type>, _Expr> _Op;
@@ -3140,15 +3140,16 @@ atan(const _Expr& __x) {
 template <class _Expr1,
           class _Expr2,
           __enable_if_t<__is_val_expr<_Expr1>::value && __is_val_expr<_Expr2>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_BinaryOp<__atan2_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
-atan2(const _Expr1& __x, const _Expr2& __y) {
+[[__nodiscard__]] inline
+    _LIBCPP_HIDE_FROM_ABI __val_expr<_BinaryOp<__atan2_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
+    atan2(const _Expr1& __x, const _Expr2& __y) {
   typedef typename _Expr1::value_type value_type;
   typedef _BinaryOp<__atan2_expr<value_type>, _Expr1, _Expr2> _Op;
   return __val_expr<_Op>(_Op(__atan2_expr<value_type>(), __x, __y));
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
 __val_expr<_BinaryOp<__atan2_expr<typename _Expr::value_type>, _Expr, __scalar_expr<typename _Expr::value_type> > >
 atan2(const _Expr& __x, const typename _Expr::value_type& __y) {
   typedef typename _Expr::value_type value_type;
@@ -3157,7 +3158,7 @@ atan2(const _Expr& __x, const typename _Expr::value_type& __y) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
 __val_expr<_BinaryOp<__atan2_expr<typename _Expr::value_type>, __scalar_expr<typename _Expr::value_type>, _Expr> >
 atan2(const typename _Expr::value_type& __x, const _Expr& __y) {
   typedef typename _Expr::value_type value_type;
@@ -3166,7 +3167,7 @@ atan2(const typename _Expr::value_type& __x, const _Expr& __y) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__cos_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__cos_expr<typename _Expr::value_type>, _Expr> >
 cos(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__cos_expr<value_type>, _Expr> _Op;
@@ -3174,7 +3175,7 @@ cos(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__cosh_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__cosh_expr<typename _Expr::value_type>, _Expr> >
 cosh(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__cosh_expr<value_type>, _Expr> _Op;
@@ -3182,7 +3183,7 @@ cosh(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__exp_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__exp_expr<typename _Expr::value_type>, _Expr> >
 exp(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__exp_expr<value_type>, _Expr> _Op;
@@ -3190,7 +3191,7 @@ exp(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__log_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__log_expr<typename _Expr::value_type>, _Expr> >
 log(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__log_expr<value_type>, _Expr> _Op;
@@ -3198,7 +3199,7 @@ log(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__log10_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__log10_expr<typename _Expr::value_type>, _Expr> >
 log10(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__log10_expr<value_type>, _Expr> _Op;
@@ -3208,15 +3209,16 @@ log10(const _Expr& __x) {
 template <class _Expr1,
           class _Expr2,
           __enable_if_t<__is_val_expr<_Expr1>::value && __is_val_expr<_Expr2>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_BinaryOp<__pow_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
-pow(const _Expr1& __x, const _Expr2& __y) {
+[[__nodiscard__]] inline
+    _LIBCPP_HIDE_FROM_ABI __val_expr<_BinaryOp<__pow_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
+    pow(const _Expr1& __x, const _Expr2& __y) {
   typedef typename _Expr1::value_type value_type;
   typedef _BinaryOp<__pow_expr<value_type>, _Expr1, _Expr2> _Op;
   return __val_expr<_Op>(_Op(__pow_expr<value_type>(), __x, __y));
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
 __val_expr<_BinaryOp<__pow_expr<typename _Expr::value_type>, _Expr, __scalar_expr<typename _Expr::value_type> > >
 pow(const _Expr& __x, const typename _Expr::value_type& __y) {
   typedef typename _Expr::value_type value_type;
@@ -3225,7 +3227,7 @@ pow(const _Expr& __x, const typename _Expr::value_type& __y) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
 __val_expr<_BinaryOp<__pow_expr<typename _Expr::value_type>, __scalar_expr<typename _Expr::value_type>, _Expr> >
 pow(const typename _Expr::value_type& __x, const _Expr& __y) {
   typedef typename _Expr::value_type value_type;
@@ -3234,7 +3236,7 @@ pow(const typename _Expr::value_type& __x, const _Expr& __y) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sin_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sin_expr<typename _Expr::value_type>, _Expr> >
 sin(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__sin_expr<value_type>, _Expr> _Op;
@@ -3242,7 +3244,7 @@ sin(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sinh_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sinh_expr<typename _Expr::value_type>, _Expr> >
 sinh(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__sinh_expr<value_type>, _Expr> _Op;
@@ -3250,7 +3252,7 @@ sinh(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sqrt_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__sqrt_expr<typename _Expr::value_type>, _Expr> >
 sqrt(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__sqrt_expr<value_type>, _Expr> _Op;
@@ -3258,7 +3260,7 @@ sqrt(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__tan_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__tan_expr<typename _Expr::value_type>, _Expr> >
 tan(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__tan_expr<value_type>, _Expr> _Op;
@@ -3266,46 +3268,18 @@ tan(const _Expr& __x) {
 }
 
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__tanh_expr<typename _Expr::value_type>, _Expr> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __val_expr<_UnaryOp<__tanh_expr<typename _Expr::value_type>, _Expr> >
 tanh(const _Expr& __x) {
   typedef typename _Expr::value_type value_type;
   typedef _UnaryOp<__tanh_expr<value_type>, _Expr> _Op;
   return __val_expr<_Op>(_Op(__tanh_expr<value_type>(), __x));
 }
 
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _Tp* begin(valarray<_Tp>& __v) {
-  return __v.__begin_;
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI const _Tp* begin(const valarray<_Tp>& __v) {
-  return __v.__begin_;
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _Tp* end(valarray<_Tp>& __v) {
-  return __v.__end_;
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI const _Tp* end(const valarray<_Tp>& __v) {
-  return __v.__end_;
-}
-
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <algorithm>
-#    include <concepts>
-#    include <cstdlib>
-#    include <cstring>
-#    include <functional>
-#    include <stdexcept>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_VALARRAY

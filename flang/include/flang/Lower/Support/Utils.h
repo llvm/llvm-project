@@ -14,18 +14,27 @@
 #define FORTRAN_LOWER_SUPPORT_UTILS_H
 
 #include "flang/Common/indirection.h"
-#include "flang/Lower/IterationSpace.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace Fortran::evaluate {
+class Component;
+} // namespace Fortran::evaluate
+
 namespace Fortran::lower {
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
+// FIXME: needed for privatizeSymbol that does not belong to this header.
+class AbstractConverter;
+class SymMap;
 } // end namespace Fortran::lower
+
+namespace fir {
+class FirOpBuilder;
+}
 
 //===----------------------------------------------------------------------===//
 // Small inline helper functions to deal with repetitive, clumsy conversions.
@@ -74,27 +83,14 @@ ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
       [](const auto &v) { return ignoreEvConvert(v); }, x.u);
 }
 
-/// Zip two containers of the same size together and flatten the pairs. `flatZip
-/// [1;2] [3;4]` yields `[1;3;2;4]`.
-template <typename A>
-A flatZip(const A &container1, const A &container2) {
-  assert(container1.size() == container2.size());
-  A result;
-  for (auto [e1, e2] : llvm::zip(container1, container2)) {
-    result.emplace_back(e1);
-    result.emplace_back(e2);
-  }
-  return result;
-}
-
 namespace Fortran::lower {
 unsigned getHashValue(const Fortran::lower::SomeExpr *x);
-unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x);
+unsigned getHashValue(const Fortran::evaluate::Component *x);
 
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y);
-bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
-             const Fortran::lower::ExplicitIterSpace::ArrayBases &y);
+bool isEqual(const Fortran::evaluate::Component *x,
+             const Fortran::evaluate::Component *y);
 
 template <typename OpType, typename OperandsStructType>
 void privatizeSymbol(
@@ -103,7 +99,8 @@ void privatizeSymbol(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
-    std::optional<llvm::omp::Directive> dir = std::nullopt);
+    std::optional<llvm::omp::Directive> dir = std::nullopt,
+    bool forceHeapAllocationForPrivateDynamicArrays = false);
 
 } // end namespace Fortran::lower
 
@@ -111,17 +108,23 @@ void privatizeSymbol(
 namespace llvm {
 template <>
 struct DenseMapInfo<const Fortran::lower::SomeExpr *> {
-  static inline const Fortran::lower::SomeExpr *getEmptyKey() {
-    return reinterpret_cast<Fortran::lower::SomeExpr *>(~0);
-  }
-  static inline const Fortran::lower::SomeExpr *getTombstoneKey() {
-    return reinterpret_cast<Fortran::lower::SomeExpr *>(~0 - 1);
-  }
   static unsigned getHashValue(const Fortran::lower::SomeExpr *v) {
     return Fortran::lower::getHashValue(v);
   }
   static bool isEqual(const Fortran::lower::SomeExpr *lhs,
                       const Fortran::lower::SomeExpr *rhs) {
+    return Fortran::lower::isEqual(lhs, rhs);
+  }
+};
+
+// DenseMapInfo for pointers to Fortran::evaluate::Component.
+template <>
+struct DenseMapInfo<const Fortran::evaluate::Component *> {
+  static unsigned getHashValue(const Fortran::evaluate::Component *v) {
+    return Fortran::lower::getHashValue(v);
+  }
+  static bool isEqual(const Fortran::evaluate::Component *lhs,
+                      const Fortran::evaluate::Component *rhs) {
     return Fortran::lower::isEqual(lhs, rhs);
   }
 };

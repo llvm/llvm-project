@@ -5,72 +5,44 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Legacy-pass-manager wrapper around the Analysis-layer libcall lowering info,
+// which is aware of TargetSubtargetInfo.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
 #define LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
 
-#include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
-
+class RuntimeLibraryInfoWrapper;
 class TargetSubtargetInfo;
 
-class LibcallLoweringInfo {
-private:
-  const RTLIB::RuntimeLibcallsInfo &RTLCI;
-  /// Stores the implementation choice for each each libcall.
-  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
-      RTLIB::Unsupported};
+/// Resolve the LibcallLoweringInfo for \p Subtarget from the module-level \p
+/// ModuleInfo, applying the subtarget's libcall overrides.
+LLVM_ABI const LibcallLoweringInfo &
+getLibcallLowering(const ModuleLibcallLoweringInfo &ModuleInfo,
+                   const TargetSubtargetInfo &Subtarget);
+
+class LLVM_ABI LibcallLoweringInfoWrapper : public ImmutablePass {
+  ModuleLibcallLoweringInfo Result;
+  RuntimeLibraryInfoWrapper *RuntimeLibcallsWrapper = nullptr;
 
 public:
-  LLVM_ABI LibcallLoweringInfo(const RTLIB::RuntimeLibcallsInfo &RTLCI,
-                               const TargetSubtargetInfo &Subtarget);
+  static char ID;
+  LibcallLoweringInfoWrapper();
 
-  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
-    return RTLCI;
-  }
+  const LibcallLoweringInfo &
+  getLibcallLowering(const Module &M, const TargetSubtargetInfo &Subtarget);
 
-  /// Get the libcall routine name for the specified libcall.
-  // FIXME: This should be removed. Only LibcallImpl should have a name.
-  LLVM_ABI const char *getLibcallName(RTLIB::Libcall Call) const {
-    // FIXME: Return StringRef
-    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpls[Call])
-        .data();
-  }
+  const ModuleLibcallLoweringInfo &getResult(const Module &M);
 
-  /// Return the lowering's selection of implementation call for \p Call
-  LLVM_ABI RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
-    return LibcallImpls[Call];
-  }
-
-  /// Rename the default libcall routine name for the specified libcall.
-  LLVM_ABI void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
-    LibcallImpls[Call] = Impl;
-  }
-
-  // FIXME: Remove this wrapper in favor of directly using
-  // getLibcallImplCallingConv
-  LLVM_ABI CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return RTLCI.LibcallImplCallingConvs[LibcallImpls[Call]];
-  }
-
-  /// Get the CallingConv that should be used for the specified libcall.
-  LLVM_ABI CallingConv::ID
-  getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return RTLCI.LibcallImplCallingConvs[Call];
-  }
-
-  /// Return a function impl compatible with RTLIB::MEMCPY, or
-  /// RTLIB::Unsupported if fully unsupported.
-  RTLIB::LibcallImpl getMemcpyImpl() const {
-    RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
-    if (Memcpy == RTLIB::Unsupported) {
-      // Fallback to memmove if memcpy isn't available.
-      return getLibcallImpl(RTLIB::MEMMOVE);
-    }
-
-    return Memcpy;
-  }
+  void initializePass() override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void releaseMemory() override;
 };
 
 } // end namespace llvm

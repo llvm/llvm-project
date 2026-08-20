@@ -13,6 +13,7 @@
 #ifndef LLVM_SANDBOXIR_TYPE_H
 #define LLVM_SANDBOXIR_TYPE_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -25,6 +26,7 @@ namespace llvm::sandboxir {
 class Context;
 // Forward declare friend classes for MSVC.
 class ArrayType;
+class ByteType;
 class CallBase;
 class CmpInst;
 class ConstantDataSequential;
@@ -40,7 +42,8 @@ class TargetExtType;
 class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and
 /// can only be created via static factory methods.
@@ -48,6 +51,7 @@ class Type {
 protected:
   llvm::Type *LLVMTy;
   friend class ArrayType;          // For LLVMTy.
+  friend class ByteType;           // For LLVMTy.
   friend class StructType;         // For LLVMTy.
   friend class VectorType;         // For LLVMTy.
   friend class FixedVectorType;    // For LLVMTy.
@@ -72,7 +76,10 @@ protected:
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+#undef DEF_CONST
   Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}
@@ -164,6 +171,12 @@ public:
 
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return LLVMTy->isIntegerTy(); }
+
+  /// True if this is an instance of ByteType.
+  bool isByteTy() const { return LLVMTy->isByteTy(); }
+
+  /// Return true if this is a ByteType of the given width.
+  bool isByteTy(unsigned Bitwidth) const { return LLVMTy->isByteTy(Bitwidth); }
 
   /// Return true if this is an IntegerType of the given width.
   bool isIntegerTy(unsigned Bitwidth) const {
@@ -269,11 +282,24 @@ public:
 
   // TODO: ADD MISSING
 
-  LLVM_ABI static Type *getInt64Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt32Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt16Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt8Ty(Context &Ctx);
-  LLVM_ABI static Type *getInt1Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt64Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt32Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt16Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt8Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt1Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByteNTy(Context &Ctx, unsigned N);
+  LLVM_ABI static ByteType *getByte1Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte8Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte16Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte32Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte64Ty(Context &Ctx);
+  LLVM_ABI static ByteType *getByte128Ty(Context &Ctx);
+  /// Returns an integer (vector of integer) type with the same size of a byte
+  /// of the given byte (vector of byte) type.
+  LLVM_ABI static Type *getIntFromByteType(Type *Ty);
+  /// Returns a byte (vector of byte) type with the same size of an integer of
+  /// the given integer (vector of integer) type.
+  LLVM_ABI static Type *getByteFromIntType(Type *Ty);
   LLVM_ABI static Type *getDoubleTy(Context &Ctx);
   LLVM_ABI static Type *getFloatTy(Context &Ctx);
   LLVM_ABI static Type *getHalfTy(Context &Ctx);
@@ -472,6 +498,24 @@ public:
   }
   operator llvm::IntegerType &() const {
     return *cast<llvm::IntegerType>(LLVMTy);
+  }
+};
+
+/// Class to represent byte types.
+class ByteType : public Type {
+public:
+  LLVM_ABI static ByteType *get(Context &C, unsigned NumBits);
+
+  /// Get the number of bits in this ByteType
+  unsigned getBitWidth() const {
+    return cast<llvm::ByteType>(LLVMTy)->getBitWidth();
+  }
+
+  /// Get a bit mask for this type.
+  APInt getMask() const { return cast<llvm::ByteType>(LLVMTy)->getMask(); }
+
+  static bool classof(const Type *From) {
+    return isa<llvm::ByteType>(From->LLVMTy);
   }
 };
 

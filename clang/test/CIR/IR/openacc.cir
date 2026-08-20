@@ -1,0 +1,24 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Verify that cir-opt registers the OpenACC dialect along with the CIR type
+// extensions, so OpenACC data clauses operating on a !cir.ptr verify and
+// round-trip.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @acc_copyin(%arg0: !cir.ptr<!s32i>) {
+    %0 = acc.copyin varPtr(%arg0 : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "x"}
+    acc.parallel dataOperands(%0 : !cir.ptr<!s32i>) {
+      acc.yield
+    }
+    acc.delete accPtr(%0 : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copyin>, name = "x"}
+    cir.return
+  }
+}
+
+// CHECK: cir.func{{.*}} @acc_copyin(%[[ARG:.*]]: !cir.ptr<!s32i>)
+// CHECK:   %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARG]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "x"}
+// CHECK:   acc.parallel dataOperands(%[[COPYIN]] : !cir.ptr<!s32i>)
+// CHECK:     acc.yield
+// CHECK:   acc.delete accPtr(%[[COPYIN]] : !cir.ptr<!s32i>)

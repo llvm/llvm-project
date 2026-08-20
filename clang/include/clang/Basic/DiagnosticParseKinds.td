@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -220,6 +223,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -350,6 +356,8 @@ def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+def err_defer_ts_labeled_stmt : Error<
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
@@ -419,9 +427,10 @@ def warn_cxx98_compat_for_range : Warning<
   "range-based for loop is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_for_range_identifier : Error<
-  "range-based for loop requires type for loop variable">;
+  "%select{range-based for loop|expansion statement}0 requires "
+  "type for %select{loop|expansion}0 variable">;
 def err_for_range_expected_decl : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
@@ -448,6 +457,18 @@ def err_unspecified_size_with_static : Error<
   "'static' may not be used without an array size">;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
+def err_expansion_stmt_requires_range : Error<
+  "expansion statement must use the syntax of a range-based for loop">;
+def err_expansion_stmt_requires_cxx2c : Error<
+  "expansion statements are only supported in C++2c">;
+def err_for_template : Error<
+  "'for template' is invalid; use 'template for' instead">;
+def ext_expansion_stmt_body_not_compound_stmt : Extension<
+  "ISO C++ requires the body of an expansion statement to be a compound statement">,
+  InGroup<ExpansionStmtBody>;
+def ext_expansion_stmt_body_attr : Extension<
+  "ISO C++ forbids attributes before the compound statement of an expansion statement">,
+  InGroup<ExpansionStmtBody>;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
@@ -1077,23 +1098,11 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
-def ext_relocatable_keyword : ExtWarn<
-  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
-  "keyword is a C++2c extension">,
-  InGroup<CXX26>;
-def warn_relocatable_keyword  : Warning<
-  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
-  "keyword is incompatible with standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
-
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
-
-def err_duplicate_class_relocation_specifier : Error<
-  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1223,6 +1232,8 @@ def err_avail_query_expected_platform_name : Error<
 
 def err_avail_query_unrecognized_platform_name : Error<
   "unrecognized platform name %0">;
+def err_avail_query_anyappleos_min_version : Error<
+  "invalid anyAppleOS version '%0' in availability check">;
 def err_availability_query_wildcard_required: Error<
   "must handle potential future platforms with '*'">;
 def err_availability_query_repeated_platform: Error<
@@ -1368,6 +1379,10 @@ def err_pragma_comment_unknown_kind : Error<"unknown kind of pragma comment">;
 // PS4 recognizes only #pragma comment(lib)
 def warn_pragma_comment_ignored : Warning<"'#pragma comment %0' ignored">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_comment_once
+    : Warning<"'#pragma comment %0' "
+              "ignored: it can be specified only once per translation unit">,
+      InGroup<IgnoredPragmas>;
 // - #pragma detect_mismatch
 def err_pragma_detect_mismatch_malformed : Error<
   "pragma detect_mismatch is malformed; it requires two comma-separated "
@@ -1568,18 +1583,21 @@ def note_omp_assumption_clause_continue_here
     : Note<"the ignored tokens spans until here">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only %select{'device_type'|'to' or 'link'|'to', 'link' or 'device_type'|'device_type', 'indirect'|'to', 'link', 'device_type' or 'indirect'}1 clauses expected">;
-def err_omp_declare_target_unexpected_clause_52: Error<
-  "unexpected '%0' clause, only %select{'device_type'|'enter' or 'link'|'enter', 'link' or 'device_type'|'device_type', 'indirect'|'enter', 'link', 'device_type' or 'indirect'}1 clauses expected">;
+def err_omp_declare_target_unexpected_clause_52
+    : Error<"unexpected '%0' clause, only %select{'device_type'|'enter' or "
+            "'link'|'enter', 'link' or 'device_type'|'device_type', "
+            "'indirect'|'enter', 'link', 'device_type' or 'indirect'|'enter', "
+            "'link', 'device_type', 'indirect' or 'local'}1 clauses expected">;
 def err_omp_begin_declare_target_unexpected_implicit_to_clause: Error<
   "unexpected '(', only 'to', 'link' or 'device_type' clauses expected for 'begin declare target' directive">;
 def err_omp_declare_target_wrong_clause_after_implicit_to: Error<
   "unexpected clause after an implicit 'to' clause">;
 def err_omp_declare_target_wrong_clause_after_implicit_enter: Error<
   "unexpected clause after an implicit 'enter' clause">;
-def err_omp_declare_target_missing_to_or_link_clause: Error<
-  "expected at least one %select{'to' or 'link'|'to', 'link' or 'indirect'}0 clause">;
-def err_omp_declare_target_missing_enter_or_link_clause: Error<
-  "expected at least one %select{'enter' or 'link'|'enter', 'link' or 'indirect'}0 clause">;
+def err_omp_declare_target_missing_required_clause
+    : Error<"expected at least one %select{'to' or 'link'|'to', 'link' or "
+            "'indirect'|'enter', 'link' or 'indirect'|'enter', 'link', "
+            "'indirect' or 'local'}0 clause">;
 def err_omp_declare_target_unexpected_to_clause: Error<
   "unexpected 'to' clause, use 'enter' instead">;
 def err_omp_declare_target_unexpected_enter_clause: Error<
@@ -1696,6 +1714,16 @@ def err_omp_expected_interop_type : Error<
 def warn_omp_more_one_interop_type
   : Warning<"interop type '%0' cannot be specified more than once">,
     InGroup<OpenMPClauses>;
+def err_omp_interop_multiple_fr : Error<
+  "only one 'fr' selector allowed per preference-specification">;
+def err_omp_prefer_type_brace_60 : Error<
+  "brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later">;
+def err_omp_expected_fr_or_attr_selector : Error<
+  "expected 'fr' or 'attr' selector in 'prefer_type'">;
+def err_omp_expected_pref_spec : Error<
+  "expected preference-specification in 'prefer_type'">;
+def err_omp_append_args_prefer_type_60 : Error<
+  "'prefer_type' in 'append_args' requires OpenMP version 6.0 or later">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<
@@ -1727,7 +1755,7 @@ def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 def err_omp_unknown_need_device_ptr_kind
     : Error<
         "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
-        "expected 'fp_nullify' or 'fb_preserve'">;
+        "expected 'fb_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1789,10 +1817,8 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_unexpected_module_decl : Error<
-  "module declaration can only appear at the top level">;
-def err_module_expected_ident : Error<
-  "expected a module name after '%select{module|import}0'">;
+def err_unexpected_module_or_import_decl : Error<
+  "%select{module|import}0 declaration can only appear at the top level">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<
@@ -1803,6 +1829,10 @@ def err_keyword_not_import_attr : Error<
   "%0 cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
+def err_expected_semi_after_module_or_import
+  : Error<"%0 directive must end with a ';'">;
+def note_module_declared_here : Note<
+  "%select{module|import}0 directive defined here">;
 def err_global_module_introducer_not_at_start : Error<
   "'module;' introducing a global module fragment can appear only "
   "at the start of the translation unit">;
@@ -1853,6 +1883,11 @@ def err_concept_legacy_bool_keyword : Error<
   "ISO C++ does not permit the 'bool' keyword after 'concept'">;
 def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
+}
+
+let CategoryName = "Reflection Diagnostics" in {
+def err_cannot_reflect_operand : Error<
+  "unknown or unimplemented reflectable entity">;
 }
 
 def warn_max_tokens : Warning<

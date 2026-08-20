@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyOptions.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
@@ -52,10 +52,9 @@ template <> struct MappingTraits<FileFilter> {
   static std::string validate(IO &Io, FileFilter &File) {
     if (File.Name.empty())
       return "No file name specified";
-    for (const FileFilter::LineRange &Range : File.LineRanges) {
+    for (const FileFilter::LineRange &Range : File.LineRanges)
       if (Range.first <= 0 || Range.second <= 0)
         return "Invalid line range";
-    }
     return "";
   }
 };
@@ -66,6 +65,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
     IO.mapRequired("value", KeyValue.second);
   }
 };
+
+namespace {
 
 struct NOptionMap {
   NOptionMap(IO &) {}
@@ -84,6 +85,8 @@ struct NOptionMap {
   std::vector<ClangTidyOptions::StringPair> Options;
 };
 
+} // namespace
+
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
@@ -91,9 +94,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
     SortedOptions.reserve(Val.size());
-    for (auto &Key : Val) {
+    for (auto &Key : Val)
       SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
-    }
     std::sort(SortedOptions.begin(), SortedOptions.end());
 
     IO.beginMapping();
@@ -111,7 +113,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
   } else {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<SequenceNode>(I.getCurrentNode())) {
       MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
                                                                           Val);
@@ -155,7 +157,7 @@ template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
@@ -167,7 +169,7 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckValue &V) {
@@ -178,16 +180,21 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
-struct ChecksVariant {
+namespace {
+
+struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
 
-template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
+} // namespace
+
+template <>
+void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<ScalarNode, BlockScalarNode>(I.getCurrentNode())) {
       Val.AsString = std::string();
       yamlize(IO, *Val.AsString, true, Ctx);
@@ -200,25 +207,26 @@ template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
   }
 }
 
-static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
+static void mapGlobList(IO &IO, std::optional<std::string> &GlobList,
+                        StringRef Key) {
   if (IO.outputting()) {
     // Output always a string
-    IO.mapOptional("Checks", Checks);
+    IO.mapOptional(Key, GlobList);
   } else {
     // Input as either a string or a list
-    ChecksVariant ChecksAsVariant;
-    IO.mapOptional("Checks", ChecksAsVariant);
-    if (ChecksAsVariant.AsString)
-      Checks = ChecksAsVariant.AsString;
-    else if (ChecksAsVariant.AsVector)
-      Checks = llvm::join(*ChecksAsVariant.AsVector, ",");
+    GlobListVariant GlobListAsVariant;
+    IO.mapOptional(Key, GlobListAsVariant);
+    if (GlobListAsVariant.AsString)
+      GlobList = GlobListAsVariant.AsString;
+    else if (GlobListAsVariant.AsVector)
+      GlobList = llvm::join(*GlobListAsVariant.AsVector, ",");
   }
 }
 
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    mapChecks(IO, Options.Checks);
-    IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
+    mapGlobList(IO, Options.Checks, "Checks");
+    mapGlobList(IO, Options.WarningsAsErrors, "WarningsAsErrors");
     IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
@@ -230,6 +238,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("CheckOptions", Options.CheckOptions);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
+    IO.mapOptional("RemovedArgs", Options.RemovedArgs);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
@@ -252,6 +261,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
+  Options.RemovedArgs = std::nullopt;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
     Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
@@ -295,6 +305,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
+  mergeVectors(RemovedArgs, Other.RemovedArgs);
   // FIXME: how to handle duplicate names check?
   mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {
@@ -313,25 +324,16 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
   return Result;
 }
 
-const char ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary[] =
-    "clang-tidy binary";
-const char ClangTidyOptionsProvider::OptionsSourceTypeCheckCommandLineOption[] =
-    "command-line option '-checks'";
-const char
-    ClangTidyOptionsProvider::OptionsSourceTypeConfigCommandLineOption[] =
-        "command-line option '-config'";
-
-ClangTidyOptions
-ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
+ClangTidyOptions ClangTidyOptionsProvider::getOptions(StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (auto &Source : getRawOptions(FileName))
+  for (const auto &Source : getRawOptions(FileName))
     Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
 std::vector<OptionsSource>
-DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+DefaultOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> Result;
   Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
   return Result;
@@ -347,18 +349,17 @@ ConfigOptionsProvider::ConfigOptionsProvider(
       ConfigOptions(std::move(ConfigOptions)) {}
 
 std::vector<OptionsSource>
-ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+ConfigOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
 
-    llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+    llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
-    if (AbsoluteFilePath) {
+    if (AbsoluteFilePath)
       addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-    }
   }
   RawOptions.emplace_back(ConfigOptions,
                           OptionsSourceTypeConfigCommandLineOption);
@@ -388,10 +389,10 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
       OverrideOptions(std::move(OverrideOptions)),
       ConfigHandlers(std::move(ConfigHandlers)) {}
 
-llvm::ErrorOr<llvm::SmallString<128>>
-FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
+llvm::ErrorOr<SmallString<128>>
+FileOptionsBaseProvider::getNormalizedAbsolutePath(StringRef Path) {
   assert(FS && "FS must be set.");
-  llvm::SmallString<128> NormalizedAbsolutePath = {Path};
+  SmallString<128> NormalizedAbsolutePath = {Path};
   const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
@@ -400,12 +401,12 @@ FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
 }
 
 void FileOptionsBaseProvider::addRawFileOptions(
-    llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
-  auto CurSize = CurOptions.size();
+    StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
+  const auto CurSize = CurOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
-  auto MemorizedConfigFile =
+  const auto MemorizedConfigFile =
       [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
     const auto Iter = CachedOptions.Memorized.find(CurrentPath);
     if (Iter != CachedOptions.Memorized.end())
@@ -463,7 +464,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};

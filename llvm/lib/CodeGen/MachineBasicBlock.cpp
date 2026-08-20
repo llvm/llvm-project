@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -132,6 +133,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
     MachineBasicBlock *N) {
   MachineFunction &MF = *N->getParent();
   N->Number = MF.addToMBBNumbering(N);
+  N->AnalysisNumber = MF.assignAnalysisNumber();
 
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -143,6 +145,7 @@ void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
     MachineBasicBlock *N) {
   N->getParent()->removeFromMBBNumbering(N->Number);
   N->Number = -1;
+  N->AnalysisNumber = -1;
 }
 
 /// When we add an instruction to a basic block list, we update its parent
@@ -493,7 +496,7 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
   auto PrintBBRef = [&](const BasicBlock *bb) {
     os << "%ir-block.";
     if (bb->hasName()) {
-      os << bb->getName();
+      printLLVMNameWithoutPrefix(os, bb->getName());
     } else {
       int slot = -1;
 
@@ -515,7 +518,9 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
   if (printNameFlags & PrintNameIr) {
     if (const auto *bb = getBasicBlock()) {
       if (bb->hasName()) {
-        os << '.' << bb->getName();
+        // Quote if not a plain identifier, or the MIR cannot be parsed back.
+        os << '.';
+        printLLVMNameWithoutPrefix(os, bb->getName());
       } else {
         hasAttributes = true;
         os << " (";
@@ -549,6 +554,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
     if (isEHFuncletEntry()) {
       os << (hasAttributes ? ", " : " (");
       os << "ehfunclet-entry";
+      hasAttributes = true;
+    }
+    if (isEHScopeEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehscope-entry";
       hasAttributes = true;
     }
     if (getAlignment() != Align(1)) {
@@ -596,6 +606,7 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
 }
 
 void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
+  assert(Reg.isPhysical());
   LiveInVector::iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   if (I == LiveIns.end())
@@ -634,6 +645,7 @@ MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
 }
 
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
+  assert(Reg.isPhysical());
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
@@ -927,9 +939,12 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
-  pred_iterator I = find(Predecessors, Pred);
-  assert(I != Predecessors.end() && "Pred is not a predecessor of this block!");
-  Predecessors.erase(I);
+  // This is often called on many predecessors in reverse order.
+  // Do a reverse search and removal to avoid quadratic behavior in such cases.
+  auto RI = llvm::find(reverse(Predecessors), Pred);
+  assert(RI != Predecessors.rend() &&
+         "Pred is not a predecessor of this block!");
+  Predecessors.erase(std::prev(RI.base()));
 }
 
 void MachineBasicBlock::transferSuccessors(MachineBasicBlock *FromMBB) {
@@ -1076,7 +1091,7 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
     addLiveIns(*SplitBB, LiveRegs);
 
   if (LIS)
-    LIS->insertMBBInMaps(SplitBB);
+    LIS->splitAt(*this, *SplitBB);
 
   return SplitBB;
 }
@@ -1425,14 +1440,14 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
   // where both sides of the branches are always executed.
 
   if (MF->getTarget().requiresStructuredCFG()) {
-    // If `Succ` is a loop header, splitting the critical edge will not
-    // break structured CFG.
-    if (MLI) {
-      const MachineLoop *L = MLI->getLoopFor(Succ);
-      return L && L->getHeader() == Succ;
-    }
-
-    return false;
+    if (!MLI)
+      return false;
+    const MachineLoop *L = MLI->getLoopFor(Succ);
+    // Only if `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG. And fallthrough to check if this's terminator is
+    // analyzable.
+    if (!L || L->getHeader() != Succ)
+      return false;
   }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
@@ -1450,10 +1465,10 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
                          /*AllowModify*/ false))
     return false;
 
-  // Avoid bugpoint weirdness: A block may end with a conditional branch but
-  // jumps to the same MBB is either case. We have duplicate CFG edges in that
-  // case that we can't handle. Since this never happens in properly optimized
-  // code, just skip those edges.
+  // Handle weird inputs (e.g., generated by a test case reducer/fuzzer): A
+  // block may end with a conditional branch but jumps to the same MBB is either
+  // case. We have duplicate CFG edges in that case that we can't handle. Since
+  // this never happens in properly optimized code, just skip those edges.
   if (TBB && TBB == FBB) {
     LLVM_DEBUG(dbgs() << "Won't split critical edge after degenerate "
                       << printMBBReference(*this) << '\n');
@@ -1684,6 +1699,7 @@ MachineBasicBlock::LivenessQueryResult
 MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
                                            MCRegister Reg, const_iterator Before,
                                            unsigned Neighborhood) const {
+  assert(Reg.isPhysical());
   unsigned N = Neighborhood;
 
   // Try searching forwards from Before, looking for reads or defs.
@@ -1814,8 +1830,10 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);
-    ExceptionSelector = TLI.getExceptionSelectorRegister(PersonalityFn);
+    ExceptionPointer = TLI.getExceptionPointerRegister(
+        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
+    ExceptionSelector = TLI.getExceptionSelectorRegister(
+        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
   }
 
   return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);

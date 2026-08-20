@@ -114,19 +114,19 @@ def icmp_sgt: IRBuilder<"CreateICmpSGT">;
 def icmp_sge: IRBuilder<"CreateICmpSGE">;
 def icmp_slt: IRBuilder<"CreateICmpSLT">;
 def icmp_sle: IRBuilder<"CreateICmpSLE">;
-def fcmp_eq: IRBuilder<"CreateFCmpOEQ">;
-def fcmp_ne: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
-def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
-def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
-def fcmp_ult: IRBuilder<"CreateFCmpULT">;
-def fcmp_ule: IRBuilder<"CreateFCmpULE">;
+def fcmp_eq_node: IRBuilder<"CreateFCmpOEQ">;
+def fcmp_ne_node: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
+def fcmp_gt_node: IRBuilder<"CreateFCmpOGT">;
+def fcmp_ge_node: IRBuilder<"CreateFCmpOGE">;
+def fcmp_ult_node: IRBuilder<"CreateFCmpULT">;
+def fcmp_ule_node: IRBuilder<"CreateFCmpULE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
-def sitofp: IRBuilder<"CreateSIToFP">;
-def uitofp: IRBuilder<"CreateUIToFP">;
-def fptosi: IRBuilder<"CreateFPToSI">;
-def fptoui: IRBuilder<"CreateFPToUI">;
+def sitofp_node: IRBuilder<"CreateSIToFP">;
+def uitofp_node: IRBuilder<"CreateUIToFP">;
+def fptosi_node: IRBuilder<"CreateFPToSI">;
+def fptoui_node: IRBuilder<"CreateFPToUI">;
 def vrev: CGHelperFn<"ARMMVEVectorElementReverse"> {
   let special_params = [IRBuilderIntParam<1, "unsigned">];
 }
@@ -215,9 +215,9 @@ def bitsize;
 
 // strictFPAlt allows a node to have different code generation under strict-fp.
 // TODO: The standard node can be IRBuilderBase or IRIntBase.
-class strictFPAlt<Builder standard_, IRIntBase strictfp_> : Builder {
+class strictFPAlt<Builder standard_, Builder strictfp_> : Builder {
   Builder standard = standard_;
-  IRIntBase strictfp = strictfp_;
+  Builder strictfp = strictfp_;
 }
 
 // If you put CustomCodegen<"foo"> in an intrinsic's codegen field, it
@@ -589,6 +589,30 @@ def fsub: strictFPAlt<fsub_node,
                       IRInt<"vsub", [Vector]>>;
 def fmul: strictFPAlt<fmul_node,
                       IRInt<"vmul", [Vector]>>;
+def fminnm : strictFPAlt<IRIntBase<"minnum", [Vector]>,
+                         IRInt<"vminnm", [Vector]>>;
+def fmaxnm : strictFPAlt<IRIntBase<"maxnum", [Vector]>,
+                         IRInt<"vmaxnm", [Vector]>>;
+def fcmp_eq  : strictFPAlt<fcmp_eq_node,
+                           IRInt<"cmp_eq", [Predicate, Vector]>>;
+def fcmp_ne  : strictFPAlt<fcmp_ne_node,
+                           IRInt<"cmp_ne", [Predicate, Vector]>>;
+def fcmp_gt  : strictFPAlt<fcmp_gt_node,
+                           IRInt<"cmp_gt", [Predicate, Vector]>>;
+def fcmp_ge  : strictFPAlt<fcmp_ge_node,
+                           IRInt<"cmp_ge", [Predicate, Vector]>>;
+def fcmp_ult : strictFPAlt<fcmp_ult_node,
+                           IRInt<"cmp_lt", [Predicate, Vector]>>;
+def fcmp_ule : strictFPAlt<fcmp_ule_node,
+                           IRInt<"cmp_le", [Predicate, Vector]>>;
+def sitofp: strictFPAlt<sitofp_node,
+                        CGFHelperFn<"ARMMVECreateSIToFP">>;
+def uitofp: strictFPAlt<uitofp_node,
+                        CGFHelperFn<"ARMMVECreateUIToFP">>;
+def fptosi: strictFPAlt<fptosi_node,
+                        CGFHelperFn<"ARMMVECreateFPToSI">>;
+def fptoui: strictFPAlt<fptoui_node,
+                        CGFHelperFn<"ARMMVECreateFPToUI">>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you

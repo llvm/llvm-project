@@ -32,6 +32,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/DynamicAllocationArgumentsCXX.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -479,7 +480,11 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
     return nullptr;
   }
 
-  return ParsedType::make(T);
+  TypeLocBuilder TLB;
+  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
@@ -644,8 +649,10 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
@@ -659,7 +666,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
@@ -1063,10 +1071,8 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
 
       // We don't keep the instantiated default argument expressions around so
       // we must rebuild them here.
-      for (unsigned I = 1, E = CD->getNumParams(); I != E; ++I) {
-        if (CheckCXXDefaultArgExpr(ThrowLoc, CD, CD->getParamDecl(I)))
-          return true;
-      }
+      if (BuildCtorClosureDefaultArgs(ThrowLoc, CD, /*IsCopy=*/true))
+        return true;
     }
   }
 
@@ -1426,7 +1432,7 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   const auto *Method = dyn_cast<CXXMethodDecl>(DC);
   if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(DC)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
@@ -1483,8 +1489,11 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
   // If we're outside the body of a member function, then we'll have a specified
-  // type for 'this'.
-  if (CXXThisTypeOverride.isNull())
+  // type for 'this'. Constraint substitution is the exception: a concept is
+  // evaluated in its own declaration context (see GH#197215), so it loses the
+  // enclosing '*this' even though it may legitimately name a member of the
+  // class currently being instantiated.
+  if (CXXThisTypeOverride.isNull() && !inConstraintSubstitution())
     return false;
 
   // Determine whether we're looking into a class that's currently being
@@ -1558,6 +1567,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
+    if (Ty->getAs<AutoType>())
+      DiagCompat(TyBeginLoc, diag_compat::auto_expr) << FullRange;
+
     if (Inits.empty())
       return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
                        << Ty << FullRange);
@@ -1566,10 +1578,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       return ExprError(Diag(FirstBad->getBeginLoc(),
                             diag::err_auto_expr_init_multiple_expressions)
                        << Ty << FullRange);
-    }
-    if (getLangOpts().CPlusPlus23) {
-      if (Ty->getAs<AutoType>())
-        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
     }
     Expr *Deduce = Inits[0];
     if (isa<InitListExpr>(Deduce))
@@ -1671,7 +1679,15 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // CXXTemporaryObjectExpr. It's also weird that the functional cast
     // is sometimes handled by initialization and sometimes not.
     QualType ResultType = Result.get()->getType();
-    SourceRange Locs = ListInitialization
+    // In HLSL, vector/matrix constructors have their arguments wrapped into an
+    // InitListExpr during initialization sequencing. Mark the resulting
+    // CXXFunctionalCastExpr as list-initialization so that during template
+    // re-instantiation, TreeTransform correctly passes the InitListExpr back
+    // through BuildCXXTypeConstructExpr with ListInitialization=true as opposed
+    // to false.
+    bool IsListInit = ListInitialization ||
+                      (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
+    SourceRange Locs = IsListInit
                            ? SourceRange()
                            : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
     Result = CXXFunctionalCastExpr::Create(
@@ -2203,8 +2219,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << /*array*/ 2
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity
-      = InitializedEntity::InitializeNew(StartLoc, AllocType);
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2422,6 +2438,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   FunctionDecl *OperatorNew = nullptr;
   FunctionDecl *OperatorDelete = nullptr;
+  SmallVector<Expr *, 4> SelectedAllocationArgs;
   unsigned Alignment =
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
@@ -2438,13 +2455,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   SourceRange AllocationParameterRange = Range;
   if (PlacementLParen.isValid() && PlacementRParen.isValid())
     AllocationParameterRange = SourceRange(PlacementLParen, PlacementRParen);
-  if (!AllocType->isDependentType() &&
-      !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
-      FindAllocationFunctions(StartLoc, AllocationParameterRange, Scope, Scope,
-                              AllocType, ArraySize.has_value(), IAP,
-                              PlacementArgs, OperatorNew, OperatorDelete))
-    return ExprError();
 
+  if (!AllocType->isDependentType() &&
+      !Expr::hasAnyTypeDependentArguments(PlacementArgs)) {
+    auto FoundAllocation = FindAllocationFunctions(
+        StartLoc, AllocationParameterRange, Scope, Scope, AllocType,
+        /*IsArray=*/ArraySize.has_value(), IAP, PlacementArgs);
+    if (!FoundAllocation)
+      return ExprError();
+    IAP = FoundAllocation->IAP;
+    OperatorNew = FoundAllocation->OperatorNew;
+    OperatorDelete = FoundAllocation->OperatorDelete;
+    SelectedAllocationArgs = std::move(FoundAllocation->Arguments);
+  }
   // If this is an array allocation, compute whether the usual array
   // deallocation function for the type has a size_t parameter.
   bool UsualArrayDeleteWantsSize = false;
@@ -2463,13 +2486,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // arguments. Skip the first parameter because we don't have a corresponding
     // argument. Skip the second parameter too if we're passing in the
     // alignment; we've already filled it in.
-    unsigned NumImplicitArgs = 1;
-    if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-      assert(OperatorNew->isTypeAwareOperatorNewOrDelete());
-      NumImplicitArgs++;
-    }
-    if (isAlignedAllocation(IAP.PassAlignment))
-      NumImplicitArgs++;
+    unsigned NumImplicitArgs =
+        SelectedAllocationArgs.size() - PlacementArgs.size();
     if (GatherArgumentsForCall(AllocationParameterRange.getBegin(), OperatorNew,
                                Proto, NumImplicitArgs, PlacementArgs,
                                AllPlaceArgs, CallType))
@@ -2586,8 +2604,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     else
       InitType = AllocType;
 
-    InitializedEntity Entity
-      = InitializedEntity::InitializeNew(StartLoc, InitType);
+    bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, InitType,
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
@@ -2631,6 +2652,33 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
+  // new[] will trigger vector deleting destructor emission if the class has
+  // virtual destructor for MSVC compatibility. Perform necessary checks.
+  if (Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts())) {
+    if (const CXXConstructExpr *CCE =
+            dyn_cast_or_null<CXXConstructExpr>(Initializer);
+        CCE && ArraySize) {
+      CXXRecordDecl *ClassDecl = CCE->getConstructor()->getParent();
+      // We probably already did this for another new[] with this class so don't
+      // do it twice.
+      if (!Context.classMaybeNeedsVectorDeletingDestructor(ClassDecl)) {
+        auto *Dtor = ClassDecl->getDestructor();
+        if (Dtor && Dtor->isVirtual() && !Dtor->isDeleted()) {
+          Context.setClassMaybeNeedsVectorDeletingDestructor(ClassDecl);
+          if (!Dtor->isDefined() && !Dtor->isInvalidDecl()) {
+            // Call CheckDestructor if destructor is not defined. This is
+            // needed to find operators delete and delete[] for vector deleting
+            // destructor body because new[] will trigger emission of vector
+            // deleting destructor body even if destructor is defined in another
+            // translation unit.
+            ContextRAII SavedContext(*this, Dtor);
+            CheckDestructor(Dtor);
+          }
+        }
+      }
+    }
+  }
+
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             IAP, UsualArrayDeleteWantsSize, PlacementArgs,
                             TypeIdParens, ArraySize, InitStyle, Initializer,
@@ -2660,8 +2708,9 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-      << AllocType.getUnqualifiedType()
-      << AllocType.getQualifiers().getAddressSpaceAttributePrintValue();
+           << AllocType.getUnqualifiedType()
+           << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
+
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
       QualType BaseAllocType = Context.getBaseElementType(AT);
@@ -2675,174 +2724,147 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   return false;
 }
 
-enum class ResolveMode { Typed, Untyped };
-static bool resolveAllocationOverloadInterior(
-    Sema &S, LookupResult &R, SourceRange Range, ResolveMode Mode,
-    SmallVectorImpl<Expr *> &Args, AlignedAllocationMode &PassAlignment,
-    FunctionDecl *&Operator, OverloadCandidateSet *AlignedCandidates,
-    Expr *AlignArg, bool Diagnose) {
-  unsigned NonTypeArgumentOffset = 0;
-  if (Mode == ResolveMode::Typed) {
-    ++NonTypeArgumentOffset;
+static void diagnoseNoViableFunctionForAllocationOverloadResolution(
+    Sema &S, const LookupResult &R, SourceRange Range, ArrayRef<Expr *> Args,
+    OverloadCandidateSet &Candidates, OverloadCandidateSet *AlignedCandidates,
+    Expr *AlignArg, bool IncludedMSVCFallback, bool AlignedBeforeUnaligned) {
+  // If this is an allocation of the form 'new (p) X' for some object
+  // pointer p (or an expression that will decay to such a pointer),
+  // diagnose the reason for the error.
+  if (!R.isClassLookup() && Args.size() == 2 &&
+      (Args[1]->getType()->isObjectPointerType() ||
+       Args[1]->getType()->isArrayType())) {
+    const QualType Arg1Type = Args[1]->getType();
+    QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+    if (UnderlyingType->isPointerType())
+      UnderlyingType = UnderlyingType->getPointeeType();
+    if (UnderlyingType.isConstQualified()) {
+      S.Diag(Args[1]->getExprLoc(),
+             diag::err_placement_new_into_const_qualified_storage)
+          << Arg1Type << Args[1]->getSourceRange();
+      return;
+    }
+    S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
+        << R.getLookupName() << Range;
+    // Listing the candidates is unlikely to be useful; skip it.
+    return;
   }
 
-  OverloadCandidateSet Candidates(R.getNameLoc(),
-                                  OverloadCandidateSet::CSK_Normal);
-  for (LookupResult::iterator Alloc = R.begin(), AllocEnd = R.end();
+  // Finish checking all candidates before we note any. This checking can
+  // produce additional diagnostics so can't be interleaved with our
+  // emission of notes.
+  //
+  // For an aligned allocation, separately check the aligned and unaligned
+  // candidates with their respective argument lists.
+  SmallVector<OverloadCandidate *, 32> Cands;
+  SmallVector<OverloadCandidate *, 32> AlignedCands;
+  llvm::SmallVector<Expr *, 4> AlignedArgs;
+  if (AlignedCandidates) {
+    auto IsAligned = [](OverloadCandidate &C) {
+      const unsigned AlignArgOffset = 1;
+      return C.Function->getNumParams() > AlignArgOffset &&
+             C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
+    };
+    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+
+    AlignedArgs.reserve(Args.size() + 1);
+    AlignedArgs.push_back(Args[0]);
+    AlignedArgs.push_back(AlignArg);
+    AlignedArgs.append(Args.begin() + 1, Args.end());
+    AlignedCands = AlignedCandidates->CompleteCandidates(
+        S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
+
+    Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                          R.getNameLoc(), IsUnaligned);
+  } else {
+    Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                          R.getNameLoc());
+  }
+
+  S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+      << R.getLookupName() << Range;
+  if (AlignedCandidates && AlignedBeforeUnaligned)
+    AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+                                      R.getNameLoc());
+  Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
+  if (AlignedCandidates && !AlignedBeforeUnaligned)
+    AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+                                      R.getNameLoc());
+  if (IncludedMSVCFallback)
+    S.Diag(R.getNameLoc(), diag::note_ovl_ms_allocation_fallback_failed)
+        << Range;
+}
+
+enum class AllocatorResolveResult { Success, Retry, Error };
+static AllocatorResolveResult resolveAllocationOverload(
+    Sema &S, const LookupResult &BaseLookup, SourceRange Range,
+    ImplicitAllocationArguments &AllocationArgs, MultiExprArg TrialArguments,
+    FunctionDecl *&Operator, OverloadCandidateSet &Candidates, bool Diagnose) {
+  std::optional<LookupResult> MSVCFallback;
+  const LookupResult &LocalLookup =
+      AllocationArgs.updateLookupForMSVCCompatibility(S, BaseLookup,
+                                                      MSVCFallback);
+
+  bool ArgumentListIsTypeAware =
+      isTypeAwareAllocation(AllocationArgs.PassTypeIdentity);
+
+  for (LookupResult::iterator Alloc = LocalLookup.begin(),
+                              AllocEnd = LocalLookup.end();
        Alloc != AllocEnd; ++Alloc) {
     // Even member operator new/delete are implicitly treated as
     // static, so don't use AddMemberCandidate.
     NamedDecl *D = (*Alloc)->getUnderlyingDecl();
-    bool IsTypeAware = D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
-    if (IsTypeAware == (Mode != ResolveMode::Typed))
+    bool CandidateIsTypeAware =
+        D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
+    if (CandidateIsTypeAware != ArgumentListIsTypeAware)
       continue;
 
     if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
       S.AddTemplateOverloadCandidate(FnTemplate, Alloc.getPair(),
-                                     /*ExplicitTemplateArgs=*/nullptr, Args,
-                                     Candidates,
+                                     /*ExplicitTemplateArgs=*/nullptr,
+                                     TrialArguments, Candidates,
                                      /*SuppressUserConversions=*/false);
       continue;
     }
 
     FunctionDecl *Fn = cast<FunctionDecl>(D);
-    S.AddOverloadCandidate(Fn, Alloc.getPair(), Args, Candidates,
+    S.AddOverloadCandidate(Fn, Alloc.getPair(), TrialArguments, Candidates,
                            /*SuppressUserConversions=*/false);
   }
 
   // Do the resolution.
   OverloadCandidateSet::iterator Best;
-  switch (Candidates.BestViableFunction(S, R.getNameLoc(), Best)) {
+  switch (Candidates.BestViableFunction(S, LocalLookup.getNameLoc(), Best)) {
   case OR_Success: {
-    // Got one!
     FunctionDecl *FnDecl = Best->Function;
-    if (S.CheckAllocationAccess(R.getNameLoc(), Range, R.getNamingClass(),
+    if (S.CheckAllocationAccess(LocalLookup.getNameLoc(), Range,
+                                LocalLookup.getNamingClass(),
                                 Best->FoundDecl) == Sema::AR_inaccessible)
-      return true;
+      return AllocatorResolveResult::Error;
 
     Operator = FnDecl;
-    return false;
+    return AllocatorResolveResult::Success;
   }
 
   case OR_No_Viable_Function:
-    // C++17 [expr.new]p13:
-    //   If no matching function is found and the allocated object type has
-    //   new-extended alignment, the alignment argument is removed from the
-    //   argument list, and overload resolution is performed again.
-    if (isAlignedAllocation(PassAlignment)) {
-      PassAlignment = AlignedAllocationMode::No;
-      AlignArg = Args[NonTypeArgumentOffset + 1];
-      Args.erase(Args.begin() + NonTypeArgumentOffset + 1);
-      return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
-                                               PassAlignment, Operator,
-                                               &Candidates, AlignArg, Diagnose);
-    }
-
-    // MSVC will fall back on trying to find a matching global operator new
-    // if operator new[] cannot be found.  Also, MSVC will leak by not
-    // generating a call to operator delete or operator delete[], but we
-    // will not replicate that bug.
-    // FIXME: Find out how this interacts with the std::align_val_t fallback
-    // once MSVC implements it.
-    if (R.getLookupName().getCXXOverloadedOperator() == OO_Array_New &&
-        S.Context.getLangOpts().MSVCCompat && Mode != ResolveMode::Typed) {
-      R.clear();
-      R.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
-      S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
-      // FIXME: This will give bad diagnostics pointing at the wrong functions.
-      return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
-                                               PassAlignment, Operator,
-                                               /*Candidates=*/nullptr,
-                                               /*AlignArg=*/nullptr, Diagnose);
-    }
-    if (Mode == ResolveMode::Typed) {
-      // If we can't find a matching type aware operator we don't consider this
-      // a failure.
-      Operator = nullptr;
-      return false;
-    }
-    if (Diagnose) {
-      // If this is an allocation of the form 'new (p) X' for some object
-      // pointer p (or an expression that will decay to such a pointer),
-      // diagnose the reason for the error.
-      if (!R.isClassLookup() && Args.size() == 2 &&
-          (Args[1]->getType()->isObjectPointerType() ||
-           Args[1]->getType()->isArrayType())) {
-        const QualType Arg1Type = Args[1]->getType();
-        QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
-        if (UnderlyingType->isPointerType())
-          UnderlyingType = UnderlyingType->getPointeeType();
-        if (UnderlyingType.isConstQualified()) {
-          S.Diag(Args[1]->getExprLoc(),
-                 diag::err_placement_new_into_const_qualified_storage)
-              << Arg1Type << Args[1]->getSourceRange();
-          return true;
-        }
-        S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
-            << R.getLookupName() << Range;
-        // Listing the candidates is unlikely to be useful; skip it.
-        return true;
-      }
-
-      // Finish checking all candidates before we note any. This checking can
-      // produce additional diagnostics so can't be interleaved with our
-      // emission of notes.
-      //
-      // For an aligned allocation, separately check the aligned and unaligned
-      // candidates with their respective argument lists.
-      SmallVector<OverloadCandidate*, 32> Cands;
-      SmallVector<OverloadCandidate*, 32> AlignedCands;
-      llvm::SmallVector<Expr*, 4> AlignedArgs;
-      if (AlignedCandidates) {
-        auto IsAligned = [NonTypeArgumentOffset](OverloadCandidate &C) {
-          auto AlignArgOffset = NonTypeArgumentOffset + 1;
-          return C.Function->getNumParams() > AlignArgOffset &&
-                 C.Function->getParamDecl(AlignArgOffset)
-                     ->getType()
-                     ->isAlignValT();
-        };
-        auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
-
-        AlignedArgs.reserve(Args.size() + NonTypeArgumentOffset + 1);
-        for (unsigned Idx = 0; Idx < NonTypeArgumentOffset + 1; ++Idx)
-          AlignedArgs.push_back(Args[Idx]);
-        AlignedArgs.push_back(AlignArg);
-        AlignedArgs.append(Args.begin() + NonTypeArgumentOffset + 1,
-                           Args.end());
-        AlignedCands = AlignedCandidates->CompleteCandidates(
-            S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
-
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc(), IsUnaligned);
-      } else {
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc());
-      }
-
-      S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-          << R.getLookupName() << Range;
-      if (AlignedCandidates)
-        AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
-                                          R.getNameLoc());
-      Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
-    }
-    return true;
+    return AllocatorResolveResult::Retry;
 
   case OR_Ambiguous:
     if (Diagnose) {
       Candidates.NoteCandidates(
-          PartialDiagnosticAt(R.getNameLoc(),
+          PartialDiagnosticAt(LocalLookup.getNameLoc(),
                               S.PDiag(diag::err_ovl_ambiguous_call)
-                                  << R.getLookupName() << Range),
-          S, OCD_AmbiguousCandidates, Args);
+                                  << LocalLookup.getLookupName() << Range),
+          S, OCD_AmbiguousCandidates, TrialArguments);
     }
-    return true;
+    return AllocatorResolveResult::Error;
 
   case OR_Deleted: {
     if (Diagnose)
-      S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
-                                     Candidates, Best->Function, Args);
-    return true;
+      S.DiagnoseUseOfDeletedFunction(LocalLookup.getNameLoc(), Range,
+                                     LocalLookup.getLookupName(), Candidates,
+                                     Best->Function, TrialArguments);
+    return AllocatorResolveResult::Error;
   }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
@@ -2868,55 +2890,197 @@ static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
   }
 }
 
-static bool resolveAllocationOverload(
-    Sema &S, LookupResult &R, SourceRange Range, SmallVectorImpl<Expr *> &Args,
-    ImplicitAllocationParameters &IAP, FunctionDecl *&Operator,
-    OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
-  Operator = nullptr;
-  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-    assert(S.isStdTypeIdentity(Args[0]->getType(), nullptr));
-    // The internal overload resolution work mutates the argument list
-    // in accordance with the spec. We may want to change that in future,
-    // but for now we deal with this by making a copy of the non-type-identity
-    // arguments.
-    SmallVector<Expr *> UntypedParameters;
-    UntypedParameters.reserve(Args.size() - 1);
-    UntypedParameters.push_back(Args[1]);
-    // Type aware allocation implicitly includes the alignment parameter so
-    // only include it in the untyped parameter list if alignment was explicitly
-    // requested
-    if (isAlignedAllocation(IAP.PassAlignment))
-      UntypedParameters.push_back(Args[2]);
-    UntypedParameters.append(Args.begin() + 3, Args.end());
-
-    AlignedAllocationMode InitialAlignmentMode = IAP.PassAlignment;
-    IAP.PassAlignment = AlignedAllocationMode::Yes;
-    if (resolveAllocationOverloadInterior(
-            S, R, Range, ResolveMode::Typed, Args, IAP.PassAlignment, Operator,
-            AlignedCandidates, AlignArg, Diagnose))
-      return true;
-    if (Operator)
-      return false;
-
-    // If we got to this point we could not find a matching typed operator
-    // so we update the IAP flags, and revert to our stored copy of the
-    // type-identity-less argument list.
-    IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
-    IAP.PassAlignment = InitialAlignmentMode;
-    Args = std::move(UntypedParameters);
+static void
+DiagnoseAllocationLookupFailure(Sema &SemaRef, const LookupResult &R,
+                                SourceRange Range,
+                                AllocationArgumentSet &ArgumentCandidates,
+                                ArrayRef<Expr *> PlacementArguments) {
+  ImplicitAllocationArguments *UnalignedArgumentList = nullptr;
+  ImplicitAllocationArguments *AlignedArgumentList = nullptr;
+  bool IncludedMSVCFallback = false;
+  bool AlignedBeforeUnaligned = true;
+  for (ImplicitAllocationArguments &AllocationArguments : ArgumentCandidates) {
+    if (AllocationArguments.IsMSVCCompatibilityFallback) {
+      IncludedMSVCFallback = true;
+      continue;
+    }
+    if (AllocationArguments.PassTypeIdentity == TypeAwareAllocationMode::Yes)
+      continue;
+    if (AllocationArguments.PassAlignment == AlignedAllocationMode::Yes) {
+      AlignedArgumentList = &AllocationArguments;
+      AlignedBeforeUnaligned = !UnalignedArgumentList;
+    } else {
+      UnalignedArgumentList = &AllocationArguments;
+    }
   }
-  assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
-  return resolveAllocationOverloadInterior(
-      S, R, Range, ResolveMode::Untyped, Args, IAP.PassAlignment, Operator,
-      AlignedCandidates, AlignArg, Diagnose);
+  if (!UnalignedArgumentList)
+    return;
+
+  // We re-resolve the rejected candidates for diagnostics rather than requiring
+  // them to be tracked during the initial resolution path. This both simplifies
+  // the resolution logic, and helps with performance.
+  auto Rerun = [&](ImplicitAllocationArguments &ArgumentList,
+                   OverloadCandidateSet &Candidates,
+                   SmallVectorImpl<Expr *> &Args) {
+    assert(!ArgumentList.IsMSVCCompatibilityFallback);
+    llvm::append_range(Args, ArgumentList.getImplicitArguments());
+    llvm::append_range(Args, PlacementArguments);
+    FunctionDecl *Unused = nullptr;
+    resolveAllocationOverload(SemaRef, R, Range, ArgumentList, Args, Unused,
+                              Candidates, /*Diagnose=*/false);
+  };
+  std::optional<OverloadCandidateSet> AlignedCandidates;
+  Expr *AlignArg = nullptr;
+  if (AlignedArgumentList) {
+    AlignedCandidates.emplace(R.getNameLoc(), OverloadCandidateSet::CSK_Normal);
+    SmallVector<Expr *, 4> AlignedArgs;
+    Rerun(*AlignedArgumentList, *AlignedCandidates, AlignedArgs);
+    AlignArg = AlignedArgumentList->getAlignmentArgument();
+  }
+  OverloadCandidateSet UnalignedCandidates(R.getNameLoc(),
+                                           OverloadCandidateSet::CSK_Normal);
+  SmallVector<Expr *, 4> UnalignedArgs;
+  Rerun(*UnalignedArgumentList, UnalignedCandidates, UnalignedArgs);
+  diagnoseNoViableFunctionForAllocationOverloadResolution(
+      SemaRef, R, Range, UnalignedArgs, UnalignedCandidates,
+      AlignedCandidates ? &*AlignedCandidates : nullptr, AlignArg,
+      IncludedMSVCFallback, AlignedBeforeUnaligned);
 }
 
-bool Sema::FindAllocationFunctions(
-    SourceLocation StartLoc, SourceRange Range,
-    AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
-    QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
-    MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
-    FunctionDecl *&OperatorDelete, bool Diagnose) {
+Expr *Sema::tryGetTypeIdentityArgument(QualType Type, SourceLocation Loc) {
+  if (auto Found = AllocationTypeIdentityArguments.find(Type);
+      Found != AllocationTypeIdentityArguments.end())
+    return Found->second;
+
+  QualType TypeIdentity = tryBuildStdTypeIdentity(Type, Loc);
+  if (TypeIdentity.isNull() ||
+      RequireCompleteType(Loc, TypeIdentity, diag::err_incomplete_type))
+    return nullptr;
+
+  Expr *TypeIdentityArgument =
+      new (Context) CXXScalarValueInitExpr(TypeIdentity, nullptr, Loc);
+  AllocationTypeIdentityArguments.insert({Type, TypeIdentityArgument});
+  return TypeIdentityArgument;
+}
+
+ImplicitAllocationArguments::ImplicitAllocationArguments(
+    Sema &SemaRef, Expr *TypeIdentityArg, Expr *SizeArg, Expr *AlignArg,
+    bool IsMSVCCompatibilityFallback)
+    : PassTypeIdentity(typeAwareAllocationModeFromBool(TypeIdentityArg)),
+      PassAlignment(alignedAllocationModeFromBool(AlignArg)),
+      IsMSVCCompatibilityFallback(IsMSVCCompatibilityFallback),
+      ArgumentCount(0) {
+  if (TypeIdentityArg) {
+    assert(SemaRef.isStdTypeIdentity(TypeIdentityArg->getType(), nullptr));
+    ImplicitArguments[ArgumentCount++] = TypeIdentityArg;
+  }
+  assert(SizeArg);
+  [[maybe_unused]] ASTContext &Ctx = SemaRef.getASTContext();
+  assert(Ctx.hasSameType(SizeArg->getType(), Ctx.getSizeType()));
+  ImplicitArguments[ArgumentCount++] = SizeArg;
+  if (AlignArg) {
+    assert(AlignArg->getType()->isAlignValT());
+    ImplicitArguments[ArgumentCount++] = AlignArg;
+  }
+}
+
+const LookupResult &
+ImplicitAllocationArguments::updateLookupForMSVCCompatibility(
+    Sema &S, const LookupResult &BaseLookup,
+    std::optional<LookupResult> &Buffer) const {
+  if (!IsMSVCCompatibilityFallback)
+    return BaseLookup;
+  // MSVC will fall back on trying to find a matching global operator new
+  // if operator new[] cannot be found.  Also, MSVC will leak by not
+  // generating a call to operator delete or operator delete[], but we
+  // will not replicate that bug.
+  // FIXME: Find out how this interacts with the std::align_val_t fallback
+  // once MSVC implements it.
+  LookupResult &Fallback = Buffer.emplace(LookupResult::Temporary, BaseLookup);
+  Fallback.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
+  // FIXME: This will give bad diagnostics pointing at the wrong functions.
+  S.LookupQualifiedName(Fallback, S.Context.getTranslationUnitDecl());
+  return Fallback;
+}
+
+std::optional<AllocationArgumentSet>
+Sema::resolveAllocationArguments(LookupResult &R,
+                                 const ImplicitAllocationParameters &IAP,
+                                 ArrayRef<Expr *> PlacementArguments) {
+  // FIXME: Should Sema create per-callsite versions expressions so they can be
+  // reused during codegen? This would likely create yet another case where we
+  // need to serialize information, however it would ensure identical arguments
+  // between Sema and CodeGen.
+  if (!AllocationSizeExpr) {
+    DeclareGlobalNewDelete();
+    QualType SizeTy = Context.getSizeType();
+    unsigned SizeTyWidth = Context.getTypeSize(SizeTy);
+    AllocationSizeExpr = IntegerLiteral::Create(
+        Context, llvm::APInt::getZero(SizeTyWidth), SizeTy, SourceLocation());
+  }
+  if (!AllocationAlignmentExpr) {
+    DeclareGlobalNewDelete();
+    if (EnumDecl *StdAlignValT = getStdAlignValT()) {
+      QualType AlignValT = Context.getCanonicalTagType(StdAlignValT);
+      AllocationAlignmentExpr = new (Context)
+          CXXScalarValueInitExpr(AlignValT, nullptr, SourceLocation());
+    }
+  }
+
+  AllocationArgumentSet FoundArguments;
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+    Expr *TypeIdentityArgument =
+        tryGetTypeIdentityArgument(IAP.Type, R.getNameLoc());
+    if (!TypeIdentityArgument)
+      return std::nullopt;
+
+    Expr *AlignmentExpr = AllocationAlignmentExpr;
+    if (!PlacementArguments.empty() &&
+        PlacementArguments.front()->getType()->isAlignValT())
+      AlignmentExpr = nullptr;
+    FoundArguments.push_back(ImplicitAllocationArguments(
+        *this, TypeIdentityArgument, AllocationSizeExpr, AlignmentExpr,
+        /*IsMSVCCompatibilityFallback=*/false));
+  }
+
+  ImplicitAllocationArguments UnalignedArguments(
+      *this, /*TypeIdentityArg=*/nullptr, AllocationSizeExpr,
+      /*AlignArg=*/nullptr, /*IsMSVCCompatibilityFallback=*/false);
+  ImplicitAllocationArguments AlignedArguments(
+      *this, /*TypeIdentityArg=*/nullptr, AllocationSizeExpr,
+      AllocationAlignmentExpr, /*IsMSVCCompatibilityFallback=*/false);
+
+  // C++20 [expr.new]p18:
+  //   If no matching function is found then
+  //     — if the allocated object type has new-extended alignment, the
+  //       alignment argument is removed from the argument list;
+  //     — otherwise, an argument that is the type’s alignment and has type
+  //       std::align_val_t is added into the argument list immediately after
+  //       the first argument;
+  //   and then overload resolution is performed again.
+  if (IAP.PassAlignment == AlignedAllocationMode::Yes)
+    FoundArguments.push_back(AlignedArguments);
+  FoundArguments.push_back(UnalignedArguments);
+  if (IAP.PassAlignment == AlignedAllocationMode::No &&
+      AllocationAlignmentExpr && getLangOpts().AlignedAllocation)
+    FoundArguments.push_back(AlignedArguments);
+
+  // The MSVC global fallback path
+  if (getLangOpts().MSVCCompat &&
+      R.getLookupName().getCXXOverloadedOperator() == OO_Array_New)
+    FoundArguments.push_back(ImplicitAllocationArguments(
+        *this, /*TypeIdentityArg=*/nullptr, AllocationSizeExpr,
+        /*AlignArg=*/nullptr, /*IsMSVCCompatibilityFallback=*/true));
+  return FoundArguments;
+}
+
+std::optional<ResolvedAllocation>
+Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
+                              AllocationFunctionScope NewScope,
+                              AllocationFunctionScope DeleteScope,
+                              QualType AllocType, bool IsArray,
+                              const ImplicitAllocationParameters &RequestedIAP,
+                              MultiExprArg PlaceArgs, bool Diagnose) {
   // --- Choosing an allocation function ---
   // C++ 5.3.4p8 - 14 & 18
   // 1) If looking in AllocationFunctionScope::Global scope for allocation
@@ -2929,9 +3093,6 @@ bool Sema::FindAllocationFunctions(
   // 3) The first argument is always size_t. Append the arguments from the
   //   placement form.
 
-  SmallVector<Expr*, 8> AllocArgs;
-  AllocArgs.reserve(IAP.getNumImplicitArgs() + PlaceArgs.size());
-
   // C++ [expr.new]p8:
   //   If the allocated type is a non-array type, the allocation
   //   function's name is operator new and the deallocation function's
@@ -2943,49 +3104,10 @@ bool Sema::FindAllocationFunctions(
 
   QualType AllocElemType = Context.getBaseElementType(AllocType);
 
-  // We don't care about the actual value of these arguments.
-  // FIXME: Should the Sema create the expression and embed it in the syntax
-  // tree? Or should the consumer just recalculate the value?
-  // FIXME: Using a dummy value will interact poorly with attribute enable_if.
-
-  // We use size_t as a stand in so that we can construct the init
-  // expr on the stack
-  QualType TypeIdentity = Context.getSizeType();
-  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-    QualType SpecializedTypeIdentity =
-        tryBuildStdTypeIdentity(IAP.Type, StartLoc);
-    if (!SpecializedTypeIdentity.isNull()) {
-      TypeIdentity = SpecializedTypeIdentity;
-      if (RequireCompleteType(StartLoc, TypeIdentity,
-                              diag::err_incomplete_type))
-        return true;
-    } else
-      IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
-  }
-  TypeAwareAllocationMode OriginalTypeAwareState = IAP.PassTypeIdentity;
-
-  CXXScalarValueInitExpr TypeIdentityParam(TypeIdentity, nullptr, StartLoc);
-  if (isTypeAwareAllocation(IAP.PassTypeIdentity))
-    AllocArgs.push_back(&TypeIdentityParam);
-
-  QualType SizeTy = Context.getSizeType();
-  unsigned SizeTyWidth = Context.getTypeSize(SizeTy);
-  IntegerLiteral Size(Context, llvm::APInt::getZero(SizeTyWidth), SizeTy,
-                      SourceLocation());
-  AllocArgs.push_back(&Size);
-
-  QualType AlignValT = Context.VoidTy;
-  bool IncludeAlignParam = isAlignedAllocation(IAP.PassAlignment) ||
-                           isTypeAwareAllocation(IAP.PassTypeIdentity);
-  if (IncludeAlignParam) {
-    DeclareGlobalNewDelete();
-    AlignValT = Context.getCanonicalTagType(getStdAlignValT());
-  }
-  CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
-  if (IncludeAlignParam)
-    AllocArgs.push_back(&Align);
-
-  llvm::append_range(AllocArgs, PlaceArgs);
+  ResolvedAllocation Result = {/*OperatorNew=*/nullptr,
+                               /*OperatorDelete=*/nullptr,
+                               RequestedIAP,
+                               {}};
 
   // Find the allocation function.
   {
@@ -3003,14 +3125,14 @@ bool Sema::FindAllocationFunctions(
     // We can see ambiguity here if the allocation function is found in
     // multiple base classes.
     if (R.isAmbiguous())
-      return true;
+      return std::nullopt;
 
     //   If this lookup fails to find the name, or if the allocated type is not
     //   a class type, the allocation function's name is looked up in the
     //   global scope.
     if (R.empty()) {
       if (NewScope == AllocationFunctionScope::Class)
-        return true;
+        return std::nullopt;
 
       LookupQualifiedName(R, Context.getTranslationUnitDecl());
     }
@@ -3021,7 +3143,7 @@ bool Sema::FindAllocationFunctions(
       } else {
         Diag(StartLoc, diag::err_openclcxx_placement_new);
       }
-      return true;
+      return std::nullopt;
     }
 
     assert(!R.empty() && "implicitly declared allocation functions not found");
@@ -3030,17 +3152,44 @@ bool Sema::FindAllocationFunctions(
     // We do our own custom access checks below.
     R.suppressDiagnostics();
 
-    if (resolveAllocationOverload(*this, R, Range, AllocArgs, IAP, OperatorNew,
-                                  /*Candidates=*/nullptr,
-                                  /*AlignArg=*/nullptr, Diagnose))
-      return true;
+    std::optional<AllocationArgumentSet> ArgumentListCandidates =
+        resolveAllocationArguments(R, RequestedIAP, PlaceArgs);
+    if (!ArgumentListCandidates)
+      return std::nullopt;
+
+    for (ImplicitAllocationArguments &ArgumentList : *ArgumentListCandidates) {
+      SmallVector<Expr *, 4> TrialArguments(
+          ArgumentList.getImplicitArguments());
+      llvm::append_range(TrialArguments, PlaceArgs);
+      OverloadCandidateSet OverloadCandidates(R.getNameLoc(),
+                                              OverloadCandidateSet::CSK_Normal);
+      FunctionDecl *Operator = nullptr;
+      switch (resolveAllocationOverload(*this, R, Range, ArgumentList,
+                                        TrialArguments, Operator,
+                                        OverloadCandidates, Diagnose)) {
+      case AllocatorResolveResult::Error:
+        return std::nullopt;
+      case AllocatorResolveResult::Retry:
+        continue;
+      case AllocatorResolveResult::Success:
+        Result.OperatorNew = Operator;
+        Result.IAP.PassTypeIdentity = ArgumentList.PassTypeIdentity;
+        Result.IAP.PassAlignment = ArgumentList.PassAlignment;
+        Result.Arguments = std::move(TrialArguments);
+        goto foundCandidate;
+      }
+    }
+    if (Diagnose)
+      DiagnoseAllocationLookupFailure(*this, R, Range, *ArgumentListCandidates,
+                                      PlaceArgs);
+    return std::nullopt;
   }
+foundCandidate:
+  FunctionDecl *OperatorNew = Result.OperatorNew;
 
   // We don't need an operator delete if we're running under -fno-exceptions.
-  if (!getLangOpts().Exceptions) {
-    OperatorDelete = nullptr;
-    return false;
-  }
+  if (!getLangOpts().Exceptions)
+    return Result;
 
   // Note, the name of OperatorNew might have been changed from array to
   // non-array by resolveAllocationOverload.
@@ -3065,7 +3214,7 @@ bool Sema::FindAllocationFunctions(
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())
-    return true; // FIXME: clean up expressions?
+    return std::nullopt; // FIXME: clean up expressions?
 
   // Filter out any destroying operator deletes. We can't possibly call such a
   // function in this context, because we're handling the case where the object
@@ -3089,10 +3238,10 @@ bool Sema::FindAllocationFunctions(
 
   bool FoundGlobalDelete = FoundDelete.empty();
   bool IsClassScopedTypeAwareNew =
-      isTypeAwareAllocation(IAP.PassTypeIdentity) &&
+      isTypeAwareAllocation(Result.IAP.PassTypeIdentity) &&
       OperatorNewContext->isRecord();
   auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
-    assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
+    assert(isTypeAwareAllocation(Result.IAP.PassTypeIdentity));
     if (Diagnose) {
       Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
           << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
@@ -3103,18 +3252,19 @@ bool Sema::FindAllocationFunctions(
   };
   if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
     DiagnoseMissingTypeAwareCleanupOperator(/*isPlacementNew=*/false);
-    return true;
+    return std::nullopt;
   }
   if (FoundDelete.empty()) {
     FoundDelete.clear(LookupOrdinaryName);
 
     if (DeleteScope == AllocationFunctionScope::Class)
-      return true;
+      return std::nullopt;
 
     DeclareGlobalNewDelete();
-    DeallocLookupMode LookupMode = isTypeAwareAllocation(OriginalTypeAwareState)
-                                       ? DeallocLookupMode::OptionallyTyped
-                                       : DeallocLookupMode::Untyped;
+    DeallocLookupMode LookupMode =
+        isTypeAwareAllocation(RequestedIAP.PassTypeIdentity)
+            ? DeallocLookupMode::OptionallyTyped
+            : DeallocLookupMode::Untyped;
     LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
                                       DeleteName);
   }
@@ -3138,7 +3288,7 @@ bool Sema::FindAllocationFunctions(
   // type uses the sized or non-sized form of aligned operator delete.
 
   unsigned NonPlacementNewArgCount = 1; // size parameter
-  if (isTypeAwareAllocation(IAP.PassTypeIdentity))
+  if (isTypeAwareAllocation(Result.IAP.PassTypeIdentity))
     NonPlacementNewArgCount =
         /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
   bool isPlacementNew = !PlaceArgs.empty() ||
@@ -3162,8 +3312,8 @@ bool Sema::FindAllocationFunctions(
 
       SmallVector<QualType, 6> ArgTypes;
       int InitialParamOffset = 0;
-      if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-        ArgTypes.push_back(TypeIdentity);
+      if (isTypeAwareAllocation(Result.IAP.PassTypeIdentity)) {
+        ArgTypes.push_back(Result.Arguments.front()->getType());
         InitialParamOffset = 1;
       }
       ArgTypes.push_back(Context.VoidPtrTy);
@@ -3205,9 +3355,9 @@ bool Sema::FindAllocationFunctions(
     if (getLangOpts().CUDA)
       CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
                                   Matches);
-    if (Matches.empty() && isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+    if (Matches.empty() && isTypeAwareAllocation(Result.IAP.PassTypeIdentity)) {
       DiagnoseMissingTypeAwareCleanupOperator(isPlacementNew);
-      return true;
+      return std::nullopt;
     }
   } else {
     // C++1y [expr.new]p22:
@@ -3219,7 +3369,7 @@ bool Sema::FindAllocationFunctions(
     // with a size_t where possible (which it always is in this case).
     llvm::SmallVector<UsualDeallocFnInfo, 4> BestDeallocFns;
     ImplicitDeallocationParameters IDP = {
-        AllocElemType, OriginalTypeAwareState,
+        AllocElemType, RequestedIAP.PassTypeIdentity,
         alignedAllocationModeFromBool(
             hasNewExtendedAlignment(*this, AllocElemType)),
         sizedDeallocationModeFromBool(FoundGlobalDelete)};
@@ -3240,7 +3390,8 @@ bool Sema::FindAllocationFunctions(
   //   function, that function will be called; otherwise, no
   //   deallocation function will be called.
   if (Matches.size() == 1) {
-    OperatorDelete = Matches[0].second;
+    Result.OperatorDelete = Matches[0].second;
+    FunctionDecl *OperatorDelete = Result.OperatorDelete;
     DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
     bool FoundTypeAwareOperator =
         OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
@@ -3298,7 +3449,8 @@ bool Sema::FindAllocationFunctions(
           IsSizedDelete = false;
       }
 
-      if (IsSizedDelete && !isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+      if (IsSizedDelete &&
+          !isTypeAwareAllocation(Result.IAP.PassTypeIdentity)) {
         SourceRange R = PlaceArgs.empty()
                             ? SourceRange()
                             : SourceRange(PlaceArgs.front()->getBeginLoc(),
@@ -3312,7 +3464,7 @@ bool Sema::FindAllocationFunctions(
     if (CheckDeleteOperator(*this, StartLoc, Range, Diagnose,
                             FoundDelete.getNamingClass(), Matches[0].first,
                             Matches[0].second))
-      return true;
+      return std::nullopt;
 
   } else if (!Matches.empty()) {
     // We found multiple suitable operators. Per [expr.new]p20, that means we
@@ -3326,7 +3478,7 @@ bool Sema::FindAllocationFunctions(
            diag::note_member_declared_here) << DeleteName;
   }
 
-  return false;
+  return Result;
 }
 
 void Sema::DeclareGlobalNewDelete() {
@@ -3411,6 +3563,13 @@ void Sema::DeclareGlobalNewDelete() {
     AlignValT->setIntegerType(Context.getSizeType());
     AlignValT->setPromotionType(Context.getSizeType());
     AlignValT->setImplicit(true);
+
+    // Add to the std namespace so that the module merger can find it via
+    // noload_lookup and merge it with the module's explicit definition.
+    // We want the created EnumDecl to be available for redeclaration lookups,
+    // but not for regular name lookups (same pattern as
+    // getOrCreateStdNamespace).
+    getOrCreateStdNamespace()->addDecl(AlignValT);
 
     StdAlignValT = AlignValT;
   }
@@ -3612,11 +3771,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose,
-                                                          bool LookForGlobal) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3649,8 +3806,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -4052,7 +4212,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
+             << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
@@ -4669,20 +4829,55 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
-// adjustVectorType - Compute the intermediate cast type casting elements of the
-// from type to the elements of the to type without resizing the vector.
-static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
-                                 QualType ToType, QualType *ElTy = nullptr) {
+// adjustVectorOrConstantMatrixType - Compute the intermediate cast type casting
+// elements of the from type to the elements of the to type without resizing the
+// vector or matrix.
+static QualType adjustVectorOrConstantMatrixType(ASTContext &Context,
+                                                 QualType FromTy,
+                                                 QualType ToType,
+                                                 QualType *ElTy = nullptr) {
   QualType ElType = ToType;
   if (auto *ToVec = ToType->getAs<VectorType>())
     ElType = ToVec->getElementType();
+  else if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
+    ElType = ToMat->getElementType();
 
   if (ElTy)
     *ElTy = ElType;
-  if (!FromTy->isVectorType())
-    return ElType;
-  auto *FromVec = FromTy->castAs<VectorType>();
-  return Context.getExtVectorType(ElType, FromVec->getNumElements());
+  if (FromTy->isVectorType()) {
+    auto *FromVec = FromTy->castAs<VectorType>();
+    return Context.getExtVectorType(ElType, FromVec->getNumElements());
+  }
+  if (FromTy->isConstantMatrixType()) {
+    auto *FromMat = FromTy->castAs<ConstantMatrixType>();
+    return Context.getConstantMatrixType(ElType, FromMat->getNumRows(),
+                                         FromMat->getNumColumns());
+  }
+  return ElType;
+}
+
+/// Check if an integral conversion involves incompatible overflow behavior
+/// types. Returns true if the conversion is invalid.
+static bool checkIncompatibleOBTConversion(Sema &S, QualType FromType,
+                                           QualType ToType, Expr *From) {
+  const auto *FromOBT = FromType->getAs<OverflowBehaviorType>();
+  const auto *ToOBT = ToType->getAs<OverflowBehaviorType>();
+
+  if (FromOBT && ToOBT &&
+      FromOBT->getBehaviorKind() != ToOBT->getBehaviorKind()) {
+    S.Diag(From->getExprLoc(), diag::err_incompatible_obt_kinds_assignment)
+        << ToType << FromType
+        << (ToOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap")
+        << (FromOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap");
+    return true;
+  }
+  return false;
 }
 
 ExprResult
@@ -4842,8 +5037,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy =
+          adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
+
+    // Check for incompatible OBT kinds before converting
+    if (checkIncompatibleOBTConversion(*this, FromType, StepTy, From))
+      return ExprError();
+
     if (ElTy->isBooleanType()) {
       assert(FromType->castAsEnumDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
@@ -4862,8 +5064,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Promotion:
   case ICK_Floating_Conversion: {
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy = adjustVectorOrConstantMatrixType(Context, FromType, ToType);
     From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
@@ -4894,8 +5097,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy =
+          adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
@@ -5049,9 +5254,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     QualType StepTy = ToType;
     if (FromType->isVectorType())
       ElTy = FromType->castAs<VectorType>()->getElementType();
-    if (getLangOpts().HLSL &&
-        (FromType->isVectorType() || ToType->isVectorType()))
-      StepTy = adjustVectorType(Context, FromType, ToType);
+    else if (FromType->isConstantMatrixType())
+      ElTy = FromType->castAs<ConstantMatrixType>()->getElementType();
+    if (getLangOpts().HLSL) {
+      if (FromType->isVectorType() || ToType->isVectorType() ||
+          FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+        StepTy = adjustVectorOrConstantMatrixType(Context, FromType, ToType);
+    }
 
     From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
                              VK_PRValue,
@@ -5196,19 +5405,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_HLSL_Array_RValue:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
   if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
-
-    // TODO: Support HLSL matrices.
-    assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
-           "Dimension conversion for matrix types is not implemented yet.");
-    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
-           "Dimension conversion output must be vector or scalar type.");
+    assert(
+        (ToType->isVectorType() || ToType->isConstantMatrixType() ||
+         ToType->isBuiltinType()) &&
+        "Dimension conversion output must be vector, matrix, or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -5216,6 +5425,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+      break;
+    }
+    case ICK_HLSL_Matrix_Splat: {
+      // Matrix splat from any arithmetic type to a matrix.
+      Expr *Elem = prepareMatrixSplat(ToType, From).get();
+      From =
+          ImpCastExprToType(Elem, ToType, CK_HLSLAggregateSplatCast, VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
       break;
     }
     case ICK_HLSL_Vector_Truncation: {
@@ -5232,6 +5450,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                From->getValueKind())
                  .get();
 
+      break;
+    }
+    case ICK_HLSL_Matrix_Truncation: {
+      auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
+      QualType TruncTy = FromMat->getElementType();
+      // Preserve any sugar (e.g. `row_major`/`column_major` HLSL TypeAttrs) on
+      // `ToType` so that downstream CodeGen can query the destination layout
+      // from the cast node itself rather than falling back to the TU default.
+      if (ToType->getAs<ConstantMatrixType>())
+        TruncTy = ToType;
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
+                               From->getValueKind())
+                 .get();
       break;
     }
     case ICK_Identity:
@@ -5679,8 +5910,10 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType();
   QualType RHSType = RHS.get()->getType();
 
-  bool LHSIsVector = LHSType->isVectorType() || LHSType->isSizelessVectorType();
-  bool RHSIsVector = RHSType->isVectorType() || RHSType->isSizelessVectorType();
+  bool LHSSizelessVector = LHSType->isSizelessVectorType();
+  bool RHSSizelessVector = RHSType->isSizelessVectorType();
+  bool LHSIsVector = LHSType->isVectorType() || LHSSizelessVector;
+  bool RHSIsVector = RHSType->isVectorType() || RHSSizelessVector;
 
   auto GetVectorInfo =
       [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
@@ -5698,7 +5931,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   if (LHSIsVector && RHSIsVector) {
     if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ CondType->isExtVectorType();
+          << /*isExtVectorNotSizeless=*/1;
       return {};
     }
 
@@ -5710,7 +5943,13 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     }
     ResultType = Context.getCommonSugaredType(LHSType, RHSType);
   } else if (LHSIsVector || RHSIsVector) {
-    if (CondType->isSizelessVectorType())
+    bool ResultSizeless = LHSSizelessVector || RHSSizelessVector;
+    if (ResultSizeless != CondType->isSizelessVectorType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
+          << /*isExtVectorNotSizeless=*/0;
+      return {};
+    }
+    if (ResultSizeless)
       ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
                                                /*IsCompAssign*/ false,
                                                ArithConvKind::Conditional);
@@ -6520,6 +6759,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
       ObjCMethodDecl *D = nullptr;
       if (ObjCMessageExpr *Send = dyn_cast<ObjCMessageExpr>(E)) {
         D = Send->getMethodDecl();
+      } else if (auto *OL = dyn_cast<ObjCObjectLiteral>(E);
+                 OL && OL->isGlobalAllocation()) {
+        return E;
       } else if (ObjCBoxedExpr *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
         D = BoxedExpr->getBoxingMethod();
       } else if (ObjCArrayLiteral *ArrayLit = dyn_cast<ObjCArrayLiteral>(E)) {
@@ -6530,8 +6772,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
           return E;
 
         D = ArrayLit->getArrayWithObjectsMethod();
-      } else if (ObjCDictionaryLiteral *DictLit
-                                        = dyn_cast<ObjCDictionaryLiteral>(E)) {
+      } else if (ObjCDictionaryLiteral *DictLit =
+                     dyn_cast<ObjCDictionaryLiteral>(E)) {
         // Don't do reclaims if we're using the zero-element dictionary
         // constant.
         if (DictLit->getNumElements() == 0 &&
@@ -7386,7 +7628,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;
@@ -7524,7 +7766,6 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
 
   assert(!S.isUnevaluatedContext());
-  assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
   while (isa_and_nonnull<CapturedDecl>(DC))
@@ -7870,6 +8111,8 @@ Sema::BuildExprRequirement(
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
+
+    SFINAETrap Trap(*this);
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
@@ -7879,6 +8122,8 @@ Sema::BuildExprRequirement(
         HasError = true;
     }
     if (HasError) {
+      // FIXME: Capture diagnostics from the SFINAE trap and store them in the
+      // requirement.
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {
@@ -7923,7 +8168,9 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

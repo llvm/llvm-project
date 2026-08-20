@@ -13,7 +13,6 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -132,11 +131,44 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     QT = Context.BoolTy;
     break;
   case ScalarTypeKind::SignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
+    // getIntTypeForBitwidth() picks a type purely by matching bit width, so
+    // on LP64 targets a 64-bit element would resolve to "long" even if the
+    // target's actual int64_t is "long long" (e.g. OpenBSD). Go through the
+    // target's Int64Type so this matches int64_t/uint64_t.
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.LongTy
+               : Context.LongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.UnsignedLongTy
+               : Context.UnsignedLongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2: {
+    // TODO: This is a workaround code to only support OP8 RVV types without
+    // supporting scalar OFP8 types. We need to refactor after scalar types are
+    // supported.
+    assert(Type->isVector() && "Only support vector of OFP8 types.");
+    bool IsE5M2 = Type->getScalarType() == ScalarTypeKind::FloatE5M2;
+    unsigned Scale = *Type->getScale();
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  if (IsE5M2 == E5m2 && Scale == NumEls)                                       \
+    QT = Context.SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
+    assert(!QT.isNull() && "Unsupported OFP8 vector type");
+    if (Type->isConstant())
+      QT = Context.getConstType(QT);
+    if (Type->isPointer())
+      QT = Context.getPointerType(QT);
+    return QT;
+  }
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
     break;
@@ -379,7 +411,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
                                      OverloadedName, PolicyAttrs,
-                                     Record.HasFRMRoundModeOp);
+                                     Record.HasFRMRoundModeOp, Record.AltFmt);
 
   // Put into IntrinsicList.
   uint32_t Index = IntrinsicList.size();
@@ -836,18 +868,6 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo Info =
         Context.getBuiltinVectorTypeInfo(Arg0Type->castAs<BuiltinType>());
     uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
-    if (ElemSize == 64 && !TI.hasFeature("zvknhb") &&
-        !FunctionFeatureMap.lookup("zvknhb"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
-    // If ElemSize is 32, check at least zvknha or zvknhb is enabled.
-    if (!TI.hasFeature("zvknha") && !FunctionFeatureMap.lookup("zvknha") &&
-        !TI.hasFeature("zvknhb") && !FunctionFeatureMap.lookup("zvknhb"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange()
-             << "zvknha or zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
                                    Arg0Type, ElemSize * 4) ||
@@ -1100,6 +1120,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm:
   case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm:
   case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm:
   case RISCVVector::BI__builtin_rvv_vfsqrt_v_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfrec7_v_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfcvt_x_f_v_rm_tu:
@@ -1205,6 +1227,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tu:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_m:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_m:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_m:
@@ -1348,6 +1372,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfredusum_vs_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfwredosum_vs_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfwredusum_vs_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tum:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tum:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_tumu:
@@ -1394,6 +1420,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_tumu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_tumu:
   case RISCVVector::BI__builtin_rvv_vfadd_vv_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfadd_vf_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfsub_vv_rm_mu:
@@ -1440,6 +1468,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vv_rm_mu:
   case RISCVVector::BI__builtin_rvv_vfwmaccbf16_vf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_x_f_qf_rm_mu:
+  case RISCVVector::BI__builtin_rvv_sf_vfnrclip_xu_f_qf_rm_mu:
     return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 4);
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store:
@@ -1512,10 +1542,22 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
 
 void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
                                     const llvm::StringMap<bool> &FeatureMap) {
+  const BuiltinType *BT = Ty->castAs<BuiltinType>();
   ASTContext::BuiltinVectorTypeInfo Info =
-      SemaRef.Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+      SemaRef.Context.getBuiltinVectorTypeInfo(BT);
   unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
+
+  auto IsOFP8Type = [](const BuiltinType *BT) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      return true;
+    default:
+      return false;
+    }
+  };
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !FeatureMap.lookup("zve64d"))
@@ -1526,8 +1568,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
             MinElts == 1) &&
            !FeatureMap.lookup("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64x";
-  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
-           !FeatureMap.lookup("zvfhmin") &&
+  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfhmin") &&
            !FeatureMap.lookup("xandesvpackfph"))
     if (DeclareAndesVectorBuiltins) {
       Diag(Loc, diag::err_riscv_type_requires_extension)
@@ -1553,6 +1594,8 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
+  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
 }
 
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the
@@ -1589,7 +1632,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must have at most 2 arguments
+  // - The attribute itself must have at most 3 arguments
   // - The attribute arguments must be string literals, and valid choices.
   // - The attribute arguments must be a valid combination
   // - The current target must support the right extensions for the combination.
@@ -1612,13 +1655,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+  if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
+  bool ReportedDuplicateType = false;
 
-  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
     RISCVInterruptAttr::InterruptType Type;
     StringRef TypeString;
@@ -1654,7 +1698,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       break;
     }
 
-    Types.insert(Type);
+    if (!Types.insert(Type).second && !ReportedDuplicateType) {
+      Diag(Loc, diag::warn_riscv_attribute_interrupt_duplicate_type)
+          << TypeString;
+      ReportedDuplicateType = true;
+    }
   }
 
   if (HasUnaryType && Types.size() > 1) {
@@ -1685,7 +1733,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     // The QCI interrupt types require Xqciint
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest: {
-      if (!HasFeature("experimental-xqciint")) {
+      if (!HasFeature("xqciint")) {
         Diag(AL.getLoc(),
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
@@ -1716,7 +1764,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+  SmallVector<RISCVInterruptAttr::InterruptType, 3> TypesVec(Types.begin(),
                                                              Types.end());
 
   D->addAttr(::new (getASTContext()) RISCVInterruptAttr(
@@ -1739,7 +1787,8 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
 }
 
 bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
-                                       const SourceLocation Loc) {
+                                       const SourceLocation Loc,
+                                       SmallString<64> &NewParam) {
   using namespace DiagAttrParams;
 
   llvm::SmallVector<StringRef, 8> AttrStrs;
@@ -1785,12 +1834,14 @@ bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
     return Diag(Loc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << Param << TargetVersion;
 
+  NewParam = Param;
   return false;
 }
 
 bool SemaRISCV::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+    const SmallVectorImpl<StringRef> &Params,
+    const SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams, SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1843,7 +1894,7 @@ bool SemaRISCV::checkTargetClonesAttr(
     NewParams.push_back(Param);
   }
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

@@ -18,7 +18,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -31,10 +33,13 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -46,6 +51,9 @@ using namespace llvm;
 #define DEBUG_TYPE "bolt"
 
 namespace opts {
+
+extern cl::opt<bool> LargeCodeModel;
+extern cl::opt<bool> UpdateDebugSections;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -87,6 +95,13 @@ static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
                          cl::ZeroOrMore, cl::cat(BoltCategory));
+
+static cl::opt<bool> DropDWOPageCache(
+    "drop-dwo-page-cache",
+    cl::desc("Treat .dwo files as streaming input: reclaim their page-cache "
+             "pages as soon as BOLT is done reading each one. Keeps the "
+             "file-backed footprint of large split-DWARF inputs bounded."),
+    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -192,8 +207,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
@@ -224,9 +240,11 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
-  // Set up disassembler.
+  // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
+  // make it static to outlive the AsmInfo.
+  static const MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -251,20 +269,10 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no instruction info for target ", TripleName));
 
   std::unique_ptr<MCContext> Ctx(
-      new MCContext(TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+      new MCContext(TheTriple, *AsmInfo, *MRI, *STI));
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
-  // We do not support X86 Large code model. Change this in the future.
-  bool Large = false;
-  if (TheTriple.getArch() == llvm::Triple::aarch64)
-    Large = true;
-  unsigned LSDAEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  if (IsPIC) {
-    LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-                   (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-  }
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -302,7 +310,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 
-  BC->LSDAEncoding = LSDAEncoding;
+  // Use large code model encoding for AArch64 (always). For X86, this is
+  // updated after detecting .ltext if unset.
+  // Otherwise allow the user to force it via `--large-code-model` flag.
+  if (TheTriple.getArch() == llvm::Triple::aarch64)
+    BC->UseLargeCodeModel = true;
+  else if (opts::LargeCodeModel.getNumOccurrences())
+    BC->UseLargeCodeModel = opts::LargeCodeModel;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(
       BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
@@ -313,6 +327,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   BC->SymbolicDisAsm = std::unique_ptr<MCDisassembler>(
       BC->TheTarget->createMCDisassembler(*BC->STI, *BC->Ctx));
+
+  BC->updateLSDAEncoding();
 
   if (!BC->SymbolicDisAsm)
     return createStringError(
@@ -387,6 +403,14 @@ bool BinaryContext::validateHoles() const {
     }
   }
   return Valid;
+}
+
+void BinaryContext::updateLSDAEncoding() {
+  LSDAEncoding = HasFixedLoadAddress
+                     ? dwarf::DW_EH_PE_absptr
+                     : (dwarf::DW_EH_PE_pcrel |
+                        (this->UseLargeCodeModel ? dwarf::DW_EH_PE_sdata8
+                                                 : dwarf::DW_EH_PE_sdata4));
 }
 
 void BinaryContext::updateObjectNesting(BinaryDataMapType::iterator GAI) {
@@ -531,20 +555,40 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 }
 
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
-                                                    BinaryFunction &BF) {
-  if (BF.isInConstantIsland(Address)) {
-    BF.setIgnored();
-    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                 << Twine::utohexstr(Address)
-                 << " in constant island of function " << BF << '\n';
+                                                    BinaryFunction &Source,
+                                                    BinaryFunction &Target) {
+  const uint64_t Offset = Address - Target.getAddress();
+  assert(Offset < Target.getSize() &&
+         "Address should be inside the referenced function");
+
+  bool IsValid = true;
+  if (Source.NeedBranchValidation) {
+    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+        !Target.getInstructionAtOffset(Offset)) {
+      this->errs()
+          << "BOLT-WARNING: corrupted control flow detected in function "
+          << Source
+          << ": an external branch/call targets an invalid instruction "
+          << "in function " << Target << " at address 0x"
+          << Twine::utohexstr(Address) << "; ignoring both functions\n";
+      IsValid = false;
+    }
+    if (Target.isInConstantIsland(Address)) {
+      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                   << Twine::utohexstr(Address)
+                   << " in constant island of function " << Target << '\n';
+      IsValid = false;
+    }
+  }
+
+  if (!IsValid) {
+    Source.NeedBranchValidation = false;
+    Source.setIgnored();
+    Target.setIgnored();
     return nullptr;
   }
 
-  const uint64_t Offset = Address - BF.getAddress();
-  assert(Offset < BF.getSize() &&
-         "Address should be inside the referenced function");
-
-  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
+  return Offset ? Target.addEntryPointAtOffset(Offset) : Target.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -749,6 +793,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Ignore the owning function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -757,7 +804,16 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents) {
+        this->errs()
+            << "BOLT-WARNING: unable to analyze jump table in function "
+            << *Frag << "; ignoring the function\n";
+        Frag->setIgnored();
+      }
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
@@ -806,7 +862,7 @@ void BinaryContext::populateJumpTables() {
 }
 
 void BinaryContext::skipMarkedFragments() {
-  std::vector<BinaryFunction *> FragmentQueue;
+  BinaryFunctionListType FragmentQueue;
   // Copy the functions to FragmentQueue.
   FragmentQueue.assign(FragmentsToSkip.begin(), FragmentsToSkip.end());
   auto addToWorklist = [&](BinaryFunction *Function) -> void {
@@ -1152,12 +1208,13 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
                         Section, Flags);
     GAI = BinaryDataMap.emplace(Address, BD).first;
-    GlobalSymbols[Name] = BD;
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[Symbol->getName()] = BD;
     updateObjectNesting(GAI);
   } else {
     BD = GAI->second;
     if (!BD->hasName(Name)) {
-      GlobalSymbols[Name] = BD;
+      GlobalSymbols[Symbol->getName()] = BD;
       BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
@@ -1282,8 +1339,10 @@ void BinaryContext::generateSymbolHashes() {
       }
       continue;
     }
-    BD.Symbols.insert(BD.Symbols.begin(), Ctx->getOrCreateSymbol(NewName));
-    GlobalSymbols[NewName] = &BD;
+    MCSymbol *NewSymbol = Ctx->getOrCreateSymbol(NewName);
+    BD.Symbols.insert(BD.Symbols.begin(), NewSymbol);
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[NewSymbol->getName()] = &BD;
   }
   if (NumCollisions) {
     this->errs() << "BOLT-WARNING: " << NumCollisions
@@ -1433,13 +1492,11 @@ void BinaryContext::processInterproceduralReferences() {
 
       // Create an extra entry point if needed. Can also render the target
       // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, *TargetFunction);
+      handleExternalBranchTarget(Address, Function, *TargetFunction);
 
       continue;
     }
 
-    // Check if address falls in function padding space - this could be
-    // unmarked data in code. In this case adjust the padding space size.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
     assert(Section && "cannot get section for referenced address");
 
@@ -1451,7 +1508,7 @@ void BinaryContext::processInterproceduralReferences() {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
-    // Check if it is aarch64 veneer written at Address
+    // Check if it is aarch64 veneer written at Address.
     if (isAArch64() && handleAArch64Veneer(Address))
       continue;
 
@@ -1463,6 +1520,8 @@ void BinaryContext::processInterproceduralReferences() {
       exit(1);
     }
 
+    // Check if the address falls into the function padding space - this could
+    // be an unmarked data in code. In this case, adjust the padding space size.
     TargetFunction = getBinaryFunctionContainingAddress(Address,
                                                         /*CheckPastEnd=*/false,
                                                         /*UseMaxSize=*/true);
@@ -1536,38 +1595,25 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   ChildBF.Aliases.clear();
 
   if (HasRelocations) {
-    // Merge execution counts of ChildBF into those of ParentBF.
-    // Without relocations, we cannot reliably merge profiles as both functions
-    // continue to exist and either one can be executed.
+    // Merge execution counts of ChildBF into those of ParentBF. We require
+    // relocations as without relocations we cannot reliably merge profiles as
+    // both functions continue to exist and either one can be executed.
     ChildBF.mergeProfileDataInto(ParentBF);
 
-    std::shared_lock<llvm::sys::RWMutex> ReadBfsLock(BinaryFunctionsMutex,
-                                                     std::defer_lock);
-    std::unique_lock<llvm::sys::RWMutex> WriteBfsLock(BinaryFunctionsMutex,
-                                                      std::defer_lock);
-    // Remove ChildBF from the global set of functions in relocs mode.
-    ReadBfsLock.lock();
-    auto FI = BinaryFunctions.find(ChildBF.getAddress());
-    ReadBfsLock.unlock();
-
-    assert(FI != BinaryFunctions.end() && "function not found");
-    assert(&ChildBF == &FI->second && "function mismatch");
-
-    WriteBfsLock.lock();
-    ChildBF.clearDisasmState();
-    FI = BinaryFunctions.erase(FI);
-    WriteBfsLock.unlock();
-
-  } else {
-    // In non-relocation mode we keep the function, but rename it.
-    std::string NewName = "__ICF_" + ChildName.str();
-
-    WriteCtxLock.lock();
-    ChildBF.getSymbols().push_back(Ctx->getOrCreateSymbol(NewName));
-    WriteCtxLock.unlock();
-
-    ChildBF.setFolded(&ParentBF);
+    // Clear CFG state to free memory, but keep function in map.
+    // The function is marked as folded and will not be emitted.
+    ChildBF.resetState();
   }
+
+  // Add a new symbol to the function. In relocation mode, this is a
+  // placeholder so that getSymbol() doesn't crash. In non-relocation mode,
+  // this effectively renames the function.
+  WriteCtxLock.lock();
+  ChildBF.getSymbols().push_back(
+      Ctx->getOrCreateSymbol("__ICF_" + ChildName.str()));
+  WriteCtxLock.unlock();
+
+  ChildBF.setFolded(&ParentBF);
 
   ParentBF.setHasFunctionsFoldedInto();
 }
@@ -1695,18 +1741,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
                                DestCUID, DstUnit->getVersion()));
 }
 
-std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
-  std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  SortedFunctions.begin(),
-                  [](BinaryFunction &BF) { return &BF; });
-
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
-  return SortedFunctions;
-}
-
-std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
-  std::vector<BinaryFunction *> AllFunctions;
+BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
+  BinaryFunctionListType AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
   llvm::transform(llvm::make_second_range(BinaryFunctions),
                   std::back_inserter(AllFunctions),
@@ -1716,18 +1752,123 @@ std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
   return AllFunctions;
 }
 
-std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
-  auto Iter = DWOCUs.find(DWOId);
-  if (Iter == DWOCUs.end())
-    return std::nullopt;
-
-  return Iter->second;
+/// Return the path of the file backing \p DWOCU's DWARF context, or "" .
+static StringRef getDWOFilePath(const DWARFUnit *DWOCU) {
+  if (!DWOCU)
+    return StringRef();
+  return DWOCU->getContext().getDWARFObj().getFileName();
 }
 
-DWARFContext *BinaryContext::getDWOContext() const {
-  if (DWOCUs.empty())
-    return nullptr;
-  return &DWOCUs.begin()->second->getContext();
+/// Reclaim the page-cache pages of the still-mapped .dwo backing \p DWOCU.
+static void pageOutDWOMapping(const DWARFUnit *DWOCU) {
+  if (!opts::DropDWOPageCache || !DWOCU)
+    return;
+  const object::ObjectFile *File = DWOCU->getContext().getDWARFObj().getFile();
+  if (!File)
+    return;
+  // mmap-backed MemoryBuffers are page-aligned; the malloc-backed fallback
+  // used for small files is not, and pageOutMemory() ignores it.
+  MemoryBufferRef Buf = File->getMemoryBufferRef();
+  pageOutMemory(Buf.getBufferStart(), Buf.getBufferSize());
+}
+
+/// Compute the absolute path of the .dwo/.dwp file backing \p SkeletonCU,
+/// honoring --comp-dir-override and relative-path fallbacks. If
+/// \p FellBackToRelative is non-null, it is set to true when the compilation
+/// directory was missing and the relative path was used instead. If
+/// \p DWONameOut is non-null, it receives the raw DW_AT_dwo_name.
+static SmallString<128> getDWOAbsolutePath(DWARFUnit &SkeletonCU,
+                                           bool *FellBackToRelative = nullptr,
+                                           std::string *DWONameOut = nullptr) {
+  std::string DWOName =
+      dwarf::toString(SkeletonCU.getUnitDIE().find(
+                          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+                      "");
+  SmallString<128> AbsolutePath(DWOName);
+
+  std::string DWOCompDir;
+  if (!opts::CompDirOverride.empty()) {
+    DWOCompDir = opts::CompDirOverride;
+  } else {
+    DWOCompDir = SkeletonCU.getCompilationDir();
+    if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+      DWOCompDir = ".";
+      if (FellBackToRelative)
+        *FellBackToRelative = true;
+    }
+  }
+  // Prevent failures when DWOName is already an absolute path.
+  sys::path::make_absolute(DWOCompDir, AbsolutePath);
+  if (DWONameOut)
+    *DWONameOut = std::move(DWOName);
+  return AbsolutePath;
+}
+
+std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
+  auto Iter = DWOIdToSkeletonCU.find(DWOId);
+  if (Iter == DWOIdToSkeletonCU.end())
+    return std::nullopt;
+  DWARFUnit &SkeletonCU = *Iter->second;
+
+  // The skeleton unit owns and caches its DWO context, so it is the cache:
+  // parseDWO() is a no-op once the context is open, and only then do we need
+  // the .dwo path -- computing it stats the filesystem, so skip that on the
+  // hot path.
+  SmallString<128> AbsolutePath;
+  if (!SkeletonCU.getDWO())
+    AbsolutePath = getDWOAbsolutePath(SkeletonCU);
+
+  DWARFUnit *DWOCU =
+      SkeletonCU
+          .getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+          .getDwarfUnit();
+  // On failure getNonSkeletonUnitDIE() falls back to the skeleton's own DIE.
+  if (!DWOCU || !DWOCU->isDWOUnit())
+    return std::nullopt;
+  return DWOCU;
+}
+
+void BinaryContext::releaseDWOCU(uint64_t DWOId) {
+  // With a .dwp package every split CU aliases one shared DWARFContext
+  if (UsesDWP)
+    return;
+  auto Iter = DWOIdToSkeletonCU.find(DWOId);
+  if (Iter == DWOIdToSkeletonCU.end())
+    return;
+  DWARFUnit *DWOCU = Iter->second->getDWO();
+  if (!DWOCU)
+    return;
+  const std::string Path = getDWOFilePath(DWOCU).str();
+  Iter->second->clearDWO();
+  // Only effective now that the last mapping of the file is gone.
+  if (opts::DropDWOPageCache)
+    dropFileFromPageCache(Path);
+}
+
+void BinaryContext::releaseAllDWOContexts() {
+  // Release via the skeleton map so we free every DWO context regardless of how
+  // it was opened (preprocessDWODebugInfo, the line-table name loop, or
+  // collectDebugScopeBoundaries, which opens CUs directly via
+  // getNonSkeletonUnitDIE).
+  std::vector<std::string> Paths;
+  if (opts::DropDWOPageCache) {
+    Paths.reserve(UsesDWP ? 1 : DWOIdToSkeletonCU.size());
+    for (auto &KV : DWOIdToSkeletonCU) {
+      DWARFUnit *DWOCU = KV.second->getDWO();
+      if (!DWOCU)
+        continue;
+      StringRef Path = getDWOFilePath(DWOCU);
+      if (!Path.empty())
+        Paths.emplace_back(Path.str());
+      if (UsesDWP)
+        break;
+    }
+  }
+  for (auto &KV : DWOIdToSkeletonCU)
+    KV.second->clearDWO();
+  // Only effective now that the last mapping of each file is gone.
+  for (const std::string &Path : Paths)
+    dropFileFromPageCache(Path);
 }
 
 bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
@@ -1750,40 +1891,49 @@ void BinaryContext::preprocessDWODebugInfo() {
     DWARFUnit *const DwarfUnit = CU.get();
     if (!isValidDwarfUnit(*DwarfUnit))
       continue;
-    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
-      std::string DWOName = dwarf::toString(
-          DwarfUnit->getUnitDIE().find(
-              {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-          "");
-      SmallString<16> AbsolutePath(DWOName);
-      std::string DWOCompDir = DwarfUnit->getCompilationDir();
-      if (!opts::CompDirOverride.empty()) {
-        DWOCompDir = opts::CompDirOverride;
-      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
-        DWOCompDir = ".";
-        this->outs()
-            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
-            << DWOName
-            << " does not exist. Relative path will be used to process .dwo "
-               "files.\n";
-      }
-      // Prevent failures when DWOName is already an absolute path.
-      sys::path::make_absolute(DWOCompDir, AbsolutePath);
-      DWARFUnit *DWOCU =
-          DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
-      if (!DWOCU->isDWOUnit()) {
-        this->outs()
-            << "BOLT-WARNING: Debug Fission: DWO debug information for "
-            << DWOName
-            << " was not retrieved and won't be updated. Please check "
-               "relative path or use '--comp-dir-override' to specify the base "
-               "location.\n";
-        continue;
-      }
-      DWOCUs[*DWOId] = DWOCU;
+    std::optional<uint64_t> DWOId = DwarfUnit->getDWOId();
+    if (!DWOId)
+      continue;
+    std::string DWOName;
+    bool FellBackToRelative = false;
+    SmallString<128> AbsolutePath =
+        getDWOAbsolutePath(*DwarfUnit, &FellBackToRelative, &DWOName);
+    if (FellBackToRelative)
+      this->outs()
+          << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+          << DWOName
+          << " does not exist. Relative path will be used to process .dwo "
+             "files.\n";
+    // Extract only the .dwo CU DIE here: we just need the isDWOUnit()/DWOId
+    // checks. The full DIE vector is never read off this cached array -- every
+    // consumer streams the DIEs on demand with
+    // DWARFDebugInfoEntry::extractFast (DIEBuilder::constructFromUnit /
+    // collectReferencedTypeSignatures).
+    DWARFUnit *DWOCU =
+        DwarfUnit
+            ->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+            .getDwarfUnit();
+    if (!DWOCU->isDWOUnit()) {
+      this->outs()
+          << "BOLT-WARNING: Debug Fission: DWO debug information for "
+          << DWOName
+          << " was not retrieved and won't be updated. Please check "
+             "relative path or use '--comp-dir-override' to specify the base "
+             "location.\n";
+      continue;
     }
+    // Detect a .dwp package on the first split CU we manage to open.
+    if (DWOIdToSkeletonCU.empty())
+      UsesDWP = !DWOCU->getContext().getCUIndex().getRows().empty();
+    // Remember the skeleton CU so its DWO context can be (re-)opened lazily by
+    // getDWOCU() after it is released (see releaseAllDWOContexts).
+    DWOIdToSkeletonCU[*DWOId] = DwarfUnit;
+    // In this loop we're touching a large number of pages, in streaming fashion
+    // -- so keep OS file cache usage under control.
+    if (!UsesDWP)
+      pageOutDWOMapping(DWOCU);
   }
-  if (!DWOCUs.empty())
+  if (!DWOIdToSkeletonCU.empty())
     this->outs() << "BOLT-INFO: processing split DWARF\n";
 }
 
@@ -1868,8 +2018,11 @@ void BinaryContext::preprocessDebugInfo() {
 
   preprocessDWODebugInfo();
 
+  // Check if required DWO files are missing.
+  uint64_t NumMissingDWOs = 0;
+
   // Populate MCContext with DWARF files from all units.
-  StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
+  StringRef GlobalPrefix = AsmInfo->getInternalSymbolPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     const uint64_t CUID = CU->getOffset();
     DwarfLineTable &BinaryLineTable = getDwarfLineTable(CUID);
@@ -1885,23 +2038,28 @@ void BinaryContext::preprocessDebugInfo() {
         LineTable->Prologue.FileNames;
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
+    BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      std::optional<const char *> Name =
+      const char *Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
-        auto Iter = DWOCUs.find(*DWOID);
-        if (Iter == DWOCUs.end()) {
-          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
-                       << '\n';
-          exit(1);
+        std::optional<DWARFUnit *> DWOCU = getDWOCU(*DWOID);
+        if (!DWOCU) {
+          const char *DWOName =
+              dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_dwo_name),
+                              "<missing DW_AT_dwo_name>");
+          this->errs() << "BOLT-ERROR: unable to load " << DWOName
+                       << " for DWO_id 0x" << Twine::utohexstr(*DWOID) << '\n';
+          NumMissingDWOs++;
+          continue;
         }
-        Name = dwarf::toString(
-            Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
+        Name = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
+                               nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), *Name, Checksum,
+      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
                                   std::nullopt);
     }
 
@@ -1936,10 +2094,83 @@ void BinaryContext::preprocessDebugInfo() {
                             DwarfVersion));
     }
   }
+
+  if (NumMissingDWOs) {
+    this->errs() << "BOLT-ERROR: " << NumMissingDWOs
+                 << " required DWO file(s) not found. Unable to update debug"
+                    " info. Use --comp-dir-override to locate the file(s) or"
+                    " --update-debug-sections=0 to remove debug info\n";
+    exit(1);
+  }
+}
+
+void BinaryContext::collectDebugScopeBoundaries() {
+  // Record DWARF lexical-scope boundaries (inlined_subroutine / lexical_block)
+  // into each containing BinaryFunction, so disassembly keeps an offset for the
+  // boundary instructions (see BinaryFunction::DebugScopeBoundaryOffsets) and
+  // translateInputToOutputRange() can map scope ranges precisely.
+
+  auto recordRange = [&](uint64_t LowPC, uint64_t HighPC) {
+    BinaryFunction *BF = getBinaryFunctionContainingAddress(LowPC);
+    if (!BF)
+      return;
+    BF->addDebugScopeBoundaryOffset(
+        static_cast<uint32_t>(LowPC - BF->getAddress()));
+    // Mark HighPC only if it lies strictly inside the same function.
+    if (HighPC > LowPC && getBinaryFunctionContainingAddress(HighPC) == BF)
+      BF->addDebugScopeBoundaryOffset(
+          static_cast<uint32_t>(HighPC - BF->getAddress()));
+  };
+
+  // Record the boundaries of a single scope DIE.
+  auto processScopeDie = [&](const DWARFDie &Die) {
+    const dwarf::Tag Tag = Die.getTag();
+    if (Tag != dwarf::DW_TAG_inlined_subroutine &&
+        Tag != dwarf::DW_TAG_lexical_block && Tag != dwarf::DW_TAG_try_block &&
+        Tag != dwarf::DW_TAG_catch_block)
+      return;
+    if (Expected<DWARFAddressRangesVector> Ranges = Die.getAddressRanges()) {
+      for (const DWARFAddressRange &R : *Ranges)
+        recordRange(R.LowPC, R.HighPC);
+    } else {
+      consumeError(Ranges.takeError());
+    }
+  };
+
+  for (const std::unique_ptr<DWARFUnit> &CUPtr : DwCtx->compile_units()) {
+    DWARFUnit *CU = CUPtr.get();
+    if (!ProcessedCUs.count(CU))
+      continue;
+
+    // Extract only the CU DIE (the .dwo's, for split DWARF). This is cheap (one
+    // DIE) and sets the unit's range/addr/str-offset bases that
+    // getAddressRanges needs, without materializing the full DIE array.
+    DWARFDie CUDie = CU->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true);
+    if (!CUDie)
+      continue;
+    DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
+
+    // Stream the unit's DIEs one at a time rather than recording them all in a
+    // vector (as DWARFUnit's extractDIEsToVector() does): only DIE tags/ranges
+    // are inspected, so the tree structure is not needed.
+    forEachDIEInUnit(*DIEUnit, processScopeDie);
+
+    // Done streaming this .dwo's DIEs. Release it right away and give the
+    // opportunity for any used page cache to also be reclaimed by OS, if
+    // --drop-dwo-page-cache is in effect.
+    if (std::optional<uint64_t> DWOId = CU->getDWOId())
+      releaseDWOCU(*DWOId);
+  }
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   if (Function.isPseudo())
+    return false;
+
+  // In relocation mode, folded functions should not be emitted - their code
+  // is part of the parent. In non-relocation mode, folded functions are still
+  // emitted at their original location.
+  if (HasRelocations && Function.isFolded())
     return false;
 
   if (opts::processAllFunctions())
@@ -2020,33 +2251,38 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   }
 }
 
-MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+MarkerSymType BinaryContext::getMarkerType(unsigned SymbolType,
+                                           uint64_t SymbolSize,
+                                           StringRef SymbolName) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if (isX86() || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || SymbolSize)
     return MarkerSymType::NONE;
 
-  Expected<StringRef> NameOrError = Symbol.getName();
-  Expected<object::SymbolRef::Type> TypeOrError = Symbol.getType();
-
-  if (!TypeOrError || !NameOrError)
+  if (SymbolType != ELF::STT_NOTYPE)
     return MarkerSymType::NONE;
 
-  if (*TypeOrError != SymbolRef::ST_Unknown)
-    return MarkerSymType::NONE;
-
-  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
+  if (SymbolName == "$x" || SymbolName.starts_with("$x."))
     return MarkerSymType::CODE;
 
   // $x<ISA>
-  if (isRISCV() && NameOrError->starts_with("$x"))
+  if (isRISCV() && SymbolName.starts_with("$x"))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
+  if (SymbolName == "$d" || SymbolName.starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;
+}
+
+MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+  Expected<StringRef> NameOrError = Symbol.getName();
+  if (!NameOrError)
+    return MarkerSymType::NONE;
+
+  return getMarkerType(ELFSymbolRef(Symbol).getELFType(),
+                       ELFSymbolRef(Symbol).getSize(), *NameOrError);
 }
 
 bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
@@ -2101,8 +2337,7 @@ ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
 
 void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
                               uint64_t Offset) const {
-  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Data, AsmInfo->isLittleEndian());
   uint64_t DataOffset = 0;
   while (DataOffset + 4 <= Data.size()) {
     OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
@@ -2398,8 +2633,7 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getUnsigned(&ValueOffset, Size);
 }
@@ -2413,8 +2647,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getSigned(&ValueOffset, Size);
 }
@@ -2430,11 +2663,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {
@@ -2499,8 +2732,10 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     return nullptr;
 
   BinaryFunction *BF = BFI->second;
-  if (EntryDesc)
-    *EntryDesc = BF->getEntryIDForSymbol(Symbol);
+  if (EntryDesc) {
+    std::optional<uint64_t> EntryID = BF->getEntryIDForSymbol(Symbol);
+    *EntryDesc = EntryID.value_or(0);
+  }
 
   return BF;
 }
@@ -2534,6 +2769,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
+
+  if (!OutputFunctions.empty())
+    OutputFunctions.push_back(BF);
+
   return BF;
 }
 
@@ -2563,11 +2802,21 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   PBF->addBasicBlock()->addInstructions(Instructions);
   PBF->setIsPatch(true);
 
+  // Patch functions have to be emitted each into their unique section.
+  PBF->setCodeSectionName(
+      BinaryFunction::buildCodeSectionName(PBF->getOneName(), *this));
+
   // Don't create symbol table entry if the name wasn't specified.
   if (Name.str().empty())
     PBF->setAnonymous(true);
 
   return PBF;
+}
+
+BinaryFunction *
+BinaryContext::createThunkBinaryFunction(const std::string &Name) {
+  static NameResolver NR;
+  return createInjectedBinaryFunction(NR.uniquify(Name));
 }
 
 std::pair<size_t, size_t>
@@ -2594,7 +2843,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
       std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
-  Streamer->initSections(false, *STI);
+  Streamer->initSections(*STI);
 
   MCSection *Section = MCEInstance.LocalMOFI->getTextSection();
   Section->setHasInstructions(true);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -182,4 +183,25 @@ TEST(TypeSwitchTest, DefaultNullptrForPointerLike) {
   };
   EXPECT_EQ(&foo, translate(DerivedA()).ptr);
   EXPECT_EQ(nullptr, translate(DerivedD()).ptr);
+}
+
+TEST(TypeSwitchTest, DefaultLogicalResultSuccess) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, LogicalResult>(&value)
+        .Case([](DerivedA *) { return success(); })
+        .Default(failure());
+  };
+  EXPECT_TRUE(succeeded(translate(DerivedA())));
+  EXPECT_TRUE(failed(translate(DerivedD())));
+}
+
+TEST(TypeSwitchTest, DefaultFailureOr) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, FailureOr<int>>(&value)
+        .Case([](DerivedA *) { return 42; })
+        .Default(failure());
+  };
+  EXPECT_TRUE(succeeded(translate(DerivedA())));
+  EXPECT_EQ(42, *translate(DerivedA()));
+  EXPECT_TRUE(failed(translate(DerivedD())));
 }

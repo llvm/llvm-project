@@ -11,10 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTargetMachine.h"
+#include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
+#include "SPIRVCtorDtorLowering.h"
+#include "SPIRVEmitIntrinsics.h"
+#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeImplicitBinding.h"
+#include "SPIRVLegalizePointerCast.h"
+#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVMergeRegionExitTargets.h"
+#include "SPIRVPrepareFunctions.h"
+#include "SPIRVPrepareGlobals.h"
+#include "SPIRVPushConstantAccess.h"
+#include "SPIRVRegularizer.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -31,6 +43,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -50,17 +63,20 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVCBufferAccessLegacyPass(PR);
+  initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
-  initializeSPIRVLegalizePointerCastPass(PR);
-  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVLegalizePointerCastLegacyPass(PR);
+  initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
+  initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
-  initializeSPIRVMergeRegionExitTargetsPass(PR);
-  initializeSPIRVEmitIntrinsicsPass(PR);
-  initializeSPIRVEmitNonSemanticDIPass(PR);
-  initializeSPIRVPrepareFunctionsPass(PR);
-  initializeSPIRVPrepareGlobalsPass(PR);
-  initializeSPIRVStripConvergentIntrinsicsPass(PR);
+  initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
+  initializeSPIRVEmitIntrinsicsLegacyPass(PR);
+  initializeSPIRVPrepareFunctionsLegacyPass(PR);
+  initializeSPIRVPrepareGlobalsLegacyPass(PR);
+  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
+  initializeSPIRVCtorDtorLoweringLegacyPass(PR);
+  initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -120,7 +136,6 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
-  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -169,9 +184,22 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
 
+  if (TM.getSubtargetImpl()->isShader()) {
+    if (getOptLevel() != CodeGenOptLevel::None)
+      addPass(createSPIRVFinalizeShaderLinkagePass(TM));
+  } else {
+    // Variadic function calls aren't supported in shader code.
+    // This needs to come before SPIRVPrepareFunctions because this
+    // may introduce intrinsic calls.
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
+
   addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVCtorDtorLoweringLegacyPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }
@@ -206,19 +234,25 @@ void SPIRVPassConfig::addISelPrepare() {
     // 5. Reduce the amount of variables required by pushing some operations
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
+  } else {
+    // Canonicalize loops so they have a single latch and preheader.
+    // This enables OpLoopMerge emission for non-shader targets.
+    addPass(createLoopSimplifyPass());
   }
-
-  addPass(createSPIRVStripConvergenceIntrinsicsPass());
+  SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
+  addPass(createStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
-  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
+  addPass(createSPIRVEmitIntrinsicsPass(TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
-    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
+    addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
 }
 
 bool SPIRVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -229,7 +263,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   addPass(createSPIRVPostLegalizerPass());
   return false;
 }
@@ -240,17 +274,16 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
+// Deprecated flag kept for backward compatibility. NSDI emission is now handled
+// by SPIRVNonSemanticDebugHandler, registered in SPIRVAsmPrinter::
+// doInitialization() when the module contains debug info (llvm.dbg.cu).
+// TODO: Remove this option after a deprecation period. Callers that used
+// -spv-emit-nonsemantic-debug-info should switch to -g.
 static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
-    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
+    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
+             "instructions"),
     cl::Optional, cl::init(false));
-
-void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI ||
-      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
-    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
-  }
-}
 
 namespace {
 // A custom subclass of InstructionSelect, which is mostly the same except from
