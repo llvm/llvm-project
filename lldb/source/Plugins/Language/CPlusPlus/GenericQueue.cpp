@@ -1,4 +1,4 @@
-//===-- LibCxxQueue.cpp ---------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LibCxx.h"
+#include "Generic.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
@@ -15,9 +16,10 @@ using namespace lldb_private;
 
 namespace {
 
-class QueueFrontEnd : public SyntheticChildrenFrontEnd {
+class ContainerAdaptorFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  QueueFrontEnd(ValueObject &valobj) : SyntheticChildrenFrontEnd(valobj) {
+  ContainerAdaptorFrontEnd(ValueObject &valobj)
+      : SyntheticChildrenFrontEnd(valobj) {
     Update();
   }
 
@@ -34,8 +36,7 @@ public:
   }
 
   ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
-                          : nullptr;
+    return m_container_sp ? m_container_sp->GetChildAtIndex(idx) : nullptr;
   }
 
 private:
@@ -44,11 +45,11 @@ private:
   // objects are only destroyed when every shared pointer to any of them
   // is destroyed, so we must not store a shared pointer to any ValueObject
   // derived from our backend ValueObject (since we're in the same cluster).
-  ValueObject* m_container_sp = nullptr;
+  ValueObject *m_container_sp = nullptr;
 };
 } // namespace
 
-lldb::ChildCacheState QueueFrontEnd::Update() {
+lldb::ChildCacheState ContainerAdaptorFrontEnd::Update() {
   m_container_sp = nullptr;
   ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
@@ -57,10 +58,9 @@ lldb::ChildCacheState QueueFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-SyntheticChildrenFrontEnd *
-formatters::LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
-                                       lldb::ValueObjectSP valobj_sp) {
+SyntheticChildrenFrontEnd *formatters::GenericContainerAdaptorFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
   if (valobj_sp)
-    return new QueueFrontEnd(*valobj_sp);
+    return new ContainerAdaptorFrontEnd(*valobj_sp);
   return nullptr;
 }
