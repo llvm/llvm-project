@@ -5852,6 +5852,37 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 }
 
 unsigned
+AArch64TTIImpl::getPreferredVFMultipleForMemoryOp(unsigned Opcode, Type *DataTy,
+                                                  ElementCount VF, unsigned UF,
+                                                  bool IsMasked) const {
+  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+         "expected load/store opcode");
+  if (IsMasked)
+    return 1; // TODO: Support masked multi-vector loads/stores.
+
+  if (!ST->enableSubRegLiveness())
+    return 1;
+
+  if ((Opcode != Instruction::Load && Opcode != Instruction::Store) ||
+      !ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
+    return 1;
+
+  unsigned VectorWidth = VF.getKnownMinValue() * DL.getTypeSizeInBits(DataTy);
+  if (VectorWidth % 128 != 0)
+    return 1;
+
+  for (unsigned TargetWidth : {512u, 256u}) {
+    if (TargetWidth % VectorWidth == 0) {
+      unsigned Scale = TargetWidth / VectorWidth;
+      if (Scale <= UF)
+        return Scale;
+    }
+  }
+
+  return 1;
+}
+
+unsigned
 AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
                                        bool HasUnorderedReductions) const {
   if (VF.isScalar() || (HasUnorderedReductions && VF.getKnownMinValue() <= 4))

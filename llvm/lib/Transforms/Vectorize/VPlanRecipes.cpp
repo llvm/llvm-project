@@ -566,6 +566,9 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     return StructTy->getTypeAtIndex(
         cast<VPConstantInt>(Operands[1])->getZExtValue());
   }
+  case VPInstruction::ConcatVectorParts:
+  case VPInstruction::ExtractVectorForPart:
+    return Op0Ty;
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
@@ -691,6 +694,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
+  case VPInstruction::ConcatVectorParts:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -1118,6 +1122,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return Builder.CreateExtractVector(
         DstTy, Src, Builder.getInt64(State.VF.getKnownMinValue() * Part), Name);
+  }
+  case VPInstruction::ConcatVectorParts: {
+    unsigned VectorOps = getNumOperands();
+    auto *WideDataTy = VectorType::get(
+        getScalarType(), State.VF.multiplyCoefficientBy(VectorOps));
+    Value *WideData = PoisonValue::get(WideDataTy);
+
+    for (unsigned I = 0; I < VectorOps; ++I) {
+      Value *Part = State.get(getOperand(I));
+      WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
+                                            I * State.VF.getKnownMinValue());
+    }
+    return WideData;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1643,6 +1660,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::IncomingAliasMask:
+  case VPInstruction::ConcatVectorParts:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
@@ -1776,6 +1794,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::IncomingAliasMask:
     O << "incoming-alias-mask";
+    break;
+  case VPInstruction::ConcatVectorParts:
+    O << "concat-vector-parts";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
@@ -4255,7 +4276,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getScalarType();
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  auto *DataTy =
+      VectorType::get(ScalarDataTy, State.VF.multiplyCoefficientBy(VFMultiple));
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -4285,6 +4307,8 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = load ";
+  if (VFMultiple > 1)
+    O << "x" << VFMultiple << ' ';
   printOperands(O, SlotTracker);
 }
 #endif
@@ -4372,6 +4396,8 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
 void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
+  if (VFMultiple > 1)
+    O << "x" << VFMultiple << ' ';
   printOperands(O, SlotTracker);
 }
 #endif

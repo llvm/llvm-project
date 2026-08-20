@@ -279,6 +279,10 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
 
+  unsigned getPreferredVFMultipleForMemoryOp(unsigned Opcode, Type *DataType,
+                                             ElementCount VF, unsigned UF,
+                                             bool IsMasked) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
