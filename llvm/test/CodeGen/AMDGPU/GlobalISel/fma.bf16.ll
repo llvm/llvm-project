@@ -346,15 +346,13 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_sss(<2 x bfloat> inreg %a, <2 x bfloat
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX12-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX12-NEXT:    s_fmac_f32 s2, s0, s1
-; GFX12-NEXT:    s_lshr_b32 s1, s3, 16
 ; GFX12-NEXT:    s_bfe_u32 s0, s2, 0x10010
-; GFX12-NEXT:    s_or_b32 s3, s2, 0x400000
+; GFX12-NEXT:    s_or_b32 s1, s2, 0x400000
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s2
 ; GFX12-NEXT:    s_addk_co_i32 s0, 0x7fff
 ; GFX12-NEXT:    s_cmp_u_f32 s2, 0
-; GFX12-NEXT:    s_cselect_b32 s0, s3, s0
-; GFX12-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
+; GFX12-NEXT:    s_cselect_b32 s0, s1, s0
+; GFX12-NEXT:    s_pack_hh_b32_b16 s0, s3, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -381,15 +379,13 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_sss(<2 x bfloat> inreg %a, <2 x bfloat
 ; GFX1250-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX1250-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX1250-NEXT:    s_fmac_f32 s2, s0, s1
-; GFX1250-NEXT:    s_lshr_b32 s1, s3, 16
 ; GFX1250-NEXT:    s_bfe_u32 s0, s2, 0x10010
-; GFX1250-NEXT:    s_or_b32 s3, s2, 0x400000
+; GFX1250-NEXT:    s_or_b32 s1, s2, 0x400000
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, s2
 ; GFX1250-NEXT:    s_addk_co_i32 s0, 0x7fff
 ; GFX1250-NEXT:    s_cmp_u_f32 s2, 0
-; GFX1250-NEXT:    s_cselect_b32 s0, s3, s0
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
+; GFX1250-NEXT:    s_cselect_b32 s0, s1, s0
+; GFX1250-NEXT:    s_pack_hh_b32_b16 s0, s3, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)

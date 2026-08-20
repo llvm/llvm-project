@@ -217,7 +217,6 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GFX12-NEXT:    s_cselect_b32 s1, s3, s2
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX12-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_bfe_u32 s2, s0, 0x10010
@@ -227,9 +226,7 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GFX12-NEXT:    s_cmp_u_f32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, s3, s2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
+; GFX12-NEXT:    s_pack_hh_b32_b16 s0, s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -251,7 +248,6 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GFX1250-NEXT:    s_cmp_u_f32 s1, 0
 ; GFX1250-NEXT:    s_cselect_b32 s1, s3, s2
 ; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX1250-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    s_bfe_u32 s2, s0, 0x10010
@@ -260,8 +256,7 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GFX1250-NEXT:    s_addk_co_i32 s2, 0x7fff
 ; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
+; GFX1250-NEXT:    s_pack_hh_b32_b16 s0, s1, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %src)

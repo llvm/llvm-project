@@ -422,147 +422,73 @@ define amdgpu_ps bfloat @fptrunc_f64_to_bf16_v(double %a) {
 }
 
 define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_s(<2 x float> inreg %a) {
-; GFX11-FAKE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e64 s3, s0, 0
-; GFX11-FAKE16-NEXT:    s_add_i32 s2, s2, s0
-; GFX11-FAKE16-NEXT:    s_bitset1_b32 s0, 22
-; GFX11-FAKE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e64 s3, s1, 0
-; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX11-FAKE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    s_add_i32 s2, s2, s1
-; GFX11-FAKE16-NEXT:    s_bitset1_b32 s1, 22
-; GFX11-FAKE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11-FAKE16-NEXT:    s_cselect_b32 s1, s1, s2
-; GFX11-FAKE16-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: fptrunc_v2f32_to_v2bf16_s:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s0, 0
+; GFX11-NEXT:    s_add_i32 s2, s2, s0
+; GFX11-NEXT:    s_bitset1_b32 s0, 22
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s1, 0
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX11-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s2, s2, s1
+; GFX11-NEXT:    s_bitset1_b32 s1, 22
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX11-NEXT:    s_cselect_b32 s1, s1, s2
+; GFX11-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e64 s3, s0, 0
-; GFX11-TRUE16-NEXT:    s_add_i32 s2, s2, s0
-; GFX11-TRUE16-NEXT:    s_bitset1_b32 s0, 22
-; GFX11-TRUE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e64 s3, s1, 0
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX11-TRUE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX11-TRUE16-NEXT:    s_add_i32 s2, s2, s1
-; GFX11-TRUE16-NEXT:    s_bitset1_b32 s1, 22
-; GFX11-TRUE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11-TRUE16-NEXT:    s_cselect_b32 s1, s1, s2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: fptrunc_v2f32_to_v2bf16_s:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX12-NEXT:    s_or_b32 s3, s0, 0x400000
+; GFX12-NEXT:    s_add_co_i32 s2, s2, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_addk_co_i32 s2, 0x7fff
+; GFX12-NEXT:    s_cmp_u_f32 s0, 0
+; GFX12-NEXT:    s_cselect_b32 s0, s3, s2
+; GFX12-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX12-NEXT:    s_or_b32 s3, s1, 0x400000
+; GFX12-NEXT:    s_add_co_i32 s2, s2, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_addk_co_i32 s2, 0x7fff
+; GFX12-NEXT:    s_cmp_u_f32 s1, 0
+; GFX12-NEXT:    s_cselect_b32 s1, s3, s2
+; GFX12-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
 ;
-; GFX12-FAKE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX12-FAKE16-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX12-FAKE16-NEXT:    s_add_co_i32 s2, s2, s0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-FAKE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX12-FAKE16-NEXT:    s_cmp_u_f32 s0, 0
-; GFX12-FAKE16-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX12-FAKE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX12-FAKE16-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX12-FAKE16-NEXT:    s_add_co_i32 s2, s2, s1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-FAKE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX12-FAKE16-NEXT:    s_cmp_u_f32 s1, 0
-; GFX12-FAKE16-NEXT:    s_cselect_b32 s1, s3, s2
-; GFX12-FAKE16-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-TRUE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX12-TRUE16-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX12-TRUE16-NEXT:    s_add_co_i32 s2, s2, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-TRUE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX12-TRUE16-NEXT:    s_cmp_u_f32 s0, 0
-; GFX12-TRUE16-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX12-TRUE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX12-TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-TRUE16-NEXT:    s_add_co_i32 s2, s2, s1
-; GFX12-TRUE16-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX12-TRUE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX12-TRUE16-NEXT:    s_cmp_u_f32 s1, 0
-; GFX12-TRUE16-NEXT:    s_cselect_b32 s1, s3, s2
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX12-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-FAKE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-FAKE16-NEXT:    v_nop
-; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-FAKE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX1250-FAKE16-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX1250-FAKE16-NEXT:    s_add_co_i32 s2, s2, s0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-FAKE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-FAKE16-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-FAKE16-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX1250-FAKE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX1250-FAKE16-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX1250-FAKE16-NEXT:    s_add_co_i32 s2, s2, s1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-FAKE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-FAKE16-NEXT:    s_cmp_u_f32 s1, 0
-; GFX1250-FAKE16-NEXT:    s_cselect_b32 s1, s3, s2
-; GFX1250-FAKE16-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-TRUE16-LABEL: fptrunc_v2f32_to_v2bf16_s:
-; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-TRUE16-NEXT:    v_nop
-; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-TRUE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX1250-TRUE16-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX1250-TRUE16-NEXT:    s_add_co_i32 s2, s2, s0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-TRUE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-TRUE16-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-TRUE16-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX1250-TRUE16-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX1250-TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-TRUE16-NEXT:    s_add_co_i32 s2, s2, s1
-; GFX1250-TRUE16-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX1250-TRUE16-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-TRUE16-NEXT:    s_cmp_u_f32 s1, 0
-; GFX1250-TRUE16-NEXT:    s_cselect_b32 s1, s3, s2
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX1250-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: fptrunc_v2f32_to_v2bf16_s:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX1250-NEXT:    s_or_b32 s3, s0, 0x400000
+; GFX1250-NEXT:    s_add_co_i32 s2, s2, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_addk_co_i32 s2, 0x7fff
+; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
+; GFX1250-NEXT:    s_cselect_b32 s0, s3, s2
+; GFX1250-NEXT:    s_bfe_u32 s2, s1, 0x10010
+; GFX1250-NEXT:    s_or_b32 s3, s1, 0x400000
+; GFX1250-NEXT:    s_add_co_i32 s2, s2, s1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_addk_co_i32 s2, 0x7fff
+; GFX1250-NEXT:    s_cmp_u_f32 s1, 0
+; GFX1250-NEXT:    s_cselect_b32 s1, s3, s2
+; GFX1250-NEXT:    s_pack_hh_b32_b16 s0, s0, s1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    ; return to shader part epilog
   %result = fptrunc <2 x float> %a to <2 x bfloat>
   ret <2 x bfloat> %result
 }
