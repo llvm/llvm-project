@@ -1,0 +1,35 @@
+on:
+  push:
+
+
+jobs:
+  test:
+    runs-on: windows-11-arm
+  env:
+    LLVM_VERSION: 22.1.8
+  steps:
+    - run: |
+        New-Item -Path "C:\temp-download" -ItemType "Directory" -Force ;
+        New-Item -Path "C:\clang" -ItemType "Directory" -Force ;
+        Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-${env:LLVM_VERSION}/clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" ;
+        (Get-FileHash -Path "C:\temp-download\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ;
+        xz.exe -d -qq clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz ;
+        C:\Windows\System32\tar.exe -xf clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar -C C:\clang ;
+        Set-Location C:\clang ;
+        Rename-Item -Path "C:\clang\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ;
+        Set-Location C:\clang\clang-msvc ;
+        Remove-Item -Path C:\clang\clang-msvc\libexec -Recurse -Force ;
+        Remove-Item -Path C:\clang\clang-msvc\share -Recurse -Force ;
+        Rename-Item -Path "C:\clang\clang-msvc\bin" -NewName "C:\clang\clang-msvc\bin-full" ;
+        New-Item -Path "C:\clang\clang-msvc\bin" -ItemType Directory -Force ;
+        Set-Location C:\clang\clang-msvc\bin ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\*.dll -Destination C:\clang\clang-msvc\bin\. ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\clang-cl.exe -Destination C:\clang\clang-msvc\bin\. ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ;
+        Set-Location C:\clang\clang-msvc ;
+        Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
+
+    - run: |
+        clang --version
+
+
