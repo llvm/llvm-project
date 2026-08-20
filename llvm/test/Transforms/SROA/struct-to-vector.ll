@@ -45,7 +45,13 @@ entry:
   ret void
 }
 
-; Different control-flow paths can define the source. SROA promotes the
+; Different control-flow paths can define the source, so memcpyopt doesn't do
+; anything. Currently we will promote tmp and load the source under each branch
+; and then merge them togeher for the store.
+; TODO: doing the actual memcpy src -> dst under each branch might be more
+; efficient.
+
+SROA promotes the
 ; memory merge to a vector phi.
 define void @conditional_copy(ptr %src0, ptr %src1, ptr %dst, i1 %cond) {
 ; CHECK-LABEL: define void @conditional_copy(
