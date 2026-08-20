@@ -264,7 +264,9 @@ FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
   RPCRequest.set_restricted_for_code_completion(From.RestrictForCodeCompletion);
   for (const auto &Path : From.ProximityPaths) {
     llvm::SmallString<256> RelativePath = llvm::StringRef(Path);
-    if (replace_path_prefix(RelativePath, LocalIndexRoot, ""))
+    bool IsWindowsIndex = is_absolute(Path.substr(1), Style::windows);
+    if (replace_path_prefix(RelativePath, LocalIndexRoot, "",
+                            IsWindowsIndex ? Style::windows : Style::native))
       RPCRequest.add_proximity_paths(
           convert_to_slash(RelativePath, Style::windows));
   }
@@ -396,9 +398,11 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   llvm::SmallString<256> Result = ParsedURI->body();
   llvm::StringRef Path(Result);
   // Check for Windows paths (URI=file:///X:/path => Body=/X:/path)
-  if (is_absolute(Path.substr(1), Style::windows))
+  bool IsWindowsIndex = is_absolute(Path.substr(1), Style::windows);
+  if (IsWindowsIndex)
     Result = Path.drop_front().str();
-  if (!replace_path_prefix(Result, RemoteIndexRoot, ""))
+  if (!replace_path_prefix(Result, RemoteIndexRoot, "",
+                           IsWindowsIndex ? Style::windows : Style::native))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
                  RemoteIndexRoot);
   assert(Result == convert_to_slash(Result, Style::windows));
