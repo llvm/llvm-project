@@ -2020,7 +2020,7 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSynthetic(cpp_category_sp, GenericExpectedSyntheticFrontEndCreator,
                   "MSVC STL std::expected synthetic children",
-                  "^std::expected<.+>(( )?&)?$", stl_synth_flags, true);
+                  "^std::expected<.+>(( )?&)?$", stl_deref_flags, true);
   AddCXXSummary(cpp_category_sp, GenericExpectedSummaryProvider,
                 "MSVC STL std::expected summary provider",
                 "^std::expected<.+>(( )?&)?$", stl_summary_flags, true);

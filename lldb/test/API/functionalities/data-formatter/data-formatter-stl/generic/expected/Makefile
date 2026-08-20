@@ -1,3 +1,4 @@
 CXX_SOURCES := main.cpp
-override CXXFLAGS_EXTRAS += -std=c++17
+CXXFLAGS_EXTRAS := -std=c++23
+
 include Makefile.rules
