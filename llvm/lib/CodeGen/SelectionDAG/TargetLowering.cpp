@@ -3296,7 +3296,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   // Not demanding any elements from Op.
   if (DemandedElts == 0) {
     KnownUndef.setAllBits();
-    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+    return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
   }
 
   // Limit search depth.
@@ -3354,7 +3354,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0]) {
       KnownUndef.setAllBits();
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+      return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
     }
     KnownUndef.setHighBits(NumElts - 1);
     break;
@@ -3483,7 +3483,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::BUILD_VECTOR: {
-    // Check all elements and simplify any unused elements with UNDEF.
+    // Check all elements and simplify any unused elements with POISON.
     if (!DemandedElts.isAllOnes()) {
       // Don't simplify BROADCASTS.
       if (llvm::any_of(Op->op_values(),
@@ -3492,7 +3492,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         bool Updated = false;
         for (unsigned i = 0; i != NumElts; ++i) {
           if (!DemandedElts[i] && !Ops[i].isUndef()) {
-            Ops[i] = TLO.DAG.getUNDEF(Ops[0].getValueType());
+            Ops[i] = TLO.DAG.getPOISON(Ops[0].getValueType());
             KnownUndef.setBit(i);
             Updated = true;
           }
@@ -3570,7 +3570,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // If none of the src operand elements are demanded, replace it with undef.
     if (!DemandedSrcElts && !Src.isUndef())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                                               TLO.DAG.getUNDEF(VT), Sub,
+                                               TLO.DAG.getPOISON(VT), Sub,
                                                Op.getOperand(2)));
 
     if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownUndef, KnownZero,
@@ -3708,14 +3708,14 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         DemandedRHS.setBit(M - NumElts);
     }
 
-    // If either side isn't demanded, replace it by UNDEF. We handle this
+    // If either side isn't demanded, replace it by POISON. We handle this
     // explicitly here to also simplify in case of multiple uses (on the
     // contrary to the SimplifyDemandedVectorElts calls below).
     bool FoldLHS = !DemandedLHS && !LHS.isUndef();
     bool FoldRHS = !DemandedRHS && !RHS.isUndef();
     if (FoldLHS || FoldRHS) {
-      LHS = FoldLHS ? TLO.DAG.getUNDEF(LHS.getValueType()) : LHS;
-      RHS = FoldRHS ? TLO.DAG.getUNDEF(RHS.getValueType()) : RHS;
+      LHS = FoldLHS ? TLO.DAG.getPOISON(LHS.getValueType()) : LHS;
+      RHS = FoldRHS ? TLO.DAG.getPOISON(RHS.getValueType()) : RHS;
       SDValue NewOp =
           TLO.DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, ShuffleMask);
       return TLO.CombineTo(Op, NewOp);
@@ -4000,7 +4000,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   // Constant fold all undef cases.
   // TODO: Handle zero cases as well.
   if (DemandedElts.isSubsetOf(KnownUndef))
-    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+    return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
 
   return false;
 }
@@ -7043,8 +7043,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     // Magic algorithm doesn't work for division by 1. We need to emit a select
     // at the end.
     if (Divisor.isOne()) {
-      PreShift = PostShift = DAG.getUNDEF(ShSVT);
-      MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
+      PreShift = PostShift = DAG.getPOISON(ShSVT);
+      MagicFactor = NPQFactor = DAG.getPOISON(SVT);
     } else {
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
