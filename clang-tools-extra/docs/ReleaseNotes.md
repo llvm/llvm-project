@@ -108,6 +108,11 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`readability-avoid-default-lambda-capture
+  <clang-tidy/checks/readability/avoid-default-lambda-capture>` check.
+
+  Warns on default lambda captures (e.g. `[&](){ ... }`, `[=](){ ... }`).
+
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
 
