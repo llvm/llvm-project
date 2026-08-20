@@ -569,6 +569,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together
   with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
 
+- Added a new warning when the same interrupt type is specified more than
+  once in a RISC-V `interrupt` attribute.
+
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
