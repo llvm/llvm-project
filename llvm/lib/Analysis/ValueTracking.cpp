@@ -4681,9 +4681,11 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   // We are going to infer semantics of a library function based on mapping it
   // to an LLVM intrinsic. Check that the library function is available from
   // this callbase and in this environment.
-  LibFunc Func;
-  if (F->hasLocalLinkage() || !TLI || !TLI->getLibFunc(CB, Func) ||
-      !CB.onlyReadsMemory())
+  if (F->hasLocalLinkage() || !TLI || !CB.onlyReadsMemory())
+    return Intrinsic::not_intrinsic;
+
+  LibFunc Func = TLI->getLibFunc(CB);
+  if (Func == NotLibFunc)
     return Intrinsic::not_intrinsic;
 
   switch (Func) {
@@ -5658,7 +5660,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      Known.propagateNaN(KnownSrc);
+      Known.propagateNonNaN(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
 

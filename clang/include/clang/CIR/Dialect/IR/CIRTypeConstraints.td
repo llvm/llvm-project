@@ -361,10 +361,10 @@ def CIR_AnyFloatOrVecOfFloatType
 }
 
 // Types valid for bitwise ops (and/or/xor):
-// integer, boolean, or vector of integer (no floating-point).
+// integer, boolean, or vector of bool or integer (no floating-point).
 def CIR_AnyBitwiseType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntType],
-                "integer, boolean, or vector of integer">;
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntOrBoolType],
+                "integer, boolean, or vector of bool or integer">;
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

@@ -10,7 +10,8 @@ define void @udiv_v7i32(ptr noalias %dst, ptr noalias %x, ptr noalias %y) vscale
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <7 x i32> [[TMP2]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP3]], ptr align 4 [[DST]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    store <7 x i32> [[TMP6]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -72,7 +73,8 @@ define void @sdiv_v7i32(ptr noalias %dst, ptr noalias %x, ptr noalias %y) vscale
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <7 x i32> [[TMP2]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP3]], ptr align 4 [[DST]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    store <7 x i32> [[TMP6]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

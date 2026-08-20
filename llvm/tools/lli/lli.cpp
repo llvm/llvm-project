@@ -511,8 +511,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   TargetOptions Options =
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+      ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
+    Mod->addModuleFlag(Module::Error, "float-abi",
+                       MDString::get(Context, FloatABI::getABITypeName(ABI)));
+  }
 
   builder.setTargetOptions(Options);
 

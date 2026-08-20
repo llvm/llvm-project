@@ -6343,11 +6343,15 @@ namespace {
   };
 } // end anonymous namespace
 
-static void
-fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
-                                 const ParsedAttributesView &Attrs) {
-  for (const ParsedAttr &AL : Attrs) {
-    if (AL.getKind() == ParsedAttr::AT_AddressSpace) {
+static void fillDependentAddressSpaceTypeLoc(
+    DependentAddressSpaceTypeLoc DASTL,
+    ArrayRef<const ParsedAttributesView *> AttrLists) {
+  for (const ParsedAttributesView *Attrs : AttrLists) {
+    for (const ParsedAttr &AL : *Attrs) {
+      // Skip invalid or malformed attributes; they did not produce a type.
+      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.isInvalid() ||
+          AL.getNumArgs() != 1 || !AL.isArgExpr(0))
+        continue;
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
       DASTL.setAttrOperandParensRange(SourceRange());
@@ -6422,7 +6426,13 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
 
       case TypeLoc::DependentAddressSpace: {
         auto TL = CurrTL.castAs<DependentAddressSpaceTypeLoc>();
-        fillDependentAddressSpaceTypeLoc(TL, D.getTypeObject(i).getAttrs());
+        // An attribute written after the declarator-id appertains to the
+        // declared entity, not to a chunk, so every attribute list of the
+        // declarator has to be searched.
+        fillDependentAddressSpaceTypeLoc(TL, {&D.getTypeObject(i).getAttrs(),
+                                              &D.getAttributes(),
+                                              &D.getDeclSpec().getAttributes(),
+                                              &D.getDeclarationAttributes()});
         CurrTL = TL.getPointeeTypeLoc().getUnqualifiedLoc();
         break;
       }

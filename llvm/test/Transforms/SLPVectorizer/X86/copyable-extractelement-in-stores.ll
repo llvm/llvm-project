@@ -12,10 +12,8 @@ define void @test(i8 %s, ptr %out) {
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <16 x i8> poison, i8 [[S]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <16 x i8> [[I0]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[V:%.*]] = add <16 x i8> [[SPLAT]], <i8 poison, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
-; CHECK-NEXT:    store i8 [[S]], ptr [[OUT]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <15 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    store <15 x i8> [[TMP1]], ptr [[P1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> [[I0]], <16 x i32> <i32 16, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x i8> [[TMP1]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %i0 = insertelement <16 x i8> poison, i8 %s, i64 0

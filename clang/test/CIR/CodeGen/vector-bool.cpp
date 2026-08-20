@@ -180,3 +180,75 @@ void vec_bool_ternary_expr() {
 // SHARED: %[[RESULT:.*]] = select <8 x i1> %[[TMP_A_I8]], <8 x i1> %[[TMP_B_I8]], <8 x i1> %[[TMP_C_I8]]
 // SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[RESULT]] to i8
 // SHARED: store i8 %[[RESULT_I8]], ptr %[[D_ADDR]], align 1
+
+void vec_bool_bitwise_operators() {
+  v8b a;
+  v8b b;
+  v8b v_or = a | b;
+  v8b v_and = a & b;
+  v8b v_xor = a ^ b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[OR_ADDR:.*]] = cir.alloca "v_or" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[AND_ADDR:.*]] = cir.alloca "v_and" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[XOR_ADDR:.*]] = cir.alloca "v_xor" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[OR:.*]] = cir.or %[[TMP_A]], %[[TMP_B]] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[OR]], %[[OR_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[AND:.*]] = cir.and %[[TMP_A]], %[[TMP_B]] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[AND]], %[[AND_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[XOR:.*]] = cir.xor %[[TMP_A]], %[[TMP_B]] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[XOR]], %[[XOR_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[OR_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[AND_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[XOR_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load i8, ptr %[[B_ADDR]], align 1
+// SHARED: %[[TMP_B_VEC:.*]] = bitcast i8 %[[TMP_B]] to <8 x i1>
+// SHARED: %[[OR:.*]] = or <8 x i1> %[[TMP_A_VEC]], %[[TMP_B_VEC]]
+// SHARED: %[[OR_I8:.*]] = bitcast <8 x i1> %[[OR]] to i8
+// SHARED: store i8 %[[OR_I8]], ptr %[[OR_ADDR]], align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load i8, ptr %[[B_ADDR]], align 1
+// SHARED: %[[TMP_B_VEC:.*]] = bitcast i8 %[[TMP_B]] to <8 x i1>
+// SHARED: %[[AND:.*]] = and <8 x i1> %[[TMP_A_VEC]], %[[TMP_B_VEC]]
+// SHARED: %[[AND_I8:.*]] = bitcast <8 x i1> %[[AND]] to i8
+// SHARED: store i8 %[[AND_I8]], ptr %[[AND_ADDR]], align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load i8, ptr %[[B_ADDR]], align 1
+// SHARED: %[[TMP_B_VEC:.*]] = bitcast i8 %[[TMP_B]] to <8 x i1>
+// SHARED: %[[XOR:.*]] = xor <8 x i1> %[[TMP_A_VEC]], %[[TMP_B_VEC]]
+// SHARED: %[[XOR_I8:.*]] = bitcast <8 x i1> %[[XOR]] to i8
+// SHARED: store i8 %[[XOR_I8]], ptr %[[XOR_ADDR]], align 1
+
+void vec_bool_not_op() {
+  v8b a;
+  v8b b = ~a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[RESULT:.*]] = cir.not %[[TMP_A]] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A:.*]] to <8 x i1>
+// SHARED: %[[RESULT:.*]] = xor <8 x i1> %[[TMP_A_VEC]], splat (i1 true)
+// SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[RESULT]] to i8
+// SHARED: store i8 %[[RESULT_I8]], ptr %[[B_ADDR]], align 1

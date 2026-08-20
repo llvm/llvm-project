@@ -14,14 +14,17 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -30,6 +33,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -48,7 +52,7 @@
 #include <optional>
 #include <utility>
 
-#define DEBUG_TYPE "regbankselect"
+#define DEBUG_TYPE "reg-bank-select"
 
 using namespace llvm;
 
@@ -58,42 +62,643 @@ using namespace llvm;
 static constexpr unsigned ImpossibleRepairCost =
     std::numeric_limits<unsigned>::max();
 
-static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
+static cl::opt<RegBankSelectMode> RegBankSelectModeOption(
     cl::desc("Mode of the RegBankSelect pass"), cl::Hidden, cl::Optional,
-    cl::values(clEnumValN(RegBankSelect::Mode::Fast, "regbankselect-fast",
+    cl::values(clEnumValN(RegBankSelectMode::Fast, "regbankselect-fast",
                           "Run the Fast mode (default mapping)"),
-               clEnumValN(RegBankSelect::Mode::Greedy, "regbankselect-greedy",
+               clEnumValN(RegBankSelectMode::Greedy, "regbankselect-greedy",
                           "Use the Greedy mode (best local mapping)")));
 
-char RegBankSelect::ID = 0;
+char RegBankSelectLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(RegBankSelectLegacy, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",
                       false, false);
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_END(RegBankSelectLegacy, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(Mode RunningMode)
-    : MachineFunctionPass(ID), OptMode(RunningMode) {
-  if (RegBankSelectMode.getNumOccurrences() != 0) {
-    OptMode = RegBankSelectMode;
-    if (RegBankSelectMode != RunningMode)
+static RegBankSelectMode computeOptMode(RegBankSelectMode RequestedMode) {
+  if (RegBankSelectModeOption.getNumOccurrences() != 0) {
+    if (RegBankSelectModeOption != RequestedMode)
       LLVM_DEBUG(dbgs() << "RegBankSelect mode overrided by command line\n");
+    return RegBankSelectModeOption;
   }
+  return RequestedMode;
 }
 
-void RegBankSelect::init(MachineFunction &MF) {
+namespace {
+
+class RegBankSelectImpl {
+  /// Abstract class used to represent an insertion point in a CFG.
+  /// This class records an insertion point and materializes it on
+  /// demand.
+  /// It allows to reason about the frequency of this insertion point,
+  /// without having to logically materialize it (e.g., on an edge),
+  /// before we actually need to insert something.
+  class InsertPoint {
+  protected:
+    /// Tell if the insert point has already been materialized.
+    bool WasMaterialized = false;
+
+    /// Materialize the insertion point.
+    ///
+    /// If isSplit() is true, this involves actually splitting
+    /// the block or edge.
+    ///
+    /// \post getPointImpl() returns a valid iterator.
+    /// \post getInsertMBBImpl() returns a valid basic block.
+    /// \post isSplit() == false ; no more splitting should be required.
+    virtual void materialize() = 0;
+
+    /// Return the materialized insertion basic block.
+    /// Code will be inserted into that basic block.
+    ///
+    /// \pre ::materialize has been called.
+    virtual MachineBasicBlock &getInsertMBBImpl() = 0;
+
+    /// Return the materialized insertion point.
+    /// Code will be inserted before that point.
+    ///
+    /// \pre ::materialize has been called.
+    virtual MachineBasicBlock::iterator getPointImpl() = 0;
+
+  public:
+    virtual ~InsertPoint() = default;
+
+    /// The first call to this method will cause the splitting to
+    /// happen if need be, then sub sequent calls just return
+    /// the iterator to that point. I.e., no more splitting will
+    /// occur.
+    ///
+    /// \return The iterator that should be used with
+    /// MachineBasicBlock::insert. I.e., additional code happens
+    /// before that point.
+    MachineBasicBlock::iterator getPoint() {
+      if (!WasMaterialized) {
+        WasMaterialized = true;
+        assert(canMaterialize() && "Impossible to materialize this point");
+        materialize();
+      }
+      // When we materialized the point we should have done the splitting.
+      assert(!isSplit() && "Wrong pre-condition");
+      return getPointImpl();
+    }
+
+    /// The first call to this method will cause the splitting to
+    /// happen if need be, then sub sequent calls just return
+    /// the basic block that contains the insertion point.
+    /// I.e., no more splitting will occur.
+    ///
+    /// \return The basic block should be used with
+    /// MachineBasicBlock::insert and ::getPoint. The new code should
+    /// happen before that point.
+    MachineBasicBlock &getInsertMBB() {
+      if (!WasMaterialized) {
+        WasMaterialized = true;
+        assert(canMaterialize() && "Impossible to materialize this point");
+        materialize();
+      }
+      // When we materialized the point we should have done the splitting.
+      assert(!isSplit() && "Wrong pre-condition");
+      return getInsertMBBImpl();
+    }
+
+    /// Insert \p MI in the just before ::getPoint()
+    MachineBasicBlock::iterator insert(MachineInstr &MI) {
+      return getInsertMBB().insert(getPoint(), &MI);
+    }
+
+    /// Does this point involve splitting an edge or block?
+    /// As soon as ::getPoint is called and thus, the point
+    /// materialized, the point will not require splitting anymore,
+    /// i.e., this will return false.
+    virtual bool isSplit() const { return false; }
+
+    /// Frequency of the insertion point.
+    /// \p P is used to access the various analysis that will help to
+    /// get that information, like MachineBlockFrequencyInfo.  If \p P
+    /// does not contain enough to return the actual frequency,
+    /// this returns 1.
+    virtual uint64_t frequency(
+        function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+        function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) const {
+      return 1;
+    }
+
+    /// Check whether this insertion point can be materialized.
+    /// As soon as ::getPoint is called and thus, the point materialized
+    /// calling this method does not make sense.
+    virtual bool canMaterialize() const { return false; }
+  };
+
+  /// Insertion point before or after an instruction.
+  class LLVM_ABI InstrInsertPoint : public InsertPoint {
+  private:
+    /// Insertion point.
+    MachineInstr &Instr;
+
+    /// Does the insertion point is before or after Instr.
+    bool Before;
+
+    void materialize() override;
+
+    MachineBasicBlock::iterator getPointImpl() override {
+      if (Before)
+        return Instr;
+      return Instr.getNextNode() ? *Instr.getNextNode()
+                                 : Instr.getParent()->end();
+    }
+
+    MachineBasicBlock &getInsertMBBImpl() override {
+      return *Instr.getParent();
+    }
+
+  public:
+    /// Create an insertion point before (\p Before=true) or after \p Instr.
+    InstrInsertPoint(MachineInstr &Instr, bool Before = true);
+
+    bool isSplit() const override;
+    uint64_t
+    frequency(function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+              function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI)
+        const override;
+
+    // Worst case, we need to slice the basic block, but that is still doable.
+    bool canMaterialize() const override { return true; }
+  };
+
+  /// Insertion point at the beginning or end of a basic block.
+  class LLVM_ABI MBBInsertPoint : public InsertPoint {
+  private:
+    /// Insertion point.
+    MachineBasicBlock &MBB;
+
+    /// Does the insertion point is at the beginning or end of MBB.
+    bool Beginning;
+
+    void materialize() override { /*Nothing to do to materialize*/ }
+
+    MachineBasicBlock::iterator getPointImpl() override {
+      return Beginning ? MBB.begin() : MBB.end();
+    }
+
+    MachineBasicBlock &getInsertMBBImpl() override { return MBB; }
+
+  public:
+    MBBInsertPoint(MachineBasicBlock &MBB, bool Beginning = true)
+        : MBB(MBB), Beginning(Beginning) {
+      // If we try to insert before phis, we should use the insertion
+      // points on the incoming edges.
+      assert((!Beginning || MBB.getFirstNonPHI() == MBB.begin()) &&
+             "Invalid beginning point");
+      // If we try to insert after the terminators, we should use the
+      // points on the outcoming edges.
+      assert((Beginning || MBB.getFirstTerminator() == MBB.end()) &&
+             "Invalid end point");
+    }
+
+    bool isSplit() const override { return false; }
+    uint64_t
+    frequency(function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+              function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI)
+        const override;
+    bool canMaterialize() const override { return true; };
+  };
+
+  /// Insertion point on an edge.
+  class LLVM_ABI EdgeInsertPoint : public InsertPoint {
+  private:
+    /// Source of the edge.
+    MachineBasicBlock &Src;
+
+    /// Destination of the edge.
+    /// After the materialization is done, this hold the basic block
+    /// that resulted from the splitting.
+    MachineBasicBlock *DstOrSplit;
+
+    /// P/MFAM is used to update the analysis passes as applicable when
+    /// splitting critical edges.
+    Pass *P;
+    MachineFunctionAnalysisManager *MFAM;
+
+    void materialize() override;
+
+    MachineBasicBlock::iterator getPointImpl() override {
+      // DstOrSplit should be the Split block at this point.
+      // I.e., it should have one predecessor, Src, and one successor,
+      // the original Dst.
+      assert(DstOrSplit && DstOrSplit->isPredecessor(&Src) &&
+             DstOrSplit->pred_size() == 1 && DstOrSplit->succ_size() == 1 &&
+             "Did not split?!");
+      return DstOrSplit->begin();
+    }
+
+    MachineBasicBlock &getInsertMBBImpl() override { return *DstOrSplit; }
+
+  public:
+    EdgeInsertPoint(MachineBasicBlock &Src, MachineBasicBlock &Dst, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM)
+        : Src(Src), DstOrSplit(&Dst), P(P), MFAM(MFAM) {}
+
+    bool isSplit() const override {
+      return Src.succ_size() > 1 && DstOrSplit->pred_size() > 1;
+    }
+
+    uint64_t
+    frequency(function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+              function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI)
+        const override;
+    bool canMaterialize() const override;
+  };
+
+  /// Struct used to represent the placement of a repairing point for
+  /// a given operand.
+  class RepairingPlacement {
+  public:
+    /// Define the kind of action this repairing needs.
+    enum RepairingKind {
+      /// Nothing to repair, just drop this action.
+      None,
+      /// Reparing code needs to happen before InsertPoints.
+      Insert,
+      /// (Re)assign the register bank of the operand.
+      Reassign,
+      /// Mark this repairing placement as impossible.
+      Impossible
+    };
+
+    /// \name Convenient types for a list of insertion points.
+    /// @{
+    using InsertionPoints = SmallVector<std::unique_ptr<InsertPoint>, 2>;
+    using insertpt_iterator = InsertionPoints::iterator;
+    using const_insertpt_iterator = InsertionPoints::const_iterator;
+    /// @}
+
+  private:
+    /// Kind of repairing.
+    RepairingKind Kind;
+    /// Index of the operand that will be repaired.
+    unsigned OpIdx;
+    /// Are all the insert points materializeable?
+    bool CanMaterialize;
+    /// Is there any of the insert points needing splitting?
+    bool HasSplit = false;
+    /// Insertion point for the repair code.
+    /// The repairing code needs to happen just before these points.
+    InsertionPoints InsertPoints;
+    /// Some insertion points may need to update the liveness and such.
+    Pass *P;
+    MachineFunctionAnalysisManager *MFAM;
+
+  public:
+    /// Create a repairing placement for the \p OpIdx-th operand of
+    /// \p MI. \p TRI is used to make some checks on the register aliases
+    /// if the machine operand is a physical register. \p P is used to
+    /// to update liveness information and such when materializing the
+    /// points.
+    LLVM_ABI RepairingPlacement(MachineInstr &MI, unsigned OpIdx,
+                                const TargetRegisterInfo &TRI, Pass *P,
+                                MachineFunctionAnalysisManager *MFAM,
+                                RepairingKind Kind = RepairingKind::Insert);
+
+    /// \name Getters.
+    /// @{
+    RepairingKind getKind() const { return Kind; }
+    unsigned getOpIdx() const { return OpIdx; }
+    bool canMaterialize() const { return CanMaterialize; }
+    bool hasSplit() { return HasSplit; }
+    /// @}
+
+    /// \name Overloaded methods to add an insertion point.
+    /// @{
+    /// Add a MBBInsertionPoint to the list of InsertPoints.
+    LLVM_ABI void addInsertPoint(MachineBasicBlock &MBB, bool Beginning);
+    /// Add a InstrInsertionPoint to the list of InsertPoints.
+    LLVM_ABI void addInsertPoint(MachineInstr &MI, bool Before);
+    /// Add an EdgeInsertionPoint (\p Src, \p Dst) to the list of InsertPoints.
+    LLVM_ABI void addInsertPoint(MachineBasicBlock &Src,
+                                 MachineBasicBlock &Dst);
+    /// Add an InsertPoint to the list of insert points.
+    /// This method takes the ownership of &\p Point.
+    LLVM_ABI void addInsertPoint(InsertPoint &Point);
+    /// @}
+
+    /// \name Accessors related to the insertion points.
+    /// @{
+    insertpt_iterator begin() { return InsertPoints.begin(); }
+    insertpt_iterator end() { return InsertPoints.end(); }
+
+    const_insertpt_iterator begin() const { return InsertPoints.begin(); }
+    const_insertpt_iterator end() const { return InsertPoints.end(); }
+
+    unsigned getNumInsertPoints() const { return InsertPoints.size(); }
+    /// @}
+
+    /// Change the type of this repairing placement to \p NewKind.
+    /// It is not possible to switch a repairing placement to the
+    /// RepairingKind::Insert. There is no fundamental problem with
+    /// that, but no uses as well, so do not support it for now.
+    ///
+    /// \pre NewKind != RepairingKind::Insert
+    /// \post getKind() == NewKind
+    void switchTo(RepairingKind NewKind) {
+      assert(NewKind != Kind && "Already of the right Kind");
+      Kind = NewKind;
+      InsertPoints.clear();
+      CanMaterialize = NewKind != RepairingKind::Impossible;
+      HasSplit = false;
+      assert(NewKind != RepairingKind::Insert &&
+             "We would need more MI to switch to Insert");
+    }
+  };
+
+protected:
+  /// Helper class used to represent the cost for mapping an instruction.
+  /// When mapping an instruction, we may introduce some repairing code.
+  /// In most cases, the repairing code is local to the instruction,
+  /// thus, we can omit the basic block frequency from the cost.
+  /// However, some alternatives may produce non-local cost, e.g., when
+  /// repairing a phi, and thus we then need to scale the local cost
+  /// to the non-local cost. This class does this for us.
+  /// \note: We could simply always scale the cost. The problem is that
+  /// there are higher chances that we saturate the cost easier and end
+  /// up having the same cost for actually different alternatives.
+  /// Another option would be to use APInt everywhere.
+  class MappingCost {
+  private:
+    /// Cost of the local instructions.
+    /// This cost is free of basic block frequency.
+    uint64_t LocalCost = 0;
+    /// Cost of the non-local instructions.
+    /// This cost should include the frequency of the related blocks.
+    uint64_t NonLocalCost = 0;
+    /// Frequency of the block where the local instructions live.
+    uint64_t LocalFreq;
+
+    MappingCost(uint64_t LocalCost, uint64_t NonLocalCost, uint64_t LocalFreq)
+        : LocalCost(LocalCost), NonLocalCost(NonLocalCost),
+          LocalFreq(LocalFreq) {}
+
+    /// Check if this cost is saturated.
+    bool isSaturated() const;
+
+  public:
+    /// Create a MappingCost assuming that most of the instructions
+    /// will occur in a basic block with \p LocalFreq frequency.
+    LLVM_ABI MappingCost(BlockFrequency LocalFreq);
+
+    /// Add \p Cost to the local cost.
+    /// \return true if this cost is saturated, false otherwise.
+    LLVM_ABI bool addLocalCost(uint64_t Cost);
+
+    /// Add \p Cost to the non-local cost.
+    /// Non-local cost should reflect the frequency of their placement.
+    /// \return true if this cost is saturated, false otherwise.
+    LLVM_ABI bool addNonLocalCost(uint64_t Cost);
+
+    /// Saturate the cost to the maximal representable value.
+    LLVM_ABI void saturate();
+
+    /// Return an instance of MappingCost that represents an
+    /// impossible mapping.
+    LLVM_ABI static MappingCost ImpossibleCost();
+
+    /// Check if this is less than \p Cost.
+    LLVM_ABI bool operator<(const MappingCost &Cost) const;
+    /// Check if this is equal to \p Cost.
+    LLVM_ABI bool operator==(const MappingCost &Cost) const;
+    /// Check if this is not equal to \p Cost.
+    bool operator!=(const MappingCost &Cost) const { return !(*this == Cost); }
+    /// Check if this is greater than \p Cost.
+    bool operator>(const MappingCost &Cost) const {
+      return *this != Cost && Cost < *this;
+    }
+
+    /// Print this on dbgs() stream.
+    LLVM_ABI void dump() const;
+
+    /// Print this on \p OS;
+    LLVM_ABI void print(raw_ostream &OS) const;
+
+    /// Overload the stream operator for easy debug printing.
+    friend raw_ostream &operator<<(raw_ostream &OS, const MappingCost &Cost) {
+      Cost.print(OS);
+      return OS;
+    }
+  };
+
+  /// Interface to the target lowering info related
+  /// to register banks.
+  const RegisterBankInfo *RBI = nullptr;
+
+  /// MRI contains all the register class/bank information that this
+  /// pass uses and updates.
+  MachineRegisterInfo *MRI = nullptr;
+
+  /// Information on the register classes for the current function.
+  const TargetRegisterInfo *TRI = nullptr;
+
+  /// Get the frequency of blocks.
+  /// This is required for non-fast mode.
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+
+  /// Get the frequency of the edges.
+  /// This is required for non-fast mode.
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+
+  /// Current optimization remark emitter. Used to report failures.
+  std::unique_ptr<MachineOptimizationRemarkEmitter> MORE;
+
+  /// Helper class used for every code morphing.
+  MachineIRBuilder MIRBuilder;
+
+  /// Optimization mode of the pass.
+  RegBankSelectMode OptMode;
+
+  /// The current Pass/MFAM reference to enable updating analyses.
+  Pass *P = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
+
+  /// Assign the register bank of each operand of \p MI.
+  /// \return True on success, false otherwise.
+  bool
+  assignInstr(MachineInstr &MI,
+              function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+              function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI);
+
+  /// Initialize the field members using \p MF.
+  void init(MachineFunction &MF,
+            function_ref<MachineBlockFrequencyInfo *()> GetMBFI,
+            function_ref<MachineBranchProbabilityInfo *()> GetMBPI);
+
+  /// Check if \p Reg is already assigned what is described by \p ValMapping.
+  /// \p OnlyAssign == true means that \p Reg just needs to be assigned a
+  /// register bank.  I.e., no repairing is necessary to have the
+  /// assignment match.
+  bool assignmentMatch(Register Reg,
+                       const RegisterBankInfo::ValueMapping &ValMapping,
+                       bool &OnlyAssign) const;
+
+  /// Insert repairing code for \p Reg as specified by \p ValMapping.
+  /// The repairing placement is specified by \p RepairPt.
+  /// \p NewVRegs contains all the registers required to remap \p Reg.
+  /// In other words, the number of registers in NewVRegs must be equal
+  /// to ValMapping.BreakDown.size().
+  ///
+  /// The transformation could be sketched as:
+  /// \code
+  /// ... = op Reg
+  /// \endcode
+  /// Becomes
+  /// \code
+  /// <NewRegs> = COPY or extract Reg
+  /// ... = op Reg
+  /// \endcode
+  ///
+  /// and
+  /// \code
+  /// Reg = op ...
+  /// \endcode
+  /// Becomes
+  /// \code
+  /// Reg = op ...
+  /// Reg = COPY or build_sequence <NewRegs>
+  /// \endcode
+  ///
+  /// \pre NewVRegs.size() == ValMapping.BreakDown.size()
+  ///
+  /// \note The caller is supposed to do the rewriting of op if need be.
+  /// I.e., Reg = op ... => <NewRegs> = NewOp ...
+  ///
+  /// \return True if the repairing worked, false otherwise.
+  bool repairReg(MachineOperand &MO,
+                 const RegisterBankInfo::ValueMapping &ValMapping,
+                 RegBankSelectImpl::RepairingPlacement &RepairPt,
+                 const iterator_range<SmallVectorImpl<Register>::const_iterator>
+                     &NewVRegs);
+
+  /// Return the cost of the instruction needed to map \p MO to \p ValMapping.
+  /// The cost is free of basic block frequencies.
+  /// \pre MO.isReg()
+  /// \pre MO is assigned to a register bank.
+  /// \pre ValMapping is a valid mapping for MO.
+  uint64_t
+  getRepairCost(const MachineOperand &MO,
+                const RegisterBankInfo::ValueMapping &ValMapping) const;
+
+  /// Find the best mapping for \p MI from \p PossibleMappings.
+  /// \return a reference on the best mapping in \p PossibleMappings.
+  const RegisterBankInfo::InstructionMapping &
+  findBestMapping(MachineInstr &MI,
+                  RegisterBankInfo::InstructionMappings &PossibleMappings,
+                  SmallVectorImpl<RepairingPlacement> &RepairPts,
+                  function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+                  function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI);
+
+  /// Compute the cost of mapping \p MI with \p InstrMapping and
+  /// compute the repairing placement for such mapping in \p
+  /// RepairPts.
+  /// \p BestCost is used to specify when the cost becomes too high
+  /// and thus it is not worth computing the RepairPts.  Moreover if
+  /// \p BestCost == nullptr, the mapping cost is actually not
+  /// computed.
+  MappingCost
+  computeMapping(MachineInstr &MI,
+                 const RegisterBankInfo::InstructionMapping &InstrMapping,
+                 SmallVectorImpl<RepairingPlacement> &RepairPts,
+                 function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+                 function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI,
+                 const MappingCost *BestCost = nullptr);
+
+  /// When \p RepairPt involves splitting to repair \p MO for the
+  /// given \p ValMapping, try to change the way we repair such that
+  /// the splitting is not required anymore.
+  ///
+  /// \pre \p RepairPt.hasSplit()
+  /// \pre \p MO == MO.getParent()->getOperand(\p RepairPt.getOpIdx())
+  /// \pre \p ValMapping is the mapping of \p MO for MO.getParent()
+  ///      that implied \p RepairPt.
+  void tryAvoidingSplit(RegBankSelectImpl::RepairingPlacement &RepairPt,
+                        const MachineOperand &MO,
+                        const RegisterBankInfo::ValueMapping &ValMapping) const;
+
+  /// Apply \p Mapping to \p MI. \p RepairPts represents the different
+  /// mapping action that need to happen for the mapping to be
+  /// applied.
+  /// \return True if the mapping was applied sucessfully, false otherwise.
+  bool applyMapping(MachineInstr &MI,
+                    const RegisterBankInfo::InstructionMapping &InstrMapping,
+                    SmallVectorImpl<RepairingPlacement> &RepairPts);
+
+public:
+  /// Create a RegBankSelect pass with the specified \p RunningMode.
+  RegBankSelectImpl(RegBankSelectMode RunningMode);
+
+  /// Check that our input is fully legal: we require the function to have the
+  /// Legalized property, so it should be.
+  ///
+  /// FIXME: This should be in the MachineVerifier.
+  bool checkFunctionIsLegal(MachineFunction &MF) const;
+
+  /// Walk through \p MF and assign a register bank to every virtual register
+  /// that are still mapped to nothing.
+  /// The target needs to provide a RegisterBankInfo and in particular
+  /// override RegisterBankInfo::getInstrMapping.
+  ///
+  /// Simplified algo:
+  /// \code
+  ///   RBI = MF.subtarget.getRegBankInfo()
+  ///   MIRBuilder.setMF(MF)
+  ///   for each bb in MF
+  ///     for each inst in bb
+  ///       MIRBuilder.setInstr(inst)
+  ///       MappingCosts = RBI.getMapping(inst);
+  ///       Idx = findIdxOfMinCost(MappingCosts)
+  ///       CurRegBank = MappingCosts[Idx].RegBank
+  ///       MRI.setRegBank(inst.getOperand(0).getReg(), CurRegBank)
+  ///       for each argument in inst
+  ///         if (CurRegBank != argument.RegBank)
+  ///           ArgReg = argument.getReg()
+  ///           Tmp = MRI.createNewVirtual(MRI.getSize(ArgReg), CurRegBank)
+  ///           MIRBuilder.buildInstr(COPY, Tmp, ArgReg)
+  ///           inst.getOperand(argument.getOperandNo()).setReg(Tmp)
+  /// \endcode
+  bool assignRegisterBanks(
+      MachineFunction &MF,
+      function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+      function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI);
+
+  bool runOnMachineFunction(
+      MachineFunction &MF, Pass *PassRef,
+      MachineFunctionAnalysisManager *MFAMRef,
+      function_ref<MachineBlockFrequencyInfo *()> GetMBFI,
+      function_ref<MachineBranchProbabilityInfo *()> GetMBPI,
+      function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+      function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI);
+};
+
+} // namespace
+
+RegBankSelectImpl::RegBankSelectImpl(RegBankSelectMode RunningMode)
+    : OptMode(RunningMode) {}
+
+RegBankSelectLegacy::RegBankSelectLegacy(RegBankSelectMode RunningMode)
+    : MachineFunctionPass(ID), OptMode(computeOptMode(RunningMode)) {}
+
+void RegBankSelectImpl::init(
+    MachineFunction &MF, function_ref<MachineBlockFrequencyInfo *()> GetMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetMBPI) {
   RBI = MF.getSubtarget().getRegBankInfo();
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  if (OptMode != Mode::Fast) {
-    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  if (OptMode != RegBankSelectMode::Fast) {
+    MBFI = GetMBFI();
+    MBPI = GetMBPI();
   } else {
     MBFI = nullptr;
     MBPI = nullptr;
@@ -102,8 +707,8 @@ void RegBankSelect::init(MachineFunction &MF) {
   MORE = std::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
 }
 
-void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
-  if (OptMode != Mode::Fast) {
+void RegBankSelectLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  if (OptMode != RegBankSelectMode::Fast) {
     // We could preserve the information from these two analysis but
     // the APIs do not allow to do so yet.
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -114,7 +719,7 @@ void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool RegBankSelect::assignmentMatch(
+bool RegBankSelectImpl::assignmentMatch(
     Register Reg, const RegisterBankInfo::ValueMapping &ValMapping,
     bool &OnlyAssign) const {
   // By default we assume we will have to repair something.
@@ -137,9 +742,9 @@ bool RegBankSelect::assignmentMatch(
   return CurRegBank == DesiredRegBank;
 }
 
-bool RegBankSelect::repairReg(
+bool RegBankSelectImpl::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
-    RegBankSelect::RepairingPlacement &RepairPt,
+    RegBankSelectImpl::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<Register>::const_iterator> &NewVRegs) {
 
   assert(ValMapping.NumBreakDowns == (unsigned)size(NewVRegs) &&
@@ -241,7 +846,7 @@ bool RegBankSelect::repairReg(
   return true;
 }
 
-uint64_t RegBankSelect::getRepairCost(
+uint64_t RegBankSelectImpl::getRepairCost(
     const MachineOperand &MO,
     const RegisterBankInfo::ValueMapping &ValMapping) const {
   assert(MO.isReg() && "We should only repair register operand");
@@ -292,9 +897,11 @@ uint64_t RegBankSelect::getRepairCost(
   return ImpossibleRepairCost;
 }
 
-const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
+const RegisterBankInfo::InstructionMapping &RegBankSelectImpl::findBestMapping(
     MachineInstr &MI, RegisterBankInfo::InstructionMappings &PossibleMappings,
-    SmallVectorImpl<RepairingPlacement> &RepairPts) {
+    SmallVectorImpl<RepairingPlacement> &RepairPts,
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) {
   assert(!PossibleMappings.empty() &&
          "Do not know how to map this instruction");
 
@@ -303,8 +910,8 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
   SmallVector<RepairingPlacement, 4> LocalRepairPts;
   for (const RegisterBankInfo::InstructionMapping *CurMapping :
        PossibleMappings) {
-    MappingCost CurCost =
-        computeMapping(MI, *CurMapping, LocalRepairPts, &Cost);
+    MappingCost CurCost = computeMapping(MI, *CurMapping, LocalRepairPts,
+                                         GetCachedMBFI, GetCachedMBPI, &Cost);
     if (CurCost < Cost) {
       LLVM_DEBUG(dbgs() << "New best: " << CurCost << '\n');
       Cost = CurCost;
@@ -320,15 +927,15 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     // Thus, pick the first one and set an impossible repairing point.
     // It will trigger the failed isel mode.
     BestMapping = *PossibleMappings.begin();
-    RepairPts.emplace_back(
-        RepairingPlacement(MI, 0, *TRI, *this, RepairingPlacement::Impossible));
+    RepairPts.emplace_back(RepairingPlacement(MI, 0, *TRI, P, MFAM,
+                                              RepairingPlacement::Impossible));
   } else
     assert(BestMapping && "No suitable mapping for instruction");
   return *BestMapping;
 }
 
-void RegBankSelect::tryAvoidingSplit(
-    RegBankSelect::RepairingPlacement &RepairPt, const MachineOperand &MO,
+void RegBankSelectImpl::tryAvoidingSplit(
+    RegBankSelectImpl::RepairingPlacement &RepairPt, const MachineOperand &MO,
     const RegisterBankInfo::ValueMapping &ValMapping) const {
   const MachineInstr &MI = *MO.getParent();
   assert(RepairPt.hasSplit() && "We should not have to adjust for split");
@@ -447,10 +1054,12 @@ void RegBankSelect::tryAvoidingSplit(
   }
 }
 
-RegBankSelect::MappingCost RegBankSelect::computeMapping(
+RegBankSelectImpl::MappingCost RegBankSelectImpl::computeMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
     SmallVectorImpl<RepairingPlacement> &RepairPts,
-    const RegBankSelect::MappingCost *BestCost) {
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI,
+    const RegBankSelectImpl::MappingCost *BestCost) {
   assert((MBFI || !BestCost) && "Costs comparison require MBFI");
 
   if (!InstrMapping.isValid())
@@ -497,14 +1106,14 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     }
     if (Assign) {
       LLVM_DEBUG(dbgs() << "=> is free (simple assignment).\n");
-      RepairPts.emplace_back(RepairingPlacement(MI, OpIdx, *TRI, *this,
+      RepairPts.emplace_back(RepairingPlacement(MI, OpIdx, *TRI, P, MFAM,
                                                 RepairingPlacement::Reassign));
       continue;
     }
 
     // Find the insertion point for the repairing code.
-    RepairPts.emplace_back(
-        RepairingPlacement(MI, OpIdx, *TRI, *this, RepairingPlacement::Insert));
+    RepairPts.emplace_back(RepairingPlacement(MI, OpIdx, *TRI, P, MFAM,
+                                              RepairingPlacement::Insert));
     RepairingPlacement &RepairPt = RepairPts.back();
 
     // If we need to split a basic block to materialize this insertion point,
@@ -567,7 +1176,8 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
         assert(CostForInsertPt + Bias > CostForInsertPt &&
                "Repairing + split bias overflows");
         CostForInsertPt += Bias;
-        uint64_t PtCost = InsertPt->frequency(*this) * CostForInsertPt;
+        uint64_t PtCost =
+            InsertPt->frequency(GetCachedMBFI, GetCachedMBPI) * CostForInsertPt;
         // Check if we just overflowed.
         if ((Saturated = PtCost < CostForInsertPt))
           Cost.saturate();
@@ -592,9 +1202,9 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
   return Cost;
 }
 
-bool RegBankSelect::applyMapping(
+bool RegBankSelectImpl::applyMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
-    SmallVectorImpl<RegBankSelect::RepairingPlacement> &RepairPts) {
+    SmallVectorImpl<RegBankSelectImpl::RepairingPlacement> &RepairPts) {
   // OpdMapper will hold all the information needed for the rewriting.
   std::optional<RegisterBankInfo::OperandsMapper> OpdMapper;
 
@@ -646,7 +1256,9 @@ bool RegBankSelect::applyMapping(
   return true;
 }
 
-bool RegBankSelect::assignInstr(MachineInstr &MI) {
+bool RegBankSelectImpl::assignInstr(
+    MachineInstr &MI, function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) {
   LLVM_DEBUG(dbgs() << "Assign: " << MI);
 
   unsigned Opc = MI.getOpcode();
@@ -671,9 +1283,10 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   SmallVector<RepairingPlacement, 4> RepairPts;
 
   const RegisterBankInfo::InstructionMapping *BestMapping;
-  if (OptMode == RegBankSelect::Mode::Fast) {
+  if (OptMode == RegBankSelectMode::Fast) {
     BestMapping = &RBI->getInstrMapping(MI);
-    MappingCost DefaultCost = computeMapping(MI, *BestMapping, RepairPts);
+    MappingCost DefaultCost = computeMapping(MI, *BestMapping, RepairPts,
+                                             GetCachedMBFI, GetCachedMBPI);
     (void)DefaultCost;
     if (DefaultCost == MappingCost::ImpossibleCost())
       return false;
@@ -682,7 +1295,8 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
         RBI->getInstrPossibleMappings(MI);
     if (PossibleMappings.empty())
       return false;
-    BestMapping = &findBestMapping(MI, PossibleMappings, RepairPts);
+    BestMapping = &findBestMapping(MI, PossibleMappings, RepairPts,
+                                   GetCachedMBFI, GetCachedMBPI);
   }
   // Make sure the mapping is valid for MI.
   assert(BestMapping->verify(MI) && "Invalid instruction mapping");
@@ -694,7 +1308,10 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   return applyMapping(MI, *BestMapping, RepairPts);
 }
 
-bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
+bool RegBankSelectImpl::assignRegisterBanks(
+    MachineFunction &MF,
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) {
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
   // the best mapping of the current instruction.
@@ -723,7 +1340,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
       if (MI.isImplicitDef())
         continue;
 
-      if (!assignInstr(MI)) {
+      if (!assignInstr(MI, GetCachedMBFI, GetCachedMBPI)) {
         reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
@@ -734,7 +1351,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
   return true;
 }
 
-bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
+bool RegBankSelectImpl::checkFunctionIsLegal(MachineFunction &MF) const {
 #ifndef NDEBUG
   if (!DisableGISelLegalityCheck) {
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
@@ -747,24 +1364,32 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
   return true;
 }
 
-bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
+bool RegBankSelectImpl::runOnMachineFunction(
+    MachineFunction &MF, Pass *PassRef, MachineFunctionAnalysisManager *MFAMRef,
+    function_ref<MachineBlockFrequencyInfo *()> GetMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetMBPI,
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasFailedISel())
     return false;
 
+  P = PassRef;
+  MFAM = MFAMRef;
+
   LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
-  Mode SaveOptMode = OptMode;
+  RegBankSelectMode SaveOptMode = OptMode;
   if (F.hasOptNone())
-    OptMode = Mode::Fast;
-  init(MF);
+    OptMode = RegBankSelectMode::Fast;
+  init(MF, GetMBFI, GetMBPI);
 
 #ifndef NDEBUG
   if (!checkFunctionIsLegal(MF))
     return false;
 #endif
 
-  assignRegisterBanks(MF);
+  assignRegisterBanks(MF, GetCachedMBFI, GetCachedMBPI);
 
   OptMode = SaveOptMode;
   return false;
@@ -773,8 +1398,9 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 //                  Helper Classes Implementation
 //------------------------------------------------------------------------------
-RegBankSelect::RepairingPlacement::RepairingPlacement(
-    MachineInstr &MI, unsigned OpIdx, const TargetRegisterInfo &TRI, Pass &P,
+RegBankSelectImpl::RepairingPlacement::RepairingPlacement(
+    MachineInstr &MI, unsigned OpIdx, const TargetRegisterInfo &TRI, Pass *P,
+    MachineFunctionAnalysisManager *MFAM,
     RepairingPlacement::RepairingKind Kind)
     // Default is, we are going to insert code to repair OpIdx.
     : Kind(Kind), OpIdx(OpIdx),
@@ -867,30 +1493,30 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
   }
 }
 
-void RegBankSelect::RepairingPlacement::addInsertPoint(MachineInstr &MI,
-                                                       bool Before) {
+void RegBankSelectImpl::RepairingPlacement::addInsertPoint(MachineInstr &MI,
+                                                           bool Before) {
   addInsertPoint(*new InstrInsertPoint(MI, Before));
 }
 
-void RegBankSelect::RepairingPlacement::addInsertPoint(MachineBasicBlock &MBB,
-                                                       bool Beginning) {
+void RegBankSelectImpl::RepairingPlacement::addInsertPoint(
+    MachineBasicBlock &MBB, bool Beginning) {
   addInsertPoint(*new MBBInsertPoint(MBB, Beginning));
 }
 
-void RegBankSelect::RepairingPlacement::addInsertPoint(MachineBasicBlock &Src,
-                                                       MachineBasicBlock &Dst) {
-  addInsertPoint(*new EdgeInsertPoint(Src, Dst, P));
+void RegBankSelectImpl::RepairingPlacement::addInsertPoint(
+    MachineBasicBlock &Src, MachineBasicBlock &Dst) {
+  addInsertPoint(*new EdgeInsertPoint(Src, Dst, P, MFAM));
 }
 
-void RegBankSelect::RepairingPlacement::addInsertPoint(
-    RegBankSelect::InsertPoint &Point) {
+void RegBankSelectImpl::RepairingPlacement::addInsertPoint(
+    RegBankSelectImpl::InsertPoint &Point) {
   CanMaterialize &= Point.canMaterialize();
   HasSplit |= Point.isSplit();
   InsertPoints.emplace_back(&Point);
 }
 
-RegBankSelect::InstrInsertPoint::InstrInsertPoint(MachineInstr &Instr,
-                                                  bool Before)
+RegBankSelectImpl::InstrInsertPoint::InstrInsertPoint(MachineInstr &Instr,
+                                                      bool Before)
     : Instr(Instr), Before(Before) {
   // Since we do not support splitting, we do not need to update
   // liveness and such, so do not do anything with P.
@@ -900,7 +1526,7 @@ RegBankSelect::InstrInsertPoint::InstrInsertPoint(MachineInstr &Instr,
          "Splitting between phis does not make sense");
 }
 
-void RegBankSelect::InstrInsertPoint::materialize() {
+void RegBankSelectImpl::InstrInsertPoint::materialize() {
   if (isSplit()) {
     // Slice and return the beginning of the new block.
     // If we need to split between the terminators, we theoritically
@@ -922,7 +1548,7 @@ void RegBankSelect::InstrInsertPoint::materialize() {
   // here.
 }
 
-bool RegBankSelect::InstrInsertPoint::isSplit() const {
+bool RegBankSelectImpl::InstrInsertPoint::isSplit() const {
   // If the insertion point is after a terminator, we need to split.
   if (!Before)
     return Instr.isTerminator();
@@ -931,50 +1557,49 @@ bool RegBankSelect::InstrInsertPoint::isSplit() const {
   return Instr.getPrevNode() && Instr.getPrevNode()->isTerminator();
 }
 
-uint64_t RegBankSelect::InstrInsertPoint::frequency(const Pass &P) const {
+uint64_t RegBankSelectImpl::InstrInsertPoint::frequency(
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) const {
   // Even if we need to split, because we insert between terminators,
   // this split has actually the same frequency as the instruction.
-  const auto *MBFIWrapper =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
-  if (!MBFIWrapper)
+  const MachineBlockFrequencyInfo *MBFI = GetCachedMBFI();
+  if (!MBFI)
     return 1;
-  return MBFIWrapper->getMBFI().getBlockFreq(Instr.getParent()).getFrequency();
+  return MBFI->getBlockFreq(Instr.getParent()).getFrequency();
 }
 
-uint64_t RegBankSelect::MBBInsertPoint::frequency(const Pass &P) const {
-  const auto *MBFIWrapper =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
-  if (!MBFIWrapper)
+uint64_t RegBankSelectImpl::MBBInsertPoint::frequency(
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) const {
+  const MachineBlockFrequencyInfo *MBFI = GetCachedMBFI();
+  if (!MBFI)
     return 1;
-  return MBFIWrapper->getMBFI().getBlockFreq(&MBB).getFrequency();
+  return MBFI->getBlockFreq(&MBB).getFrequency();
 }
 
-void RegBankSelect::EdgeInsertPoint::materialize() {
+void RegBankSelectImpl::EdgeInsertPoint::materialize() {
   // If we end up repairing twice at the same place before materializing the
   // insertion point, we may think we have to split an edge twice.
   // We should have a factory for the insert point such that identical points
   // are the same instance.
   assert(Src.isSuccessor(DstOrSplit) && DstOrSplit->isPredecessor(&Src) &&
          "This point has already been split");
-  MachineBasicBlock *NewBB = Src.SplitCriticalEdge(DstOrSplit, P);
+  MachineBasicBlock *NewBB = Src.SplitCriticalEdge(DstOrSplit, P, MFAM);
   assert(NewBB && "Invalid call to materialize");
   // We reuse the destination block to hold the information of the new block.
   DstOrSplit = NewBB;
 }
 
-uint64_t RegBankSelect::EdgeInsertPoint::frequency(const Pass &P) const {
-  const auto *MBFIWrapper =
-      P.getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
-  if (!MBFIWrapper)
+uint64_t RegBankSelectImpl::EdgeInsertPoint::frequency(
+    function_ref<MachineBlockFrequencyInfo *()> GetCachedMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI) const {
+  const MachineBlockFrequencyInfo *MBFI = GetCachedMBFI();
+  if (!MBFI)
     return 1;
-  const auto *MBFI = &MBFIWrapper->getMBFI();
   if (WasMaterialized)
     return MBFI->getBlockFreq(DstOrSplit).getFrequency();
 
-  auto *MBPIWrapper =
-      P.getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
-  const MachineBranchProbabilityInfo *MBPI =
-      MBPIWrapper ? &MBPIWrapper->getMBPI() : nullptr;
+  const MachineBranchProbabilityInfo *MBPI = GetCachedMBPI();
   if (!MBPI)
     return 1;
   // The basic block will be on the edge.
@@ -982,7 +1607,7 @@ uint64_t RegBankSelect::EdgeInsertPoint::frequency(const Pass &P) const {
       .getFrequency();
 }
 
-bool RegBankSelect::EdgeInsertPoint::canMaterialize() const {
+bool RegBankSelectImpl::EdgeInsertPoint::canMaterialize() const {
   // If this is not a critical edge, we should not have used this insert
   // point. Indeed, either the successor or the predecessor should
   // have do.
@@ -991,10 +1616,10 @@ bool RegBankSelect::EdgeInsertPoint::canMaterialize() const {
   return Src.canSplitCriticalEdge(DstOrSplit);
 }
 
-RegBankSelect::MappingCost::MappingCost(BlockFrequency LocalFreq)
+RegBankSelectImpl::MappingCost::MappingCost(BlockFrequency LocalFreq)
     : LocalFreq(LocalFreq.getFrequency()) {}
 
-bool RegBankSelect::MappingCost::addLocalCost(uint64_t Cost) {
+bool RegBankSelectImpl::MappingCost::addLocalCost(uint64_t Cost) {
   // Check if this overflows.
   if (LocalCost + Cost < LocalCost) {
     saturate();
@@ -1004,7 +1629,7 @@ bool RegBankSelect::MappingCost::addLocalCost(uint64_t Cost) {
   return isSaturated();
 }
 
-bool RegBankSelect::MappingCost::addNonLocalCost(uint64_t Cost) {
+bool RegBankSelectImpl::MappingCost::addNonLocalCost(uint64_t Cost) {
   // Check if this overflows.
   if (NonLocalCost + Cost < NonLocalCost) {
     saturate();
@@ -1014,21 +1639,22 @@ bool RegBankSelect::MappingCost::addNonLocalCost(uint64_t Cost) {
   return isSaturated();
 }
 
-bool RegBankSelect::MappingCost::isSaturated() const {
+bool RegBankSelectImpl::MappingCost::isSaturated() const {
   return LocalCost == UINT64_MAX - 1 && NonLocalCost == UINT64_MAX &&
          LocalFreq == UINT64_MAX;
 }
 
-void RegBankSelect::MappingCost::saturate() {
+void RegBankSelectImpl::MappingCost::saturate() {
   *this = ImpossibleCost();
   --LocalCost;
 }
 
-RegBankSelect::MappingCost RegBankSelect::MappingCost::ImpossibleCost() {
+RegBankSelectImpl::MappingCost
+RegBankSelectImpl::MappingCost::ImpossibleCost() {
   return MappingCost(UINT64_MAX, UINT64_MAX, UINT64_MAX);
 }
 
-bool RegBankSelect::MappingCost::operator<(const MappingCost &Cost) const {
+bool RegBankSelectImpl::MappingCost::operator<(const MappingCost &Cost) const {
   // Sort out the easy cases.
   if (*this == Cost)
     return false;
@@ -1105,19 +1731,19 @@ bool RegBankSelect::MappingCost::operator<(const MappingCost &Cost) const {
   return ThisScaledCost < OtherScaledCost;
 }
 
-bool RegBankSelect::MappingCost::operator==(const MappingCost &Cost) const {
+bool RegBankSelectImpl::MappingCost::operator==(const MappingCost &Cost) const {
   return LocalCost == Cost.LocalCost && NonLocalCost == Cost.NonLocalCost &&
          LocalFreq == Cost.LocalFreq;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void RegBankSelect::MappingCost::dump() const {
+LLVM_DUMP_METHOD void RegBankSelectImpl::MappingCost::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
 #endif
 
-void RegBankSelect::MappingCost::print(raw_ostream &OS) const {
+void RegBankSelectImpl::MappingCost::print(raw_ostream &OS) const {
   if (*this == ImpossibleCost()) {
     OS << "impossible";
     return;
@@ -1127,4 +1753,46 @@ void RegBankSelect::MappingCost::print(raw_ostream &OS) const {
     return;
   }
   OS << LocalFreq << " * " << LocalCost << " + " << NonLocalCost;
+}
+
+bool RegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
+  RegBankSelectImpl Impl(OptMode);
+  return Impl.runOnMachineFunction(
+      MF, this, nullptr,
+      [&]() {
+        return &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+      },
+      [&]() {
+        return &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
+                    .getMBPI();
+      },
+      [&]() {
+        return &getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>()
+                    ->getMBFI();
+      },
+      [&]() {
+        return &getAnalysisIfAvailable<
+                    MachineBranchProbabilityInfoWrapperPass>()
+                    ->getMBPI();
+      });
+}
+
+RegBankSelectPass::RegBankSelectPass(RegBankSelectMode RunningMode)
+    : OptMode(RunningMode) {}
+
+PreservedAnalyses RegBankSelectPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  RegBankSelectImpl Impl(OptMode);
+  bool Changed = Impl.runOnMachineFunction(
+      MF, nullptr, &MFAM,
+      [&]() { return &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF); },
+      [&]() { return &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF); },
+      [&]() { return MFAM.getCachedResult<MachineBlockFrequencyAnalysis>(MF); },
+      [&]() {
+        return MFAM.getCachedResult<MachineBranchProbabilityAnalysis>(MF);
+      });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

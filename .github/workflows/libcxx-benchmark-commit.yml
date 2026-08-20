@@ -42,7 +42,7 @@ on:
         description: 'The URL of the LNT instance to submit to'
         required: false
         type: string
-        default: http://lnt.llvm.org
+        default: https://lnt.llvm.org
 
 jobs:
   # Determine which configuration to run based on the `lnt-machine` input.
