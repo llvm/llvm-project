@@ -67,26 +67,26 @@ constexpr void test_SFINAE() {
   // Underlying non-const to const not convertible.
   {
     std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto st= v.end();
-    auto const_st= std::as_const(v).end();
+    auto st       = v.end();
+    auto const_st = std::as_const(v).end();
 
-    static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
+    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
 
     // We cannot create a non-const sentinel from a const sentinel.
-    static_assert(!std::is_constructible_v<decltype(sent1), decltype(sent2)>);
+    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
 
     // We can create a const sentinel from a non-const sentinel.
-    static_assert(std::is_constructible_v<decltype(sent2), decltype(sent1)>);
+    static_assert(std::is_constructible_v<decltype(const_st), decltype(st)>);
   }
   {
     std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto sent1                                       = v.end();
-    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    auto st                                             = v.end();
+    std::ranges::sentinel_t<const decltype(v)> const_st = st;
 
-    static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
+    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
 
     // We cannot create a non-const sentinel from a const sentinel.
-    static_assert(!std::is_constructible_v<decltype(sent1), decltype(sent2)>);
+    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
   }
 }
 
@@ -112,11 +112,11 @@ constexpr void test() {
     // Assigning a non-const sentinel to a const-sentinel-typed variable invokes
     // the converting constructor.
     std::same_as<EnumerateSentinel> decltype(auto) st = view.end();
-    std::same_as<Sentinel> decltype(auto) sResult    = s.base();
+    std::same_as<Sentinel> decltype(auto) sResult     = st.base();
     assert(base(base(sResult)) == std::to_address(base(array.end())));
 
     // Verify assignment
-    EnumerateConstSentinel cs                      = s;
+    EnumerateConstSentinel cs                      = st;
     std::same_as<Sentinel> decltype(auto) csResult = cs.base();
     assert(base(base(csResult)) == std::to_address(base(array.end())));
   }
