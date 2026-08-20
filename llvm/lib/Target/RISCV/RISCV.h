@@ -62,6 +62,19 @@ void initializeRISCVLateBranchOptPass(PassRegistry &);
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 
+class RISCVGatherScatterLoweringPass
+    : public OptionalPassInfoMixin<RISCVGatherScatterLoweringPass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVGatherScatterLoweringPass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createRISCVGatherScatterLoweringLegacyPass();
+void initializeRISCVGatherScatterLoweringLegacyPass(PassRegistry &);
+
 FunctionPass *createRISCVVectorPeepholePass();
 void initializeRISCVVectorPeepholePass(PassRegistry &);
 
@@ -139,8 +152,15 @@ void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 ModulePass *createRISCVPromoteConstantPass();
 void initializeRISCVPromoteConstantPass(PassRegistry &);
 
-FunctionPass *createRISCVVLOptimizerPass();
-void initializeRISCVVLOptimizerPass(PassRegistry &);
+class RISCVVLOptimizerPass
+    : public OptionalPassInfoMixin<RISCVVLOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVVLOptimizerLegacyPass();
+void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);

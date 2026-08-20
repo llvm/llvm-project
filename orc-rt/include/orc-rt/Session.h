@@ -72,6 +72,7 @@ private:
 
 public:
   using ErrorReporterFn = move_only_function<void(Error)>;
+  using OnDisconnectFn = move_only_function<void(Error)>;
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
 
@@ -226,13 +227,34 @@ public:
     /// when the controller disconnects, whether initiated by a call to
     /// disconnect, by the controller, or by a communication failure.
     ///
+    /// Err describes the mode of disconnection, which clients may observe by
+    /// installing a handler via Session::setOnDisconnect:
+    ///
+    ///   - Success: the disconnection was orderly. Either it was requested
+    ///     locally via disconnect, or the controller announced that it was
+    ///     going away (e.g. by sending an explicit hangup message).
+    ///
+    ///   - Failure: the disconnection was abnormal, and Err describes what was
+    ///     observed: a communication failure, a protocol error, or the
+    ///     controller vanishing without announcing it (e.g. end-of-file on a
+    ///     transport whose protocol requires an explicit hangup). The cause of
+    ///     an abnormal disconnection is generally unknowable -- the controller
+    ///     may have crashed, been killed, or become unreachable -- so Err
+    ///     should describe what was observed rather than assert a cause.
+    ///
+    /// Pass the terminal error here rather than to reportError: if no
+    /// on-disconnect handler is installed the Session forwards Err to the error
+    /// reporter, so doing both would report it twice. Only one Err can be
+    /// reported, so if both a local failure and an error announced by the
+    /// controller occur, pick whichever better describes why the session ended.
+    ///
     /// It is the ControllerAccess implementation's responsibility to ensure
     /// exactly-once semantics for this method, even when disconnect is called
     /// concurrently with controller-initiated disconnection.
     ///
     /// No calls should be made to reportError, handleWrapperCall, or
     /// handleControllerCallResult after this method is called.
-    void notifyDisconnected() { S.handleDisconnect(); }
+    void notifyDisconnected(Error Err) { S.handleDisconnect(std::move(Err)); }
 
     /// Ask the Session to run the given wrapper function.
     ///
@@ -318,6 +340,58 @@ public:
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
+  /// Set a handler to be called when the Session's controller connection ends.
+  ///
+  /// The handler is called exactly once, as the Session detaches and before any
+  /// Service is notified via onDetach. Every Session calls it, including one
+  /// that never attached a controller.
+  ///
+  /// The Error it receives describes how the connection ended:
+  ///
+  ///   - Success: the disconnection was orderly -- it was requested locally,
+  ///     the controller announced that it was going away, or no controller was
+  ///     ever attached (with no connection to lose, the disconnect trivially
+  ///     succeeds).
+  ///
+  ///   - Failure: the disconnection was abnormal -- a failure to connect in
+  ///     the first place, a communication failure, or the controller vanishing
+  ///     without announcing it.
+  ///
+  /// The handler takes ownership of the Error and must consume it. Note that
+  /// success covers both an orderly disconnection and never having attached; a
+  /// client that needs to tell those apart knows which it did.
+  ///
+  /// This is where a client decides what the end of the connection means for
+  /// the Session. The expected use is to call shutdown, turning "the controller
+  /// is gone" into "finish outstanding work and exit" rather than idling on an
+  /// empty task queue waiting for instructions that will never arrive. Calling
+  /// shutdown here is supported: it schedules the shutdown, which proceeds once
+  /// the detach completes. The Error is available to make that conditional --
+  /// e.g. to exit with a failure status if the controller was lost
+  /// unexpectedly.
+  ///
+  /// If no handler is installed, an abnormal disconnection is reported via the
+  /// Session's error reporter and an orderly one is ignored. Installing a
+  /// handler
+  /// takes over this routing entirely: the error reporter will not also see the
+  /// disconnection error.
+  ///
+  /// The handler runs synchronously, on whichever thread drove the
+  /// disconnection -- for a remote controller, typically a listener thread. It
+  /// must not block, because the detach cannot proceed until it returns: both
+  /// waiting for the shutdown it scheduled and destroying the Session (~Session
+  /// waits for the Session lifecycle to complete) deadlock. If a controller was
+  /// attached, it is guaranteed to outlive the call.
+  ///
+  /// Must be called prior to attach: a disconnection during attach would
+  /// otherwise be routed to the error reporter before the handler is installed.
+  void setOnDisconnect(OnDisconnectFn OnDisconnect) {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Start && TargetState == State::None &&
+           "Must be called prior to attach");
+    this->OnDisconnect = std::move(OnDisconnect);
+  }
+
   /// Add a Service to the session.
   template <typename ServiceT>
   ServiceT &addService(std::unique_ptr<ServiceT> Srv) {
@@ -360,6 +434,13 @@ public:
   /// ControllerAccessT is constructed with a reference to this Session as its
   /// first argument, followed by the given args, as required by the
   /// ControllerAccess base constructor.
+  ///
+  /// A Session may be attached at most once, and attach must not be called
+  /// after -- or concurrently with -- detach or shutdown: by the time a detach
+  /// has been requested it may be arbitrarily far along, so there is no point
+  /// at which a newly attached controller could be connected, or its
+  /// disconnection coherently reported. Violating this is a programming error,
+  /// checked by assertion.
   template <typename ControllerAccessT, typename... ArgTs>
   void attach(BootstrapInfo BI, ArgTs &&...Args) {
     doAttach(std::make_shared<ControllerAccessT>(*this,
@@ -381,6 +462,9 @@ public:
   ///
   /// ControllerAccessT::Create is passed a reference to this Session as its
   /// first argument, followed by the given args.
+  ///
+  /// The attach itself is subject to the same restrictions as
+  /// attach<ControllerAccessT>; the returned Error reports Create failure only.
   template <typename ControllerAccessT, typename... ArgTs>
   Error tryAttach(BootstrapInfo BI, ArgTs &&...Args) {
     auto CA = ControllerAccessT::Create(*this, std::forward<ArgTs>(Args)...);
@@ -419,6 +503,17 @@ public:
   /// Register a callback to be called when the Session detaches from the
   /// controller. If the Session has already detached, the callback will be
   /// called immediately.
+  ///
+  /// Callbacks may call shutdown: this is supported, and is the usual way to
+  /// turn a detach into "finish outstanding work and exit". It schedules the
+  /// shutdown, which proceeds once the detach completes -- every onDetach
+  /// callback runs before any onShutdown callback. A callback must not block
+  /// waiting for that shutdown to complete, since the shutdown cannot start
+  /// until the callback returns.
+  ///
+  /// Any number of callbacks may be registered, and unlike the on-disconnect
+  /// handler (see setOnDisconnect) they carry no indication of how the
+  /// controller connection ended.
   void addOnDetach(OnDetachFn OnDetach);
 
   /// Register a callback to be called when the Session shuts down. If the
@@ -547,9 +642,10 @@ private:
   /// object: clients never hold a ControllerAccess directly.
   void doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
-  void handleDisconnect();
+  void handleDisconnect(Error Err);
   void proceedToDetach(std::unique_lock<std::mutex> &Lock,
-                       std::shared_ptr<ControllerAccess> TmpCA);
+                       std::shared_ptr<ControllerAccess> TmpCA,
+                       Error DisconnectErr);
   void detachServices(std::vector<Service *> ToNotify, bool ShutdownRequested);
   void completeDetach();
 
@@ -627,6 +723,7 @@ private:
   std::shared_ptr<TaskGroup> KeepaliveTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
+  OnDisconnectFn OnDisconnect;
 
   mutable std::mutex M;
   std::condition_variable CV;
