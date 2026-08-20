@@ -184,34 +184,76 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; X86-NEXT:    vextractps $1, %xmm1, %ecx
-; X86-NEXT:    vpextrd $1, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %edi
-; X86-NEXT:    vmovd %eax, %xmm2
-; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; X86-NEXT:    vpextrd $2, %xmm1, %ecx
-; X86-NEXT:    vpextrd $2, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; X86-NEXT:    vpextrd $3, %xmm1, %ecx
-; X86-NEXT:    vpextrd $3, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm5 = xmm1[0],zero,xmm1[1],zero
+; X86-NEXT:    vmovq {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
+; X86-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X86-NEXT:    vpor %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vsubsd %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpsrlq $32, %xmm1, %xmm6
+; X86-NEXT:    vpor %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vsubsd %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vdivsd %xmm6, %xmm3, %xmm6
+; X86-NEXT:    vcvttsd2si %xmm6, %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    vmovsd {{.*#+}} xmm3 = [2.147483648E+9,0.0E+0]
+; X86-NEXT:    vsubsd %xmm3, %xmm6, %xmm6
+; X86-NEXT:    vcvttsd2si %xmm6, %ecx
+; X86-NEXT:    andl %esi, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    vpor %xmm2, %xmm4, %xmm4
+; X86-NEXT:    vsubsd %xmm2, %xmm4, %xmm4
+; X86-NEXT:    vpor %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vsubsd %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vdivsd %xmm5, %xmm4, %xmm4
+; X86-NEXT:    vcvttsd2si %xmm4, %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    vsubsd %xmm3, %xmm4, %xmm4
+; X86-NEXT:    vcvttsd2si %xmm4, %edi
+; X86-NEXT:    andl %esi, %edi
+; X86-NEXT:    orl %edx, %edi
+; X86-NEXT:    vmovd %edi, %xmm4
+; X86-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; X86-NEXT:    vxorpd %xmm5, %xmm5, %xmm5
+; X86-NEXT:    vpunpckhdq {{.*#+}} xmm6 = xmm0[2],xmm5[2],xmm0[3],xmm5[3]
+; X86-NEXT:    vpor %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vsubsd %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vpunpckhdq {{.*#+}} xmm5 = xmm1[2],xmm5[2],xmm1[3],xmm5[3]
+; X86-NEXT:    vpor %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vsubsd %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vdivsd %xmm5, %xmm6, %xmm5
+; X86-NEXT:    vcvttsd2si %xmm5, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    vsubsd %xmm3, %xmm5, %xmm5
+; X86-NEXT:    vcvttsd2si %xmm5, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    vpinsrd $2, %esi, %xmm4, %xmm4
+; X86-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vcvttsd2si %xmm0, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    vsubsd %xmm3, %xmm0, %xmm0
+; X86-NEXT:    vcvttsd2si %xmm0, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    vpinsrd $3, %esi, %xmm4, %xmm0
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -227,31 +269,47 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE-NEXT:    movd %xmm2, %ecx
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; SSE-NEXT:    movd %xmm2, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; SSE-NEXT:    movd %xmm3, %eax
+; SSE-NEXT:    xorps %xmm3, %xmm3
+; SSE-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE-NEXT:    divsd %xmm2, %xmm3
+; SSE-NEXT:    cvttsd2si %xmm3, %rax
 ; SSE-NEXT:    movd %eax, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; SSE-NEXT:    movd %xmm3, %ecx
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE-NEXT:    movd %xmm3, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    xorps %xmm3, %xmm3
+; SSE-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; SSE-NEXT:    movd %xmm4, %eax
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    cvtsi2sd %rax, %xmm4
+; SSE-NEXT:    divsd %xmm3, %xmm4
+; SSE-NEXT:    cvttsd2si %xmm4, %rax
 ; SSE-NEXT:    movd %eax, %xmm3
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-NEXT:    movd %xmm1, %ecx
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    cvtsi2sd %rax, %xmm2
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    cvtsi2sd %rax, %xmm4
+; SSE-NEXT:    divsd %xmm2, %xmm4
+; SSE-NEXT:    cvttsd2si %xmm4, %rax
 ; SSE-NEXT:    movd %eax, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-NEXT:    movd %xmm1, %ecx
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    cvtsi2sd %rax, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
@@ -266,26 +324,33 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; AVX1-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vextractps $1, %xmm1, %ecx
-; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
-; AVX1-NEXT:    movl %eax, %ecx
-; AVX1-NEXT:    vmovd %xmm1, %esi
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %esi
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm2
+; AVX1-NEXT:    vextractps $1, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm3
+; AVX1-NEXT:    vdivsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rax
+; AVX1-NEXT:    vmovd %xmm0, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm2
+; AVX1-NEXT:    vmovd %xmm1, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm3
+; AVX1-NEXT:    vdivsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rcx
+; AVX1-NEXT:    vmovd %ecx, %xmm2
+; AVX1-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm3
+; AVX1-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm4
+; AVX1-NEXT:    vdivsd %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vcvttsd2si %xmm3, %rax
 ; AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
 ; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX1-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; AVX1-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
 ; AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
@@ -451,34 +516,92 @@ define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; X86-NEXT:    vextractps $1, %xmm1, %ecx
-; X86-NEXT:    vpextrd $1, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %edi
-; X86-NEXT:    vmovd %edx, %xmm2
-; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm5 = xmm1[0],zero,xmm1[1],zero
+; X86-NEXT:    vmovq {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
+; X86-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X86-NEXT:    vpor %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vsubsd %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpsrlq $32, %xmm1, %xmm6
+; X86-NEXT:    vpor %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vsubsd %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vdivsd %xmm6, %xmm3, %xmm6
+; X86-NEXT:    vcvttsd2si %xmm6, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    vmovsd {{.*#+}} xmm3 = [2.147483648E+9,0.0E+0]
+; X86-NEXT:    vsubsd %xmm3, %xmm6, %xmm6
+; X86-NEXT:    vcvttsd2si %xmm6, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    vpextrd $1, %xmm1, %edx
+; X86-NEXT:    imull %esi, %edx
+; X86-NEXT:    vpextrd $1, %xmm0, %ecx
+; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    vpor %xmm2, %xmm4, %xmm4
+; X86-NEXT:    vsubsd %xmm2, %xmm4, %xmm4
+; X86-NEXT:    vpor %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vsubsd %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vdivsd %xmm5, %xmm4, %xmm4
+; X86-NEXT:    vcvttsd2si %xmm4, %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    vsubsd %xmm3, %xmm4, %xmm4
+; X86-NEXT:    vcvttsd2si %xmm4, %edi
+; X86-NEXT:    andl %esi, %edi
+; X86-NEXT:    orl %edx, %edi
+; X86-NEXT:    vmovd %xmm1, %edx
+; X86-NEXT:    imull %edi, %edx
+; X86-NEXT:    vmovd %xmm0, %esi
+; X86-NEXT:    subl %edx, %esi
+; X86-NEXT:    vmovd %esi, %xmm4
+; X86-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; X86-NEXT:    vxorpd %xmm5, %xmm5, %xmm5
+; X86-NEXT:    vpunpckhdq {{.*#+}} xmm6 = xmm0[2],xmm5[2],xmm0[3],xmm5[3]
+; X86-NEXT:    vpor %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vsubsd %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vpunpckhdq {{.*#+}} xmm5 = xmm1[2],xmm5[2],xmm1[3],xmm5[3]
+; X86-NEXT:    vpor %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vsubsd %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vdivsd %xmm5, %xmm6, %xmm5
+; X86-NEXT:    vcvttsd2si %xmm5, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    vsubsd %xmm3, %xmm5, %xmm5
+; X86-NEXT:    vcvttsd2si %xmm5, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    vpextrd $2, %xmm1, %ecx
-; X86-NEXT:    vpextrd $2, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    vpinsrd $2, %edx, %xmm2, %xmm2
+; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    vpextrd $2, %xmm0, %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
+; X86-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpor %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vsubsd %xmm2, %xmm5, %xmm5
+; X86-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpor %xmm2, %xmm6, %xmm6
+; X86-NEXT:    vsubsd %xmm2, %xmm6, %xmm2
+; X86-NEXT:    vdivsd %xmm2, %xmm5, %xmm2
+; X86-NEXT:    vcvttsd2si %xmm2, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vcvttsd2si %xmm2, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    vpextrd $3, %xmm1, %ecx
-; X86-NEXT:    vpextrd $3, %xmm0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %ecx
-; X86-NEXT:    vpinsrd $3, %edx, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    vpextrd $3, %xmm0, %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm0
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -494,35 +617,59 @@ define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE-NEXT:    movd %xmm2, %ecx
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; SSE-NEXT:    movd %xmm2, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
-; SSE-NEXT:    movd %edx, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; SSE-NEXT:    movd %xmm3, %ecx
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; SSE-NEXT:    movd %xmm3, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
-; SSE-NEXT:    movd %edx, %xmm3
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-NEXT:    movd %xmm1, %ecx
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
-; SSE-NEXT:    movd %edx, %xmm2
+; SSE-NEXT:    xorps %xmm3, %xmm3
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm3
+; SSE-NEXT:    divsd %xmm2, %xmm3
+; SSE-NEXT:    cvttsd2si %xmm3, %rdx
+; SSE-NEXT:    imull %eax, %edx
+; SSE-NEXT:    subl %edx, %ecx
+; SSE-NEXT:    movd %ecx, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; SSE-NEXT:    movd %xmm2, %eax
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; SSE-NEXT:    movd %xmm4, %ecx
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm4
+; SSE-NEXT:    divsd %xmm2, %xmm4
+; SSE-NEXT:    cvttsd2si %xmm4, %rdx
+; SSE-NEXT:    imull %eax, %edx
+; SSE-NEXT:    subl %edx, %ecx
+; SSE-NEXT:    movd %ecx, %xmm2
+; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    xorps %xmm3, %xmm3
+; SSE-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE-NEXT:    movd %xmm0, %ecx
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm4
+; SSE-NEXT:    divsd %xmm3, %xmm4
+; SSE-NEXT:    cvttsd2si %xmm4, %rdx
+; SSE-NEXT:    imull %eax, %edx
+; SSE-NEXT:    subl %edx, %ecx
+; SSE-NEXT:    movd %ecx, %xmm3
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-NEXT:    movd %xmm1, %ecx
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    cvtsi2sd %rax, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl %ecx
-; SSE-NEXT:    movd %edx, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    movd %xmm0, %ecx
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm0
+; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rdx
+; SSE-NEXT:    imull %eax, %edx
+; SSE-NEXT:    subl %edx, %ecx
+; SSE-NEXT:    movd %ecx, %xmm0
+; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
+; SSE-NEXT:    movdqa %xmm3, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vp_urem_v4i32:
@@ -533,27 +680,42 @@ define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; AVX1-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vextractps $1, %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm2
 ; AVX1-NEXT:    vextractps $1, %xmm1, %ecx
-; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
-; AVX1-NEXT:    movl %edx, %ecx
-; AVX1-NEXT:    vmovd %xmm1, %esi
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %esi
-; AVX1-NEXT:    vmovd %edx, %xmm2
-; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm3
+; AVX1-NEXT:    vdivsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rdx
+; AVX1-NEXT:    imull %ecx, %edx
+; AVX1-NEXT:    subl %edx, %eax
+; AVX1-NEXT:    vmovd %xmm0, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm2
+; AVX1-NEXT:    vmovd %xmm1, %edx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm15, %xmm3
+; AVX1-NEXT:    vdivsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rsi
+; AVX1-NEXT:    imull %edx, %esi
+; AVX1-NEXT:    subl %esi, %ecx
+; AVX1-NEXT:    vmovd %ecx, %xmm2
+; AVX1-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
-; AVX1-NEXT:    vpinsrd $2, %edx, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm3
+; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm4
+; AVX1-NEXT:    vdivsd %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vcvttsd2si %xmm3, %rdx
+; AVX1-NEXT:    imull %ecx, %edx
+; AVX1-NEXT:    subl %edx, %eax
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
 ; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    divl %ecx
-; AVX1-NEXT:    vpinsrd $3, %edx, %xmm2, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; AVX1-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rdx
+; AVX1-NEXT:    imull %ecx, %edx
+; AVX1-NEXT:    subl %edx, %eax
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;

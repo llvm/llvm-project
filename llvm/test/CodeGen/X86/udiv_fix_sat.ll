@@ -12,14 +12,16 @@ declare  <4 x i32> @llvm.udiv.fix.sat.v4i32(<4 x i32>, <4 x i32>, i32)
 define i16 @func(i16 %x, i16 %y) nounwind {
 ; X64-LABEL: func:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %ecx
+; X64-NEXT:    movzwl %si, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm0
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %ecx
-; X64-NEXT:    cmpl $131071, %eax # imm = 0x1FFFF
-; X64-NEXT:    movl $131071, %ecx # imm = 0x1FFFF
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %rcx
+; X64-NEXT:    cmpl $131071, %ecx # imm = 0x1FFFF
+; X64-NEXT:    movl $131071, %eax # imm = 0x1FFFF
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -49,9 +51,11 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    movsbl %sil, %ecx
 ; X64-NEXT:    andl $32767, %ecx # imm = 0x7FFF
+; X64-NEXT:    cvtsi2sd %ecx, %xmm0
 ; X64-NEXT:    shll $14, %eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %ecx
+; X64-NEXT:    cvtsi2sd %eax, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %rax
 ; X64-NEXT:    cmpl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    movl $32767, %ecx # imm = 0x7FFF
 ; X64-NEXT:    cmovbl %eax, %ecx
@@ -88,13 +92,15 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    shll $4, %ecx
+; X64-NEXT:    movzbl %sil, %eax
+; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm0
+; X64-NEXT:    addl %edi, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
@@ -118,12 +124,14 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 define i4 @func4(i4 %x, i4 %y) nounwind {
 ; X64-LABEL: func4:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $15, %sil
 ; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    andl $15, %esi
+; X64-NEXT:    cvtsi2ss %esi, %xmm0
 ; X64-NEXT:    shlb $2, %dil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %al, %ecx
+; X64-NEXT:    cvtsi2ss %eax, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %ecx
 ; X64-NEXT:    cmpb $15, %cl
 ; X64-NEXT:    movl $15, %eax
 ; X64-NEXT:    cmovbl %ecx, %eax
@@ -221,12 +229,14 @@ define i18 @func6(i16 %x, i16 %y) nounwind {
 ; X64-NEXT:    andl $262143, %eax # imm = 0x3FFFF
 ; X64-NEXT:    movswl %si, %ecx
 ; X64-NEXT:    andl $262143, %ecx # imm = 0x3FFFF
+; X64-NEXT:    cvtsi2sd %ecx, %xmm0
 ; X64-NEXT:    shll $7, %eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %ecx
-; X64-NEXT:    cmpl $262143, %eax # imm = 0x3FFFF
-; X64-NEXT:    movl $262143, %ecx # imm = 0x3FFFF
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    cvtsi2sd %eax, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %rcx
+; X64-NEXT:    cmpl $262143, %ecx # imm = 0x3FFFF
+; X64-NEXT:    movl $262143, %eax # imm = 0x3FFFF
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func6:

@@ -37,10 +37,16 @@ define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_urem_zext_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %ah, %eax
+; X64-NEXT:    movzbl %sil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm0
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %dl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %1 = urem i8 %x, %y
   ret i8 %1
@@ -59,11 +65,17 @@ define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_urem_noext_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %ah, %eax
-; X64-NEXT:    addb %sil, %al
+; X64-NEXT:    movzbl %sil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm0
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %dl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    addb %dl, %cl
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %1 = urem i8 %x, %y
   %2 = add i8 %1, %y
@@ -81,9 +93,16 @@ define i64 @test_urem_zext64_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_urem_zext64_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %ah, %eax
+; X64-NEXT:    movzbl %sil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm0
+; X64-NEXT:    movzbl %dil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %cl
+; X64-NEXT:    subb %al, %dl
+; X64-NEXT:    movzbl %dl, %eax
 ; X64-NEXT:    retq
   %1 = urem i8 %x, %y
   %2 = zext i8 %1 to i64
@@ -125,10 +144,16 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_srem_sext_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    idivb %sil
-; X64-NEXT:    movsbl %ah, %eax
+; X64-NEXT:    movsbl %sil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm0
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %dl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %1 = srem i8 %x, %y
   ret i8 %1
@@ -147,11 +172,17 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_srem_noext_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    idivb %sil
-; X64-NEXT:    movsbl %ah, %eax
-; X64-NEXT:    addb %sil, %al
+; X64-NEXT:    movsbl %sil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm0
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %dl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    addb %dl, %cl
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %1 = srem i8 %x, %y
   %2 = add i8 %1, %y
@@ -170,10 +201,16 @@ define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: test_srem_sext64_ah:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    idivb %sil
-; X64-NEXT:    movsbl %ah, %eax
-; X64-NEXT:    cltq
+; X64-NEXT:    movsbl %sil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm0
+; X64-NEXT:    movsbl %dil, %edx
+; X64-NEXT:    cvtsi2ss %edx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %cl
+; X64-NEXT:    subb %al, %dl
+; X64-NEXT:    movsbq %dl, %rax
 ; X64-NEXT:    retq
   %1 = srem i8 %x, %y
   %2 = sext i8 %1 to i64

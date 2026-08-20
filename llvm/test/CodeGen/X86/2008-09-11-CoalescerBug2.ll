@@ -9,31 +9,39 @@
 define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-LABEL: func_44:
 ; SOURCE-SCHED:       # %bb.0: # %entry
-; SOURCE-SCHED-NEXT:    subl $12, %esp
+; SOURCE-SCHED-NEXT:    pushl %ebx
+; SOURCE-SCHED-NEXT:    subl $8, %esp
 ; SOURCE-SCHED-NEXT:    movl g_5, %eax
 ; SOURCE-SCHED-NEXT:    sarl %eax
 ; SOURCE-SCHED-NEXT:    xorl %ecx, %ecx
 ; SOURCE-SCHED-NEXT:    cmpl $2, %eax
 ; SOURCE-SCHED-NEXT:    setge %cl
-; SOURCE-SCHED-NEXT:    movzbl g_73, %edx
-; SOURCE-SCHED-NEXT:    xorl %eax, %eax
-; SOURCE-SCHED-NEXT:    subb {{[0-9]+}}(%esp), %al
-; SOURCE-SCHED-NEXT:    testb %dl, %dl
+; SOURCE-SCHED-NEXT:    movzbl g_73, %ebx
+; SOURCE-SCHED-NEXT:    xorl %edx, %edx
+; SOURCE-SCHED-NEXT:    subb {{[0-9]+}}(%esp), %dl
+; SOURCE-SCHED-NEXT:    testb %bl, %bl
 ; SOURCE-SCHED-NEXT:    jne .LBB0_2
 ; SOURCE-SCHED-NEXT:  # %bb.1: # %bb11
-; SOURCE-SCHED-NEXT:    movzbl %al, %eax
-; SOURCE-SCHED-NEXT:    divb %dl
-; SOURCE-SCHED-NEXT:    movzbl %ah, %eax
+; SOURCE-SCHED-NEXT:    movzbl %bl, %eax
+; SOURCE-SCHED-NEXT:    cvtsi2ss %eax, %xmm0
+; SOURCE-SCHED-NEXT:    movzbl %dl, %eax
+; SOURCE-SCHED-NEXT:    cvtsi2ss %eax, %xmm1
+; SOURCE-SCHED-NEXT:    divss %xmm0, %xmm1
+; SOURCE-SCHED-NEXT:    cvttss2si %xmm1, %eax
+; SOURCE-SCHED-NEXT:    # kill: def $al killed $al killed $eax
+; SOURCE-SCHED-NEXT:    mulb %bl
+; SOURCE-SCHED-NEXT:    subb %al, %dl
 ; SOURCE-SCHED-NEXT:  .LBB0_2: # %bb12
-; SOURCE-SCHED-NEXT:    xorl %edx, %edx
-; SOURCE-SCHED-NEXT:    testb %al, %al
-; SOURCE-SCHED-NEXT:    setne %dl
+; SOURCE-SCHED-NEXT:    xorl %eax, %eax
+; SOURCE-SCHED-NEXT:    testb %dl, %dl
+; SOURCE-SCHED-NEXT:    setne %al
 ; SOURCE-SCHED-NEXT:    subl $4, %esp
 ; SOURCE-SCHED-NEXT:    pushl $0
 ; SOURCE-SCHED-NEXT:    pushl %ecx
-; SOURCE-SCHED-NEXT:    pushl %edx
+; SOURCE-SCHED-NEXT:    pushl %eax
 ; SOURCE-SCHED-NEXT:    calll func_48@PLT
-; SOURCE-SCHED-NEXT:    addl $28, %esp
+; SOURCE-SCHED-NEXT:    addl $24, %esp
+; SOURCE-SCHED-NEXT:    popl %ebx
 ; SOURCE-SCHED-NEXT:    retl
 entry:
 	%0 = load i32, ptr @g_5, align 4

@@ -7,42 +7,52 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main(i1 %tobool.not, i32 %0) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $1, %r8d
+; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  .LBB0_1: # %j.preheader
-; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %esi, %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    divsd %xmm0, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %r8d
+; CHECK-NEXT:    imull %esi, %r8d
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    subl %r8d, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2ss %edx, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    divss %xmm0, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %r8
+; CHECK-NEXT:    imull %edx, %r8d
+; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:    subl %r8d, %edx
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_5: # %if.then4
+; CHECK-NEXT:  .LBB0_4: # %if.then4
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %r8d
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_6
+; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  .LBB0_2: # %j
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    testb %r9b, %r9b
-; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %j
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    testl %r9d, %r9d
-; CHECK-NEXT:    js .LBB0_5
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    movl %r9d, %edx
-; CHECK-NEXT:  .LBB0_6: # %if.end9
-; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    js .LBB0_4
+; CHECK-NEXT:  # %bb.6: # %if.end9
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: # %if.end13
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    je .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %while.body.lr.ph
-; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   br i1 %tobool.not, label %if.end13, label %j.preheader

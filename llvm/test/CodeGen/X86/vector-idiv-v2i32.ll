@@ -323,48 +323,80 @@ define void @test_srem_pow2_v2i32(ptr %x, ptr %y) nounwind {
 define void @test_udiv_v2i32(ptr %x, ptr %y, ptr %z) nounwind {
 ; X64-LABEL: test_udiv_v2i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movq %rax, %xmm0
-; X64-NEXT:    movq (%rsi), %rsi
-; X64-NEXT:    movq %rsi, %xmm1
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
+; X64-NEXT:    movq (%rsi), %rcx
+; X64-NEXT:    movq %rcx, %xmm1
+; X64-NEXT:    movl %ecx, %ecx
+; X64-NEXT:    cvtsi2sd %rcx, %xmm2
+; X64-NEXT:    movl %eax, %eax
+; X64-NEXT:    cvtsi2sd %rax, %xmm3
+; X64-NEXT:    divsd %xmm2, %xmm3
+; X64-NEXT:    cvttsd2si %xmm3, %rax
 ; X64-NEXT:    movd %eax, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    cvtsi2sd %rax, %xmm1
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %esi
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    cvtsi2sd %rax, %xmm0
+; X64-NEXT:    divsd %xmm1, %xmm0
+; X64-NEXT:    cvttsd2si %xmm0, %rax
 ; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64-NEXT:    movq %xmm2, (%rcx)
+; X64-NEXT:    movq %xmm2, (%rdx)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_udiv_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    movd %xmm1, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %esi
-; X86-NEXT:    movd %eax, %xmm2
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    xorps %xmm3, %xmm3
+; X86-NEXT:    movss {{.*#+}} xmm3 = xmm1[0],xmm3[1,2,3]
+; X86-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
+; X86-NEXT:    xorps %xmm4, %xmm4
+; X86-NEXT:    movss {{.*#+}} xmm4 = xmm5[0],xmm4[1,2,3]
+; X86-NEXT:    movsd {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
+; X86-NEXT:    orps %xmm2, %xmm4
+; X86-NEXT:    subsd %xmm2, %xmm4
+; X86-NEXT:    orps %xmm2, %xmm3
+; X86-NEXT:    subsd %xmm2, %xmm3
+; X86-NEXT:    divsd %xmm4, %xmm3
+; X86-NEXT:    cvttsd2si %xmm3, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movsd {{.*#+}} xmm4 = [2.147483648E+9,0.0E+0]
+; X86-NEXT:    subsd %xmm4, %xmm3
+; X86-NEXT:    cvttsd2si %xmm3, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    movd %esi, %xmm3
+; X86-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1,1,1]
+; X86-NEXT:    xorps %xmm6, %xmm6
+; X86-NEXT:    movss {{.*#+}} xmm6 = xmm5[0],xmm6[1,2,3]
+; X86-NEXT:    orps %xmm2, %xmm6
+; X86-NEXT:    subsd %xmm2, %xmm6
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm1, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %esi
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86-NEXT:    movq %xmm2, (%ecx)
+; X86-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X86-NEXT:    orps %xmm2, %xmm0
+; X86-NEXT:    subsd %xmm2, %xmm0
+; X86-NEXT:    divsd %xmm6, %xmm0
+; X86-NEXT:    cvttsd2si %xmm0, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    subsd %xmm4, %xmm0
+; X86-NEXT:    cvttsd2si %xmm0, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    movd %esi, %xmm0
+; X86-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; X86-NEXT:    movq %xmm3, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %a = load <2 x i32>, ptr %x
@@ -377,48 +409,92 @@ define void @test_udiv_v2i32(ptr %x, ptr %y, ptr %z) nounwind {
 define void @test_urem_v2i32(ptr %x, ptr %y, ptr %z) nounwind {
 ; X64-LABEL: test_urem_v2i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movq %rax, %xmm0
-; X64-NEXT:    movq (%rsi), %rsi
-; X64-NEXT:    movq %rsi, %xmm1
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
-; X64-NEXT:    movd %edx, %xmm2
+; X64-NEXT:    movq (%rsi), %rcx
+; X64-NEXT:    movq %rcx, %xmm1
+; X64-NEXT:    movl %ecx, %esi
+; X64-NEXT:    cvtsi2sd %rsi, %xmm2
+; X64-NEXT:    movl %eax, %esi
+; X64-NEXT:    cvtsi2sd %rsi, %xmm3
+; X64-NEXT:    divsd %xmm2, %xmm3
+; X64-NEXT:    cvttsd2si %xmm3, %rsi
+; X64-NEXT:    imull %ecx, %esi
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    movd %eax, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    cvtsi2sd %rax, %xmm1
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %esi
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
-; X64-NEXT:    movd %edx, %xmm0
+; X64-NEXT:    movd %xmm0, %ecx
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    cvtsi2sd %rcx, %xmm0
+; X64-NEXT:    divsd %xmm1, %xmm0
+; X64-NEXT:    cvttsd2si %xmm0, %rsi
+; X64-NEXT:    imull %eax, %esi
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    movd %ecx, %xmm0
 ; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64-NEXT:    movq %xmm2, (%rcx)
+; X64-NEXT:    movq %xmm2, (%rdx)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_urem_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    movd %xmm1, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %esi
-; X86-NEXT:    movd %edx, %xmm2
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    xorps %xmm2, %xmm2
+; X86-NEXT:    xorps %xmm4, %xmm4
+; X86-NEXT:    movss {{.*#+}} xmm4 = xmm0[0],xmm4[1,2,3]
+; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    xorps %xmm5, %xmm5
+; X86-NEXT:    movss {{.*#+}} xmm5 = xmm1[0],xmm5[1,2,3]
+; X86-NEXT:    movsd {{.*#+}} xmm3 = [4.503599627370496E+15,0.0E+0]
+; X86-NEXT:    orps %xmm3, %xmm5
+; X86-NEXT:    subsd %xmm3, %xmm5
+; X86-NEXT:    orps %xmm3, %xmm4
+; X86-NEXT:    subsd %xmm3, %xmm4
+; X86-NEXT:    divsd %xmm5, %xmm4
+; X86-NEXT:    cvttsd2si %xmm4, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movsd {{.*#+}} xmm5 = [2.147483648E+9,0.0E+0]
+; X86-NEXT:    subsd %xmm5, %xmm4
+; X86-NEXT:    cvttsd2si %xmm4, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    movd %xmm1, %ecx
+; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    movd %xmm0, %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    movd %edx, %xmm4
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm1, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %esi
+; X86-NEXT:    xorps %xmm6, %xmm6
+; X86-NEXT:    movss {{.*#+}} xmm6 = xmm1[0],xmm6[1,2,3]
+; X86-NEXT:    orps %xmm3, %xmm6
+; X86-NEXT:    subsd %xmm3, %xmm6
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
+; X86-NEXT:    orps %xmm3, %xmm2
+; X86-NEXT:    subsd %xmm3, %xmm2
+; X86-NEXT:    divsd %xmm6, %xmm2
+; X86-NEXT:    cvttsd2si %xmm2, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    subsd %xmm5, %xmm2
+; X86-NEXT:    cvttsd2si %xmm2, %esi
+; X86-NEXT:    andl %edx, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    movd %xmm1, %ecx
+; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    movd %xmm0, %edx
+; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    movd %edx, %xmm0
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86-NEXT:    movq %xmm2, (%ecx)
+; X86-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1]
+; X86-NEXT:    movq %xmm4, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %a = load <2 x i32>, ptr %x

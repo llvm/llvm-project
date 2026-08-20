@@ -21,16 +21,17 @@
 define i32 @_Z3fooiidd(i32 %a, i32 %b, double %d, double %e) #0 {
 ; CHECK-LABEL: _Z3fooiidd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rsi,%rdi), %ecx
+; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    cvttsd2si %xmm0, %eax
-; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:    cmpl $3, %edi
-; CHECK-NEXT:    cmovll %ecx, %eax
-; CHECK-NEXT:    cvttsd2si %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
+; CHECK-NEXT:    cmovll %esi, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
+; CHECK-NEXT:    cvttpd2dq %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
+; CHECK-NEXT:    divsd %xmm1, %xmm0
+; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    retq
 entry:
   %add = add nsw i32 %b, %a

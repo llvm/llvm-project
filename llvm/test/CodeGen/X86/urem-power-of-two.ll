@@ -81,20 +81,33 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X86-LABEL: and_pow_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $4, %cl
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    divb %cl
-; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andb $4, %dl
+; X86-NEXT:    cvtsi2ss %ecx, %xmm0
+; X86-NEXT:    movzbl %dl, %eax
+; X86-NEXT:    cvtsi2ss %eax, %xmm1
+; X86-NEXT:    divss %xmm1, %xmm0
+; X86-NEXT:    cvttss2si %xmm0, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    mulb %dl
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_pow_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $4, %sil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %ah, %eax
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    andb $4, %dl
+; X64-NEXT:    andl $4, %esi
+; X64-NEXT:    cvtsi2ss %esi, %xmm0
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    cvtsi2ss %ecx, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    mulb %dl
+; X64-NEXT:    subb %al, %cl
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %and = and i8 %y, 4
   %urem = urem i8 %x, %and

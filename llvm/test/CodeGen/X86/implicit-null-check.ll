@@ -261,8 +261,12 @@ define i32 @imp_null_check_udiv_result(ptr %x, i32 %p) {
 ; CHECK-NEXT:  Ltmp8:
 ; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB10_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
+; CHECK-NEXT:    divsd %xmm0, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %rax
+; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB10_1: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax

@@ -50,62 +50,110 @@ define <8 x i32> @bar(<8 x i32> %t, <8 x i32> %u) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,3,3,3]
-; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; CHECK-NEXT:    movd %xmm5, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm5, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm5
+; CHECK-NEXT:    xorps %xmm5, %xmm5
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm5
+; CHECK-NEXT:    divsd %xmm0, %xmm5
+; CHECK-NEXT:    cvttsd2si %xmm5, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; CHECK-NEXT:    movd %xmm5, %eax
+; CHECK-NEXT:    xorps %xmm5, %xmm5
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,2,3]
+; CHECK-NEXT:    movd %xmm6, %ecx
+; CHECK-NEXT:    xorps %xmm6, %xmm6
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm6
+; CHECK-NEXT:    divsd %xmm5, %xmm6
+; CHECK-NEXT:    cvttsd2si %xmm6, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm5
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
-; CHECK-NEXT:    movd %xmm4, %eax
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
-; CHECK-NEXT:    movd %xmm4, %eax
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm0
+; CHECK-NEXT:    movd %xmm4, %ecx
+; CHECK-NEXT:    xorps %xmm6, %xmm6
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm6
+; CHECK-NEXT:    divsd %xmm0, %xmm6
+; CHECK-NEXT:    cvttsd2si %xmm6, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm2
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; CHECK-NEXT:    movd %xmm4, %ecx
+; CHECK-NEXT:    xorps %xmm4, %xmm4
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm4
+; CHECK-NEXT:    divsd %xmm2, %xmm4
+; CHECK-NEXT:    cvttsd2si %xmm4, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[3,3,3,3]
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movd %xmm4, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    movd %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm4
+; CHECK-NEXT:    xorps %xmm4, %xmm4
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm4
+; CHECK-NEXT:    divsd %xmm2, %xmm4
+; CHECK-NEXT:    cvttsd2si %xmm4, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; CHECK-NEXT:    movd %xmm4, %eax
+; CHECK-NEXT:    xorps %xmm4, %xmm4
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm4
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movd %xmm5, %ecx
+; CHECK-NEXT:    xorps %xmm5, %xmm5
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm5
+; CHECK-NEXT:    divsd %xmm4, %xmm5
+; CHECK-NEXT:    cvttsd2si %xmm5, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm4
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    movd %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
+; CHECK-NEXT:    movd %xmm3, %eax
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
 ; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movd %edx, %xmm1
+; CHECK-NEXT:    xorps %xmm5, %xmm5
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm5
+; CHECK-NEXT:    divsd %xmm2, %xmm5
+; CHECK-NEXT:    cvttsd2si %xmm5, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; CHECK-NEXT:    movd %xmm3, %eax
+; CHECK-NEXT:    xorps %xmm3, %xmm3
+; CHECK-NEXT:    cvtsi2sd %rax, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm1
+; CHECK-NEXT:    divsd %xmm3, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %rdx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm1

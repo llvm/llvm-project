@@ -334,17 +334,19 @@ define <8 x i16> @ashr_op1_constant(ptr %p) nounwind {
 define <4 x i32> @sdiv_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: sdiv_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl $42, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    idivl (%rdi)
+; SSE-NEXT:    cvtsi2sdl (%rdi), %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    divsd %xmm0, %xmm1
+; SSE-NEXT:    cvttsd2si %xmm1, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl $42, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    idivl (%rdi)
+; AVX-NEXT:    vcvtsi2sdl (%rdi), %xmm15, %xmm0
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcvttsd2si %xmm0, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i32, ptr %p
@@ -390,20 +392,28 @@ define <8 x i16> @sdiv_op1_constant(ptr %p) nounwind {
 define <8 x i16> @srem_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: srem_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movw $42, %ax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    idivw (%rdi)
-; SSE-NEXT:    # kill: def $dx killed $dx def $edx
-; SSE-NEXT:    movd %edx, %xmm0
+; SSE-NEXT:    movswl (%rdi), %eax
+; SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; SSE-NEXT:    movss {{.*#+}} xmm1 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    divss %xmm0, %xmm1
+; SSE-NEXT:    cvttss2si %xmm1, %ecx
+; SSE-NEXT:    imull %eax, %ecx
+; SSE-NEXT:    movl $42, %eax
+; SSE-NEXT:    subl %ecx, %eax
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: srem_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movw $42, %ax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    idivw (%rdi)
-; AVX-NEXT:    # kill: def $dx killed $dx def $edx
-; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    movswl (%rdi), %eax
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcvttss2si %xmm0, %ecx
+; AVX-NEXT:    imull %eax, %ecx
+; AVX-NEXT:    movl $42, %eax
+; AVX-NEXT:    subl %ecx, %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i16, ptr %p
   %b = srem i16 42, %x
@@ -446,19 +456,13 @@ define <4 x i32> @srem_op1_constant(ptr %p) nounwind {
 define <4 x i32> @udiv_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: udiv_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl $42, %eax
-; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divl (%rdi)
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    divsd %xmm0, %xmm1
+; SSE-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
-;
-; AVX-LABEL: udiv_op0_constant:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $42, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl (%rdi)
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    retq
   %x = load i32, ptr %p
   %b = udiv i32 42, %x
   %r = insertelement <4 x i32> undef, i32 %b, i32 0

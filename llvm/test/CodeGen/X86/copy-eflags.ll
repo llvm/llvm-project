@@ -247,25 +247,20 @@ define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %pt
 ;
 ; X64-LABEL: PR37100:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movq %rdx, %r10
-; X64-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_1: # %bb1
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movsbq %dil, %rax
-; X64-NEXT:    xorl %r11d, %r11d
-; X64-NEXT:    cmpq %rax, %r10
-; X64-NEXT:    setl %r11b
-; X64-NEXT:    negl %r11d
-; X64-NEXT:    cmpq %rax, %r10
-; X64-NEXT:    movzbl %al, %edi
-; X64-NEXT:    cmovgel %ecx, %edi
+; X64-NEXT:    movsbq %dil, %rcx
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    cmpq %rcx, %rdx
+; X64-NEXT:    setl %sil
+; X64-NEXT:    negl %esi
+; X64-NEXT:    cmpq %rcx, %rdx
+; X64-NEXT:    movzbl %cl, %edi
+; X64-NEXT:    cmovgel %eax, %edi
 ; X64-NEXT:    movb %dil, (%r8)
-; X64-NEXT:    cmovgel (%r9), %r11d
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %r11d
+; X64-NEXT:    cmovgel (%r9), %esi
 ; X64-NEXT:    jmp .LBB3_1
 bb:
   br label %bb1
@@ -321,16 +316,18 @@ define dso_local void @PR37431(ptr %arg1, ptr %arg2, ptr %arg3, i32 %arg4, i64 %
 ;
 ; X64-LABEL: PR37431:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movslq (%rdi), %rdx
+; X64-NEXT:    movslq (%rdi), %rax
 ; X64-NEXT:    xorl %edi, %edi
-; X64-NEXT:    cmpq %rdx, %r8
+; X64-NEXT:    cmpq %rax, %r8
 ; X64-NEXT:    sbbl %edi, %edi
 ; X64-NEXT:    movb %dil, (%rsi)
-; X64-NEXT:    cltd
-; X64-NEXT:    idivl %edi
-; X64-NEXT:    movb %dl, (%rcx)
+; X64-NEXT:    cvtsi2sd %edi, %xmm0
+; X64-NEXT:    cvtsi2sd %ecx, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %eax
+; X64-NEXT:    imull %edi, %eax
+; X64-NEXT:    subl %eax, %ecx
+; X64-NEXT:    movb %cl, (%rdx)
 ; X64-NEXT:    retq
 entry:
   %tmp = load i32, ptr %arg1

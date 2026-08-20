@@ -640,10 +640,13 @@ define i64 @load_fold_sdiv2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB35_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
   %ret = sdiv i64 %v, %v2
@@ -671,10 +674,13 @@ define i64 @load_fold_sdiv3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    idivq %rcx
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB36_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %ecx
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %ecx, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8
   %v2 = load atomic i64, ptr %p2 unordered, align 8
@@ -726,10 +732,13 @@ define i64 @load_fold_udiv2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB38_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
   %ret = udiv i64 %v, %v2
@@ -758,10 +767,13 @@ define i64 @load_fold_udiv3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    divq %rcx
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB39_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %ecx
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %ecx, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8
   %v2 = load atomic i64, ptr %p2 unordered, align 8
@@ -824,10 +836,14 @@ define i64 @load_fold_srem2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB41_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    movl %edx, %eax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rcx
+; CHECK-O3-NEXT:    imull %esi, %ecx
+; CHECK-O3-NEXT:    subl %ecx, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
   %ret = srem i64 %v, %v2
@@ -857,10 +873,14 @@ define i64 @load_fold_srem3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB42_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %ecx
-; CHECK-O3-NEXT:    movl %edx, %eax
+; CHECK-O3-NEXT:    movl %ecx, %edx
+; CHECK-O3-NEXT:    vcvtsi2sd %rdx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %edx
+; CHECK-O3-NEXT:    vcvtsi2sd %rdx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rdx
+; CHECK-O3-NEXT:    imull %ecx, %edx
+; CHECK-O3-NEXT:    subl %edx, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8
   %v2 = load atomic i64, ptr %p2 unordered, align 8
@@ -920,10 +940,14 @@ define i64 @load_fold_urem2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB44_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    movl %edx, %eax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rcx
+; CHECK-O3-NEXT:    imull %esi, %ecx
+; CHECK-O3-NEXT:    subl %ecx, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8
   %ret = urem i64 %v, %v2
@@ -954,10 +978,14 @@ define i64 @load_fold_urem3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB45_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %ecx
-; CHECK-O3-NEXT:    movl %edx, %eax
+; CHECK-O3-NEXT:    movl %ecx, %edx
+; CHECK-O3-NEXT:    vcvtsi2sd %rdx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %edx
+; CHECK-O3-NEXT:    vcvtsi2sd %rdx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rdx
+; CHECK-O3-NEXT:    imull %ecx, %edx
+; CHECK-O3-NEXT:    subl %edx, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8
   %v2 = load atomic i64, ptr %p2 unordered, align 8
@@ -1477,10 +1505,13 @@ define void @rmw_fold_sdiv2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB74_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %prev = load atomic i64, ptr %p unordered, align 8
@@ -1529,10 +1560,13 @@ define void @rmw_fold_udiv2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB76_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %eax
+; CHECK-O3-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rax
+; CHECK-O3-NEXT:    movl %eax, %eax
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %prev = load atomic i64, ptr %p unordered, align 8
@@ -1607,11 +1641,15 @@ define void @rmw_fold_srem2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB78_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-O3-NEXT:    movq %rdx, (%rdi)
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rcx
+; CHECK-O3-NEXT:    imull %esi, %ecx
+; CHECK-O3-NEXT:    subl %ecx, %eax
+; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %prev = load atomic i64, ptr %p unordered, align 8
   %val = srem i64 %prev, %v
@@ -1675,11 +1713,15 @@ define void @rmw_fold_urem2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
 ; CHECK-O3-NEXT:  .LBB80_1:
-; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    divl %esi
-; CHECK-O3-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-O3-NEXT:    movq %rdx, (%rdi)
+; CHECK-O3-NEXT:    movl %esi, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; CHECK-O3-NEXT:    movl %eax, %ecx
+; CHECK-O3-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; CHECK-O3-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-O3-NEXT:    vcvttsd2si %xmm0, %rcx
+; CHECK-O3-NEXT:    imull %esi, %ecx
+; CHECK-O3-NEXT:    subl %ecx, %eax
+; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %prev = load atomic i64, ptr %p unordered, align 8
   %val = urem i64 %prev, %v
