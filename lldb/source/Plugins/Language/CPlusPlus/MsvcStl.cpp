@@ -305,24 +305,3 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
   }
   return true;
 }
-
-bool lldb_private::formatters::IsMsvcStlFilesystemPath(ValueObject &valobj) {
-  if (auto valobj_sp = valobj.GetNonSyntheticValue())
-    return valobj_sp->GetChildMemberWithName("_Text") != nullptr;
-  return false;
-}
-
-bool lldb_private::formatters::MsvcStlFilesystemPathSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
-  ValueObjectSP text_sp = valobj.GetChildMemberWithName("_Text");
-  if (!text_sp)
-    text_sp = valobj.GetChildMemberWithName("_M_pathname");
-  if (!text_sp)
-    return false;
-
-  if (const char *summary = text_sp->GetSummaryAsCString()) {
-    stream << summary;
-    return true;
-  }
-  return false;
-}

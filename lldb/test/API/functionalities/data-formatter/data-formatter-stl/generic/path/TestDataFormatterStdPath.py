@@ -16,17 +16,24 @@ class StdPathTestCase(TestBase):
         )
 
         p = self.frame().FindVariable("p")
-        self.assertTrue(p.GetError().Success())
-        self.assertIsNotNone(p.summary)
-        self.assertIn("file.txt", p.summary)
+        self.assertSuccess(p.GetError())
+        self.assertRegex(p.summary, r'^(L)?"dir/file\.txt"$')
 
         empty = self.frame().FindVariable("empty")
-        self.assertTrue(empty.GetError().Success())
+        self.assertSuccess(empty.GetError())
+        self.assertRegex(empty.summary, r'^(L)?""$')
 
         abs_win = self.frame().FindVariable("abs_win")
-        self.assertTrue(abs_win.GetError().Success())
-        self.assertIsNotNone(abs_win.summary)
-        self.assertIn("file.txt", abs_win.summary)
+        self.assertSuccess(abs_win.GetError())
+        self.assertRegex(abs_win.summary, r'^(L)?"C:\\\\tmp\\\\file\.txt"$')
+
+        abs_unix = self.frame().FindVariable("abs_unix")
+        self.assertSuccess(abs_unix.GetError())
+        self.assertRegex(abs_unix.summary, r'^(L)?"/usr/local/lib/file\.txt"$')
+
+        extensionless = self.frame().FindVariable("extensionless")
+        self.assertSuccess(extensionless.GetError())
+        self.assertRegex(extensionless.summary, r'^(L)?"README"$')
 
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):

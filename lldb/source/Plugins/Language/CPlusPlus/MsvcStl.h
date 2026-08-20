@@ -142,11 +142,6 @@ SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
 
-// MSVC STL std::filesystem::path
-bool IsMsvcStlFilesystemPath(ValueObject &valobj);
-bool MsvcStlFilesystemPathSummaryProvider(ValueObject &valobj, Stream &stream,
-                                          const TypeSummaryOptions &options);
-
 } // namespace formatters
 } // namespace lldb_private
 
