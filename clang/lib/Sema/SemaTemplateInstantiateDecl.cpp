@@ -6523,6 +6523,8 @@ void Sema::BuildVariableInstantiation(
     // We're producing a template. Don't instantiate the initializer yet.
   } else if (NewVar->getType()->isUndeducedType()) {
     // We need the type to complete the declaration of the variable.
+    RecursiveInstGuard AlreadyInstantiating(*this, NewVar,
+                                            RecursiveInstGuard::Kind::Template);
     InstantiateVariableInitializer(NewVar, OldVar, TemplateArgs);
   } else if (InstantiatingSpecFromTemplate ||
              (OldVar->isInline() && OldVar->isThisDeclarationADefinition() &&

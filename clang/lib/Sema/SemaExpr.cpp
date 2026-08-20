@@ -20715,8 +20715,7 @@ static void DoMarkVarDeclReferenced(
 
   bool NeedDefinition =
       OdrUse == OdrUseContext::Used || NeededForConstantEvaluation ||
-      (TSK != clang::TSK_Undeclared && !UsableInConstantExpr &&
-       Var->getType()->isUndeducedType());
+      (TSK != clang::TSK_Undeclared && Var->getType()->isUndeducedType());
 
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");
