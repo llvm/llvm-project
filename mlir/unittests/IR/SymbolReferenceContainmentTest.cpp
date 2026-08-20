@@ -334,35 +334,42 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
   }
 }
 
-// Growth preserves every earlier fact. The cache's internal table starts
-// minimal and doubles as it fills, so inserting far past the growth trigger
-// forces several rehashes; open addressing must re-home every live slot on each
-// grow. Synthetic 8-aligned pointers in a regular stride stand in for the
-// bump-allocated storage addresses the cache keys on; the keys are opaque and
-// never dereferenced. Because a probe runs to the empty slot, preservation
-// holds for any home function, so this exercises the rehash, not the mix -- the
-// mix instead keeps the table's capacity bounded when storage addresses arrive
-// in a stride, which this test does not measure.
-TEST_F(SymbolReferenceContainmentTest, TableGrowthPreservesEntries) {
+// Growth preserves every recorded clear fact. The clear-object set starts empty
+// and grows as it fills, so inserting far past its initial capacity forces
+// several rehashes; every live key must survive each grow. Synthetic pointers
+// in a regular stride stand in for the bump-allocated storage addresses the
+// cache keys on; the keys are opaque and never dereferenced. Only clear facts
+// are recorded, so this checks that each survives the rehash and that
+// may-contain facts, which the store never keeps, stay misses.
+TEST_F(SymbolReferenceContainmentTest, SetGrowthPreservesEntries) {
   detail::SymbolRefContainmentCache cache;
-  const int n = 5000; // many doublings past the minimal table
-  std::vector<Type> keys;
-  keys.reserve(n);
+  const int n = 5000; // many doublings past the minimal set
+  std::vector<Type> clearKeys;
+  std::vector<Type> mayContainKeys;
   for (int i = 0; i < n; ++i) {
     auto *p = reinterpret_cast<const void *>(
         static_cast<uintptr_t>(0x100000 + i * 8));
     Type key = Type::getFromOpaquePointer(p);
-    bool value = (i % 3 == 0); // a deterministic mix of true/false facts
-    // The first insert of a key returns the value it records.
-    EXPECT_EQ(cache.insert(key, value, /*lock=*/false), value);
-    keys.push_back(key);
+    if (i % 3 == 0) {
+      // A may-contain fact is never stored: insert returns true but records
+      // nothing, so a later lookup stays a miss and the caller recomputes.
+      EXPECT_TRUE(cache.insert(key, /*value=*/true, /*lock=*/false));
+      mayContainKeys.push_back(key);
+    } else {
+      // A clear fact is recorded and returned unchanged.
+      EXPECT_FALSE(cache.insert(key, /*value=*/false, /*lock=*/false));
+      clearKeys.push_back(key);
+    }
   }
-  // After all the growth, every earlier fact is still found with its value.
-  for (int i = 0; i < n; ++i) {
-    std::optional<bool> got = cache.lookup(keys[i], /*lock=*/false);
-    ASSERT_TRUE(got.has_value()) << "lost entry " << i;
-    EXPECT_EQ(*got, (i % 3 == 0)) << "entry " << i;
+  // After all the growth, every clear fact is still found as false.
+  for (Type key : clearKeys) {
+    std::optional<bool> got = cache.lookup(key, /*lock=*/false);
+    ASSERT_TRUE(got.has_value()) << "lost clear entry";
+    EXPECT_FALSE(*got);
   }
+  // A may-contain fact was never stored, so it stays a miss.
+  for (Type key : mayContainKeys)
+    EXPECT_FALSE(cache.lookup(key, /*lock=*/false).has_value());
   // A key never inserted is a miss, not a stray cluster hit.
   Type absent = Type::getFromOpaquePointer(
       reinterpret_cast<const void *>(static_cast<uintptr_t>(0x100000 + n * 8)));
@@ -371,18 +378,11 @@ TEST_F(SymbolReferenceContainmentTest, TableGrowthPreservesEntries) {
 
 // A DistinctAttr is keyed by the address of its own storage, which comes from a
 // separate always-allocating allocator rather than the attribute uniquer; the
-// cache must tag and recover that pointer just like a uniqued one. Its
-// 8-alignment, which frees bit 0 for the answer tag, is asserted at compile
-// time beside the table; this exercises the runtime path.
+// cache must record and recover that pointer just like a uniqued one.
 TEST_F(SymbolReferenceContainmentTest, DistinctAttrIsHandled) {
   DistinctAttr d1 = DistinctAttr::create(UnitAttr::get(&context));
   DistinctAttr d2 = DistinctAttr::create(UnitAttr::get(&context));
   ASSERT_NE(d1, d2); // always-allocating: distinct instances, distinct pointers
-
-  // The separate allocator must still hand back 8-aligned storage, so bit 0 of
-  // the opaque pointer is free for the answer tag.
-  EXPECT_EQ(
-      reinterpret_cast<uintptr_t>(Attribute(d1).getAsOpaquePointer()) & 1u, 0u);
 
   // Through the public query a DistinctAttr exposes no SymbolRefAttr
   // sub-element, so it answers false, stably across the cold fill and the warm
@@ -392,14 +392,18 @@ TEST_F(SymbolReferenceContainmentTest, DistinctAttrIsHandled) {
   EXPECT_EQ(SymbolTable::mayContainSymbolRefs(d1), cold);
   EXPECT_FALSE(SymbolTable::mayContainSymbolRefs(d2));
 
-  // Drive the tag round-trip with bit 0 set on a distinct-allocator pointer: a
-  // forced true must survive the insert and be returned by the warm lookup,
-  // while an uninserted distinct pointer stays a miss.
+  // A may-contain answer is never recorded: a forced-true insert on a
+  // distinct-allocator pointer returns true but stores nothing, so the warm
+  // lookup stays a miss and the caller recomputes. A clear answer, by contrast,
+  // is recorded and returned false warm, while an uninserted distinct pointer
+  // stays a miss -- the pointer round-trips just like a uniqued one.
   detail::SymbolRefContainmentCache cache;
   EXPECT_TRUE(cache.insert(d1, /*value=*/true, /*lock=*/false));
+  EXPECT_FALSE(cache.lookup(d1, /*lock=*/false).has_value());
+  EXPECT_FALSE(cache.insert(d1, /*value=*/false, /*lock=*/false));
   std::optional<bool> warm = cache.lookup(d1, /*lock=*/false);
   ASSERT_TRUE(warm.has_value());
-  EXPECT_TRUE(*warm);
+  EXPECT_FALSE(*warm);
   EXPECT_FALSE(cache.lookup(d2, /*lock=*/false).has_value());
 }
 
