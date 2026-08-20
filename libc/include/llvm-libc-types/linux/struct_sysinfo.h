@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Definition of struct sysinfo.
+/// Definition of struct sysinfo for Linux.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_STRUCT_SYSINFO_H
-#define LLVM_LIBC_TYPES_STRUCT_SYSINFO_H
+#ifndef LLVM_LIBC_TYPES_LINUX_STRUCT_SYSINFO_H
+#define LLVM_LIBC_TYPES_LINUX_STRUCT_SYSINFO_H
 
-#if defined(__linux__)
-#include "linux/struct_sysinfo.h"
-#endif
+#include <linux/sysinfo.h>
 
-#endif // LLVM_LIBC_TYPES_STRUCT_SYSINFO_H
+#endif // LLVM_LIBC_TYPES_LINUX_STRUCT_SYSINFO_H

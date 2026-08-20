@@ -5,8 +5,6 @@ types:
   - type_name: struct_sysinfo
 functions:
   - name: sysinfo
-    standards:
-      - linux
     return_type: int
     arguments:
       - type: struct sysinfo *
