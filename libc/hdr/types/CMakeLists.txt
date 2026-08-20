@@ -431,7 +431,6 @@ add_proxy_header_library(
     struct_sigevent.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sigevent
-    libc.include.signal
 )
 
 add_proxy_header_library(

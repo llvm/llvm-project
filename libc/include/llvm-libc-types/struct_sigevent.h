@@ -25,7 +25,9 @@ struct sigevent {
   union sigval sigev_value;
   void (*sigev_notify_function)(union sigval);
   pthread_attr_t *sigev_notify_attributes;
+#ifdef __linux__
   pid_t sigev_notify_thread_id;
+#endif
 };
 
 #endif // LLVM_LIBC_TYPES_STRUCT_SIGEVENT_H

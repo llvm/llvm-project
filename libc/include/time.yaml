@@ -19,7 +19,6 @@ types:
   - type_name: size_t
   - type_name: locale_t
   - type_name: tm_gmtoff_t
-  - type_name: struct_sigevent
 enums: []
 objects: []
 functions:
