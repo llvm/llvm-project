@@ -332,6 +332,10 @@ add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
+# Build device-only InputGen runtime bitcode independently.
+# Keeping this child here makes inputgen-gpu-runtime-bc available without
+# BUILD_LIBOMPTARGET.
+add_subdirectory(tools/inputgen/runtime)
 add_subdirectory(tools)
 add_subdirectory(docs)
 

@@ -28,5 +28,13 @@ config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
 config.offload_tblgen = "@OFFLOAD_TBLGEN_EXECUTABLE@"
 config.omp_kernel_replay = "@OMP_KERNEL_REPLAY@"
+config.inputgen_gpu_src = "@INPUTGEN_GPU_RT_SOURCE_DIR@"
+config.inputgen_gpu_interface_include = "@INPUTGEN_GPU_RT_INTERFACE_INCLUDE_DIR@"
+config.inputgen_gpu_llvm_include = "@INPUTGEN_GPU_RT_LLVM_INCLUDE_DIR@"
+config.inputgen_gpu_runtime_available = @INPUTGEN_GPU_RT_AVAILABLE@
+config.inputgen_gpu_target_triple = "@INPUTGEN_GPU_RT_TEST_COMPILER_TRIPLE@"
+config.inputgen_gpu_state_bc = "@INPUTGEN_GPU_RT_TEST_STATE_BC@"
+config.inputgen_gpu_callbacks_bc = "@INPUTGEN_GPU_RT_TEST_CALLBACKS_BC@"
+config.inputgen_gpu_runtime_bc = "@INPUTGEN_GPU_RT_TEST_RUNTIME_BC@"
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")
