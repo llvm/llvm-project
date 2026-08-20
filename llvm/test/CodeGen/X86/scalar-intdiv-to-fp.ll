@@ -28,6 +28,21 @@ define i32 @udiv_i32(i32 %a, i32 %b) nounwind {
   ret i32 %r
 }
 
+define i32 @srem_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: srem_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    imull %esi, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    retq
+  %r = srem i32 %a, %b
+  ret i32 %r
+}
+
 define i32 @urem_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: urem_i32:
 ; CHECK:       # %bb.0:
@@ -45,43 +60,62 @@ define i32 @urem_i32(i32 %a, i32 %b) nounwind {
   ret i32 %r
 }
 
-define i64 @sdiv_i64(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: sdiv_i64:
+define signext i16 @sdiv_i16(i16 signext %a, i16 signext %b) nounwind {
+; CHECK-LABEL: sdiv_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    cqto
-; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
-  %r = sdiv i64 %a, %b
-  ret i64 %r
+  %r = sdiv i16 %a, %b
+  ret i16 %r
 }
 
-define i32 @sdiv_i32_const(i32 %a) nounwind {
-; CHECK-LABEL: sdiv_i32_const:
+define zeroext i16 @udiv_i16(i16 zeroext %a, i16 zeroext %b) nounwind {
+; CHECK-LABEL: udiv_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrl $31, %ecx
-; CHECK-NEXT:    sarl $2, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
-  %r = sdiv i32 %a, 7
-  ret i32 %r
+  %r = udiv i16 %a, %b
+  ret i16 %r
 }
 
-define i32 @sdiv_i32_noimplicitfloat(i32 %a, i32 %b) nounwind noimplicitfloat {
-; CHECK-LABEL: sdiv_i32_noimplicitfloat:
+define signext i16 @srem_i16(i16 signext %a, i16 signext %b) nounwind {
+; CHECK-LABEL: srem_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %ecx
+; CHECK-NEXT:    imull %esi, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
-  %r = sdiv i32 %a, %b
-  ret i32 %r
+  %r = srem i16 %a, %b
+  ret i16 %r
+}
+
+define zeroext i16 @urem_i16(i16 zeroext %a, i16 zeroext %b) nounwind {
+; CHECK-LABEL: urem_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %ecx
+; CHECK-NEXT:    imull %esi, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %r = urem i16 %a, %b
+  ret i16 %r
 }
 
 define signext i8 @sdiv_i8(i8 signext %a, i8 signext %b) nounwind {
@@ -110,28 +144,147 @@ define zeroext i8 @udiv_i8(i8 zeroext %a, i8 zeroext %b) nounwind {
   ret i8 %r
 }
 
-define signext i16 @sdiv_i16(i16 signext %a, i16 signext %b) nounwind {
-; CHECK-LABEL: sdiv_i16:
+define signext i8 @srem_i8(i8 signext %a, i8 signext %b) nounwind {
+; CHECK-LABEL: srem_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
 ; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
 ; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vcvttss2si %xmm0, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    mulb %sil
+; CHECK-NEXT:    subb %al, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-  %r = sdiv i16 %a, %b
-  ret i16 %r
+  %r = srem i8 %a, %b
+  ret i8 %r
 }
 
-define zeroext i16 @udiv_i16(i16 zeroext %a, i16 zeroext %b) nounwind {
-; CHECK-LABEL: udiv_i16:
+define zeroext i8 @urem_i8(i8 zeroext %a, i8 zeroext %b) nounwind {
+; CHECK-LABEL: urem_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
 ; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
 ; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vcvttss2si %xmm0, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    mulb %sil
+; CHECK-NEXT:    subb %al, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-  %r = udiv i16 %a, %b
-  ret i16 %r
+  %r = urem i8 %a, %b
+  ret i8 %r
+}
+
+define i32 @sdiv_srem_pair(i32 %a, i32 %b, ptr %p) nounwind {
+; CHECK-LABEL: sdiv_srem_pair:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    movl %edx, (%rcx)
+; CHECK-NEXT:    retq
+  %q = sdiv i32 %a, %b
+  %r = srem i32 %a, %b
+  store i32 %r, ptr %p
+  ret i32 %q
+}
+
+define i32 @udiv_urem_pair(i32 %a, i32 %b, ptr %p) nounwind {
+; CHECK-LABEL: udiv_urem_pair:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    movl %edx, (%rcx)
+; CHECK-NEXT:    retq
+  %q = udiv i32 %a, %b
+  %r = urem i32 %a, %b
+  store i32 %r, ptr %p
+  ret i32 %q
+}
+
+define i32 @udiv_i32_narrow(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: udiv_i32_narrow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    movzbl %sil, %ecx
+; CHECK-NEXT:    vcvtsi2ss %ecx, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %a2 = and i32 %a, 255
+  %b2 = and i32 %b, 255
+  %r = udiv i32 %a2, %b2
+  ret i32 %r
+}
+
+define i32 @sdiv_i32_narrow(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: sdiv_i32_narrow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sarl $24, %edi
+; CHECK-NEXT:    sarl $24, %esi
+; CHECK-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; CHECK-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %eax
+; CHECK-NEXT:    retq
+  %a2 = ashr i32 %a, 24
+  %b2 = ashr i32 %b, 24
+  %r = sdiv i32 %a2, %b2
+  ret i32 %r
+}
+
+define i32 @sdiv_i32_const(i32 %a) nounwind {
+; CHECK-LABEL: sdiv_i32_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    sarl $2, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %r = sdiv i32 %a, 7
+  ret i32 %r
+}
+
+define i64 @sdiv_i64(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: sdiv_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    retq
+  %r = sdiv i64 %a, %b
+  ret i64 %r
+}
+
+define i32 @sdiv_i32_noimplicitfloat(i32 %a, i32 %b) nounwind noimplicitfloat {
+; CHECK-LABEL: sdiv_i32_noimplicitfloat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
+  %r = sdiv i32 %a, %b
+  ret i32 %r
+}
+
+define i32 @sdiv_i32_strictfp(i32 %a, i32 %b) nounwind strictfp {
+; CHECK-LABEL: sdiv_i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
+  %r = sdiv i32 %a, %b
+  ret i32 %r
 }
