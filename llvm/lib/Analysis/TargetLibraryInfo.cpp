@@ -1269,6 +1269,12 @@ static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 };
 
+static const VecDesc VecFuncs_LIBMVEC_RVV[] = {
+#define TLI_DEFINE_LIBMVEC_RVV_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_RVV_VECFUNCS
+};
+
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
@@ -1349,6 +1355,10 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
       addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64);
+      break;
+    case llvm::Triple::riscv64:
+    case llvm::Triple::riscv32:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_RVV);
       break;
     }
     break;
