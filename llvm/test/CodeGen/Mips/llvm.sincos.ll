@@ -768,77 +768,89 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; MIPSEL-LABEL: test_sincos_f128:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    addiu $sp, $sp, -64
-; MIPSEL-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
-; MIPSEL-NEXT:    sw $16, 56($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    addiu $sp, $sp, -80
+; MIPSEL-NEXT:    sw $ra, 76($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $fp, 72($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $16, 68($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    move $fp, $sp
+; MIPSEL-NEXT:    addiu $1, $zero, -16
+; MIPSEL-NEXT:    and $sp, $sp, $1
 ; MIPSEL-NEXT:    move $1, $7
 ; MIPSEL-NEXT:    move $16, $4
-; MIPSEL-NEXT:    addiu $2, $sp, 24
+; MIPSEL-NEXT:    addiu $2, $sp, 32
 ; MIPSEL-NEXT:    sw $2, 20($sp)
-; MIPSEL-NEXT:    addiu $2, $sp, 40
+; MIPSEL-NEXT:    addiu $2, $sp, 48
 ; MIPSEL-NEXT:    sw $2, 16($sp)
-; MIPSEL-NEXT:    lw $7, 80($sp)
+; MIPSEL-NEXT:    lw $7, 96($fp)
 ; MIPSEL-NEXT:    move $4, $5
 ; MIPSEL-NEXT:    move $5, $6
 ; MIPSEL-NEXT:    jal sincosl
 ; MIPSEL-NEXT:    move $6, $1
-; MIPSEL-NEXT:    lw $1, 52($sp)
-; MIPSEL-NEXT:    lw $2, 24($sp)
-; MIPSEL-NEXT:    lw $3, 28($sp)
-; MIPSEL-NEXT:    lw $4, 32($sp)
-; MIPSEL-NEXT:    lw $5, 36($sp)
+; MIPSEL-NEXT:    lw $1, 60($sp)
+; MIPSEL-NEXT:    lw $2, 32($sp)
+; MIPSEL-NEXT:    lw $3, 36($sp)
+; MIPSEL-NEXT:    lw $4, 40($sp)
+; MIPSEL-NEXT:    lw $5, 44($sp)
 ; MIPSEL-NEXT:    sw $5, 28($16)
 ; MIPSEL-NEXT:    sw $4, 24($16)
 ; MIPSEL-NEXT:    sw $3, 20($16)
 ; MIPSEL-NEXT:    sw $2, 16($16)
 ; MIPSEL-NEXT:    sw $1, 12($16)
-; MIPSEL-NEXT:    lw $1, 48($sp)
+; MIPSEL-NEXT:    lw $1, 56($sp)
 ; MIPSEL-NEXT:    sw $1, 8($16)
-; MIPSEL-NEXT:    lw $1, 44($sp)
+; MIPSEL-NEXT:    lw $1, 52($sp)
 ; MIPSEL-NEXT:    sw $1, 4($16)
-; MIPSEL-NEXT:    lw $1, 40($sp)
+; MIPSEL-NEXT:    lw $1, 48($sp)
 ; MIPSEL-NEXT:    sw $1, 0($16)
-; MIPSEL-NEXT:    lw $16, 56($sp) # 4-byte Folded Reload
-; MIPSEL-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    move $sp, $fp
+; MIPSEL-NEXT:    lw $16, 68($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    lw $fp, 72($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    lw $ra, 76($sp) # 4-byte Folded Reload
 ; MIPSEL-NEXT:    jr $ra
-; MIPSEL-NEXT:    addiu $sp, $sp, 64
+; MIPSEL-NEXT:    addiu $sp, $sp, 80
 ;
 ; SOFT-FLOAT-32-LABEL: test_sincos_f128:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, -64
-; SOFT-FLOAT-32-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
-; SOFT-FLOAT-32-NEXT:    sw $16, 56($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, -80
+; SOFT-FLOAT-32-NEXT:    sw $ra, 76($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    sw $fp, 72($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    sw $16, 68($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    move $fp, $sp
+; SOFT-FLOAT-32-NEXT:    addiu $1, $zero, -16
+; SOFT-FLOAT-32-NEXT:    and $sp, $sp, $1
 ; SOFT-FLOAT-32-NEXT:    move $1, $7
 ; SOFT-FLOAT-32-NEXT:    move $16, $4
-; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 24
+; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 32
 ; SOFT-FLOAT-32-NEXT:    sw $2, 20($sp)
-; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 40
+; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 48
 ; SOFT-FLOAT-32-NEXT:    sw $2, 16($sp)
-; SOFT-FLOAT-32-NEXT:    lw $7, 80($sp)
+; SOFT-FLOAT-32-NEXT:    lw $7, 96($fp)
 ; SOFT-FLOAT-32-NEXT:    move $4, $5
 ; SOFT-FLOAT-32-NEXT:    move $5, $6
 ; SOFT-FLOAT-32-NEXT:    jal sincosl
 ; SOFT-FLOAT-32-NEXT:    move $6, $1
-; SOFT-FLOAT-32-NEXT:    lw $1, 52($sp)
-; SOFT-FLOAT-32-NEXT:    lw $2, 24($sp)
-; SOFT-FLOAT-32-NEXT:    lw $3, 28($sp)
-; SOFT-FLOAT-32-NEXT:    lw $4, 32($sp)
-; SOFT-FLOAT-32-NEXT:    lw $5, 36($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 60($sp)
+; SOFT-FLOAT-32-NEXT:    lw $2, 32($sp)
+; SOFT-FLOAT-32-NEXT:    lw $3, 36($sp)
+; SOFT-FLOAT-32-NEXT:    lw $4, 40($sp)
+; SOFT-FLOAT-32-NEXT:    lw $5, 44($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $5, 28($16)
 ; SOFT-FLOAT-32-NEXT:    sw $4, 24($16)
 ; SOFT-FLOAT-32-NEXT:    sw $3, 20($16)
 ; SOFT-FLOAT-32-NEXT:    sw $2, 16($16)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 12($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 48($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 56($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 8($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 44($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 52($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 4($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 40($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 48($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 0($16)
-; SOFT-FLOAT-32-NEXT:    lw $16, 56($sp) # 4-byte Folded Reload
-; SOFT-FLOAT-32-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    move $sp, $fp
+; SOFT-FLOAT-32-NEXT:    lw $16, 68($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    lw $fp, 72($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    lw $ra, 76($sp) # 4-byte Folded Reload
 ; SOFT-FLOAT-32-NEXT:    jr $ra
-; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, 64
+; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, 80
 ;
 ; SOFT-FLOAT-64-LABEL: test_sincos_f128:
 ; SOFT-FLOAT-64:       # %bb.0:
@@ -861,43 +873,47 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; MIPSEL-LABEL: test_sincos_v2f128:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    addiu $sp, $sp, -96
-; MIPSEL-NEXT:    sw $ra, 92($sp) # 4-byte Folded Spill
-; MIPSEL-NEXT:    sw $16, 88($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    addiu $sp, $sp, -112
+; MIPSEL-NEXT:    sw $ra, 108($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $fp, 104($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $16, 100($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    move $fp, $sp
+; MIPSEL-NEXT:    addiu $1, $zero, -16
+; MIPSEL-NEXT:    and $sp, $sp, $1
 ; MIPSEL-NEXT:    move $5, $7
 ; MIPSEL-NEXT:    move $1, $6
 ; MIPSEL-NEXT:    move $16, $4
-; MIPSEL-NEXT:    addiu $2, $sp, 24
+; MIPSEL-NEXT:    addiu $2, $sp, 32
 ; MIPSEL-NEXT:    sw $2, 20($sp)
-; MIPSEL-NEXT:    addiu $2, $sp, 40
+; MIPSEL-NEXT:    addiu $2, $sp, 48
 ; MIPSEL-NEXT:    sw $2, 16($sp)
-; MIPSEL-NEXT:    lw $6, 112($sp)
-; MIPSEL-NEXT:    lw $7, 116($sp)
+; MIPSEL-NEXT:    lw $6, 128($fp)
+; MIPSEL-NEXT:    lw $7, 132($fp)
 ; MIPSEL-NEXT:    jal sincosl
 ; MIPSEL-NEXT:    move $4, $1
-; MIPSEL-NEXT:    addiu $1, $sp, 56
+; MIPSEL-NEXT:    addiu $1, $sp, 64
 ; MIPSEL-NEXT:    sw $1, 20($sp)
-; MIPSEL-NEXT:    addiu $1, $sp, 72
+; MIPSEL-NEXT:    addiu $1, $sp, 80
 ; MIPSEL-NEXT:    sw $1, 16($sp)
-; MIPSEL-NEXT:    lw $4, 120($sp)
-; MIPSEL-NEXT:    lw $5, 124($sp)
-; MIPSEL-NEXT:    lw $6, 128($sp)
-; MIPSEL-NEXT:    lw $7, 132($sp)
+; MIPSEL-NEXT:    lw $4, 136($fp)
+; MIPSEL-NEXT:    lw $5, 140($fp)
+; MIPSEL-NEXT:    lw $6, 144($fp)
+; MIPSEL-NEXT:    lw $7, 148($fp)
 ; MIPSEL-NEXT:    jal sincosl
 ; MIPSEL-NEXT:    nop
-; MIPSEL-NEXT:    lw $1, 36($sp)
-; MIPSEL-NEXT:    lw $2, 56($sp)
-; MIPSEL-NEXT:    lw $3, 60($sp)
-; MIPSEL-NEXT:    lw $4, 64($sp)
-; MIPSEL-NEXT:    lw $5, 52($sp)
-; MIPSEL-NEXT:    lw $6, 72($sp)
-; MIPSEL-NEXT:    lw $7, 76($sp)
-; MIPSEL-NEXT:    lw $8, 80($sp)
-; MIPSEL-NEXT:    lw $9, 84($sp)
-; MIPSEL-NEXT:    lw $10, 24($sp)
-; MIPSEL-NEXT:    lw $11, 28($sp)
-; MIPSEL-NEXT:    lw $12, 32($sp)
-; MIPSEL-NEXT:    lw $13, 68($sp)
+; MIPSEL-NEXT:    lw $1, 44($sp)
+; MIPSEL-NEXT:    lw $2, 64($sp)
+; MIPSEL-NEXT:    lw $3, 68($sp)
+; MIPSEL-NEXT:    lw $4, 72($sp)
+; MIPSEL-NEXT:    lw $5, 60($sp)
+; MIPSEL-NEXT:    lw $6, 80($sp)
+; MIPSEL-NEXT:    lw $7, 84($sp)
+; MIPSEL-NEXT:    lw $8, 88($sp)
+; MIPSEL-NEXT:    lw $9, 92($sp)
+; MIPSEL-NEXT:    lw $10, 32($sp)
+; MIPSEL-NEXT:    lw $11, 36($sp)
+; MIPSEL-NEXT:    lw $12, 40($sp)
+; MIPSEL-NEXT:    lw $13, 76($sp)
 ; MIPSEL-NEXT:    sw $13, 60($16)
 ; MIPSEL-NEXT:    sw $4, 56($16)
 ; MIPSEL-NEXT:    sw $3, 52($16)
@@ -911,56 +927,62 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; MIPSEL-NEXT:    sw $7, 20($16)
 ; MIPSEL-NEXT:    sw $6, 16($16)
 ; MIPSEL-NEXT:    sw $5, 12($16)
-; MIPSEL-NEXT:    lw $1, 48($sp)
+; MIPSEL-NEXT:    lw $1, 56($sp)
 ; MIPSEL-NEXT:    sw $1, 8($16)
-; MIPSEL-NEXT:    lw $1, 44($sp)
+; MIPSEL-NEXT:    lw $1, 52($sp)
 ; MIPSEL-NEXT:    sw $1, 4($16)
-; MIPSEL-NEXT:    lw $1, 40($sp)
+; MIPSEL-NEXT:    lw $1, 48($sp)
 ; MIPSEL-NEXT:    sw $1, 0($16)
-; MIPSEL-NEXT:    lw $16, 88($sp) # 4-byte Folded Reload
-; MIPSEL-NEXT:    lw $ra, 92($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    move $sp, $fp
+; MIPSEL-NEXT:    lw $16, 100($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    lw $fp, 104($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    lw $ra, 108($sp) # 4-byte Folded Reload
 ; MIPSEL-NEXT:    jr $ra
-; MIPSEL-NEXT:    addiu $sp, $sp, 96
+; MIPSEL-NEXT:    addiu $sp, $sp, 112
 ;
 ; SOFT-FLOAT-32-LABEL: test_sincos_v2f128:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, -96
-; SOFT-FLOAT-32-NEXT:    sw $ra, 92($sp) # 4-byte Folded Spill
-; SOFT-FLOAT-32-NEXT:    sw $16, 88($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, -112
+; SOFT-FLOAT-32-NEXT:    sw $ra, 108($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    sw $fp, 104($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    sw $16, 100($sp) # 4-byte Folded Spill
+; SOFT-FLOAT-32-NEXT:    move $fp, $sp
+; SOFT-FLOAT-32-NEXT:    addiu $1, $zero, -16
+; SOFT-FLOAT-32-NEXT:    and $sp, $sp, $1
 ; SOFT-FLOAT-32-NEXT:    move $5, $7
 ; SOFT-FLOAT-32-NEXT:    move $1, $6
 ; SOFT-FLOAT-32-NEXT:    move $16, $4
-; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 24
+; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 32
 ; SOFT-FLOAT-32-NEXT:    sw $2, 20($sp)
-; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 40
+; SOFT-FLOAT-32-NEXT:    addiu $2, $sp, 48
 ; SOFT-FLOAT-32-NEXT:    sw $2, 16($sp)
-; SOFT-FLOAT-32-NEXT:    lw $6, 112($sp)
-; SOFT-FLOAT-32-NEXT:    lw $7, 116($sp)
+; SOFT-FLOAT-32-NEXT:    lw $6, 128($fp)
+; SOFT-FLOAT-32-NEXT:    lw $7, 132($fp)
 ; SOFT-FLOAT-32-NEXT:    jal sincosl
 ; SOFT-FLOAT-32-NEXT:    move $4, $1
-; SOFT-FLOAT-32-NEXT:    addiu $1, $sp, 56
+; SOFT-FLOAT-32-NEXT:    addiu $1, $sp, 64
 ; SOFT-FLOAT-32-NEXT:    sw $1, 20($sp)
-; SOFT-FLOAT-32-NEXT:    addiu $1, $sp, 72
+; SOFT-FLOAT-32-NEXT:    addiu $1, $sp, 80
 ; SOFT-FLOAT-32-NEXT:    sw $1, 16($sp)
-; SOFT-FLOAT-32-NEXT:    lw $4, 120($sp)
-; SOFT-FLOAT-32-NEXT:    lw $5, 124($sp)
-; SOFT-FLOAT-32-NEXT:    lw $6, 128($sp)
-; SOFT-FLOAT-32-NEXT:    lw $7, 132($sp)
+; SOFT-FLOAT-32-NEXT:    lw $4, 136($fp)
+; SOFT-FLOAT-32-NEXT:    lw $5, 140($fp)
+; SOFT-FLOAT-32-NEXT:    lw $6, 144($fp)
+; SOFT-FLOAT-32-NEXT:    lw $7, 148($fp)
 ; SOFT-FLOAT-32-NEXT:    jal sincosl
 ; SOFT-FLOAT-32-NEXT:    nop
-; SOFT-FLOAT-32-NEXT:    lw $1, 36($sp)
-; SOFT-FLOAT-32-NEXT:    lw $2, 56($sp)
-; SOFT-FLOAT-32-NEXT:    lw $3, 60($sp)
-; SOFT-FLOAT-32-NEXT:    lw $4, 64($sp)
-; SOFT-FLOAT-32-NEXT:    lw $5, 52($sp)
-; SOFT-FLOAT-32-NEXT:    lw $6, 72($sp)
-; SOFT-FLOAT-32-NEXT:    lw $7, 76($sp)
-; SOFT-FLOAT-32-NEXT:    lw $8, 80($sp)
-; SOFT-FLOAT-32-NEXT:    lw $9, 84($sp)
-; SOFT-FLOAT-32-NEXT:    lw $10, 24($sp)
-; SOFT-FLOAT-32-NEXT:    lw $11, 28($sp)
-; SOFT-FLOAT-32-NEXT:    lw $12, 32($sp)
-; SOFT-FLOAT-32-NEXT:    lw $13, 68($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 44($sp)
+; SOFT-FLOAT-32-NEXT:    lw $2, 64($sp)
+; SOFT-FLOAT-32-NEXT:    lw $3, 68($sp)
+; SOFT-FLOAT-32-NEXT:    lw $4, 72($sp)
+; SOFT-FLOAT-32-NEXT:    lw $5, 60($sp)
+; SOFT-FLOAT-32-NEXT:    lw $6, 80($sp)
+; SOFT-FLOAT-32-NEXT:    lw $7, 84($sp)
+; SOFT-FLOAT-32-NEXT:    lw $8, 88($sp)
+; SOFT-FLOAT-32-NEXT:    lw $9, 92($sp)
+; SOFT-FLOAT-32-NEXT:    lw $10, 32($sp)
+; SOFT-FLOAT-32-NEXT:    lw $11, 36($sp)
+; SOFT-FLOAT-32-NEXT:    lw $12, 40($sp)
+; SOFT-FLOAT-32-NEXT:    lw $13, 76($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $13, 60($16)
 ; SOFT-FLOAT-32-NEXT:    sw $4, 56($16)
 ; SOFT-FLOAT-32-NEXT:    sw $3, 52($16)
@@ -974,16 +996,18 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; SOFT-FLOAT-32-NEXT:    sw $7, 20($16)
 ; SOFT-FLOAT-32-NEXT:    sw $6, 16($16)
 ; SOFT-FLOAT-32-NEXT:    sw $5, 12($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 48($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 56($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 8($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 44($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 52($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 4($16)
-; SOFT-FLOAT-32-NEXT:    lw $1, 40($sp)
+; SOFT-FLOAT-32-NEXT:    lw $1, 48($sp)
 ; SOFT-FLOAT-32-NEXT:    sw $1, 0($16)
-; SOFT-FLOAT-32-NEXT:    lw $16, 88($sp) # 4-byte Folded Reload
-; SOFT-FLOAT-32-NEXT:    lw $ra, 92($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    move $sp, $fp
+; SOFT-FLOAT-32-NEXT:    lw $16, 100($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    lw $fp, 104($sp) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    lw $ra, 108($sp) # 4-byte Folded Reload
 ; SOFT-FLOAT-32-NEXT:    jr $ra
-; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, 96
+; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, 112
 ;
 ; SOFT-FLOAT-64-LABEL: test_sincos_v2f128:
 ; SOFT-FLOAT-64:       # %bb.0:

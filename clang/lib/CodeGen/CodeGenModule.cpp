@@ -472,10 +472,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
   if (Triple.getArch() != llvm::Triple::m68k)
     Check("long long", llvm::Type::getIntNTy(Context, Target.LongLongWidth),
           Target.LongLongAlign);
-  // FIXME: There are int128 alignment mismatches on multiple targets.
-  if (Target.hasInt128Type() && !Target.getTargetOpts().ForceEnableInt128 &&
-      !Triple.isAMDGPU() && !Triple.isSPIRV() &&
-      Triple.getArch() != llvm::Triple::ve)
+  if (Target.hasInt128Type() && !Target.getTargetOpts().ForceEnableInt128)
     Check("__int128", llvm::Type::getIntNTy(Context, 128), Target.Int128Align);
 
   if (Target.hasFloat16Type())

@@ -52,6 +52,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The default ABI and preferred alignment of `i128` in the data layout is now
+  128 bits, matching the `__int128` ABI implemented by Clang. Previously, data
+  layout strings without an explicit `i128` entry fell back to the alignment of
+  the next smaller specified integer type, typically `i64`. Targets whose ABI
+  aligns `i128` to fewer than 128 bits (currently only SystemZ) now spell this
+  out explicitly in their data layout string, and data layouts of existing
+  SystemZ IR are upgraded accordingly.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be

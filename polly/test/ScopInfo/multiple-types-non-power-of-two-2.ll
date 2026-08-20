@@ -25,7 +25,7 @@
 ; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 2i0 <= o0 <= 1 + 2i0 }
 ; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 3i0 <= o0 <= 2 + 3i0 }
+; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 3i0 <= o0 <= 3 + 3i0 }
 ; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 2i0 <= o0 <= 1 + 2i0 }
 ; CHECK: }

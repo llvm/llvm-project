@@ -123,8 +123,8 @@ define noundef i128 @_Z20store_load_long_longPx(ptr captures(none) noundef initi
 ; CHECK-LABEL: define noundef i128 @_Z20store_load_long_longPx(
 ; CHECK-SAME: ptr noundef captures(none) initializes((0, 16)) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i128, align 8, addrspace(5)
-; CHECK-NEXT:    store i128 5, ptr addrspace(5) [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i128, align 16, addrspace(5)
+; CHECK-NEXT:    store i128 5, ptr addrspace(5) [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_store_ind(ptr [[A]], i32 0, ptr [[TMP1]], i64 16, i64 8, i32 12, i32 0, i8 1, i8 0) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 5, ptr [[TMP2]], align 8
@@ -132,10 +132,10 @@ define noundef i128 @_Z20store_load_long_longPx(ptr captures(none) noundef initi
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @__instrumentor_pre_load(ptr [[ARRAYIDX]], i32 0, i64 16, i64 8, i32 12, i32 0, i8 1, i8 0) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i128, ptr [[TMP3]], align 8
-; CHECK-NEXT:    store i128 [[TMP6]], ptr addrspace(5) [[TMP0]], align 8
+; CHECK-NEXT:    store i128 [[TMP6]], ptr addrspace(5) [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
 ; CHECK-NEXT:    call void @__instrumentor_post_load_ind(ptr [[ARRAYIDX]], i32 0, ptr [[TMP5]], i64 16, i64 8, i32 12, i32 0, i8 1, i8 0) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP5]], align 16
 ; CHECK-NEXT:    ret i128 [[TMP4]]
 ;
 entry:

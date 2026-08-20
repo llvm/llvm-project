@@ -243,7 +243,7 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_n(ptr [[P]], i64 16)
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
-; CHECK-NEXT:    store i128 [[TMP7]], ptr [[TMP14]], align 8
+; CHECK-NEXT:    store i128 [[TMP7]], ptr [[TMP14]], align 16
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB10]]:
@@ -251,12 +251,12 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 32
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i64 [[TMP18]], [[TMP19]]
-; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP15]], align 8
+; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP15]], align 16
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[TMP15]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
-; CHECK-NEXT:    store i128 [[X]], ptr [[P]], align 8
+; CHECK-NEXT:    store i128 [[X]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -441,12 +441,12 @@ define i128 @Load16(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
 ; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[P]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_n(ptr [[P]], i64 16)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 1
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP9]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 16
 ; CHECK-NEXT:    store i128 [[_MSLD]], ptr [[RETVAL_SHADOW]], align 8
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[RETVAL_ORIGIN]], align 4
 ; CHECK-NEXT:    ret i128 [[TMP7]]
@@ -490,7 +490,7 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    [[TMP9:%.*]] = alloca i8, i64 [[TMP6]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP9]], ptr align 8 [[VA_ARG_ORIGIN]], i64 [[TMP8]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @__msan_poison_alloca(ptr [[ARGS]], i64 24, ptr @[[GLOB0:[0-9]+]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[ARGS]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, ptr } [[TMP10]], 0

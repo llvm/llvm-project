@@ -1897,7 +1897,7 @@ llvm.func @omp_atomic_capture_complex_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr)
 
 // CHECK-LABEL: define void @omp_atomic_capture_complex8_swap
 llvm.func @omp_atomic_capture_complex8_swap(%x_arg: !llvm.ptr, %v_arg: !llvm.ptr) {
-    // CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { double, double }, align 8
+    // CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { double, double }, align 16
     // CHECK: %[[X_NEW_VAL:.*]] = alloca { double, double }, align 8
     // CHECK: call void @__atomic_load(i64 16, ptr %{{.*}}, ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
     // CHECK: %[[PHI:.*]] = phi { double, double }

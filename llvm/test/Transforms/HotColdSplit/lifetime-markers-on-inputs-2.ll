@@ -37,7 +37,7 @@ declare void @use(ptr)
 define void @only_lifetime_start_is_cold(i1 %arg) {
 ; CHECK-LABEL: @only_lifetime_start_is_cold(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 16
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[CODEREPL:%.*]], label [[NO_EXTRACT1:%.*]]
 ; CHECK:       codeRepl:
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL1]])
@@ -95,7 +95,7 @@ exit:
 define void @only_lifetime_end_is_cold(i1 %arg) {
 ; CHECK-LABEL: @only_lifetime_end_is_cold(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL1]])
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[NO_EXTRACT1:%.*]], label [[CODEREPL:%.*]]
 ; CHECK:       no-extract1:
@@ -133,7 +133,7 @@ exit:
 define void @do_not_lift_lifetime_end(i1 %arg) {
 ; CHECK-LABEL: @do_not_lift_lifetime_end(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL1]])
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:

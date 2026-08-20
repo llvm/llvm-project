@@ -3410,8 +3410,8 @@ endif:
 define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a, [8 x i32], i128 %b) nounwind #0 {
 ; SI-LABEL: s_mul_i128:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x13
-; SI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x1f
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x15
+; SI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x21
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -3459,8 +3459,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; VI-LABEL: s_mul_i128:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x4c
-; VI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x7c
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x54
+; VI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x84
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
@@ -3494,8 +3494,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; GFX9-LABEL: s_mul_i128:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x7c
-; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x4c
+; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x84
+; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x54
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
@@ -3545,8 +3545,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX10-LABEL: s_mul_i128:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4c
-; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x7c
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
+; GFX10-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x84
 ; GFX10-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x24
 ; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    s_mov_b32 s5, s6
@@ -3596,8 +3596,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX11-LABEL: s_mul_i128:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x4c
-; GFX11-NEXT:    s_load_b128 s[8:11], s[4:5], 0x7c
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x54
+; GFX11-NEXT:    s_load_b128 s[8:11], s[4:5], 0x84
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
 ; GFX11-NEXT:    s_mov_b32 s6, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -3647,8 +3647,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX12-LABEL: s_mul_i128:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b128 s[8:11], s[4:5], 0x7c
-; GFX12-NEXT:    s_load_b128 s[12:15], s[4:5], 0x4c
+; GFX12-NEXT:    s_load_b128 s[8:11], s[4:5], 0x84
+; GFX12-NEXT:    s_load_b128 s[12:15], s[4:5], 0x54
 ; GFX12-NEXT:    s_mov_b32 s3, 0
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    s_mov_b32 s7, s3
@@ -3694,8 +3694,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    s_load_b128 s[8:11], s[4:5], 0x7c nv
-; GFX1250-NEXT:    s_load_b128 s[12:15], s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_load_b128 s[8:11], s[4:5], 0x84 nv
+; GFX1250-NEXT:    s_load_b128 s[12:15], s[4:5], 0x54 nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], 0xffffffff
@@ -3740,8 +3740,8 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX13-LABEL: s_mul_i128:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    s_load_b128 s[8:11], s[4:5], 0x7c nv
-; GFX13-NEXT:    s_load_b128 s[12:15], s[4:5], 0x4c nv
+; GFX13-NEXT:    s_load_b128 s[8:11], s[4:5], 0x84 nv
+; GFX13-NEXT:    s_load_b128 s[12:15], s[4:5], 0x54 nv
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_mov_b64 s[4:5], 0xffffffff
 ; GFX13-NEXT:    s_mov_b32 s3, 0
@@ -3788,32 +3788,32 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     MULLO_INT * T0.X, KC0[5].X, KC0[8].X,
-; EG-NEXT:     MULHI * T0.Y, KC0[5].X, KC0[8].X,
-; EG-NEXT:     MULLO_INT * T0.Z, KC0[8].Y, KC0[4].W,
-; EG-NEXT:     MULLO_INT * T0.W, KC0[8].X, KC0[5].Y,
-; EG-NEXT:     MULHI * T1.X, KC0[5].X, KC0[7].W,
-; EG-NEXT:     MULHI * T1.Y, KC0[4].W, KC0[8].X,
-; EG-NEXT:     MULHI * T1.Z, KC0[8].Y, KC0[4].W,
-; EG-NEXT:     MULLO_INT * T1.W, KC0[8].Y, KC0[5].X,
-; EG-NEXT:     MULHI * T2.X, KC0[7].W, KC0[5].Y,
-; EG-NEXT:     MULLO_INT * T2.Y, KC0[5].X, KC0[7].W,
-; EG-NEXT:     MULHI * T2.Z, KC0[4].W, KC0[7].W,
+; EG-NEXT:     MULLO_INT * T0.X, KC0[5].Z, KC0[8].Z,
+; EG-NEXT:     MULHI * T0.Y, KC0[5].Z, KC0[8].Z,
+; EG-NEXT:     MULLO_INT * T0.Z, KC0[8].W, KC0[5].Y,
+; EG-NEXT:     MULLO_INT * T0.W, KC0[8].Z, KC0[5].W,
+; EG-NEXT:     MULHI * T1.X, KC0[5].Z, KC0[8].Y,
+; EG-NEXT:     MULHI * T1.Y, KC0[5].Y, KC0[8].Z,
+; EG-NEXT:     MULHI * T1.Z, KC0[8].W, KC0[5].Y,
+; EG-NEXT:     MULLO_INT * T1.W, KC0[8].W, KC0[5].Z,
+; EG-NEXT:     MULHI * T2.X, KC0[8].Y, KC0[5].W,
+; EG-NEXT:     MULLO_INT * T2.Y, KC0[5].Z, KC0[8].Y,
+; EG-NEXT:     MULHI * T2.Z, KC0[5].Y, KC0[8].Y,
 ; EG-NEXT:     ADD_INT T2.W, T2.Y, PS,
-; EG-NEXT:     MULLO_INT * T3.X, KC0[4].W, KC0[8].X,
+; EG-NEXT:     MULLO_INT * T3.X, KC0[5].Y, KC0[8].Z,
 ; EG-NEXT:     ADDC_UINT T2.Z, T2.Y, T2.Z,
 ; EG-NEXT:     ADDC_UINT T3.W, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T2.Y, KC0[7].W, KC0[5].Z,
+; EG-NEXT:     MULLO_INT * T2.Y, KC0[8].Y, KC0[6].X,
 ; EG-NEXT:     ADD_INT T2.X, T2.X, PS,
 ; EG-NEXT:     ADD_INT T2.Y, T1.Z, T1.W,
 ; EG-NEXT:     ADD_INT T1.Z, T1.Y, PV.W,
 ; EG-NEXT:     ADD_INT T1.W, T1.X, PV.Z, BS:VEC_120/SCL_212
-; EG-NEXT:     MULLO_INT * T1.X, KC0[8].Z, KC0[4].W,
+; EG-NEXT:     MULLO_INT * T1.X, KC0[9].X, KC0[5].Y,
 ; EG-NEXT:     ADD_INT T4.X, PV.W, PV.Z,
 ; EG-NEXT:     ADDC_UINT T1.Y, PV.W, PV.Z,
 ; EG-NEXT:     ADD_INT T1.Z, PV.Y, PS,
 ; EG-NEXT:     ADD_INT T0.W, PV.X, T0.W,
-; EG-NEXT:     MULLO_INT * T1.X, KC0[7].W, KC0[5].Y,
+; EG-NEXT:     MULLO_INT * T1.X, KC0[8].Y, KC0[5].W,
 ; EG-NEXT:     ADD_INT T2.Y, PV.Z, PV.W,
 ; EG-NEXT:     ADDC_UINT T1.Z, T0.Z, PS,
 ; EG-NEXT:     ADD_INT T0.W, T0.Y, PV.Y,
@@ -3829,7 +3829,7 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; EG-NEXT:     ADD_INT * T0.Y, T3.X, T2.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     MULLO_INT * T0.X, KC0[4].W, KC0[7].W,
+; EG-NEXT:     MULLO_INT * T0.X, KC0[5].Y, KC0[8].Y,
 entry:
   %mul = mul i128 %a, %b
   store i128 %mul, ptr addrspace(1) %out

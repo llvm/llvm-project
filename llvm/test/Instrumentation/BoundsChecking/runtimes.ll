@@ -21,7 +21,7 @@ define void @f1(i64 %x) nounwind {
 ; TR-LABEL: define void @f1(
 ; TR-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TR-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; TR-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; TR-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; TR-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; TR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; TR-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -37,7 +37,7 @@ define void @f1(i64 %x) nounwind {
 ; RT-LABEL: define void @f1(
 ; RT-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RT-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; RT-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RT-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; RT-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; RT-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -53,7 +53,7 @@ define void @f1(i64 %x) nounwind {
 ; TR-NOMERGE-LABEL: define void @f1(
 ; TR-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TR-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; TR-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; TR-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; TR-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; TR-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; TR-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -69,7 +69,7 @@ define void @f1(i64 %x) nounwind {
 ; RT-NOMERGE-LABEL: define void @f1(
 ; RT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; RT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; RT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; RT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -85,7 +85,7 @@ define void @f1(i64 %x) nounwind {
 ; RTABORT-NOMERGE-LABEL: define void @f1(
 ; RTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; RTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; RTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; RTABORT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -98,26 +98,10 @@ define void @f1(i64 %x) nounwind {
 ; RTABORT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR2:[0-9]+]], !nosanitize [[META0]]
 ; RTABORT-NOMERGE-NEXT:    unreachable, !nosanitize [[META0]]
 ;
-; MINRT-PRESERVE-NOMERGE-LABEL: define void @f1(
-; MINRT-PRESERVE-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
-; MINRT-PRESERVE-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
-; MINRT-PRESERVE-NOMERGE:       [[BB7]]:
-; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
-; MINRT-PRESERVE-NOMERGE-NEXT:    ret void
-; MINRT-PRESERVE-NOMERGE:       [[TRAP]]:
-; MINRT-PRESERVE-NOMERGE-NEXT:    call preserve_allcc void @__ubsan_handle_local_out_of_bounds_minimal_preserve() #[[ATTR1:[0-9]+]], !nosanitize [[META0]]
-; MINRT-PRESERVE-NOMERGE-NEXT:    br label %[[BB7]], !nosanitize [[META0]]
-;
 ; MINRT-NOMERGE-LABEL: define void @f1(
 ; MINRT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MINRT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; MINRT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; MINRT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; MINRT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; MINRT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; MINRT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -133,7 +117,7 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NOMERGE-LABEL: define void @f1(
 ; MINRTABORT-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; MINRTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; MINRTABORT-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; MINRTABORT-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -146,34 +130,62 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NOMERGE-NEXT:    call void @__ubsan_handle_local_out_of_bounds_minimal_abort() #[[ATTR2:[0-9]+]], !nosanitize [[META0]]
 ; MINRTABORT-NOMERGE-NEXT:    unreachable, !nosanitize [[META0]]
 ;
-; TR-GUARD-COMMON-LABEL: define void @f1(
-; TR-GUARD-COMMON-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TR-GUARD-COMMON-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; TR-GUARD-COMMON-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
-; TR-GUARD-COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
-; TR-GUARD-COMMON-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
-; TR-GUARD-COMMON-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
-; TR-GUARD-COMMON-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-LABEL: define void @f1(
+; MINRT-PRESERVE-NOMERGE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    br i1 [[TMP6]], label %[[TRAP:.*]], label %[[BB7:.*]]
+; MINRT-PRESERVE-NOMERGE:       [[BB7]]:
+; MINRT-PRESERVE-NOMERGE-NEXT:    [[TMP8:%.*]] = load i128, ptr [[TMP2]], align 4
+; MINRT-PRESERVE-NOMERGE-NEXT:    ret void
+; MINRT-PRESERVE-NOMERGE:       [[TRAP]]:
+; MINRT-PRESERVE-NOMERGE-NEXT:    call preserve_allcc void @__ubsan_handle_local_out_of_bounds_minimal_preserve() #[[ATTR1:[0-9]+]], !nosanitize [[META0]]
+; MINRT-PRESERVE-NOMERGE-NEXT:    br label %[[BB7]], !nosanitize [[META0]]
 ;
-; TR-GUARD-THREE:          [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 3), !nosanitize [[META0]]
-; TR-GUARD-THIRTEEN:       [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 13), !nosanitize [[META0]]
+; TR-GUARD-THREE-LABEL: define void @f1(
+; TR-GUARD-THREE-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; TR-GUARD-THREE-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
+; TR-GUARD-THREE-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
+; TR-GUARD-THREE-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; TR-GUARD-THREE-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 3), !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
+; TR-GUARD-THREE:       [[BB9]]:
+; TR-GUARD-THREE-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
+; TR-GUARD-THREE-NEXT:    ret void
+; TR-GUARD-THREE:       [[TRAP]]:
+; TR-GUARD-THREE-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
+; TR-GUARD-THREE-NEXT:    unreachable, !nosanitize [[META0]]
 ;
-; TR-GUARD-COMMON:         [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
-; TR-GUARD-COMMON-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
-; TR-GUARD-COMMON:       [[BB9]]:
-; TR-GUARD-COMMON-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
-; TR-GUARD-COMMON-NEXT:    ret void
-; TR-GUARD-COMMON:       [[TRAP]]:
-;
-; TR-GUARD-THREE:       call void @llvm.ubsantrap(i8 3) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
-; TR-GUARD-THIRTEEN:    call void @llvm.ubsantrap(i8 13) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
-;
-; TR-GUARD-COMMON:      unreachable, !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-LABEL: define void @f1(
+; TR-GUARD-THIRTEEN-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 13), !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
+; TR-GUARD-THIRTEEN:       [[BB9]]:
+; TR-GUARD-THIRTEEN-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
+; TR-GUARD-THIRTEEN-NEXT:    ret void
+; TR-GUARD-THIRTEEN:       [[TRAP]]:
+; TR-GUARD-THIRTEEN-NEXT:    call void @llvm.ubsantrap(i8 13) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
+; TR-GUARD-THIRTEEN-NEXT:    unreachable, !nosanitize [[META0]]
 ;
 ; RT-GUARD-LABEL: define void @f1(
 ; RT-GUARD-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RT-GUARD-NEXT:    [[TMP1:%.*]] = mul i64 [[X]], 16
-; RT-GUARD-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RT-GUARD-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; RT-GUARD-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
 ; RT-GUARD-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; RT-GUARD-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -193,6 +205,11 @@ define void @f1(i64 %x) nounwind {
   ret void
 }
 
+; TR-GUARD: attributes #[[ATTR0]] = { nounwind }
+; TR-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; TR-GUARD: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+; TR-GUARD: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
+; TR-GUARD: [[META0]] = !{}
 ;.
 ; TR: attributes #[[ATTR0]] = { nounwind }
 ; TR: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
@@ -218,10 +235,18 @@ define void @f1(i64 %x) nounwind {
 ; MINRTABORT-NOMERGE: attributes #[[ATTR1:[0-9]+]] = { noreturn nounwind }
 ; MINRTABORT-NOMERGE: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
 ;.
-; TR-GUARD: attributes #[[ATTR0]] = { nounwind }
-; TR-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; TR-GUARD: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-; TR-GUARD: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
+; MINRT-PRESERVE-NOMERGE: attributes #[[ATTR0]] = { nounwind }
+; MINRT-PRESERVE-NOMERGE: attributes #[[ATTR1]] = { nomerge nounwind }
+;.
+; TR-GUARD-THREE: attributes #[[ATTR0]] = { nounwind }
+; TR-GUARD-THREE: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TR-GUARD-THREE: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+; TR-GUARD-THREE: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
+;.
+; TR-GUARD-THIRTEEN: attributes #[[ATTR0]] = { nounwind }
+; TR-GUARD-THIRTEEN: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TR-GUARD-THIRTEEN: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+; TR-GUARD-THIRTEEN: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 ;.
 ; RT-GUARD: attributes #[[ATTR0]] = { nounwind }
 ; RT-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
@@ -241,7 +266,13 @@ define void @f1(i64 %x) nounwind {
 ;.
 ; MINRTABORT-NOMERGE: [[META0]] = !{}
 ;.
-; TR-GUARD: [[META0]] = !{}
+; MINRT-PRESERVE-NOMERGE: [[META0]] = !{}
+;.
+; TR-GUARD-THREE: [[META0]] = !{}
+;.
+; TR-GUARD-THIRTEEN: [[META0]] = !{}
 ;.
 ; RT-GUARD: [[META0]] = !{}
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; TR-GUARD-COMMON: {{.*}}

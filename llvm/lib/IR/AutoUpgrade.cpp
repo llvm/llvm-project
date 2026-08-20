@@ -7369,10 +7369,16 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   }
 
   if (T.isSystemZ() && !DL.empty()) {
+    Res = DL.str();
+    // i128 used to be aligned only to 64 bits by way of the i64:64 entry.
+    // Now that the default i128 alignment is 128 bits, this needs to be
+    // spelled out explicitly.
+    if (!DL.contains("-i128") && !DL.starts_with("i128"))
+      Res.append("-i128:64");
     // Make sure the stack alignment is present.
     if (!DL.contains("-S64"))
-      return "E-S64" + DL.drop_front(1).str();
-    return DL.str();
+      Res = "E-S64" + StringRef(Res).drop_front(1).str();
+    return Res;
   }
 
   auto AddPtr32Ptr64AddrSpaces = [&DL, &Res]() {

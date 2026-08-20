@@ -21,7 +21,7 @@
 ; type i24 is modeled with allocation size i32 and that i40, i48 and i56 are
 ; modeled with allocation size i64. Larger types, e.g., i120, i192 and i248 are
 ; not rounded up to the next power-of-two allocation size, but rather to the
-; next multiple of 64.
+; next multiple of 128, the alignment of types larger than i64.
 
 ; The allocation size discussed above defines the number of canonical array
 ; elements accessed. For example, even though i24 only consists of 3 bytes,
@@ -52,7 +52,7 @@
 ; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 16i0 <= o0 <= 15 + 16i0 };
 ; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 24i0 <= o0 <= 23 + 24i0 };
+; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 24i0 <= o0 <= 31 + 24i0 };
 ; CHECK:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:             { Stmt_bb2[i0] -> MemRef_A[o0] : 32i0 <= o0 <= 31 + 32i0 };
 ; CHECK:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]

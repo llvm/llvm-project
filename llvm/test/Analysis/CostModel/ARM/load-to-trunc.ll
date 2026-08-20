@@ -9,7 +9,7 @@
 ; Check that cost is 1 for unusual load to register sized load.
 define i32 @loadUnusualIntegerWithTrunc(ptr %ptr) {
 ; CHECK-LABEL: 'loadUnusualIntegerWithTrunc'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %out = load i128, ptr %ptr, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %out = load i128, ptr %ptr, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc = trunc i128 %out to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: ret i32 %trunc
 ;
@@ -20,7 +20,7 @@ define i32 @loadUnusualIntegerWithTrunc(ptr %ptr) {
 
 define i128 @loadUnusualInteger(ptr %ptr) {
 ; CHECK-LABEL: 'loadUnusualInteger'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %out = load i128, ptr %ptr, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %out = load i128, ptr %ptr, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: ret i128 %out
 ;
   %out = load i128, ptr %ptr

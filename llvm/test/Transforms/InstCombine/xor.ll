@@ -1304,7 +1304,7 @@ define i67 @xor_orn_commute3_1use(i67 %pa, i67 %pb, ptr %s) {
 ; CHECK-NEXT:    [[B:%.*]] = udiv i67 42, [[PB:%.*]]
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i67 [[A]], -1
 ; CHECK-NEXT:    [[L:%.*]] = or i67 [[B]], [[NOTA]]
-; CHECK-NEXT:    store i67 [[L]], ptr [[S:%.*]], align 4
+; CHECK-NEXT:    store i67 [[L]], ptr [[S:%.*]], align 16
 ; CHECK-NEXT:    [[Z:%.*]] = xor i67 [[A]], [[L]]
 ; CHECK-NEXT:    ret i67 [[Z]]
 ;

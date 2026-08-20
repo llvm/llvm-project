@@ -178,10 +178,11 @@ struct LessPointerAddrSpace {
 // Default primitive type specifications.
 // NOTE: These arrays must be sorted by type bit width.
 constexpr DataLayout::PrimitiveSpec DefaultIntSpecs[] = {
-    {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
-    {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
-    {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
-    {64, Align::Constant<4>(), Align::Constant<8>()}, // i64:32:64
+    {8, Align::Constant<1>(), Align::Constant<1>()},     // i8:8:8
+    {16, Align::Constant<2>(), Align::Constant<2>()},    // i16:16:16
+    {32, Align::Constant<4>(), Align::Constant<4>()},    // i32:32:32
+    {64, Align::Constant<4>(), Align::Constant<8>()},    // i64:32:64
+    {128, Align::Constant<16>(), Align::Constant<16>()}, // i128:128:128
 };
 constexpr DataLayout::PrimitiveSpec DefaultFloatSpecs[] = {
     {16, Align::Constant<2>(), Align::Constant<2>()},    // f16:16:16

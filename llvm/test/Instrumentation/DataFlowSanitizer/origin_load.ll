@@ -224,19 +224,19 @@ define i128 @load128(ptr %p) {
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
   ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = add i64 %[[#SHADOW_OFFSET]], [[#ORIGIN_BASE]]
   ; CHECK-NEXT:            %[[#ORIGIN1_PTR:]] = inttoptr i64 %[[#ORIGIN_ADDR]] to ptr
-  ; CHECK-NEXT:            %[[#ORIGIN1:]] = load i32, ptr %[[#ORIGIN1_PTR]], align 8
+  ; CHECK-NEXT:            %[[#ORIGIN1:]] = load i32, ptr %[[#ORIGIN1_PTR]], align 16
   ; CHECK-NEXT:            %[[#WIDE_SHADOW1:]] = load i64, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK-NEXT:            %[[#WIDE_SHADOW1_LO:]] = shl i64 %[[#WIDE_SHADOW1]], 32
   ; CHECK-NEXT:            %[[#ORIGIN2_PTR:]] = getelementptr i32, ptr %[[#ORIGIN1_PTR]], i64 1
-  ; CHECK-NEXT:            %[[#ORIGIN2:]] = load i32, ptr %[[#ORIGIN2_PTR]], align 8
+  ; CHECK-NEXT:            %[[#ORIGIN2:]] = load i32, ptr %[[#ORIGIN2_PTR]], align 16
   ; CHECK-NEXT:            %[[#WIDE_SHADOW2_PTR:]] = getelementptr i64, ptr %[[#SHADOW_PTR]], i64 1
   ; CHECK-NEXT:            %[[#WIDE_SHADOW2:]] = load i64, ptr %[[#WIDE_SHADOW2_PTR]], align 1
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW1]], %[[#WIDE_SHADOW2]]
   ; CHECK-NEXT:            %[[#ORIGIN3_PTR:]] = getelementptr i32, ptr %[[#ORIGIN2_PTR]], i64 1
-  ; CHECK-NEXT:            %[[#ORIGIN3:]] = load i32, ptr %[[#ORIGIN3_PTR]], align 8
+  ; CHECK-NEXT:            %[[#ORIGIN3:]] = load i32, ptr %[[#ORIGIN3_PTR]], align 16
   ; CHECK-NEXT:            %[[#WIDE_SHADOW2_LO:]] = shl i64 %[[#WIDE_SHADOW2]], 32
   ; CHECK-NEXT:            %[[#ORIGIN4_PTR:]] = getelementptr i32, ptr %[[#ORIGIN3_PTR]], i64 1
-  ; CHECK-NEXT:            %[[#ORIGIN4:]] = load i32, ptr %[[#ORIGIN4_PTR]], align 8
+  ; CHECK-NEXT:            %[[#ORIGIN4:]] = load i32, ptr %[[#ORIGIN4_PTR]], align 16
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
@@ -255,7 +255,7 @@ define i128 @load128(ptr %p) {
   ; COMBINE_LOAD_PTR-NEXT: %[[#NZ:]] = icmp ne i8 %[[#PS]], 0
   ; COMBINE_LOAD_PTR-NEXT: %[[#ORIGIN:]] = select i1 %[[#NZ]], i32 %[[#PO]], i32 %[[#ORIGIN]]
 
-  ; CHECK-NEXT:            %a = load i128, ptr %p, align 8
+  ; CHECK-NEXT:            %a = load i128, ptr %p, align 16
   ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            store i32 %[[#ORIGIN]], ptr @__dfsan_retval_origin_tls, align 4
 

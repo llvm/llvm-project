@@ -3651,6 +3651,7 @@ specifications are given in this list:
 -  `i32:32:32` - i32 is 32-bit aligned
 -  `i64:32:64` - i64 has ABI alignment of 32-bits but preferred
    alignment of 64-bits
+-  `i128:128:128` - i128 is 128-bit aligned
 -  `f16:16:16` - half is 16-bit aligned
 -  `f32:32:32` - float is 32-bit aligned
 -  `f64:64:64` - double is 64-bit aligned
@@ -3670,7 +3671,8 @@ following rules:
    the bitwidth then the largest integer type is used. For example,
    given the default specifications above, the i7 type will use the
    alignment of i8 (next largest) while both i65 and i256 will use the
-   alignment of i64 (largest specified).
+   alignment of i128 (i65 because it is the next largest, i256 because
+   i128 is the largest specified).
 
 The function of the data layout string may not be what you expect.
 Notably, this is not a specification from the frontend of what alignment

@@ -13,9 +13,9 @@ void pass_BitInt129(_BitInt(129));
 // LA32-NEXT:  [[ENTRY:.*:]]
 // LA32-NEXT:    [[L7:%.*]] = alloca i8, align 1
 // LA32-NEXT:    [[L65:%.*]] = alloca i128, align 16
-// LA32-NEXT:    [[L129:%.*]] = alloca [32 x i8], align 16
+// LA32-NEXT:    [[L129:%.*]] = alloca i256, align 16
 // LA32-NEXT:    [[BYVAL_TEMP:%.*]] = alloca i128, align 16
-// LA32-NEXT:    [[BYVAL_TEMP3:%.*]] = alloca [32 x i8], align 16
+// LA32-NEXT:    [[BYVAL_TEMP3:%.*]] = alloca i256, align 16
 // LA32-NEXT:    store i8 0, ptr [[L7]], align 1
 // LA32-NEXT:    store i128 0, ptr [[L65]], align 16
 // LA32-NEXT:    store i256 0, ptr [[L129]], align 16
@@ -96,7 +96,7 @@ _BitInt(7) return_large_BitInt7(void) { return 0; }
 //
 _BitInt(65) return_large_BitInt65(void) { return 0; }
 // LA32-LABEL: define dso_local void @return_large_BitInt129(
-// LA32-SAME: ptr dead_on_unwind noalias writable sret([32 x i8]) align 16 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
+// LA32-SAME: ptr dead_on_unwind noalias writable sret(i256) align 16 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // LA32-NEXT:  [[ENTRY:.*:]]
 // LA32-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // LA32-NEXT:    store ptr [[AGG_RESULT]], ptr [[RESULT_PTR]], align 4

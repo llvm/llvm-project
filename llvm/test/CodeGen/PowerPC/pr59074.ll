@@ -27,8 +27,8 @@ define void @pr59074(ptr %0) {
 ; LE32-NEXT:    .cfi_def_cfa_offset 80
 ; LE32-NEXT:    lwz 4, 0(3)
 ; LE32-NEXT:    xxlxor 0, 0, 0
-; LE32-NEXT:    addi 5, 1, 20
 ; LE32-NEXT:    li 6, 0
+; LE32-NEXT:    addi 5, 1, 20
 ; LE32-NEXT:    li 7, 12
 ; LE32-NEXT:    addi 8, 1, 16
 ; LE32-NEXT:    xxswapd 0, 0
@@ -37,26 +37,27 @@ define void @pr59074(ptr %0) {
 ; LE32-NEXT:    stw 6, 40(1)
 ; LE32-NEXT:    stw 6, 36(1)
 ; LE32-NEXT:    stw 7, 16(1)
-; LE32-NEXT:    rlwinm 9, 4, 29, 28, 29
+; LE32-NEXT:    rlwinm 6, 4, 29, 28, 29
 ; LE32-NEXT:    stxvd2x 0, 0, 5
+; LE32-NEXT:    lwzx 5, 8, 6
+; LE32-NEXT:    rlwimi 8, 4, 29, 28, 29
 ; LE32-NEXT:    clrlwi 4, 4, 27
-; LE32-NEXT:    lwzux 5, 9, 8
-; LE32-NEXT:    lwz 6, 8(9)
-; LE32-NEXT:    lwz 7, 4(9)
-; LE32-NEXT:    lwz 8, 12(9)
+; LE32-NEXT:    lwz 6, 8(8)
+; LE32-NEXT:    lwz 7, 4(8)
+; LE32-NEXT:    lwz 8, 12(8)
 ; LE32-NEXT:    xori 9, 4, 31
 ; LE32-NEXT:    subfic 11, 4, 32
 ; LE32-NEXT:    srw 5, 5, 4
 ; LE32-NEXT:    slwi 10, 6, 1
-; LE32-NEXT:    srw 6, 6, 4
-; LE32-NEXT:    slw 9, 10, 9
-; LE32-NEXT:    srw 10, 7, 4
+; LE32-NEXT:    srw 12, 7, 4
 ; LE32-NEXT:    slw 7, 7, 11
+; LE32-NEXT:    srw 6, 6, 4
 ; LE32-NEXT:    slw 11, 8, 11
 ; LE32-NEXT:    srw 4, 8, 4
+; LE32-NEXT:    slw 9, 10, 9
 ; LE32-NEXT:    or 5, 7, 5
 ; LE32-NEXT:    or 6, 11, 6
-; LE32-NEXT:    or 7, 10, 9
+; LE32-NEXT:    or 7, 12, 9
 ; LE32-NEXT:    stw 4, 12(3)
 ; LE32-NEXT:    stw 6, 8(3)
 ; LE32-NEXT:    stw 5, 0(3)

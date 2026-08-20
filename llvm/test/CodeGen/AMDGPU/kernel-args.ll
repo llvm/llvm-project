@@ -4459,53 +4459,54 @@ entry:
 define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nounwind {
 ; SI-LABEL: i65_arg:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_load_dword s8, s[4:5], 0xd
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xf
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_and_b32 s0, s8, 1
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0 offset:8
+; SI-NEXT:    s_and_b32 s6, s6, 1
+; SI-NEXT:    v_mov_b32_e32 v0, s6
+; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:8
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s2
-; SI-NEXT:    v_mov_b32_e32 v1, s3
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: i65_arg:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dword s6, s[4:5], 0x34
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x3c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_and_b32 s4, s6, 1
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_add_u32 s0, s0, 8
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v6, s4
-; VI-NEXT:    v_mov_b32_e32 v5, s1
-; VI-NEXT:    v_mov_b32_e32 v4, s0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_byte v[2:3], v4
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    flat_store_byte v[4:5], v6
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: i65_arg:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x10
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x18
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    global_store_byte v2, v3, s[0:1] offset:8
-; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    global_store_byte v2, v3, s[2:3] offset:8
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; EG-LABEL: i65_arg:
@@ -4522,7 +4523,7 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; EG-NEXT:     AND_INT * T1.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T1.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T2.W, KC0[3].Y, 1,
+; EG-NEXT:     AND_INT * T2.W, KC0[3].W, 1,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T1.X, PS, PV.W,
 ; EG-NEXT:     LSHL * T1.W, literal.x, PV.W,
@@ -4533,10 +4534,10 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 4(5.605194e-45)
 ; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
-; EG-NEXT:     MOV * T3.X, KC0[3].X,
+; EG-NEXT:     MOV * T3.X, KC0[3].Z,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     LSHR T4.X, KC0[2].Y, literal.x,
-; EG-NEXT:     MOV * T5.X, KC0[2].W,
+; EG-NEXT:     MOV * T5.X, KC0[3].Y,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: i65_arg:
@@ -4553,7 +4554,7 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; CM-NEXT:     AND_INT * T1.W, PV.W, literal.x,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     LSHL T0.Z, PV.W, literal.x,
-; CM-NEXT:     AND_INT * T1.W, KC0[3].Y, 1,
+; CM-NEXT:     AND_INT * T1.W, KC0[3].W, 1,
 ; CM-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; CM-NEXT:     LSHL T1.X, PV.W, PV.Z,
 ; CM-NEXT:     LSHL * T1.W, literal.x, PV.Z,
@@ -4562,12 +4563,12 @@ define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) nou
 ; CM-NEXT:     MOV * T1.Z, 0.0,
 ; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV T2.X, KC0[2].W,
+; CM-NEXT:     MOV T2.X, KC0[3].Y,
 ; CM-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
 ; CM-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ; CM-NEXT:     LSHR * T3.X, PV.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:     MOV * T4.X, KC0[3].X,
+; CM-NEXT:     MOV * T4.X, KC0[3].Z,
 ; CM-NEXT:     LSHR * T5.X, T0.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
