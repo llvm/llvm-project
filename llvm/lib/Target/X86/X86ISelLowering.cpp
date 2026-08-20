@@ -50780,6 +50780,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
@@ -50791,6 +50792,26 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineMulToPMADD52(N, DL, DAG, Subtarget))
     return V;
+
+  // InstCombine folds shl X, cttz(Y) into mul(and(neg(Y), Y), X), which is
+  // usually profitable but is worse when BMI1 is available: the mul
+  // form lowers to blsi+imul while the shl form uses tzcnt for the shift
+  // amount, which has better latency/throughput despite matching instruction
+  // count (https://github.com/llvm/llvm-project/issues/216550). Reverse the
+  // fold when that feature is available. Only valid when Y is provably nonzero:
+  // CTTZ_ZERO_POISON is poison at Y == 0, while the mul form is well-defined
+  // (0) at Y == 0 - so the rewrite would be a miscompile for Y == 0 without
+  // that guard.
+  if (Subtarget.hasBMI() && VT.isScalarInteger() &&
+      (VT == MVT::i32 || VT == MVT::i64)) {
+    SDValue X, Y;
+    if (sd_match(N, m_Mul(m_Value(X),
+                          m_OneUse(m_And(m_Neg(m_Value(Y)), m_Deferred(Y))))) &&
+        DAG.isKnownNeverZero(Y)) {
+      SDValue Cttz = DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, VT, Y);
+      return DAG.getNode(ISD::SHL, DL, VT, X, Cttz);
+    }
+  }
 
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DL, DAG, Subtarget);
