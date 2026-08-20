@@ -3,7 +3,6 @@ Test std::source_location summary.
 """
 
 import lldb
-import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -22,13 +21,11 @@ class StdSourceLocationTestCase(TestBase):
 
         loc_main = frame.FindVariable("loc_main")
         self.assertTrue(loc_main.GetError().Success())
-        self.assertRegex(loc_main.summary, r"main\.cpp\":6:\d+ \(\"int main\(\)\"\)")
+        self.assertRegex(loc_main.summary, r'main\.cpp":6:\d+ \(".*\bmain\b.*"\)')
 
         loc_foo = frame.FindVariable("loc_foo")
         self.assertTrue(loc_foo.GetError().Success())
-        self.assertRegex(
-            loc_foo.summary, r"main\.cpp\":3:\d+ \(\"std::source_location foo\(\)\"\)"
-        )
+        self.assertRegex(loc_foo.summary, r'main\.cpp":3:\d+ \(".*\bfoo\b.*"\)')
 
         loc_empty = frame.FindVariable("loc_empty")
         self.assertTrue(loc_empty.GetError().Success())
@@ -56,20 +53,7 @@ class StdSourceLocationTestCase(TestBase):
     @add_test_categories(["msvcstl"])
     def test_msvcstl(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
-        )
-
-        self.expect_var_path(
-            "loc_main",
-            summary=re.compile(r'main\.cpp":6:\d+.*main'),
-        )
-        self.expect_var_path(
-            "loc_foo",
-            summary=re.compile(r'main\.cpp":3:\d+.*foo'),
-        )
-        loc_empty = self.expect_var_path("loc_empty")
-        self.assertIsNone(loc_empty.summary)
+        self.do_test()
 
         for member in ("_File =", "_Function =", "_Line =", "_Column ="):
             self.expect(
