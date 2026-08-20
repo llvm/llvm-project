@@ -11,7 +11,6 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
-#include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
