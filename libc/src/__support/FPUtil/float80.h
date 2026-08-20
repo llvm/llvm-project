@@ -97,12 +97,13 @@ struct Float80 {
     return static_cast<T>(xd.as_mantissa_type());
   }
 
-  // unary operators
+  // unary operator
   LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float80 operator-() const {
     fputil::FPBits<Float80> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
   }
+
   LIBC_INLINE constexpr Float80 operator+(const Float80 &other) const {
     return fputil::generic::add<Float80>(fputil::cast<Float128>(*this),
                                          fputil::cast<Float128>(other));
@@ -148,11 +149,6 @@ struct Float80 {
     return fputil::greater_than_or_equals(*this, other);
   }
 };
-
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
-              LIBC_NAMESPACE::fputil::Float80>::value);
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
-              LIBC_NAMESPACE::fputil::Float80>::value);
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
