@@ -12,9 +12,10 @@
 // Alias-analysis scopes are defined by an id (which can be a string or some
 // other metadata node), a domain node, and an optional descriptive string.
 // A domain is defined by an id (which can be a string or some other metadata
-// node), and an optional descriptive string.
+// node), a flag saying whether its scopes are disjoint, and an optional
+// descriptive string.
 //
-// !dom0 =   metadata !{ metadata !"domain of foo()" }
+// !dom0 =   metadata !{ metadata !"domain of foo()", i1 false }
 // !scope1 = metadata !{ metadata !scope1, metadata !dom0, metadata !"scope 1" }
 // !scope2 = metadata !{ metadata !scope2, metadata !dom0, metadata !"scope 2" }
 //
@@ -28,6 +29,17 @@
 // has a set of noalias scopes in some domain that is a superset of the alias
 // scopes in that domain of some other instruction, then the two memory
 // accesses are assumed not to alias.
+//
+// A domain can also declare its scopes to be disjoint, in which case tagging
+// an instruction with an alias scope from that domain implicitly tags it with
+// a noalias set containing every other scope in that domain:
+//
+// !dom1 =   metadata !{ metadata !dom1, i1 true, metadata !"disjoint domain" }
+// !scope3 = metadata !{ metadata !scope3, metadata !dom1 }
+// !scope4 = metadata !{ metadata !scope4, metadata !dom1 }
+//
+// ... = load %ptr3, !alias.scope !{ !scope3 } ; doesn't alias the load below
+// ... = load %ptr4, !alias.scope !{ !scope4 }
 //
 //===----------------------------------------------------------------------===//
 
@@ -68,6 +80,9 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
   if (!mayAliasInScopes(BScopes, ANoAlias))
     return AliasResult::NoAlias;
 
+  if (!mayAliasInDisjointDomains(AScopes, BScopes))
+    return AliasResult::NoAlias;
+
   return AliasResult::MayAlias;
 }
 
@@ -91,6 +106,10 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 
+  if (!mayAliasInDisjointDomains(
+          Loc.AATags.Scope, Call->getMetadata(LLVMContext::MD_alias_scope)))
+    return ModRefInfo::NoModRef;
+
   return ModRefInfo::ModRef;
 }
 
@@ -108,6 +127,10 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const FenceInst *F,
                         Loc.AATags.NoAlias))
     return ModRefInfo::NoModRef;
 
+  if (!mayAliasInDisjointDomains(Loc.AATags.Scope,
+                                 F->getMetadata(LLVMContext::MD_alias_scope)))
+    return ModRefInfo::NoModRef;
+
   return ModRefInfo::ModRef;
 }
 
@@ -123,6 +146,11 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call1,
 
   if (!mayAliasInScopes(Call2->getMetadata(LLVMContext::MD_alias_scope),
                         Call1->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInDisjointDomains(
+          Call1->getMetadata(LLVMContext::MD_alias_scope),
+          Call2->getMetadata(LLVMContext::MD_alias_scope)))
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
@@ -170,6 +198,37 @@ bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
 
     // To not alias, all of the nodes in ScopeNodes must be in NANodes.
     if (llvm::set_is_subset(ScopeNodes, NANodes))
+      return false;
+  }
+
+  return true;
+}
+
+bool ScopedNoAliasAAResult::mayAliasInDisjointDomains(const MDNode *Scopes1,
+                                                      const MDNode *Scopes2) {
+  if (!Scopes1 || !Scopes2)
+    return true;
+
+  // Collect the domains with disjoint scopes that the first access is in.
+  SmallPtrSet<const MDNode *, 16> Domains;
+  for (const MDOperand &MDOp : Scopes1->operands())
+    if (const MDNode *MD = dyn_cast<MDNode>(MDOp))
+      if (const MDNode *Domain = AliasScopeNode(MD).getDomain())
+        if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+          Domains.insert(Domain);
+
+  // Each access is implicitly noalias with every scope of such a domain it is
+  // not itself in, so the accesses don't alias if, for some domain, they have
+  // no scope in common.
+  for (const MDNode *Domain : Domains) {
+    SmallPtrSet<const MDNode *, 16> Nodes2;
+    collectMDInDomain(Scopes2, Domain, Nodes2);
+    if (Nodes2.empty())
+      continue;
+
+    SmallPtrSet<const MDNode *, 16> Nodes1;
+    collectMDInDomain(Scopes1, Domain, Nodes1);
+    if (!llvm::set_intersects(Nodes1, Nodes2))
       return false;
   }
 

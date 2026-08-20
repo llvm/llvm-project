@@ -65,7 +65,7 @@ bb:
   !1 = !{!1}
   !2 = !{!3}
   !3 = distinct !{!3, !4}
-  !4 = distinct !{!4}
+  !4 = distinct !{!4, i1 false}
   !5 = !{!3}
 ;.
 ; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0, i64 0}
@@ -73,10 +73,10 @@ bb:
 ; CHECK: [[META3]] = distinct !{[[META3]]}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]]}
+; CHECK: [[META6]] = distinct !{[[META6]], i1 false}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]]}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 false}
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META6]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META6]]}
 ; CHECK: [[META12]] = !{[[META10]]}

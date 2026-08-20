@@ -94,14 +94,14 @@ attributes #2 = { nounwind uwtable }
 
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello: %a"}
-; CHECK: !2 = distinct !{!2, !"hello"}
+; CHECK: !2 = distinct !{!2, i1 false, !"hello"}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !2, !"hello: %c"}
 ; CHECK: !5 = !{!1, !4}
 
 ; CHECK: !6 = !{!7}
 ; CHECK: !7 = distinct !{!7, !8, !"hello_cs: %a"}
-; CHECK: !8 = distinct !{!8, !"hello_cs"}
+; CHECK: !8 = distinct !{!8, i1 false, !"hello_cs"}
 ; CHECK: !9 = !{!10}
 ; CHECK: !10 = distinct !{!10, !8, !"hello_cs: %c"}
 ; CHECK: !11 = !{!7, !10}
