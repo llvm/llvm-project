@@ -94,6 +94,10 @@ class LiveIntervals {
   /// block.
   SmallVector<std::pair<unsigned, unsigned>, 8> RegMaskBlocks;
 
+  /// The register mask pointer shared by every RegMaskBits entry, or nullptr
+  /// when the function uses more than one mask pointer.
+  const uint32_t *SingleRegMask = nullptr;
+
   /// Keeps a live range set for each register unit to track fixed physreg
   /// interference.
   SmallVector<LiveRange *, 0> RegUnitRanges;

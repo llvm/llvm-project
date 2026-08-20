@@ -147,6 +147,7 @@ void LiveIntervals::clear() {
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
+  SingleRegMask = nullptr;
 
   for (LiveRange *LR : RegUnitRanges)
     delete LR;
@@ -291,6 +292,16 @@ void LiveIntervals::computeRegMasks() {
 
     // Compute the number of register mask instructions in this block.
     RMB.second = RegMaskSlots.size() - RMB.first;
+  }
+
+  if (!RegMaskBits.empty()) {
+    SingleRegMask = RegMaskBits.front();
+    for (const uint32_t *Mask : RegMaskBits) {
+      if (Mask != SingleRegMask) {
+        SingleRegMask = nullptr;
+        break;
+      }
+    }
   }
 }
 
@@ -1031,21 +1042,26 @@ bool LiveIntervals::checkRegMaskInterference(const LiveInterval &LI,
       }
       // Remove usable registers clobbered by this mask.
       UsableRegs.clearBitsNotInMask(Bits[Idx]);
+      // Reapplying the same mask cannot change UsableRegs.
+      return SingleRegMask != nullptr;
   };
   while (true) {
     assert(*SlotI >= LiveI->start);
     // Loop over all slots overlapping this segment.
     while (*SlotI < LiveI->end) {
       // *SlotI overlaps LI. Collect mask bits.
-      unionBitMask(SlotI - Slots.begin());
+      if (unionBitMask(SlotI - Slots.begin()))
+        return true;
       if (++SlotI == SlotE)
         return Found;
     }
     // If segment ends with live-through use we need to collect its regmask.
-    if (*SlotI == LiveI->end)
+    if (*SlotI == LiveI->end) {
       if (MachineInstr *MI = getInstructionFromIndex(*SlotI))
         if (hasLiveThroughUse(MI, LI.reg()))
-          unionBitMask(SlotI++ - Slots.begin());
+          if (unionBitMask(SlotI++ - Slots.begin()))
+            return true;
+    }
     // *SlotI is beyond the current LI segment.
     // Special advance implementation to not miss next LiveI->end.
     if (++LiveI == LiveE || SlotI == SlotE || *SlotI > LI.endIndex())
