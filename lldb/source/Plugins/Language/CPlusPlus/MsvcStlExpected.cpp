@@ -17,29 +17,6 @@ using namespace lldb_private::formatters;
 
 namespace {
 
-/// `_Value` / `_Unexpected` live in an anonymous union. Direct
-/// GetChildMemberWithName from the class works on DWARF; PDB often needs the
-/// same parent/index walk GenericOptional uses for `_Value`.
-ValueObjectSP GetExpectedUnionMember(ValueObject &ns, const char *name) {
-  if (ValueObjectSP direct = ns.GetChildMemberWithName(name))
-    return direct;
-
-  ValueObjectSP has_sp = ns.GetChildMemberWithName("_Has_value");
-  if (!has_sp)
-    return {};
-  ValueObject *parent = has_sp->GetParent();
-  if (!parent)
-    return {};
-  ValueObjectSP first_sp = parent->GetChildAtIndex(0);
-  if (!first_sp)
-    return {};
-  if (ValueObjectSP nested = first_sp->GetChildMemberWithName(name))
-    return nested;
-  if (first_sp->GetName() == name)
-    return first_sp;
-  return {};
-}
-
 class MsvcStlExpectedFrontend : public SyntheticChildrenFrontEnd {
 public:
   MsvcStlExpectedFrontend(ValueObject &valobj)
@@ -49,7 +26,7 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    if (!m_engaged)
+    if (!m_active_sp)
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     if (m_has_value) {
       if (name == "Value" || name == "$$dereference$$")
@@ -61,30 +38,17 @@ public:
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    return m_engaged ? 1U : 0U;
+    return m_active_sp ? 1U : 0U;
   }
 
   ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    if (!m_engaged || idx != 0)
+    if (!m_active_sp || idx != 0)
       return {};
-
-    ValueObjectSP ns = m_backend.GetNonSyntheticValue();
-    if (!ns)
-      return {};
-
-    if (m_has_value) {
-      if (ValueObjectSP val_sp = GetExpectedUnionMember(*ns, "_Value"))
-        return val_sp->Clone("Value");
-      return {};
-    }
-
-    if (ValueObjectSP err_sp = GetExpectedUnionMember(*ns, "_Unexpected"))
-      return err_sp->Clone("Unexpected");
-    return {};
+    return m_active_sp->Clone(m_has_value ? "Value" : "Unexpected");
   }
 
   lldb::ChildCacheState Update() override {
-    m_engaged = false;
+    m_active_sp.reset();
     m_has_value = false;
     ValueObjectSP ns = m_backend.GetNonSyntheticValue();
     if (!ns)
@@ -96,15 +60,13 @@ public:
 
     m_has_value = has_sp->GetValueAsUnsigned(0) != 0;
     // expected<void, E> has no value child when engaged.
-    if (m_has_value)
-      m_engaged = GetExpectedUnionMember(*ns, "_Value") != nullptr;
-    else
-      m_engaged = GetExpectedUnionMember(*ns, "_Unexpected") != nullptr;
+    m_active_sp =
+        ns->GetChildMemberWithName(m_has_value ? "_Value" : "_Unexpected");
     return lldb::ChildCacheState::eRefetch;
   }
 
 private:
-  bool m_engaged = false;
+  ValueObjectSP m_active_sp;
   bool m_has_value = false;
 };
 } // namespace
