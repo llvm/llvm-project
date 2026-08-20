@@ -18,7 +18,22 @@ struct task : awaitable {
   };
 };
 
+struct task_with_new {
+  struct promise_type {
+    void *operator new(decltype(sizeof(0)));
+    task_with_new get_return_object();
+    awaitable initial_suspend();
+    awaitable final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+  };
+};
+
 task foo(int a) { // expected-warning{{unused parameter 'a'}}
+  co_return;
+}
+
+task_with_new class_specific_new(int a) { // expected-warning{{unused parameter 'a'}}
   co_return;
 }
 
