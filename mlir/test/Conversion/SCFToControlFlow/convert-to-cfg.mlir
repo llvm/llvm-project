@@ -795,3 +795,21 @@ func.func @do_while_loops_annotation() {
   return
 }
 
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @parallel_loop_annotation
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @parallel_loop_annotation(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : memref<?xf32>) {
+  %cst = arith.constant 1.0 : f32
+  scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
+    memref.store %cst, %arg3[%i] : memref<?xf32>
+    scf.reduce
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}
+
