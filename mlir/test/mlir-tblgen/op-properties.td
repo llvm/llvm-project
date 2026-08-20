@@ -5,6 +5,7 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/Properties.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -34,6 +35,12 @@ def OpWithProps : NS_Op<"op_with_props"> {
     OptionalProp<I64Prop>:$optional,
     DefaultI64Array:$value
   );
+}
+
+def OpWithPropsAndInferType : NS_Op<"op_with_props_and_infer_type",
+    [InferTypeOpInterface]> {
+  let arguments = (ins BoolProp:$flag);
+  let results = (outs AnyType:$result);
 }
 
 /// Check that optional arguments to builders only go at the end.
@@ -119,6 +126,28 @@ def OpWithOptionalPropsAndAttrs :
 // DEFS-NEXT: return hash_value(::llvm::ArrayRef<int64_t>{propStorage})
 // DEFS: hash_value(prop.optional)
 // DEFS: hash_value_(prop.value)
+
+// COM : Check that collective builders populate a diagnostic callback when converting attributes to properties.
+// DEFS-LABEL: void OpWithProps::build(
+// DEFS: if (!attributes.empty()) {
+// DEFS: if (failed(info->setOpPropertiesFromAttribute(odsState.name, properties,
+// DEFS: odsState.attributes.getDictionary(odsState.getContext()),
+// DEFS: [&]() { return ::mlir::emitError(odsState.location); })))
+// DEFS-NEXT:   ::llvm::report_fatal_error("Property conversion failed.");
+
+// COM : Check inferred-type collective builders populate a diagnostic callback too.
+// DEFS-LABEL: void OpWithPropsAndInferType::build({{.*}}::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes{{.*}}) {
+// DEFS: if (!attributes.empty()) {
+// DEFS: if (failed(info->setOpPropertiesFromAttribute(odsState.name, properties,
+// DEFS: odsState.attributes.getDictionary(odsState.getContext()),
+// DEFS: [&]() { return ::mlir::emitError(odsState.location); })))
+// DEFS-NEXT:   ::llvm::report_fatal_error("Property conversion failed.");
+// DEFS-LABEL: void OpWithPropsAndInferType::build({{.*}}::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes{{.*}}) {
+// DEFS: if (!attributes.empty()) {
+// DEFS: if (failed(info->setOpPropertiesFromAttribute(odsState.name, properties,
+// DEFS: odsState.attributes.getDictionary(odsState.getContext()),
+// DEFS: [&]() { return ::mlir::emitError(odsState.location); })))
+// DEFS-NEXT:   ::llvm::report_fatal_error("Property conversion failed.");
 
 // -----
 
