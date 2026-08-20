@@ -94,7 +94,11 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getDirect();
   }
 
-  // TODO: Handle empty records and zero-size non-SVE types.
+  TypeSize TySize = RetTy->getSizeInBits();
+  uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
+  if (!RetTy->isSVESizelessType() &&
+      (Size == 0 || (RetTy->isRecord() && cast<RecordType>(RetTy)->isEmpty())))
+    return ArgInfo::getIgnore();
 
   const Type *Base = nullptr;
   uint64_t Members = 0;
@@ -144,12 +148,25 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
                                            RecordArgABI::RAA_DirectInMemory);
   }
 
+  // Empty records:
+  // AAPCS64 does not say that empty records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  // Those situations are in fact language-mode-specific, which seems really
+  // unfortunate, but it's something we just have to accept. If this doesn't
+  // apply, just fall through to the standard argument-handling path.
+  // Darwin overrides the psABI here to ignore all empty records in all modes.
   TypeSize TySize = Ty->getSizeInBits();
   uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
   const auto *RT = dyn_cast<RecordType>(Ty);
   if (!Ty->isSVESizelessType() && ((RT && RT->isEmpty()) || Size == 0)) {
-    reportNYI("Empty record argument handling");
-    return ArgInfo::getIgnore();
+    if (!Opts.IsCXX || isDarwinPCS())
+      return ArgInfo::getIgnore();
+
+    // In C++ mode, arguments which have sizeof() == 0 (which are non-standard
+    // C++) are ignored. This isn't defined by any standard, so we copy GCC's
+    // behaviour here.
+    if (Size == 0)
+      return ArgInfo::getIgnore();
   }
 
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
