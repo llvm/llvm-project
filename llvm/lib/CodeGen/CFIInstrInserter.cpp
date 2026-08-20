@@ -209,7 +209,7 @@ char CFIInstrInserterLegacy::ID = 0;
 INITIALIZE_PASS(CFIInstrInserterLegacy, "cfi-instr-inserter",
                 "Check CFA info and insert CFI instructions if needed", false,
                 false)
-FunctionPass *llvm::createCFIInstrInserter() {
+FunctionPass *llvm::createCFIInstrInserterLegacy() {
   return new CFIInstrInserterLegacy();
 }
 
