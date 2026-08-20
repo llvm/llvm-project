@@ -5708,41 +5708,9 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-/// Returns whether this target and width combination is handled by the
-/// current memchr ABI lowering.
-static bool isSupportedMemChrLowering(const llvm::Triple &triple,
-                                      unsigned intTypeWidth,
-                                      unsigned sizeTypeWidth) {
-  if (intTypeWidth != 32)
-    return false;
-  if (triple.isX86_64())
-    return sizeTypeWidth == (triple.isX32() ? 32u : 64u);
-  return triple.isAArch64(64) && sizeTypeWidth == 64;
-}
-
 mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
     cir::MemChrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  auto tripleAttr = moduleOp->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr)
-    return op.emitOpError("expects the module to record ")
-           << cir::CIRDialect::getTripleAttrName();
-
-  // The emitted call carries only the default C convention and noundef
-  // arguments. The triple does not record -mregparm, so 32-bit x86 stays
-  // unsupported.
-  // TODO(cir): replace this allowlist with target-aware call classification.
-  unsigned intTypeWidth = op.getPattern().getType().getWidth();
-  unsigned sizeTypeWidth = op.getLen().getType().getWidth();
-  if (!isSupportedMemChrLowering(llvm::Triple(tripleAttr.getValue()),
-                                 intTypeWidth, sizeTypeWidth))
-    return op.emitOpError()
-           << "lowering is not supported for target '" << tripleAttr.getValue()
-           << "' with int width " << intTypeWidth << " and size_t width "
-           << sizeTypeWidth;
-
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type srcTy = getTypeConverter()->convertType(op.getSrc().getType());
   mlir::Type patternTy =

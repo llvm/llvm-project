@@ -10,22 +10,22 @@
 module attributes {cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32} {
   cir.func @signed_len(%s: !voidptr, %p: !s32i, %n: !s64i) {
     // expected-error@+1 {{'cir.libc.memchr' op operand #2 must be fundamental unsigned integer type}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !s64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !s64i
     cir.return
   }
   cir.func @unsigned_pattern(%s: !voidptr, %p: !u32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op operand #1 must be fundamental signed integer type}}
-    %r = cir.libc.memchr(%s, %p, %n) : !u32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !u32i, !u64i
     cir.return
   }
   cir.func @wrong_pattern_width(%s: !voidptr, %p: !s16i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op pattern must have the width recorded in cir.int_type_width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s16i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s16i, !u64i
     cir.return
   }
   cir.func @wrong_len_width(%s: !voidptr, %p: !s32i, %n: !u32i) {
     // expected-error@+1 {{'cir.libc.memchr' op len must have the width recorded in cir.size_type_width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u32i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u32i
     cir.return
   }
   cir.func @non_default_addrspace(%s: !asptr, %p: !s32i, %n: !u64i) {
@@ -48,7 +48,7 @@ module attributes {cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32
 module attributes {cir.size_type_width = 64 : i32} {
   cir.func @missing_int_width(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op expects the module to record cir.int_type_width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }
@@ -61,7 +61,7 @@ module attributes {cir.size_type_width = 64 : i32} {
 module attributes {cir.int_type_width = -1 : i32, cir.size_type_width = 64 : i32} {
   cir.func @negative_int_width(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op requires cir.int_type_width to be a signless i32 holding a fundamental integer width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }
@@ -74,7 +74,7 @@ module attributes {cir.int_type_width = -1 : i32, cir.size_type_width = 64 : i32
 module attributes {cir.int_type_width = 32 : si32, cir.size_type_width = 64 : i32} {
   cir.func @signed_metadata(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op requires cir.int_type_width to be a signless i32 holding a fundamental integer width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }
@@ -87,7 +87,7 @@ module attributes {cir.int_type_width = 32 : si32, cir.size_type_width = 64 : i3
 module attributes {cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i64} {
   cir.func @malformed_size_width(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op requires cir.size_type_width to be a signless i32 holding a fundamental integer width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }
@@ -100,7 +100,7 @@ module attributes {cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i64
 module attributes {cir.int_type_width = 32 : i32} {
   cir.func @missing_size_width(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op expects the module to record cir.size_type_width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }
@@ -113,7 +113,7 @@ module attributes {cir.int_type_width = 32 : i32} {
 module attributes {cir.int_type_width = 7 : i32, cir.size_type_width = 64 : i32} {
   cir.func @non_fundamental_int_width(%s: !voidptr, %p: !s32i, %n: !u64i) {
     // expected-error@+1 {{'cir.libc.memchr' op requires cir.int_type_width to be a signless i32 holding a fundamental integer width}}
-    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    %r = cir.libc.memchr(%s, %p, %n) : !voidptr, !s32i, !u64i
     cir.return
   }
 }

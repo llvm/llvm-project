@@ -9216,7 +9216,7 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr",
     Examples:
 
     ```
-    %p = cir.libc.memchr(%src, %pattern, %len) : !s32i, !u64i
+    %p = cir.libc.memchr(%src, %pattern, %len) : !cir.ptr<!void>, !s32i, !u64i
     ```
   }];
 
@@ -9230,7 +9230,8 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr",
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
-    `:` qualified(type($pattern)) `,` qualified(type($len))
+    `:` qualified(type($src)) `,` qualified(type($pattern)) `,`
+    qualified(type($len))
   }];
 
   let hasVerifier = 1;

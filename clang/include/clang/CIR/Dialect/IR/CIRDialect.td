@@ -36,12 +36,8 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
-    static llvm::StringRef getSizeTypeWidthAttrName() {
-      return "cir.size_type_width";
-    }
-    static llvm::StringRef getIntTypeWidthAttrName() {
-      return "cir.int_type_width";
-    }
+    static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
+    static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
