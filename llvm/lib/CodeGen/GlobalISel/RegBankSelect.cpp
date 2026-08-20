@@ -485,7 +485,8 @@ protected:
     LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Overload the stream operator for easy debug printing.
-    friend raw_ostream &operator<<(raw_ostream &OS, const MappingCost &Cost) {
+    [[maybe_unused]] friend raw_ostream &operator<<(raw_ostream &OS,
+                                                    const MappingCost &Cost) {
       Cost.print(OS);
       return OS;
     }
