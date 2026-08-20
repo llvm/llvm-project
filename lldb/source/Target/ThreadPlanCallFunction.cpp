@@ -205,8 +205,12 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
               "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
               static_cast<void *>(this), m_tid, m_valid, IsPlanComplete());
     m_takedown_done = true;
-    m_stop_address =
-        thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
+    RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+    if (reg_ctx_sp)
+      m_stop_address = thread.GetRegisterContext()->GetPC();
+    else
+      m_stop_address = LLDB_INVALID_ADDRESS;
+
     m_real_stop_info_sp = GetPrivateStopInfo();
     if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state)) {
       LLDB_LOGF(log,
