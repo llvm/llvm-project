@@ -471,6 +471,7 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
+  __fwd/mbstate_t.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
