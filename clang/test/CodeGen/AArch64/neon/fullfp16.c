@@ -3,6 +3,8 @@
 // RUN:                   %clang_cc1_cg_arm64_neon -target-feature +fullfp16           -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg             | FileCheck %s --check-prefixes=ALL,LLVM
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-llvm  %s -disable-O0-optnone | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefixes=ALL,LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fclangir -emit-cir   %s -disable-O0-optnone |                                      FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,simplifycfg | FileCheck %s --check-prefix=LLVM-STRICT --implicit-check-not=' @llvm.fma.' --implicit-check-not=' @llvm.sqrt.' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-cir  %s -disable-O0-optnone |                                      FileCheck %s --check-prefix=CIR-STRICT --implicit-check-not='cir.call_llvm_intrinsic "fma"' --implicit-check-not='cir.call_llvm_intrinsic "sqrt"' %}
 
 //=============================================================================
 // NOTES
@@ -309,6 +311,10 @@ float16_t test_vrndxh_f16(float16_t a) {
 //===------------------------------------------------------===//
 // 2.5.1.4.  Square root
 //===------------------------------------------------------===//
+// LLVM-STRICT-LABEL: @test_vsqrth_f16(
+// LLVM-STRICT: call half @llvm.experimental.constrained.sqrt.f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CIR-STRICT-LABEL: cir.func {{.*}}@test_vsqrth_f16(
+// CIR-STRICT: cir.sqrt %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
 // ALL-LABEL: test_vsqrth_f16
 float16_t test_vsqrth_f16(float16_t a) {
 // CIR:  cir.sqrt
@@ -335,6 +341,10 @@ float16_t test_vnegh_f16(float16_t a) {
 //===------------------------------------------------------===//
 // 2.5.1.9.3 Fused multiply-accumulate
 //===------------------------------------------------------===//
+// LLVM-STRICT-LABEL: @test_vfmah_f16(
+// LLVM-STRICT: call half @llvm.experimental.constrained.fma.f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CIR-STRICT-LABEL: cir.func {{.*}}@test_vfmah_f16(
+// CIR-STRICT: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
 // ALL-LABEL: test_vfmah_f16
 float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 // CIR: cir.fma {{.*}} : !cir.f16
