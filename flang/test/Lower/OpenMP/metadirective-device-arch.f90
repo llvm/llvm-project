@@ -99,7 +99,7 @@ subroutine test_begin_arch_multi_when()
   x = 0
   !$omp begin metadirective &
   !$omp & when(device={arch(aarch64)}: parallel) &
-  !$omp & when(device={arch(x86_64)}: task)
+  !$omp & when(device={arch(x86_64)}: task shared(x))
   x = 1
   !$omp end metadirective
 end subroutine
