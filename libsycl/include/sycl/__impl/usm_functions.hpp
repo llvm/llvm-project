@@ -30,15 +30,16 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
 /// syclDevice is a subdevice.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// syclDevice and which must eventually be deallocated with sycl::free in
+/// order to avoid a memory leak. Returns nullptr if the requested alignment
+/// is not supported by the implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
                            const device &syclDevice, const context &syclContext,
@@ -46,15 +47,17 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
 /// syclDevice is a subdevice.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// syclDevice and which must eventually be deallocated with sycl::free in
+/// order to avoid a memory leak. Returns nullptr if the requested alignment
+/// is not supported by the implementation.
 template <typename T>
 T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
@@ -66,13 +69,14 @@ T *aligned_alloc_device(std::size_t alignment, std::size_t count,
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
-/// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// \return a pointer to the newly allocated memory, which is allocated on the
+/// device provided by syclQueue and which must eventually be deallocated with
+/// sycl::free in order to avoid a memory leak. Returns nullptr if the
+/// requested alignment is not supported by the implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
                            const queue &syclQueue,
@@ -80,13 +84,15 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
-/// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// \return a pointer to the newly allocated memory, which is allocated on the
+/// device provided by syclQueue and which must eventually be deallocated with
+/// sycl::free in order to avoid a memory leak. Returns nullptr if the
+/// requested alignment is not supported by the implementation.
 template <typename T>
 T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const queue &syclQueue,
@@ -133,9 +139,9 @@ T *malloc_device(std::size_t count, const device &syclDevice,
 /// \param numBytes the number of bytes to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
-/// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// \return a pointer to the newly allocated memory, which is allocated on the
+/// device provided by syclQueue and which must eventually be deallocated with
+/// sycl::free in order to avoid a memory leak.
 _LIBSYCL_EXPORT void *malloc_device(std::size_t numBytes,
                                     const queue &syclQueue,
                                     const property_list &propList = {});
@@ -145,9 +151,9 @@ _LIBSYCL_EXPORT void *malloc_device(std::size_t numBytes,
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
-/// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// \return a pointer to the newly allocated memory, which is allocated on the
+/// device provided by syclQueue and which must eventually be deallocated with
+/// sycl::free in order to avoid a memory leak.
 template <typename T>
 T *malloc_device(std::size_t count, const queue &syclQueue,
                  const property_list &propList = {}) {
@@ -163,13 +169,15 @@ T *malloc_device(std::size_t count, const queue &syclQueue,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclContext the context that should have access to the allocated
 /// memory.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
                          const context &syclContext,
@@ -177,13 +185,16 @@ void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclContext the context that should have access to the allocated
 /// memory.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc_host(std::size_t alignment, std::size_t count,
                       const context &syclContext,
@@ -195,12 +206,14 @@ T *aligned_alloc_host(std::size_t alignment, std::size_t count,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclQueue queue that provides the context.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
                          const queue &syclQueue,
@@ -208,12 +221,15 @@ void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue queue that provides the context.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc_host(std::size_t alignment, std::size_t count,
                       const queue &syclQueue,
@@ -279,14 +295,16 @@ T *malloc_host(std::size_t count, const queue &syclQueue,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
 /// syclDevice is a subdevice.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
                            const device &syclDevice, const context &syclContext,
@@ -294,14 +312,17 @@ void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
 /// syclDevice is a subdevice.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
@@ -313,12 +334,14 @@ T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
                            const queue &syclQueue,
@@ -326,12 +349,15 @@ void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
                         const queue &syclQueue,
@@ -403,7 +429,7 @@ T *malloc_shared(std::size_t count, const queue &syclQueue,
 
 /// Allocates USM of type `kind` with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclDevice the device to use for the allocation. The syclDevice
 /// parameter is ignored if kind is usm::alloc::host.
@@ -412,9 +438,10 @@ T *malloc_shared(std::size_t count, const queue &syclQueue,
 /// \param kind the type of memory to allocate.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak. If there are
-/// not enough resources to allocate the requested memory, these functions
-/// return nullptr.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if there are not enough resources to allocate the requested
+/// memory, or if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
@@ -422,7 +449,8 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates USM of type `kind` with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation. The syclDevice
 /// parameter is ignored if kind is usm::alloc::host.
@@ -431,9 +459,10 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 /// \param kind the type of memory to allocate.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak. If there are
-/// not enough resources to allocate the requested memory, these functions
-/// return nullptr.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if there are not enough resources to allocate the requested
+/// memory, or if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc(std::size_t alignment, std::size_t count,
                  const device &syclDevice, const context &syclContext,
@@ -444,15 +473,17 @@ T *aligned_alloc(std::size_t alignment, std::size_t count,
 }
 
 /// Allocates USM of type `kind` with specified alignment.
-/// \param alignment the alignment of the allocated memory.
+///
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param numBytes the number of bytes to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param kind the type of memory to allocate.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak. If there are
-/// not enough resources to allocate the requested memory, these functions
-/// return nullptr.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if there are not enough resources to allocate the requested
+/// memory, or if the requested alignment is not supported by the
+/// implementation.
 _LIBSYCL_EXPORT
 void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const queue &syclQueue, usm::alloc kind,
@@ -460,15 +491,17 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates USM of type `kind` with specified alignment.
 ///
-/// \param alignment the alignment of the allocated memory.
+/// \param alignment the minimum alignment of the allocated memory; the actual
+/// alignment used is at least alignof(T).
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param kind the type of memory to allocate.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
-/// deallocated with sycl::free in order to avoid a memory leak. If there are
-/// not enough resources to allocate the requested memory, these functions
-/// return nullptr.
+/// deallocated with sycl::free in order to avoid a memory leak. Returns
+/// nullptr if there are not enough resources to allocate the requested
+/// memory, or if the requested alignment is not supported by the
+/// implementation.
 template <typename T>
 T *aligned_alloc(std::size_t alignment, std::size_t count,
                  const queue &syclQueue, usm::alloc kind,
