@@ -439,6 +439,18 @@ namespace amdgcn {
 // NOTE: copied from HIPUtility.cpp.
 static std::string normalizeForBundler(const llvm::Triple &T,
                                        bool HasTargetID) {
+  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
+  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
+  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
+  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
+  // not match, producing hipErrorInvalidImage at load time. Force the legacy
+  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
+  // hardcoding this.
+  if (HasTargetID && T.isAMDGCN())
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()

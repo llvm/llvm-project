@@ -219,14 +219,13 @@ define i1 @single_block_header_is_latch(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[IV]], 5
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i1 [[GE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop

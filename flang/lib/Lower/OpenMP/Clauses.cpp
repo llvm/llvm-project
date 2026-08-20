@@ -723,30 +723,32 @@ Doacross makeDoacross(const parser::OmpDoacross &doa,
   // Iteration is the equivalent of parser::OmpIteration
   using Iteration = Doacross::Vector::value_type; // LoopIterationT
 
-  auto visitSource = [&](const parser::OmpDoacross::Source &) {
+  auto &mods = semantics::OmpGetModifiers(doa);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpDependenceType>(mods);
+  assert(m0 && "Expecting dependence-type");
+  if (m0->v == parser::OmpDependenceType::Value::Source) {
     return Doacross{{/*DependenceType=*/Doacross::DependenceType::Source,
                      /*Vector=*/{}}};
-  };
+  }
 
-  auto visitSink = [&](const parser::OmpDoacross::Sink &s) {
-    using IterOffset = parser::OmpIterationOffset;
-    auto convert2 = [&](const parser::OmpIteration &v) {
-      auto &t0 = std::get<parser::Name>(v.t);
-      auto &t1 = std::get<std::optional<IterOffset>>(v.t);
+  using IterOffset = parser::OmpIterationOffset;
+  auto convert2 = [&](const parser::OmpIteration &v) {
+    auto &t0 = std::get<parser::Name>(v.t);
+    auto &t1 = std::get<std::optional<IterOffset>>(v.t);
 
-      auto convert3 = [&](const IterOffset &u) {
-        auto &s0 = std::get<parser::DefinedOperator>(u.t);
-        auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
-        return Iteration::Distance{
-            {makeDefinedOperator(s0, semaCtx), makeExpr(s1, semaCtx)}};
-      };
-      return Iteration{{makeObject(t0, semaCtx), maybeApply(convert3, t1)}};
+    auto convert3 = [&](const IterOffset &u) {
+      auto &s0 = std::get<parser::DefinedOperator>(u.t);
+      auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
+      return Iteration::Distance{
+          {makeDefinedOperator(s0, semaCtx), makeExpr(s1, semaCtx)}};
     };
-    return Doacross{{/*DependenceType=*/Doacross::DependenceType::Sink,
-                     /*Vector=*/makeList(s.v.v, convert2)}};
+    return Iteration{{makeObject(t0, semaCtx), maybeApply(convert3, t1)}};
   };
 
-  return common::visit(common::visitors{visitSink, visitSource}, doa.u);
+  auto &vec = std::get<std::optional<parser::OmpIterationVector>>(doa.t);
+  assert(vec && "Expecting iteration vector");
+  return Doacross{{/*DependenceType=*/Doacross::DependenceType::Sink,
+                   /*Vector=*/makeList(vec->v, convert2)}};
 }
 
 Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,

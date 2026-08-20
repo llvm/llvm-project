@@ -1905,6 +1905,8 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
     return false;
 
   MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
+  if (!ParentMI)
+    return false;
 
   int64_t ParentMask = 0;
   std::optional<ANDMaskResult> ParentResult = getANDMaskRegOperand(*ParentMI);
