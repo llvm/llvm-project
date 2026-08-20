@@ -585,9 +585,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
+  if ((LangOpts.CUDA || LangOpts.isSYCL()) && LangOpts.GPURelocatableDeviceCode)
+    Builder.defineMacro("__CLANG_RDC__");
   if (LangOpts.CUDA) {
-    if (LangOpts.GPURelocatableDeviceCode)
-      Builder.defineMacro("__CLANG_RDC__");
     if (!LangOpts.HIP)
       Builder.defineMacro("__CUDA__");
     if (LangOpts.GPUDefaultStream ==
@@ -749,7 +749,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
-    Builder.defineMacro("__cpp_auto_cast", "202110L");
     Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
@@ -757,6 +756,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
+  Builder.defineMacro("__cpp_auto_cast", "202110L");
   Builder.defineMacro("__cpp_named_character_escapes", "202606L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
 

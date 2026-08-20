@@ -899,8 +899,10 @@ Status NativeProcessNetBSD::Attach() {
   return Status();
 }
 
-Status NativeProcessNetBSD::ReadMemory(lldb::addr_t addr, void *buf,
-                                       size_t size, size_t &bytes_read) {
+Status NativeProcessNetBSD::ReadMemory(const ProcessAddress &process_addr,
+                                       void *buf, size_t size,
+                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   unsigned char *dst = static_cast<unsigned char *>(buf);
   struct ptrace_io_desc io;
 

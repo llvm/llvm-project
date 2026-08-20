@@ -910,11 +910,11 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     use during the build. Enabling this option can significantly speed up build
     times, especially when building LLVM in Debug configurations.
 
-**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN}\_JOBS**:STRING
+**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN,SPHINX}\_JOBS**:STRING
 
-:   Limit the maximum number of concurrent compilation, link or tablegen jobs
-    respectively. The default total number of parallel jobs is determined by
-    the number of logical CPUs.
+:   Limit the maximum number of concurrent compilation, link, tablegen, or
+    `sphinx-build` invocations respectively. These limits are implemented with
+    Ninja job pools and only take effect when using a Ninja generator.
 
 **LLVM_PROFDATA_FILE**:PATH
 
@@ -939,6 +939,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 :   If enabled, all supported unordered llvm containers would be iterated in
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
+
+**LLVM_SPHINX_THREADS**:STRING
+
+:   Controls `sphinx-build -j`, which is the internal Sphinx worker count.
+    Defaults to half the number of logical cores, rounded up. The default is
+    high because Sphinx is often on the critical path, and rarely uses all
+    available cores. Set to an empty string to omit the Sphinx `-j` option.
 
 **LLVM_STATIC_LINK_CXX_STDLIB**:BOOL
 

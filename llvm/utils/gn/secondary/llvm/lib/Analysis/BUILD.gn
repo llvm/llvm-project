@@ -81,6 +81,7 @@ static_library("Analysis") {
     "LazyBranchProbabilityInfo.cpp",
     "LazyCallGraph.cpp",
     "LazyValueInfo.cpp",
+    "LibcallLoweringInfo.cpp",
     "Lint.cpp",
     "Loads.cpp",
     "Local.cpp",

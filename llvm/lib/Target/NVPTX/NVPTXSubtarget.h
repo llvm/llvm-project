@@ -95,9 +95,7 @@ public:
   bool hasAtomSwap128() const {
     return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX83);
   }
-  bool hasClusters() const {
-    return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX78);
-  }
+  bool hasClusters() const { return hasFeature(NVPTX::SM90); }
   bool hasLDG() const { return hasFeature(NVPTX::SM32); }
   bool hasHWROT32() const { return hasFeature(NVPTX::SM32); }
   bool hasBrx() const {
@@ -112,9 +110,7 @@ public:
   }
   // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
   // release, acq_rel, sc) ?
-  bool hasMemoryOrdering() const {
-    return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX60);
-  }
+  bool hasMemoryOrdering() const { return hasFeature(NVPTX::SM70); }
   // Does SM & PTX support .acquire and .release qualifiers for fence?
   bool hasSplitAcquireAndReleaseFences() const {
     return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX86);
@@ -123,9 +119,7 @@ public:
   bool hasRelaxedMMIO() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX82);
   }
-  bool hasDotInstructions() const {
-    return hasFeature(NVPTX::SM61) && hasFeature(NVPTX::PTX50);
-  }
+  bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
   // Cache hint SM/PTX version requirements
   bool hasL1EvictionHint() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX74);
@@ -157,113 +151,8 @@ public:
     return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
   }
 
-  // Checks Rubin family extensions support.
-  //  - TMA S2G im2col_w mode support
-  //  - tcgen05.commit shared mem A variants.
-  bool hasRubinFamilySupport() const { return hasAnyFeature({NVPTX::SM107f}); }
-
-  // Checks tcgen05.shift instruction support.
-  bool hasTcgen05ShiftSupport() const {
-    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05MMAScaleInputDImm() const {
-    return hasAnyFeature({NVPTX::SM100f});
-  }
-
-  bool hasTcgen05MMAI8Kind() const {
-    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05MMASparseMxf4nvf4() const {
-    return hasFeature(NVPTX::PTX87) &&
-           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05MMASparseMxf4() const {
-    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05LdRedSupport() const {
-    return hasFeature(NVPTX::PTX88) &&
-           hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
-  }
-
-  bool hasReduxSyncF32() const { return hasAnyFeature({NVPTX::SM100f}); }
-
-  bool hasMMABlockScale() const { return hasAnyFeature({NVPTX::SM120f}); }
-
-  bool hasMMASparseBlockScaleF4() const {
-    return hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
-  }
-
-  bool hasMMAWithMXF4NVF4Scale4xE8M0() const {
-    return hasFeature(NVPTX::PTX91) && hasAnyFeature({NVPTX::SM120f});
-  }
-
-  bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
-    return hasFeature(NVPTX::PTX91) &&
-           hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
-  }
-
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
-
-  // Checks support for following in TMA:
-  //  - cta_group::1/2 support
-  //  - im2col_w/w_128 mode support
-  //  - tile_gather4 mode support
-  //  - tile_scatter4 mode support
-  bool hasTMABlackwellSupport() const {
-    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
-  }
-
-  // Checks support for conversions involving e4m3x2 and e5m2x2.
-  bool hasFP8ConversionSupport() const {
-    if (hasFeature(NVPTX::PTX81))
-      return hasFeature(NVPTX::SM89);
-
-    if (hasFeature(NVPTX::PTX78))
-      return hasFeature(NVPTX::SM90);
-
-    return false;
-  }
-
-  // Checks support for conversions involving the following types:
-  // - e2m3x2/e3m2x2
-  // - e2m1x2
-  // - ue8m0x2
-  bool hasNarrowFPConversionSupport() const {
-    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
-  }
-
-  // Checks support for conversions involving the following types:
-  // - bf16x2 -> f8x2
-  // - f16x2 -> f6x2
-  // - bf16x2 -> f6x2
-  // - f16x2 -> f4x2
-  // - bf16x2 -> f4x2
-  bool hasFP16X2ToNarrowFPConversionSupport() const {
-    return hasFeature(NVPTX::PTX91) &&
-           hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
-  }
-
-  bool hasS2F6X2ConversionSupport() const {
-    return hasFeature(NVPTX::PTX91) &&
-           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a,
-                          NVPTX::SM120a, NVPTX::SM121a});
-  }
-
-  // Checks support for conversions from narrow FP types to bf16x2.
-  bool hasNarrowFPToBF16x2ConversionSupport() const {
-    return hasFeature(NVPTX::PTX92) &&
-           hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
-  }
-
-  // Checks support for conversions involving ue5m3x2.
-  bool hasUE5M3TypeSupport() const {
-    return hasFeature(NVPTX::PTX94) && hasAnyFeature({NVPTX::SM107f});
-  }
 
   bool hasTensormapReplaceSupport() const {
     return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f}) ||
@@ -280,32 +169,12 @@ public:
     return hasTensormapReplaceSupport();
   }
 
-  bool hasTensormapReplaceSwizzleAtomicitySupport() const {
-    return (hasFeature(NVPTX::PTX88) &&
-            hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f})) ||
-           (hasFeature(NVPTX::PTX87) &&
-            hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a, NVPTX::SM120a}));
-  }
-
   bool hasTensormapReplaceSwizzleModeSupport(unsigned SwizzleMode) const {
     if (SwizzleMode ==
         static_cast<unsigned>(nvvm::TensormapSwizzleMode::SWIZZLE_96B))
       return hasAnyFeature({NVPTX::SM103a});
 
     return hasTensormapReplaceSupport();
-  }
-
-  bool hasClusterLaunchControlTryCancelMulticastSupport() const {
-    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
-  }
-
-  bool hasSetMaxNRegSupport() const {
-    return hasAnyFeature(
-        {NVPTX::SM90a, NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
-  }
-
-  bool hasLdStmatrixBlackwellSupport() const {
-    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
@@ -318,10 +187,6 @@ public:
   bool hasPTXASUnreachableBug() const { return !hasFeature(NVPTX::PTX83); }
   bool hasCvtaParam() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX77);
-  }
-  bool hasConvertWithStochasticRounding() const {
-    return hasFeature(NVPTX::PTX87) &&
-           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a});
   }
   // The compute capability as a number, for __CUDA_ARCH__. This is the one
   // place an architecture needs to be a number, and it is not an identity:

@@ -1576,6 +1576,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   else {
     PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
+    maybeCreateMCDCCondBitmap();
     EmitStmt(blockDecl->getBody());
   }
 
