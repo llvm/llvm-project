@@ -841,8 +841,11 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
          isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
-  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
-    return BoundType(cast<ConstantInt>(MD->getValue()));
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN)) {
+    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+      return BoundType(CV);
+    return BoundType();
+  }
 
   if (auto *MD = dyn_cast<DIVariable>(IN))
     return BoundType(MD);
