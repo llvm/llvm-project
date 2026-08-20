@@ -1998,14 +1998,23 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  // Intrinsic doesn't support vectors, also it seems that it's often difficult
-  // to prove that a vector cannot have any nulls in it so it's unclear if it's
-  // worth supporting.
+  // TODO: This is target-independent reasoning about the source pointer being
+  // non-null, and would fit better in a generic pass such as
+  // AggressiveInstCombine. It lives here for now because proving the source is
+  // not the null value requires knowing the numeric null pointer value of the
+  // source address space, which is not yet a first-class IR concept.
+
+  // If the flag is already set there is nothing to do.
+  if (I.hasNonNull())
+    return false;
+
+  // It is often difficult to prove that a vector of pointers cannot have any
+  // nulls in it, so it's unclear if it's worth supporting.
   if (I.getType()->isVectorTy())
     return false;
 
-  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
-  // This is only worthwhile for casts from/to priv/local to flat.
+  // The nonnull flag only affects the lowering of casts from/to priv/local to
+  // flat, so only bother proving non-null for those.
   const unsigned SrcAS = I.getSrcAddressSpace();
   const unsigned DstAS = I.getDestAddressSpace();
 
@@ -2026,11 +2035,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
       }))
     return false;
 
-  IRBuilder<> B(&I);
-  auto *Intrin = B.CreateIntrinsic(
-      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
-  I.replaceAllUsesWith(Intrin);
-  DeadVals.push_back(&I);
+  I.setNonNull();
   return true;
 }
 
