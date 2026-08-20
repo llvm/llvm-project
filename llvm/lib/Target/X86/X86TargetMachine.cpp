@@ -603,7 +603,7 @@ void X86PassConfig::addPreEmitPass2() {
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
        MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
-    addPass(createCFIInstrInserter());
+    addPass(createCFIInstrInserterLegacy());
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.

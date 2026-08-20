@@ -608,7 +608,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   }));
 
   if (EnableCFIInstrInserter)
-    addPass(createCFIInstrInserter());
+    addPass(createCFIInstrInserterLegacy());
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
