@@ -42,6 +42,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
@@ -11358,6 +11359,7 @@ namespace {
     bool VisitCXXConstructExpr(const CXXConstructExpr *E, QualType T);
     bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
     bool VisitBinCmp(const BinaryOperator *E);
+    bool VisitTypeTraitExpr(const TypeTraitExpr *E);
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
@@ -19511,6 +19513,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
   return DoAfter();
 }
 
+static bool EvaluateComparisonResult(EvalInfo &Info, const Expr *E,
+                                     ComparisonCategoryResult CCR,
+                                     APValue &Result) {
+  const ComparisonCategoryInfo &CmpInfo =
+      Info.Ctx.CompCategories.getInfoForType(E->getType());
+  const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
+
+  // Check and evaluate the result as a constant expression.
+  LValue LV;
+  LV.set(VD);
+  if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
+    return false;
+  return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                 ConstantExprKind::Normal);
+}
+
 bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
   if (!CheckLiteralType(Info, E))
     return false;
@@ -19533,22 +19551,23 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
       CCR = ComparisonCategoryResult::Unordered;
       break;
     }
-    // Evaluation succeeded. Lookup the information for the comparison category
-    // type and fetch the VarDecl for the result.
-    const ComparisonCategoryInfo &CmpInfo =
-        Info.Ctx.CompCategories.getInfoForType(E->getType());
-    const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
-    // Check and evaluate the result as a constant expression.
-    LValue LV;
-    LV.set(VD);
-    if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
-      return false;
-    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                   ConstantExprKind::Normal);
+    return EvaluateComparisonResult(Info, E, CCR, Result);
   };
   return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {
     return ExprEvaluatorBaseTy::VisitBinCmp(E);
   });
+}
+
+bool RecordExprEvaluator::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  if (!CheckLiteralType(Info, E))
+    return false;
+
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
+
+  ComparisonCategoryResult CCR = static_cast<ComparisonCategoryResult>(
+      E->getAPValue().getInt().getZExtValue());
+  return EvaluateComparisonResult(Info, E, CCR, Result);
 }
 
 bool RecordExprEvaluator::VisitCXXParenListInitExpr(

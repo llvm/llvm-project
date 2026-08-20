@@ -648,14 +648,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setMaxLargeFPConvertBitWidthSupported(64);
 }
 
-bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  const auto Flags = Op.getNode()->getFlags();
-  if (Flags.hasNoSignedZeros())
-    return true;
-
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // Target Information
 //===----------------------------------------------------------------------===//
@@ -5228,8 +5220,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     return SDValue();
 
   bool MayIgnoreSignedZeroForAllUses =
-      mayIgnoreSignedZero(N0) ||
-      (N0.hasOneUse() && mayIgnoreSignedZero(SDValue(N, 0)));
+      N0->getFlags().hasNoSignedZeros() ||
+      (N0.hasOneUse() && N->getFlags().hasNoSignedZeros());
 
   SDLoc SL(N);
   switch (Opc) {

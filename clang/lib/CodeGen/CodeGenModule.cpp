@@ -3422,6 +3422,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    getTarget().getTargetOpts().Features);
       }
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else if (getTarget().getTriple().isSPIRV() &&
+               getTarget().getTriple().getVendor() == llvm::Triple::AMD) {
+      // The AMDGCN-flavored SPIR-V target unions every GPU's features so it can
+      // report all builtins as supported, but that union is meaningless in the
+      // emitted IR.
     } else {
       Features = getTarget().getTargetOpts().Features;
     }
