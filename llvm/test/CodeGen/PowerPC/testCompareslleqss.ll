@@ -99,16 +99,16 @@ define i64 @test_lleqss_sext_z(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lleqss_sext_z:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    cntlzw r3, r3
-; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    neg r3, r3
+; CHECK-BE-NEXT:    clrldi r3, r3, 48
+; CHECK-BE-NEXT:    addic r3, r3, -1
+; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lleqss_sext_z:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    cntlzw r3, r3
-; CHECK-LE-NEXT:    srwi r3, r3, 5
-; CHECK-LE-NEXT:    neg r3, r3
+; CHECK-LE-NEXT:    clrldi r3, r3, 48
+; CHECK-LE-NEXT:    addic r3, r3, -1
+; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, 0
@@ -230,19 +230,19 @@ define dso_local void @test_lleqss_sext_z_store(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lleqss_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    cntlzw r3, r3
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    neg r3, r3
+; CHECK-BE-NEXT:    addic r3, r3, -1
+; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lleqss_sext_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    cntlzw r3, r3
+; CHECK-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-LE-NEXT:    srwi r3, r3, 5
-; CHECK-LE-NEXT:    neg r3, r3
+; CHECK-LE-NEXT:    addic r3, r3, -1
+; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:

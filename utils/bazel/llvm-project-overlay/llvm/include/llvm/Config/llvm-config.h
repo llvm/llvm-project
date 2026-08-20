@@ -14,7 +14,6 @@
    into Bazel defines, but it is by no means complete, so if you see something
    that looks wrong, it probably is. */
 
-
 /* This file enumerates variables from the LLVM configuration so that they
    can be in exported headers and won't override package specific directives.
    This is a C header that can be included in the llvm-c headers. */
@@ -131,7 +130,11 @@
 /* LLVM_ENABLE_IO_SANDBOX */
 
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
+// Allow -DLLVM_ENABLE_DIA_SDK=1 to override this default 0, which is set
+// otherwise.
+#ifndef LLVM_ENABLE_DIA_SDK
 #define LLVM_ENABLE_DIA_SDK 0
+#endif
 
 /* Define if plugins enabled */
 /* LLVM_ENABLE_PLUGINS defined in Bazel */

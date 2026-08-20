@@ -138,9 +138,6 @@ enum ActionKind {
   /// Run one or more source code analyses.
   RunAnalysis,
 
-  /// Dump template instantiations
-  TemplightDump,
-
   /// Just lex, no output.
   RunPreprocessorOnly,
 
@@ -241,7 +238,7 @@ class FrontendInputFile {
   /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
-  friend class CompilerInvocationBase;
+  friend class CowCompilerInvocation;
 
 public:
   FrontendInputFile() = default;
@@ -422,6 +419,22 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// Enable Clang IR (CIR) idiom recognizer
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIREnableIdiomRecognizer : 1;
+
+  /// Enable Clang IR (CIR) calling-convention lowering
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIREnableCallConvLowering : 1;
+
+  /// Enable ClangIR library optimization.
+  /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRLibOptEnabled : 1;
+
+  /// Options to control ClangIR library optimization
+  std::string ClangIRLibOptOptions;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -491,6 +504,9 @@ public:
   /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
+  /// The time in seconds to wait on an implicit module lock before timing out.
+  unsigned ImplicitModulesLockTimeoutSeconds = 90;
+
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
@@ -506,7 +522,7 @@ public:
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
 
-  /// Auxiliary triple for CUDA/HIP compilation.
+  /// Auxiliary triple for CUDA/HIP/SYCL compilation.
   std::string AuxTriple;
 
   /// Auxiliary target CPU for CUDA/HIP compilation.
@@ -552,8 +568,9 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
+        ClangIREnableCallConvLowering(false), ClangIRLibOptEnabled(false),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

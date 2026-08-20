@@ -30,6 +30,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
@@ -147,6 +148,71 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
 
   return failure();
+}
+
+/// Depth-first conversion of the metadata node `md` to the matching LLVM
+/// dialect metadata attribute. Returns a null attribute for shapes that the
+/// dialect's metadata-attribute hierarchy does not currently model. `path`
+/// holds the metadata nodes on the current depth-first search path. Cyclic
+/// metadata graphs are valid in LLVM IR, but they cannot be expressed by the
+/// immutable, structurally-uniqued metadata attributes built here. The `path`
+/// set lets the traversal recognize such a back-edge and bail out. `attrMap`
+/// caches the attributes of fully converted nodes so that shared subgraphs
+/// are visited only once.
+static Attribute convertMetadataToAttrImpl(
+    MLIRContext *ctx, const llvm::Metadata *md,
+    SmallPtrSetImpl<const llvm::Metadata *> &path,
+    DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
+  if (!md)
+    return {};
+  if (auto *mdStr = dyn_cast<llvm::MDString>(md))
+    return MDStringAttr::get(ctx, StringAttr::get(ctx, mdStr->getString()));
+  if (auto *cam = dyn_cast<llvm::ConstantAsMetadata>(md)) {
+    auto *ci = dyn_cast<llvm::ConstantInt>(cam->getValue());
+    if (!ci)
+      return {};
+    auto intType = IntegerType::get(ctx, ci->getBitWidth());
+    return MDConstantAttr::get(ctx, IntegerAttr::get(intType, ci->getValue()));
+  }
+  if (auto *vam = dyn_cast<llvm::ValueAsMetadata>(md)) {
+    auto *fn = dyn_cast<llvm::Function>(vam->getValue());
+    if (!fn)
+      return {};
+    return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
+  }
+  if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    if (Attribute cached = attrMap.lookup(node))
+      return cached;
+    // If `node` is already on the current search path, this is a back-edge into
+    // a cyclic graph. While that's valid it isn't implemented yet, so bail out.
+    if (!path.insert(node).second)
+      return {};
+    SmallVector<Attribute> operands;
+    operands.reserve(node->getNumOperands());
+    for (const llvm::MDOperand &op : node->operands()) {
+      Attribute opAttr =
+          convertMetadataToAttrImpl(ctx, op.get(), path, attrMap);
+      if (!opAttr)
+        return {};
+      operands.push_back(opAttr);
+    }
+    path.erase(node);
+    Attribute nodeAttr = MDNodeAttr::get(ctx, operands);
+    attrMap.try_emplace(node, nodeAttr);
+    return nodeAttr;
+  }
+  return {};
+}
+
+/// Converts the metadata node `md` to the matching LLVM dialect metadata
+/// attribute. Returns a null attribute for shapes that the dialect's
+/// metadata-attribute hierarchy does not currently model, including cyclic
+/// metadata graphs that the immutable metadata attributes cannot express.
+static Attribute convertMetadataToAttr(MLIRContext *ctx,
+                                       const llvm::Metadata *md) {
+  SmallPtrSet<const llvm::Metadata *, 8> path;
+  DenseMap<const llvm::Metadata *, Attribute> attrMap;
+  return convertMetadataToAttrImpl(ctx, md, path, attrMap);
 }
 
 /// Get a topologically sorted list of blocks for the given basic blocks.
@@ -841,7 +907,18 @@ convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
   if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
     return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
                                                 mdTuple);
-  return nullptr;
+  // Handle MDTuples whose operands are all MDStrings (e.g. "riscv-isa").
+  // Convert them to ArrayAttr of StringAttrs for a lossless round-trip.
+  Builder builder(mlirModule->getContext());
+  SmallVector<Attribute> strings;
+  strings.reserve(mdTuple->getNumOperands());
+  for (const llvm::MDOperand &operand : mdTuple->operands()) {
+    auto *mdString = dyn_cast_if_present<llvm::MDString>(operand.get());
+    if (!mdString)
+      return nullptr;
+    strings.push_back(builder.getStringAttr(mdString->getString()));
+  }
+  return builder.getArrayAttr(strings);
 }
 
 LogicalResult ModuleImport::convertModuleFlagsMetadata() {
@@ -1073,12 +1150,15 @@ void ModuleImport::convertTargetTriple() {
 }
 
 void ModuleImport::convertModuleLevelAsm() {
-  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
   llvm::SmallVector<mlir::Attribute> asmArrayAttr;
 
-  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
-    if (!line.empty())
-      asmArrayAttr.push_back(builder.getStringAttr(line));
+  for (const llvm::Module::GlobalAsmFragment &Frag :
+       llvmModule->getModuleInlineAsm()) {
+    // TODO: Preserve module asm properties.
+    for (llvm::StringRef line : llvm::split(Frag.Asm, '\n'))
+      if (!line.empty())
+        asmArrayAttr.push_back(builder.getStringAttr(line));
+  }
 
   mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                       builder.getArrayAttr(asmArrayAttr));
@@ -1221,6 +1301,9 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
+  if (constScalar->getType()->isVectorTy())
+    return {};
+
   // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
@@ -1269,6 +1352,17 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     return llvm::dyn_cast_if_present<ShapedType>(
         getBuiltinTypeForAttr(convertType(type)));
   };
+
+  // Convert constant vector splat values.
+  if (isa<llvm::ConstantInt, llvm::ConstantFP>(constant)) {
+    assert(constant->getType()->isVectorTy() && "expected a vector splat");
+    auto shape = getConstantShape(constant->getType());
+    if (!shape)
+      return {};
+    Attribute splatAttr =
+        getScalarConstantAsAttr(builder, constant->getSplatValue());
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
   // integer or half/bfloat/float/double values.
@@ -1879,13 +1973,28 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
-  assert(!isa<llvm::MetadataAsValue>(value) &&
-         "expected value to not be metadata");
-
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
   if (it != valueMapping.end())
     return it->getSecond();
+
+  // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
+  // MDString arguments used by the constrained floating-point intrinsics, or
+  // the named-register MDNode used by `llvm.read_register`) are lifted into a
+  // `llvm.mlir.metadata_as_value` SSA op carrying the corresponding metadata
+  // attribute.
+  if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
+    llvm::Metadata *md = mdAsVal->getMetadata();
+    Attribute mdAttr = convertMetadataToAttr(context, md);
+    if (!mdAttr)
+      return emitError(mlirModule.getLoc())
+             << "unsupported metadata: " << diagMD(md, llvmModule.get());
+    Value result =
+        MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
+            .getRes();
+    mapValue(value, result);
+    return result;
+  }
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -2240,9 +2349,17 @@ ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
-  if (inst->getOpcode() == llvm::Instruction::Br) {
-    auto *brInst = cast<llvm::BranchInst>(inst);
+  if (auto *brInst = dyn_cast<llvm::UncondBrInst>(inst)) {
+    llvm::BasicBlock *succ = brInst->getSuccessor();
+    SmallVector<Value> blockArgs;
+    if (failed(convertBranchArgs(brInst, succ, blockArgs)))
+      return failure();
 
+    auto brOp = LLVM::BrOp::create(builder, loc, blockArgs, lookupBlock(succ));
+    mapNoResultOp(inst, brOp);
+    return success();
+  }
+  if (auto *brInst = dyn_cast<llvm::CondBrInst>(inst)) {
     SmallVector<Block *> succBlocks;
     SmallVector<SmallVector<Value>> succBlockArgs;
     for (auto i : llvm::seq<unsigned>(0, brInst->getNumSuccessors())) {
@@ -2254,12 +2371,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (!brInst->isConditional()) {
-      auto brOp = LLVM::BrOp::create(builder, loc, succBlockArgs.front(),
-                                     succBlocks.front());
-      mapNoResultOp(inst, brOp);
-      return success();
-    }
     FailureOr<Value> condition = convertValue(brInst->getCondition());
     if (failed(condition))
       return failure();
@@ -2690,7 +2801,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("memory"),
     StringLiteral("minsize"),
     StringLiteral("no_caller_saved_registers"),
-    StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
@@ -2865,6 +2975,9 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  .value()));
   }
 
+  if (func->hasFnAttribute("use-sample-profile"))
+    funcOp.setUseSampleProfile(true);
+
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
@@ -2886,10 +2999,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
-
-  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoNansFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
@@ -3037,6 +3146,7 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
 

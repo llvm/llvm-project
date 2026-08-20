@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
+@skipIfWasm  # driver cannot launch a Wasm inferior
 class DriverBatchModeTest(PExpectTest):
     source = "main.c"
 
@@ -19,7 +20,7 @@ class DriverBatchModeTest(PExpectTest):
         """--batch should immediately quit if there are no commands given."""
         try:
             proc = subprocess.run(
-                [lldbtest_config.lldbExec, "--batch"],
+                [lldbtest_config.lldbExec, "--batch", "--no-lldbinit"],
                 timeout=60,
                 stdout=subprocess.PIPE,
                 text=True,

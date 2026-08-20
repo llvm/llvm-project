@@ -6,15 +6,17 @@ struct A {
 
 void vcall(A *a) {
   // CHECK: [[TEST:%.*]] = call i1 @llvm.type.test
-  // CHECK-NEXT: [[NOT:%.*]] = xor i1 [[TEST]], true
-  // CHECK-NEXT: call void @llvm.cond.loop(i1 [[NOT]])
+  // CHECK-NEXT: br i1 [[TEST]], label %cont, label %trap
+  // CHECK: trap:
+  // CHECK-NEXT: call void @llvm.looptrap()
   a->f();
 }
 
 int overflow(int a, int b) {
   // CHECK: [[OVERFLOW:%.*]] = extractvalue { i32, i1 } %2, 1, !nosanitize
   // CHECK-NEXT: [[NOTOVERFLOW:%.*]] = xor i1 [[OVERFLOW]], true, !nosanitize
-  // CHECK-NEXT: [[NOTNOTOVERFLOW:%.*]] = xor i1 [[NOTOVERFLOW]], true, !nosanitize
-  // CHECK-NEXT: call void @llvm.cond.loop(i1 [[NOTNOTOVERFLOW]])
+  // CHECK-NEXT: br i1 [[NOTOVERFLOW]], label %cont, label %trap
+  // CHECK: trap:
+  // CHECK-NEXT: call void @llvm.looptrap()
   return a + b;
 }

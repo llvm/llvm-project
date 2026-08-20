@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SHARED_MATH_CBRTF_H
-#define LIBC_SHARED_MATH_CBRTF_H
+#ifndef LLVM_LIBC_SHARED_MATH_CBRTF_H
+#define LLVM_LIBC_SHARED_MATH_CBRTF_H
 
 #include "shared/libc_common.h"
 #include "src/__support/math/cbrtf.h"
@@ -20,4 +20,4 @@ using math::cbrtf;
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SHARED_MATH_CBRTF_H
+#endif // LLVM_LIBC_SHARED_MATH_CBRTF_H

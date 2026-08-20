@@ -41,15 +41,26 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
     extras/meta.py
 )
 
+# Keep this source group unconditional because runtime/*.py contains generic
+# memref helpers that do not depend on the ExecutionEngine extension. Only the
+# wrapper and type stub require _mlirExecutionEngine.
+set(_execution_engine_python_sources)
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  set(_execution_engine_python_sources
+    execution_engine.py
+    _mlir_libs/_mlirExecutionEngine.pyi
+  )
+endif()
+
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
-    execution_engine.py
-    _mlir_libs/_mlirExecutionEngine.pyi
+    ${_execution_engine_python_sources}
   SOURCES_GLOB
     runtime/*.py
 )
+unset(_execution_engine_python_sources)
 
 declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
   ROOT_DIR "${MLIR_SOURCE_DIR}/include"
@@ -328,11 +339,11 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/X86VectorTransformOps.td
+  TD_FILE dialects/X86TransformOps.td
   SOURCES
-    dialects/transform/x86vector.py
+    dialects/transform/x86.py
   DIALECT_NAME transform
-  EXTENSION_NAME x86vector_transform)
+  EXTENSION_NAME x86_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -522,9 +533,9 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/X86Vector.td
-  SOURCES dialects/x86vector.py
-  DIALECT_NAME x86vector)
+  TD_FILE dialects/X86.td
+  SOURCES dialects/x86.py
+  DIALECT_NAME x86)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -687,8 +698,10 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectTransform.cpp
+    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
+    MLIRPythonExtension.Core
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect

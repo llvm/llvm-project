@@ -60,7 +60,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   ArgStringList LinkArgs{};
 
   for (auto Input : Inputs)
-    LinkArgs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkArgs.push_back(Input.getFilename());
 
   // Add static device libraries using the common helper function.
   // This handles unbundling archives (.a) containing bitcode bundles.
@@ -111,6 +112,31 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     TrArgs.push_back("--spirv-ext=+all");
   }
 
+  // Preserve debug info requested via -g into the emitted SPIR-V using the
+  // NonSemantic.Shader.DebugInfo form. Downstream consumers such as Intel's IGC
+  // and gdb-oneapi use it to map device code back to source lines and local
+  // variables; the translator's default OpenCL.DebugInfo.100 form is not
+  // sufficient for that. Emitting the NonSemantic debug instructions requires
+  // the SPV_KHR_non_semantic_info extension.
+  //
+  // SPV_INTEL_optnone carries the optnone function attribute, which Clang
+  // attaches to every function at -O0, through to the consumer as the
+  // OptNoneEXT function control. Without it the attribute is silently dropped
+  // in translation and the device compiler is free to optimize the kernel, so a
+  // debugger reports arguments and locals as <optimized out> even though the
+  // debug info itself is present. At -O1 and above no optnone attribute exists
+  // and the extension has no effect. It is redundant for the +all list above
+  // but required for the restricted chipStar one.
+  //
+  // The translator accumulates --spirv-ext across occurrences, so this augments
+  // the list set above.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0)) {
+    TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                     ",+SPV_INTEL_optnone");
+    TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
+  }
+
   InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
   SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
 }
@@ -151,7 +177,7 @@ HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void HIPSPVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
 
   if (!HostTC) {
     assert(DeviceOffloadingKind == Action::OFK_None &&
@@ -159,7 +185,7 @@ void HIPSPVToolChain::addClangTargetOptions(
     return;
   }
 
-  HostTC->addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+  HostTC->addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -179,7 +205,7 @@ void HIPSPVToolChain::addClangTargetOptions(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
   for (const BitCodeLibraryInfo &BCFile :
-       getDeviceLibs(DriverArgs, DeviceOffloadingKind))
+       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind))
     CC1Args.append(
         {"-mlink-builtin-bitcode", DriverArgs.MakeArgString(BCFile.Path)});
 }
@@ -241,7 +267,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(
-    const llvm::opt::ArgList &DriverArgs,
+    const llvm::opt::ArgList &DriverArgs, BoundArch BA,
     const Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
@@ -304,7 +330,8 @@ HIPSPVToolChain::getDeviceLibs(
   return BCLibs;
 }
 
-SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
+SanitizerMask HIPSPVToolChain::getSupportedSanitizers(
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // The HIPSPVToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
   // toolchain. The HIPSPVToolChain will actually ignore any command line
@@ -314,9 +341,11 @@ SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
   // tolerate flags meant only for the host toolchain.
+
+  // FIXME: Be accurate and use DeviceOffloadKind.
   if (HostTC)
-    return HostTC->getSupportedSanitizers();
-  return ToolChain::getSupportedSanitizers();
+    return HostTC->getSupportedSanitizers(BA, DeviceOffloadKind);
+  return ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 }
 
 VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,
@@ -329,8 +358,24 @@ VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,
 void HIPSPVToolChain::adjustDebugInfoKind(
     llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
     const llvm::opt::ArgList &Args) const {
-  // Debug info generation is disabled for SPIRV-LLVM-Translator
-  // which currently aborts on the presence of DW_OP_LLVM_convert.
-  // TODO: Enable debug info when the SPIR-V backend arrives.
-  DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+  // Historically device debug info was force-disabled here because the
+  // SPIRV-LLVM-Translator aborted on DW_OP_LLVM_convert debug expressions. The
+  // translator now lowers that operation, so honor the debug level the user
+  // requested (e.g. via -g) and let it flow into the emitted SPIR-V.
+  // constructLinkAndEmitSpirvCommand() enables the NonSemantic.Shader.DebugInfo
+  // form at translation time so downstream tools (e.g. gdb-oneapi) can consume
+  // it. Leaving DebugInfoKind untouched keeps the default (no -g) behavior,
+  // since the driver defaults it to NoDebugInfo.
+  (void)DebugInfoKind;
+  (void)Args;
+}
+
+LTOKind HIPSPVToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                                    Action::OffloadKind Kind) const {
+  // The old offload driver pipeline does not support LTO output types. Only
+  // default to LTO with the new driver.
+  if (!Args.hasFlag(options::OPT_offload_new_driver,
+                    options::OPT_no_offload_new_driver, true))
+    return LTOK_None;
+  return ToolChain::getLTOMode(Args, Kind);
 }

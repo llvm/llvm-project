@@ -16,13 +16,13 @@
 define void @unknown_sign(ptr %a, i64 %k) {
 ; CHECK-LABEL: 'unknown_sign'
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.0, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: (-1 * %k) ne) 0
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 2, ptr %idx.1, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: (-1 * %k) ne) 0
 ;

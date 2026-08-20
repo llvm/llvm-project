@@ -1,0 +1,46 @@
+# REQUIRES: target-x86
+
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb -b -o "breakpoint set --name main" \
+# RUN:        -o run \
+# RUN:        -o "register read rip r10d rflags" \
+# RUN:        -o "register read -A rsp rbp rip" \
+# RUN:        -o "register read -s 0" \
+# RUN:        -o "register read --all" \
+# RUN:        %t.out | FileCheck --strict-whitespace %s
+
+# CHECK: (lldb) register read rip r10d rflags
+# CHECK-NEXT: {{^     rip = }}
+# CHECK-NEXT: {{^    r10d = }}
+# CHECK-NEXT: {{^  rflags = }}
+
+# CHECK: (lldb) register read -A rsp rbp rip
+# CHECK-NEXT: {{^  rsp/sp = }}
+# CHECK-NEXT: {{^  rbp/fp = }}
+# CHECK-NEXT: {{^  rip/pc = }}
+
+## Registers within a set align to each other.
+# CHECK: (lldb) register read -s 0
+# CHECK: General Purpose Registers:
+# CHECK: {{^      rsi = }}
+# CHECK: {{^       r8 = }}
+# CHECK: {{^      rip = }}
+# CHECK: {{^   rflags = }}
+# CHECK: {{^       cs = }}
+# CHECK: {{^  fs_base = }}
+# CHECK: {{^  gs_base = }}
+# CHECK: {{^       ds = }}
+
+## Registers within sets are aligned, but not aligned across different sets.
+# CHECK: (lldb) register read --all
+
+# CHECK: General Purpose Registers:
+# CHECK: {{^      rip = }}
+# CHECK: {{^   rflags = }}
+# CHECK: {{^  fs_base = }}
+
+# CHECK: Floating Point Registers:
+# CHECK: {{^       ftag = }}
+# CHECK: {{^        fdp = }}
+# CHECK: {{^  mxcsrmask = }}
+# CHECK: {{^      xmm10 = }}

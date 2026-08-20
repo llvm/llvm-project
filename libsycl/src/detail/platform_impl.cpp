@@ -9,6 +9,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
@@ -20,11 +21,13 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+bool PlatformImpl::rediscoverIfEmpty = false;
+
 PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
   auto &PlatformCache = getPlatformCache();
   for (auto &PlatImpl : PlatformCache) {
     assert(PlatImpl && "Platform impl can not be nullptr");
-    if (PlatImpl->getHandleRef() == Platform)
+    if (PlatImpl->getOLHandleRef() == Platform)
       return *PlatImpl;
   }
 
@@ -35,20 +38,33 @@ PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
 }
 
 const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
-  [[maybe_unused]] static auto InitPlatformsOnce = []() {
+  static auto InitPlatforms = []() {
     discoverOffloadDevices();
+
+    registerStaticVarShutdownHandler();
 
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
+      if (Topo.getBackend() == OL_PLATFORM_BACKEND_HOST)
+        continue;
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.getPlatforms()) {
         PlatformCache.emplace_back(std::make_unique<PlatformImpl>(
             OffloadPlatform, PlatformIndex++, PrivateTag{}));
       }
     }
+  };
+
+  [[maybe_unused]] static auto InitPlatformsOnce = []() {
+    callAndThrow(olInit, nullptr);
+    InitPlatforms();
     return true;
   }();
-  return getPlatformCache();
+  auto &PlatformCache = getPlatformCache();
+  if (rediscoverIfEmpty && PlatformCache.empty())
+    InitPlatforms();
+
+  return PlatformCache;
 }
 
 PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
@@ -75,6 +91,8 @@ PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
                   MRootDevices.emplace_back(std::make_unique<DeviceImpl>(
                       Device, *this, DeviceImpl::PrivateTag{}));
                 });
+
+  MDefaultContext = ContextImpl::create(*this);
 }
 
 const std::vector<DeviceImplUPtr> &PlatformImpl::getRootDevices() const {
@@ -117,6 +135,12 @@ void PlatformImpl::iterateDevices(
     if (KeepAll || DeviceType == Impl->getDeviceType())
       callback(Impl.get());
   }
+}
+
+ContextImpl &PlatformImpl::getDefaultContext() {
+  assert(MDefaultContext &&
+         "Default context for platform must be created in platform ctor");
+  return *MDefaultContext.get();
 }
 
 } // namespace detail

@@ -17,6 +17,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -74,49 +75,126 @@ static cl::opt<unsigned>
     VScale("vscale", cl::desc("The value of llvm.vscale (default = 4)"),
            cl::value_desc("N"), cl::init(4), cl::cat(InterpreterCategory));
 
-class VerboseEventHandler : public ubi::EventHandler {
+static cl::opt<unsigned>
+    Seed("seed",
+         cl::desc("Random seed for non-deterministic behavior (default = 0)"),
+         cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
+
+static cl::opt<bool>
+    Deterministic("deterministic",
+                  cl::desc("Disable interpreter-introduced non-determinism."),
+                  cl::init(false), cl::cat(InterpreterCategory));
+
+static cl::opt<bool> FuseFMulAdd("fuse-fmuladd",
+                                 cl::desc("Fuse llvm.fmuladd.* intrinsic"),
+                                 cl::init(true), cl::cat(InterpreterCategory));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the IR verifier"),
+                              cl::init(false), cl::cat(InterpreterCategory));
+
+cl::opt<ubi::UndefValueBehavior> UndefBehavior(
+    "undef-behavior", cl::desc("Choose undef value behavior:"),
+    cl::values(clEnumValN(ubi::UndefValueBehavior::NonDeterministic, "nondet",
+                          "Each load of an uninitialized byte yields a freshly "
+                          "random value."),
+               clEnumValN(ubi::UndefValueBehavior::Zero, "zero",
+                          "All uses of an uninitialized byte yield zero.")));
+
+cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
+    "nan-behavior", cl::desc("Choose NaN propagation behavior:"),
+    cl::values(
+        clEnumValN(ubi::NaNPropagationBehavior::NonDeterministic, "nondet",
+                   "Non-deterministically choose from valid NaN results as "
+                   "specified by language reference."),
+        clEnumValN(ubi::NaNPropagationBehavior::PreferredNaN, "preferred",
+                   "The quiet bit is set and the payload is all-zero."),
+        clEnumValN(
+            ubi::NaNPropagationBehavior::QuietingNaN, "quieting",
+            "The quiet bit is set and the payload is copied from any input"
+            "operand that is a NaN."),
+        clEnumValN(ubi::NaNPropagationBehavior::UnchangedNaN, "unchanged",
+                   "The quiet bit and payload are copied from any input operand"
+                   "that is a NaN"),
+        clEnumValN(ubi::NaNPropagationBehavior::TargetSpecificNaN,
+                   "target-specific",
+                   "The quiet bit is set and the payload is picked from a "
+                   "known target-specific set of \"extra\" possible NaN "
+                   "payloads.")),
+    cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
+
+class NoopEventHandler : public ubi::EventHandler {
+  void onImmediateUB(StringRef Msg) override {
+    errs() << "Immediate UB detected: " << Msg << '\n';
+  }
+
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
+  void onUnrecognizedInstruction(Instruction &I) override {
+    errs() << "Unrecognized instruction: " << I << '\n';
+  }
+};
+
+class VerboseEventHandler : public NoopEventHandler {
+  ubi::AnyValuePrinter OS;
+
 public:
+  VerboseEventHandler(ubi::Context &Ctx) : OS(Ctx, errs()) {}
+
   bool onInstructionExecuted(Instruction &I,
                              const ubi::AnyValue &Result) override {
     if (Result.isNone()) {
-      errs() << I << '\n';
+      OS << I << '\n';
     } else {
-      errs() << I << " => " << Result << '\n';
+      OS << I << " => " << Result << '\n';
     }
 
     return true;
   }
 
-  void onImmediateUB(StringRef Msg) override {
-    errs() << "Immediate UB detected: " << Msg << '\n';
-  }
-
   bool onBBJump(Instruction &I, BasicBlock &To) override {
-    errs() << I << " jump to ";
-    To.printAsOperand(errs(), /*PrintType=*/false);
+    OS << I << " jump to ";
+    To.printAsOperand(OS, /*PrintType=*/false);
+    OS << '\n';
     return true;
   }
 
   bool onFunctionEntry(Function &F, ArrayRef<ubi::AnyValue> Args,
                        CallBase *CallSite) override {
-    errs() << "Entering function: " << F.getName() << '\n';
+    OS << "Entering function: " << F.getName() << '\n';
     size_t ArgSize = F.arg_size();
     for (auto &&[Idx, Arg] : enumerate(Args)) {
       if (Idx >= ArgSize)
-        errs() << "  vaarg[" << (Idx - ArgSize) << "] = " << Arg << '\n';
+        OS << "  vaarg[" << (Idx - ArgSize) << "] = " << Arg << '\n';
       else
-        errs() << "  " << *F.getArg(Idx) << " = " << Arg << '\n';
+        OS << "  " << *F.getArg(Idx) << " = " << Arg << '\n';
     }
     return true;
   }
 
   bool onFunctionExit(Function &F, const ubi::AnyValue &RetVal) override {
-    errs() << "Exiting function: " << F.getName() << '\n';
+    OS << "Exiting function: " << F.getName() << '\n';
     return true;
   }
 
-  void onUnrecognizedInstruction(Instruction &I) override {
-    errs() << "Unrecognized instruction: " << I << '\n';
+  void onProgramExit(const ubi::ProgramExitInfo &Info) override {
+    switch (Info.Kind) {
+    case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Failed:
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+      OS << "Program exited with code " << Info.ExitCode << '\n';
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+      OS << "Program aborted.\n";
+      return;
+    case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+      OS << "Program terminated.\n";
+      return;
+    }
+
+    llvm_unreachable("Unknown ProgramExitKind");
   }
 };
 
@@ -130,14 +208,31 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (VScale == 0) {
+    WithColor::error() << "--vscale value must be positive\n";
+    return 1;
+  }
+
+  if (!isPowerOf2_32(VScale)) {
+    WithColor::error() << "--vscale value must be a power of 2\n";
+    return 1;
+  }
+
   LLVMContext Context;
 
   // Load the bitcode...
   SMDiagnostic Err;
-  std::unique_ptr<Module> Owner = parseIRFile(InputFile, Err, Context);
+  AsmParserContext ParserContext;
+  std::unique_ptr<Module> Owner =
+      parseIRFile(InputFile, Err, Context, /*Callbacks=*/{}, &ParserContext);
   Module *Mod = Owner.get();
   if (!Mod) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*Mod, &errs())) {
+    WithColor::error() << InputFile << ": input module is broken!\n";
     return 1;
   }
 
@@ -156,11 +251,22 @@ int main(int argc, char **argv) {
   InputArgv.insert(InputArgv.begin(), InputFile);
 
   // Initialize the execution context and set parameters.
-  ubi::Context Ctx(*Mod);
+  ubi::Context Ctx(*Mod, &ParserContext);
   Ctx.setMemoryLimit(MaxMem);
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setFusedMultiplyAdd(FuseFMulAdd);
+  Ctx.setDeterministic(Deterministic);
+  Ctx.setUndefValueBehavior(UndefBehavior);
+  Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
+  Ctx.reseed(Seed);
+
+  if (!Ctx.initGlobalValues()) {
+    WithColor::error() << "Failed to initialize global values (e.g., the "
+                          "memory limit may be too low).\n";
+    return 1;
+  }
 
   // Call the main function from M as if its signature were:
   //   int main (int argc, char **argv)
@@ -173,17 +279,20 @@ int main(int argc, char **argv) {
   }
   TargetLibraryInfo TLI(Ctx.getTLIImpl());
   Type *IntTy = IntegerType::get(Ctx.getContext(), TLI.getIntSize());
-  auto *MainFuncTy = FunctionType::get(
-      IntTy, {IntTy, PointerType::getUnqual(Ctx.getContext())}, false);
+  Type *PtrTy = PointerType::getUnqual(Ctx.getContext());
+  auto *MainFuncTy = FunctionType::get(IntTy, {IntTy, PtrTy}, false);
   SmallVector<ubi::AnyValue> Args;
   if (EntryFn->getFunctionType() == MainFuncTy) {
-    Args.push_back(
-        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size())));
+    const ubi::AnyValue *Argc =
+        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size()));
+    assert(Argc && "failed to initialize argc");
+    Args.push_back(*Argc);
 
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
     auto ArgvPtrsMem = Ctx.allocate(PtrsSize, 8, "argv",
-                                    /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                    /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                    ubi::MemAllocKind::Global);
     if (!ArgvPtrsMem) {
       WithColor::error() << "Failed to allocate memory for argv pointers.\n";
       return 1;
@@ -191,14 +300,15 @@ int main(int argc, char **argv) {
     for (const auto &[Idx, Arg] : enumerate(InputArgv)) {
       uint64_t Size = Arg.length() + 1;
       auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
-                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
+                                     /*AS=*/0, ubi::MemInitKind::Zeroed,
+                                     ubi::MemAllocKind::Global);
       if (!ArgvStrMem) {
         WithColor::error() << "Failed to allocate memory for argv strings.\n";
         return 1;
       }
       ubi::Pointer ArgPtr = Ctx.deriveFromMemoryObject(ArgvStrMem);
-      ArgvStrMem->writeRawBytes(0, Arg.c_str(), Arg.length());
-      ArgvPtrsMem->writePointer(Idx * PtrSize, ArgPtr, Ctx.getDataLayout());
+      Ctx.storeRawBytes(*ArgvStrMem, 0, Arg.c_str(), Arg.length());
+      Ctx.store(*ArgvPtrsMem, Idx * PtrSize, ArgPtr, PtrTy);
     }
     Args.push_back(Ctx.deriveFromMemoryObject(ArgvPtrsMem));
   } else if (!EntryFn->arg_empty()) {
@@ -213,27 +323,36 @@ int main(int argc, char **argv) {
       Args.push_back(ubi::AnyValue::getNullValue(Ctx, Arg.getType()));
   }
 
-  ubi::EventHandler NoopHandler;
-  VerboseEventHandler VerboseHandler;
+  NoopEventHandler NoopHandler;
+  VerboseEventHandler VerboseHandler(Ctx);
   ubi::AnyValue RetVal;
-  if (!Ctx.runFunction(*EntryFn, Args, RetVal,
-                       Verbose ? VerboseHandler : NoopHandler)) {
+  ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(
+      *EntryFn, Args, RetVal, Verbose ? VerboseHandler : NoopHandler);
+  switch (ExitInfo.Kind) {
+  case ubi::ProgramExitInfo::ProgramExitKind::Failed:
     WithColor::error() << "Execution of function '" << EntryFunc
                        << "' failed.\n";
     return 1;
+  case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
+  case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
+    return 134;
+  case ubi::ProgramExitInfo::ProgramExitKind::Exited:
+    return static_cast<int>(ExitInfo.ExitCode & 0xFF);
+  case ubi::ProgramExitInfo::ProgramExitKind::Returned:
+    // If the function returns an integer, return that as the exit code.
+    if (EntryFn->getReturnType()->isIntegerTy()) {
+      assert(!RetVal.isNone() && "Expected a return value from entry function");
+      if (RetVal.isPoison()) {
+        WithColor::error() << "Execution of function '" << EntryFunc
+                           << "' resulted in poison return value.\n";
+        return 1;
+      }
+      APInt Result = RetVal.asInteger();
+      return (int)Result.extractBitsAsZExtValue(
+          std::min(Result.getBitWidth(), 8U), 0);
+    }
+    return 0;
   }
 
-  // If the function returns an integer, return that as the exit code.
-  if (EntryFn->getReturnType()->isIntegerTy()) {
-    assert(!RetVal.isNone() && "Expected a return value from entry function");
-    if (RetVal.isPoison()) {
-      WithColor::error() << "Execution of function '" << EntryFunc
-                         << "' resulted in poison return value.\n";
-      return 1;
-    }
-    APInt Result = RetVal.asInteger();
-    return (int)Result.extractBitsAsZExtValue(
-        std::min(Result.getBitWidth(), 8U), 0);
-  }
-  return 0;
+  llvm_unreachable("Unknown ProgramExitKind");
 }

@@ -374,6 +374,13 @@ func.func @expand_shape_illegal_output_shape(%arg0: tensor<2xf32>) {
   return
 }
 
+// -----
+
+func.func @expand_shape_output_shape_dynamic_dim_mismatch(%arg0: tensor<6xf32>) {
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 0, expected 2}}
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [2, 3] : tensor<6xf32> into tensor<?x?xf32>
+  return
+}
 
 // -----
 
@@ -397,7 +404,7 @@ func.func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
 // -----
 
 func.func @rank(%0: f32) {
-  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
+  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any non-token type values}}
   "tensor.rank"(%0): (f32)->index
   return
 }

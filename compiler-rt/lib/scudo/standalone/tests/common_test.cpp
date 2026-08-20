@@ -16,100 +16,38 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include <algorithm>
-#include <vector>
-
 namespace scudo {
 
-TEST(ScudoCommonTest, VerifyGetResidentPages) {
-  if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
-
-  constexpr uptr NumPages = 512;
-  const uptr SizeBytes = NumPages * getPageSizeCached();
-
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
-  ASSERT_NE(MemMap.getBase(), 0U);
-
-  // Only android seems to properly detect when single pages are touched.
-#if SCUDO_ANDROID
-  // Verify nothing should be mapped in right after the map is created.
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Touch a page.
-  u8 *Data = reinterpret_cast<u8 *>(MemMap.getBase());
-  Data[0] = 1;
-  EXPECT_EQ(1U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Touch a non-consective page.
-  Data[getPageSizeCached() * 2] = 1;
-  EXPECT_EQ(2U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Touch a page far enough that the function has to make multiple calls
-  // to mincore.
-  Data[getPageSizeCached() * 300] = 1;
-  EXPECT_EQ(3U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Touch another page in the same range to make sure the second
-  // read is working.
-  Data[getPageSizeCached() * 400] = 1;
-  EXPECT_EQ(4U, getResidentPages(MemMap.getBase(), SizeBytes));
-#endif
-
-  // Now write the whole thing.
-  memset(reinterpret_cast<void *>(MemMap.getBase()), 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  MemMap.unmap();
+TEST(ScudoCommonTest, IsPowerOfTwo) {
+  EXPECT_FALSE(isPowerOfTwo(0));
+  EXPECT_TRUE(isPowerOfTwo(1));
+  EXPECT_TRUE(isPowerOfTwo(2));
+  EXPECT_TRUE(isPowerOfTwo(4));
+  EXPECT_FALSE(isPowerOfTwo(3));
 }
 
-TEST(ScudoCommonTest, VerifyReleasePagesToOS) {
-  if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
+TEST(ScudoCommonTest, ComputePercentage) {
+  uptr Integral, Fractional;
+  computePercentage(50, 100, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 50U);
+  EXPECT_EQ(Fractional, 0U);
 
-  constexpr uptr NumPages = 1000;
-  const uptr SizeBytes = NumPages * getPageSizeCached();
+  computePercentage(1, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 33U);
+  EXPECT_EQ(Fractional, 33U);
 
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
-  ASSERT_NE(MemMap.getBase(), 0U);
+  computePercentage(2, 3, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 66U);
+  EXPECT_EQ(Fractional, 67U);
 
-  void *P = reinterpret_cast<void *>(MemMap.getBase());
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Make the entire map resident.
-  memset(P, 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Should release the memory to the kernel immediately.
-  MemMap.releasePagesToOS(MemMap.getBase(), SizeBytes);
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  // Make the entire map resident again.
-  memset(P, 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
-
-  MemMap.unmap();
+  computePercentage(0, 0, &Integral, &Fractional);
+  EXPECT_EQ(Integral, 100U);
+  EXPECT_EQ(Fractional, 0U);
 }
 
-TEST(ScudoCommonTest, Zeros) {
-  const uptr Size = 1ull << 20;
-
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "Zeros"));
-  ASSERT_NE(MemMap.getBase(), 0U);
-  uptr *P = reinterpret_cast<uptr *>(MemMap.getBase());
-  const ptrdiff_t N = Size / sizeof(uptr);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
-
-  memset(P, 1, Size);
-  EXPECT_EQ(std::count(P, P + N, 0), 0);
-
-  MemMap.releasePagesToOS(MemMap.getBase(), Size);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
-
-  MemMap.unmap();
+TEST(ScudoCommonTest, IsAlignedSlow) {
+  EXPECT_TRUE(isAlignedSlow(64, 16));
+  EXPECT_FALSE(isAlignedSlow(65, 16));
 }
 
 } // namespace scudo

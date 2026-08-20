@@ -8,6 +8,7 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
   -bugprone-unused-return-value,
+  -bugprone-derived-method-shadowing-base-method,
   cppcoreguidelines-init-variables,
   cppcoreguidelines-missing-std-forward,
   cppcoreguidelines-rvalue-reference-param-not-moved,
@@ -44,3 +45,5 @@ CheckOptions:
     value:           false
   - key:             misc-include-cleaner.MissingIncludes
     value:           false
+  - key:             misc-override-with-different-visibility.DisallowedVisibilityChange
+    value:           widening

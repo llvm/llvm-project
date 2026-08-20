@@ -64,7 +64,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   // Define available target features
   // These must be defined in sorted order!
   NoAsmVariants = true;
-  GPU = OffloadArch::UNUSED;
+  GPU = OffloadArch::Unused;
 
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
@@ -184,9 +184,13 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     unsigned ArchID = CudaArchToID(GPU);
     Builder.defineMacro("__CUDA_ARCH__", llvm::Twine(ArchID));
 
-    if (IsNVIDIAAcceleratedOffloadArch(GPU))
+    if (IsNVIDIAAcceleratedOffloadArch(GPU)) {
+      Builder.defineMacro("__CUDA_ARCH_SPECIFIC__", llvm::Twine(ArchID));
       Builder.defineMacro(
           "__CUDA_ARCH_FEAT_SM" + llvm::Twine(ArchID / 10) + "_ALL", "1");
+    }
+    if (IsNVIDIAFamilySpecificOffloadArch(GPU))
+      Builder.defineMacro("__CUDA_ARCH_FAMILY_SPECIFIC__", llvm::Twine(ArchID));
   }
 }
 

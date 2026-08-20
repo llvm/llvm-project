@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -975,8 +975,8 @@ namespace cwg354 { // cwg354: 3.1 c++11
   int b0 = both<0>();
   int b1 = both<(int*)0>();
   // cxx98-error@-1 {{no matching function for call to 'both'}}
-  //   cxx98-note@#cwg354-both-int-ptr {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
-  //   cxx98-note@#cwg354-both-int {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   cxx98-note@#cwg354-both-int-ptr {{candidate template ignored: non-type template argument does not refer to any declaration for 1st template parameter}}
+  //   cxx98-note@#cwg354-both-int {{candidate template ignored: non-type template argument of type 'int *' must have an integral or enumeration type for 1st template parameter}}
 
   template<int S::*> struct ptr_mem {}; // #cwg354-ptr_mem
   ptr_mem<0> m0; // #cwg354-m0
@@ -1124,6 +1124,7 @@ namespace cwg367 { // cwg367: 2.7
   static_assert(__enable_constant_folding(true ? *new int : 4), "");
   // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
+  //   expected-note@-3 {{heap allocation performed here}}
   static_assert(__enable_constant_folding(true ? 4 : *new int), "");
 } // namespace cwg367
 
@@ -1703,14 +1704,16 @@ namespace cwg395 { // cwg395: 3.0
 
 namespace cwg396 { // cwg396: 3.0
   void f() {
-    auto int a();
-    // since-cxx11-error@-1 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
-    // expected-error@-2 {{illegal storage class on function}}
+    auto int a(); // #cwg396-a
+    // cxx98-error@#cwg396-a {{illegal storage class on function}}
+    // since-cxx11-error@#cwg396-a {{'auto' cannot be combined with a type specifier}}
+    // since-cxx11-warning@#cwg396-a {{empty parentheses interpreted as a function declaration}}
+    //   since-cxx11-note@#cwg396-a {{replace parentheses with an initializer to declare a variable}}
     int (i); // #cwg396-i
-    auto int (i);
-    // since-cxx11-error@-1 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
-    // expected-error@-2 {{redefinition of 'i'}}
-    //   expected-note@#cwg396-i {{previous definition is here}}
+    auto int (i); // #cwg396-auto-i
+    // cxx98-error@#cwg396-auto-i {{redefinition of 'i'}}
+    //   cxx98-note@#cwg396-i {{previous definition is here}}
+    // since-cxx11-error@#cwg396-auto-i {{'auto' cannot be combined with a type specifier}}
   }
 } // namespace cwg396
 

@@ -45,7 +45,7 @@ struct IPSCCPOptions {
 };
 
 /// Pass to perform interprocedural constant propagation.
-class IPSCCPPass : public PassInfoMixin<IPSCCPPass> {
+class IPSCCPPass : public OptionalPassInfoMixin<IPSCCPPass> {
   IPSCCPOptions Options;
 
 public:
@@ -53,7 +53,7 @@ public:
 
   IPSCCPPass(IPSCCPOptions Options) : Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   bool isFuncSpecEnabled() const { return Options.AllowFuncSpec; }
 };

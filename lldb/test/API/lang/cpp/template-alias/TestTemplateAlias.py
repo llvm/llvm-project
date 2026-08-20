@@ -5,6 +5,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestTemplateAlias(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, extra_flags):
         self.build(dictionary=extra_flags)
         self.main_source_file = lldb.SBFileSpec("main.cpp")

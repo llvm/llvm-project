@@ -53,12 +53,12 @@ def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<
   Example:
 
   ```mlir
-
   wasmssa.block {
 
     // instructions
 
   } > ^successor
+  ```
   }];
 }
 
@@ -72,10 +72,10 @@ def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<
   Example:
 
   ```mlir
-
   wasmssa.loop {
 
   } > ^successor
+  ```
   }];
 }
 
@@ -99,7 +99,7 @@ def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
     Example:
 
     ```mlir
-      wasmssa.block_return
+    wasmssa.block_return
     ```
   }];
   let assemblyFormat = "($inputs^ `:` type($inputs))? attr-dict";
@@ -318,7 +318,7 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
     }
     ```
   }];
-  let regions = (region AnyRegion: $initializer);
+  let regions = (region SizedRegion<1>: $initializer);
 
   let extraClassDeclaration = [{
     ::mlir::SymbolTable::Visibility getVisibility() {
@@ -326,8 +326,11 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
     };
+
+    wasmssa::ReturnOp getInitTerminator();
   }];
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
@@ -542,7 +545,7 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
      ```mlir
      // Import the memory `mem` from `my_module` as @mem_0
      wasmssa.import_mem "mem" from "my_module" as @mem_0 {limits = !wasmssa<limit[2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -582,7 +585,7 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
      ```mlir
      // Import the table `table` from `my_module` as @table_0
      wasmssa.import_table "table" from "my_module" as @table_0 {type = !wasmssa<tabletype !wasmssa.funcref [2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -624,7 +627,7 @@ def WasmSSA_AddOp : WasmSSA_BinaryNumericalOp<"add",
 
      ```mlir
      %a = wasmssa.add %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -634,7 +637,7 @@ def WasmSSA_AndOp : WasmSSA_BinaryNumericalOp<"and",
 
      ```mlir
      %a = wasmssa.and %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -644,7 +647,7 @@ def WasmSSA_DivOp : WasmSSA_BinaryNumericalOp<"div",
 
      ```mlir
      %a = wasmssa.div %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -654,7 +657,7 @@ def WasmSSA_DivUIOp : WasmSSA_BinaryNumericalOp<"div_ui",
 
      ```mlir
      %a = wasmssa.div_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -664,7 +667,7 @@ def WasmSSA_DivSIOp : WasmSSA_BinaryNumericalOp<"div_si",
 
      ```mlir
      %a = wasmssa.div_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -674,7 +677,7 @@ def WasmSSA_MulOp : WasmSSA_BinaryNumericalOp<"mul",
 
      ```mlir
      %a = wasmssa.mul %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -684,7 +687,7 @@ def WasmSSA_OrOp : WasmSSA_BinaryNumericalOp<"or",
 
      ```mlir
      %a = wasmssa.or %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -694,7 +697,7 @@ def WasmSSA_SubOp : WasmSSA_BinaryNumericalOp<"sub",
 
      ```mlir
      %a = wasmssa.sub %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -704,7 +707,7 @@ def WasmSSA_RemUIOp : WasmSSA_BinaryNumericalOp<"rem_ui",
 
      ```mlir
      %a = wasmssa.rem_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -714,7 +717,7 @@ def WasmSSA_RemSIOp : WasmSSA_BinaryNumericalOp<"rem_si",
 
      ```mlir
      %a = wasmssa.rem_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -724,7 +727,7 @@ def WasmSSA_XOrOp : WasmSSA_BinaryNumericalOp<"xor",
 
      ```mlir
      %a = wasmssa.xor %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -734,7 +737,7 @@ def WasmSSA_MinOp : WasmSSA_BinaryNumericalOp<"min",
 
      ```mlir
      %a = wasmssa.min %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -744,7 +747,7 @@ def WasmSSA_MaxOp : WasmSSA_BinaryNumericalOp<"max",
 
      ```mlir
      %a = wasmssa.max %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -754,7 +757,7 @@ def WasmSSA_CopySignOp : WasmSSA_BinaryNumericalOp<"copysign",
 
      ```mlir
      %a = wasmssa.copysign %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -774,7 +777,7 @@ def WasmSSA_EqOp : WasmSSA_BinaryComparisonOp<"eq",
 
      ```mlir
      %a = wasmssa.eq %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -784,7 +787,7 @@ def WasmSSA_NeOp : WasmSSA_BinaryComparisonOp<"ne",
 
      ```mlir
      %a = wasmssa.ne %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -794,7 +797,7 @@ def WasmSSA_LtSIOp : WasmSSA_BinaryComparisonOp<"lt_si",
 
      ```mlir
      %a = wasmssa.lt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -804,7 +807,7 @@ def WasmSSA_LtUIOp : WasmSSA_BinaryComparisonOp<"lt_ui",
 
      ```mlir
      %a = wasmssa.lt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -814,7 +817,7 @@ def WasmSSA_LeSIOp : WasmSSA_BinaryComparisonOp<"le_si",
 
      ```mlir
      %a = wasmssa.le_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -824,7 +827,7 @@ def WasmSSA_LeUIOp : WasmSSA_BinaryComparisonOp<"le_ui",
 
      ```mlir
      %a = wasmssa.le_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -834,7 +837,7 @@ def WasmSSA_GtSIOp : WasmSSA_BinaryComparisonOp<"gt_si",
 
      ```mlir
      %a = wasmssa.gt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -844,7 +847,7 @@ def WasmSSA_GtUIOp : WasmSSA_BinaryComparisonOp<"gt_ui",
 
      ```mlir
      %a = wasmssa.gt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -854,7 +857,7 @@ def WasmSSA_GeSIOp : WasmSSA_BinaryComparisonOp<"ge_si",
 
      ```mlir
      %a = wasmssa.ge_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -864,7 +867,7 @@ def WasmSSA_GeUIOp : WasmSSA_BinaryComparisonOp<"ge_ui",
 
      ```mlir
      %a = wasmssa.ge_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -874,7 +877,7 @@ def WasmSSA_LtOp : WasmSSA_BinaryComparisonOp<"lt",
 
      ```mlir
      %a = wasmssa.lt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -884,7 +887,7 @@ def WasmSSA_LeOp : WasmSSA_BinaryComparisonOp<"le",
 
      ```mlir
      %a = wasmssa.le %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -894,7 +897,7 @@ def WasmSSA_GtOp : WasmSSA_BinaryComparisonOp<"gt",
 
      ```mlir
      %a = wasmssa.gt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -904,7 +907,7 @@ def WasmSSA_GeOp : WasmSSA_BinaryComparisonOp<"ge",
 
      ```mlir
      %a = wasmssa.ge %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -926,7 +929,7 @@ def WasmSSA_ShLOp : WasmSSA_ShiftRotateOp<"shl",
 
      ```mlir
      %a = wasmssa.shl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -942,7 +945,7 @@ def WasmSSA_ShRSOp : WasmSSA_ShiftRotateOp<"shr_s",
 
      ```mlir
      %a = wasmssa.shr_s %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -958,7 +961,7 @@ def WasmSSA_ShRUOp : WasmSSA_ShiftRotateOp<"shr_u",
 
      ```mlir
      %a = wasmssa.shr_u %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -972,7 +975,7 @@ def WasmSSA_RotlOp : WasmSSA_ShiftRotateOp<"rotl",
 
      ```mlir
      %a = wasmssa.rotl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -986,7 +989,7 @@ def WasmSSA_RotrOp : WasmSSA_ShiftRotateOp<"rotr",
 
      ```mlir
      %a = wasmssa.rotr %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -1009,7 +1012,7 @@ def WasmSSA_ConvertUOp : WasmSSA_ConversionOp<"convert_u",
 
      ```mlir
      %a = wasmssa.convert_u %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
@@ -1022,10 +1025,38 @@ def WasmSSA_ConvertSOp : WasmSSA_ConversionOp<"convert_s",
 
      ```mlir
      %a = wasmssa.convert_s %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
+
+def WasmSSA_TruncSIOp : WasmSSA_ConversionOp<"trunc_si",
+    [{Truncate floating point value to signed integer.
+
+    Consume a floating point value and produces a signed integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
+    [{Truncate floating point value to unsigned integer.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, is negative, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
 
 def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
     "Convert a f64 value to f32",
@@ -1033,7 +1064,7 @@ def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
 
      ```mlir
      %a = wasmssa.demote %b : f64 to f32
-    ```
+     ```
     }],
     [F64],
     [F32]>{}
@@ -1044,7 +1075,7 @@ def WasmSSA_ExtendSI32Op : WasmSSA_Op<"extend_i32_s">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);
@@ -1057,7 +1088,7 @@ def WasmSSA_ExtendUI32Op : WasmSSA_Op<"extend_i32_u">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);
@@ -1194,6 +1225,16 @@ def WasmSSA_TruncOp : WasmSSA_UnaryNumericalOp<"trunc",
 
                                          ```mlir
                                          %a = wasmssa.trunc %b : f32
+                                         ```
+                                        }],
+                                       [WasmSSA_FPType]>{}
+
+def WasmSSA_NearestOp : WasmSSA_UnaryNumericalOp<"nearest",
+                                       "Round floating point value to the nearest integer, ties to even",
+                                        [{Example:
+
+                                         ```mlir
+                                         %a = wasmssa.nearest %b : f32
                                          ```
                                         }],
                                        [WasmSSA_FPType]>{}

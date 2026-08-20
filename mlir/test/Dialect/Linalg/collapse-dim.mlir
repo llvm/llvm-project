@@ -199,3 +199,32 @@ func.func private @memref_linalg_copy(%arg0: memref<1x24x32x8xf32, 1>, %arg1: me
   linalg.copy ins(%arg0: memref<1x24x32x8xf32, 1>) outs(%arg1: memref<1x24x32x8xf32, 1>)
   return
 }
+
+// -----
+
+// Test that non-projected-permutation indexing maps don't crash the collapse pass.
+// The indexing map has affine expressions like d1 + d4, which are not projected
+// permutations. The pass should skip collapsing and leave the op unchanged.
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3, 0)>
+// CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+// CHECK-LABEL: func @non_projected_permutation_no_crash
+//       CHECK:   linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]], #[[$MAP2]]],
+//  CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]
+
+func.func @non_projected_permutation_no_crash(
+    %arg0: tensor<1x5x5x1xf32>, %arg1: tensor<2x2x1x1xf32>) -> tensor<1x4x4x1xf32> {
+  %cst = arith.constant dense<0.0> : tensor<1x4x4x1xf32>
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>,
+                     affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3, 0)>,
+                     affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>],
+    iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]
+  } ins(%arg0, %arg1 : tensor<1x5x5x1xf32>, tensor<2x2x1x1xf32>) outs(%cst : tensor<1x4x4x1xf32>) {
+  ^bb0(%in: f32, %w: f32, %out: f32):
+    %mul = arith.mulf %in, %w : f32
+    %add = arith.addf %out, %mul : f32
+    linalg.yield %add : f32
+  } -> tensor<1x4x4x1xf32>
+  return %0 : tensor<1x4x4x1xf32>
+}

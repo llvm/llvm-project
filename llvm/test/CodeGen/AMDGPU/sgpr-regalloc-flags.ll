@@ -1,16 +1,16 @@
 ; REQUIRES: asserts
 
-; RUN: llc -verify-machineinstrs=0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=greedy -wwm-regalloc=greedy -vgpr-regalloc=greedy -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=greedy -wwm-regalloc=greedy -vgpr-regalloc=greedy -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
-; RUN: llc -verify-machineinstrs=0 -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=O0 %s
+; RUN: llc -verify-machineinstrs=0 -O0 -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=O0 %s
 
-; RUN: llc -verify-machineinstrs=0 -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT-BASIC %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-DEFAULT %s
-; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-BASIC %s
+; RUN: llc -verify-machineinstrs=0 -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=DEFAULT-BASIC %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-DEFAULT %s
+; RUN: llc -verify-machineinstrs=0 -sgpr-regalloc=basic -wwm-regalloc=basic -vgpr-regalloc=basic -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=BASIC-BASIC %s
 
-; RUN: not llc -verify-machineinstrs=0 -regalloc=basic -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
-; RUN: not llc -verify-machineinstrs=0 -regalloc=fast -O0 -mtriple=amdgcn-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
+; RUN: not llc -verify-machineinstrs=0 -regalloc=basic -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
+; RUN: not llc -verify-machineinstrs=0 -regalloc=fast -O0 -mtriple=amdgpu7.00-amd-amdhsa -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck -check-prefix=REGALLOC %s
 
 
 ; REGALLOC: -regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, and -vgpr-regalloc
@@ -18,9 +18,11 @@
 ; DEFAULT: Greedy Register Allocator
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Stack Slot Coloring
+; DEFAULT-NEXT: Machine Cycle Info Analysis
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
+; DEFAULT-NEXT: Machine Register Class Info Analysis
 ; DEFAULT-NEXT: SI Pre-allocate WWM Registers
 ; DEFAULT-NEXT: Live Stack Slot Analysis
 ; DEFAULT-NEXT: Greedy Register Allocator
@@ -37,11 +39,13 @@
 ; DEFAULT-NEXT: Stack Slot Coloring
 
 ; O0: Fast Register Allocator
+; O0-NEXT: Machine Cycle Info Analysis
 ; O0-NEXT: SI lower SGPR spill instructions
 ; O0-NEXT: Slot index numbering
 ; O0-NEXT: Live Interval Analysis
 ; O0-NEXT: Virtual Register Map
 ; O0-NEXT: Live Register Matrix
+; O0-NEXT: Machine Register Class Info Analysis
 ; O0-NEXT: SI Pre-allocate WWM Registers
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Lower WWM Copies
@@ -61,9 +65,11 @@
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
+; BASIC-DEFAULT-NEXT: Machine Cycle Info Analysis
 ; BASIC-DEFAULT-NEXT: SI lower SGPR spill instructions
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
+; BASIC-DEFAULT-NEXT: Machine Register Class Info Analysis
 ; BASIC-DEFAULT-NEXT: SI Pre-allocate WWM Registers
 ; BASIC-DEFAULT-NEXT: Live Stack Slot Analysis
 ; BASIC-DEFAULT-NEXT: Bundle Machine CFG Edges
@@ -88,9 +94,11 @@
 ; DEFAULT-BASIC: Greedy Register Allocator
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
+; DEFAULT-BASIC-NEXT: Machine Cycle Info Analysis
 ; DEFAULT-BASIC-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
+; DEFAULT-BASIC-NEXT: Machine Register Class Info Analysis
 ; DEFAULT-BASIC-NEXT: SI Pre-allocate WWM Registers
 ; DEFAULT-BASIC-NEXT: Live Stack Slot Analysis
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
@@ -117,9 +125,11 @@
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Stack Slot Coloring
+; BASIC-BASIC-NEXT: Machine Cycle Info Analysis
 ; BASIC-BASIC-NEXT: SI lower SGPR spill instructions
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
+; BASIC-BASIC-NEXT: Machine Register Class Info Analysis
 ; BASIC-BASIC-NEXT: SI Pre-allocate WWM Registers
 ; BASIC-BASIC-NEXT: Live Stack Slot Analysis
 ; BASIC-BASIC-NEXT: Basic Register Allocator

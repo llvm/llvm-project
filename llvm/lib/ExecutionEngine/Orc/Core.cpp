@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1064,9 +1065,7 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
     assert(State == Open && "JD is defunct");
-    using SymbolMaterializerItrPair =
-        std::pair<SymbolTable::iterator, UnmaterializedInfosMap::iterator>;
-    std::vector<SymbolMaterializerItrPair> SymbolsToRemove;
+    SmallVector<SymbolStringPtr, 0> SymbolsToRemove;
     SymbolNameSet Missing;
     SymbolNameSet Materializing;
 
@@ -1086,10 +1085,7 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
         continue;
       }
 
-      auto UMII = I->second.hasMaterializerAttached()
-                      ? UnmaterializedInfos.find(Name)
-                      : UnmaterializedInfos.end();
-      SymbolsToRemove.push_back(std::make_pair(I, UMII));
+      SymbolsToRemove.push_back(Name);
     }
 
     // If any of the symbols are not defined, return an error.
@@ -1102,18 +1098,18 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
       return make_error<SymbolsCouldNotBeRemoved>(ES.getSymbolStringPool(),
                                                   std::move(Materializing));
 
-    // Remove the symbols.
-    for (auto &SymbolMaterializerItrPair : SymbolsToRemove) {
-      auto UMII = SymbolMaterializerItrPair.second;
-
+    // Remove the symbols. Erase by key rather than holding iterators across the
+    // loop: a prior erase invalidates other stored iterators under
+    // backward-shift deletion.
+    for (const SymbolStringPtr &Name : SymbolsToRemove) {
       // If there is a materializer attached, call discard.
+      auto UMII = UnmaterializedInfos.find(Name);
       if (UMII != UnmaterializedInfos.end()) {
         UMII->second->MU->doDiscard(*this, UMII->first);
         UnmaterializedInfos.erase(UMII);
       }
 
-      auto SymI = SymbolMaterializerItrPair.first;
-      Symbols.erase(SymI);
+      Symbols.erase(Name);
     }
 
     shrinkMaterializationInfoMemory();
@@ -1576,9 +1572,16 @@ void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 void LookupTask::run() { LS.continueLookup(Error::success()); }
 
 ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
-    : EPC(std::move(EPC)) {
+    : EPC(std::move(EPC)), BootstrapJD(createBareJITDylib("<bootstrap>")) {
   // Associated EPC and this.
   this->EPC->ES = this;
+  SymbolMap BootstrapSymbols;
+  for (auto &[Name, Ptr] : this->EPC->getBootstrapSymbolsMap())
+    BootstrapSymbols[intern(Name)] =
+        ExecutorSymbolDef(Ptr, JITSymbolFlags::Exported);
+  // Can't fail: BootstrapJD is a new, empty JD and the BootstrapSymbols
+  // variable is a map, so can't contain duplicates.
+  cantFail(BootstrapJD.define(absoluteSymbols(std::move(BootstrapSymbols))));
 }
 
 ExecutionSession::~ExecutionSession() {
@@ -1590,12 +1593,15 @@ ExecutionSession::~ExecutionSession() {
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
+  WaitingOnGraph::OpRecorder *GOpRecorderToEnd = nullptr;
   auto JDsToRemove = runSessionLocked([&] {
 
 #ifdef EXPENSIVE_CHECKS
     verifySessionState("Entering ExecutionSession::endSession");
 #endif
 
+    if (SessionOpen)
+      GOpRecorderToEnd = GOpRecorder;
     SessionOpen = false;
     return JDs;
   });
@@ -1605,6 +1611,9 @@ Error ExecutionSession::endSession() {
   auto Err = removeJITDylibs(std::move(JDsToRemove));
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
+
+  if (GOpRecorderToEnd)
+    GOpRecorderToEnd->recordEnd();
 
   return Err;
 }
@@ -2988,7 +2997,7 @@ Error ExecutionSession::OL_notifyEmitted(
           std::move(Residual), WaitingOnGraph::ContainerElementsMap()));
   }
 
-  auto SR = WaitingOnGraph::simplify(std::move(SNs));
+  auto SR = WaitingOnGraph::simplify(std::move(SNs), GOpRecorder);
 
   LLVM_DEBUG({
     dbgs() << "  Simplified dependencies:\n";
@@ -3106,6 +3115,10 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   verifySessionState("entering ExecutionSession::IL_failSymbols");
 #endif
 
+  // Early out in the easy case.
+  if (SymbolsToFail.empty())
+    return {};
+
   JITDylib::AsynchronousSymbolQuerySet FailedQueries;
   auto Fail = [&](JITDylib *FailJD, NonOwningSymbolStringPtr FailSym) {
     auto I = FailJD->Symbols.find_as(FailSym);
@@ -3134,7 +3147,7 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   for (auto &Sym : SymbolsToFail)
     JDToFail.insert(NonOwningSymbolStringPtr(Sym));
 
-  auto FailedSNs = G.fail(ToFail);
+  auto FailedSNs = G.fail(ToFail, GOpRecorder);
 
   for (auto &SN : FailedSNs) {
     for (auto &[FailJD, Defs] : SN->defs()) {

@@ -66,13 +66,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// Rewrites vector.multi_reduction such that all reduction dimensions are
 /// either innermost or outermost, by adding the proper vector.transpose
 /// operations.
-///
-/// [OneDimMultiReductionToTwoDim]
-/// For cases that reduce to 1-D vector<k> reduction (and are thus missing
-/// either a parallel or a reduction), we lift them back up to 2-D with a simple
-/// vector.shape_cast to vector<1xk> so that the other patterns can kick in,
-/// thus fully exiting out of the vector.multi_reduction abstraction.
-void populateVectorMultiReductionTransformationPatterns(
+void populateVectorMultiReductionReorderPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
@@ -89,6 +83,9 @@ void populateVectorMultiReductionFlatteningPatterns(
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [OneDimMultiReductionToReduction]
+/// Converts 1-D vector.multi_reduction to vector.reduction.
+///
 /// [TwoDimMultiReductionToElementWise]
 /// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
 /// dimension, unroll the outer dimension to obtain a sequence of 1-D vector
@@ -100,21 +97,6 @@ void populateVectorMultiReductionFlatteningPatterns(
 /// vector.reduction + insert. This can further lower to horizontal reduction
 /// ops.
 void populateVectorMultiReductionUnrollingPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. These patterns are the ones
-/// populated by:
-///
-/// * populateVectorMultiReductionTransformationPatterns
-/// * populateVectorMultiReductionFlatteningPatterns
-/// * populateVectorMultiReductionUnrollingPatterns
-///
-/// This is just a convenience wrapper that we use in testing and is effectively
-/// deprecated.
-/// TODO: Delete.
-void populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
@@ -259,8 +241,20 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 /// Populate the pattern set with the following patterns:
 ///
 /// [StepToArithConstantOp]
-/// Convert vector.step op into arith ops if not using scalable vectors
+/// Convert a non-scalable `vector.step` into an `arith.constant`. `index`-typed
+/// steps are materialized using `indexBitwidth` as the index bitwidth;
+/// an `indexBitwidth` of 0 leaves them untouched. `indexBitwidth` must not
+/// exceed `IndexType::kInternalStorageBitWidth`.
+///
+/// NOTE: `indexBitwidth` defaults to 64 for backwards compatibility - this
+/// coincides with the index type bitwidth that this pattern used to assume
+/// unconditionally before the parameter was introduced. The index type is not
+/// always 64-bit wide though (e.g. it can be lowered to 32-bit on some
+/// targets), so this default is merely a safe historical choice. In the future
+/// this default should be removed and callers should pass the appropriate index
+/// bitwidth explicitly.
 void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
+                                        unsigned indexBitwidth = 64,
                                         PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
@@ -307,6 +301,9 @@ void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
 
 void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
+
+void populateVectorDeinterleaveToShufflePatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
 /// Populates the pattern set with the following patterns:
 ///

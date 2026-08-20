@@ -16,16 +16,12 @@
 
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include <set>
 
 namespace llvm {
 class SPIRVSubtarget;
 
 class SPIRVTargetLowering : public TargetLowering {
   const SPIRVSubtarget &STI;
-
-  // Record of already processed machine functions
-  mutable std::set<const MachineFunction *> ProcessedMF;
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
@@ -52,6 +48,8 @@ public:
                           const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -68,18 +66,24 @@ public:
 
   MVT getPreferredSwitchConditionType(LLVMContext &Context,
                                       EVT ConditionVT) const override {
-    return ConditionVT.getSimpleVT();
+    return MVT::i1;
   }
 
   bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
                                    unsigned OpIdx) const;
   bool insertLogicalCopyOnResult(MachineInstr &I,
-                                 SPIRVType *NewResultType) const;
+                                 SPIRVTypeInst NewResultType) const;
 
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
   AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
+
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
 };
 } // namespace llvm
 

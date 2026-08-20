@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
-#define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
+#ifndef LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
+#define LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"
@@ -22,6 +22,11 @@
 #include <vector>
 
 namespace lldb_private::mcp {
+
+/// Installs the standard LLDB tool and resource-provider set on \p server.
+/// Sharing one installer keeps every MCP server consistent, whether it runs in
+/// the plugin or is hosted in-process by an embedder.
+void PopulateServer(lldb_protocol::mcp::Server &server);
 
 class ProtocolServerMCP : public ProtocolServer {
 

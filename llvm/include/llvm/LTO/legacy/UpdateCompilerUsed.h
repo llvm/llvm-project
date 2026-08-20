@@ -24,8 +24,8 @@ class TargetMachine;
 /// \p AsmUndefinedRefs, as well as the user-supplied functions definitions that
 /// are also libcalls, and create or update the magic "llvm.compiler_used"
 /// global in \p TheModule.
-void updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
-                        const StringSet<> &AsmUndefinedRefs);
+LLVM_ABI void updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
+                                 const StringSet<> &AsmUndefinedRefs);
 }
 
 #endif // LLVM_LTO_LEGACY_UPDATECOMPILERUSED_H

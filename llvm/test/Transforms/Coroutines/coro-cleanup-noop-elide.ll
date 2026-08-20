@@ -2,11 +2,28 @@
 ; RUN: opt < %s -S -passes='coro-cleanup' | FileCheck %s
 
 ; Tests that resume or destroy a no-op coroutine can be erased; Finally, erase coro.noop if it has no users.
-define void @erase() personality i32 0 {
-; CHECK-LABEL: define void @erase() personality i32 0 {
+define void @erase(i1 %cond) personality i32 0 {
+; CHECK-LABEL: define void @erase(
+; CHECK-SAME: i1 [[COND:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[DONE:.*:]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[DONE1:.*]], label %[[OTHER:.*]]
+; CHECK:       [[DONE_UNREACHABLE:.*]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[DONE1]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[UNWIND:.*]]:
+; CHECK-NEXT:    [[PAD:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            catch ptr null
+; CHECK-NEXT:    call void @terminate()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    invoke void @terminate()
+; CHECK-NEXT:            to label %[[DONE_UNREACHABLE]] unwind label %[[UNWIND]]
 ;
+entry:
+  br i1 %cond, label %coro, label %other
+
+coro:
   %frame = call noundef ptr @llvm.coro.noop()
   %resume = call ptr @llvm.coro.subfn.addr(ptr %frame, i8 0)
   call fastcc void %resume(ptr %frame)
@@ -14,14 +31,18 @@ define void @erase() personality i32 0 {
   invoke fastcc void %destroy(ptr %frame)
   to label %done unwind label %unwind
 
-done:
+done:                                             ; preds = %coro, %other
   ret void
 
-unwind:
+unwind:                                           ; preds = %coro, %other
+  %phi = phi i32 [ 0, %coro ], [ 1, %other ]
   %pad = landingpad { ptr, i32 }
   catch ptr null
   call void @terminate()
   unreachable
+
+other:
+  invoke void @terminate() to label %done unwind label %unwind
 }
 
 ; Tests the load-and-call pattern despite mismatched calling conventions. Prevent instcombine from breaking code.

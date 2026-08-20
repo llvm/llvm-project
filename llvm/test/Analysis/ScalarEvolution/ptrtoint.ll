@@ -410,7 +410,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
-; X32-NEXT:    --> {%arg2,+,1}<%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg2,+,1}<nw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i12 = load i8, ptr %i11, align 1
 ; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = add i8 %i12, %i8
@@ -487,7 +487,7 @@ define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
-; X32-NEXT:    --> {%arg2,+,1}<%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg2,+,1}<nw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i12 = load i8, ptr %i11, align 1
 ; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = add i8 %i12, %i8
@@ -682,5 +682,60 @@ bb13:                                             ; preds = %bb10, %bb8
   ret void
 
 bb14:                                             ; preds = %bb
+  ret void
+}
+
+define i64 @ptrtoint_signbits(i1 %c) {
+; CHECK-LABEL: 'ptrtoint_signbits'
+; CHECK-NEXT:  Classifying expressions for: @ptrtoint_signbits
+; CHECK-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    --> %p U: [-1,1) S: [-1,1)
+; CHECK-NEXT:    %a = ptrtoint ptr %p to i64
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
+;
+  %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+  %a = ptrtoint ptr %p to i64
+  ret i64 %a
+}
+
+define void @ptrtoint_iv_start(ptr %arg, ptr %dst) {
+; CHECK-LABEL: 'ptrtoint_iv_start_no_cancel'
+; CHECK-NEXT:  Classifying expressions for: @ptrtoint_iv_start_no_cancel
+; CHECK-NEXT:    %start = ptrtoint ptr %arg to i64
+; CHECK-NEXT:    --> %start U: full-set S: full-set
+; CHECK-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+; CHECK-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cur = ptrtoint ptr %p to i64
+; CHECK-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %off = sub i64 %cur, %pi
+; CHECK-NEXT:    --> ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) U: full-set S: full-set Exits: ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
+; CHECK-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %pi.next = add i64 %pi, 8
+; CHECK-NEXT:    --> {(8 + %start),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start_no_cancel
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %start = ptrtoint ptr %arg to i64
+  br label %loop
+
+loop:
+  %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+  %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+  %cur = ptrtoint ptr %p to i64
+  %off = sub i64 %cur, %pi
+  store i64 %off, ptr %dst, align 8
+  %p.next = getelementptr i8, ptr %p, i64 8
+  %pi.next = add i64 %pi, 8
+  %ec = icmp eq i64 %off, 80
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

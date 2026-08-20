@@ -12,6 +12,7 @@
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCStreamer.h"
+#include <map>
 
 namespace llvm {
 
@@ -75,12 +76,6 @@ public:
 };
 
 template <> struct DenseMapInfo<CSKYTargetStreamer::SymbolIndex> {
-  static inline CSKYTargetStreamer::SymbolIndex getEmptyKey() {
-    return {nullptr, CSKY::S_Invalid};
-  }
-  static inline CSKYTargetStreamer::SymbolIndex getTombstoneKey() {
-    return {nullptr, CSKY::S_Invalid};
-  }
   static unsigned getHashValue(const CSKYTargetStreamer::SymbolIndex &V) {
     return hash_combine(DenseMapInfo<const MCSymbol *>::getHashValue(V.sym),
                         DenseMapInfo<int>::getHashValue(V.kind));

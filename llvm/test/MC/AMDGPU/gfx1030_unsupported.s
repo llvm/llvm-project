@@ -17,4 +17,4 @@ v_fmac_legacy_f32_sdwa v255, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel
 // CHECK: :[[@LINE-1]]:1: error: sdwa variant of this instruction is not supported
 
 v_mul_lo_i32 v0, v1, v2
-// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1030): v_mul_lo_i32

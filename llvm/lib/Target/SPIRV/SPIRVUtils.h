@@ -14,6 +14,9 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -21,14 +24,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
+#include <set>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
+
+#include "SPIRVTypeInst.h"
 
 namespace llvm {
 class MCInst;
 class MachineFunction;
-class MachineInstr;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -70,20 +73,20 @@ class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
 
-  std::unordered_set<BasicBlock *> Queued = {};
-  std::queue<BasicBlock *> ToVisit = {};
+  SmallPtrSet<BasicBlock *, 0> Queued;
+  std::queue<BasicBlock *> ToVisit;
 
   struct OrderInfo {
     size_t Rank;
     size_t TraversalIndex;
   };
 
-  using BlockToOrderInfoMap = std::unordered_map<BasicBlock *, OrderInfo>;
+  using BlockToOrderInfoMap = DenseMap<BasicBlock *, OrderInfo>;
   BlockToOrderInfoMap BlockToOrder;
-  std::vector<BasicBlock *> Order = {};
+  std::vector<BasicBlock *> Order;
 
   // Get all basic-blocks reachable from Start.
-  std::unordered_set<BasicBlock *> getReachableFrom(BasicBlock *Start);
+  SmallPtrSet<BasicBlock *, 0> getReachableFrom(BasicBlock *Start);
 
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
@@ -164,15 +167,16 @@ struct FPFastMathDefaultInfoVector
 // during the translation to cope with aggregate flattening etc.
 FunctionType *getOriginalFunctionType(const Function &F);
 FunctionType *getOriginalFunctionType(const CallBase &CB);
+// This handles retrieving the original ASM constraints, which we had to spoof
+// into having a single output.
+StringRef getOriginalAsmConstraints(const CallBase &CB);
 } // namespace SPIRV
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const StringRef &Str, MCInst &Inst);
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args);
+void addStringImm(StringRef Str, MCInst &Inst);
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
@@ -186,31 +190,22 @@ std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(Register Target, const StringRef &Name,
-                 MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -218,7 +213,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
-MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+MachineBasicBlock::iterator getOpVariableMBBIt(MachineFunction &MF);
 
 // Return a valid position for the instruction at the end of the block before
 // terminators and debug instructions.
@@ -231,6 +226,7 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
   case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::CodeSectionINTEL:
     return true;
   default:
     return false;
@@ -307,6 +303,10 @@ bool isSpvIntrinsic(const Value *Arg);
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
 
+// Get the i-th operand of the metadata node as a ConstantInt, or nullptr if it
+// is out of range or not a ConstantInt.
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I);
+
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
@@ -328,6 +328,15 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
 
+// Create a stack slot in the entry block of F for a value of the given type.
+AllocaInst *createVariable(Function &F, Type *Type);
+
+// Create a value in BB set to the value associated with the branch the block
+// terminator will take.
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue);
+
 // Check for peeled array structs and recursively reconstitute them. In HLSL
 // CBuffers, arrays may have padding between the elements, but not after the
 // last element. To represent this in LLVM IR an array [N x T] will be
@@ -344,7 +353,11 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 Type *reconstitutePeeledArrayType(Type *Ty);
 
 inline bool hasInitializer(const GlobalVariable *GV) {
-  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+  if (!GV->hasInitializer())
+    return false;
+  if (const auto *Init = GV->getInitializer(); isa<UndefValue>(Init))
+    return GV->isConstant() && Init->getType()->isAggregateType();
+  return true;
 }
 
 // True if this is an instance of TypedPointerType.
@@ -360,6 +373,12 @@ inline bool isUntypedPointerTy(const Type *T) {
 // True if this is an instance of PointerType or TypedPointerType.
 inline bool isPointerTy(const Type *T) {
   return isUntypedPointerTy(T) || isTypedPointerTy(T);
+}
+
+// True if this is a vector whose element type is an (untyped) PointerType.
+inline bool isUntypedPointerVectorTy(const Type *T) {
+  return isa_and_nonnull<VectorType>(T) &&
+         isUntypedPointerTy(T->getScalarType());
 }
 
 // Get the address space of this pointer or pointer vector type for instances of
@@ -385,13 +404,6 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   if (Arg->hasByRefAttr())
     return Arg->getParamByRefType();
   return nullptr;
-}
-
-inline Type *reconstructFunctionType(Function *F) {
-  SmallVector<Type *> ArgTys;
-  for (unsigned i = 0; i < F->arg_size(); ++i)
-    ArgTys.push_back(F->getArg(i)->getType());
-  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
 #define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"
@@ -523,21 +535,19 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
-bool getVacantFunctionName(Module &M, std::string &Name);
+#define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,
                      SPIRV::AccessQualifier::AccessQualifier AccessQual,
                      bool EmitIR, bool Force = false);
-void setRegClassType(Register Reg, const MachineInstr *SpvType,
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
 Register createVirtualRegister(
     const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
@@ -549,7 +559,7 @@ bool isNestedPointer(const Type *Ty);
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
 inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
-  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+  static const StringMap<FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
       {"rtp", FPDecorationId::RTP},
@@ -581,10 +591,9 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
-MachineBasicBlock::iterator
-getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
+Function *getOrCreateBackendServiceFunction(Module &M);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

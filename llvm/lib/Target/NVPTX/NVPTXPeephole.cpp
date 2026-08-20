@@ -71,7 +71,7 @@ static bool isCVTAToLocalCombinationCandidate(MachineInstr &Root) {
   auto &MF = *MBB.getParent();
   // Check current instruction is cvta.to.local
   if (Root.getOpcode() != NVPTX::cvta_to_local_64 &&
-      Root.getOpcode() != NVPTX::cvta_to_local)
+      Root.getOpcode() != NVPTX::cvta_to_local_32)
     return false;
 
   auto &Op = Root.getOperand(1);

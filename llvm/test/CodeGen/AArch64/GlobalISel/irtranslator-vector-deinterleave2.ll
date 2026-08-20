@@ -6,10 +6,10 @@ define void @vector_deinterleave2_v4i32(<4 x i32> %a) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x s32>), [[DEF]], shufflemask(0, 2)
-  ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x s32>), [[DEF]], shufflemask(1, 3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x i32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<2 x i32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x i32>), [[DEF]], shufflemask(0, 2)
+  ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<2 x i32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x i32>), [[DEF]], shufflemask(1, 3)
   ; CHECK-NEXT:   RET_ReallyLR
     %res = call {<2 x i32>, <2 x i32>} @llvm.vector.deinterleave2.v4i32(<4 x i32> %a)
     ret void
@@ -20,14 +20,14 @@ define void @vector_deinterleave2_v8f32(<8 x float> %a) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x s32>), [[BITCAST1]](<4 x s32>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x s32>), [[DEF]], shufflemask(0, 2, 4, 6)
-  ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x s32>), [[DEF]], shufflemask(1, 3, 5, 7)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x f32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x f32>), [[BITCAST1]](<4 x f32>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<8 x f32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x f32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x f32>), [[DEF]], shufflemask(0, 2, 4, 6)
+  ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<4 x f32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x f32>), [[DEF]], shufflemask(1, 3, 5, 7)
   ; CHECK-NEXT:   RET_ReallyLR
     %res = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %a)
     ret void

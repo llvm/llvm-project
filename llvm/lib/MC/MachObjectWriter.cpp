@@ -443,7 +443,12 @@ void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
   // The Mach-O streamer uses the lowest 16-bits of the flags for the 'desc'
   // value.
   bool EncodeAsAltEntry = IsAlias && OrigSymbol.isAltEntry();
-  W.write<uint16_t>(Symbol->getEncodedFlags(EncodeAsAltEntry));
+  uint16_t Flags = Symbol->getEncodedFlags(EncodeAsAltEntry);
+  // Preserve the aliasee's flags while adding alias-specific flags,
+  // such as N_WEAK_DEF emitted by .weak_definition.
+  if (IsAlias)
+    Flags |= OrigSymbol.getEncodedFlags(EncodeAsAltEntry);
+  W.write<uint16_t>(Flags);
   if (is64Bit())
     W.write<uint64_t>(Address);
   else
@@ -1060,7 +1065,7 @@ uint64_t MachObjectWriter::writeObject() {
     if (Data.End)
       End = getSymbolAddress(*Data.End);
     else
-      report_fatal_error("Data region not terminated");
+      report_fatal_error("data region not terminated");
 
     LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data.Kind
                       << "  start: " << Start << "(" << Data.Start->getName()

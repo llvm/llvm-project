@@ -133,8 +133,8 @@ static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
   if (!TM)
     ErrorAndExit("Could not create target machine");
 
-  codegen::setFunctionAttributes(codegen::getCPUStr(),
-                                 codegen::getFeaturesStr(), *M);
+  codegen::setFunctionAttributes(*M, codegen::getCPUStr(),
+                                 codegen::getFeaturesStr());
 
   // Add a pass that writes the optimized IR to an output stream
   std::string outString;

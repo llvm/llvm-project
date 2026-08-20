@@ -146,7 +146,7 @@ public:
     EmitPreamble();
   }
 
-  ~SDiagsWriter() override {}
+  ~SDiagsWriter() override;
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
@@ -154,8 +154,6 @@ public:
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
     LangOpts = &LO;
   }
-
-  void finish() override;
 
 private:
   /// Build a DiagnosticsEngine to emit diagnostics about the diagnostics
@@ -770,7 +768,7 @@ void SDiagsWriter::RemoveOldDiagnostics() {
   MergeChildRecords = false;
 }
 
-void SDiagsWriter::finish() {
+SDiagsWriter::~SDiagsWriter() {
   assert(!IsFinishing);
   IsFinishing = true;
 

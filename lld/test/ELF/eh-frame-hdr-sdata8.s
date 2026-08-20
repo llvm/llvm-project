@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86 && llvm-64-bits
 
 ## Test that .eh_frame_hdr uses DW_EH_PE_sdata8 instead of DW_EH_PE_sdata4 when
 ## eh_frame_ptr or a table entry exceeds the 32-bit range.
@@ -66,11 +66,13 @@ _start:
 .dc.a __ehdr_start
 
 #--- 1.lds
+## Use AT() to place output sections with huge addresses in separate PT_LOAD
+## segments, avoiding a huge PT_LOAD whose sparse file size would exceed 4GiB.
 SECTIONS {
   . = 0x1000;
   .eh_frame_hdr : {}
   .eh_frame : {}
-  .text 0x100002000 : {}
+  .text 0x100002000 : AT(0x2000) {}
 }
 
 #--- 2.lds
@@ -78,7 +80,7 @@ SECTIONS {
   . = 0x1000;
   .text : {}
   .eh_frame_hdr : {}
-  .eh_frame 0x100002000 : {}
+  .eh_frame 0x100002000 : AT(0x2000) {}
 }
 
 #--- 3.lds
@@ -95,7 +97,7 @@ SECTIONS {
   .relr.dyn : {}
   .data : { *(.data) . += 63*8-40 + SIZEOF(.eh_frame_hdr); *(.data.*) }
   . = SIZEOF(.relr.dyn) > 16 ? 0x100008000 : 0x3000;
-  .text : {}
+  .text : AT(0x2000) {}
   ASSERT(SIZEOF(.relr.dyn) > 16, ".relr.dyn size should increase from 16 to 24")
 }
 

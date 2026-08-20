@@ -302,7 +302,7 @@ private:
 
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
-    PM.add(createAArch64ExpandPseudoPass());
+    PM.add(createAArch64ExpandPseudoLegacyPass());
   }
 };
 
@@ -350,6 +350,12 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     return Error::success();
   case llvm::AArch64::OPERAND_SHIFTED_IMMEDIATE:
     AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case llvm::AArch64::OPERAND_IMM_UINT5:
+    AssignedValue = MCOperand::createImm(31);
+    return Error::success();
+  case llvm::AArch64::OPERAND_IMM_UINT8:
+    AssignedValue = MCOperand::createImm(1);
     return Error::success();
   case MCOI::OperandType::OPERAND_PCREL:
     AssignedValue = MCOperand::createImm(8);

@@ -10,6 +10,7 @@
 #include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
+#include <iterator>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -165,6 +166,62 @@ TEST(TransformTest, TransformCategory) {
     EXPECT_TRUE(std::is_rvalue_reference_v<decltype(s)>);
     return StructB{std::move(s)};
   });
+}
+
+// Checks that pointer to member is a valid argument
+TEST(TransformTest, TransformToMember) {
+  struct StructA {
+    int x = 1;
+    int y = 2;
+  };
+  std::optional<StructA> Opt{StructA{}};
+  auto OptX = transformOptional(Opt, &StructA::x);
+  ASSERT_TRUE(OptX.has_value());
+  EXPECT_EQ(*OptX, 1);
+
+  auto OptY = transformOptional(Opt, &StructA::y);
+  ASSERT_TRUE(OptY.has_value());
+  EXPECT_EQ(*OptY, 2);
+
+  Opt = std::nullopt;
+  OptX = transformOptional(Opt, &StructA::x);
+  EXPECT_FALSE(OptX.has_value());
+}
+
+// Checks that pointer to member function is a valid argument
+TEST(TransformTest, TransformToMemberFunc) {
+  struct Foo {
+    int bar() const { return 42; }
+  };
+  std::optional<Foo> Opt{Foo{}};
+  auto OptRes = transformOptional(Opt, &Foo::bar);
+  ASSERT_TRUE(OptRes.has_value());
+  EXPECT_EQ(*OptRes, 42);
+}
+
+// Checks that callable is forwarded properly
+TEST(TransformTest, TransformRvalueRef) {
+  struct Foo {
+    int operator()(int x) && { return 42; }
+    int operator()(int x) & { return 43; }
+  };
+  std::optional<int> Opt = 1;
+  Foo foo;
+  auto Res = transformOptional(Opt, foo);
+  EXPECT_EQ(Res.value_or(0), 43);
+  Res = transformOptional(Opt, std::move(foo));
+  EXPECT_EQ(Res.value_or(0), 42);
+}
+
+// Checks constexpr
+TEST(TransformTest, TransfornConstexpr) {
+  constexpr std::optional<int> Opt1 = 42;
+  auto PlusOne = [](int x) { return x + 1; };
+  constexpr auto Res1 = transformOptional(Opt1, PlusOne);
+  EXPECT_EQ(Res1.value_or(0), 43);
+  constexpr std::optional<int> Opt2;
+  constexpr auto Res2 = transformOptional(Opt2, PlusOne);
+  EXPECT_FALSE(Res2.has_value());
 }
 
 TEST(TransformTest, ToUnderlying) {
@@ -604,6 +661,41 @@ TEST(STLForwardCompatTest, BindFrontBindBack) {
   EXPECT_TRUE(any_of(V, Spec0));
   EXPECT_TRUE(any_of(V, Spec1));
 }
+
+// Compile-time tests for llvm::is_sorted_constexpr
+static constexpr int CEmptyHelper[]{-1};
+static_assert(llvm::is_sorted_constexpr(std::begin(CEmptyHelper),
+                                        std::begin(CEmptyHelper)),
+              "Empty range should be sorted");
+
+static constexpr int CSingle[]{42};
+static_assert(llvm::is_sorted_constexpr(std::begin(CSingle), std::end(CSingle)),
+              "Single element range should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::begin(CSingle), std::end(CSingle),
+                                        std::greater<>()),
+              "Single element range should be sorted with std::greater");
+
+static constexpr int CSorted[]{1, 2, 2, 3, 5};
+static_assert(llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted)),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted),
+                                        std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted),
+                                         std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
+
+static constexpr int CUnsorted[]{1, 3, 2, 4, 5};
+static_assert(!llvm::is_sorted_constexpr(std::begin(CUnsorted),
+                                         std::end(CUnsorted)),
+              "Unsorted range should not be sorted");
+
+static constexpr int CDesc[]{9, 7, 7, 3, 0};
+static_assert(llvm::is_sorted_constexpr(std::begin(CDesc), std::end(CDesc),
+                                        std::greater<>()),
+              "Non-ascending order with std::greater should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::rbegin(CDesc), std::rend(CDesc)),
+              "Reverse iterators should be supported.");
 
 } // namespace
 } // namespace llvm

@@ -69,6 +69,10 @@ def emit_fatbin_only
       Flags<[WrapperOnlyOption]>,
       HelpText<"Emit fat binary directly without wrapping or host linking">;
 
+def no_canonical_prefixes : Flag<["--"], "no-canonical-prefixes">,
+  Flags<[WrapperOnlyOption]>,
+  HelpText<"Do not resolve symbolic links, turn relative paths into absolute ones, or do anything else to identify the executable">;
+
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
@@ -123,8 +127,7 @@ def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
 
-def v : Flag<["--", "-"], "v">, HelpText<"Display the version number and exit">;
-def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
+def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;

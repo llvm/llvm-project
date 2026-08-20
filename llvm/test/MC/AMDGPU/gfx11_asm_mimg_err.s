@@ -28,13 +28,13 @@ image_atomic_dec v5, v1, s[8:15] dmask:0x1 unorm glc
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_atomic_fcmpswap
 
 image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_atomic_fmax
 
 image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_atomic_fmin
 
 image_atomic_inc v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
 // NOGFX11: :[[@LINE-1]]:32: error: invalid operand for instruction
@@ -148,10 +148,10 @@ image_gather4_b_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_gather4_b_cl_o v[64:67], [v32, v0, v4, v5, v6, v7], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_b_cl_o
 
 image_gather4_b_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_b_o
 
 image_gather4_c v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
@@ -172,22 +172,22 @@ image_gather4_c_b_cl v[64:67], [v32, v0, v4, v5, v6, v7], s[4:11], s[100:103] dm
 // NOGFX11: :[[@LINE-1]]:79: error: not a valid operand.
 
 image_gather4_c_b_cl_o v[64:67], [v32, v0, v4, v5, v6, v7, v8], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_c_b_cl_o
 
 image_gather4_c_b_o v[64:67], [v32, v0, v4, v5, v6, v7], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_c_b_o
 
 image_gather4_c_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_gather4_c_cl_o v[64:67], [v32, v0, v4, v5, v6, v7], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_c_cl_o
 
 image_gather4_c_l v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_gather4_c_l_o v[64:67], [v32, v0, v4, v5, v6, v7], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_c_l_o
 
 image_gather4_c_lz v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
@@ -196,13 +196,13 @@ image_gather4_c_lz_o v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_gather4_c_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_c_o
 
 image_gather4_cl v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_gather4_cl_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_cl_o
 
 image_gather4_l v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
@@ -214,7 +214,7 @@ image_gather4_l v[64:67], v[32:33], s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
 // NOGFX11: :[[@LINE-1]]:46: error: invalid operand for instruction
 
 image_gather4_l_o v[64:67], [v32, v0, v4, v5, v6], s[4:11], s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_gather4_l_o
 
 image_gather4_lz v[5:8], v[1:2], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
@@ -340,16 +340,16 @@ image_sample_c_b_o v[64:66], [v32, v16, v0, v2, v1, v4], s[4:11], s[100:103] dma
 // NOGFX11: :[[@LINE-1]]:78: error: not a valid operand.
 
 image_sample_c_cd v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_c_cd
 
 image_sample_c_cd_cl v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8, v9], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_c_cd_cl
 
 image_sample_c_cd_cl_o v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8, v9, v10], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_c_cd_cl_o
 
 image_sample_c_cd_o v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8, v9], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_c_cd_o
 
 image_sample_c_cl v5, v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
@@ -415,16 +415,16 @@ image_sample_c_o v5, v[1:3], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand
 
 image_sample_cd v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_cd
 
 image_sample_cd_cl v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_cd_cl
 
 image_sample_cd_cl_o v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8, v9], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_cd_cl_o
 
 image_sample_cd_o v[64:66], [v32, v16, v0, v2, v1, v4, v5, v6, v7, v8], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): image_sample_cd_o
 
 image_sample_cl v5, v[1:2], s[8:15], s[12:15] dmask:0x1 unorm
 // NOGFX11: :[[@LINE-1]]:1: error: missing dim operand

@@ -8,9 +8,10 @@
 ; uninitialized, if a bit is initialized in both inputs but has a different
 ; value.
 ;
-; TODO: since the compiler/optimizer may freely choose between (icmp eq + br)
-;       vs. switch, MSan's switch instrumentation also needs to be able to
-;       handle partly-uninitialized inputs.
+; If switch has a partly uninitialized input, but it is possible to rule out
+; matching any of the cases, it will use the default case instead of reporting
+; use-of-uninitialized memory. This is equivalent to if the switch was replaced
+; by a series of (icmp eq + br).
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -20,8 +21,22 @@ define i64 @switch_test(i32 %wii) sanitize_memory {
 ; CHECK-SAME: i32 [[WII:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[WII]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = xor i32 [[WII]], 43
+; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 0
+; CHECK-NEXT:    [[_MSPROP_ICMP1:%.*]] = and i1 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[_MSPROP_ICMP]], [[_MSPROP_ICMP1]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable

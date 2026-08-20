@@ -1,6 +1,6 @@
 ; Test aliasing errors on z/OS
 
-; RUN: not llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=s390x-ibm-zos 2>&1 | FileCheck %s
 
 ; CHECK: error: Only aliases to functions is supported in GOFF.
 ; CHECK: error: Weak alias/reference not supported on z/OS

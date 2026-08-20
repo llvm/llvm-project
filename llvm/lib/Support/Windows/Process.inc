@@ -90,9 +90,9 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
   sys_time = toDuration(KernelTime);
 }
 
-// Some LLVM programs such as bugpoint produce core files as a normal part of
-// their operation. To prevent the disk from filling up, this configuration
-// item does what's necessary to prevent their generation.
+// Some LLVM programs such as llvm-reduce produce core files as a normal part of
+// their operation. To prevent the disk from filling up, this configuration item
+// does what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
   // Windows does have the concept of core files, called minidumps.  However,
   // disabling minidumps for a particular application extends past the lifetime
@@ -103,7 +103,7 @@ void Process::PreventCoreFiles() {
   // later).
   //
   // Windows also has modal pop-up message boxes.  As this method is used by
-  // bugpoint, preventing these pop-ups is additionally important.
+  // llvm-reduce, preventing these pop-ups is additionally important.
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX |
                SEM_NOOPENFILEERRORBOX);
 

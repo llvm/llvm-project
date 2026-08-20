@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 
@@ -78,6 +79,21 @@ bool Parser::isCXXDeclarationStatement(
     [[fallthrough]];
     // simple-declaration
   default:
+
+    if (DisambiguatingWithExpression) {
+      TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+      // Skip early access checks to support edge cases like extern declarations
+      // involving private types. Tokens are unannotated by reverting so that
+      // access integrity is verified during the subsequent type-lookup phase.
+      SuppressAccessChecks AccessExporter(*this, /*activate=*/true);
+      if (isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false)) {
+        // Do not annotate the tokens, otherwise access will be neglected later.
+        TPA.Revert();
+        return true;
+      }
+      TPA.Commit();
+      return false;
+    }
     return isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false);
   }
 }
@@ -155,9 +171,10 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
     }
     [[fallthrough]];
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
@@ -1176,6 +1193,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_inline:
   case tok::kw_virtual:
   case tok::kw_explicit:
+  case tok::kw__Noreturn:
 
     // Modules
   case tok::kw___module_private__:
@@ -1226,12 +1244,21 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+    // HLSL matrix layout qualifiers
+  case tok::kw_row_major:
+  case tok::kw_column_major:
 
     // GNU
   case tok::kw_restrict:
   case tok::kw__Complex:
+  case tok::kw__Imaginary:
   case tok::kw___attribute:
   case tok::kw___auto_type:
+    return TPResult::True;
+
+    // OverflowBehaviorTypes
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
     return TPResult::True;
 
     // Microsoft
@@ -1499,7 +1526,8 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     return TPResult::True;
 
   // GNU typeof support.
-  case tok::kw_typeof: {
+  case tok::kw_typeof:
+  case tok::kw_typeof_unqual: {
     if (NextToken().isNot(tok::l_paren))
       return TPResult::True;
 
@@ -1522,7 +1550,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     return TPResult::True;
 
   // C11 _Alignas
@@ -1564,8 +1592,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     return true;
 
     // elaborated-type-specifier
@@ -1624,7 +1653,8 @@ bool Parser::isCXXDeclarationSpecifierAType() {
 }
 
 Parser::TPResult Parser::TryParseTypeofSpecifier() {
-  assert(Tok.is(tok::kw_typeof) && "Expected 'typeof'!");
+  assert(Tok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
+         "Expected 'typeof' or 'typeof_unqual'!");
   ConsumeToken();
 
   assert(Tok.is(tok::l_paren) && "Expected '('");

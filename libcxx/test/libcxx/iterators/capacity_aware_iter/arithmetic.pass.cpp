@@ -25,6 +25,7 @@
 // operator-(__capacity_aware_iterator, __capacity_aware_iterator)
 
 #include <__iterator/capacity_aware_iterator.h>
+#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <iterator>

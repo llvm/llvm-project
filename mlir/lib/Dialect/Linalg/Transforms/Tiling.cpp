@@ -827,6 +827,9 @@ mlir::linalg::tileLinalgOp(RewriterBase &b, LinalgOp op,
 
 namespace {
 /// Helper classes for type list expansion.
+/// TODO: Move this to a common header, so all dialects, passes and
+/// transforms can utilize this method to compose canonicalization
+/// patterns.
 template <typename... OpTypes>
 class CanonicalizationPatternList;
 
@@ -844,39 +847,33 @@ public:
     CanonicalizationPatternList<OpTypes...>::insert(patterns);
   }
 };
-} // namespace
 
-RewritePatternSet
-mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
-  RewritePatternSet patterns(ctx);
-  populateLinalgTilingCanonicalizationPatterns(patterns);
-  return patterns;
-}
-
-void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
-    RewritePatternSet &patterns) {
+/// TODO: Move this into `getCanonicalizationPattern` and do the same for all
+/// dialects, so that we don't need this hack to also get the operations'
+/// canonicalization patterns per dialect.
+static void
+populateLinalgCanonicalizationPatterns(RewritePatternSet &patterns) {
   auto *ctx = patterns.getContext();
-  affine::AffineApplyOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineForOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineMinOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineMaxOp::getCanonicalizationPatterns(patterns, ctx);
-  arith::ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
-
-  memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
-  memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
-
-  scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
-  scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
-
-  tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::EmptyOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::InsertSliceOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::PadOp::getCanonicalizationPatterns(patterns, ctx);
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
 
   CanonicalizationPatternList<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >::insert(patterns);
+}
+} // namespace
+
+void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
+    RewritePatternSet &patterns) {
+  // Extra patterns from other dialects that we want to register for tiling
+  // Linalg operations.
+  CanonicalizationPatternList<
+      affine::AffineApplyOp, affine::AffineForOp, affine::AffineMinOp,
+      affine::AffineMaxOp, arith::ConstantIndexOp, memref::SubViewOp,
+      memref::ViewOp, scf::ForOp, scf::ParallelOp, tensor::CastOp,
+      tensor::EmptyOp, tensor::ExtractSliceOp, tensor::InsertSliceOp,
+      tensor::PadOp>::insert(patterns);
+
+  // Linalg's own patterns
+  populateLinalgCanonicalizationPatterns(patterns);
 }
