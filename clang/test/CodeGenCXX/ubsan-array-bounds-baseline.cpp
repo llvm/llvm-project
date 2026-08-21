@@ -120,15 +120,15 @@ void x_ref_meminit(int i) {
 }
 
 // CHECK-LABEL: define {{.*}}@_Z13x_member_calli(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_member_call(int i) { ma[i].m(); }
 
 // CHECK-LABEL: define {{.*}}@_Z19x_member_call_arrowi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_member_call_arrow(int i) { (&ma[i])->m(); }
 
 // CHECK-LABEL: define {{.*}}@_Z21x_member_call_virtuali(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_member_call_virtual(int i) { msa[i].virt(); }
 
 // TODO: confirm with reviewers. C++ [class.static]p2 says the object expression
@@ -154,12 +154,12 @@ void x_member_arrow(int i) { (&ma[i])->f = 1; }
 void x_trivial_assign_lhs(int i) { agga[i] = agglocal; }
 
 // CHECK-LABEL: define {{.*}}@_Z20x_trivial_assign_rhsi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_trivial_assign_rhs(int i) { agglocal = agga[i]; }
 
 // The same assignment spelled as an explicit operator= call.
 // CHECK-LABEL: define {{.*}}@_Z17x_explicit_assigni(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_explicit_assign(int i) { agglocal.operator=(agga[i]); }
 
 // CHECK-LABEL: define {{.*}}@_Z17x_derived_to_basei(
