@@ -85,7 +85,8 @@ void SwiftLanguage::Initialize() {
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::ArraySyntheticFrontEndCreator);
 
-  initializeSwiftModules();
+  static std::once_flag g_initialize_swift_modules_once;
+  std::call_once(g_initialize_swift_modules_once, initializeSwiftModules);
 }
 
 void SwiftLanguage::Terminate() {
@@ -105,6 +106,7 @@ void SwiftLanguage::Terminate() {
       .erase(g_NSArrayClass1);
 
   PluginManager::UnregisterPlugin(CreateInstance);
+  LogChannelSwift::Terminate();
 }
 
 bool SwiftLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
