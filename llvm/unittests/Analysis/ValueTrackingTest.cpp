@@ -2779,6 +2779,57 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
   expectKnownBits(/*zero*/ 2u, /*one*/ 0u);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsX86BmiBextr32) {
+  // bextr(11111111....., shift=4, length=8)
+  // extracts bits [4, 12) which are all known one.
+  parseAssembly(
+      "define i32 @test(i32 %a) {\n"
+      "  %aa = or i32 %a, 4080\n"
+      "  %A = call i32 @llvm.x86.bmi.bextr.32(i32 %aa, i32 2052)\n"
+      "  ret i32 %A\n"
+      "}\n"
+      "declare i32 @llvm.x86.bmi.bextr.32(i32, i32)\n");
+  expectKnownBits(/*zero*/ 4294967040u, /*one*/ 255u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsX86TbmBextriU32Mixed) {
+  // bextr(....1111....0000, shift=0, length=12)
+  // extracts bits [0, 12), a mix of known and unknown bits, zero-extended.
+  parseAssembly(
+      "define i32 @test(i32 %a) {\n"
+      "  %aa = shl i32 %a, 4\n"
+      "  %aaa = or i32 %aa, 3840\n"
+      "  %A = call i32 @llvm.x86.tbm.bextri.u32(i32 %aaa, i32 3072)\n"
+      "  ret i32 %A\n"
+      "}\n"
+      "declare i32 @llvm.x86.tbm.bextri.u32(i32, i32)\n");
+  expectKnownBits(/*zero*/ 4294963215u, /*one*/ 3840u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsX86BmiBextr64ZeroLength) {
+  // bextr(x, shift=0, length=0) is always zero, regardless of the operand.
+  parseAssembly(
+      "define i64 @test(i64 %a) {\n"
+      "  %A = call i64 @llvm.x86.bmi.bextr.64(i64 %a, i64 0)\n"
+      "  ret i64 %A\n"
+      "}\n"
+      "declare i64 @llvm.x86.bmi.bextr.64(i64, i64)\n");
+  expectKnownBits(/*zero*/ 18446744073709551615u, /*one*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsX86TbmBextriU32OutOfRange) {
+  // shift + length (30 + 10 = 40) exceeds the bit width (32), so nothing is
+  // known about the result even though the operand has known bits.
+  parseAssembly(
+      "define i32 @test(i32 %a) {\n"
+      "  %aa = or i32 %a, 4080\n"
+      "  %A = call i32 @llvm.x86.tbm.bextri.u32(i32 %aa, i32 2590)\n"
+      "  ret i32 %A\n"
+      "}\n"
+      "declare i32 @llvm.x86.tbm.bextri.u32(i32, i32)\n");
+  expectKnownBits(/*zero*/ 0u, /*one*/ 0u);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
   // ptrtoint truncates the pointer type. Make sure we don't crash.
   parseAssembly(
