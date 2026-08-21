@@ -684,12 +684,13 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       return 0;
     }
 
-    if (debug_abbrev_file_size > 0 && debug_info_file_size > 0)
+    if (debug_abbrev_file_size > 0 && debug_info_file_size > 0) {
       abilities |= CompileUnits | Functions | Blocks | GlobalVariables |
                    LocalVariables | VariableTypes;
 
-    if (debug_line_file_size > 0)
-      abilities |= LineTables;
+      if (debug_line_file_size > 0)
+        abilities |= LineTables;
+    }
   }
   return abilities;
 }

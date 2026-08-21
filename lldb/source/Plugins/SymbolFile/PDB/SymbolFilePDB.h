@@ -162,6 +162,10 @@ public:
   void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter,
                     bool show_color) override;
 
+protected:
+  static uint32_t
+  CalculateAbilitiesFromPDBTables(llvm::pdb::IPDBEnumTables &tables);
+
 private:
   struct SecContribInfo {
     uint32_t Offset;
