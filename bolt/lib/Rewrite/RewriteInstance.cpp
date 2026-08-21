@@ -48,6 +48,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/ELF/ELFConfig.h"
+#include "llvm/ObjCopy/ELF/ELFObjcopy.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -101,6 +105,11 @@ static cl::opt<bool>
     AllowStripped("allow-stripped",
                   cl::desc("allow processing of stripped binaries"), cl::Hidden,
                   cl::cat(BoltCategory));
+
+static cl::opt<bool> CompactOutput(
+    "compact-output",
+    cl::desc("repack the output ELF to remove gaps and stale section data"),
+    cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<bool> ForceToDataRelocations(
     "force-data-relocations",
@@ -5012,6 +5021,30 @@ void RewriteInstance::patchELFPHDRTable(ELFObjectFile<ELFT> *File) {
 
 namespace {
 
+Error compactELFOutput(StringRef Filename) {
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
+  if (!BinaryOrErr)
+    return createFileError(Filename, BinaryOrErr.takeError());
+
+  OwningBinary<Binary> OutputBinary = std::move(*BinaryOrErr);
+  auto *ELFObj = dyn_cast<ELFObjectFileBase>(OutputBinary.getBinary());
+  if (!ELFObj)
+    return createStringError(errc::executable_format_error,
+                             "output is not an ELF file");
+
+  objcopy::CommonConfig Config;
+  Config.InputFilename = Filename;
+  Config.OutputFilename = Filename;
+  objcopy::ELFConfig ELFConfig;
+
+  // writeToOutput writes through a temporary file and atomically replaces the
+  // original. OutputBinary keeps the old file contents alive until ObjCopy is
+  // done reading them.
+  return writeToOutput(Filename, [&](raw_ostream &OS) {
+    return objcopy::elf::executeObjcopyOnBinary(Config, ELFConfig, *ELFObj, OS);
+  });
+}
+
 /// Write padding to \p OS such that its current \p Offset becomes aligned
 /// at \p Alignment. Return new (aligned) offset.
 uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
@@ -6755,6 +6788,17 @@ void RewriteInstance::rewriteFile() {
   }
 
   Out->keep();
+
+  // ObjCopy has to reopen the completed file. Destroy the output stream first
+  // so all buffered data is flushed and its file descriptor is closed.
+  Out.reset();
+
+  if (opts::CompactOutput) {
+    check_error(compactELFOutput(opts::OutputFilename),
+                "failed to compact output ELF");
+    BC->outs() << "BOLT-INFO: binary has been compacted \n";
+  }
+
   EC = sys::fs::setPermissions(
       opts::OutputFilename,
       static_cast<sys::fs::perms>(sys::fs::perms::all_all &

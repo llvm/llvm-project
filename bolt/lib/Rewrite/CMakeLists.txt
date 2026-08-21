@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   JITLink
   MC
   Object
+  ObjCopy
   Support
   DWARFLinker
   DWARFLinkerClassic

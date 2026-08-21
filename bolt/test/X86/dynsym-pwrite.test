@@ -5,9 +5,18 @@
 # REQUIRES: system-linux
 
 # RUN: yaml2obj %s -o %t.so
-# RUN: llvm-bolt %t.so -o %t.so.bolt 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.so -o %t.so.bolt --compact-output 2>&1 | FileCheck %s
+# RUN: llvm-readelf -dW %t.so.bolt 2>&1 | FileCheck %s --check-prefix=DYNAMIC --implicit-check-not=warning:
+# RUN: llvm-readelf -SW %t.so.bolt | FileCheck %s --check-prefix=SECTIONS
 
 # CHECK-NOT: We don't support extending the stream
+# CHECK: BOLT-INFO: non-allocatable section .debug_gap
+
+# DYNAMIC: Dynamic section
+# DYNAMIC: (SYMTAB) 0x2100
+
+# SECTIONS-NOT: .debug_gap
+# SECTIONS: .dynamic DYNAMIC 0000000000002000 002000
 
 --- !ELF
 FileHeader:
@@ -21,7 +30,7 @@ ProgramHeaders:
     VAddr:           0x1000
     Align:           0x1000
     FirstSec:        .text
-    LastSec:         .eh_frame
+    LastSec:         .load_metadata
   - Type:            PT_LOAD
     Flags:           [ PF_R, PF_W ]
     VAddr:           0x2000
@@ -33,34 +42,37 @@ ProgramHeaders:
     VAddr:           0x2000
     FirstSec:        .dynamic
     LastSec:         .dynamic
-  - Type:            PT_GNU_EH_FRAME
-    Flags:           [ PF_R ]
-    VAddr:           0x1010
-    FirstSec:        .eh_frame_hdr
-    LastSec:         .eh_frame_hdr
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x1000
     AddressAlign:    0x1000
+    Offset:          0x1000
     Content:         'C3' # ret
     Size:            0x1
-  - Name:            .eh_frame_hdr
+  # Non-allocatable contents inside a PT_LOAD are part of the loadable image
+  # and must not be diagnosed as removable file padding.
+  - Name:            .load_metadata
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x1010
-    Content:         '011B033B0C00000001000000F0FFFFFF28000000'
-  - Name:            .eh_frame
+    Address:         0x1008
+    AddressAlign:    0x1
+    Offset:          0x1008
+    Content:         '00'
+  # Model a valid but unusual linker layout with a non-allocatable section
+  # placed before a later PT_LOAD file image.
+  - Name:            .debug_gap
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x1020
-    Content:         '1400000000000000017A5200017810011B0C070890010000140000001C000000C0FFFFFF010000000000000000000000'
+    AddressAlign:    0x1
+    Offset:          0x1009
+    Size:            0x100000
   - Name:            .dynamic
     Type:            SHT_DYNAMIC
     Flags:           [ SHF_ALLOC, SHF_WRITE ]
     Address:         0x2000
     AddressAlign:    0x1000
+    Link:            .dynstr
+    Offset:          0x102000
     Entries:
       - Tag:             DT_SYMTAB
         Value:           0x2100
@@ -70,10 +82,12 @@ Sections:
     Type:            SHT_STRTAB
     Flags:           [ SHF_ALLOC ]
     Address:         0x2050
+    Offset:          0x102050
   - Name:            .dynsym
     Type:            SHT_DYNSYM
     Flags:           [ SHF_ALLOC ]
     Address:         0x2100
+    Offset:          0x102100
     Link:            .dynstr
 DynamicSymbols:
   - Name:            _DYNAMIC
