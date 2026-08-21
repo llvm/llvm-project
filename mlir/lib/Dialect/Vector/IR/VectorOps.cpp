@@ -7523,9 +7523,8 @@ public:
   }
 };
 
-/// Positions (in order) of `type`'s non-broadcast dims: the data-carrying dims
-/// (size != 1, or a scalable [1]) a broadcast copies verbatim. Size-1 dims are
-/// replicated, so their position is irrelevant.
+/// Returns the positions, in order, of `type`'s non-broadcast dims - the dims a
+/// broadcast copies from its source, replicating their data along the others.
 static SmallVector<int64_t> nonBroadcastAxes(VectorType type) {
   SmallVector<int64_t> axes;
   for (auto [i, size] : llvm::enumerate(type.getShape()))
@@ -7545,10 +7544,8 @@ static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
   return true;
 }
 
-/// Folds transpose(broadcast(x)) to broadcast(x) when the transpose is order
-/// preserving, i.e. it only reorders broadcast/size-1 dims and leaves every
-/// non-broadcast dim of x where a direct broadcast to the transpose result
-/// would place it.
+/// Folds transpose(broadcast(x)) to broadcast(x) when the transpose leaves
+/// every non-broadcast dim of x at the position it already occupies.
 ///
 /// Example:
 /// ```
@@ -7560,6 +7557,33 @@ static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
 /// ```
 ///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<8x1xi32>.
 /// ```
+///
+/// The algorithm works by locating x's non-broadcast dims - those with size
+/// != 1, or a scalable [1] - in the broadcast result, and checking that the
+/// transpose leaves each of them in place.
+///
+/// A broadcast right-aligns x against its result, copies x along the
+/// non-broadcast dims and replicates it along all the others. Reading an
+/// element of the broadcast result therefore only uses the indices of the
+/// non-broadcast dims; the other indices are ignored. Those dims can be
+/// permuted freely, as a broadcast fills them the same way wherever they land.
+///
+/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7, i.e. a broadcast from
+///
+///   1x1x4x1x1x7
+///   ^ ^ ^ ^ ^ ^
+///   0 1 2 3 4 5   <- position in the broadcast result
+///       ^     ^
+///       non-broadcast dims (4 and 7)
+///
+/// The fold applies iff the permutation leaves positions 2 and 5 alone, e.g.
+/// [1, 0, 2, 3, 4, 5] or [4, 0, 2, 3, 1, 5]. The latter permutes broadcast dims
+/// across position 2, which is still valid because those dims only replicate.
+///
+/// Note this is weaker than `isOrderPreserving`, used by the transpose <->
+/// shape_cast folds, which requires the flattened transpose input and output to
+/// be identical. Here only the composition has to be a broadcast, so a
+/// transpose that is not order preserving can still fold.
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
   using Base::Base;
@@ -7574,27 +7598,34 @@ public:
       return rewriter.notifyMatchFailure(transpose,
                                          "not preceded by a broadcast");
 
-    VectorType outType = transpose.getResultVectorType();
-    auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
+    auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType outputType = transpose.getResultVectorType();
 
-    // transpose(broadcast(scalar)) always folds. Otherwise the source must be
-    // broadcastable to the result and the transpose must leave its
-    // non-broadcast dims in place, i.e. map each to itself (from == to).
-    if (srcType) {
-      if (vector::isBroadcastableTo(srcType, outType) !=
-          vector::BroadcastableToResult::Success)
-        return rewriter.notifyMatchFailure(transpose, "not broadcastable");
-
-      int64_t rankDelta = outType.getRank() - srcType.getRank();
-      SmallVector<int64_t> axes;
-      for (int64_t axis : nonBroadcastAxes(srcType))
-        axes.push_back(axis + rankDelta);
-      if (!transposeMapsAxes(axes, axes, transpose.getPermutation()))
-        return rewriter.notifyMatchFailure(transpose,
-                                           "not an order-preserving broadcast");
+    // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid
+    bool inputIsScalar = !inputType;
+    if (inputIsScalar) {
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+                                                       broadcast.getSource());
+      return success();
     }
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outType,
+    // The transpose must leave the non-broadcast dims in place, i.e. map each
+    // to itself (from == to).
+    int64_t rankDelta = outputType.getRank() - inputType.getRank();
+    SmallVector<int64_t> axes;
+    for (int64_t axis : nonBroadcastAxes(inputType))
+      axes.push_back(axis + rankDelta);
+    if (!transposeMapsAxes(axes, axes, transpose.getPermutation()))
+      return rewriter.notifyMatchFailure(transpose,
+                                         "moves a non-broadcast dim");
+
+    // The preceding logic also ensures that at this point, the output of the
+    // transpose is definitely broadcastable from the input shape, assert so:
+    assert(vector::isBroadcastableTo(inputType, outputType) ==
+               vector::BroadcastableToResult::Success &&
+           "not broadcastable directly to transpose output");
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
                                                      broadcast.getSource());
     return success();
   }
