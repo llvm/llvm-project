@@ -46,6 +46,7 @@
 ; CHECK-NEXT:     riscv-isel
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-machinelicm
+; CHECK-NEXT:     riscv-vl-optimizer
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
 ; CHECK-NEXT:     stack-coloring
@@ -89,7 +90,7 @@
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     branch-relaxation
-; CHECK-NEXT:     FuncletLayoutPass
+; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
 ; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>

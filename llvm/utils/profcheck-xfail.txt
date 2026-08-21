@@ -125,4 +125,5 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
+Transforms/VectorCombine/deinterleave-interleave-pairs.ll
 tools/opt/mtune.ll
