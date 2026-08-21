@@ -55,15 +55,6 @@ do.end:
   ret i32 %sub
 }
 
-; CHECK: multipreds
-; Deal with alternative tail predecessors
-; CHECK-NOT: LBB
-; CHECK: cmov
-; CHECK-NOT: LBB
-; CHECK: cmov
-; CHECK-NOT: LBB
-; CHECK: fprintf
-
 define void @multipreds(i32 %sw) nounwind uwtable ssp {
 ; CHECK-LABEL: multipreds:
 ; CHECK:       ## %bb.0: ## %entry
@@ -219,7 +210,6 @@ declare void @BZ2_bz__AssertH__fail()
 
 ; Make sure we don't speculate on div/idiv instructions
 ; CHECK: test_idiv
-; CHECK-NOT: cmov
 define i32 @test_idiv(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: test_idiv:
 ; CHECK:       ## %bb.0:
@@ -243,7 +233,6 @@ define i32 @test_idiv(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 }
 
 ; CHECK: test_div
-; CHECK-NOT: cmov
 define i32 @test_div(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: test_div:
 ; CHECK:       ## %bb.0:

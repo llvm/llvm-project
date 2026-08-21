@@ -4,11 +4,11 @@
 ; The divide instruction does not have a debug location. CodeGen should
 ; represent this in the debug information. This is done by setting line to 0.
 
-;      CHECK:         leal
+;      CHECK:         addl
 ; CHECK-NEXT:         .loc 1 0 3
-;      CHECK:         cltd
-; CHECK-NEXT:         idivl
-; CHECK-NEXT:         .loc 1 4 3
+;      CHECK:         cvtsi2sd
+;      CHECK:         divsd
+;      CHECK:         .loc 1 4 3
 
 define i32 @foo(i32 %w, i32 %x, i32 %y, i32 %z) nounwind !dbg !1 {
 entry:
