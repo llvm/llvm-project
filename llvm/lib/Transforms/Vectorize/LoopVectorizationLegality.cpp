@@ -467,6 +467,13 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
+
+  // Check if the pointer is derived from a a monotonic PHI. If so, return a
+  // conservative stride (assuming the PHI is always updated).
+  if (std::optional<CompressedPtrInfo> PtrInfo = getCompressedPtrInfo(Ptr))
+    return getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, AccessTy, Ptr, PSE)
+        .value_or(0);
+
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
@@ -475,29 +482,6 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
     return 0;
   PSE.addPredicates(Predicates);
   return Stride;
-}
-
-bool LoopVectorizationLegality::isCompressedPtr(Type *AccessTy, Value *Ptr,
-                                                BasicBlock *BB) const {
-  if (!EnableMonotonicPatterns)
-    return false;
-
-  MonotonicDescriptor Desc;
-  if (!MonotonicDescriptor::isMonotonicVal(Ptr, TheLoop, Desc, *PSE.getSE()))
-    return false;
-
-  // Check that the memory operation has the same predicate as the step.
-  // TODO: Relax these restrictions.
-  if (Desc.getPredicateEdge() !=
-      MonotonicDescriptor::Edge(BB, BB->getUniqueSuccessor()))
-    return false;
-
-  // Check if pointer step equals access size.
-  auto *Step =
-      dyn_cast<SCEVConstant>(Desc.getExpr()->getStepRecurrence(*PSE.getSE()));
-  if (!Step)
-    return false;
-  return Step->getAPInt() == BB->getDataLayout().getTypeAllocSize(AccessTy);
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
@@ -773,6 +757,26 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
+bool LoopVectorizationLegality::addMonotonicPHI(PHINode *Phi,
+                                                const MonotonicDescriptor &MD) {
+  MonotonicPHIs[Phi] = MD;
+
+  DenseMap<Value *, const SCEV *> CompressedPtrsForMD;
+  if (!collectCompressedPtrs(CompressedPtrsForMD, *TheLoop, MD, *PSE.getSE())) {
+    reportVectorizationFailure("Unsupported user of monotonic phi",
+                               "UnsupportedMonotonicUse", ORE, TheLoop);
+    return false;
+  }
+
+  for (auto [Ptr, PtrSCEV] : CompressedPtrsForMD) {
+    auto *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
+    assert(PtrAddRec->isAffine() && "Expected affine SCEVAddRecExpr");
+    CompressedPtrs[Ptr] = CompressedPtrInfo{Phi, PtrAddRec};
+  }
+
+  return true;
+}
+
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -935,8 +939,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     MonotonicDescriptor MD;
     if (EnableMonotonicPatterns &&
         MonotonicDescriptor::isMonotonicPHI(Phi, TheLoop, MD, *PSE.getSE())) {
-      MonotonicPHIs[Phi] = MD;
-      return true;
+      return addMonotonicPHI(Phi, MD);
     }
 
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {

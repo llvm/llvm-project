@@ -247,6 +247,13 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store) {}
 };
 
+/// Holds details about a "compressed" pointer: the monotonic PHI used to
+/// derive the pointer and the SCEV expression for the pointer.
+struct CompressedPtrInfo {
+  PHINode *MonotonicPHI;
+  const SCEVAddRecExpr *PtrSCEV;
+};
+
 /// Indicates the characteristics of a loop with an uncountable exit.
 /// * None      -- No uncountable exit present.
 /// * ReadOnly  -- At least one uncountable exit in a readonly loop.
@@ -392,9 +399,6 @@ public:
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
-  /// Check if memory access is compressed when vectorizing.
-  bool isCompressedPtr(Type *AccessTy, Value *Ptr, BasicBlock *BB) const;
-
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.
   LLVM_ABI bool isInvariant(Value *V) const;
@@ -486,6 +490,26 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a monotonic PHI, otherwise std::nullptr.
+  std::optional<CompressedPtrInfo>
+  getCompressedPtrInfo(const Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns the CompressedPtrInfo for \p I if it corresponds to a compressed
+  /// load or store (which can map to an llvm.masked.expandload or
+  /// llvm.masked.compressstore), otherwise std::nullopt.
+  std::optional<CompressedPtrInfo>
+  isCompressedLoadOrStore(const Instruction *I) {
+    if (isa<LoadInst, StoreInst>(I))
+      return getCompressedPtrInfo(getLoadStorePointerOperand(I));
+    return std::nullopt;
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -657,6 +681,10 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
+  /// Adds \p Phi to the monotonic PHI list and collects load/store users of
+  /// the phi. Returns true if all users of \p Phi are legal for vectorization.
+  bool addMonotonicPHI(PHINode *Phi, const MonotonicDescriptor &MD);
+
   /// The loop that we evaluate.
   Loop *TheLoop;
 
@@ -740,6 +768,11 @@ private:
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
+
+  /// Contains all pointers used in the loop that are defined using an index
+  /// derived from a monotonic PHI. Loads/stores to these pointers map to
+  /// expandloads or compressstores.
+  SmallDenseMap<const Value *, CompressedPtrInfo> CompressedPtrs;
 
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;

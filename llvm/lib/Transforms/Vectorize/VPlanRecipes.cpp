@@ -151,6 +151,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPMonotonicPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -1247,7 +1248,6 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
                                                : TTI::CastContextHint::Normal;
       }
-
       const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
       if (WidenMemoryRecipe == nullptr)
         return TTI::CastContextHint::None;
@@ -2441,6 +2441,12 @@ void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
     State.set(this, MemI);
 }
 
+VPValue *VPWidenMemIntrinsicRecipe::getMask() const {
+  auto MaskPos = getVectorIntrinsicMaskArgIdx(getVectorIntrinsicID());
+  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
+  return getOperand(*MaskPos);
+}
+
 InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
     Intrinsic::ID IID, Type *Ty, bool IsMasked, Align Alignment,
     VPCostContext &Ctx) {
@@ -2459,11 +2465,8 @@ VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
     DataTy = getScalarType();
   assert(!DataTy->isVoidTy() && "Expected a non-void data type");
   Type *Ty = toVectorTy(DataTy, VF);
-  auto MaskPos = getVectorIntrinsicMaskArgIdx(getVectorIntrinsicID());
-  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
-                                 !match(getOperand(*MaskPos), m_True()),
-                                 Alignment, Ctx);
+                                 !match(getMask(), m_True()), Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
@@ -5149,15 +5152,6 @@ void VPMonotonicPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
-
-InstructionCost VPMonotonicPHIRecipe::computeCost(ElementCount VF,
-                                                  VPCostContext &Ctx) const {
-  auto *Phi = cast<PHINode>(getUnderlyingValue());
-  // The value of a monotonic phi must be uniform across the VF.
-  if (!Ctx.isUniformAfterVectorization(Phi, VF))
-    return InstructionCost::getInvalid();
-  return VPHeaderPHIRecipe::computeCost(VF, Ctx);
-}
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);
