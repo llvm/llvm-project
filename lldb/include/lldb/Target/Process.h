@@ -1603,9 +1603,9 @@ public:
   /// This function will read memory from the current process's address space
   /// and remove any traps that may have been inserted into the memory.
   ///
-  /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
-  /// void *, size_t, Status &).
+  /// Process subclasses implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &) instead of this function, and override
+  /// Process::ShouldUseMemoryCache to keep their reads out of the memory cache.
   ///
   /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
@@ -1630,8 +1630,8 @@ public:
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  virtual size_t ReadMemory(const ProcessAddress &process_addr, void *buf,
-                            size_t size, Status &error);
+  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
+                    Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
   ///
@@ -3025,6 +3025,12 @@ protected:
   ///     \b true if the new thread list could be generated, \b false otherwise.
   virtual bool DoUpdateThreadList(ThreadList &old_thread_list,
                                   ThreadList &new_thread_list) = 0;
+
+  /// Whether ReadMemory should serve reads of \a process_addr out of the
+  /// memory cache.
+  virtual bool ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+    return true;
+  }
 
   /// Actually do the reading of memory from a process.
   ///

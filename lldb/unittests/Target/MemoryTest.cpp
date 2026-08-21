@@ -1036,3 +1036,205 @@ LoadCommands:
             12u);
   EXPECT_TRUE(short_error.Fail());
 }
+
+// A process that does not clear the Status it is handed
+class StatusPreservingProcess : public Process {
+public:
+  StatusPreservingProcess(lldb::TargetSP target_sp,
+                          lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+
+  // Doesn't clear error.
+  size_t DoReadMemory(const ProcessAddress &, void *buf, size_t size,
+                      Status &) override {
+    if (!m_can_read)
+      return 0;
+    memset(buf, 'B', size);
+    return size;
+  }
+
+  bool ShouldUseMemoryCache(const ProcessAddress &) override { return false; }
+
+  void SetCanRead(bool can_read) { m_can_read = can_read; }
+
+  // Boilerplate.
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool IsAlive() override { return true; }
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "status-preserving"; }
+
+private:
+  bool m_can_read = true;
+};
+
+// Test that a filecache read that sets the error is cleared when reading from
+// the process.
+TEST_F(MemoryTest, TestReadMemoryClearsStaleFileCacheError) {
+  SubsystemRAII<ObjectFileMachO> subsystems;
+
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  auto process_sp =
+      std::make_shared<StatusPreservingProcess>(target_sp, listener_sp);
+  struct TargetHack : public Target {
+    void SetProcess(lldb::ProcessSP process) { m_process_sp = process; }
+  };
+  static_cast<TargetHack *>(target_sp.get())->SetProcess(process_sp);
+
+  // A read-only section whose file contents are absent, so the file cache
+  // cannot read from it.
+  auto expected_file = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0x100001000
+    vmsize:          0xC
+    fileoff:         0x0
+    filesize:        0x0
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x100001000
+        size:            12
+        offset:          0x0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+...
+)");
+  ASSERT_THAT_EXPECTED(expected_file, llvm::Succeeded());
+
+  ModuleSP module_sp = std::make_shared<Module>(expected_file->moduleSpec());
+  target_sp->GetImages().Append(module_sp, /*notify=*/false);
+
+  SectionList *sections = module_sp->GetSectionList();
+  ASSERT_TRUE(sections);
+  SectionSP section_sp = sections->FindSectionByName(ConstString("__const"));
+  ASSERT_TRUE(section_sp);
+  // The file-cache path only runs for a read-only section.
+  ASSERT_FALSE(Flags(section_sp->GetPermissions()).Test(ePermissionsWritable));
+  target_sp->SetSectionLoadAddress(section_sp, section_sp->GetFileAddress());
+
+  Address addr;
+  ASSERT_TRUE(
+      target_sp->ResolveLoadAddress(section_sp->GetFileAddress(), addr));
+
+  // force_live_memory defaults to false, so the read-only file-cache path runs
+  // first and fails, leaving an error for the live read to supersede.
+  char buf[5] = {};
+  Status error;
+  EXPECT_EQ(target_sp->ReadMemory(addr, buf, sizeof(buf), error), sizeof(buf));
+  EXPECT_TRUE(error.Success()) << error.AsCString();
+  // The filler proves the bytes came from the process, not the file.
+  EXPECT_EQ(llvm::StringRef(buf, sizeof(buf)), "BBBBB");
+
+  // Clearing the stale error must not mask a genuine failure.
+  process_sp->SetCanRead(false);
+  char unread[5] = {};
+  Status fail_error;
+  EXPECT_EQ(target_sp->ReadMemory(addr, unread, sizeof(unread), fail_error),
+            0u);
+  EXPECT_TRUE(fail_error.Fail());
+}
+
+// A process that opts some of its addresses out of the memory cache, the way a
+// plugin with a non-cacheable address space does.
+class SelectivelyCachedProcess : public Process {
+public:
+  static constexpr lldb::addr_t g_cached_addr = 0x1000;
+  static constexpr lldb::addr_t g_uncached_addr = 0x2000;
+
+  SelectivelyCachedProcess(lldb::TargetSP target_sp,
+                           lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+
+  bool ShouldUseMemoryCache(const ProcessAddress &process_addr) override {
+    return process_addr.GetValue() != g_uncached_addr;
+  }
+
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &) override {
+    m_reads.emplace_back(process_addr.GetValue(), size);
+    memset(buf, 'B', size);
+    return size;
+  }
+
+  // Boilerplate.
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool IsAlive() override { return true; }
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "selectively-cached"; }
+
+  std::vector<std::pair<lldb::addr_t, size_t>> m_reads;
+};
+
+// Test that a read the process doesn't want cached reaches the plugin
+// unchanged, while the others still go through the cache.
+TEST_F(MemoryTest, TestShouldUseMemoryCache) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  auto process_sp =
+      std::make_shared<SelectivelyCachedProcess>(target_sp, listener_sp);
+
+  // A cached read is served by a whole cache line, not by the requested size.
+  char buf[4] = {};
+  Status error;
+  EXPECT_EQ(process_sp->ReadMemory(SelectivelyCachedProcess::g_cached_addr, buf,
+                                   sizeof(buf), error),
+            sizeof(buf));
+  EXPECT_TRUE(error.Success()) << error.AsCString();
+  ASSERT_EQ(process_sp->m_reads.size(), 1u);
+  EXPECT_EQ(process_sp->m_reads[0].first,
+            SelectivelyCachedProcess::g_cached_addr);
+  EXPECT_GT(process_sp->m_reads[0].second, sizeof(buf));
+
+  // An uncached read asks the plugin for exactly what the caller wanted.
+  process_sp->m_reads.clear();
+  EXPECT_EQ(process_sp->ReadMemory(SelectivelyCachedProcess::g_uncached_addr,
+                                   buf, sizeof(buf), error),
+            sizeof(buf));
+  EXPECT_TRUE(error.Success()) << error.AsCString();
+  ASSERT_EQ(process_sp->m_reads.size(), 1u);
+  EXPECT_EQ(process_sp->m_reads[0].first,
+            SelectivelyCachedProcess::g_uncached_addr);
+  EXPECT_EQ(process_sp->m_reads[0].second, sizeof(buf));
+}

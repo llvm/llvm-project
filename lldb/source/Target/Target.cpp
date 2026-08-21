@@ -2202,6 +2202,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (file_cache_read_buffer && file_cache_bytes_read > 0) {
     // Reading from the process failed. If we've previously succeeded in reading
     // something from the file cache, then copy that over and return that.
+    error.Clear();
     std::memcpy(dst, file_cache_read_buffer.get(), file_cache_bytes_read);
     return file_cache_bytes_read;
   }

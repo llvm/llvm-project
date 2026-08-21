@@ -127,15 +127,31 @@ size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
   return size;
 }
 
-size_t ProcessWasm::ReadMemory(const ProcessAddress &process_addr, void *buf,
-                               size_t size, Status &error) {
+bool ProcessWasm::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  wasm_addr_t wasm_addr(process_addr.GetValue());
+
+  switch (wasm_addr.GetType()) {
+  case WasmAddressType::Memory:
+  case WasmAddressType::Object:
+    return ProcessGDBRemote::ShouldUseMemoryCache(process_addr);
+  case WasmAddressType::Global:
+  case WasmAddressType::Invalid:
+    // A global's address holds an index, not an offset into addressable
+    // storage, so the cache's aligned reads would name a different global.
+    return false;
+  }
+  llvm_unreachable("Fully covered switch above!");
+}
+
+size_t ProcessWasm::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                 size_t size, Status &error) {
   lldb::addr_t vm_addr = process_addr.GetValue();
   wasm_addr_t wasm_addr(vm_addr);
 
   switch (wasm_addr.GetType()) {
   case WasmAddressType::Memory:
   case WasmAddressType::Object:
-    return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
+    return ProcessGDBRemote::DoReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Global:
     return ReadGlobal(wasm_addr.GetModuleID(), wasm_addr.GetOffset(), buf, size,
                       error);

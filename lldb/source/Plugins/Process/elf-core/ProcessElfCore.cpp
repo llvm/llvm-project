@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -524,15 +523,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
-                                  size_t size, Status &error) {
-  lldb::addr_t addr = process_addr.GetValue();
-  if (lldb::ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
-
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessElfCore::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The core file is already a local copy of this memory.
+  return false;
 }
 
 Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
