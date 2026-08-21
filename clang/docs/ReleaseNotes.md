@@ -595,6 +595,9 @@ features cannot lower the translation-unit ABI level;
 - Added a new warning when the same interrupt type is specified more than
   once in a RISC-V `interrupt` attribute.
 
+- SiFive CLIC preemptible interrupt handlers now diagnose unsupported frame
+  pointers instead of producing a backend fatal error.
+
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
