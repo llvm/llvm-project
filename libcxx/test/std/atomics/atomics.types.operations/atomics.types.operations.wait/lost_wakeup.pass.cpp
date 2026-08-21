@@ -39,9 +39,9 @@ int main(int, char**) {
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
         while (waiter_ready.load() < num_waiters) {
-          #if !defined(__APPLE__)
-                std::this_thread::yield();
-          #endif
+#if !defined(__APPLE__)
+          std::this_thread::yield();
+#endif
         }
         waiter_ready.store(0);
         state.fetch_add(1);
