@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -x hip %s
 
 template<typename T=int> struct S {};
 template<typename> void f();
@@ -32,4 +33,20 @@ void foo(void) {
 template<typename ...T>
 void bar(T... args) {
   S<S<V<void(T)...>>> s7;
+}
+
+template <typename T, typename T1> void operator<<(T, T1);
+
+struct S1 {};
+
+template <> void operator<<<>(S1, S1);
+
+class C {
+public:
+  template <typename T> void operator<<(T) {}
+};
+
+void foobar() {
+  C CC;
+  CC.operator<<<int>(1);
 }

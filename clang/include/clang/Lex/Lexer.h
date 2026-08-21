@@ -395,7 +395,7 @@ public:
                                             const LangOptions &LangOpts);
 
   /// Get the physical length (including trigraphs and escaped newlines) of the
-  /// first \p Characters characters of the token starting at TokStart.
+  /// first \p CharNo characters of the token starting at TokStart.
   static unsigned getTokenPrefixLength(SourceLocation TokStart,
                                        unsigned CharNo,
                                        const SourceManager &SM,
