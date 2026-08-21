@@ -12,6 +12,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/Relocation.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
@@ -19,6 +20,12 @@
 
 namespace llvm {
 namespace bolt {
+
+static bool isGOTPCRELX(uint32_t Type) {
+  return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
+}
+
+static bool isGOTPC64(uint32_t Type) { return Type == ELF::R_X86_64_GOTPC64; }
 
 X86MCSymbolizer::~X86MCSymbolizer() {}
 
@@ -97,8 +104,7 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   const uint64_t InstOffset = InstAddress - Function.getAddress();
   const Relocation *Relocation =
       Function.getRelocationInRange(InstOffset, InstOffset + InstSize);
-  if (Relocation &&
-      BC.getRelocationHandler().isX86GOTPCRELX(Relocation->Type)) {
+  if (Relocation && isGOTPCRELX(Relocation->Type)) {
     // If the operand is PC-relative, convert it without using the relocation
     // information. For GOTPCRELX, it is safe to use the absolute address
     // instead of extracting the addend from the relocation, as non-standard
@@ -134,7 +140,7 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   // GOTPC64 is special because the X86 Assembler doesn't know how to emit
   // a PC-relative 8-byte fixup, which is what we need to cover this. The
   // only way to do this is to use the symbol name _GLOBAL_OFFSET_TABLE_.
-  if (BC.getRelocationHandler().isX86GOTPC64(Relocation->Type)) {
+  if (isGOTPC64(Relocation->Type)) {
     auto PairOrErr = handleGOTPC64(*Relocation, InstAddress);
     if (auto E = PairOrErr.takeError()) {
       Function.setSimple(false);

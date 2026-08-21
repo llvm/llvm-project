@@ -94,7 +94,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for CALL26 relocation for both backward
   // and forward branches.
   //
@@ -141,7 +141,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for R_AARCH64_JUMP26 relocation for both
   // backward and forward branches.
   //

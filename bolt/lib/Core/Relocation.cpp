@@ -28,9 +28,207 @@ enum {
 };
 } // namespace ELFReserved
 
-static bool isPCRelativeX86(uint32_t Type);
+namespace {
 
-static bool isSupportedX86(uint32_t Type) {
+class X86RelocationHandler final : public RelocationHandler {
+public:
+  bool isSupported(uint32_t Type) const override;
+  size_t getSizeForType(uint32_t Type) const override;
+  bool skipRelocationType(uint32_t Type) const override;
+
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override;
+  bool canEncodeValue(uint32_t Type, uint64_t Value,
+                      uint64_t PC) const override;
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override;
+
+  bool isGOT(uint32_t Type) const override;
+  bool isRelative(uint32_t Type) const override;
+  bool isIRelative(uint32_t Type) const override;
+  bool isTLS(uint32_t Type) const override;
+  bool isPCRelative(uint32_t Type) const override;
+
+  uint32_t getNone() const override;
+  uint32_t getPC32() const override;
+  uint32_t getPC64() const override;
+  uint32_t getAbs64() const override;
+  uint32_t getRelative() const override;
+
+  void printType(raw_ostream &OS, uint32_t Type) const override;
+};
+
+class AArch64RelocationHandler final : public RelocationHandler {
+public:
+  bool isSupported(uint32_t Type) const override;
+  size_t getSizeForType(uint32_t Type) const override;
+  bool skipRelocationType(uint32_t Type) const override;
+
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override;
+  bool canEncodeValue(uint32_t Type, uint64_t Value,
+                      uint64_t PC) const override;
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override;
+
+  bool isGOT(uint32_t Type) const override;
+  bool isRelative(uint32_t Type) const override;
+  bool isIRelative(uint32_t Type) const override;
+  bool isTLS(uint32_t Type) const override;
+  bool isPCRelative(uint32_t Type) const override;
+
+  uint32_t getNone() const override;
+  uint32_t getPC32() const override;
+  uint32_t getPC64() const override;
+  uint32_t getAbs64() const override;
+  uint32_t getRelative() const override;
+
+  void printType(raw_ostream &OS, uint32_t Type) const override;
+};
+
+class RISCVRelocationHandler final : public RelocationHandler {
+  bool Is64Bit;
+
+public:
+  explicit RISCVRelocationHandler(bool Is64Bit) : Is64Bit(Is64Bit) {}
+
+  bool isSupported(uint32_t Type) const override;
+  size_t getSizeForType(uint32_t Type) const override;
+  bool skipRelocationType(uint32_t Type) const override;
+
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override;
+  bool canEncodeValue(uint32_t Type, uint64_t Value,
+                      uint64_t PC) const override;
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override;
+
+  bool isGOT(uint32_t Type) const override;
+  bool isRelative(uint32_t Type) const override;
+  bool isIRelative(uint32_t Type) const override;
+  bool isTLS(uint32_t Type) const override;
+  bool isInstructionReference(uint32_t Type) const override;
+  bool isPCRelative(uint32_t Type) const override;
+
+  uint32_t getNone() const override;
+  uint32_t getPC32() const override;
+  uint32_t getPC64() const override;
+  uint32_t getAbs64() const override;
+  uint32_t getRelative() const override;
+
+  MCBinaryExpr::Opcode getComposeOpcodeFor(uint32_t Type) const override;
+  void printType(raw_ostream &OS, uint32_t Type) const override;
+};
+
+} // namespace
+
+bool X86RelocationHandler::canEncodeValue(uint32_t, uint64_t, uint64_t) const {
+  return true;
+}
+
+bool X86RelocationHandler::isRelative(uint32_t Type) const {
+  return Type == ELF::R_X86_64_RELATIVE;
+}
+
+bool X86RelocationHandler::isIRelative(uint32_t Type) const {
+  return Type == ELF::R_X86_64_IRELATIVE;
+}
+
+uint32_t X86RelocationHandler::getNone() const { return ELF::R_X86_64_NONE; }
+
+uint32_t X86RelocationHandler::getPC32() const { return ELF::R_X86_64_PC32; }
+
+uint32_t X86RelocationHandler::getPC64() const { return ELF::R_X86_64_PC64; }
+
+uint32_t X86RelocationHandler::getAbs64() const { return ELF::R_X86_64_64; }
+
+uint32_t X86RelocationHandler::getRelative() const {
+  return ELF::R_X86_64_RELATIVE;
+}
+
+void X86RelocationHandler::printType(raw_ostream &OS, uint32_t Type) const {
+  OS << object::getELFRelocationTypeName(ELF::EM_X86_64, Type);
+}
+
+bool AArch64RelocationHandler::isRelative(uint32_t Type) const {
+  return Type == ELF::R_AARCH64_RELATIVE;
+}
+
+bool AArch64RelocationHandler::isIRelative(uint32_t Type) const {
+  return Type == ELF::R_AARCH64_IRELATIVE;
+}
+
+uint32_t AArch64RelocationHandler::getNone() const {
+  return ELF::R_AARCH64_NONE;
+}
+
+uint32_t AArch64RelocationHandler::getPC32() const {
+  return ELF::R_AARCH64_PREL32;
+}
+
+uint32_t AArch64RelocationHandler::getPC64() const {
+  return ELF::R_AARCH64_PREL64;
+}
+
+uint32_t AArch64RelocationHandler::getAbs64() const {
+  return ELF::R_AARCH64_ABS64;
+}
+
+uint32_t AArch64RelocationHandler::getRelative() const {
+  return ELF::R_AARCH64_RELATIVE;
+}
+
+void AArch64RelocationHandler::printType(raw_ostream &OS, uint32_t Type) const {
+  OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
+}
+
+bool RISCVRelocationHandler::isRelative(uint32_t Type) const {
+  return Type == ELF::R_RISCV_RELATIVE;
+}
+
+bool RISCVRelocationHandler::isIRelative(uint32_t) const {
+  llvm_unreachable("not implemented");
+}
+
+bool RISCVRelocationHandler::isInstructionReference(uint32_t Type) const {
+  if (!Is64Bit)
+    return false;
+  return Type == ELF::R_RISCV_PCREL_LO12_I || Type == ELF::R_RISCV_PCREL_LO12_S;
+}
+
+uint32_t RISCVRelocationHandler::getNone() const { return ELF::R_RISCV_NONE; }
+
+uint32_t RISCVRelocationHandler::getPC32() const {
+  return ELF::R_RISCV_32_PCREL;
+}
+
+uint32_t RISCVRelocationHandler::getPC64() const {
+  llvm_unreachable("not implemented");
+}
+
+uint32_t RISCVRelocationHandler::getAbs64() const { return ELF::R_RISCV_64; }
+
+uint32_t RISCVRelocationHandler::getRelative() const {
+  llvm_unreachable("not implemented");
+}
+
+MCBinaryExpr::Opcode
+RISCVRelocationHandler::getComposeOpcodeFor(uint32_t Type) const {
+  switch (Type) {
+  default:
+    llvm_unreachable("not implemented");
+  case ELF::R_RISCV_ADD32:
+    return MCBinaryExpr::Add;
+  case ELF::R_RISCV_SUB32:
+    return MCBinaryExpr::Sub;
+  }
+}
+
+void RISCVRelocationHandler::printType(raw_ostream &OS, uint32_t Type) const {
+  OS << object::getELFRelocationTypeName(ELF::EM_RISCV, Type);
+}
+
+bool X86RelocationHandler::isSupported(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -53,7 +251,7 @@ static bool isSupportedX86(uint32_t Type) {
   }
 }
 
-static bool isSupportedAArch64(uint32_t Type) {
+bool AArch64RelocationHandler::isSupported(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -102,7 +300,7 @@ static bool isSupportedAArch64(uint32_t Type) {
   }
 }
 
-static bool isSupportedRISCV(uint32_t Type) {
+bool RISCVRelocationHandler::isSupported(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -136,7 +334,7 @@ static bool isSupportedRISCV(uint32_t Type) {
   }
 }
 
-static size_t getSizeForTypeX86(uint32_t Type) {
+size_t X86RelocationHandler::getSizeForType(uint32_t Type) const {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_X86_64, Type) << '\n';
@@ -163,7 +361,7 @@ static size_t getSizeForTypeX86(uint32_t Type) {
   }
 }
 
-static size_t getSizeForTypeAArch64(uint32_t Type) {
+size_t AArch64RelocationHandler::getSizeForType(uint32_t Type) const {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
@@ -215,7 +413,7 @@ static size_t getSizeForTypeAArch64(uint32_t Type) {
   }
 }
 
-static size_t getSizeForTypeRISCV(uint32_t Type) {
+size_t RISCVRelocationHandler::getSizeForType(uint32_t Type) const {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_RISCV, Type) << '\n';
@@ -242,16 +440,16 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
   case ELF::R_RISCV_TLS_GD_HI20:
-    // See extractValueRISCV for why this is necessary.
+    // See extractValue for why this is necessary.
     return 8;
   }
 }
 
-static bool skipRelocationTypeX86(uint32_t Type) {
+bool X86RelocationHandler::skipRelocationType(uint32_t Type) const {
   return Type == ELF::R_X86_64_NONE;
 }
 
-static bool skipRelocationTypeAArch64(uint32_t Type) {
+bool AArch64RelocationHandler::skipRelocationType(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -262,7 +460,7 @@ static bool skipRelocationTypeAArch64(uint32_t Type) {
   }
 }
 
-static bool skipRelocationTypeRISCV(uint32_t Type) {
+bool RISCVRelocationHandler::skipRelocationType(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -272,7 +470,8 @@ static bool skipRelocationTypeRISCV(uint32_t Type) {
   }
 }
 
-static uint64_t encodeValueX86(uint32_t Type, uint64_t Value, uint64_t PC) {
+uint64_t X86RelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
+                                           uint64_t PC) const {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -286,7 +485,8 @@ static uint64_t encodeValueX86(uint32_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
-static bool canEncodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
+bool AArch64RelocationHandler::canEncodeValue(uint32_t Type, uint64_t Value,
+                                              uint64_t PC) const {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -296,7 +496,8 @@ static bool canEncodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   }
 }
 
-static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
+uint64_t AArch64RelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
+                                               uint64_t PC) const {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -328,8 +529,8 @@ static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
-static uint64_t canEncodeValueRISCV(uint32_t Type, uint64_t Value,
-                                    uint64_t PC) {
+bool RISCVRelocationHandler::canEncodeValue(uint32_t Type, uint64_t Value,
+                                            uint64_t PC) const {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -339,7 +540,8 @@ static uint64_t canEncodeValueRISCV(uint32_t Type, uint64_t Value,
   }
 }
 
-static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
+uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
+                                             uint64_t PC) const {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -350,16 +552,18 @@ static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
-static uint64_t extractValueX86(uint32_t Type, uint64_t Contents, uint64_t PC) {
+uint64_t X86RelocationHandler::extractValue(uint32_t Type, uint64_t Contents,
+                                            uint64_t PC) const {
   if (Type == ELF::R_X86_64_32S)
     return SignExtend64<32>(Contents);
-  if (isPCRelativeX86(Type))
-    return SignExtend64(Contents, 8 * getSizeForTypeX86(Type));
+  if (isPCRelative(Type))
+    return SignExtend64(Contents, 8 * getSizeForType(Type));
   return Contents;
 }
 
-static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
-                                    uint64_t PC) {
+uint64_t AArch64RelocationHandler::extractValue(uint32_t Type,
+                                                uint64_t Contents,
+                                                uint64_t PC) const {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
@@ -492,8 +696,8 @@ static uint64_t extractBImmRISCV(uint32_t Contents) {
       (((Contents >> 7) & 0x1) << 11) | (((Contents >> 31) & 0x1) << 12));
 }
 
-static uint64_t extractValueRISCV(uint32_t Type, uint64_t Contents,
-                                  uint64_t PC) {
+uint64_t RISCVRelocationHandler::extractValue(uint32_t Type, uint64_t Contents,
+                                              uint64_t PC) const {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_RISCV, Type) << '\n';
@@ -535,7 +739,7 @@ static uint64_t extractValueRISCV(uint32_t Type, uint64_t Contents,
   }
 }
 
-static bool isGOTX86(uint32_t Type) {
+bool X86RelocationHandler::isGOT(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -555,7 +759,7 @@ static bool isGOTX86(uint32_t Type) {
   }
 }
 
-static bool isGOTAArch64(uint32_t Type) {
+bool AArch64RelocationHandler::isGOT(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -573,7 +777,7 @@ static bool isGOTAArch64(uint32_t Type) {
   }
 }
 
-static bool isGOTRISCV(uint32_t Type) {
+bool RISCVRelocationHandler::isGOT(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -584,7 +788,7 @@ static bool isGOTRISCV(uint32_t Type) {
   }
 }
 
-static bool isTLSX86(uint32_t Type) {
+bool X86RelocationHandler::isTLS(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -595,7 +799,7 @@ static bool isTLSX86(uint32_t Type) {
   }
 }
 
-static bool isTLSAArch64(uint32_t Type) {
+bool AArch64RelocationHandler::isTLS(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -615,7 +819,7 @@ static bool isTLSAArch64(uint32_t Type) {
   }
 }
 
-static bool isTLSRISCV(uint32_t Type) {
+bool RISCVRelocationHandler::isTLS(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -631,7 +835,7 @@ static bool isTLSRISCV(uint32_t Type) {
   }
 }
 
-static bool isPCRelativeX86(uint32_t Type) {
+bool X86RelocationHandler::isPCRelative(uint32_t Type) const {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -657,7 +861,7 @@ static bool isPCRelativeX86(uint32_t Type) {
   }
 }
 
-static bool isPCRelativeAArch64(uint32_t Type) {
+bool AArch64RelocationHandler::isPCRelative(uint32_t Type) const {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -707,7 +911,7 @@ static bool isPCRelativeAArch64(uint32_t Type) {
   }
 }
 
-static bool isPCRelativeRISCV(uint32_t Type) {
+bool RISCVRelocationHandler::isPCRelative(uint32_t Type) const {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -735,169 +939,6 @@ static bool isPCRelativeRISCV(uint32_t Type) {
     return true;
   }
 }
-
-namespace {
-
-class X86RelocationHandler final : public RelocationHandler {
-public:
-  bool isSupported(uint32_t Type) const override {
-    return isSupportedX86(Type);
-  }
-  size_t getSizeForType(uint32_t Type) const override {
-    return getSizeForTypeX86(Type);
-  }
-  bool skipRelocationType(uint32_t Type) const override {
-    return skipRelocationTypeX86(Type);
-  }
-  uint64_t encodeValue(uint32_t Type, uint64_t Value,
-                       uint64_t PC) const override {
-    return encodeValueX86(Type, Value, PC);
-  }
-  bool canEncodeValue(uint32_t, uint64_t, uint64_t) const override {
-    return true;
-  }
-  uint64_t extractValue(uint32_t Type, uint64_t Contents,
-                        uint64_t PC) const override {
-    return extractValueX86(Type, Contents, PC);
-  }
-  bool isGOT(uint32_t Type) const override { return isGOTX86(Type); }
-  bool isX86GOTPCRELX(uint32_t Type) const override {
-    return Type == ELF::R_X86_64_GOTPCRELX ||
-           Type == ELF::R_X86_64_REX_GOTPCRELX;
-  }
-  bool isX86GOTPC64(uint32_t Type) const override {
-    return Type == ELF::R_X86_64_GOTPC64;
-  }
-  bool isRelative(uint32_t Type) const override {
-    return Type == ELF::R_X86_64_RELATIVE;
-  }
-  bool isIRelative(uint32_t Type) const override {
-    return Type == ELF::R_X86_64_IRELATIVE;
-  }
-  bool isTLS(uint32_t Type) const override { return isTLSX86(Type); }
-  uint32_t getNone() const override { return ELF::R_X86_64_NONE; }
-  uint32_t getPC32() const override { return ELF::R_X86_64_PC32; }
-  uint32_t getPC64() const override { return ELF::R_X86_64_PC64; }
-  bool isPCRelative(uint32_t Type) const override {
-    return isPCRelativeX86(Type);
-  }
-  uint32_t getAbs64() const override { return ELF::R_X86_64_64; }
-  uint32_t getRelative() const override { return ELF::R_X86_64_RELATIVE; }
-  void printType(raw_ostream &OS, uint32_t Type) const override {
-    OS << object::getELFRelocationTypeName(ELF::EM_X86_64, Type);
-  }
-};
-
-class AArch64RelocationHandler final : public RelocationHandler {
-public:
-  bool isSupported(uint32_t Type) const override {
-    return isSupportedAArch64(Type);
-  }
-
-size_t getSizeForType(uint32_t Type) const override {
-    return getSizeForTypeAArch64(Type);
-  }
-  bool skipRelocationType(uint32_t Type) const override {
-    return skipRelocationTypeAArch64(Type);
-  }
-  uint64_t encodeValue(uint32_t Type, uint64_t Value,
-                       uint64_t PC) const override {
-    return encodeValueAArch64(Type, Value, PC);
-  }
-  bool canEncodeValue(uint32_t Type, uint64_t Value,
-                      uint64_t PC) const override {
-    return canEncodeValueAArch64(Type, Value, PC);
-  }
-  uint64_t extractValue(uint32_t Type, uint64_t Contents,
-                        uint64_t PC) const override {
-    return extractValueAArch64(Type, Contents, PC);
-  }
-  bool isGOT(uint32_t Type) const override { return isGOTAArch64(Type); }
-  bool isRelative(uint32_t Type) const override {
-    return Type == ELF::R_AARCH64_RELATIVE;
-  }
-  bool isIRelative(uint32_t Type) const override {
-    return Type == ELF::R_AARCH64_IRELATIVE;
-  }
-  bool isTLS(uint32_t Type) const override { return isTLSAArch64(Type); }
-  uint32_t getNone() const override { return ELF::R_AARCH64_NONE; }
-  uint32_t getPC32() const override { return ELF::R_AARCH64_PREL32; }
-  uint32_t getPC64() const override { return ELF::R_AARCH64_PREL64; }
-  bool isPCRelative(uint32_t Type) const override {
-    return isPCRelativeAArch64(Type);
-  }
-  uint32_t getAbs64() const override { return ELF::R_AARCH64_ABS64; }
-  uint32_t getRelative() const override { return ELF::R_AARCH64_RELATIVE; }
-  void printType(raw_ostream &OS, uint32_t Type) const override {
-    OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
-  }
-};
-
-class RISCVRelocationHandler final : public RelocationHandler {
-  bool Is64Bit;
-
-public:
-  explicit RISCVRelocationHandler(bool Is64Bit) : Is64Bit(Is64Bit) {}
-
-  bool isSupported(uint32_t Type) const override {
-    return isSupportedRISCV(Type);
-  }
-  size_t getSizeForType(uint32_t Type) const override {
-    return getSizeForTypeRISCV(Type);
-  }
-  bool skipRelocationType(uint32_t Type) const override {
-    return skipRelocationTypeRISCV(Type);
-  }
-  uint64_t encodeValue(uint32_t Type, uint64_t Value,
-                       uint64_t PC) const override {
-    return encodeValueRISCV(Type, Value, PC);
-  }
-  bool canEncodeValue(uint32_t Type, uint64_t Value,
-                      uint64_t PC) const override {
-    return canEncodeValueRISCV(Type, Value, PC);
-  }
-  uint64_t extractValue(uint32_t Type, uint64_t Contents,
-                        uint64_t PC) const override {
-    return extractValueRISCV(Type, Contents, PC);
-  }
-  bool isGOT(uint32_t Type) const override { return isGOTRISCV(Type); }
-  bool isRelative(uint32_t Type) const override {
-    return Type == ELF::R_RISCV_RELATIVE;
-  }
-  bool isIRelative(uint32_t) const override {
-    llvm_unreachable("not implemented");
-  }
-  bool isTLS(uint32_t Type) const override { return isTLSRISCV(Type); }
-  bool isInstructionReference(uint32_t Type) const override {
-    if (!Is64Bit)
-      return false;
-    return Type == ELF::R_RISCV_PCREL_LO12_I ||
-           Type == ELF::R_RISCV_PCREL_LO12_S;
-  }
-  uint32_t getNone() const override { return ELF::R_RISCV_NONE; }
-  uint32_t getPC32() const override { return ELF::R_RISCV_32_PCREL; }
-  uint32_t getPC64() const override { llvm_unreachable("not implemented"); }
-  bool isPCRelative(uint32_t Type) const override {
-    return isPCRelativeRISCV(Type);
-  }
-  uint32_t getAbs64() const override { return ELF::R_RISCV_64; }
-  uint32_t getRelative() const override { llvm_unreachable("not implemented"); }
-  MCBinaryExpr::Opcode getComposeOpcodeFor(uint32_t Type) const override {
-    switch (Type) {
-    default:
-      llvm_unreachable("not implemented");
-    case ELF::R_RISCV_ADD32:
-      return MCBinaryExpr::Add;
-    case ELF::R_RISCV_SUB32:
-      return MCBinaryExpr::Sub;
-    }
-  }
-  void printType(raw_ostream &OS, uint32_t Type) const override {
-    OS << object::getELFRelocationTypeName(ELF::EM_RISCV, Type);
-  }
-};
-
-} // namespace
 
 MCBinaryExpr::Opcode
 RelocationHandler::getComposeOpcodeFor(uint32_t Type) const {
