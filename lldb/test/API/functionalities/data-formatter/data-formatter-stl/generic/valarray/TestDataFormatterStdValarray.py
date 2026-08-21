@@ -12,11 +12,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
-    def do_test(self):
-        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.cpp", False)
-        )
-
+    def check_valarray(self, process, bkpt):
         #
         # std::valarray
         #
@@ -32,12 +28,35 @@ class StdValarrayDataFormatterTestCase(TestBase):
                 "}",
             ],
         )
+        self.expect("frame variable va_empty", substrs=["va_empty = size=0"])
+        self.expect(
+            "frame variable va_ref",
+            substrs=[
+                "va_ref = size=4",
+                "[0] = 0",
+                "[1] = 0",
+                "[2] = 0",
+                "[3] = 0",
+                "}",
+            ],
+        )
 
         lldbutil.continue_to_breakpoint(process, bkpt)
         self.expect(
             "frame variable va_int",
             substrs=[
                 "va_int = size=4",
+                "[0] = 1",
+                "[1] = 12",
+                "[2] = 123",
+                "[3] = 1234",
+                "}",
+            ],
+        )
+        self.expect(
+            "frame variable va_ref",
+            substrs=[
+                "va_ref = size=4",
                 "[0] = 1",
                 "[1] = 12",
                 "[2] = 123",
@@ -79,6 +98,12 @@ class StdValarrayDataFormatterTestCase(TestBase):
             error=True,
             substrs=['array index 4 is not valid for "(valarray'],
         )
+
+    def do_test(self):
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        self.check_valarray(process, bkpt)
 
         #
         # std::slice_array
@@ -200,27 +225,4 @@ class StdValarrayDataFormatterTestCase(TestBase):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
-
-        zero_children = [ValueCheck(name=f"[{index}]", value="0") for index in range(4)]
-        self.expect_var_path("va_int", summary="size=4", children=zero_children)
-        self.expect_var_path("va_empty", summary="size=0", children=[])
-        self.expect_var_path("va_ref", summary="size=4", children=zero_children)
-
-        lldbutil.continue_to_breakpoint(process, bkpt)
-
-        int_children = [
-            ValueCheck(name=f"[{index}]", value=value)
-            for index, value in enumerate(["1", "12", "123", "1234"])
-        ]
-        self.expect_var_path("va_int", summary="size=4", children=int_children)
-        self.expect_var_path("va_ref", summary="size=4", children=int_children)
-        self.expect_var_path(
-            "va_double",
-            summary="size=4",
-            children=[
-                ValueCheck(name="[0]", value="1"),
-                ValueCheck(name="[1]", value="0.5"),
-                ValueCheck(name="[2]", value="0.25"),
-                ValueCheck(name="[3]", value="0.125"),
-            ],
-        )
+        self.check_valarray(process, bkpt)
