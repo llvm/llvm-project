@@ -89,6 +89,12 @@ namespace __pstl {
 // - replace_if
 // - generate
 // - generate_n
+// - uninitialized_default_construct
+// - uninitialized_default_construct_n
+// - uninitialized_value_construct
+// - uninitialized_value_construct_n
+// - uninitialized_fill
+// - uninitialized_fill_n
 //
 // merge family
 // ------------
@@ -97,6 +103,14 @@ namespace __pstl {
 // reverse family
 // ------------
 // No other algorithms based on reverse
+//
+// search family
+// ------------
+// No other algorithms based on search
+//
+// search_n family
+// ------------------
+// No other algorithms based on search_n
 //
 // stable_sort family
 // ------------------
@@ -489,6 +503,90 @@ struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
     return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) { __element = __gen(); });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_default_construct<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType;
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_default_construct_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType;
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_value_construct<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType();
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_value_construct_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType();
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_fill<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [&__value](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType(__value);
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_fill_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp& __value) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [&__value](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType(__value);
+    });
   }
 };
 

@@ -194,7 +194,7 @@ struct FormatBindingID
         RC(RTI.getResourceClass()) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) {
-    OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
+    OS << getRCPrefix(RC).upper() << Item.getBinding().BindingID;
   }
 };
 

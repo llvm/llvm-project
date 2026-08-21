@@ -2048,6 +2048,25 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
     return RValue::get(ptr);
   }
+  case Builtin::BI__builtin_clear_padding: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    QualType pointeeTy = e->getArg(0)->getType()->getPointeeType();
+
+    llvm::ArrayRef<ASTContext::BitInterval> padding =
+        cgm.getASTContext().getPaddingIntervals(pointeeTy);
+
+    llvm::SmallVector<mlir::Attribute> paddingLocs;
+    for (const auto &interval : padding)
+      paddingLocs.push_back(cir::OffsetPairAttr::get(
+          &getMLIRContext(), interval.First, interval.Last));
+
+    cir::ClearPaddingOp::create(
+        builder, loc, addr.getPointer(),
+        builder.getI64IntegerAttr(addr.getAlignment().getQuantity()),
+        mlir::ArrayAttr::get(&getMLIRContext(), paddingLocs));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:

@@ -139,6 +139,7 @@ llvm::Error CommonOptionsParser::init(
           new FixedCompilationDatabase(".", std::vector<std::string>()));
     }
   }
+  Compilations = inferToolLocation(std::move(Compilations));
   auto AdjustingCompilations =
       std::make_unique<ArgumentsAdjustingCompilations>(
           std::move(Compilations));

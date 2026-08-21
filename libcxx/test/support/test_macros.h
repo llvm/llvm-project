@@ -576,4 +576,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
 
+// Align benchmark functions and never inline them to reduce changes in performance in unrelated benchmarks
+#define TEST_ALIGN_BENCHMARK __attribute__((aligned(128), noinline))
+
 #endif // SUPPORT_TEST_MACROS_HPP
