@@ -6,35 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RegisterClassInfo.h"
-#include "CodeGenTestBase.h"
+#include "AMDGPUUnitTests.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Config/Targets.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
 
-class RegisterClassInfoTest : public CodeGenTestBase {
+class RegisterClassInfoTest : public AMDGPUCodeGenTestBase {
 public:
-  /// Register the AMDGPU target components needed by this test suite.
-  static void SetUpTestCase() {
-#if LLVM_HAS_AMDGPU_TARGET
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetMC();
-#else
-    GTEST_SKIP();
-#endif
-  }
-
   /// Use a GCN triple so VGPR registers are available to the test.
   void SetUp() override { setUpImpl("amdgpu9.00-amd-amdhsa", "", /*FS=*/""); }
 };
