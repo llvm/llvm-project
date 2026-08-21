@@ -170,10 +170,9 @@ define amdgpu_vs <2 x float> @test_fpext_fmul_multiple_uses(half inreg %x1, half
 ; GFX10-FAST-DENORM-LABEL: test_fpext_fmul_multiple_uses:
 ; GFX10-FAST-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-FAST-DENORM-NEXT:    v_mul_f16_e64 v0, s0, s1
-; GFX10-FAST-DENORM-NEXT:    v_mul_f16_e64 v1, s2, s3
-; GFX10-FAST-DENORM-NEXT:    v_add_f16_e32 v2, s4, v0
-; GFX10-FAST-DENORM-NEXT:    v_fma_mix_f32 v0, s0, s1, v1 op_sel_hi:[1,1,1]
-; GFX10-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; GFX10-FAST-DENORM-NEXT:    v_add_f16_e32 v1, s4, v0
+; GFX10-FAST-DENORM-NEXT:    v_fma_mix_f32 v0, s2, s3, v0 op_sel_hi:[1,1,1]
+; GFX10-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX10-FAST-DENORM-NEXT:    ; return to shader part epilog
 .entry:
     ; First fpext(fmul) operand: %mul1 has multiple uses

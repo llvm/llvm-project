@@ -6573,42 +6573,35 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
-  // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
-      std::swap(LHS, RHS);
-  }
-
-  // fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
-  MachineInstr *FpExtSrc;
-  if (mi_match(LHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
-      isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
+  MachineInstr *LHSFpExtSrc;
+  bool LHSContractable =
+      mi_match(LHS.Reg, MRI, m_GFPExt(m_MInstr(LHSFpExtSrc))) &&
+      isContractableFMul(*LHSFpExtSrc, AllowFusionGlobally) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
-                          MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
-    unsigned Flags = MI.getFlags() & FpExtSrc->getFlags();
+                          MRI.getType(LHSFpExtSrc->getOperand(1).getReg()));
+  MachineInstr *RHSFpExtSrc;
+  bool RHSContractable =
+      mi_match(RHS.Reg, MRI, m_GFPExt(m_MInstr(RHSFpExtSrc))) &&
+      isContractableFMul(*RHSFpExtSrc, AllowFusionGlobally) &&
+      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
+                          MRI.getType(RHSFpExtSrc->getOperand(1).getReg()));
+
+  //  fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
+  if (LHSContractable || RHSContractable) {
+    // Ensure that the contractable fmul with the fewest uses (if both are
+    // contractable) is the LHS operand.
+    if (!LHSContractable ||
+        (RHSContractable && hasMoreUses(*LHSFpExtSrc, *RHSFpExtSrc, MRI))) {
+      std::swap(LHS, RHS);
+      LHSFpExtSrc = RHSFpExtSrc;
+    }
+
+    unsigned Flags = MI.getFlags() & LHSFpExtSrc->getFlags();
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
-      auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
-      auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
+      auto FpExtX = B.buildFPExt(DstType, LHSFpExtSrc->getOperand(1).getReg());
+      auto FpExtY = B.buildFPExt(DstType, LHSFpExtSrc->getOperand(2).getReg());
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {FpExtX.getReg(0), FpExtY.getReg(0), RHS.Reg}, Flags);
-    };
-    return true;
-  }
-
-  // fold (fadd z, (fpext (fmul x, y))) -> (fma (fpext x), (fpext y), z)
-  // Note: Commutes FADD operands.
-  if (mi_match(RHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
-      isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
-      TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
-                          MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
-    unsigned Flags = MI.getFlags() & FpExtSrc->getFlags();
-    MatchInfo = [=, &MI](MachineIRBuilder &B) {
-      auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
-      auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
-      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-                   {FpExtX.getReg(0), FpExtY.getReg(0), LHS.Reg}, Flags);
     };
     return true;
   }
