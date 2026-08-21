@@ -128,13 +128,12 @@ define void @pr49900(i32 %x, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[IV_1]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP30]], 26
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP18]], i32 65536)
-; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP16]], -13
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i32 [[UMAX]], -26
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP34]], [[IV_1]]
-; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP20]], [[TMP31]]
+; CHECK-NEXT:    [[TMP33:%.*]] = sub i32 [[TMP20]], [[TMP17]]
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP33]], i32 1)
 ; CHECK-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP20]], [[UMIN1]]
-; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP23]], [[TMP31]]
+; CHECK-NEXT:    [[TMP32:%.*]] = sub i32 [[TMP23]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = udiv i32 [[TMP32]], 13
 ; CHECK-NEXT:    [[TMP35:%.*]] = add i32 [[UMIN1]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP35]], 1

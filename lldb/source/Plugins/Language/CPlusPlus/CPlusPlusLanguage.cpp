@@ -1736,6 +1736,23 @@ GenericBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *children,
   return LibStdcppBitsetSyntheticFrontEndCreator(children, valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlExpected(*valobj_sp))
+    return MsvcStlExpectedSyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static bool GenericExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (IsMsvcStlExpected(valobj))
+    return MsvcStlExpectedSummaryProvider(valobj, stream, options);
+  return false;
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -2000,6 +2017,13 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstdc++ std::bitset summary provider",
                 "^std::bitset<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericExpectedSyntheticFrontEndCreator,
+                  "MSVC STL std::expected synthetic children",
+                  "^std::expected<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericExpectedSummaryProvider,
+                "MSVC STL std::expected summary provider",
+                "^std::expected<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

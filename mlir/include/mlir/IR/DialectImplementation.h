@@ -70,15 +70,6 @@ public:
 /// Provide a template class that can be specialized by users to dispatch to
 /// parsers. Auto-generated parsers generate calls to `FieldParser<T>::parse`,
 /// where `T` is the parameter storage type, to parse custom types.
-///
-/// A parser is key-value compositional only if it consumes exactly one value
-/// and leaves the comma separating the next key unconsumed. For example, an
-/// undelimited array parser for `values = 1, 2, next = 9` cannot distinguish
-/// its element commas from the comma before `next` and may try to parse `next`
-/// as another element. Marking it non-compositional lets a keyed property list
-/// use a self-delimiting attribute such as `array<i64: 1, 2>` instead.
-/// Specializations with this behavior, or that may succeed without consuming a
-/// token, should define `isKeyValueCompositional` as false.
 template <typename T, typename = T>
 struct FieldParser;
 
@@ -140,8 +131,6 @@ struct FieldParser<
     std::optional<AttributeT>,
     std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                      std::optional<AttributeT>>> {
-  static constexpr bool isKeyValueCompositional = false;
-
   static FailureOr<std::optional<AttributeT>> parse(AsmParser &parser) {
     if constexpr (HasStaticDialectName<AttributeT>::value) {
       parser.getContext()->getOrLoadDialect(AttributeT::dialectName);
@@ -162,8 +151,6 @@ template <typename IntT>
 struct FieldParser<
     std::optional<IntT>,
     std::enable_if_t<std::is_integral<IntT>::value, std::optional<IntT>>> {
-  static constexpr bool isKeyValueCompositional = false;
-
   static FailureOr<std::optional<IntT>> parse(AsmParser &parser) {
     IntT value;
     OptionalParseResult result = parser.parseOptionalInteger(value);
@@ -180,51 +167,14 @@ namespace detail {
 template <typename T>
 using has_push_back_t = decltype(std::declval<T>().push_back(
     std::declval<typename T::value_type &&>()));
-
-template <typename StorageType, typename = void>
-struct HasFieldParser : std::false_type {};
-
-template <typename StorageType>
-struct HasFieldParser<StorageType,
-                      std::void_t<decltype(sizeof(FieldParser<StorageType>)),
-                                  decltype(FieldParser<StorageType>::parse(
-                                      std::declval<OpAsmParser &>()))>>
-    : std::true_type {};
-
-template <typename ContainerT, typename = void>
-struct HasFieldParserContainer : std::false_type {};
-
-template <typename ContainerT>
-struct HasFieldParserContainer<ContainerT,
-                               std::void_t<has_push_back_t<ContainerT>>>
-    : HasFieldParser<typename ContainerT::value_type> {};
-
-template <typename Parser, typename = void>
-struct IsKeyValueCompositional : std::true_type {};
-
-template <typename Parser>
-struct IsKeyValueCompositional<
-    Parser, std::void_t<decltype(Parser::isKeyValueCompositional)>>
-    : std::bool_constant<Parser::isKeyValueCompositional> {};
-
-/// Whether the selected FieldParser consumes exactly one value in a keyed
-/// property list. Parser specializations may set isKeyValueCompositional to
-/// false if they can succeed without consuming a token or consume an
-/// undelimited comma-separated list.
-template <typename StorageType>
-struct HasKeyValueFieldParser
-    : std::conjunction<HasFieldParser<StorageType>,
-                       IsKeyValueCompositional<FieldParser<StorageType>>> {};
 } // namespace detail
 
 /// Parse any container that supports back insertion as a list.
 template <typename ContainerT>
-struct FieldParser<
-    ContainerT,
-    std::enable_if_t<detail::HasFieldParserContainer<ContainerT>::value,
-                     ContainerT>> {
-  static constexpr bool isKeyValueCompositional = false;
-
+struct FieldParser<ContainerT,
+                   std::enable_if_t<llvm::is_detected<detail::has_push_back_t,
+                                                      ContainerT>::value,
+                                    ContainerT>> {
   using ElementT = typename ContainerT::value_type;
   static FailureOr<ContainerT> parse(AsmParser &parser) {
     ContainerT elements;
@@ -251,28 +201,6 @@ struct FieldParser<AffineMap> {
     return map;
   }
 };
-
-namespace detail {
-/// Parse a property with its FieldParser when one is available, otherwise
-/// fall back to the property's attribute conversion.
-template <typename StorageType, typename ConvertFromAttribute>
-ParseResult
-parsePropertyWithFallback(OpAsmParser &parser, StorageType &storage,
-                          ConvertFromAttribute convertFromAttribute) {
-  if constexpr (HasKeyValueFieldParser<StorageType>::value) {
-    auto value = FieldParser<StorageType>::parse(parser);
-    if (failed(value))
-      return failure();
-    storage = std::move(*value);
-    return success();
-  } else {
-    Attribute attr;
-    if (parser.parseAttribute(attr))
-      return failure();
-    return convertFromAttribute(storage, attr);
-  }
-}
-} // namespace detail
 
 } // namespace mlir
 
