@@ -8493,6 +8493,15 @@ void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<InterleaveDeinterleaveFolder>(context);
 }
 
+OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
+  // interleave(splat(x), splat(x)) -> widened splat(x)
+  auto splat = dyn_cast_if_present<SplatElementsAttr>(adaptor.getLhs());
+  if (!splat || adaptor.getLhs() != adaptor.getRhs())
+    return {};
+  return SplatElementsAttr::get(getResultVectorType(),
+                                splat.getSplatValue<Attribute>());
+}
+
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }

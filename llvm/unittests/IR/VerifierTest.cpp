@@ -797,27 +797,4 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
         << Error;
   }
 }
-
-TEST(VerifierTest, InvalidStrictFPAttribute) {
-  LLVMContext Ctx;
-  Module M("M", Ctx);
-  FunctionType *FuncTy =
-      FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
-  Function *F =
-      Function::Create(FuncTy, Function::ExternalLinkage, "strictfp_test", M);
-  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
-  Type *FloatTy = Type::getFloatTy(Ctx);
-
-  Function *CosF =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::cos, FloatTy);
-  CallInst *CI = CallInst::Create(CosF, ConstantFP::getNullValue(FloatTy),
-                                  "strictfp_call", Entry);
-  CI->addFnAttr(Attribute::StrictFP);
-  ReturnInst::Create(Ctx, Entry);
-
-  std::string Error;
-  raw_string_ostream ErrorOS(Error);
-  // FIXME: Missing verifier check for strictfp.
-  EXPECT_FALSE(verifyModule(M, &ErrorOS));
-}
 } // end anonymous namespace

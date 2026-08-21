@@ -189,7 +189,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+    auto layout = dyn_cast<xegpu::DistributeLayoutAttr>(tdescTy.getLayout());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1606,8 +1606,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
                                xegpu::StoreNdOp, xegpu::PrefetchNdOp>(
       [=](Operation *op) -> bool {
         auto tdescTy = getTensorDescType(op);
-        auto layout =
-            dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+        auto layout = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+            tdescTy.getLayout());
         return isLegal(layout);
       });
 

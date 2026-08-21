@@ -1744,7 +1744,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPFlushDirectiveClass:
     case Stmt::OMPDepobjDirectiveClass:
     case Stmt::OMPScanDirectiveClass:
-    case Stmt::OMPOrderedDirectiveClass:
+    case Stmt::OMPOrderedStandaloneDirectiveClass:
+    case Stmt::OMPOrderedBlockAssocDirectiveClass:
     case Stmt::OMPAtomicDirectiveClass:
     case Stmt::OMPAssumeDirectiveClass:
     case Stmt::OMPTargetDirectiveClass:
@@ -2390,40 +2391,37 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
-                                         NodeBuilder &Builder,
-                                         ExplodedNode *Pred) {
-  // If we reach a loop which has a known bound (and meets
-  // other constraints) then consider completely unrolling it.
-  if(AMgr.options.ShouldUnrollLoops) {
-    unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
-    if (Term) {
-      ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
-                                                 Pred, maxBlockVisitOnPath);
-      if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
-        if (!UpdatedNode)
-          return;
-        Pred = UpdatedNode;
-      }
-    }
+ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
+                                                  ExplodedNode *Pred) {
+  const StackFrame *SF = Pred->getStackFrame();
+  const Stmt *Term = getCurrBlock()->getTerminatorStmt();
+  ProgramStateRef State = Pred->getState();
+  unsigned MaxBlockVisit = AMgr.options.maxBlockVisitOnPath;
+
+  // If we reach a loop which has a known bound (and meets other constraints)
+  // then consider completely unrolling it.
+  if (AMgr.options.ShouldUnrollLoops) {
+    if (Term)
+      State = updateLoopStack(Term, AMgr.getASTContext(), Pred, MaxBlockVisit);
     // Is we are inside an unrolled loop then no need the check the counters.
-    if(isUnrolledState(Pred->getState()))
-      return;
+    if (isUnrolledState(State))
+      return Engine.makeNode(BE, State, Pred);
   }
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
   unsigned int BlockCount = getNumVisitedCurrent();
-  if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
-      AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
+  if (BlockCount == MaxBlockVisit - 1 && AMgr.options.ShouldWidenLoops) {
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
-      return;
+      return Engine.makeNode(BE, State, Pred);
 
-    // Widen.
-    const StackFrame *SF = Pred->getStackFrame();
+    if (State != Pred->getState()) {
+      // TODO: This intermediate transition is very likely to be irrelevant,
+      // remove it in a follow-up change.
+      Pred = Engine.makeNode(BE, State, Pred);
+      if (!Pred)
+        return nullptr;
+    }
 
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
@@ -2432,44 +2430,54 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
-    Builder.generateNode(BE, WidenedState, Pred);
-    return;
+        State, SF, BlockCount, *getCurrBlock()->ref_begin());
+    return Engine.makeNode(BE, WidenedState, Pred);
   }
 
-  // FIXME: Refactor this into a checker.
-  if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
-    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
-    const ExplodedNode *Sink =
-        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
+  // If we did not reach MaxBlockVisitOnPath, continue the analysis normally.
+  if (BlockCount < MaxBlockVisit)
+    return Engine.makeNode(BE, State, Pred);
 
-    const StackFrame *SF = Pred->getStackFrame();
-    if (!SF->inTopFrame()) {
-      // FIXME: This will unconditionally prevent inlining this function (even
-      // from other entry points), which is not a reasonable heuristic: even if
-      // we reached max block count on this particular execution path, there
-      // may be other execution paths (especially with other parametrizations)
-      // where the analyzer can reach the end of the function (so there is no
-      // natural reason to avoid inlining it). However, disabling this would
-      // significantly increase the analysis time (because more entry points
-      // would exhaust their allocated budget), so it must be compensated by a
-      // different (more reasonable) reduction of analysis scope.
-      Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
+  // ... otherwise, discard this execution path.
 
-      // Re-run the call evaluation without inlining it, by storing the
-      // no-inlining policy in the state and enqueuing the new work item on
-      // the list. Replay should almost never fail. Use the stats to catch it
-      // if it does.
-      if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
-        return;
-      NumMaxBlockCountReachedInInlined++;
-    } else
-      NumMaxBlockCountReached++;
-
-    // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+  if (State != Pred->getState()) {
+    // TODO: This intermediate transition is very likely to be irrelevant,
+    // remove it in a follow-up change.
+    Pred = Engine.makeNode(BE, State, Pred);
+    if (!Pred)
+      return nullptr;
   }
+
+  static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+  const ExplodedNode *Sink =
+      Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);
+
+  if (!SF->inTopFrame()) {
+    // FIXME: This will unconditionally prevent inlining this function (even
+    // from other entry points), which is not a reasonable heuristic: even if
+    // we reached max block count on this particular execution path, there
+    // may be other execution paths (especially with other parametrizations)
+    // where the analyzer can reach the end of the function (so there is no
+    // natural reason to avoid inlining it). However, disabling this would
+    // significantly increase the analysis time (because more entry points
+    // would exhaust their allocated budget), so it must be compensated by a
+    // different (more reasonable) reduction of analysis scope.
+    Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
+
+    // Re-run the call evaluation without inlining it, by storing the
+    // no-inlining policy in the state and enqueuing the new work item on
+    // the list. Replay should almost never fail. Use the stats to catch it
+    // if it does.
+    if (!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF))
+      return nullptr;
+    NumMaxBlockCountReachedInInlined++;
+  } else
+    NumMaxBlockCountReached++;
+
+  // Make sink nodes as exhausted(for stats) only if retry failed.
+  Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+
+  return nullptr;
 }
 
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,

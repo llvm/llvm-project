@@ -860,13 +860,20 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         Scheduler.exitRegion();
         continue;
       }
-      LLVM_DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      LLVM_DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB)
-                        << " " << MBB->getName() << "\n  From: " << *I
-                        << "    To: ";
-                 if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
-                 else dbgs() << "End\n";
-                 dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
+      auto DumpRegionHeader = [&] {
+        dbgs() << "Current Schedule Region\n";
+        dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
+               << MBB->getName() << "\n  From: " << *I << "    To: ";
+        if (RegionEnd != MBB->end())
+          dbgs() << *RegionEnd;
+        else
+          dbgs() << "End\n";
+        dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n';
+      };
+      if (PrintDAGs)
+        DumpRegionHeader();
+      else
+        LLVM_DEBUG(DumpRegionHeader());
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
         errs() << ":%bb. " << MBB->getNumber();

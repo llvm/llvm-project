@@ -202,7 +202,7 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
 
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
-static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
+static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
                                        InterpState &S, const Expr *DiagExpr) {
   if (Src.isInfinity()) {
     if (S.diagnosing())

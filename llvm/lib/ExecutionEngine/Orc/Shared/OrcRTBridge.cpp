@@ -8,18 +8,9 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
-
 namespace llvm {
 namespace orc {
 namespace rt {
-
-const char *SimpleExecutorDylibManagerInstanceName =
-    "__llvm_orc_SimpleExecutorDylibManager_Instance";
-const char *SimpleExecutorDylibManagerOpenWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
-const char *SimpleExecutorDylibManagerResolveWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_resolve_wrapper";
 
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
@@ -49,7 +40,9 @@ const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
 const char *RegisterJITLoaderGDBAllocActionName =
-    "llvm_orc_registerJITLoaderGDBAllocAction";
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_register";
+const char *DeregisterJITLoaderGDBAllocActionName =
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_deregister";
 
 const char *const DispatchName = "__orc_rt_jit_dispatch";
 const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
@@ -61,13 +54,6 @@ const SimpleExecutorMemoryManagerSymbolNames
         "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
-};
-
-const SimpleExecutorDylibManagerSymbolNames
-    orc_rt_NativeDylibManagerSPSSymbols = {
-        "orc_rt_ci_NativeDylibManager_Instance",
-        "orc_rt_ci_sps_NativeDylibManager_load",
-        "orc_rt_ci_sps_NativeDylibManager_lookup",
 };
 
 const MachOUnwindInfoRegistrarSymbolNames

@@ -641,6 +641,7 @@ def OMPC_UseDevicePtr : Clause<[Spelling<"use_device_ptr">]> {
 }
 def OMPC_UsesAllocators : Clause<[Spelling<"uses_allocators">]> {
   let clangClass = "OMPUsesAllocatorsClause";
+  let flangClass = "OmpUsesAllocatorsClause";
 }
 def OMPC_Weak : Clause<[Spelling<"weak">]> {
   let clangClass = "OMPWeakClause";
@@ -1083,17 +1084,22 @@ def OMP_Nothing : Directive<[Spelling<"nothing">]> {
     LM_Identity,
   ];
 }
-def OMP_Ordered : Directive<[Spelling<"ordered">]> {
+def OMP_OrderedStandalone : Directive<[Spelling<"ordered">]> {
+  let name = "ordered_standalone";
   let allowedClauses = [
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Doacross, 52>,
   ];
+  let association = AS_None;
+  let category = CA_Executable;
+}
+def OMP_OrderedBlockassoc : Directive<[Spelling<"ordered">]> {
+  let name = "ordered_blockassoc";
   let allowedOnceClauses = [
     VersionedClause<OMPC_Simd>,
     VersionedClause<OMPC_Threads>,
   ];
-  let association = AS_None;
-  // There is also a block-associated "ordered" directive.
+  let association = AS_Block;
   let category = CA_Executable;
 }
 def OMP_Parallel : Directive<[Spelling<"parallel">]> {
@@ -1477,7 +1483,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Apply, 60>,
   ];
-  let allowedOnceClauses = [
+  let allowedExclusiveClauses = [
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];

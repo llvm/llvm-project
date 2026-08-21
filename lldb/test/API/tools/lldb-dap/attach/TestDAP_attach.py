@@ -25,7 +25,7 @@ from lldbsuite.test.tools.lldb_dap.types import (
 # Often fails on Arm Linux, but not specifically because it's Arm, something in
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
-@requireNotWasm  # No attach support
+@requireNotWasm("no attach support")
 class TestDAP_attach(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 

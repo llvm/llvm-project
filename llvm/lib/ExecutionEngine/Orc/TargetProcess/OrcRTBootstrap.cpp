@@ -8,7 +8,8 @@
 
 #include "OrcRTBootstrap.h"
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/CallProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/MemoryAccessProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"

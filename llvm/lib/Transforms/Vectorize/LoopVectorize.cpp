@@ -255,11 +255,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
-cl::opt<bool> llvm::EnableWideActiveLaneMask(
-    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
-    cl::desc("Enable use of wide lane masks when used for control flow in "
-             "tail-folded loops"));
-
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
@@ -1217,15 +1212,6 @@ public:
   /// Returns true if all loop blocks should have partial aliases masked.
   bool maskPartialAliasing() const {
     return PartialAliasMaskingStatus == AliasMaskingStatus::Enabled;
-  }
-
-  /// Returns true if the use of wide lane masks is requested and the loop is
-  /// using tail-folding with a lane mask for control flow.
-  bool useWideActiveLaneMask() const {
-    if (!EnableWideActiveLaneMask)
-      return false;
-
-    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Returns true if the instructions in this block requires predication
@@ -2228,18 +2214,19 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
   // A helper that returns true if the use of Ptr by MemAccess will be scalar.
   // The pointer operands of loads and stores will be scalar as long as the
-  // memory access is not a gather or scatter operation. The value operand of a
-  // store will remain scalar if the store is scalarized.
+  // memory access is not a gather/scatter or histogram operation. The value
+  // operand of a store will remain scalar if the store is scalarized.
   auto IsScalarUse = [&](Instruction *MemAccess, Value *Ptr) {
     InstWidening WideningDecision = getWideningDecision(MemAccess, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
-    if (auto *Store = dyn_cast<StoreInst>(MemAccess))
-      if (Ptr == Store->getValueOperand())
-        return WideningDecision == CM_Scalarize;
+    auto *Store = dyn_cast<StoreInst>(MemAccess);
+    if (Store && Ptr == Store->getValueOperand())
+      return WideningDecision == CM_Scalarize;
     assert(Ptr == getLoadStorePointerOperand(MemAccess) &&
            "Ptr is neither a value or pointer operand");
-    return WideningDecision != CM_GatherScatter;
+    return WideningDecision != CM_GatherScatter &&
+           !(Store && Legal->getHistogramInfo(Store));
   };
 
   // A helper that returns true if the given value is a getelementptr
@@ -3651,12 +3638,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  // Only interleave tail-folded loops if wide lane masks are requested, as the
-  // overhead of multiple instructions to calculate the predicate is likely
-  // not beneficial. If an epilogue is not allowed for any other reason,
-  // do not interleave.
-  if (!CM.isEpilogueAllowed() &&
-      !(CM.preferTailFoldedLoop() && CM.useWideActiveLaneMask()))
+  // Do not interleave tail-folded loops, as the overhead of multiple
+  // instructions to calculate the predicate is likely not beneficial.
+  // If an epilogue is not allowed for any other reason, do not interleave.
+  if (!CM.isEpilogueAllowed())
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -3684,8 +3669,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (hasFindLastReductionPhi(Plan))
     return 1;
 
-  VPRegisterUsage R =
-      calculateRegisterUsageForPlan(Plan, {VF}, TTI, CM.ValuesToIgnore)[0];
+  VPRegisterUsage R = calculateRegisterUsageForPlan(Plan, {VF}, TTI)[0];
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -5887,7 +5871,7 @@ LoopVectorizationPlanner::computeBestVF() {
       return Config.shouldConsiderRegPressureForVF(VF);
     });
     if (ConsiderRegPressure)
-      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
+      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
       ElementCount VF = VFs[I];
@@ -5945,8 +5929,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
-                 *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF,
-                 CM.ValuesToIgnore);
+                 *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
@@ -7750,6 +7733,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
+    assert(ExpandedSCEVs.contains(ExpandR->getSCEV()) &&
+           "Epilogue plan needs a SCEV not expanded for the main loop");
     VPValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);

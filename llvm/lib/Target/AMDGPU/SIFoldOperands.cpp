@@ -710,6 +710,26 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     if (!TII->isOperandLegal(*MI, OpNo, &New))
       return false;
 
+    if (ST->hasBF16InlineConstFromUpperFP32() &&
+        OpNo ==
+            AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::src0)) {
+      unsigned Opcode = MI->getOpcode();
+      uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
+      if ((OpType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+           OpType == AMDGPU::OPERAND_REG_INLINE_C_BF16) &&
+          TII->isInlineConstant(*ImmVal, OpType)) {
+        // We can fold it, but we need to set OPSEL
+        int Mod0 =
+            AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0_modifiers);
+        if (Mod0 == -1)
+          return false;
+        MachineOperand &ModOp = MI->getOperand(Mod0);
+        if (ModOp.getImm())
+          return false;
+        ModOp.setImm(SISrcMods::OP_SEL_0);
+      }
+    }
+
     Old.ChangeToImmediate(*ImmVal);
     return true;
   }

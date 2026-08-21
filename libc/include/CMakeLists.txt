@@ -588,6 +588,19 @@ add_header_macro(
 )
 
 add_header_macro(
+  semaphore
+  ../libc/include/semaphore.yaml
+  semaphore.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.semaphore_macros
+    .llvm-libc-types.clockid_t
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.sem_t
+    .llvm-libc-types.struct_timespec
+)
+
+add_header_macro(
   spawn
   ../libc/include/spawn.yaml
   spawn.h
@@ -607,6 +620,8 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
     .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.struct_link_map
+    .llvm-libc-types.struct_r_debug
     .llvm-libc-types.__dl_iterate_phdr_callback_t
 )
 

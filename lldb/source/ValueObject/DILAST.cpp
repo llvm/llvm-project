@@ -39,6 +39,10 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Shl;
   case Token::greatergreater:
     return BinaryOpKind::Shr;
+  case Token::ampamp:
+    return BinaryOpKind::LAnd;
+  case Token::pipepipe:
+    return BinaryOpKind::LOr;
   default:
     break;
   }
@@ -90,6 +94,10 @@ BooleanLiteralNode::Accept(Visitor *v) const {
 }
 
 llvm::Expected<lldb::ValueObjectSP> CastNode::Accept(Visitor *v) const {
+  return v->Visit(*this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> SizeOfNode::Accept(Visitor *v) const {
   return v->Visit(*this);
 }
 

@@ -40,7 +40,7 @@ enum class EvaluationKind : uint8_t {
 };
 
 /// Interpreter context.
-class InterpState final : public State, public SourceMapper {
+class InterpState final : public State {
 public:
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
@@ -68,13 +68,12 @@ public:
   void deallocate(Block *B);
 
   /// Delegates source mapping to the mapper.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    if (M)
-      return M->getSource(F, PC);
-
-    assert(F && "Function cannot be null");
-    return F->getSource(PC);
+  SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
+  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
+  SourceLocation getLocation(CodePtr PC) const {
+    return getSource(PC).getLoc();
   }
+  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   Context &getContext() const { return Ctx; }
 

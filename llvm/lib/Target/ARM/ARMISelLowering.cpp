@@ -22299,19 +22299,17 @@ bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
 }
 
 Register ARMTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

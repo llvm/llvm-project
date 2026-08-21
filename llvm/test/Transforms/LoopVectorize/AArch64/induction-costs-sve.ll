@@ -12,11 +12,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
-; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP31:%.*]] = shl nuw i64 [[TMP7]], 3
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
@@ -27,6 +23,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP27]]
 ; DEFAULT-NEXT:    br i1 [[DIFF_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; DEFAULT:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[TMP0]], [[TMP8]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -66,30 +63,28 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
-; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP31]]
+; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; DEFAULT-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP34:%.*]] = shl nuw i64 [[TMP33]], 3
-; DEFAULT-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[TMP0]], [[TMP34]]
+; DEFAULT-NEXT:    [[N_MOD_VF5:%.*]] = and i64 [[TMP0]], 7
 ; DEFAULT-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF5]]
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[X]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP40:%.*]] = trunc <vscale x 8 x i32> [[BROADCAST_SPLAT8]] to <vscale x 8 x i16>
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT7]], <8 x i32> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP28:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT8]] to <8 x i16>
 ; DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX9]]
-; DEFAULT-NEXT:    [[WIDE_LOAD10:%.*]] = load <vscale x 8 x i8>, ptr [[TMP36]], align 1
-; DEFAULT-NEXT:    [[TMP32:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD10]] to <vscale x 8 x i16>
-; DEFAULT-NEXT:    [[TMP37:%.*]] = mul <vscale x 8 x i16> [[TMP32]], [[TMP40]]
-; DEFAULT-NEXT:    [[TMP38:%.*]] = or <vscale x 8 x i16> [[TMP37]], [[TMP32]]
-; DEFAULT-NEXT:    [[TMP35:%.*]] = lshr <vscale x 8 x i16> [[TMP38]], splat (i16 1)
-; DEFAULT-NEXT:    [[TMP39:%.*]] = trunc <vscale x 8 x i16> [[TMP35]] to <vscale x 8 x i8>
+; DEFAULT-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i8>, ptr [[TMP36]], align 1
+; DEFAULT-NEXT:    [[TMP34:%.*]] = zext <8 x i8> [[WIDE_LOAD10]] to <8 x i16>
+; DEFAULT-NEXT:    [[TMP35:%.*]] = mul <8 x i16> [[TMP34]], [[TMP28]]
+; DEFAULT-NEXT:    [[TMP31:%.*]] = or <8 x i16> [[TMP35]], [[TMP34]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = lshr <8 x i16> [[TMP31]], splat (i16 1)
+; DEFAULT-NEXT:    [[TMP33:%.*]] = trunc <8 x i16> [[TMP32]] to <8 x i8>
 ; DEFAULT-NEXT:    [[TMP42:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX9]]
-; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP39]], ptr [[TMP42]], align 1
-; DEFAULT-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX9]], [[TMP34]]
+; DEFAULT-NEXT:    store <8 x i8> [[TMP33]], ptr [[TMP42]], align 1
+; DEFAULT-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX9]], 8
 ; DEFAULT-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC6]]
 ; DEFAULT-NEXT:    br i1 [[TMP43]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:

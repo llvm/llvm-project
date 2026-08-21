@@ -22,10 +22,10 @@ struct VirtualInherits : virtual Base1, virtual Base2 {
 };
 
 
-// CIR: !rec_Base2 = !cir.struct<"Base2" {!cir.float, !cir.float, !cir.float}>
-// CIR: !rec_Base1 = !cir.struct<"Base1" {!s32i, !s32i, !s32i}>
-// CIR: !rec_Inherits = !cir.struct<"Inherits" {!rec_Base1, !rec_Base2, !s32i, !s32i, !s32i}>
-// CIR: !rec_VirtualInherits = !cir.struct<"VirtualInherits" packed padded {!cir.vptr, !s32i, !s32i, !s32i, !rec_Base1, !rec_Base2, !cir.array<!u8i x 4>}>
+// CIR: !rec_Base2 = !cir.struct<"Base2" {data !cir.float, data !cir.float, data !cir.float}>
+// CIR: !rec_Base1 = !cir.struct<"Base1" {data !s32i, data !s32i, data !s32i}>
+// CIR: !rec_Inherits = !cir.struct<"Inherits" {data !rec_Base1, data !rec_Base2, data !s32i, data !s32i, data !s32i}>
+// CIR: !rec_VirtualInherits = !cir.struct<"VirtualInherits" packed padded {data !cir.vptr, data !s32i, data !s32i, data !s32i, data !rec_Base1, data !rec_Base2, pad !cir.array<!u8i x 4>}>
 //
 // LLVM: %struct.Inherits = type { %struct.Base1, %struct.Base2, i32, i32, i32 }
 // LLVM: %struct.Base1 = type { i32, i32, i32 }

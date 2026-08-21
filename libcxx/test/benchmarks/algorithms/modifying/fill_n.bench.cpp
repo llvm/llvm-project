@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto fill_n) {
       benchmark::RegisterBenchmark(
           name,
-          [fill_n](auto& st) {
+          [fill_n](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::fill_n(vector<bool>)
   {
     auto bm = [](std::string name, auto fill_n) {
-      benchmark::RegisterBenchmark(name, [fill_n](auto& st) {
+      benchmark::RegisterBenchmark(name, [fill_n](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const size = st.range(0);
         bool x                 = true;
         std::vector<bool> c(size, x);

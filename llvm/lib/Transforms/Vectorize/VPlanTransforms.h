@@ -39,7 +39,6 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -551,10 +550,11 @@ struct VPlanTransforms {
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.
-  static void replaceWideCanonicalIVWithWideIV(
-      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
-      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+  static void
+  replaceWideCanonicalIVWithWideIV(VPlan &Plan, ScalarEvolution &SE,
+                                   const TargetTransformInfo &TTI,
+                                   TargetTransformInfo::TargetCostKind CostKind,
+                                   ElementCount VF, unsigned UF);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
