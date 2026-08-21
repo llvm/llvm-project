@@ -14510,7 +14510,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     if (!IsCopyable)
       if (auto *FPCI = dyn_cast<FPMathOperator>(I))
         FMF &= FPCI->getFastMathFlags();
-    if (IsCopyable || !I->isBinaryOp()) {
+    if (IsCopyable || (I->getOpcode() != S.getOpcode() &&
+                       I->getOpcode() != S.getAltOpcode())) {
       FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
       continue;
     }
