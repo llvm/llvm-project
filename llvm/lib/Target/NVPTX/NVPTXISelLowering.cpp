@@ -6654,11 +6654,140 @@ static SDValue PerformMULCombine(SDNode *N,
   return PerformMULCombineWithOperands(N, N0, N1, DCI);
 }
 
+/// Commute SHL with a bitwise logic operation when doing so exposes a common
+/// shifted operand. For example:
+///
+/// Before:
+///   N          = shl (zext (LogicOp X, C)), ShiftAmount
+///   OtherShift = shl (zext (OtherLogicOp X, OtherC)), ShiftAmount
+///
+/// After:
+///   ShiftedX   = shl (zext X), ShiftAmount
+///   N          = LogicOp ShiftedX, ShiftedC
+///   OtherShift = OtherLogicOp ShiftedX, ShiftedOtherC
+///
+/// ShiftedC = (zext C) << ShiftAmount and ShiftedOtherC =
+/// (zext OtherC) << ShiftAmount are folded constants. This replaces two
+/// variable shifts with the single shared ShiftedX. Requiring another matching
+/// shift avoids disrupting isolated address calculations where a shift may be
+/// folded into the addressing mode.
+static SDValue combineShiftOfLogicOp(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+
+  struct ShiftOfLogicOp {
+    SDNode *Shift;
+    SDValue LogicOp;
+    SDValue X;
+    SDValue Constant;
+    unsigned ExtendOpcode;
+  };
+
+  // Match a logic operation, with an optional extension, inside a SHL.
+  auto matchShiftOfLogicOp =
+      [&](SDNode *Shift) -> std::optional<ShiftOfLogicOp> {
+    if (Shift->getOpcode() != ISD::SHL || !Shift->getOperand(0).hasOneUse())
+      return std::nullopt;
+    ShiftOfLogicOp Match;
+    Match.Shift = Shift;
+    Match.LogicOp = Shift->getOperand(0);
+    Match.ExtendOpcode = 0;
+    if (ISD::isExtOpcode(Match.LogicOp.getOpcode())) {
+      Match.ExtendOpcode = Match.LogicOp.getOpcode();
+      Match.LogicOp = Match.LogicOp.getOperand(0);
+    }
+
+    if (!sd_match(Match.LogicOp, m_OneUse(m_BitwiseLogic(
+                                     m_Value(Match.X),
+                                     m_Value(Match.Constant, m_ConstInt())))))
+      return std::nullopt;
+
+    return Match;
+  };
+
+  // Match N as the root shift-of-logic; bail if it does not fit the pattern.
+  const std::optional<ShiftOfLogicOp> Root = matchShiftOfLogicOp(N);
+  if (!Root)
+    return SDValue();
+
+  // Only profitable for a constant shift amount: the per-op constant shift then
+  // folds away instead of becoming an extra variable shift.
+  if (!isConstOrConstSplat(N->getOperand(1)))
+    return SDValue();
+
+  // Collect candidate shifts that share X. Reached through another user of X,
+  // the logic result feeds the shift directly or through an optional extend.
+  SmallVector<SDNode *, 4> CandidateShifts;
+  for (const SDNode *CandidateLogicOp : Root->X->users()) {
+    if (CandidateLogicOp == Root->LogicOp.getNode())
+      continue;
+    for (SDNode *LogicUser : CandidateLogicOp->users()) {
+      if (ISD::isExtOpcode(LogicUser->getOpcode())) {
+        // shl (ext (logic X, C)): step through the extend to find the shift.
+        for (SDNode *ExtendUser : LogicUser->users())
+          if (ExtendUser->getOpcode() == ISD::SHL)
+            CandidateShifts.push_back(ExtendUser);
+      } else if (LogicUser->getOpcode() == ISD::SHL) {
+        // shl (logic X, C): the user is already the shift.
+        CandidateShifts.push_back(LogicUser);
+      }
+    }
+  }
+
+  // Verify each candidate against the root's pattern: the same X, extension,
+  // type, and shift amount.
+  const EVT VT = N->getValueType(0);
+  const SDValue ShiftAmount = N->getOperand(1);
+  SmallVector<ShiftOfLogicOp, 4> Matches;
+  for (SDNode *CandidateShift : CandidateShifts) {
+    const std::optional<ShiftOfLogicOp> Candidate =
+        matchShiftOfLogicOp(CandidateShift);
+    if (Candidate && Candidate->X == Root->X &&
+        Candidate->ExtendOpcode == Root->ExtendOpcode &&
+        CandidateShift->getValueType(0) == VT &&
+        CandidateShift->getOperand(1) == ShiftAmount)
+      Matches.push_back(*Candidate);
+  }
+  if (Matches.empty())
+    return SDValue();
+
+  // Build the shared shifted X once, then rewrite the root and every match
+  // into a logic op over it so the shift is CSE'd.
+  SelectionDAG &DAG = DCI.DAG;
+  const SDValue ShiftedX =
+      DAG.getNode(ISD::SHL, SDLoc(N), VT,
+                  Root->ExtendOpcode
+                      ? DAG.getNode(Root->ExtendOpcode, SDLoc(N), VT, Root->X)
+                      : Root->X,
+                  ShiftAmount);
+
+  // Rebuild the logic op from shared ShiftedX and a folded constant shift.
+  auto buildCommutedLogicOp = [&](const SDValue LogicOp, SDValue C,
+                                  const SDLoc &DL) {
+    if (Root->ExtendOpcode)
+      C = DAG.getNode(Root->ExtendOpcode, DL, VT, C);
+    const SDValue ShiftedC = DAG.getNode(ISD::SHL, DL, VT, C, ShiftAmount);
+    return DAG.getNode(LogicOp.getOpcode(), DL, VT, ShiftedX, ShiftedC,
+                       LogicOp->getFlags());
+  };
+
+  for (const ShiftOfLogicOp &Match : Matches)
+    DCI.CombineTo(Match.Shift,
+                  buildCommutedLogicOp(Match.LogicOp, Match.Constant,
+                                       SDLoc(Match.Shift)));
+  return buildCommutedLogicOp(Root->LogicOp, Root->Constant, SDLoc(N));
+}
+
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
   if (OptLevel > CodeGenOptLevel::None) {
+    // Expose a shared shifted operand for CSE before mul.wide folding, which
+    // would otherwise consume the shift.
+    if (SDValue Ret = combineShiftOfLogicOp(N, DCI))
+      return Ret;
+
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
