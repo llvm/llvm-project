@@ -309,7 +309,7 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
   ON_CALL(*this, olMemPrefetch)
-      .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
+      .WillByDefault([](ol_queue_handle_t Queue, size_t Count,
                             const void **Mems, const size_t *Sizes,
                             ol_mem_migration_flags_t Flags) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
