@@ -10625,7 +10625,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      // Use SHL/ADDI (and possible XORI) to avoid having to materialize
+      // Use SLLI/ADDI (and possible XORI) to avoid having to materialize
       // a constant in register
       if ((TrueVal - FalseVal).isPowerOf2() && FalseVal.isSignedIntN(12)) {
         SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
@@ -10637,6 +10637,28 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         CondV = DAG.getLogicalNOT(DL, CondV, CondV.getValueType());
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
         return DAG.getNode(ISD::ADD, DL, VT, BitDiff, TrueV);
+      }
+
+      // If we can't use ADDI, it might still be profitable to use SLLI/ADD or
+      // SLLI/SUB. We need to materialize a large constant for the czero+add
+      // sequence below anyway. Using SLLI avoids materializing the delta.
+      // Don't do this if the condition is an equality comparison since czero
+      // allows us to fold part of the compare.
+      if ((TrueVal - FalseVal).isPowerOf2() &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+      }
+      if ((FalseVal - TrueVal).isPowerOf2() && !FalseVal.isSignedIntN(12) &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::SUB, DL, VT, FalseV, BitDiff);
       }
 
       auto getCost = [&](const APInt &Delta, const APInt &Addend) {
