@@ -154,3 +154,11 @@ functions:
     arguments:
       - type: struct timespec *
       - type: int
+  - name: timer_create
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: clockid_t
+      - type: struct sigevent *__restrict
+      - type: timer_t *__restrict

@@ -72,3 +72,20 @@ add_entrypoint_object(
     libc.src.__support.time.clock_settime
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  timer_create
+  SRCS
+    timer_create.cpp
+  HDRS
+    ../timer_create.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_sigevent
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_create
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
