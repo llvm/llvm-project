@@ -215,6 +215,13 @@ features cannot lower the translation-unit ABI level;
   `-fsanitize=shadow-call-stack`. The selected register must also be reserved
   with the matching `-ffixed-<reg>`.
 
+- Added `-fmodules-ignore-search-path=<path>`, the search-path counterpart to
+  `-fmodules-ignore-macro=<macro>`: the path is dropped from the context hash of
+  every module and physically removed from every module build, and kept only for
+  the translation unit itself. This lets builds that differ only in a search
+  path share one module cache, and is only sound when no module needs the path
+  -- a lookup that would have resolved through an ignored path simply fails.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -515,6 +522,11 @@ features cannot lower the translation-unit ABI level;
   (#GH215900)
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
+
+- Fixed an assertion when a redeclaration of a function template or an out-of-line
+  definition of a member of a class template added a default argument to a
+  parameter that follows a parameter pack (e.g.
+  `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
 #### Bug Fixes to AST Handling
 

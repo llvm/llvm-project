@@ -307,7 +307,7 @@ protected:
   /// is greater than twice the number of buckets.
   unsigned NumNodes;
 
-  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize = 6);
+  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
   LLVM_ABI FoldingSetBase &operator=(FoldingSetBase &&RHS);
   LLVM_ABI ~FoldingSetBase();
@@ -377,9 +377,8 @@ protected:
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
 
-  /// Increase the number of buckets such that adding the \p EltCount th node
-  /// won't cause a rebucket operation. reserve is permitted to allocate more
-  /// space than requested by EltCount.
+  /// Grow the number of buckets so that we can hold at least \p EltCount
+  /// nodes before rebucketing. May allocate more space than requested.
   LLVM_ABI void reserve(unsigned EltCount, const FoldingSetInfo &Info);
 
   /// Remove a node from the folding set, returning true if one
@@ -505,9 +504,8 @@ public:
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
 
-  /// Increase the number of buckets such that adding the \p EltCount th node
-  /// won't cause a rebucket operation. reserve is permitted to allocate more
-  /// space than requested by EltCount.
+  /// Grow the number of buckets so that we can hold at least \p EltCount
+  /// nodes before rebucketing. May allocate more space than requested.
   void reserve(unsigned EltCount) {
     FoldingSetBase::reserve(EltCount, getFoldingSetInfo());
   }
