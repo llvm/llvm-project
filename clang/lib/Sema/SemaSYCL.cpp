@@ -213,18 +213,6 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
 }
 
-void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
-  // Device code can neither call a variadic function nor take its address, so
-  // there is no reason to emit device code for one. Since SYCL 2020 prohibits
-  // only the call, ignore the attribute rather than reject the declaration.
-  if (cast<FunctionDecl>(D)->isVariadic()) {
-    Diag(AL.getLoc(), diag::warn_sycl_external_ignored_variadic_function) << AL;
-    return;
-  }
-
-  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
-}
-
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   ParsedType PT = AL.getTypeArg();
   TypeSourceInfo *TSI = nullptr;
@@ -293,6 +281,16 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
 void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
   const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
   assert(SEAttr && "Missing sycl_external attribute");
+  // SYCL 2020 section 5.4 prohibits calling a variadic function from device
+  // code, so the attribute cannot be honored; declaring one is not prohibited,
+  // so ignore the attribute rather than reject the declaration.
+  if (FD->isVariadic()) {
+    Diag(SEAttr->getLocation(),
+         diag::warn_sycl_external_ignored_variadic_function)
+        << SEAttr;
+    FD->dropAttr<SYCLExternalAttr>();
+    return;
+  }
   if (!FD->isInvalidDecl() && !FD->isTemplated()) {
     if (!FD->isExternallyVisible())
       if (!FD->isFunctionTemplateSpecialization() ||

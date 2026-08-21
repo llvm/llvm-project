@@ -5,10 +5,11 @@
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=WINDOWS %s
 
-/// No variadic functions in SYCL device code, so 'ap' comes from the caller.
-[[clang::sycl_external]] int f(__builtin_va_list *ap) {
+/// The sycl_external attribute is ignored for a variadic function, so 'f' is
+/// emitted because 'g' references it.
+int f(int n, ...) {
   __builtin_va_list ap1, ap2;
-  __builtin_va_copy(ap1, *ap);
+  __builtin_va_start(ap1, n);
   int v = __builtin_va_arg(ap1, int);
   __builtin_va_copy(ap2, ap1);
   __builtin_va_end(ap1);
@@ -16,10 +17,13 @@
   return v;
 }
 
-// LINUX:    define {{.*}} i32 @_Z1fPA1_13__va_list_tag(
+using FP = int (*)(int, ...);
+[[clang::sycl_external]] FP g() { return f; }
+
+// LINUX:    define {{.*}} i32 @_Z1fiz(i32 noundef %n, ...) {{.*}} {
 // LINUX:      %ap1 = alloca [1 x %struct.__va_list_tag], align 8
 // LINUX:      %ap2 = alloca [1 x %struct.__va_list_tag], align 8
 
-// WINDOWS:  define {{.*}} i32 @_Z1fPPc(
+// WINDOWS:  define {{.*}} i32 @_Z1fiz(i32 noundef %n, ...) {{.*}} {
 // WINDOWS:    %ap1 = alloca ptr addrspace(4), align 8
 // WINDOWS:    %ap2 = alloca ptr addrspace(4), align 8

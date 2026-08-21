@@ -7846,7 +7846,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.SYCL().handleKernelAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLExternal:
-    S.SYCL().handleExternalAttr(D, AL);
+    handleSimpleAttribute<SYCLExternalAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);

@@ -4243,8 +4243,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     //   used on the first declaration of that function in the translation unit.
     //   Redeclarations of the function in the same translation unit may
     //   optionally use SYCL_EXTERNAL, but this is not required.
+    // The attribute is ignored and dropped for a variadic function, so 'Old'
+    // won't have it; 'New' still does since the drop happens after this check.
     const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
-    if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
+    if (SEA && !New->isVariadic() && !Old->hasAttr<SYCLExternalAttr>()) {
       Diag(SEA->getLocation(), diag::warn_sycl_external_missing_on_first_decl)
           << SEA;
       Diag(Old->getLocation(), diag::note_previous_declaration);
