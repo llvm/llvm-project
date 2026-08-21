@@ -226,6 +226,83 @@ define <vscale x 8 x float> @deinterleave2_fneg_interleave2(<vscale x 8 x float>
   ret <vscale x 8 x float> %r
 }
 
+define <16 x float> @deinterleave4_fmul_reverse_interleave4(<16 x float> %v) {
+; CHECK-LABEL: define <16 x float> @deinterleave4_fmul_reverse_interleave4(
+; CHECK-SAME: <16 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <16 x float> [[V]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[R:%.*]] = call <16 x float> @llvm.vector.reverse.v16f32(<16 x float> [[MUL]])
+; CHECK-NEXT:    ret <16 x float> [[R]]
+;
+  %d = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave4.v16f32(<16 x float> %v)
+  %f0 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 0
+  %f1 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 1
+  %f2 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 2
+  %f3 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 3
+  %mul0 = fmul <4 x float> %f0, splat (float 2.000000e+00)
+  %mul1 = fmul <4 x float> %f1, splat (float 2.000000e+00)
+  %mul2 = fmul <4 x float> %f2, splat (float 2.000000e+00)
+  %mul3 = fmul <4 x float> %f3, splat (float 2.000000e+00)
+  %rev0 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %mul0)
+  %rev1 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %mul1)
+  %rev2 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %mul2)
+  %rev3 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %mul3)
+  %r = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> %rev3, <4 x float> %rev2, <4 x float> %rev1, <4 x float> %rev0)
+  ret <16 x float> %r
+}
+
+define <16 x float> @deinterleave4_reverse_fmul_interleave4(<16 x float> %v) {
+; CHECK-LABEL: define <16 x float> @deinterleave4_reverse_fmul_interleave4(
+; CHECK-SAME: <16 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[REVERSE:%.*]] = call <16 x float> @llvm.vector.reverse.v16f32(<16 x float> [[V]])
+; CHECK-NEXT:    [[R:%.*]] = fmul <16 x float> [[REVERSE]], splat (float 2.000000e+00)
+; CHECK-NEXT:    ret <16 x float> [[R]]
+;
+  %d = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave4.v16f32(<16 x float> %v)
+  %f0 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 0
+  %f1 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 1
+  %f2 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 2
+  %f3 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %d, 3
+  %rev0 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %f0)
+  %rev1 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %f1)
+  %rev2 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %f2)
+  %rev3 = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %f3)
+  %mul0 = fmul <4 x float> %rev0, splat (float 2.000000e+00)
+  %mul1 = fmul <4 x float> %rev1, splat (float 2.000000e+00)
+  %mul2 = fmul <4 x float> %rev2, splat (float 2.000000e+00)
+  %mul3 = fmul <4 x float> %rev3, splat (float 2.000000e+00)
+  %r = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> %mul3, <4 x float> %mul2, <4 x float> %mul1, <4 x float> %mul0)
+  ret <16 x float> %r
+}
+
+define <16 x i16> @deinterleave4_add_reverse_mul_interleave4(<16 x i16> %v) {
+; CHECK-LABEL: define <16 x i16> @deinterleave4_add_reverse_mul_interleave4(
+; CHECK-SAME: <16 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i16> [[V]], splat (i16 1)
+; CHECK-NEXT:    [[REVERSE:%.*]] = call <16 x i16> @llvm.vector.reverse.v16i16(<16 x i16> [[ADD]])
+; CHECK-NEXT:    [[R:%.*]] = mul <16 x i16> [[REVERSE]], splat (i16 2)
+; CHECK-NEXT:    ret <16 x i16> [[R]]
+;
+  %d = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave4.v16i16(<16 x i16> %v)
+  %f0 = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %d, 0
+  %f1 = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %d, 1
+  %f2 = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %d, 2
+  %f3 = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %d, 3
+  %add0 = add <4 x i16> %f0, splat (i16 1)
+  %add1 = add <4 x i16> %f1, splat (i16 1)
+  %add2 = add <4 x i16> %f2, splat (i16 1)
+  %add3 = add <4 x i16> %f3, splat (i16 1)
+  %rev0 = call <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16> %add0)
+  %rev1 = call <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16> %add1)
+  %rev2 = call <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16> %add2)
+  %rev3 = call <4 x i16> @llvm.vector.reverse.v4i16(<4 x i16> %add3)
+  %mul0 = mul <4 x i16> %rev0, splat (i16 2)
+  %mul1 = mul <4 x i16> %rev1, splat (i16 2)
+  %mul2 = mul <4 x i16> %rev2, splat (i16 2)
+  %mul3 = mul <4 x i16> %rev3, splat (i16 2)
+  %r = call <16 x i16> @llvm.vector.interleave4.v16i16(<4 x i16> %mul3, <4 x i16> %mul2, <4 x i16> %mul1, <4 x i16> %mul0)
+  ret <16 x i16> %r
+}
+
 define <vscale x 8 x float> @deinterleave2_bitcast_interleave2(<vscale x 8 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 8 x float> @deinterleave2_bitcast_interleave2(
 ; CHECK-SAME: <vscale x 8 x i32> [[V:%.*]]) {
