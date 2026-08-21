@@ -1510,35 +1510,35 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool getDefaultArgUpgradeInfo(Function *F, Intrinsic::ID IID,
-                                     unsigned &FullArgCount) {
+static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
+                                                    Intrinsic::ID IID) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return false;
+    return 0;
 
   if (Intrinsic::isOverloaded(IID))
-    return false;
+    return 0;
 
-  FullArgCount = FirstDefault + Defaults.size();
+  unsigned FullArgCount = FirstDefault + Defaults.size();
 
   // Only trailing default arguments can be missing.
   if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
-    return false;
+    return 0;
 
-  return true;
+  return FullArgCount;
 }
 
 static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
 
-  unsigned FullArgCount;
-  if (!getDefaultArgUpgradeInfo(F, IID, FullArgCount))
+  unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
+  if (!FullArgCount)
     return false;
 
   rename(F);
   NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   assert(NewFn->arg_size() == FullArgCount &&
-         "default argument table does not match intrinsic signature");
+         "total number of default args does not match intrinsic signature");
   return true;
 }
 
