@@ -7534,8 +7534,8 @@ static SmallVector<int64_t> nonBroadcastAxes(VectorType type) {
   return axes;
 }
 
-/// Returns true if `permutation` moves the axis at each input position `from[i]`
-/// to output position `to[i]`.
+/// Returns true if `permutation` moves the axis at each input position
+/// `from[i]` to output position `to[i]`.
 static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
                               ArrayRef<int64_t> permutation) {
   SmallVector<int64_t> invPerm = invertPermutationVector(permutation);
@@ -7547,8 +7547,8 @@ static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
 
 /// Folds transpose(broadcast(x)) to broadcast(x) when the transpose is order
 /// preserving, i.e. it only reorders broadcast/size-1 dims and leaves every
-/// non-broadcast dim of x where a direct broadcast to the transpose result would
-/// place it.
+/// non-broadcast dim of x where a direct broadcast to the transpose result
+/// would place it.
 ///
 /// Example:
 /// ```
@@ -7578,8 +7578,8 @@ public:
     auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
 
     // transpose(broadcast(scalar)) always folds. Otherwise the source must be
-    // broadcastable to the result and the transpose must leave its non-broadcast
-    // dims in place, i.e. map each to itself (from == to).
+    // broadcastable to the result and the transpose must leave its
+    // non-broadcast dims in place, i.e. map each to itself (from == to).
     if (srcType) {
       if (vector::isBroadcastableTo(srcType, outType) !=
           vector::BroadcastableToResult::Success)
@@ -7602,12 +7602,13 @@ public:
 
 /// Folds transpose(broadcast(shape_cast(x))) to broadcast(x) when a
 /// size-1-dim-only shape_cast `x -> y` sits between the broadcast and its
-/// source, i.e. y (the broadcast's input) is x with only size-1 dims rearranged.
+/// source, i.e. y (the broadcast's input) is x with only size-1 dims
+/// rearranged.
 ///
-/// Such a shape_cast leaves x and y with the same non-broadcast dims (in order),
-/// so the chain is still a plain broadcast of x even when the transpose moves
-/// things relative to y. Reusing transposeMapsAxes, each non-broadcast axis is
-/// mapped from its position in y to its direct-broadcast position in x.
+/// Such a shape_cast leaves x and y with the same non-broadcast dims (in
+/// order), so the chain is still a plain broadcast of x even when the transpose
+/// moves things relative to y. Reusing transposeMapsAxes, each non-broadcast
+/// axis is mapped from its position in y to its direct-broadcast position in x.
 ///
 /// Example 1, broadcast prepends a dim that the transpose moves to the back:
 /// ```
@@ -7640,15 +7641,17 @@ public:
       return rewriter.notifyMatchFailure(transpose, "not a shape_cast source");
 
     VectorType srcType = shapeCast.getSourceVectorType(); // x
-    VectorType midType = shapeCast.getResultVectorType(); // y, the broadcast input
+    VectorType midType =
+        shapeCast.getResultVectorType(); // y, the broadcast input
     VectorType outType = transpose.getResultVectorType();
 
     if (vector::isBroadcastableTo(srcType, outType) !=
         vector::BroadcastableToResult::Success)
       return rewriter.notifyMatchFailure(transpose, "not broadcastable");
 
-    // Size-1-dim-only shape_cast: x and y must have identical non-broadcast dims
-    // in the same order. E.g. rejects 5x4 -> 4x5x1, which reorders 5 and 4.
+    // Size-1-dim-only shape_cast: x and y must have identical non-broadcast
+    // dims in the same order. E.g. rejects 5x4 -> 4x5x1, which reorders 5
+    // and 4.
     SmallVector<int64_t> srcAxes = nonBroadcastAxes(srcType);
     SmallVector<int64_t> midAxes = nonBroadcastAxes(midType);
     if (srcAxes.size() != midAxes.size())
@@ -7676,8 +7679,8 @@ public:
       return rewriter.notifyMatchFailure(transpose,
                                          "not a plain broadcast of the source");
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        transpose, outType, shapeCast.getSource());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outType,
+                                                     shapeCast.getSource());
     return success();
   }
 };
