@@ -33,6 +33,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -6092,8 +6093,9 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
                                NewOperands[1]);
     if (isa<SelectInst>(NarrowInst))
-      return Builder.CreateSelect(NewOperands[0], NewOperands[1],
-                                  NewOperands[2]);
+      return Builder.CreateSelect(
+          NewOperands[0], NewOperands[1], NewOperands[2], /*Name=*/"",
+          ProfcheckDisableMetadataFixes ? nullptr : NarrowInst);
     if (isa<FreezeInst>(NarrowInst))
       return Builder.CreateFreeze(NewOperands[0]);
     if (auto *II = dyn_cast<IntrinsicInst>(NarrowInst))
