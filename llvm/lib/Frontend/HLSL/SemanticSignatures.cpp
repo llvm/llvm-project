@@ -59,13 +59,11 @@ ArrayRef<SemanticStageInfo>
 hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   switch (SemanticKind) {
   case dxbc::PSV::SemanticKind::Arbitrary: {
-    static constexpr IOType AllIOTypes =
-        static_cast<IOType>(IOType::InOut | IOType::PatchConstantOrPrimitive);
     static constexpr IOType OutOrPatchConstant =
         static_cast<IOType>(IOType::Out | IOType::PatchConstantOrPrimitive);
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::InOut}, {Triple::Geometry, IOType::InOut},
-        {Triple::Hull, AllIOTypes},      {Triple::Domain, AllIOTypes},
+        {Triple::Hull, IOType::All},     {Triple::Domain, IOType::All},
         {Triple::Pixel, IOType::In},     {Triple::Mesh, OutOrPatchConstant},
     };
     return Stages;
@@ -100,11 +98,9 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   }
   case dxbc::PSV::SemanticKind::ClipDistance:
   case dxbc::PSV::SemanticKind::CullDistance: {
-    static constexpr IOType AllIOTypes =
-        static_cast<IOType>(IOType::InOut | IOType::PatchConstantOrPrimitive);
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Vertex, IOType::InOut}, {Triple::Hull, AllIOTypes},
-        {Triple::Domain, AllIOTypes},    {Triple::Geometry, IOType::InOut},
+        {Triple::Vertex, IOType::InOut}, {Triple::Hull, IOType::All},
+        {Triple::Domain, IOType::All},   {Triple::Geometry, IOType::InOut},
         {Triple::Pixel, IOType::In},     {Triple::Mesh, IOType::Out},
     };
     return Stages;

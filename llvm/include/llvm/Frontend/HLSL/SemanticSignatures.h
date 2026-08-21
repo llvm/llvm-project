@@ -40,6 +40,7 @@ enum IOType {
   Out = 0b010,
   InOut = 0b011,
   PatchConstantOrPrimitive = 0b100,
+  All = 0b111,
 };
 
 struct SemanticStageInfo {
