@@ -315,15 +315,14 @@ func.func @parallel_reduction_pattern(%data: memref<8xi32>, %shared: memref<i32>
   } {acc.par_dims = #acc<par_dims[thread_x]>}
   acc.reduction_accumulate %partial to %private <add>
       par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
-  acc.reduction_combine %private into %shared <add> : memref<i32>
-      {acc.par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_combine %private into %shared <add> par_dims(#acc<par_dims[thread_x]>) : memref<i32>
   return
 }
 // CHECK: memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>}
 // CHECK: scf.parallel
 // CHECK: scf.reduce
 // CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
-// CHECK: acc.reduction_combine %{{.*}} into %{{.*}} <add> : memref<i32> {acc.par_dims = #acc<par_dims[thread_x]>}
+// CHECK: acc.reduction_combine %{{.*}} into %{{.*}} <add> par_dims(#acc<par_dims[thread_x]>) : memref<i32>
 
 // -----
 
