@@ -959,17 +959,11 @@ bool PeepholeOptimizer::optimizeCmpInstr(
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  // Stop tracking MI before optimizeCompareInstr may erase it. Any instruction
-  // created below could otherwise reuse MI's address and be confused with the
-  // erased instruction in LocalMIs.
-  LocalMIs.erase(&MI);
-  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    // MI was not erased, and is still part of the already visited region.
-    LocalMIs.insert(&MI);
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
     return false;
-  }
 
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
   ++NumCmps;
 
   // The eliminated compare may have been the extra use preventing a
