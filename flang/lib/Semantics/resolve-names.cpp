@@ -4304,6 +4304,8 @@ static bool MatchesCublasZgemm(SemanticsContext &context,
 static const IntrinsicModuleUseAssociationRule *
 FindIntrinsicModuleUseAssociationRule(
     SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Add entries here for intrinsic module generics that should take precedence
+  // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
       {"cublas", "zgemm", MatchesCublasZgemm},
   };
@@ -4552,10 +4554,14 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
 
   auto warnIntrinsicModuleUseAssociation{[&](const Symbol &generic) {
     const Scope &owner{generic.GetUltimate().owner()};
-    context().Warn(common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
-        location,
-        "USE association selects intrinsic '%s' generic '%s' over an equivalent external interface"_warn_en_US,
-        owner.GetName().value(), generic.GetUltimate().name());
+    if (auto *msg{context().Warn(
+            common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+            location,
+            "USE association selects intrinsic '%s' generic '%s' over an equivalent external interface"_warn_en_US,
+            owner.GetName().value(), generic.GetUltimate().name())}) {
+      msg->Attach(location,
+          "this extension can be disabled (-fno-prefer-intrinsic-module-use-association)"_en_US);
+    }
   }};
 
   if (context().IsEnabled(

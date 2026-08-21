@@ -90,7 +90,10 @@ contains
 end module
 
 ! EXTERNAL-FIRST: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
+! EXTERNAL-FIRST: this extension can be disabled (-fno-prefer-intrinsic-module-use-association)
 ! CUBLAS-FIRST: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
+! CUBLAS-FIRST: this extension can be disabled (-fno-prefer-intrinsic-module-use-association)
 ! PEDANTIC: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
+! PEDANTIC: this extension can be disabled (-fno-prefer-intrinsic-module-use-association)
 ! DISABLED: error: 'zgemm' must be an abstract interface or a procedure with an explicit interface
 ! NO-WARNING-NOT: warning:
