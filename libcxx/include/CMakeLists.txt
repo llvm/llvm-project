@@ -235,6 +235,7 @@ set(files
   __bit/bit_floor.h
   __bit/bit_log2.h
   __bit/bit_width.h
+  __bit/bit_reverse.h
   __bit/blsr.h
   __bit/byteswap.h
   __bit/countl.h
