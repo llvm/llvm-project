@@ -48,6 +48,11 @@ protected:
         : ShaderStage(ShaderStage), IOTy(IOTy), Elements(Elements) {}
   };
 
+  enum class PackingMethod {
+    Stacked,
+    Indexed,
+  };
+
   SmallVector<SemanticSignatureElement>
   makeSignature(const TestConfig &Config) {
     SmallVector<SemanticSignatureElement> Elements;
@@ -68,34 +73,34 @@ protected:
     return Elements;
   }
 
-  Expected<unsigned>
-  packStacked(SmallVectorImpl<SemanticSignatureElement> &Elements,
-              const TestConfig &Config) {
-    return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
+  Expected<unsigned> pack(PackingMethod Method,
+                          SmallVectorImpl<SemanticSignatureElement> &Elements,
+                          const TestConfig &Config) {
+    switch (Method) {
+    case PackingMethod::Stacked:
+      return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
+    case PackingMethod::Indexed: {
+      if (Error E =
+              packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy))
+        return std::move(E);
+
+      unsigned Rows = 0;
+      for (const SemanticSignatureElement &Element : Elements)
+        if (Element.isAllocated())
+          Rows = std::max(Rows, Element.StartRow + Element.Rows);
+      return Rows;
+    }
+    }
+    llvm_unreachable("invalid packing method");
   }
 
-  Expected<unsigned>
-  packIndexed(SmallVectorImpl<SemanticSignatureElement> &Elements,
-              const TestConfig &Config) {
-    if (Error E =
-            packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy))
-      return std::move(E);
-
-    unsigned Rows = 0;
-    for (const SemanticSignatureElement &Element : Elements)
-      if (Element.isAllocated())
-        Rows = std::max(Rows, Element.StartRow + Element.Rows);
-    return Rows;
-  }
-
-  void verifyPackingImpl(const TestConfig &Config, unsigned ExpectedRows,
-                         std::initializer_list<ExpectedLocation> Locations,
-                         bool Indexed) {
+  void verifyPacking(PackingMethod Method, const TestConfig &Config,
+                     unsigned ExpectedRows,
+                     std::initializer_list<ExpectedLocation> Locations) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
     ASSERT_EQ(Elements.size(), Locations.size());
 
-    Expected<unsigned> Rows =
-        Indexed ? packIndexed(Elements, Config) : packStacked(Elements, Config);
+    Expected<unsigned> Rows = pack(Method, Elements, Config);
     ASSERT_THAT_EXPECTED(Rows, Succeeded());
     EXPECT_EQ(*Rows, ExpectedRows);
 
@@ -107,22 +112,11 @@ protected:
     }
   }
 
-  void verifyPacking(const TestConfig &Config, unsigned ExpectedRows,
-                     std::initializer_list<ExpectedLocation> Locations) {
-    verifyPackingImpl(Config, ExpectedRows, Locations, /*Indexed=*/false);
-  }
-
-  void verifyIndexedPacking(const TestConfig &Config, unsigned ExpectedRows,
-                            std::initializer_list<ExpectedLocation> Locations) {
-    verifyPackingImpl(Config, ExpectedRows, Locations, /*Indexed=*/true);
-  }
-
-  void verifyPackingErrorImpl(const TestConfig &Config,
-                              SignaturePackingError::ErrorKind ExpectedKind,
-                              unsigned ExpectedElementIndex, bool Indexed) {
+  void verifyPackingError(PackingMethod Method, const TestConfig &Config,
+                          SignaturePackingError::ErrorKind ExpectedKind,
+                          unsigned ExpectedElementIndex) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-    Expected<unsigned> Rows =
-        Indexed ? packIndexed(Elements, Config) : packStacked(Elements, Config);
+    Expected<unsigned> Rows = pack(Method, Elements, Config);
     if (Rows) {
       ADD_FAILURE() << "expected a SignaturePackingError";
       return;
@@ -137,20 +131,6 @@ protected:
           ADD_FAILURE() << "expected a SignaturePackingError, got: "
                         << Other.message();
         });
-  }
-
-  void verifyPackingError(const TestConfig &Config,
-                          SignaturePackingError::ErrorKind ExpectedKind,
-                          unsigned ExpectedElementIndex) {
-    verifyPackingErrorImpl(Config, ExpectedKind, ExpectedElementIndex,
-                           /*Indexed=*/false);
-  }
-
-  void verifyIndexedPackingError(const TestConfig &Config,
-                                 SignaturePackingError::ErrorKind ExpectedKind,
-                                 unsigned ExpectedElementIndex) {
-    verifyPackingErrorImpl(Config, ExpectedKind, ExpectedElementIndex,
-                           /*Indexed=*/true);
   }
 };
 
@@ -217,7 +197,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
   // Expected layout:
   // reg0: A.xy  | unused.zw
   // reg1: B.xyz | unused.w
-  verifyPacking(Config, /*ExpectedRows=*/2,
+  verifyPacking(PackingMethod::Stacked, Config, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/0}, Unallocated, {/*Row=*/1, /*Col=*/0}});
 }
 
@@ -244,7 +224,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
   // reg1: Data.xy          | unused.zw
   // reg2: ClipDistance.xyz | unused.w
   verifyPacking(
-      Config, /*ExpectedRows=*/3,
+      PackingMethod::Stacked, Config, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
 
@@ -273,7 +253,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, DoesNotCoPackElements) {
   // reg1: B.x | unused.yzw
   // reg2: C.x | unused.yzw
   // reg3: D.x | unused.yzw
-  verifyPacking(Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::Stacked, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/2, /*Col=*/0},
@@ -305,7 +285,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, StacksMultiRowElements) {
   // reg4: B[1].xyz | unused.w
   // reg5: C.xyzw
   verifyPacking(
-      Config, /*ExpectedRows=*/6,
+      PackingMethod::Stacked, Config, /*ExpectedRows=*/6,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/0}, {/*Row=*/5, /*Col=*/0}});
 }
 
@@ -323,8 +303,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, ExactlyFillsSignature) {
 
   // Expected layout:
   // reg0-31: A[0-31].xyzw
-  verifyPacking(Config, /*ExpectedRows=*/MaxSignatureRows,
-                {{/*Row=*/0, /*Col=*/0}});
+  verifyPacking(PackingMethod::Stacked, Config,
+                /*ExpectedRows=*/MaxSignatureRows, {{/*Row=*/0, /*Col=*/0}});
 }
 
 //===----------------------------------------------------------------------===//
@@ -347,7 +327,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSignatureOverflow) {
                                dxbc::PSV::InterpolationMode::Linear});
 
   // The last element is the one that no longer fits.
-  verifyPackingError(Config, SignaturePackingError::SignatureOverflow,
+  verifyPackingError(PackingMethod::Stacked, Config,
+                     SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/MaxSignatureRows);
 }
 
@@ -363,7 +344,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
                       /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
                       dxbc::PSV::InterpolationMode::Linear}});
 
-  verifyPackingError(Config, SignaturePackingError::SignatureOverflow,
+  verifyPackingError(PackingMethod::Stacked, Config,
+                     SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/0);
 }
 
@@ -382,7 +364,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
                       /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
                       dxbc::PSV::InterpolationMode::Linear}});
 
-  verifyPackingError(Config, SignaturePackingError::SignatureOverflow,
+  verifyPackingError(PackingMethod::Stacked, Config,
+                     SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/1);
 }
 
@@ -416,8 +399,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesSemanticIndices) {
   // reg1: unused.xyzw
   // reg2: Color2.xy   | unused.zw
   // reg3: Color3.xyzw
-  verifyIndexedPacking(
-      Config, /*ExpectedRows=*/4,
+  verifyPacking(
+      PackingMethod::Indexed, Config, /*ExpectedRows=*/4,
       {{/*Row=*/3, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
 
@@ -442,8 +425,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedLeavesSemanticIndexGaps) {
   // reg1: Color1.xyzw
   // reg2-6: unused.xyzw
   // reg7: Color7.xyzw
-  verifyIndexedPacking(Config, /*ExpectedRows=*/8,
-                       {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
+  verifyPacking(PackingMethod::Indexed, Config, /*ExpectedRows=*/8,
+                {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
@@ -458,8 +441,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
         /*SemanticIndex=*/MaxSignatureRows}});
 
-  verifyIndexedPackingError(Config, SignaturePackingError::SignatureOverflow,
-                            /*ExpectedElementIndex=*/0);
+  verifyPackingError(PackingMethod::Indexed, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/0);
 }
 
 } // namespace
