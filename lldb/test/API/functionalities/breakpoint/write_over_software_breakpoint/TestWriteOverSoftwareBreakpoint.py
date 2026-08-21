@@ -46,6 +46,8 @@ class WriteOverSoftwareBreakpoint(TestBase):
         # Memory operations and breakpoint actions must be sent to the server
         # right away instead of waiting for the next continue event.
         self.runCmd("settings set target.process.disable-memory-cache on")
+        # Breakpoints set by address are never delayed but to make this test
+        # less fragile if later changed, disable delayed breakpoints entirely.
         self.runCmd("settings set target.process.use-delayed-breakpoints false")
 
         # At this point we are stopped at the start of the for loop.
