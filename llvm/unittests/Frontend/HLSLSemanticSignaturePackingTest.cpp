@@ -970,4 +970,67 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/0,
                 {Unallocated, Unallocated});
 }
+
+//===----------------------------------------------------------------------===//
+// Prefix-stable dynamic indexing tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedRanges) {
+  // An element with multiple rows occupies the same columns of a contiguous
+  // range of rows, and other elements may be co-packed into the columns those
+  // rows have left. A system value cannot be placed in a dynamically indexable
+  // row, so Position starts a new register.
+
+  // struct VSOut {
+  //   float2 A[2]    : A;
+  //   float B[2]     : B;
+  //   float C        : C;
+  //   float Position : SV_Position;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Position, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A[0].xy | B[0].z | C.w
+  // reg1: A[1].xy | B[1].z | unused.w
+  // reg2: Position.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/2},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedAfterSystemValue) {
+  // A multi-row element is dynamically indexable, so it may not share any of
+  // its rows with a system value, and it requires contiguous rows.
+
+  // struct VSOut {
+  //   float Position : SV_Position;
+  //   float3 A[2]    : A;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Position, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: Position.x | unused.yzw
+  // reg1: A[0].xyz   | unused.w
+  // reg2: A[1].xyz   | unused.w
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
 } // namespace
