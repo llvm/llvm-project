@@ -461,7 +461,7 @@ body:             |
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
-name:            test_s128_fpr_to_gpr
+name:            test_i128_fpr_to_gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -469,7 +469,7 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0
-    ; CHECK-LABEL: name: test_s128_fpr_to_gpr
+    ; CHECK-LABEL: name: test_i128_fpr_to_gpr
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
@@ -478,10 +478,10 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[UMOVvi64_]]
     ; CHECK-NEXT: $x1 = COPY [[UMOVvi64_1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
-    %0:fpr(s128) = COPY $q0
-    %1:gpr(s64), %2:gpr(s64) = G_UNMERGE_VALUES %0(s128)
-    $x0 = COPY %1(s64)
-    $x1 = COPY %2(s64)
+    %0:fpr(i128) = COPY $q0
+    %1:gpr(i64), %2:gpr(i64) = G_UNMERGE_VALUES %0(i128)
+    $x0 = COPY %1(i64)
+    $x1 = COPY %2(i64)
     RET_ReallyLR implicit $x0, implicit $x1
 ...
 ---

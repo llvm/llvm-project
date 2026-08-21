@@ -4041,7 +4041,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   const RegisterBank &HiRB = *RBI.getRegBank(HiReg, MRI, TRI);
   const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  // Handle unmerging an s128 FPR value into two s64 GPR values.
+  // Handle unmerging a 128-bit FPR value into two 64-bit GPR values.
   if (NarrowTy == LLT::scalar(64) && WideTy == LLT::scalar(128) &&
       LoRB.getID() == AArch64::GPRRegBankID &&
       HiRB.getID() == AArch64::GPRRegBankID &&
