@@ -34,15 +34,16 @@ using namespace llvm;
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
 namespace {
-class RISCVCodeGenPrepare : public InstVisitor<RISCVCodeGenPrepare, bool> {
+class RISCVCodeGenPrepareImpl
+    : public InstVisitor<RISCVCodeGenPrepareImpl, bool> {
   Function &F;
   const DataLayout *DL;
   const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
-  RISCVCodeGenPrepare(Function &F, const DominatorTree *DT,
-                      const RISCVSubtarget *ST)
+  RISCVCodeGenPrepareImpl(Function &F, const DominatorTree *DT,
+                          const RISCVSubtarget *ST)
       : F(F), DL(&F.getDataLayout()), DT(DT), ST(ST) {}
   bool run();
   bool visitInstruction(Instruction &I) { return false; }
@@ -76,7 +77,7 @@ public:
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
 // the upper 32 bits with ones.
-bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
+bool RISCVCodeGenPrepareImpl::visitAnd(BinaryOperator &BO) {
   if (!ST->is64Bit())
     return false;
 
@@ -145,7 +146,7 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 //
 // The trunc will normally be sunk outside of the loop, but even if there are
 // users inside the loop it is still profitable.
-bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
+bool RISCVCodeGenPrepareImpl::widenVPMerge(Instruction *Root) {
   if (!Root->getType()->getScalarType()->isIntegerTy(1))
     return false;
 
@@ -188,7 +189,7 @@ bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
   return true;
 }
 
-bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
+bool RISCVCodeGenPrepareImpl::visitFreezeInst(FreezeInst &I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I.getOperand(0)))
     if (II->getIntrinsicID() == Intrinsic::vp_merge)
       return widenVPMerge(&I);
@@ -226,7 +227,7 @@ bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
 // selection.
-bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+bool RISCVCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
@@ -289,7 +290,7 @@ static Value *buildMulTree(IRBuilder<> &Builder, ElementCount PieceEC,
 
 // Partially expand a vector_reduce_mul wider than M1 to reduce
 // register pressure and the number of vsetvlis required.
-bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
+bool RISCVCodeGenPrepareImpl::expandMulReduction(IntrinsicInst &II) {
   if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
     return false;
 
@@ -379,7 +380,7 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
 // Always expand zero strided loads so we match more .vx splat patterns, even if
 // we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
 // it back to a strided load if it's optimized.
-bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
+bool RISCVCodeGenPrepareImpl::expandVPStrideLoad(IntrinsicInst &II) {
   Value *BasePtr, *VL;
 
   using namespace PatternMatch;
@@ -410,7 +411,7 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   return true;
 }
 
-bool RISCVCodeGenPrepare::run() {
+bool RISCVCodeGenPrepareImpl::run() {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -428,7 +429,7 @@ bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
   auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  RISCVCodeGenPrepare RVCGP(F, DT, ST);
+  RISCVCodeGenPrepareImpl RVCGP(F, DT, ST);
   return RVCGP.run();
 }
 
@@ -448,7 +449,7 @@ PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
   DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
   auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
-  bool Changed = RISCVCodeGenPrepare(F, DT, ST).run();
+  bool Changed = RISCVCodeGenPrepareImpl(F, DT, ST).run();
   if (!Changed)
     return PreservedAnalyses::all();
 

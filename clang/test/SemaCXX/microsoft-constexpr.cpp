@@ -1,6 +1,7 @@
 // Some of this should fail in MSVC, but work in clang
 // when -fms-compatibility is enabled.
 // RUN: %clang -fsyntax-only -fms-compatibility -std=c++20 %s
+// RUN: %clang -fsyntax-only -fms-compatibility -std=c++20 -fexperimental-new-constant-interpreter %s
 
 typedef long LONG;
 typedef __int64 LONG_PTR, *PLONG_PTR;
