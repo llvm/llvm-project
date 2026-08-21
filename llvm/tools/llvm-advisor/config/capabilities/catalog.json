@@ -1,0 +1,24 @@
+{
+  "capabilities": [
+    {
+      "id": "llvm.remarks.summary",
+      "name": "Optimization remarks summary",
+      "version": "1",
+      "runner": "builtin.remarks_summary",
+      "summary": "remarks summary requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": []
+    },
+    {
+      "id": "llvm.remarks.detail",
+      "name": "Optimization remarks detail",
+      "version": "1",
+      "runner": "builtin.remarks_detail",
+      "summary": "remarks detail requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    }
+  ]
+}
