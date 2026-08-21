@@ -635,18 +635,18 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
   // consumer would be affected by any CMP adjustment we make.
   if (!nzcvLivesOut(&MBB))
     Changed |= commitPendingPair(PendingPair, PairsByReg);
-  
+
   // Check if there is any CMP/CMN + Bcc sequence which
   // can be converted to TBZ/TBNZ.
   auto [BrMI, CmpMI, CC] = isCmpToTbzPattern(MBB);
-  
+
   if (BrMI && CmpMI) {
     Register Reg = CmpMI->getOperand(1).getReg();
-  
+
     MachineBasicBlock *TBB = nullptr;
     MachineBasicBlock *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;
-  
+
     if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
       return false;
     if (!TBB)
@@ -656,21 +656,19 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
     // Determine the new TBZ/TBNZ opcode and bit position.
     unsigned TbzOpc;
     unsigned Bit;
-  
+
     switch (CmpOpc) {
     // 32-bit comparison
     case AArch64::SUBSWri:
     case AArch64::ADDSWri:
       Bit = 31;
-      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZW
-                                   : AArch64::TBNZW;
+      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZW : AArch64::TBNZW;
       break;
     // 64-bit comparison
     case AArch64::SUBSXri:
     case AArch64::ADDSXri:
       Bit = 63;
-      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZX
-                                   : AArch64::TBNZX;
+      bzOpc = CC == AArch64CC::GE ? AArch64::TBZX : AArch64::TBNZX;
       break;
     default:
       return false;
@@ -683,10 +681,10 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
     // Remove the old Compare and Branch instructions
     CmpMI->eraseFromParent();
     BrMI->eraseFromParent();
-  
+
     Changed = true;
   }
-  
+
   return Changed;
 }
 
