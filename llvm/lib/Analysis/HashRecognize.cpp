@@ -169,10 +169,6 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 const RecurrenceInfo &SimpleRecurrence,
                                 bool IsBigEndian) {
   auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
-  CmpPredicate Pred;
-  const Value *L;
-  const APInt *R;
-  Instruction *TV, *FV;
 
   // Match predicate with or without a SimpleRecurrence (the corresponding data
   // is LHSAux).
@@ -188,6 +184,11 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
       match(SI, m_Select(m_Trunc(MatchPred), MatchBitShiftXorGenPoly,
                          m_Specific(BitShift))))
     return true;
+
+  CmpPredicate Pred;
+  const Value *L;
+  const APInt *R;
+  Instruction *TV, *FV;
   if (!match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_APInt(R)),
                           m_Instruction(TV), m_Instruction(FV))))
     return false;
