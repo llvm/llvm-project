@@ -92,16 +92,16 @@ protected:
 struct Clause : public Descriptor<details::Clause> {
   using Base = Descriptor<details::Clause>;
   using Base::Base;
-  Properties getProperties(unsigned V) const;
-  Directives getDirectives(unsigned V) const;
-  Modifiers getModifiers(unsigned V) const;
+  LLVM_ABI Properties getProperties(unsigned V) const;
+  LLVM_ABI Directives getDirectives(unsigned V) const;
+  LLVM_ABI Modifiers getModifiers(unsigned V) const;
 };
 
 struct Modifier : public Descriptor<details::Modifier> {
   using Base = Descriptor<details::Modifier>;
   using Base::Base;
-  Properties getProperties(unsigned V) const;
-  Clauses getClauses(unsigned V) const;
+  LLVM_ABI Properties getProperties(unsigned V) const;
+  LLVM_ABI Clauses getClauses(unsigned V) const;
 };
 } // namespace descriptor
 
