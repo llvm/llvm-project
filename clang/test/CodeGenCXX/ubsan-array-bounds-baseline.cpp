@@ -54,37 +54,37 @@ MS msa[4];
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: define {{.*}}@_Z10x_ref_bindi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ref_bind(int i) {
   int &r = a[i];
   (void)r;
 }
 
 // CHECK-LABEL: define {{.*}}@_Z11x_ref_consti(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ref_const(int i) {
   const int &r = a[i];
   (void)r;
 }
 
 // CHECK-LABEL: define {{.*}}@_Z14x_ref_cleanupsi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ref_cleanups(int i) {
   int &r = (T(), a[i]);
   (void)r;
 }
 
 // CHECK-LABEL: define {{.*}}@_Z12x_ref_returni(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 int &x_ref_return(int i) { return a[i]; }
 
 void takes_ref(int &);
 // CHECK-LABEL: define {{.*}}@_Z11x_ref_parami(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ref_param(int i) { takes_ref(a[i]); }
 
 // CHECK-LABEL: define {{.*}}@_Z16x_ref_structuredi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ref_structured(int i) {
   auto &[e] = agga[i];
   (void)e;
@@ -93,7 +93,7 @@ void x_ref_structured(int i) {
 // A default argument bound to a reference.
 int &pick(int &r = a[gidx]);
 // CHECK-LABEL: define {{.*}}@_Z13x_default_argv(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_default_arg() { pick(); }
 
 // A default member initializer bound to a reference. The check lands in the
@@ -102,7 +102,7 @@ struct R {
   int &r = a[gidx];
 };
 // CTOR-LABEL: define {{.*}}@_ZN1RC2Ev(
-// CTOR: icmp ule i64 {{.*}}, 4
+// CTOR: icmp ult i64 {{.*}}, 4
 void x_default_init() {
   R x;
   (void)x;
@@ -113,7 +113,7 @@ struct S {
   S(int i) : r(a[i]) {}
 };
 // CTOR-LABEL: define {{.*}}@_ZN1SC2Ei(
-// CTOR: icmp ule i64 {{.*}}, 4
+// CTOR: icmp ult i64 {{.*}}, 4
 void x_ref_meminit(int i) {
   S x(i);
   (void)x;
@@ -242,7 +242,7 @@ void ntsink(NT);
 // A non-trivial copy constructor makes a real call, so the
 // argument binds to a reference instead.
 // CHECK-LABEL: define {{.*}}@_Z18x_byval_nontriviali(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_byval_nontrivial(int i) { ntsink(nta[i]); }
 
 //===----------------------------------------------------------------------===//

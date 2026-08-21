@@ -699,7 +699,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 RValue
 CodeGenFunction::EmitReferenceBindingToExpr(const Expr *E) {
   // Emit the expression as an lvalue.
-  LValue LV = EmitLValue(E);
+  LValue LV = EmitLValue(E, NotKnownNonNull, ObjectRequired);
   assert(LV.isSimple());
   llvm::Value *Value = LV.getPointer(*this);
 
