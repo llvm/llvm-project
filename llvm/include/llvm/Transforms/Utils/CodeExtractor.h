@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
@@ -260,15 +261,17 @@ public:
   void excludeArgFromAggregate(Value *Arg);
 
 protected:
-  /// Allocate an intermediate variable at the specified point.
+  /// Allocate an intermediate variable at the specified point. \p DL is a debug
+  /// location for anything an override emits that needs one.
   virtual Instruction *allocateVar(IRBuilder<>::InsertPoint AllocaIP,
-                                   Type *VarType, const Twine &Name = Twine(""),
+                                   DebugLoc DL, Type *VarType,
+                                   const Twine &Name = Twine(""),
                                    AddrSpaceCastInst **CastedAlloc = nullptr);
 
   /// Deallocate a previously-allocated intermediate variable at the specified
-  /// point.
+  /// point. \p DL is as for allocateVar().
   virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
-                                     Value *Var, Type *VarType);
+                                     DebugLoc DL, Value *Var, Type *VarType);
 
 private:
   struct LifetimeMarkerInfo {
