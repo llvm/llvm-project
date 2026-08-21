@@ -966,7 +966,7 @@ bool RISCVLegalizerInfo::legalizeReadCounter(
   //   csrrs ReadAgainReg, counterh
   //   bne   HiReg, ReadAgainReg, read
   // Emit the target instructions directly with BuildMI.
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
   BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
       .addImm(HiCounter)
       .addReg(RISCV::X0);
