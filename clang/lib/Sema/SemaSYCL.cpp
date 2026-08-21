@@ -937,8 +937,8 @@ public:
     // These SMF checks are not cheap and should only be enabled with
     // -Wpendantic-sycl.
     DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
-    bool CheckSMFs = !Diags.isIgnored(
-        diag::warn_sycl_device_copyable_smf_not_public, Loc);
+    bool CheckSMFs =
+        !Diags.isIgnored(diag::warn_sycl_device_copyable_smf_not_public, Loc);
 
     // Checking SYCL 2020 3.13.1, when explicitly declaring certain class types
     // as device copyable:

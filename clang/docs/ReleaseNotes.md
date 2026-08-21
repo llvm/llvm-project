@@ -690,6 +690,20 @@ features cannot lower the translation-unit ABI level;
 
 #### Improvements
 
+- Added checks for ensuring SYCL kernel parameters are device-copyable. Non
+  device-copyable kernel parameters now result in Semantic errors by default.
+  - `-Wsycl-device-copyable` flags can be used to lower non device-copyable
+    diagnostics to a warning (or ignored).
+  - Device-copyable checks now respect the `sycl::is_device_copyable` type
+    trait. However, it is assumed that the user knows what they are doing, and
+    deeper SYCL kernel parameter checking is no longer performed on
+    `sycl::is_device_copyable` types.
+  - By default, this device-copyable check does not enforce requirements from
+    SYCL 2020 3.13.1, regarding types explicitly marked as
+    `sycl::is_device_copyable` (since marking types that do not satisfy these
+    requirements results in undefined behavior). However, stricter checks for
+    the requirements from 3.13.1 can be enabled with `-Wpedantic-sycl`. 
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
