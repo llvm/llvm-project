@@ -337,7 +337,7 @@ jobs:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '') }}
       run: |
-        SET
+        Get-ChildItem Env:
         clang-cl.exe --version
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
