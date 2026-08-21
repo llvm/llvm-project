@@ -20,26 +20,26 @@ __strong id *p;
 void arc_weak_store(int i, id v) { wa[i] = v; }
 
 // CHECK-LABEL: define {{.*}}@arc_strong_store(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void arc_strong_store(int i, id v) { st[i] = v; }
 
 // CHECK-LABEL: define {{.*}}@arc_weak_load(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void arc_weak_load(int i, id *o) { *o = wa[i]; }
 
 // The remaining lifetimes take their own emitters, so each is covered rather
 // than assumed to follow from the two above.
 
 // CHECK-LABEL: define {{.*}}@arc_strong_load(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void arc_strong_load(int i, id *o) { *o = st[i]; }
 
 // CHECK-LABEL: define {{.*}}@arc_unsafe_store(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void arc_unsafe_store(int i, id v) { ua[i] = v; }
 
 // CHECK-LABEL: define {{.*}}@arc_unsafe_load(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void arc_unsafe_load(int i, id *o) { *o = ua[i]; }
 
 //===----------------------------------------------------------------------===//
