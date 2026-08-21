@@ -89,8 +89,13 @@ public:
   MOCK_METHOD(ol_result_t, olIterateDevices,
               (ol_device_iterate_cb_t Callback, void *UserData));
   MOCK_METHOD(ol_result_t, olDestroyProgram, (ol_program_handle_t Program));
+  MOCK_METHOD(ol_result_t, olCreateContext,
+              (size_t NumDevices, ol_device_handle_t *Devices,
+               ol_context_handle_t *Context));
+  MOCK_METHOD(ol_result_t, olDestroyContext, (ol_context_handle_t Context));
   MOCK_METHOD(ol_result_t, olCreateQueue,
-              (ol_device_handle_t Device, ol_queue_handle_t *Queue));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               ol_queue_handle_t *Queue));
   MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olSyncQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olDestroyEvent, (ol_event_handle_t Event));
@@ -107,6 +112,7 @@ public:
   MOCK_METHOD(ol_result_t, olWaitEvents,
               (ol_queue_handle_t Queue, ol_event_handle_t *Events,
                size_t NumEvents));
+  MOCK_METHOD(ol_result_t, olSyncEvent, (ol_event_handle_t Event));
   MOCK_METHOD(ol_result_t, olCreateEvent,
               (ol_queue_handle_t Queue, ol_event_flags_t Flags,
                ol_event_handle_t *Event));
@@ -120,9 +126,18 @@ public:
               (ol_queue_handle_t Queue, void *DstPtr,
                ol_device_handle_t DstDevice, const void *SrcPtr,
                ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olMemPrefetch,
+              (ol_queue_handle_t Queue, size_t Count, const void **Mems,
+               const size_t *Sizes, ol_mem_migration_flags_t Flags));
   MOCK_METHOD(ol_result_t, olGetMemInfo,
               (const void *Ptr, ol_mem_info_t PropName, size_t PropSize,
                void *PropValue));
+  MOCK_METHOD(ol_result_t, olMemAlloc,
+              (ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
+               void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocHost,
+              (ol_device_handle_t Device, size_t Size, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =

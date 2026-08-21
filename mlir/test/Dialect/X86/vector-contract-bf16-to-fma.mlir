@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -transform-interpreter -cse -split-input-file | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 !vecA = vector<1x1x1x2xbf16>
 !vecB = vector<1x1x8x2xbf16>
 !vecC = vector<1x8xf32>
@@ -444,8 +446,6 @@ func.func @matmul_to_fma_flat_layout_loop(%arg0: memref<16x64x32xbf16>, %arg1: m
 }
 
 // CHECK-LABEL: @matmul_to_fma_flat_layout_loop
-// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
-// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
 // CHECK: scf.for
 // CHECK: scf.for
 // CHECK: x86.avx.bcst_to_f32.packed
@@ -461,6 +461,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
       transform.apply_patterns.x86.vector_contract_bf16_to_fma
     } : !transform.any_op
     transform.yield

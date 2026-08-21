@@ -17,17 +17,6 @@ from lit.llvm.subst import ToolSubst
 # name: The name of this test suite.
 config.name = "LLVM"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
@@ -37,7 +26,7 @@ extra_substitutions = extra_substitutions = (
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
+config.test_format = lit.formats.ShTest(extra_substitutions=extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -79,7 +68,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -91,7 +79,7 @@ if config.enable_profcheck:
     )
     # Not aimed at being used for peak-optimized binaries. These will be
     # addressed later. PhaseOrdering has a couple of merge function tests.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -194,6 +182,11 @@ if asan_rtlib:
     ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
+elif config.osx_xcrun:
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
+    ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
     config.ocamlfind_executable,
@@ -302,7 +295,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -347,6 +339,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
@@ -591,6 +584,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
@@ -703,13 +699,6 @@ def have_ld64_plugin_support():
         return False
 
     if config.ld64_executable == "":
-        return False
-
-    ld_cmd = subprocess.Popen([config.ld64_executable, "-v"], stderr=subprocess.PIPE)
-    ld_out = ld_cmd.stderr.read().decode()
-    ld_cmd.wait()
-
-    if "ld64" not in ld_out or "LTO" not in ld_out:
         return False
 
     return True

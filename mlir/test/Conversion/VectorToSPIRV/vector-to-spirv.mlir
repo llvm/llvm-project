@@ -1117,7 +1117,7 @@ module attributes {
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST2:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:   %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+//       CHECK:   %[[S4:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
 //       CHECK:   %[[S5:.+]] = spirv.Bitcast %[[S4]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
 //       CHECK:   %[[R0:.+]] = spirv.Load "StorageBuffer" %[[S5]] : vector<4xf32>
 //       CHECK:   return %[[R0]] : vector<4xf32>
@@ -1125,6 +1125,17 @@ func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>
   %idx = arith.constant 0 : index
   %cst_0 = arith.constant 0.000000e+00 : f32
   %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// Dynamic StorageBuffer layouts do not identify a fixed base object, so keep
+// the pointer calculation conservative even though the vector access itself
+// has in-bounds source semantics.
+// CHECK-LABEL: @vector_load_dynamic
+// CHECK: spirv.AccessChain {{.*}} !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+func.func @vector_load_dynamic(%arg0 : memref<?xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<?xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -1137,7 +1148,7 @@ func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST2:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:   %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+//       CHECK:   %[[S4:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
 //       CHECK:   %[[S5:.+]] = spirv.Load "StorageBuffer" %[[S4]] : f32
 //       CHECK:   %[[R0:.+]] = builtin.unrealized_conversion_cast %[[S5]] : f32 to vector<1xf32>
 //       CHECK:   return %[[R0]] : vector<1xf32>
@@ -1170,7 +1181,7 @@ func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Storag
 //       CHECK:   %[[S3:.+]] = spirv.IMul %[[S1]], %[[CST4]] : i32
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 1 : i32
 //       CHECK:   %[[S6:.+]] = spirv.IAdd  %[[S2]], %[[S3]] : i32
-//       CHECK:   %[[S7:.+]] = spirv.AccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+//       CHECK:   %[[S7:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
 //       CHECK:   %[[S8:.+]] = spirv.Bitcast %[[S7]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
 //       CHECK:   %[[R0:.+]] = spirv.Load "StorageBuffer" %[[S8]] : vector<4xf32>
 //       CHECK:   return %[[R0]] : vector<4xf32>
@@ -1190,7 +1201,7 @@ func.func @vector_load_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBu
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST2:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:   %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+//       CHECK:   %[[S4:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
 //       CHECK:   %[[S5:.+]] = spirv.Bitcast %[[S4]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
 //       CHECK:   spirv.Store "StorageBuffer" %[[S5]], %[[ARG1]] : vector<4xf32>
 func.func @vector_store(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
@@ -1218,7 +1229,7 @@ func.func @vector_store_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Stora
 //       CHECK:  %[[CST1:.+]] = spirv.Constant 0 : i32
 //       CHECK:  %[[CST2:.+]] = spirv.Constant 0 : i32
 //       CHECK:  %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:  %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S2]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
+//       CHECK:  %[[S4:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST1]], %[[S2]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
 //       CHECK:  spirv.Store "StorageBuffer" %[[S4]], %[[S1]] : f32
 func.func @vector_store_single_elem(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<1xf32>) {
   %idx = arith.constant 0 : index
@@ -1240,7 +1251,7 @@ func.func @vector_store_single_elem(%arg0 : memref<4xf32, #spirv.storage_class<S
 //       CHECK:   %[[S3:.+]] = spirv.IMul %[[S1]], %[[CST4]] : i32
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 1 : i32
 //       CHECK:   %[[S6:.+]] = spirv.IAdd %[[S2]], %[[S3]] : i32
-//       CHECK:   %[[S7:.+]] = spirv.AccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+//       CHECK:   %[[S7:.+]] = spirv.InBoundsAccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
 //       CHECK:   %[[S8:.+]] = spirv.Bitcast %[[S7]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
 //       CHECK:   spirv.Store "StorageBuffer" %[[S8]], %[[ARG1]] : vector<4xf32>
 func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {

@@ -72,6 +72,7 @@ class CCValAssign;
 enum class ComplexDeinterleavingOperation;
 enum class ComplexDeinterleavingRotation;
 class Constant;
+enum class ExceptionHandling : int;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
@@ -119,21 +120,27 @@ enum Preference : uint8_t {
 // MemOp models a memory operation, either memset or memcpy/memmove.
 struct MemOp {
 private:
+  enum class MemOpKind {
+    Memset,
+    MemsetWithZero, // memset the memory with zeros
+    Memcpy, // copy memory from source to destination, source and destination do
+            // not overlap
+    MemcpyStrSrc, // memcpy source is an in-register constant, so it does not
+                  // need to be loaded
+    Memmove, // memmove: like memcpy, but source and destination regions may
+             // overlap
+  };
+
   // Shared
   uint64_t Size;
   bool DstAlignCanChange; // true if destination alignment can satisfy any
                           // constraint.
   Align DstAlign;         // Specified alignment of the memory operation.
 
-  bool AllowOverlap;
-  // memset only
-  bool IsMemset;   // If setthis memory operation is a memset.
-  bool ZeroMemset; // If set clears out memory with zeros.
-  // memcpy only
-  bool MemcpyStrSrc; // Indicates whether the memcpy source is an in-register
-                     // constant so it does not need to be loaded.
-  Align SrcAlign;    // Inferred alignment of the source or default value if the
-                     // memory operation does not need to load the value.
+  bool IsVolatile;
+  MemOpKind Kind;
+  Align SrcAlign; // Inferred alignment of the source or default value if the
+                  // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                     Align SrcAlign, bool IsVolatile,
@@ -142,10 +149,20 @@ public:
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
     Op.DstAlign = DstAlign;
-    Op.AllowOverlap = !IsVolatile;
-    Op.IsMemset = false;
-    Op.ZeroMemset = false;
-    Op.MemcpyStrSrc = MemcpyStrSrc;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = MemcpyStrSrc ? MemOpKind::MemcpyStrSrc : MemOpKind::Memcpy;
+    Op.SrcAlign = SrcAlign;
+    return Op;
+  }
+
+  static MemOp Move(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
+                    Align SrcAlign, bool IsVolatile) {
+    MemOp Op;
+    Op.Size = Size;
+    Op.DstAlignCanChange = DstAlignCanChange;
+    Op.DstAlign = DstAlign;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = MemOpKind::Memmove;
     Op.SrcAlign = SrcAlign;
     return Op;
   }
@@ -156,10 +173,8 @@ public:
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
     Op.DstAlign = DstAlign;
-    Op.AllowOverlap = !IsVolatile;
-    Op.IsMemset = true;
-    Op.ZeroMemset = IsZeroMemset;
-    Op.MemcpyStrSrc = false;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = IsZeroMemset ? MemOpKind::MemsetWithZero : MemOpKind::Memset;
     return Op;
   }
 
@@ -169,19 +184,22 @@ public:
     return DstAlign;
   }
   bool isFixedDstAlign() const { return !DstAlignCanChange; }
-  bool allowOverlap() const { return AllowOverlap; }
-  bool isMemset() const { return IsMemset; }
-  bool isMemcpy() const { return !IsMemset; }
-  bool isMemcpyWithFixedDstAlign() const {
-    return isMemcpy() && !DstAlignCanChange;
+  bool isVolatile() const { return IsVolatile; }
+  bool isMemset() const {
+    return Kind == MemOpKind::Memset || Kind == MemOpKind::MemsetWithZero;
   }
-  bool isZeroMemset() const { return isMemset() && ZeroMemset; }
-  bool isMemcpyStrSrc() const {
-    assert(isMemcpy() && "Must be a memcpy");
-    return MemcpyStrSrc;
+  bool isMemcpy() const {
+    return Kind == MemOpKind::Memcpy || Kind == MemOpKind::MemcpyStrSrc;
   }
+  bool isMemmove() const { return Kind == MemOpKind::Memmove; }
+  bool isMemcpyOrMemmove() const { return isMemcpy() || isMemmove(); }
+  bool isMemcpyOrMemmoveWithFixedDstAlign() const {
+    return isMemcpyOrMemmove() && !DstAlignCanChange;
+  }
+  bool isZeroMemset() const { return Kind == MemOpKind::MemsetWithZero; }
+  bool isMemcpyStrSrc() const { return Kind == MemOpKind::MemcpyStrSrc; }
   Align getSrcAlign() const {
-    assert(isMemcpy() && "Must be a memcpy");
+    assert(isMemcpyOrMemmove() && "Must be a memcpy or memmove");
     return SrcAlign;
   }
   bool isSrcAligned(Align AlignCheck) const {
@@ -288,6 +306,16 @@ public:
     Cheaper = 0,    // Negated expression is cheaper.
     Neutral = 1,    // Negated expression has the same cost.
     Expensive = 2   // Negated expression is more expensive.
+  };
+
+  /// Enum that specifies how expensive lowering an EXTRACT_SUBVECTOR is.
+  enum class ExtractSubvectorCost {
+    Free = 0,  // Lowers to no instruction at all, e.g. a subregister copy.
+    Cheap = 1, // Lowers to at most one instruction, and may still be free if
+               // the target can fold the extract into the instruction
+               // consuming it (e.g. a widening op that reads the high half of
+               // a register).
+    Expensive = 2 // Needs a shuffle sequence that cannot be folded away.
   };
 
   /// Enum of different potentially desirable ways to fold (and/or (setcc ...),
@@ -493,22 +521,11 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.experimental.cttz.elts intrinsic should be
-  /// expanded using generic code in SelectionDAGBuilder.
-  virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
-
   /// Return the minimum number of bits required to hold the maximum possible
   /// number of trailing zero vector elements.
   unsigned getBitWidthForCttzElements(EVT RetVT, ElementCount EC,
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
-
-  /// Return true if the @llvm.experimental.vector.match intrinsic should be
-  /// expanded for vector type `VT' and search size `SearchSize' using generic
-  /// code in SelectionDAGBuilder.
-  virtual bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const {
-    return true;
-  }
 
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
@@ -1210,7 +1227,23 @@ public:
   unsigned getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
                                   EVT &IntermediateVT,
                                   unsigned &NumIntermediates,
-                                  MVT &RegisterVT) const;
+                                  MVT &RegisterVT) const {
+    return getVectorTypeBreakdownImpl(Context, VT, IntermediateVT,
+                                      NumIntermediates, RegisterVT,
+                                      /*ForCallingConv=*/false);
+  }
+
+  /// Return true if fixed-length, non-power-of-two vectors should be broken
+  /// down into legal vector parts instead of scalars for internal values.
+  virtual bool preferVectorizedNonPowerOfTwoTypeBreakdown() const {
+    return false;
+  }
+
+  bool shouldUseDynamicVectorTypeBreakdown(EVT VT, bool ForCallingConv) const {
+    return preferVectorizedNonPowerOfTwoTypeBreakdown() && !ForCallingConv &&
+           VT.isFixedLengthVector() &&
+           !isPowerOf2_32(VT.getVectorNumElements());
+  }
 
   /// Certain targets such as MIPS require that some types such as vectors are
   /// always broken down into scalars in some contexts. This occurs even if the
@@ -1218,8 +1251,9 @@ public:
   virtual unsigned getVectorTypeBreakdownForCallingConv(
       LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
       unsigned &NumIntermediates, MVT &RegisterVT) const {
-    return getVectorTypeBreakdown(Context, VT, IntermediateVT, NumIntermediates,
-                                  RegisterVT);
+    return getVectorTypeBreakdownImpl(Context, VT, IntermediateVT,
+                                      NumIntermediates, RegisterVT,
+                                      /*ForCallingConv=*/true);
   }
 
   struct IntrinsicInfo {
@@ -1828,27 +1862,8 @@ public:
   virtual Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
-  MVT getRegisterType(MVT VT) const {
-    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
-    return RegisterTypeForVT[VT.SimpleTy];
-  }
-
-  /// Return the type of registers that this ValueType will eventually require.
   MVT getRegisterType(LLVMContext &Context, EVT VT) const {
-    if (VT.isSimple())
-      return getRegisterType(VT.getSimpleVT());
-    if (VT.isVector()) {
-      EVT VT1;
-      MVT RegisterVT;
-      unsigned NumIntermediates;
-      (void)getVectorTypeBreakdown(Context, VT, VT1,
-                                   NumIntermediates, RegisterVT);
-      return RegisterVT;
-    }
-    if (VT.isInteger()) {
-      return getRegisterType(Context, getTypeToTransformTo(Context, VT));
-    }
-    llvm_unreachable("Unsupported extended type!");
+    return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/false);
   }
 
   /// Return the number of registers that this ValueType will eventually
@@ -1865,23 +1880,7 @@ public:
   virtual unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
                   std::optional<MVT> RegisterVT = std::nullopt) const {
-    if (VT.isSimple()) {
-      assert((unsigned)VT.getSimpleVT().SimpleTy <
-             std::size(NumRegistersForVT));
-      return NumRegistersForVT[VT.getSimpleVT().SimpleTy];
-    }
-    if (VT.isVector()) {
-      EVT VT1;
-      MVT VT2;
-      unsigned NumIntermediates;
-      return getVectorTypeBreakdown(Context, VT, VT1, NumIntermediates, VT2);
-    }
-    if (VT.isInteger()) {
-      unsigned BitWidth = VT.getSizeInBits();
-      unsigned RegWidth = getRegisterType(Context, VT).getSizeInBits();
-      return (BitWidth + RegWidth - 1) / RegWidth;
-    }
-    llvm_unreachable("Unsupported extended type!");
+    return getNumRegistersImpl(Context, VT, /*ForCallingConv=*/false);
   }
 
   /// Certain combinations of ABIs, Targets and features require that types
@@ -1889,7 +1888,7 @@ public:
   /// For MIPS all vector types must be passed through the integer register set.
   virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                             CallingConv::ID CC, EVT VT) const {
-    return getRegisterType(Context, VT);
+    return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/true);
   }
 
   /// Certain targets require unusual breakdowns of certain types. For MIPS,
@@ -1898,7 +1897,7 @@ public:
   virtual unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                                  CallingConv::ID CC,
                                                  EVT VT) const {
-    return getNumRegisters(Context, VT);
+    return getNumRegistersImpl(Context, VT, /*ForCallingConv=*/true);
   }
 
   /// Certain targets have context sensitive alignment requirements, where one
@@ -2129,14 +2128,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   virtual Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const {
     return Register();
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   virtual Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const {
     return Register();
   }
 
@@ -2501,9 +2502,10 @@ public:
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+    Type *ValTy = RMWI->getValOperand()->getType();
     if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
-        (RMWI->getValOperand()->getType()->isFloatingPointTy() ||
-         RMWI->getValOperand()->getType()->isPointerTy()))
+        (ValTy->isFloatingPointTy() || ValTy->isPointerTy() ||
+         ValTy->isVectorTy()))
       return AtomicExpansionKind::CastToInteger;
 
     return AtomicExpansionKind::None;
@@ -3256,6 +3258,12 @@ public:
     return isZExtFree(Val.getValueType(), VT2);
   }
 
+  /// Return true is an anyext is free from FromTy to ToTy. Usually true for
+  /// scalar types when not trying to pack elements into vector lanes.
+  virtual bool isAnyExtFree(EVT FromTy, EVT ToTy) const {
+    return !FromTy.isVector();
+  }
+
   /// Return true if sign-extension from FromTy to ToTy is cheaper than
   /// zero-extension.
   virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {
@@ -3522,13 +3530,16 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
-  /// from this source type with this index. This is needed because
-  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
-  /// the first element, and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                       unsigned Index) const {
-    return false;
+  /// Return the cost of extracting a subvector of type \p ResVT from a vector
+  /// of type \p SrcVT, starting at element \p Index.
+  ///
+  /// Most callers only create a new EXTRACT_SUBVECTOR when the cost is at most
+  /// ExtractSubvectorCost::Cheap. This hook exists because EXTRACT_SUBVECTOR
+  /// usually has custom lowering that depends on the index of the first
+  /// element, so only the target knows which lowering is cheap.
+  virtual ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                       unsigned Index) const {
+    return ExtractSubvectorCost::Expensive;
   }
 
   /// Try to convert an extract element of a vector binary operation into an
@@ -3606,8 +3617,9 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
-  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
-  /// from min(max(fptoi)) saturation patterns.
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type
+  /// VT. Used when folding idioms into a saturating fp-to-int conversion, such
+  /// as min(max(fptoi)) clamps or NaN-guarded selects.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }
@@ -3714,11 +3726,6 @@ public:
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
     return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
-
-  /// Get the comparison predicate that's to be used to test the result of the
-  /// comparison libcall against zero. This should only be used with
-  /// floating-point compare libcalls.
-  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -3951,6 +3958,66 @@ private:
            "Table isn't big enough!");
     unsigned Ty = (unsigned)VT.SimpleTy;
     return (LegalizeAction)((IndexedModeActions[Ty][IdxMode] >> Shift) & 0xf);
+  }
+
+  unsigned getVectorTypeBreakdownImpl(LLVMContext &Context, EVT VT,
+                                      EVT &IntermediateVT,
+                                      unsigned &NumIntermediates,
+                                      MVT &RegisterVT,
+                                      bool ForCallingConv) const;
+
+  unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
+                                     unsigned &NumIntermediates,
+                                     MVT &RegisterVT);
+
+  /// Return the type of registers that this ValueType will eventually require.
+  MVT getCachedRegisterType(MVT VT) const {
+    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
+    return RegisterTypeForVT[VT.SimpleTy];
+  }
+
+  MVT getRegisterTypeImpl(LLVMContext &Context, EVT VT,
+                          bool ForCallingConv) const {
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv))
+      return getCachedRegisterType(VT.getSimpleVT());
+    if (VT.isVector()) {
+      EVT VT1;
+      MVT RegisterVT;
+      unsigned NumIntermediates;
+      (void)getVectorTypeBreakdownImpl(Context, VT, VT1, NumIntermediates,
+                                       RegisterVT, ForCallingConv);
+      return RegisterVT;
+    }
+    if (VT.isInteger()) {
+      return getRegisterTypeImpl(Context, getTypeToTransformTo(Context, VT),
+                                 ForCallingConv);
+    }
+    llvm_unreachable("Unsupported extended type!");
+  }
+
+  unsigned getNumRegistersImpl(LLVMContext &Context, EVT VT,
+                               bool ForCallingConv) const {
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv)) {
+      assert((unsigned)VT.getSimpleVT().SimpleTy <
+             std::size(NumRegistersForVT));
+      return NumRegistersForVT[VT.getSimpleVT().SimpleTy];
+    }
+    if (VT.isVector()) {
+      EVT VT1;
+      MVT VT2;
+      unsigned NumIntermediates;
+      return getVectorTypeBreakdownImpl(Context, VT, VT1, NumIntermediates, VT2,
+                                        ForCallingConv);
+    }
+    if (VT.isInteger()) {
+      unsigned BitWidth = VT.getSizeInBits();
+      unsigned RegWidth =
+          getRegisterTypeImpl(Context, VT, ForCallingConv).getSizeInBits();
+      return (BitWidth + RegWidth - 1) / RegWidth;
+    }
+    llvm_unreachable("Unsupported extended type!");
   }
 
 protected:
@@ -5184,7 +5251,7 @@ public:
   /// necessary information.
   virtual EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                        ISD::NodeType /*ExtendKind*/) const {
-    EVT MinVT = getRegisterType(MVT::i32);
+    EVT MinVT = getRegisterType(Context, MVT::i32);
     return VT.bitsLT(MinVT) ? MinVT : VT;
   }
 
@@ -5745,6 +5812,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VECTOR_MATCH nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVectorMatch(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand VECTOR_FIND_LAST_ACTIVE nodes
   /// \param N Node to expand

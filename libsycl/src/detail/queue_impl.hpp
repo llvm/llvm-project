@@ -21,6 +21,7 @@
 #include <OffloadAPI.h>
 
 #include <memory>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
@@ -71,6 +72,13 @@ public:
   /// Waits for completion of all commands submitted to this queue.
   void wait();
 
+  /// Waits for completion of all commands submitted to this queue and flushes
+  /// unconsumed async errors to the appropriate async handlers.
+  void waitAndThrow();
+
+  /// Flushes unconsumed async errors to the appropriate async handlers.
+  void throwAsynchronous();
+
   /// Enqueues a kernel to liboffload.
   /// Kernel parameters like dependencies and range must be passed in advance by
   /// calling setKernelParameters.
@@ -96,6 +104,9 @@ public:
   void setKernelParameters(std::vector<EventImplPtr> &&Events,
                            const detail::UnifiedRangeView &Range);
 
+  /// \return the async_handler associated with this queue.
+  const async_handler &getAsyncHandler() const { return MAsyncHandler; }
+
   /// Submits a memory copy operation from one USM or host pointer to another.
   ///
   /// \param Dest is the pointer to copy to.
@@ -106,9 +117,18 @@ public:
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
 
+  /// Submits a prefetch operation for a USM pointer.
+  ///
+  /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param NumBytes is a number of bytes to be prefetched.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+                        const std::vector<EventImplPtr> &DepEvents);
+
 private:
-  void handleEventDependencies(std::vector<ol_event_handle_t> &Deps);
-  EventImplPtr createEvent();
+  void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
+  EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
 
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
@@ -122,11 +142,7 @@ private:
   struct KernelSubmitInfo {
     EventImplPtr LastEvent;
     ol_kernel_launch_size_args_t Range;
-    // TODO: consider storing EventImplPtr here, it will work with plain handle
-    // only because submission is done within queue::submit call. Otherwise we
-    // need to ensure that event handle is still alive by keeping our own copy
-    // of EventImpl.
-    std::vector<ol_event_handle_t> DepEvents;
+    std::vector<EventImplPtr> DepEvents;
   };
   inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };

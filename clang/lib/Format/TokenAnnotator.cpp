@@ -450,7 +450,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
@@ -2308,7 +2308,8 @@ private:
           }
           if (Previous->opensScope())
             break;
-          if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
+          if (!Previous->isTypeFinalized() &&
+              Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isPointerOrReference() && Previous->Previous &&
               Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);

@@ -108,26 +108,26 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
 Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
-    GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
     const DynBlockMemConfTy &DynBlockMemConf,
     AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
-  // environment. Older versions of the compiler do not generate a kernel
-  // launch environment.
+  // environment, and launches with no reserved dyn_ptr slot (e.g. older
+  // compiler versions, or non-OpenMP launches) have nowhere to store one.
   if ((GenericDevice.getRecordReplay() &&
        GenericDevice.getRecordReplay()->isReplaying()) ||
-      KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+      !LaunchArgs.DynPtrSlot)
     return nullptr;
 
   const auto &RedCfg = KernelEnvironment.Configuration;
   const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
-  if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "kernel was built against an older OpenMP "
                          "kernel-launch-environment ABI (v%u); current "
                          "runtime requires v%u for cross-team reductions",
-                         KernelArgs.Version, OMP_KERNEL_ARG_VERSION);
-  if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem)
+                         LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !LaunchArgs.DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
   auto AllocOrErr = GenericDevice.dataAlloc(
@@ -177,7 +177,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
 }
 
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
-                                       KernelArgsTy &KernelArgs,
+                                       const KernelLaunchArgsTy &LaunchArgs,
                                        uint32_t NumThreads[3],
                                        uint32_t NumBlocks[3]) const {
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
@@ -185,23 +185,22 @@ Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
        "%s mode\n",
        getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
        NumThreads[1], NumThreads[2], getExecutionModeName());
-  return printLaunchInfoDetails(GenericDevice, KernelArgs, NumThreads,
+  return printLaunchInfoDetails(GenericDevice, LaunchArgs, NumThreads,
                                 NumBlocks);
 }
 
-Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                                              KernelArgsTy &KernelArgs,
-                                              uint32_t NumThreads[3],
-                                              uint32_t NumBlocks[3]) const {
+Error GenericKernelTy::printLaunchInfoDetails(
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
+    uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
   return Plugin::success();
 }
 
 Expected<DynBlockMemConfTy>
 GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                                    KernelArgsTy &KernelArgs,
+                                    const KernelLaunchArgsTy &LaunchArgs,
                                     uint32_t NumBlocks) const {
   uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
-  uint32_t DynBlockMemSize = KernelArgs.DynCGroupMem;
+  uint32_t DynBlockMemSize = LaunchArgs.DynCGroupMem;
   uint32_t TotalBlockMemSize = StaticBlockMemSize + DynBlockMemSize;
   uint32_t DynNativeBlockMemSize = DynBlockMemSize;
   void *DynFallbackPtr = nullptr;
@@ -212,7 +211,7 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
                          "Static block memory size exceeds maximum");
   // No enough block memory to cover dynamic one, and the fallback is aborting.
   if (static_cast<DynCGroupMemFallbackType>(
-          KernelArgs.Flags.DynCGroupMemFallback) ==
+          LaunchArgs.Flags.DynCGroupMemFallback) ==
           DynCGroupMemFallbackType::Abort &&
       TotalBlockMemSize > MaxBlockMemSize)
     return Plugin::error(
@@ -224,7 +223,7 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
     // Launch without native dynamic block memory.
     DynNativeBlockMemSize = 0;
     DynFallback = static_cast<DynCGroupMemFallbackType>(
-        KernelArgs.Flags.DynCGroupMemFallback);
+        LaunchArgs.Flags.DynCGroupMemFallback);
     if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
       // Do not provide any memory as fallback.
       DynBlockMemSize = 0;
@@ -243,19 +242,15 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
                            DynFallbackPtr};
 }
 
-Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                              ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
-                              KernelExtraArgsTy *KernelExtraArgs,
+Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
+                              KernelLaunchArgsTy &LaunchArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  llvm::SmallVector<void *, 16> Args;
-  llvm::SmallVector<void *, 16> Ptrs;
-
-  uint32_t EffectiveNumThreads[3] = {KernelArgs.UserThreadLimit[0],
-                                     KernelArgs.UserThreadLimit[1],
-                                     KernelArgs.UserThreadLimit[2]};
-  uint32_t EffectiveNumBlocks[3] = {KernelArgs.UserNumBlocks[0],
-                                    KernelArgs.UserNumBlocks[1],
-                                    KernelArgs.UserNumBlocks[2]};
+  uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
+                                     LaunchArgs.UserThreadLimit[1],
+                                     LaunchArgs.UserThreadLimit[2]};
+  uint32_t EffectiveNumBlocks[3] = {LaunchArgs.UserNumBlocks[0],
+                                    LaunchArgs.UserNumBlocks[1],
+                                    LaunchArgs.UserNumBlocks[2]};
 
   // Multidimensional is only supported with bare mode for now.
   assert(isBareMode() ||
@@ -264,24 +259,28 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
              "Non-bare mode should only use the first thread and block "
              "dimensions");
 
-  assert(!KernelArgs.Flags.StrictBlocksAndThreads ||
+  assert(!LaunchArgs.Flags.StrictBlocks ||
+         EffectiveNumBlocks[0] > 0 && EffectiveNumBlocks[1] > 0 &&
+             EffectiveNumBlocks[2] > 0 &&
+             "Strict requires number of blocks greater than zero");
+  assert(!LaunchArgs.Flags.StrictThreads ||
          EffectiveNumThreads[0] > 0 && EffectiveNumThreads[1] > 0 &&
-             EffectiveNumThreads[2] > 0 && EffectiveNumBlocks[0] > 0 &&
-             EffectiveNumBlocks[1] > 0 && EffectiveNumBlocks[2] > 0 &&
-             "Strict requires number of blocks and threads greater than zero");
+             EffectiveNumThreads[2] > 0 &&
+             "Strict requires number of threads greater than zero");
 
   // Calculate or adjust the effective number of threads and blocks if needed.
-  if (!KernelArgs.Flags.StrictBlocksAndThreads) {
+  if (!LaunchArgs.Flags.StrictThreads)
     EffectiveNumThreads[0] =
         getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
 
+  if (!LaunchArgs.Flags.StrictBlocks)
     EffectiveNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, EffectiveNumBlocks[0], KernelArgs.Tripcount,
-        EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
-  }
+        GenericDevice, EffectiveNumBlocks[0], LaunchArgs.Tripcount,
+        EffectiveNumThreads[0], LaunchArgs.Flags.StrictThreads,
+        LaunchArgs.UserThreadLimit[0] > 0);
 
   auto DynBlockMemConfOrErr = prepareBlockMemory(
-      GenericDevice, KernelArgs,
+      GenericDevice, LaunchArgs,
       EffectiveNumBlocks[0] * EffectiveNumBlocks[1] * EffectiveNumBlocks[2]);
   if (!DynBlockMemConfOrErr)
     return DynBlockMemConfOrErr.takeError();
@@ -292,26 +291,18 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
         DynBlockMemConf.FallbackPtr);
 
   auto KernelLaunchEnvOrErr =
-      getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
+      getKernelLaunchEnvironment(GenericDevice, LaunchArgs, DynBlockMemConf,
                                  AsyncInfoWrapper, EffectiveNumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  KernelLaunchParamsTy LaunchParams;
+  // Fill in the kernel launch environment (dyn_ptr) if this launch has a
+  // reserved slot for it. When replaying, getKernelLaunchEnvironment()
+  // returns null so the recorded value already in the slot is preserved.
+  if (LaunchArgs.DynPtrSlot && *KernelLaunchEnvOrErr)
+    *LaunchArgs.DynPtrSlot = *KernelLaunchEnvOrErr;
 
-  // Kernel languages do not use the OpenMP indirection and argument parsing.
-  if (KernelArgs.Flags.IsCUDA) {
-    LaunchParams =
-        *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else if (KernelArgs.Flags.IsPtrArgs) {
-    LaunchParams = KernelLaunchParamsTy{KernelArgs.NumArgs, KernelArgs.ArgPtrs};
-  } else {
-    LaunchParams =
-        prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
-                    Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
-  }
-
-  if (auto Err = printLaunchInfo(GenericDevice, KernelArgs, EffectiveNumThreads,
+  if (auto Err = printLaunchInfo(GenericDevice, LaunchArgs, EffectiveNumThreads,
                                  EffectiveNumBlocks))
     return Err;
 
@@ -324,16 +315,16 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
     // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, KernelArgs, KernelExtraArgs, LaunchParams, EffectiveNumBlocks,
-        EffectiveNumThreads, DynBlockMemConf.NativeSize);
+        *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
+        DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
   }
 
-  if (auto Err = launchImpl(GenericDevice, EffectiveNumThreads,
-                            EffectiveNumBlocks, DynBlockMemConf.NativeSize,
-                            KernelArgs, LaunchParams, AsyncInfoWrapper))
+  if (auto Err =
+          launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
+                     DynBlockMemConf.NativeSize, LaunchArgs, AsyncInfoWrapper))
     return Err;
 
   if (RecordReplay) {
@@ -345,41 +336,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     return RecordReplay->recordEpilogue(*this, RRHandle);
   }
   return Plugin::success();
-}
-
-KernelLaunchParamsTy
-GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                             ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-                             llvm::SmallVectorImpl<void *> &Args,
-                             llvm::SmallVectorImpl<void *> &Ptrs,
-                             KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
-                             uint32_t Version) const {
-  if (NumArgs == 0)
-    return KernelLaunchParamsTy{};
-
-  // The argument arrays already include the dyn_ptr slot at the end (appended
-  // by the host for version >= 4, or by upgradeKernelArgs for version 3).
-  Args.resize(NumArgs);
-  Ptrs.resize(NumArgs);
-
-  for (uint32_t I = 0; I < NumArgs; ++I)
-    Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(ArgPtrs[I]) +
-                                       ArgOffsets[I]);
-
-  // Optionally assign the KernelLaunchEnvironment to the last slot (dyn_ptr).
-  if (KernelLaunchEnvironment)
-    Args[NumArgs - 1] = KernelLaunchEnvironment;
-
-  // Version 3 device kernels have dyn_ptr baked in at position 0. Rotate the
-  // last element to the front to match the device ABI.
-  if (Version <= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR &&
-      KernelLaunchEnvironment)
-    std::rotate(Args.begin(), Args.end() - 1, Args.end());
-
-  for (uint32_t I = 0; I < NumArgs; ++I)
-    Ptrs[I] = &Args[I];
-
-  return KernelLaunchParamsTy{NumArgs, &Ptrs[0]};
 }
 
 uint32_t
@@ -397,7 +353,7 @@ GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
     GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
     uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-    bool IsNumThreadsFromUser) const {
+    bool IsNumThreadsStrict, bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
   // NOTE: This clamps the user-requested number of blocks to the device limit
@@ -428,7 +384,7 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
       // Honor the thread_limit clause; only lower the number of threads.
       [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
       if (LoopTripCount >= DefaultNumBlocks * EffectiveNumThreads ||
-          IsNumThreadsFromUser) {
+          IsNumThreadsFromUser || IsNumThreadsStrict) {
         // Enough parallelism for blocks and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
         assert(IsNumThreadsFromUser ||
@@ -598,9 +554,11 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     GridValues.GV_Max_WG_Size =
         std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
 
-  // Enable the memory manager if required.
+  // Enable the memory manager if required. Leave the pool disabled while
+  // allocation traces are requested, so that we don't mask use-after-free
+  // (since they don't fault if the memory is still in the pool).
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
-  if (EnableMM) {
+  if (EnableMM && !OMPX_TrackAllocationTraces) {
     if (ThresholdMM == 0)
       ThresholdMM = getMemoryManagerSizeThreshold();
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
@@ -674,6 +632,15 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
+
+  // An empty image is not a valid binary. Plugins behave differently given
+  // empty binaries - e.g. CUDA will map to INVALID_BINARY, while L0 will map to
+  // INVALID_SIZE (which is also associated with invalid kernel launch dims
+  // etc.), so we guard here for consistent behavior across plugins and API
+  // consumers (liboffload and libomptarget).
+  if (InputTgtImage.empty())
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "provided binary image is empty");
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -1138,6 +1105,18 @@ Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
+                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+  if (Size == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpyImpl(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
                                     __tgt_async_info *AsyncInfo) {
@@ -1167,10 +1146,8 @@ Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
   return Err;
 }
 
-Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
-                                    ptrdiff_t *ArgOffsets,
-                                    KernelArgsTy &KernelArgs,
-                                    KernelExtraArgsTy *KernelExtraArgs,
+Error GenericDeviceTy::launchKernel(void *EntryPtr,
+                                    KernelLaunchArgsTy &LaunchArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
@@ -1189,22 +1166,22 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
   }
 
-  auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                                  KernelExtraArgs, AsyncInfoWrapper);
+  auto Err = GenericKernel.launch(*this, LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
 
   return Err;
 }
 
-Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
+Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
+                                     __tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(Device, *AsyncInfoPtr);
 
-  auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  auto Err = initAsyncInfoImpl(Device, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1712,13 +1689,10 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
 }
 
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                                       void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                       KernelArgsTy *KernelArgs,
-                                       KernelExtraArgsTy *KernelExtraArgs,
+                                       KernelLaunchArgsTy &LaunchArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets,
-                                              *KernelArgs, KernelExtraArgs,
-                                              AsyncInfoPtr);
+  auto Err =
+      getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs, AsyncInfoPtr);
   if (Err) {
     REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
              << DeviceId << ": " << toString(std::move(Err));
@@ -1844,20 +1818,6 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
 void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-}
-
-int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
-                                         __tgt_async_info **AsyncInfoPtr) {
-  assert(AsyncInfoPtr && "Invalid async info");
-
-  auto Err = getDevice(DeviceId).initAsyncInfo(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to initialize async info at " << *AsyncInfoPtr
-             << " on device " << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::set_device_identifier(int32_t UserId,

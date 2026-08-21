@@ -64,6 +64,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
@@ -117,6 +118,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -357,7 +359,7 @@ private:
   void visitNoFPClassMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
-  void visitNofreeMetadata(Instruction &I, MDNode *MD);
+  void visitNoFreeObjMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
@@ -1007,6 +1009,15 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "smaller",
             CurrentMD);
     }
+
+    // Enforce the single-operand form of the loop enable/disable pairs.
+    if (CurrentMD->getNumOperands() > 0 &&
+        any_of(OldBooleanLoopTags, [CurrentMD](const BooleanLoopTags &Tags) {
+          return CurrentMD->getOperand(0).equalsStr(Tags.Enable) ||
+                 CurrentMD->getOperand(0).equalsStr(Tags.Disable);
+        }))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expecting only the metadata name", CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -1992,6 +2003,32 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Check(Value, "wchar_size metadata requires constant integer argument");
   }
 
+  if (ID->getString() == "long-double-type") {
+    Check(MFB == Module::Error,
+          "long-double-type module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "long-double-type metadata requires a string argument");
+    if (Value)
+      Check(parseLongDoubleFormat(Value->getString()).has_value(),
+            "invalid long-double-type metadata value", Op);
+  }
+
+  if (ID->getString() == "float-abi") {
+    Check(MFB == Module::Error,
+          "float-abi module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "float-abi metadata requires a string argument");
+    if (Value)
+      Check(FloatABI::parseABIType(Value->getString()).has_value(),
+            "invalid float-abi metadata value", Op);
+  }
+
+  if (ID->getString() == "target-abi") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "target-abi metadata requires a non-empty string argument", Op);
+  }
+
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -2520,6 +2557,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-to-size", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-value", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
@@ -4582,6 +4621,18 @@ void Verifier::visitLoadInst(LoadInst &LI) {
     Check(LI.getOrdering() != AtomicOrdering::Release &&
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
+
+    if (LI.isElementwise()) {
+      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise load cannot be sequentially consistent.", &LI);
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise load operand must have fixed vector type!", &LI,
+            ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &LI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4591,6 +4642,7 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 
     checkAtomicMemAccessSize(ElTy, &LI);
   } else {
+    Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
           "Non-atomic load cannot have SynchronizationScope specified", &LI);
   }
@@ -4611,6 +4663,19 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
+
+    if (SI.isElementwise()) {
+      Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise store cannot be sequentially consistent.", &SI);
+
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise store operand must have fixed vector type!",
+            &SI, ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4619,6 +4684,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
+    Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }
@@ -4704,30 +4770,33 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Type *ScalarTy = ElTy;
+  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
+    Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
     if (VecTy)
-      ScalarTy = VecTy->getElementType();
+      checkAtomicMemAccessSize(VecTy->getElementType(), &RMWI);
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
-              ScalarTy->isPointerTy(),
+    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+           ElTy->isPtrOrPtrVectorTy()),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer or floating point type!",
+              " operand must be an integer type, a floating-point type, a "
+              "pointer type, or a fixed vector of any of these types!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isFPOrFPVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have floating-point or fixed vector of "
               "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isIntOrIntVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);
@@ -5229,11 +5298,12 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         &I);
 }
 
-void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
-  Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
-  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
+void Verifier::visitNoFreeObjMetadata(Instruction &I, MDNode *MD) {
+  Check(I.getType()->isPointerTy(), "nofreeobj applies only to pointer types",
         &I);
-  Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
+  Check((isa<IntToPtrInst>(I)),
+        "nofreeobj applies only to inttoptr instruction", &I);
+  Check(MD->getNumOperands() == 0, "nofreeobj metadata must be empty", &I);
 }
 
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
@@ -5459,17 +5529,11 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
           Op);
     auto *CallgraphMD = cast<MDNode>(Op);
     Check(CallgraphMD->getNumOperands() == 1,
-          "Well-formed generalized callgraph metadata must contain exactly one "
+          "Well-formed callgraph metadata must contain exactly one "
           "operand",
           Op);
     Check(isa<MDString>(CallgraphMD->getOperand(0)),
           "The operand of callgraph metadata for functions must be an MDString",
-          Op);
-    Check(cast<MDString>(CallgraphMD->getOperand(0))
-              ->getString()
-              .ends_with(".generalized"),
-          "Only generalized callgraph metadata can be part of the callee_type "
-          "metadata list",
           Op);
   }
 }
@@ -5526,11 +5590,15 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
     return MD->getNumOperands() == 0 && MD->isDistinct();
   };
 
-  // It must be either an access scope itself...
-  if (IsValidAccessScope(MD))
+  // An empty node is an access scope, and it must be 'distinct'. It is never a
+  // list, because an empty list is not allowed: it would look the same as an
+  // access scope.
+  if (MD->getNumOperands() == 0) {
+    Check(MD->isDistinct(), "Access scope must be 'distinct'", MD);
     return;
+  }
 
-  // ...or a list of access scopes.
+  // A non-empty node is a list of access scopes.
   for (const MDOperand &Op : MD->operands()) {
     const auto *OpMD = dyn_cast<MDNode>(Op);
     Check(OpMD != nullptr, "Access scope list must consist of MDNodes", MD);
@@ -5842,8 +5910,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
     visitDereferenceableMetadata(I, MD);
 
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofree))
-    visitNofreeMetadata(I, MD);
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofreeobj))
+    visitNoFreeObjMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
@@ -5906,6 +5974,17 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.expected.active.lanes must have exactly one operand", &I,
+          MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.expected.active.lanes operand must be an i32 constant", &I,
+          MD);
+  }
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
@@ -6649,7 +6728,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::matrix_column_major_load:
   case Intrinsic::matrix_column_major_store: {
     Function *IF = Call.getCalledFunction();
-    ConstantInt *Stride = nullptr;
+    Value *Stride = nullptr;
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
     VectorType *ResultTy;
@@ -6686,14 +6765,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
     case Intrinsic::matrix_column_major_load: {
-      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
+      Stride = Call.getArgOperand(1);
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
       break;
     }
     case Intrinsic::matrix_column_major_store: {
-      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
+      Stride = Call.getArgOperand(2);
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
@@ -6725,12 +6804,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
-    if (Stride) {
-      Check(Stride->getBitWidth() <= 64, "Stride bitwidth cannot exceed 64!",
-            IF);
-      Check(Stride->getZExtValue() >= NumRows->getZExtValue(),
-            "Stride must be greater or equal than the number of rows!", IF);
-    }
+    if (Stride)
+      Check(Stride->getType()->getIntegerBitWidth() <= 64,
+            "Stride bitwidth cannot exceed 64!", IF);
 
     break;
   }

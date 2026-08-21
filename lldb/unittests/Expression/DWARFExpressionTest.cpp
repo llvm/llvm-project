@@ -27,6 +27,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,12 +46,15 @@ namespace {
 /// with the DWARF version being configurable via the constructor.
 class MockDwarfDelegate : public DWARFExpression::Delegate {
 public:
+  using DebugAddrMap = std::unordered_map<uint32_t, dw_addr_t>;
+
   static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
   static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
   static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
 
   MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
-  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
+  explicit MockDwarfDelegate(uint16_t version, DebugAddrMap debug_addr = {})
+      : m_dwarf_version(version), m_debug_addr(std::move(debug_addr)) {}
 
   uint16_t GetVersion() const override { return m_dwarf_version; }
 
@@ -65,7 +69,8 @@ public:
   }
 
   dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const override {
-    return 0;
+    auto it = m_debug_addr.find(index);
+    return it == m_debug_addr.end() ? LLDB_INVALID_ADDRESS : it->second;
   }
 
   lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
@@ -83,6 +88,7 @@ public:
 
 private:
   uint16_t m_dwarf_version;
+  DebugAddrMap m_debug_addr;
 };
 
 /// Mock memory implementation for testing.
@@ -142,8 +148,9 @@ struct MockProcess : Process {
   MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
               MockMemory memory)
       : Process(target_sp, listener_sp), m_memory(std::move(memory)) {}
-  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    addr_t vm_addr = process_addr.GetValue();
     auto expected_memory = m_memory.ReadMemory(vm_addr, size);
     if (!expected_memory) {
       error = Status::FromError(expected_memory.takeError());
@@ -153,9 +160,9 @@ struct MockProcess : Process {
     std::memcpy(buf, expected_memory->data(), expected_memory->size());
     return size;
   }
-  size_t ReadMemory(addr_t addr, void *buf, size_t size,
+  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
                     Status &status) override {
-    return DoReadMemory(addr, buf, size, status);
+    return DoReadMemory(process_addr, buf, size, status);
   }
   bool CanDebug(lldb::TargetSP, bool) override { return true; }
   Status DoDestroy() override { return Status(); }
@@ -229,6 +236,24 @@ public:
 private:
   RegisterInfo m_reg_info{};
   RegisterValue m_reg_value{};
+};
+
+class MockStackFrame : public StackFrame {
+public:
+  MockStackFrame(const lldb::ThreadSP &thread_sp, Scalar frame_base)
+      : StackFrame(thread_sp, /*frame_idx=*/0, /*concrete_frame_idx=*/0,
+                   /*cfa=*/0, /*cfa_is_valid=*/true, /*pc=*/0,
+                   StackFrame::Kind::Regular, /*artificial=*/false,
+                   /*behaves_like_zeroth_frame=*/true, /*sc_ptr=*/nullptr),
+        m_frame_base(std::move(frame_base)) {}
+
+  llvm::Error GetFrameBaseValue(Scalar &value) override {
+    value = m_frame_base;
+    return llvm::Error::success();
+  }
+
+private:
+  Scalar m_frame_base;
 };
 } // namespace
 
@@ -453,6 +478,16 @@ DWARF:
               Form:            DW_FORM_data1
             - Attribute:       DW_AT_byte_size
               Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_bit_size
+              Form:            DW_FORM_data1
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -506,6 +541,12 @@ DWARF:
           Values:
             - Value:           0x0000000000000007 # DW_ATE_unsigned
             - Value:           0x0000000000000004
+        # 0x00000023:
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000004
+            - Value:           0x000000000000001f
         - AbbrCode:        0x00000000
 
 )";
@@ -516,6 +557,7 @@ DWARF:
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
   uint8_t offs_enum = 0x00000020;
+  uint8_t offs_sint31_t = 0x00000023;
 
   DWARFExpressionTester t(yamldata, /*cu_index=*/1);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
@@ -569,6 +611,18 @@ DWARF:
                                offs_schar, DW_OP_stack_value}),
                        ExpectScalar(8, 'A', is_signed));
 
+  // Prefer DW_AT_bit_size over DW_AT_byte_size when both are present.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0x40, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
+
+  // Truncate the high bit when the value crosses the 31-bit boundary.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0xc0, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
+
   //
   // Errors.
   //
@@ -607,6 +661,109 @@ DWARF:
       Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
       llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
                               "(stack has 0 entries)"));
+}
+
+TEST(DWARFExpression, TypedBinaryOpsRejectMismatchedTypes) {
+  class TypedDwarfDelegate : public MockDwarfDelegate {
+  public:
+    enum : uint8_t {
+      UnsignedChar = 1,
+      SignedChar = 2,
+      UnsignedShort = 3,
+    };
+
+    llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+      switch (relative_die_offset) {
+      case UnsignedChar:
+        return std::pair<uint64_t, bool>{8, false};
+      case SignedChar:
+        return std::pair<uint64_t, bool>{8, true};
+      case UnsignedShort:
+        return std::pair<uint64_t, bool>{16, false};
+      default:
+        return llvm::createStringError("unknown base type offset");
+      }
+    }
+  };
+
+  TypedDwarfDelegate unit;
+  constexpr uint8_t opcodes[] = {
+      DW_OP_plus, DW_OP_minus, DW_OP_div, DW_OP_mod, DW_OP_mul,  DW_OP_and,
+      DW_OP_or,   DW_OP_xor,   DW_OP_shl, DW_OP_shr, DW_OP_shra, DW_OP_lt,
+      DW_OP_le,   DW_OP_gt,    DW_OP_ge,  DW_OP_eq,  DW_OP_ne,
+  };
+
+  for (uint8_t opcode : opcodes) {
+    std::vector<uint8_t> expr = {DW_OP_constu,
+                                 0xff,
+                                 0x01,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedChar,
+                                 DW_OP_lit1,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedShort,
+                                 opcode,
+                                 DW_OP_stack_value};
+    EXPECT_THAT_EXPECTED(Evaluate(expr, {}, &unit), llvm::Failed())
+        << "opcode 0x" << llvm::utohexstr(opcode);
+  }
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constu, 0xff, 0x01, DW_OP_convert,
+                TypedDwarfDelegate::UnsignedChar, DW_OP_lit1, DW_OP_convert,
+                TypedDwarfDelegate::SignedChar, DW_OP_plus, DW_OP_stack_value},
+               {}, &unit),
+      llvm::Failed());
+}
+
+TEST(DWARFExpression, GenericBinaryOpsAllowDifferentSignedness) {
+  // The DWARF generic type has unspecified signedness, so differently signed
+  // address-sized generic values are still compatible operands.
+  uint8_t expr[] = {DW_OP_lit8, DW_OP_consts, 4, DW_OP_minus,
+                    DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 8);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(4));
+}
+
+TEST(DWARFExpression, RelationalOpsProduceGenericResult) {
+  struct TestCase {
+    uint8_t opcode;
+    uint8_t lhs;
+    uint8_t rhs;
+  };
+  constexpr TestCase test_cases[] = {
+      {DW_OP_eq, 3, 3}, {DW_OP_ge, 4, 3}, {DW_OP_gt, 4, 3},
+      {DW_OP_le, 3, 4}, {DW_OP_lt, 3, 4}, {DW_OP_ne, 3, 4},
+  };
+
+  for (const TestCase &test : test_cases) {
+    const std::vector<uint8_t> expr = {
+        DW_OP_lit8,
+        static_cast<uint8_t>(DW_OP_lit0 + test.lhs),
+        static_cast<uint8_t>(DW_OP_lit0 + test.rhs),
+        test.opcode,
+        DW_OP_plus,
+        DW_OP_stack_value,
+    };
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+
+    EXPECT_THAT_EXPECTED(
+        DWARFExpression::Evaluate(
+            /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+            extractor, /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+            /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+        ExpectScalar(64, 9, false))
+        << "opcode 0x" << llvm::utohexstr(test.opcode);
+  }
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
@@ -701,6 +858,31 @@ TEST(DWARFExpression, DW_OP_addr) {
       ExpectScalar(uint32_t{0x40302010}));
 }
 
+TEST(DWARFExpression, DW_OP_addr_address_size) {
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result = Evaluate({DW_OP_addr, 0x2a, 0x00, 0x00, 0x00, DW_OP_const4u,
+                          0xff, 0xff, 0xff, 0xff, DW_OP_plus, DW_OP_lit1,
+                          DW_OP_plus, DW_OP_stack_value});
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST(DWARFExpression, DW_OP_addr_index_address_size) {
+  MockDwarfDelegate unit(/*version=*/5,
+                         /*debug_addr=*/{{0, 0x11}, {1, 0x2a}});
+  for (uint8_t opcode : {static_cast<uint8_t>(DW_OP_addrx),
+                         static_cast<uint8_t>(DW_OP_GNU_addr_index)}) {
+    SCOPED_TRACE(static_cast<unsigned>(opcode));
+    auto result =
+        Evaluate({opcode, 0x01, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                  DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+                 {}, &unit);
+    ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+    EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+  }
+}
+
 TEST(DWARFExpression, DW_OP_addr_big_endian) {
   // Same operand bytes, big-endian extractor: the address must be read in
   // target byte order.
@@ -775,6 +957,61 @@ TEST(DWARFExpression, DW_OP_plus_uconst) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
                                  DW_OP_plus_uconst, 5}),
                        ExpectScalar(static_cast<int32_t>(-5)));
+}
+
+TEST(DWARFExpression, DW_OP_plus_uconst_typed) {
+  class TypedDwarfDelegate : public MockDwarfDelegate {
+  public:
+    enum : uint8_t {
+      UnsignedChar = 1,
+      SignedChar = 2,
+    };
+
+    llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+      switch (relative_die_offset) {
+      case UnsignedChar:
+        return std::pair<uint64_t, bool>{8, false};
+      case SignedChar:
+        return std::pair<uint64_t, bool>{8, true};
+      default:
+        return llvm::createStringError("unknown base type offset");
+      }
+    }
+  };
+  TypedDwarfDelegate unit;
+
+  // The addend is interpreted as the same type as the popped operand
+  // (DWARF v5, 2.5.1.4), so the addition wraps within that type.
+  // (unsigned char)0xff + 1 == 0
+  auto result = Evaluate({DW_OP_const1u, 0xff, DW_OP_convert,
+                          TypedDwarfDelegate::UnsignedChar, DW_OP_plus_uconst,
+                          1, DW_OP_stack_value},
+                         {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0, /*sign=*/false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_FALSE(result->GetScalar().IsSigned());
+
+  // (signed char)0x7f + 1 == -128
+  result = Evaluate({DW_OP_const1u, 0x7f, DW_OP_convert,
+                     TypedDwarfDelegate::SignedChar, DW_OP_plus_uconst, 1,
+                     DW_OP_stack_value},
+                    {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0x80, /*sign=*/true));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_TRUE(result->GetScalar().IsSigned());
+
+  // The reproducer from the issue: if 0xff + 1 fails to wrap to zero, the
+  // subsequent right shift produces 1 instead of 0.
+  result =
+      Evaluate({DW_OP_const8u, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_convert, TypedDwarfDelegate::UnsignedChar,
+                DW_OP_plus_uconst, 1, DW_OP_const1u, 7, DW_OP_convert,
+                TypedDwarfDelegate::UnsignedChar, DW_OP_shr, DW_OP_stack_value},
+               {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0, /*sign=*/false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_FALSE(result->GetScalar().IsSigned());
 }
 
 TEST(DWARFExpression, DW_OP_and) {
@@ -1044,13 +1281,13 @@ TEST(DWARFExpression, DW_OP_deref_size_too_large) {
 TEST(DWARFExpression, DW_OP_xderef_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef}),
-      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef"));
 }
 
 TEST(DWARFExpression, DW_OP_xderef_size_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_size, 4}),
-      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef_size"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef_size"));
 }
 
 TEST(DWARFExpression, DW_OP_call2_unimplemented) {
@@ -1065,12 +1302,11 @@ TEST(DWARFExpression, DW_OP_call4_unimplemented) {
       llvm::FailedWithMessage("unimplemented opcode DW_OP_call4"));
 }
 
-TEST(DWARFExpression, DW_OP_call_ref_unhandled) {
+TEST(DWARFExpression, DW_OP_call_ref_unimplemented) {
   // call_ref has stack arity 1 in LLVM's table, so push a value first.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_call_ref in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call_ref"));
 }
 
 TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
@@ -1079,53 +1315,48 @@ TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
       llvm::Failed());
 }
 
-TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unhandled) {
+TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_GNU_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
       llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_GNU_implicit_pointer in DWARFExpression"));
+          "unimplemented opcode DW_OP_GNU_implicit_pointer"));
 }
 
-TEST(DWARFExpression, DW_OP_const_type_unhandled) {
+TEST(DWARFExpression, DW_OP_const_type_unimplemented) {
   // const_type: ULEB128 type DIE offset, 1-byte size, N-byte value block.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_const_type, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_const_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_const_type"));
 }
 
-TEST(DWARFExpression, DW_OP_regval_type_unhandled) {
+TEST(DWARFExpression, DW_OP_regval_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_regval_type, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_regval_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_regval_type"));
 }
 
-TEST(DWARFExpression, DW_OP_deref_type_unhandled) {
+TEST(DWARFExpression, DW_OP_deref_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_deref_type, 0x04, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_deref_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_deref_type"));
 }
 
-TEST(DWARFExpression, DW_OP_xderef_type_unhandled) {
+TEST(DWARFExpression, DW_OP_xderef_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_type, 0x04, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_xderef_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef_type"));
 }
 
-TEST(DWARFExpression, DW_OP_constx_unhandled) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_constx, 0x00}),
-                       llvm::FailedWithMessage(
-                           "unhandled opcode DW_OP_constx in DWARFExpression"));
+TEST(DWARFExpression, DW_OP_constx_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constx, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_constx"));
 }
 
-TEST(DWARFExpression, DW_OP_reinterpret_unhandled) {
+TEST(DWARFExpression, DW_OP_reinterpret_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_reinterpret, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_reinterpret in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_reinterpret"));
 }
 
 // Register-based tests need a register context. MockRegisterContext returns the
@@ -1218,6 +1449,54 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx) {
                        ExpectLoadAddress(0x2010));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", RegisterValue(uint32_t{0x2a})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result =
+      Evaluate({DW_OP_breg0, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint64_t{0x10000002a})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+
+  // The register backend may expose a value wider than the target address.
+  auto result =
+      Evaluate({DW_OP_bregx, 0x40, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_fbreg_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux"));
+  lldb::StackFrameSP frame_sp =
+      std::make_shared<MockStackFrame>(ctx.thread_sp, Scalar(uint32_t{0x2a}));
+  ExecutionContext exe_ctx(frame_sp);
+
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result =
+      Evaluate({DW_OP_fbreg, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
@@ -1240,6 +1519,27 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   // Memory location: *0x4.
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4}, {}, {}, &exe_ctx),
                        ExpectScalar(Scalar(4)));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_address_size) {
+  MockMemory::Map memory = {
+      {{0x4, 4}, {0x2a, 0x00, 0x00, 0x00}},
+      {{0x8, 1}, {0xff}},
+  };
+  TestContext test_ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, std::move(memory)));
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+
+  auto deref_result =
+      Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(deref_result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(deref_result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+
+  auto deref_size_result = Evaluate(
+      {DW_OP_lit8, DW_OP_deref_size, 1, DW_OP_stack_value}, {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(deref_size_result, ExpectScalar(32, 0xff, false));
+  EXPECT_EQ(deref_size_result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {

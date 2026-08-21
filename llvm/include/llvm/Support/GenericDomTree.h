@@ -269,9 +269,10 @@ template <typename NodeT> struct DomTreeNodeTraits {
 ///
 /// This class is a generic template over graph nodes. It is instantiated for
 /// various graphs in the LLVM IR or in the code generator.
-template <typename NodeT, bool IsPostDom>
-class DominatorTreeBase {
- public:
+template <typename NodeT, bool IsPostDom> class DominatorTreeBase {
+public:
+  static_assert(GraphHasNodeNumbers<NodeT *>,
+                "DominatorTreeBase requires graphs with numbered nodes");
   static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
                 "Currently DominatorTreeBase supports only pointer nodes");
   using NodeTrait = DomTreeNodeTraits<NodeT>;
@@ -296,11 +297,6 @@ protected:
 
   using DomTreeNodeStorageTy = SmallVector<DomTreeNodeBase<NodeT> *>;
   DomTreeNodeStorageTy DomTreeNodes;
-  // For graphs where blocks don't have numbers, create a numbering here.
-  // TODO: use an empty struct with [[no_unique_address]] in C++20.
-  std::conditional_t<!GraphHasNodeNumbers<NodeT *>,
-                     DenseMap<const NodeT *, unsigned>, std::tuple<>>
-      NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
@@ -392,41 +388,15 @@ private:
     });
   }
 
-  std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
-    if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      assert(BlockNumberEpoch ==
-                 GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
-             "dominator tree used with outdated block numbers");
-      if constexpr (IsPostDom) {
-        if (!BB)
-          return 0; // BB may be nullptr for post-dominator tree, map to 0.
-      } else
-        assert(BB && "dominator tree block must be non-null");
-      return GraphTraits<const NodeT *>::getNumber(BB) + 1;
-    } else {
-      if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
-        return It->second;
-      return std::nullopt;
-    }
-  }
-
-  unsigned getNodeIndexForInsert(const NodeT *BB) {
-    if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      // getNodeIndex will never fail if nodes have getNumber().
-      unsigned Idx = *getNodeIndex(BB);
-      if (Idx >= DomTreeNodes.size()) {
-        unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent);
-        DomTreeNodes.resize(Max > Idx + 1 ? Max : Idx + 1);
-      }
-      return Idx;
-    } else {
-      // We might already have a number stored for BB.
-      unsigned Idx =
-          NodeNumberMap.try_emplace(BB, DomTreeNodes.size()).first->second;
-      if (Idx >= DomTreeNodes.size())
-        DomTreeNodes.resize(Idx + 1);
-      return Idx;
-    }
+  unsigned getNodeIndex(const NodeT *BB) const {
+    assert(BlockNumberEpoch == GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
+           "dominator tree used with outdated block numbers");
+    if constexpr (IsPostDom) {
+      if (!BB)
+        return 0; // BB may be nullptr for post-dominator tree, map to 0.
+    } else
+      assert(BB && "dominator tree block must be non-null");
+    return GraphTraits<const NodeT *>::getNumber(BB) + IsPostDom;
   }
 
 public:
@@ -437,8 +407,8 @@ public:
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
     assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
            "cannot get DomTreeNode of block with different parent");
-    if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
-      return DomTreeNodes[*Idx];
+    if (unsigned Idx = getNodeIndex(BB); Idx < DomTreeNodes.size())
+      return DomTreeNodes[Idx];
     return nullptr;
   }
 
@@ -492,10 +462,8 @@ public:
   bool isReachableFromEntry(const NodeT *A) const {
     assert(!this->isPostDominator() &&
            "This is not implemented for post dominators");
-    return isReachableFromEntry(getNode(A));
+    return getNode(A) != nullptr;
   }
-
-  bool isReachableFromEntry(const DomTreeNodeBase<NodeT> *A) const { return A; }
 
   /// dominates - Returns true iff A dominates B.  Note that this is not a
   /// constant time operation!
@@ -507,11 +475,11 @@ public:
       return true;
 
     // An unreachable node is dominated by anything.
-    if (!isReachableFromEntry(B))
+    if (!B)
       return true;
 
     // And dominates nothing.
-    if (!isReachableFromEntry(A))
+    if (!A)
       return false;
 
     if (B->getIDom() == A) return true;
@@ -645,11 +613,7 @@ public:
   /// \param Updates An ordered sequence of updates to perform. The current CFG
   /// and the reverse of these updates provides the pre-view of the CFG.
   ///
-  void applyUpdates(ArrayRef<UpdateType> Updates) {
-    GraphDiff<NodePtr, IsPostDominator> PreViewCFG(
-        Updates, /*ReverseApplyUpdates=*/true);
-    DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, nullptr);
-  }
+  void applyUpdates(ArrayRef<UpdateType> Updates);
 
   /// \param Updates An ordered sequence of updates to perform. The current CFG
   /// and the reverse of these updates provides the pre-view of the CFG.
@@ -657,24 +621,7 @@ public:
   /// to obtain a post-view of the CFG. The DT will be updated assuming the
   /// obtained PostViewCFG is the desired end state.
   void applyUpdates(ArrayRef<UpdateType> Updates,
-                    ArrayRef<UpdateType> PostViewUpdates) {
-    if (Updates.empty()) {
-      GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
-      DomTreeBuilder::ApplyUpdates(*this, PostViewCFG, &PostViewCFG);
-    } else {
-      // PreViewCFG needs to merge Updates and PostViewCFG. The updates in
-      // Updates need to be reversed, and match the direction in PostViewCFG.
-      // The PostViewCFG is created with updates reversed (equivalent to changes
-      // made to the CFG), so the PreViewCFG needs all the updates reverse
-      // applied.
-      SmallVector<UpdateType> AllUpdates(Updates);
-      append_range(AllUpdates, PostViewUpdates);
-      GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
-                                               /*ReverseApplyUpdates=*/true);
-      GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
-      DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, &PostViewCFG);
-    }
-  }
+                    ArrayRef<UpdateType> PostViewUpdates);
 
   /// Inform the dominator tree about a CFG edge insertion and update the tree.
   ///
@@ -685,13 +632,7 @@ public:
   /// Note that for postdominators it automatically takes care of inserting
   /// a reverse edge internally (so there's no need to swap the parameters).
   ///
-  void insertEdge(NodeT *From, NodeT *To) {
-    assert(From);
-    assert(To);
-    assert(NodeTrait::getParent(From) == Parent);
-    assert(NodeTrait::getParent(To) == Parent);
-    DomTreeBuilder::InsertEdge(*this, From, To);
-  }
+  void insertEdge(NodeT *From, NodeT *To);
 
   /// Inform the dominator tree about a CFG edge deletion and update the tree.
   ///
@@ -703,13 +644,7 @@ public:
   /// Note that for postdominators it automatically takes care of deleting
   /// a reverse edge internally (so there's no need to swap the parameters).
   ///
-  void deleteEdge(NodeT *From, NodeT *To) {
-    assert(From);
-    assert(To);
-    assert(NodeTrait::getParent(From) == Parent);
-    assert(NodeTrait::getParent(To) == Parent);
-    DomTreeBuilder::DeleteEdge(*this, From, To);
-  }
+  void deleteEdge(NodeT *From, NodeT *To);
 
   /// Add a new node to the dominator tree information.
   ///
@@ -771,10 +706,9 @@ public:
   /// dominate any other blocks. Removes node from its immediate dominator's
   /// children list. Deletes dominator node associated with basic block BB.
   void eraseNode(NodeT *BB) {
-    std::optional<unsigned> IdxOpt = getNodeIndex(BB);
-    assert(IdxOpt && DomTreeNodes[*IdxOpt] &&
-           "Removing node that isn't in dominator tree.");
-    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt];
+    unsigned Idx = getNodeIndex(BB);
+    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[Idx];
+    assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
@@ -783,9 +717,7 @@ public:
     if (DomTreeNodeBase<NodeT> *IDom = Node->getIDom())
       IDom->removeChild(Node);
 
-    DomTreeNodes[*IdxOpt] = nullptr;
-    if constexpr (!GraphHasNodeNumbers<NodeT *>)
-      NodeNumberMap.erase(BB);
+    DomTreeNodes[Idx] = nullptr;
 
     if (!IsPostDom) return;
 
@@ -878,41 +810,25 @@ public:
 
 private:
   void updateBlockNumberEpoch() {
-    // Nothing to do for graphs that don't number their blocks.
-    if constexpr (GraphHasNodeNumbers<NodeT *>)
-      BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
+    BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
   }
 
 public:
   /// recalculate - compute a dominator tree for the given function
-  void recalculate(ParentType &Func) {
-    Parent = &Func;
-    updateBlockNumberEpoch();
-    DomTreeBuilder::Calculate(*this);
-  }
+  void recalculate(ParentType &Func);
 
-  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates) {
-    Parent = &Func;
-    updateBlockNumberEpoch();
-    DomTreeBuilder::CalculateWithUpdates(*this, Updates);
-  }
+  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates);
 
   /// Update dominator tree after renumbering blocks.
-  template <typename T = NodeT>
-  std::enable_if_t<GraphHasNodeNumbers<T *>, void> updateBlockNumbers() {
+  void updateBlockNumbers() {
     updateBlockNumberEpoch();
 
     unsigned MaxNumber = GraphTraits<ParentPtr>::getMaxNumber(Parent);
     DomTreeNodeStorageTy NewVector;
-    NewVector.resize(MaxNumber + 1); // +1, because index 0 is for nullptr
-    for (auto &Node : DomTreeNodes) {
-      if (!Node)
-        continue;
-      unsigned Idx = *getNodeIndex(Node->getBlock());
-      // getMaxNumber is not necessarily supported
-      if (Idx >= NewVector.size())
-        NewVector.resize(Idx + 1);
-      NewVector[Idx] = std::move(Node);
+    NewVector.resize(MaxNumber + IsPostDom); // index 0 is for nullptr
+    for (DomTreeNodeBase<NodeT> *Node : DomTreeNodes) {
+      if (Node)
+        NewVector[getNodeIndex(Node->getBlock())] = Node;
     }
     DomTreeNodes = std::move(NewVector);
   }
@@ -931,14 +847,10 @@ public:
   ///             constructed tree.
   ///             Takes O(N^2) time worst case, but is faster in practise (same
   ///             as tree construction).
-  bool verify(VerificationLevel VL = VerificationLevel::Full) const {
-    return DomTreeBuilder::Verify(*this, VL);
-  }
+  bool verify(VerificationLevel VL = VerificationLevel::Full) const;
 
   void reset() {
     DomTreeNodes.clear();
-    if constexpr (!GraphHasNodeNumbers<NodeT *>)
-      NodeNumberMap.clear();
     Roots.clear();
     RootNode = nullptr;
     Parent = nullptr;
@@ -954,8 +866,14 @@ protected:
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
     static_assert(std::is_trivially_destructible_v<DomTreeNodeBase<NodeT>>);
     auto *Node = new (NodeAllocator) DomTreeNodeBase<NodeT>(BB, IDom);
-    unsigned NodeIdx = getNodeIndexForInsert(BB);
-    DomTreeNodes[NodeIdx] = Node;
+    unsigned Idx = getNodeIndex(BB);
+    if (Idx >= DomTreeNodes.size()) {
+      // Add 1 for post-dominator trees, 0 is nullptr block.
+      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent) + IsPostDom;
+      assert(Idx < Max && "getMaxNumber returned too small value");
+      DomTreeNodes.resize(Max);
+    }
+    DomTreeNodes[Idx] = Node;
     if (IDom)
       IDom->addChild(Node);
     return Node;
@@ -1019,8 +937,7 @@ protected:
   bool dominatedBySlowTreeWalk(const DomTreeNodeBase<NodeT> *A,
                                const DomTreeNodeBase<NodeT> *B) const {
     assert(A != B);
-    assert(isReachableFromEntry(B));
-    assert(isReachableFromEntry(A));
+    assert(A && B);
 
     const unsigned ALevel = A->getLevel();
     const DomTreeNodeBase<NodeT> *IDom;

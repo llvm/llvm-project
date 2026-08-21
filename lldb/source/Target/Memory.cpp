@@ -57,18 +57,18 @@ void MemoryCache::Flush(addr_t addr, size_t size) {
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  // Erase any blocks from the L1 cache that intersect with the flush range
+  // L1 chunks can overlap, and a chunk starting below addr can still reach
+  // into the flushed range, so scan the whole L1 cache and erase every chunk
+  // that intersects it.
   if (!m_L1_cache.empty()) {
     AddrRange flush_range(addr, size);
-    BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
-    if (pos != m_L1_cache.begin()) {
-      --pos;
-    }
+    BlockMap::iterator pos = m_L1_cache.begin();
     while (pos != m_L1_cache.end()) {
       AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-      if (!chunk_range.DoesIntersect(flush_range))
-        break;
-      pos = m_L1_cache.erase(pos);
+      if (chunk_range.DoesIntersect(flush_range))
+        pos = m_L1_cache.erase(pos);
+      else
+        ++pos;
     }
   }
 
@@ -136,6 +136,27 @@ const uint8_t *MemoryCache::FindL1CacheEntry(lldb::addr_t addr,
   if (!chunk_range.Contains(read_range))
     return nullptr;
   return pos->second->GetBytes() + (addr - chunk_range.GetRangeBase());
+}
+
+const uint8_t *MemoryCache::FindL2CacheEntry(lldb::addr_t addr,
+                                             size_t len) const {
+  if (m_L2_cache.empty())
+    return nullptr;
+  const lldb::addr_t line_offset = addr % m_L2_cache_line_byte_size;
+  BlockMap::const_iterator pos = m_L2_cache.find(addr - line_offset);
+  if (pos == m_L2_cache.end())
+    return nullptr;
+  if (line_offset + len > pos->second->GetByteSize())
+    return nullptr;
+  return pos->second->GetBytes() + line_offset;
+}
+
+const uint8_t *MemoryCache::FindCacheEntry(lldb::addr_t addr,
+                                           size_t len) const {
+  const uint8_t *cached = FindL1CacheEntry(addr, len);
+  if (!cached)
+    cached = FindL2CacheEntry(addr, len);
+  return cached;
 }
 
 lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
@@ -280,7 +301,7 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   results.reserve(ranges.size());
   llvm::SmallVector<Range<lldb::addr_t, size_t>> missed_ranges;
 
-  // Iterate once serving requests from L1.
+  // Iterate once serving requests from the caches.
   for (auto range : ranges) {
     const lldb::addr_t addr = range.GetRangeBase();
     const size_t len = range.GetByteSize();
@@ -290,10 +311,11 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
       continue;
     }
 
-    if (const uint8_t *l1_data = FindL1CacheEntry(addr, len)) {
+    const uint8_t *cached = FindCacheEntry(addr, len);
+    if (cached) {
       results.push_back(buffer.take_front(len));
       buffer = buffer.drop_front(len);
-      memcpy(results.back().data(), l1_data, len);
+      memcpy(results.back().data(), cached, len);
       continue;
     }
 

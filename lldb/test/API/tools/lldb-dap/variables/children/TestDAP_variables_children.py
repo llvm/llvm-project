@@ -1,8 +1,7 @@
-from lldbsuite.test.decorators import expectedFailureAll
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectVar
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_variables_children(DAPTestCaseBase):
@@ -41,6 +40,7 @@ class TestDAP_variables_children(DAPTestCaseBase):
         self.assertIn("['Indexed']", resp_body.result)
 
     @expectedFailureAll(archs=["arm$", "arm64", "aarch64"])
+    @skipIfWasm  # there is no ABI plugin for Wasm to find a return value with
     def test_return_variable_with_children(self):
         """
         Test the stepping out of a function with return value show the children correctly
@@ -71,7 +71,7 @@ class TestDAP_variables_children(DAPTestCaseBase):
         verify_children = {"buffer": '"hello world!"', "x": "10", "y": "20"}
         for child in result_children:
             verify_value = verify_children.get(child.name)
-            self.assertNotEqual(verify_value, None)
+            self.assertIsNotNone(verify_value)
             self.assertEqual(
                 child.value, verify_value, "Expected child value does not match"
             )

@@ -925,9 +925,9 @@ bool Process::HandleProcessStateChangedEvent(
           if (target_idx != UINT32_MAX)
             stream->Printf("Target %d: (", target_idx);
           else
-            stream->Printf("Target <unknown index>: (");
+            stream->PutCString("Target <unknown index>: (");
           process_sp->GetTarget().Dump(stream, eDescriptionLevelBrief);
-          stream->Printf(") stopped.\n");
+          stream->PutCString(") stopped.\n");
         }
       }
 
@@ -1365,7 +1365,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(ResumeSynchronousHijackListenerName.data()));
+      Listener::MakeListener(ResumeSynchronousHijackListenerName));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -2035,7 +2035,9 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
 // code
 //#define VERIFY_MEMORY_READS
 
-size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
+size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                           size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
@@ -2808,8 +2810,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
 
-  if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
-          shared_from_this(), header_addr, error, size_to_read))
+  if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     size_to_read))
     return module_sp;
 
   return error.takeError();
@@ -5930,7 +5932,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               Thread *thread = thread_list.GetThreadAtIndex(thread_index).get();
 
               if (!thread) {
-                ts.Printf("<?> ");
+                ts.PutCString("<?> ");
                 continue;
               }
 
@@ -5941,7 +5943,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               if (register_context)
                 ts.Printf("[ip 0x%" PRIx64 "] ", register_context->GetPC());
               else
-                ts.Printf("[ip unknown] ");
+                ts.PutCString("[ip unknown] ");
 
               // Show the private stop info here, the public stop info will be
               // from the last natural stop.
@@ -5951,7 +5953,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 if (stop_desc)
                   ts.PutCString(stop_desc);
               }
-              ts.Printf(">");
+              ts.PutCString(">");
             }
 
             event_explanation = ts.GetData();
@@ -6057,7 +6059,7 @@ void Process::GetStatus(Stream &strm, bool is_verbose) {
                   exit_description ? exit_description : "");
     } else {
       if (state == eStateConnected)
-        strm.Printf("Connected to remote target.\n");
+        strm.PutCString("Connected to remote target.\n");
       else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
         if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)

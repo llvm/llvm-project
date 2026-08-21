@@ -61,7 +61,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     MultipleProgramUnitsOnSameLine, AllocatedForAssociated,
     OpenMPThreadprivateEquivalence, RelaxedCLocChecks, CudaPinned,
     OpenAccDefaultNoneScalarsStrict, OpenACCMultipleNamesInRoutine,
-    EnumerationType)
+    EnumerationType, CUDAInit)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -87,7 +87,8 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
     UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
     MisplacedIgnoreTKR, NamelistParameter, ImpureFinalInPure,
-    IgnoredNoReallocateLHS, ExperimentalOption, IoImpliedDoIndexConflict)
+    IgnoredNoReallocateLHS, ExperimentalOption, IoImpliedDoIndexConflict,
+    BOZLiteralTruncation)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

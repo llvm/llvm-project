@@ -95,6 +95,41 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
 /// Copy parallel dimensions from \p from to \p to.
 void copyParDimsAttr(Operation *from, Operation *to);
 
+/// Obtain the active parallel dimensions carried by \p op, if any.
+ActiveParDimsAttr getActiveParDimsAttr(Operation *op);
+
+/// Return whether \p op carries active parallel dimensions.
+bool hasActiveParDimsAttr(Operation *op);
+
+/// Set active parallel dimensions on \p op.
+void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr);
+
+/// Set active parallel dimensions on \p op from a dimension list.
+void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims);
+
+/// Return whether \p op is marked with the `acc.gpu_block_redundant` attribute,
+/// i.e. it executes redundantly across all thread blocks. Such an op must not
+/// be assigned block/grid-level work-sharing; only thread-level parallelism may
+/// apply, and its enclosing block dimensions are treated as active (not
+/// predicated).
+bool hasGPUBlockRedundantAttr(Operation *op);
+
+/// Mark \p op with the `acc.gpu_block_redundant` attribute.
+void setGPUBlockRedundantAttr(Operation *op);
+
+/// Create a gang dim 1 GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr
+getGangDim1ParDimsAttr(MLIRContext *ctx, ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(
+      ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+}
+
+/// Create a sequential GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr getSeqParDimsAttr(MLIRContext *ctx,
+                                             ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
+}
+
 /// Tracks aligned byte consumption against a configurable shared memory cap.
 class SharedMemoryBudget {
 public:

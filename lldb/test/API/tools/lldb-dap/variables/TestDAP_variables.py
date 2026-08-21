@@ -6,20 +6,14 @@ import os
 from typing import List, Optional
 
 from lldbsuite.test import lldbplatformutil
-from lldbsuite.test.decorators import (
-    no_debug_info_test,
-    skipIfAsan,
-    skipIfWindows,
-    skipUnlessDarwin,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     EvaluateContext,
     LaunchArgs,
     VariablesArgs,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectEval, ExpectVar
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, ExpectEval, ExpectVar
 
 
 def make_expected_buffer(start_idx, count, offset=0):
@@ -725,7 +719,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.assertIn("at main.cpp:", pc_reg.value)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
@@ -739,7 +733,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.darwin_dwarf_missing_obj(None)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj_with_symbol_ondemand_enabled(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
