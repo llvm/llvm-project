@@ -359,6 +359,7 @@ private:
   SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_PEXT(SDNode *N);
   SDValue PromoteIntRes_PDEP(SDNode *N);
+  SDValue PromoteIntRes_MULH(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -504,6 +505,7 @@ private:
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);

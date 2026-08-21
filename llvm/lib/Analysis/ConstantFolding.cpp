@@ -1760,6 +1760,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::sadd_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
@@ -3921,6 +3923,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::pext(*C0, *C1));
+    case Intrinsic::smulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhs(*C0, *C1));
+    case Intrinsic::umulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhu(*C0, *C1));
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
     case Intrinsic::amdgcn_wave_reduce_max:
