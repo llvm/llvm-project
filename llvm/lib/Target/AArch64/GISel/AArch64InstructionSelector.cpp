@@ -2120,6 +2120,33 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setType(DstReg, LLT::scalar(64));
     return true;
   }
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    // Imported patterns require an FPR result. For a GPR, use a temporary FPR
+    // and insert a cross-bank copy.
+    Register DstReg = I.getOperand(0).getReg();
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    if (DstRB.getID() != AArch64::GPRRegBankID)
+      return false;
+
+    LLT DstTy = MRI.getType(DstReg);
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, /*GetAllRegSet=*/true);
+    if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+      return false;
+
+    Register FPRDst = MRI.createGenericVirtualRegister(DstTy);
+    MRI.setRegBank(FPRDst, RBI.getRegBank(AArch64::FPRRegBankID));
+    I.getOperand(0).setReg(FPRDst);
+
+    BuildMI(MBB, std::next(I.getIterator()), MIMetadata(I),
+            TII.get(TargetOpcode::COPY), DstReg)
+        .addReg(FPRDst);
+    return true;
+  }
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());

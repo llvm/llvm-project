@@ -2931,9 +2931,16 @@ public:
   /// [[gnu::ms_struct]].
   bool defaultsToMsStruct() const;
 
+  /// Whether layout (offset and size) information can be queried for \p D.
+  static bool hasLayout(const RecordDecl *D) {
+    D = D->getDefinition();
+    return D && !D->isInvalidDecl() && D->isCompleteDefinition();
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
+  /// \pre hasLayout(D)
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
 
   /// Get or compute information about the layout of the specified
