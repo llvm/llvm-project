@@ -23,12 +23,15 @@ namespace llvm::hlsl {
 
 static constexpr unsigned MaxSignatureRows = 32;
 static constexpr unsigned MaxSignatureCols = 4;
+static constexpr unsigned MaxClipCullRows = 2;
+static constexpr unsigned MaxGeometryStreams = 4;
 
 /// Denotes the element that could not be packed and why.
 class SignaturePackingError : public ErrorInfo<SignaturePackingError> {
 public:
   enum ErrorKind {
     SignatureOverflow,
+    ClipCullOverflow,
   };
 
   LLVM_ABI static char ID;
@@ -63,6 +66,15 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 LLVM_ABI Error
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
+
+/// Packs eligible signature elements without moving previously placed
+/// elements.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#prefix-stable-packing for
+/// details.
+LLVM_ABI Error packSignaturePrefixStable(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
 
 } // namespace llvm::hlsl
 
