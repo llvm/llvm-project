@@ -114,13 +114,18 @@ class D {
 [[clang::sycl_external]] void del() = delete;
 
 // SYCL device code does not support variadic functions.
-// expected-error@+1{{'clang::sycl_external' cannot be applied to a variadic function}}
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 [[clang::sycl_external]] void var(int, ...) {}
 
-// expected-error@+1{{'clang::sycl_external' cannot be applied to a variadic function}}
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 [[clang::sycl_external]] void vardecl(int, ...);
 
-// expected-error@+2{{'clang::sycl_external' cannot be applied to a variadic function}}
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void varredecl(int, ...);
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void varredecl(int, ...) {}
+
+// expected-warning@+2{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 class E {
   [[clang::sycl_external]] void mvar(int, ...) {}
 };
@@ -128,6 +133,10 @@ class E {
 template<typename... Ts>
 [[clang::sycl_external]] void pack(Ts...) {}
 template void pack(int);
+
+// expected-warning@+2{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+template<typename T>
+[[clang::sycl_external]] void tvar(T, ...) {}
 
 struct NonCopyable {
   ~NonCopyable() = delete;

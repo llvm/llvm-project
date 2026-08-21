@@ -62,6 +62,11 @@ public:
                                        ParsedType ParsedTy);
 
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
+
+  /// Adds a SYCLExternalAttr to 'D', or warns that the attribute is ignored if
+  /// 'D' is a variadic function.
+  void handleExternalAttr(Decl *D, const ParsedAttr &AL);
+
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
 
   /// Issues a deferred diagnostic if use of the declaration designated

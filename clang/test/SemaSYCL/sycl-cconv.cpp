@@ -8,7 +8,7 @@
 // no-aux-error@+1 {{variadic function cannot use spir_function calling convention}}
 __inline __cdecl int printf(char const* const _Format, ...) { return 0; }
 
-// expected-error@+1 {{'clang::sycl_external' cannot be applied to a variadic function}}
+// expected-warning@+1 {{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 [[clang::sycl_external]] int foo(int, ...) { return 0; }
 
 // no-aux-warning@+1 {{'__cdecl' calling convention is not supported for this target}}
