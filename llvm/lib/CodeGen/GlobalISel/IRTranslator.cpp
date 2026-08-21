@@ -266,6 +266,7 @@ class IRTranslatorImpl {
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,
                      MachineIRBuilder &MIRBuilder);
+  bool translateCopy(const User &U, Register Src, MachineIRBuilder &MIRBuilder);
 
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
@@ -2319,7 +2320,11 @@ bool IRTranslatorImpl::translateSelect(const User &U,
 
 bool IRTranslatorImpl::translateCopy(const User &U, const Value &V,
                                      MachineIRBuilder &MIRBuilder) {
-  Register Src = getOrCreateVReg(V);
+  return translateCopy(U, getOrCreateVReg(V), MIRBuilder);
+}
+
+bool IRTranslatorImpl::translateCopy(const User &U, Register Src,
+                                     MachineIRBuilder &MIRBuilder) {
   auto &Regs = *VMap.getVRegs(U);
   if (Regs.empty()) {
     Regs.push_back(Src);
@@ -2413,7 +2418,7 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
   }
 
   if (cast<GEPOperator>(U).hasAllZeroIndices())
-    return translateCopy(U, Op0, MIRBuilder);
+    return translateCopy(U, BaseReg, MIRBuilder);
 
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
@@ -4138,7 +4143,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
       // in LLT.
-      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+      return translateCopy(U, Vec, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed
@@ -4160,9 +4165,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
     }
   }
 
-  MIRBuilder.buildInsertSubvector(
-      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
-      getOrCreateVReg(*U.getOperand(1)), CI->getZExtValue());
+  MIRBuilder.buildInsertSubvector(Dst, Vec, Elt, CI->getZExtValue());
   return true;
 }
 
@@ -4217,7 +4220,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are extracting an illegal fixed vector from an illegal fixed vector,
       // use the scalar as it is not a legal vector type in LLT.
-      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+      return translateCopy(U, Vec, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a legal fixed
@@ -4239,9 +4242,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
     }
   }
 
-  MIRBuilder.buildExtractSubvector(getOrCreateVReg(U),
-                                   getOrCreateVReg(*U.getOperand(0)),
-                                   CI->getZExtValue());
+  MIRBuilder.buildExtractSubvector(Res, Vec, CI->getZExtValue());
   return true;
 }
 
