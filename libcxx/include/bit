@@ -86,6 +86,7 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 29
 #    include <__bit/bit_compress.h>
+#    include <__bit/bit_expand.h>
 #    include <__bit/bit_repeat.h>
 #    include <__bit/bit_reverse.h>
 #  endif

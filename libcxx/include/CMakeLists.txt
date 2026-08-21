@@ -238,6 +238,7 @@ set(files
   __bit/bit_reverse.h
   __bit/bit_repeat.h
   __bit/bit_compress.h
+  __bit/bit_expand.h
   __bit/blsr.h
   __bit/byteswap.h
   __bit/countl.h
