@@ -91,8 +91,15 @@ void initializeRISCVVectorPeepholeLegacyPass(PassRegistry &);
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
 
-FunctionPass *createRISCVFoldMemOffsetPass();
-void initializeRISCVFoldMemOffsetPass(PassRegistry &);
+class RISCVFoldMemOffsetPass
+    : public OptionalPassInfoMixin<RISCVFoldMemOffsetPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVFoldMemOffsetLegacyPass();
+void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
