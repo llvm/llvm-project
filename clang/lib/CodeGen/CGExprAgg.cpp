@@ -1381,7 +1381,9 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     Visit(E->getRHS());
 
     // Now emit the LHS and copy into it.
-    LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LValue LHS = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                                CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHS);
 
     // That copy is an atomic copy if the LHS is atomic.
     if (LHS.getType()->isAtomicType() ||
@@ -1399,7 +1401,9 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+  LValue LHS = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                              CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHS);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.

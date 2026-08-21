@@ -65,11 +65,11 @@ void c_load_cast(int i) { v = *(int *)&a[i]; }
 void c_compound(int i) { a[i] += 1; }
 
 // CHECK-LABEL: define {{.*}}@c_compound_paren(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_compound_paren(int i) { (a[i]) += 1; }
 
 // CHECK-LABEL: define {{.*}}@c_compound_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_compound_deref_addr(int i) { *&a[i] += 1; }
 
 // CHECK-LABEL: define {{.*}}@c_postinc(
@@ -93,11 +93,11 @@ void c_predec(int i) { --a[i]; }
 void c_agg_store(int i) { sa[i] = aggl; }
 
 // CHECK-LABEL: define {{.*}}@c_agg_store_paren(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_agg_store_paren(int i) { (sa[i]) = aggl; }
 
 // CHECK-LABEL: define {{.*}}@c_agg_store_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_agg_store_deref_addr(int i) { *&sa[i] = aggl; }
 
 // CHECK-LABEL: define {{.*}}@c_agg_load(
@@ -180,19 +180,19 @@ void c_byval(int i) { sink(sa[i]); }
 
 // Same expression as c_store: C99 6.5.3.2p3 makes `&*E` into `E`.
 // CHECK-LABEL: define {{.*}}@c_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_deref_addr(int i) { *&a[i] = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_paren(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_paren(int i) { (a[i]) = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_extension(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_extension(int i) { __extension__(a[i]) = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_cast_store(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_cast_store(int i) { *(int *)&a[i] = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_counted(

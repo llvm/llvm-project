@@ -6746,7 +6746,8 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E,
   case TEK_Scalar: {
     if (PointerAuthQualifier PtrAuth =
             E->getLHS()->getType().getPointerAuth()) {
-      LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+      LValue LV = EmitLValue(E->getLHS(), NotKnownNonNull, ObjectRequired);
+      EmitTypeCheck(TCK_Store, E->getLHS(), LV);
       LValue CopiedLV = LV;
       CopiedLV.getQuals().removePointerAuth();
       llvm::Value *RV =
@@ -6785,7 +6786,8 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E,
     } else
       RV = EmitAnyExpr(E->getRHS());
 
-    LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+    LValue LV = EmitLValue(E->getLHS(), NotKnownNonNull, ObjectRequired);
+    EmitTypeCheck(TCK_Store, E->getLHS(), LV);
 
     if (RV.isScalar())
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());

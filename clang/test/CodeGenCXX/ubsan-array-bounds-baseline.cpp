@@ -194,7 +194,7 @@ void x_ptr_to_member(int i) { ma[i].*pmf = 1; }
 void x_ptr_to_member_arrow(int i) { (&ma[i])->*pmf = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z10x_cond_armib(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_cond_arm(int i, bool c) { (c ? a[i] : a[0]) = 1; }
 
 // An assignment is a prvalue in C and an lvalue in C++, so the four cases below
@@ -204,17 +204,17 @@ void x_cond_arm(int i, bool c) { (c ? a[i] : a[0]) = 1; }
 void x_store(int i) { a[i] = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z7x_pareni(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_paren(int i) { (a[i]) = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z12x_deref_addri(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_deref_addr(int i) { *&a[i] = 1; }
 
 // C has no glvalue comma, so the C file can only test the pointer
 // form, c_comma_addr.
 // CHECK-LABEL: define {{.*}}@_Z7x_commai(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_comma(int i) { (1, a[i]) = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z11x_copy_initi(

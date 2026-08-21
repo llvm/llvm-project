@@ -692,6 +692,13 @@ public:
 
   Value *VisitStmtExpr(const StmtExpr *E);
 
+  LValue EmitAssignmentDest(const BinaryOperator *E) {
+    LValue LV = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LV);
+    return LV;
+  }
+
   // Unary Operators.
   LValue EmitIncDecOperand(const UnaryOperator *E) {
     return CGF.EmitLValue(E->getSubExpr(), NotKnownNonNull,
@@ -4096,7 +4103,9 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   OpInfo.E = E;
   // Load/convert the LHS.
-  LValue LHSLV = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+  LValue LHSLV = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                                CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHSLV);
 
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
@@ -5450,7 +5459,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   LValue LHS;
 
   if (PointerAuthQualifier PtrAuth = E->getLHS()->getType().getPointerAuth()) {
-    LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LValue LV = EmitAssignmentDest(E);
     LV.getQuals().removePointerAuth();
     llvm::Value *RV =
         CGF.EmitPointerAuthQualify(PtrAuth, E->getRHS(), LV.getAddress());
@@ -5479,7 +5488,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   case Qualifiers::OCL_Weak:
     RHS = Visit(E->getRHS());
-    LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LHS = EmitAssignmentDest(E);
     RHS = CGF.EmitARCStoreWeak(LHS.getAddress(), RHS, Ignore);
     break;
 
@@ -5496,7 +5505,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     else
       RHS = Visit(E->getRHS());
 
-    LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LHS = EmitAssignmentDest(E);
 
     // Store the value into the LHS.  Bit-fields are handled specially
     // because the result is altered by the store, i.e., [C99 6.5.16p1]
