@@ -1264,7 +1264,9 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
-    auto *irelativeSym = makeDefined(d);
+    auto *irelativeSym = makeDefined(
+        ctx, d.file, d.getName(), std::as_const(d).binding, d.stOther,
+        std::as_const(d).type, d.value, d.size, d.section);
     addIpltEntry(*irelativeSym);
     ctx.irelativeSyms.push_back(irelativeSym);
     sym.isInIplt = true;
