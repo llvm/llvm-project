@@ -28,6 +28,27 @@ namespace gsym {
 
 class GsymCreator;
 class GsymReader;
+class GsymDataExtractor;
+
+/// Byte-size accounting for a FunctionInfo, broken down by field / InfoType.
+/// Populated by FunctionInfo::parseStatistics. Every value is a byte count and
+/// each on-disk byte of a FunctionInfo is attributed to exactly one member:
+///   FunctionInfo = SizeAndName + LineTableInfo + InlineInfo + CallSiteInfo +
+///                  MergedFuncInfo + EndOfList
+/// (the per-InfoType members include that section's 8-byte InfoType+InfoLength
+/// header). InfoTypeInfoLengthCountAndFnSize is only used for the inner
+/// (merged) breakdown and captures the MergedFunctionsInfo structural bytes:
+/// its own InfoType+InfoLength (8) plus Count (4) plus each FnSize (4).
+struct FunctionInfoStats {
+  uint64_t SizeAndName = 0;
+  uint64_t LineTableInfo = 0;
+  uint64_t InlineInfo = 0;
+  uint64_t CallSiteInfo = 0;
+  uint64_t MergedFuncInfo = 0;
+  uint64_t EndOfList = 0;
+  uint64_t InfoTypeInfoLengthCountAndFnSize = 0;
+};
+
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
 /// need to be encoded using multiple FunctionInfo objects.
@@ -202,6 +223,23 @@ struct FunctionInfo {
   lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
          std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
+
+  /// Parse the function info data and accumulate the byte size of each field /
+  /// InfoType into \a Stats.
+  ///
+  /// \param Data The binary stream to read the data from. Its string-offset
+  /// size is used to size the FunctionInfo Name field (4 bytes in GSYM v1,
+  /// 1-8 bytes in v2).
+  ///
+  /// \param Stats Updated with the per-field byte sizes for this FunctionInfo.
+  ///
+  /// \param MergedFuncInfoStats If non-null, and a MergedFunctionsInfo section
+  /// is present, this is updated with the byte breakdown of the inner
+  /// FunctionInfos plus the MergedFunctionsInfo structural bytes
+  /// (InfoTypeInfoLengthCountAndFnSize).
+  LLVM_ABI static void
+  parseStatistics(GsymDataExtractor &Data, FunctionInfoStats &Stats,
+                  FunctionInfoStats *MergedFuncInfoStats = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }

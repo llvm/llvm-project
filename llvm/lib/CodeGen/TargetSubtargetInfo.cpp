@@ -18,12 +18,12 @@ using namespace llvm;
 TargetSubtargetInfo::TargetSubtargetInfo(
     const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
     StringTable PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
-    const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
-    const MCReadAdvanceEntry *RA, const InstrStage *IS, const unsigned *OC,
-    const unsigned *FP)
-    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PSM, WPR, WL, RA, IS,
-                      OC, FP) {}
+    ArrayRef<SubtargetSubTypeKV> PD, ArrayRef<SubtargetSubTypeAliasKV> PA,
+    const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PA, PSM, WPR, WL, RA,
+                      IS, OC, FP) {}
 
 TargetSubtargetInfo::~TargetSubtargetInfo() = default;
 

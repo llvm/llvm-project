@@ -31,6 +31,7 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.stat.kernel_statx_types
     libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
+    libc.src.__support.OSUtil.linux.syscall_wrappers.readlink
     libc.src.__support.OSUtil.linux.syscall_wrappers.statx
     libc.src.__support.OSUtil.path
     libc.src.string.memory_utils.inline_memcpy
@@ -52,6 +53,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  putenv
+  SRCS
+    putenv.cpp
+  HDRS
+    ../putenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
   unsetenv
   SRCS
     unsetenv.cpp
@@ -64,4 +79,28 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
+  system
+  SRCS
+    system.cpp
+  HDRS
+    ../system.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigaction
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.signal.linux.signal_utils
+    libc.src.unistd.environ
 )

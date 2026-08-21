@@ -9014,6 +9014,9 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Release ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return error(Loc,
+                 "atomic elementwise load cannot be sequentially consistent");
 
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
@@ -9030,10 +9033,11 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
 /// parseStore
 
 ///   ::= 'store' 'volatile'? TypeAndValue ',' TypeAndValue (',' 'align' i32)?
-///   ::= 'store' 'atomic' 'volatile'? TypeAndValue ',' TypeAndValue
-///       'singlethread'? AtomicOrdering (',' 'align' i32)?
+///   ::= 'store' 'atomic' 'volatile'? 'elementwise'? TypeAndValue ','
+///       TypeAndValue 'singlethread'? AtomicOrdering (',' 'align' i32)?
 int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
-  Value *Val, *Ptr; LocTy Loc, PtrLoc;
+  Value *Val, *Ptr;
+  LocTy Loc, PtrLoc;
   MaybeAlign Alignment;
   bool AteExtraComma = false;
   bool isAtomic = false;
@@ -9048,6 +9052,12 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   bool isVolatile = false;
   if (Lex.getKind() == lltok::kw_volatile) {
     isVolatile = true;
+    Lex.Lex();
+  }
+
+  bool IsElementwise = false;
+  if (Lex.getKind() == lltok::kw_elementwise) {
+    IsElementwise = true;
     Lex.Lex();
   }
 
@@ -9067,13 +9077,28 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Acquire ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic store cannot use Acquire ordering");
+
+  if (IsElementwise && !isAtomic)
+    return error(Loc, "elementwise store must be atomic");
+
+  if (IsElementwise && !isa<FixedVectorType>(Val->getType()))
+    return error(
+        Loc, "atomic elementwise store operand must have fixed vector type");
+
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return error(Loc,
+                 "atomic elementwise store cannot be sequentially consistent");
+
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Val->getType()->isSized(&Visited))
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
 
-  Inst = new StoreInst(Val, Ptr, isVolatile, *Alignment, Ordering, SSID);
+  Inst = new StoreInst(Val, Ptr,
+                       LoadStoreInstProperties{isVolatile, *Alignment, Ordering,
+                                               SSID, IsElementwise},
+                       /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 
@@ -9222,40 +9247,38 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (Ordering == AtomicOrdering::Unordered)
     return tokError("atomicrmw cannot be unordered");
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return tokError("atomicrmw elementwise cannot be sequentially consistent");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
   if (Val->getType()->isScalableTy())
     return error(ValLoc, "atomicrmw operand may not be scalable");
 
-  // For elementwise ops, the value must be a fixed vector type whose element
-  // type is legal for the corresponding scalar atomicrmw operation. So assign
-  // ScalarTy the element type for elementwise ops so we can check this.
-  Type *ScalarTy = Val->getType();
+  Type *ValTy = Val->getType();
   if (IsElementwise) {
-    auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
-    if (!VecTy)
+    if (!isa<FixedVectorType>(Val->getType()))
       return error(ValLoc,
                    "atomicrmw elementwise operand must be a fixed vector type");
-    ScalarTy = VecTy->getElementType();
   }
 
   if (Operation == AtomicRMWInst::Xchg) {
-    if (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy() &&
-        !ScalarTy->isPointerTy()) {
+    if (!ValTy->isIntOrIntVectorTy() && !ValTy->isFPOrFPVectorTy() &&
+        !ValTy->isPtrOrPtrVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-              " operand must be an integer, floating point, or pointer type");
+              " operand must be an integer type, a floating-point type, a "
+              "pointer type, or a fixed vector of any of these types");
     }
   } else if (IsFP) {
-    if (!ScalarTy->isFPOrFPVectorTy()) {
+    if (!ValTy->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point or fixed "
                                "vector of floating point type");
     }
   } else {
-    if (!ScalarTy->isIntOrIntVectorTy()) {
+    if (!ValTy->isIntOrIntVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
@@ -9264,7 +9287,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   unsigned Size =
-      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(Val->getType());
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(ValTy);
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc,
                  "atomicrmw operand must have a power-of-two byte size");

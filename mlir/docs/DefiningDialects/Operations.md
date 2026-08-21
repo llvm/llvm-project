@@ -748,6 +748,10 @@ The available directives are as follows:
         printed as part of the attribute dictionary unless a `prop-dict` is
         present.
     -   Discardable attributes are always part of the `attr-dict`.
+    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
+        `attr-dict` only carries discardable attributes for property-backed
+        operations. Inherent attributes must be bound directly in the format or
+        covered by `prop-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -756,9 +760,17 @@ The available directives are as follows:
 
 *   `prop-dict`
 
-    -   Represents the properties of the operation converted to a dictionary.
-    -   Any property or inherent attribute that are not used elsewhere in the
-        format are parsed and printed as part of this dictionary.
+    -   Represents the properties of the operation. The generated parser
+        accepts a `<key = value, ...>` list. Explicit property parsers and
+        inherent-attribute parsers must consume exactly one value and leave the
+        comma separating it from the next entry unconsumed. Properties relying
+        on the default parser use attribute conversion instead when no
+        `FieldParser` specialization is available or when the selected
+        specialization declares `isKeyValueCompositional = false`.
+    -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
+        accepted when parsing and is used by the generated printer.
+    -   Any property or inherent attribute that is not used elsewhere in the
+        format is parsed and printed as part of this list.
     -   If present, the `attr-dict` will not contain any inherent attributes.
 
 *   `custom < UserDirective > ( Params )`
@@ -1091,6 +1103,9 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
+1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
+    attribute and property must either appear in the format or be covered by the
+    `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.

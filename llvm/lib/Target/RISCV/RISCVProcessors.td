@@ -615,7 +615,11 @@ def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
                                         TuneAUIPCADDIFusion,
                                         TuneNoSinkSplatOperands,
                                         TuneVXRMPipelineFlush,
-                                        TunePostRAScheduler]>;
+                                        TunePostRAScheduler]> {
+  let MVendorID = 0x489;
+  let MArchID = 0x8000000000000109;
+  let MImpID = 0x14250606;
+}
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
@@ -826,7 +830,7 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneShiftedZExtWFusion]>;
 
 def XIANGSHAN_KUNMINGHU : RISCVProcessorModel<"xiangshan-kunminghu",
-                                              NoSchedModel,
+                                              XiangShanKunMingHuModel,
                                               !listconcat(RVA23S64Features,
                                               [FeatureStdExtZacas,
                                                FeatureStdExtZbc,
@@ -907,7 +911,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF4SegmentLoadStore,
                                         TuneEnableSelectOptimize,
                                         TuneVXRMPipelineFlush,
-                                        TunePreferAscendingLoadStore]> {
+                                        TunePreferAscendingLoadStore,
+                                        TuneNoDefaultUnroll]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;

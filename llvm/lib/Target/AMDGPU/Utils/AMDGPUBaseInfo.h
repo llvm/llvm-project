@@ -11,6 +11,7 @@
 
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
@@ -20,6 +21,7 @@
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <array>
 #include <functional>
+#include <optional>
 #include <utility>
 
 // Pull in OpName enum definition and getNamedOperandIdx() declaration.
@@ -157,9 +159,7 @@ TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
 namespace IsaInfo {
 
 enum {
-  // The closed Vulkan driver sets 96, which limits the wave count to 8 but
-  // doesn't spill SGPRs as much as when 80 is set.
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
+  FIXED_NUM_SGPRS_FOR_INIT_BUG = AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG,
   TRAP_NUM_SGPRS = 16
 };
 
@@ -219,17 +219,8 @@ constexpr unsigned getMaxFlatWorkGroupSize() {
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize);
 
-/// \returns SGPR allocation granularity for given subtarget \p STI.
-unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI);
-
 /// \returns SGPR encoding granularity for given subtarget \p STI.
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI);
-
-/// \returns Total number of SGPRs for given subtarget \p STI.
-unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI);
-
-/// \returns Addressable number of SGPRs for given subtarget \p STI.
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Minimum number of SGPRs that meets the given number of waves per
 /// execution unit requirement for given subtarget \p STI.
@@ -419,6 +410,7 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
+  MIMGDim NonArrayDim;
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool MSAA;
@@ -1522,6 +1514,11 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) and not just on two.
+bool isFullSIMDMode(const MCSubtargetInfo &STI);
+
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1533,12 +1530,15 @@ bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
-
-inline bool supportsWave32(const MCSubtargetInfo &STI) {
-  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
-}
 
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
@@ -1700,11 +1700,17 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
-LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+/// The opcode is a packed fp32 instruction which only reads low 32 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPRFP32Inst(unsigned Opc);
 
-LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+/// The opcode is a packed 64-bit instruction which only reads low 64 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPR64BitInst(unsigned Opc);
 
-LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
+/// Packed instructions that read a single SGPR for SGPR operands, except for
+/// 64-bit elements which read two SGPRs.
+LLVM_READONLY bool isSingleSGPRReadInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
@@ -1847,6 +1853,12 @@ private:
 
   Kind AttrKind = Kind::Unknown;
 };
+
+/// Evaluate the constant-folded result of v_rcp for \p Val, accounting for
+/// the hardware's denormal flushing on f32/f64 and its approximate rounding.
+/// Returns std::nullopt if the hardware result is not guaranteed to match the
+/// exact reciprocal.
+std::optional<APFloat> evaluateRcp(const APFloat &Val);
 
 } // namespace AMDGPU
 

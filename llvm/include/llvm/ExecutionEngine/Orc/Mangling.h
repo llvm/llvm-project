@@ -18,20 +18,38 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 
-namespace llvm {
-namespace orc {
+namespace llvm::orc {
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.
 class MangleAndInterner {
 public:
+  enum class ManglingMode {
+    None,
+    ELF,
+    MachO,
+    WinCOFF,
+    WinCOFFX86,
+    GOFF,
+    Mips,
+    XCOFF
+  };
+
+  LLVM_ABI MangleAndInterner(ExecutionSession &ES, StringRef ABIName = "");
+  LLVM_ABI MangleAndInterner(ExecutionSession &ES, ManglingMode Mode);
   LLVM_ABI MangleAndInterner(ExecutionSession &ES, const DataLayout &DL);
   LLVM_ABI SymbolStringPtr operator()(StringRef Name);
 
 private:
+  static ManglingMode fromDataLayoutStr(StringRef DLStr);
+  static ManglingMode fromTriple(const Triple &TT, StringRef ABIName);
+  static ManglingMode fromDataLayout(const DataLayout &DL);
+  bool doNotMangleLeadingQuestionMark() const;
+
   ExecutionSession &ES;
-  const DataLayout &DL;
+  ManglingMode Mode;
 };
 
 /// Maps IR global values to their linker symbol names / flags.
@@ -57,7 +75,6 @@ public:
       SymbolNameToDefinitionMap *SymbolToDefinition = nullptr);
 };
 
-} // End namespace orc
-} // End namespace llvm
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_MANGLING_H
