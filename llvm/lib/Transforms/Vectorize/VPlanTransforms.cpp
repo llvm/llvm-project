@@ -5609,7 +5609,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
         SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);
 
     auto *PredicatedMaxBTC = SE->rewriteUsingPredicate(
-        SE->getSymbolicMaxBackedgeTakenCount(CostCtx.L), CostCtx.L,
+        CostCtx.PSE.getSymbolicMaxBackedgeTakenCount(), CostCtx.L,
         StridePredicates.getUnionWith(NewPred, *SE)
             .getUnionWith(&CostCtx.PSE.getPredicate(), *SE));
     Type *BTCTy = PredicatedMaxBTC->getType();

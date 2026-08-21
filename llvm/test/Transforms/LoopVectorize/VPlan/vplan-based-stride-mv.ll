@@ -3325,4 +3325,79 @@ exit:
   ret void
 }
 
+; Used to crash because `getSymbolicMaxBackedgeTakenCount` is only available in
+; PSE but not SE.
+define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %stride) {
+; CHECK-LABEL: VPlan for loop in 'stride_mv_predicated_btc'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (0 smax %M))<nuw>
+; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
+; CHECK-EMPTY:
+; CHECK-NEXT:  strides.check:
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%i.ext> = sext ir<%i> to i64
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%i.ext>, ir<1>
+; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
+; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%i.ext>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
+; CHECK-NEXT:      EMIT ir<%i.next> = add ir<%i>, ir<1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%i.next.ext> = sext ir<%i.next> to i32
+; CHECK-NEXT:      EMIT ir<%ec> = icmp sgt ir<%i.next.ext>, ir<%M>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%i>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:  Successor(s): ir-bb<header>
+;
+entry:
+  br label %header
+
+header:
+  %i = phi i16 [ 0, %entry ], [ %i.next, %header ]
+  %i.ext = sext i16 %i to i64
+  %idx = mul i64 %i.ext, %stride
+  %gep.ld = getelementptr i64, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 8
+  %gep.st = getelementptr i64, ptr %p.out, i64 %i.ext
+  store i64 %ld, ptr %gep.st, align 8
+  %i.next = add i16 %i, 1
+  %i.next.ext = sext i16 %i.next to i32
+  %ec = icmp sle i32 %i.next.ext, %M
+  br i1 %ec, label %header, label %exit
+
+exit:
+  ret void
+}
+
 ; Keep this in sync with the same under LoopVectorize/
