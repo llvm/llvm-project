@@ -27,8 +27,15 @@ class TestCase(TestBase):
 
         result = self.res.GetOutput().splitlines()
 
-        self.assertRegex(result[0], r"Task 1, addr = 0x[0-9a-fA-F]+")
-        self.assertRegex(result[1], r"frame #0: Task<>.value.getter")
+        self.assertRegex(
+            result[0], r"Task 1, addr = 0x[0-9a-fA-F]+.*\[awaiting Task 2\]"
+        )
+        # Task 1 is suspended inside the Concurrency library. Don't check the
+        # function name: the linker folds identical async funclets, so multiple
+        # symbols share this address (Task.value.getter and Task.sleep(_:) among
+        # them) and which one lldb picks is arbitrary.
+        self.assertRegex(result[1], r"frame #0: ")
+
 
         result = result[2:]
         self.assertRegex(result[0], r"Task 2 \('factorial-main'\), addr = 0x[0-9a-fA-F]+")
