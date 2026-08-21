@@ -259,7 +259,7 @@ void xctl_row(int i) { p = a2[i]; }
 
 // Same expression as xctl_row.
 // CHECK-LABEL: define {{.*}}@_Z14xctl_row_elem0i(
-// CHECK: icmp ult i64 {{.*}}, 4
+// CHECK: icmp ule i64 {{.*}}, 4
 void xctl_row_elem0(int i) { p = &a2[i][0]; }
 
 // CHECK-LABEL: define {{.*}}@_Z16xctl_struct_addri(

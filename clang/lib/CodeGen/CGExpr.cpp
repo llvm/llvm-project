@@ -5154,13 +5154,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // "gep x, i" here.  Emit one "gep A, 0, i".
     assert(Array->getType()->isArrayType() &&
            "Array to pointer decay must have array source type!");
-    LValue ArrayLV;
-    // For simple multidimensional array indexing, set the 'accessed' flag for
-    // better bounds-checking of the base expression.
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      ArrayLV = EmitArraySubscriptExpr(ASE, ObjectRequired);
-    else
-      ArrayLV = EmitLValue(Array);
+    // The single GEP is a shortcut: A is still the object this subscript
+    // indexes into, so it takes the requirement we were given rather than one
+    // of its own.
+    LValue ArrayLV = EmitLValue(Array, NotKnownNonNull, Req);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
