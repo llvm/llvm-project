@@ -447,10 +447,7 @@ void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
 
   StringRef Str;
-  if (AL.getNumArgs() == 0) {
-    if (auto *ND = dyn_cast<NamedDecl>(D))
-      Str = ND->getName();
-  } else {
+  if (AL.getNumArgs() > 0) {
     SourceLocation ArgLoc;
     if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
       return;
