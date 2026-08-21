@@ -1683,7 +1683,7 @@ add_header_library(
   HDRS
     iscanonicalf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -1730,7 +1730,7 @@ add_header_library(
   HDRS
     isnanf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -1787,7 +1787,7 @@ add_header_library(
   HDRS
     issignalingf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -1892,7 +1892,7 @@ add_header_library(
   HDRS
     llrintf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2006,7 +2006,7 @@ add_header_library(
   HDRS
     lrintf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2418,7 +2418,7 @@ add_header_library(
   HDRS
     rintf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -5704,7 +5704,7 @@ add_header_library(
   HDRS
     truncf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )

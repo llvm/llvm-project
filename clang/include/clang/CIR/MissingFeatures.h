@@ -318,7 +318,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

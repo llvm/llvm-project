@@ -118,6 +118,14 @@ def uimm4_plus1 : RISCVUImmPlus1Op<4>;
 def uimm5_plus1 : RISCVUImmPlus1Op<5>;
 def uimm6_plus1 : RISCVUImmPlus1Op<6>;
 
+// Matches the negation of an N-bit unsigned immediate, rendering the magnitude.
+class RISCVUImmNegLeaf<int bitsNum>
+    : ImmLeaf<XLenVT, "return Imm < 0 && isUInt<" # bitsNum # ">(-Imm);",
+              NegImm>;
+
+def uimm4_neg : RISCVUImmNegLeaf<4>;
+def uimm5_neg : RISCVUImmNegLeaf<5>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -1778,6 +1786,10 @@ class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
+class PatGprGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VT>
+    : Pat<(VT (OpNode (VT GPR:$rd), (VT GPR:$rs1), (VT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -1883,13 +1895,25 @@ def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
 
 // MULH/MULHU/MULHSU with rounding.
-def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
-def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
+def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp, [SDNPCommutative]>;
+def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
+def SDT_RISCVSameTernary : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisSameAs<0, 3>]>;
+
+// Multiply high accumulate operations.
+def riscv_mhacc    : RVSDNode<"MHACC", SDT_RISCVSameTernary>;
+def riscv_mhracc   : RVSDNode<"MHRACC", SDT_RISCVSameTernary>;
+def riscv_mhaccu   : RVSDNode<"MHACCU", SDT_RISCVSameTernary>;
+def riscv_mhraccu  : RVSDNode<"MHRACCU", SDT_RISCVSameTernary>;
+def riscv_mhaccsu  : RVSDNode<"MHACCSU", SDT_RISCVSameTernary>;
+def riscv_mhraccsu : RVSDNode<"MHRACCSU", SDT_RISCVSameTernary>;
+
 // "Q-format" multiplication
-def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp>;
-def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp>;
+def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
+def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
 
 def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -2126,6 +2150,14 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<riscv_mulhru, PMULHRU_H, XLenVecI16VT>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_H, XLenVecI16VT>;
 
+  // 16-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_mhacc, PMHACC_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_mhracc, PMHRACC_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_mhaccu, PMHACCU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_mhraccu, PMHRACCU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_mhaccsu, PMHACCSU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_mhraccsu, PMHRACCSU_H, XLenVecI16VT>;
+
   // 16-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, PMULQ_H, XLenVecI16VT>;
   def : PatGprGpr<riscv_mulqr, PMULQR_H, XLenVecI16VT>;
@@ -2144,8 +2176,11 @@ let Predicates = [HasStdExtP] in {
   // 16-bit arithmetic shift right patterns
   def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
-  // 16-bit signed saturation shift left patterns
+  // 16-bit saturating shift patterns
   def : PatGprImm<riscv_pssha, PSSLAI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_psshar, PSSLAI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_pssha, PSRAI_H, uimm4_neg, XLenVecI16VT>;
+  def : PatGprImm<riscv_psshar, PSRARI_H, uimm4_neg, XLenVecI16VT>;
   def : PatGprShift<riscv_pssha, PSSHA_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshar, PSSHAR_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshl, PSSHL_HS, XLenVecI16VT>;
@@ -2239,6 +2274,14 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulhr, MULHR, i32>;
   def : PatGprGpr<riscv_mulhru, MULHRU, i32>;
   def : PatGprGpr<riscv_mulhrsu, MULHRSU, i32>;
+
+  // 32-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_mhacc, MHACC, i32>;
+  def : PatGprGprGpr<riscv_mhracc, MHRACC, i32>;
+  def : PatGprGprGpr<riscv_mhaccu, MHACCU, i32>;
+  def : PatGprGprGpr<riscv_mhraccu, MHRACCU, i32>;
+  def : PatGprGprGpr<riscv_mhaccsu, MHACCSU, i32>;
+  def : PatGprGprGpr<riscv_mhraccsu, MHRACCSU, i32>;
 
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
@@ -2500,15 +2543,21 @@ let append Predicates = [IsRV32] in {
   // 32-bit arithmetic shift left/right patterns
   def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
 
-  // 16-bit signed saturation shift left patterns
+  // 16-bit saturating shift patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_psshar, PSSLAI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_pssha, PSRAI_DH, uimm4_neg, v4i16>;
+  def : PatGprPairImm<riscv_psshar, PSRARI_DH, uimm4_neg, v4i16>;
   def : PatGprPairShift<riscv_pssha, PSSHA_DHS, v4i16>;
   def : PatGprPairShift<riscv_psshar, PSSHAR_DHS, v4i16>;
   def : PatGprPairShift<riscv_psshl, PSSHL_DHS, v4i16>;
   def : PatGprPairShift<riscv_psshlr, PSSHLR_DHS, v4i16>;
 
-  // 32-bit signed saturation shift left patterns
+  // 32-bit saturating shift patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_psshar, PSSLAI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_pssha, PSRAI_DW, uimm5_neg, v2i32>;
+  def : PatGprPairImm<riscv_psshar, PSRARI_DW, uimm5_neg, v2i32>;
   def : PatGprPairShift<riscv_pssha, PSSHA_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshar, PSSHAR_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshl, PSSHL_DWS, v2i32>;
@@ -2776,6 +2825,14 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulhru, PMULHRU_W, v2i32>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
 
+  // 32-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_mhacc, PMHACC_W, v2i32>;
+  def : PatGprGprGpr<riscv_mhracc, PMHRACC_W, v2i32>;
+  def : PatGprGprGpr<riscv_mhaccu, PMHACCU_W, v2i32>;
+  def : PatGprGprGpr<riscv_mhraccu, PMHRACCU_W, v2i32>;
+  def : PatGprGprGpr<riscv_mhaccsu, PMHACCSU_W, v2i32>;
+  def : PatGprGprGpr<riscv_mhraccsu, PMHRACCSU_W, v2i32>;
+
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, PMULQ_W, v2i32>;
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
@@ -2810,8 +2867,11 @@ let append Predicates = [IsRV64] in {
   // 32-bit arithmetic shift left/right patterns
   def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
 
-  // 32-bit signed saturation shift left patterns
+  // 32-bit saturating shift patterns
   def : PatGprImm<riscv_pssha, PSSLAI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_psshar, PSSLAI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_pssha, PSRAI_W, uimm5_neg, v2i32>;
+  def : PatGprImm<riscv_psshar, PSRARI_W, uimm5_neg, v2i32>;
   def : PatGprShift<riscv_pssha, PSSHA_WS, v2i32>;
   def : PatGprShift<riscv_psshar, PSSHAR_WS, v2i32>;
   def : PatGprShift<riscv_psshl, PSSHL_WS, v2i32>;

@@ -2177,8 +2177,8 @@ public:
   }
   void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAdjustArgsClause &x) {
-    Walk(std::get<OmpAdjustArgsClause::OmpAdjustOp>(x.t).v);
-    Put(":");
+    using Modifier = OmpAdjustArgsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<parser::OmpObjectList>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
@@ -2924,7 +2924,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
+  WALK_NESTED_ENUM(OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
