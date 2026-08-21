@@ -5748,6 +5748,9 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
   if (!TypeConstraintConcept.isNull()) {
+
+    assert(TypeConstraintConcept.getKind() == TemplateName::Template);
+
     auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 
     auto *ArgBuffer =
