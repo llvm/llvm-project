@@ -1,9 +1,9 @@
 ;; Entirely zeroed kernel descriptor (for GFX9).
 
-; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t1
+; RUN: llvm-mc %s --triple=amdgpu9.08-amd-amdhsa -filetype=obj -o %t1
 ; RUN: printf '.amdgcn_target "amdgcn-amd-amdhsa--gfx908:xnack-"\n.amdhsa_code_object_version 5\n' > %t2.s
 ; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t1 | tail -n +8 >> %t2.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t2 %t2.s
+; RUN: llvm-mc --triple=amdgpu9.08-amd-amdhsa -filetype=obj -o %t2 %t2.s
 ; RUN: diff %t1 %t2
 
 ; RUN: llvm-objdump -s -j .text %t1 | FileCheck --check-prefix=OBJDUMP %s

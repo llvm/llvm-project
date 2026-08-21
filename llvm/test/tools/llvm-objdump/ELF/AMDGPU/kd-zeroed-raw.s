@@ -1,7 +1,7 @@
-; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t1
+; RUN: llvm-mc %s --triple=amdgpu9.08-amd-amdhsa -filetype=obj -o %t1
 ; RUN: printf '.amdgcn_target "amdgcn-amd-amdhsa--gfx908:xnack-"\n' > %t2.s
 ; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t1 | tail -n +8 >> %t2.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t2 %t2.s
+; RUN: llvm-mc --triple=amdgpu9.08-amd-amdhsa -filetype=obj -o %t2 %t2.s
 ; RUN: llvm-objdump -s -j .text %t2 | FileCheck --check-prefix=OBJDUMP %s
 
 ;; Not running lit-test over gfx10 (see kd-zeroed-gfx10.s for details).
