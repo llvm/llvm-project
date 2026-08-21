@@ -563,8 +563,28 @@ private:
   /// beneficial rematerializations. A null score indicate the rematerialization
   /// is not helpful to reduce RP in target regions.
   struct ScoredRemat {
+    /// A dependency whose value at the candidate's definition point does not
+    /// reach the rematerialization point, because the register is redefined in
+    /// between. \ref Defs are the instructions producing the needed value, in
+    /// program order; they are cloned into a fresh virtual register at the
+    /// rematerialization point.
+    struct RecomputedDep {
+      Register Reg;
+      SmallVector<MachineInstr *, 2> Defs;
+    };
+
     /// The register index handle in the rematerializer.
     RegisterIdx RegIdx;
+    /// Region to rematerialize the candidate into.
+    unsigned TargetRegion;
+    /// Rematerializable dependencies whose live range has to be extended to
+    /// reach the rematerialization point. Only ever non-empty when
+    /// rematerializing across regions.
+    SmallVector<RegisterIdx, 2> ExtendedDeps;
+    /// Unrematerializable dependencies that have to be recomputed at the
+    /// rematerialization point. Only ever non-empty when rematerializing
+    /// across regions.
+    SmallVector<RecomputedDep, 1> RecomputedDeps;
     /// Regions in which the register is live-in/live-out/live anywhere.
     BitVector LiveIn, LiveOut, Live;
     /// Subset of \ref Live regions in which the rematerialization is not
@@ -591,13 +611,18 @@ private:
     };
 
     /// Initializes the candidate with state-independent characteristics for
-    /// rematerializable register with index handle \p RegIdx. This doesn't
-    /// update the actual score (call \ref update for this).
-    void init(RegisterIdx RegIdx, const FreqInfo &Freq,
+    /// rematerializable register with index handle \p RegIdx, to be
+    /// rematerialized into \p TargetRegion. This doesn't update the actual
+    /// score (call \ref update for this).
+    void init(RegisterIdx RegIdx, unsigned TargetRegion, const FreqInfo &Freq,
               const Rematerializer &Remater, GCNScheduleDAGMILive &DAG);
 
-    /// Rematerializes the candidate using the \p Remater.
-    void rematerialize(Rematerializer &Remater) const;
+    /// Rematerializes the candidate using the \p Remater. Recomputes
+    /// dependencies listed in \ref RecomputedDeps just before the
+    /// rematerialization point and points the rematerialized instruction(s) at
+    /// them.
+    void rematerialize(Rematerializer &Remater,
+                       GCNScheduleDAGMILive &DAG) const;
 
     /// Determines whether this rematerialization may be beneficial in at least
     /// one target region.

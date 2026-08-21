@@ -104,6 +104,20 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
+static cl::opt<bool> RematCrossRegion(
+    "amdgpu-remat-cross-region", cl::Hidden,
+    cl::desc("Let Pre-RA rematerialization handle registers with users in both "
+             "their defining region and one other region, extending dependency "
+             "live ranges and recomputing redefined dependencies as needed."),
+    cl::init(false));
+
+static cl::opt<bool> RematForceAll(
+    "amdgpu-remat-force-all", cl::Hidden,
+    cl::desc("Perform every eligible Pre-RA rematerialization instead of "
+             "stopping once register pressure targets are met. Only useful "
+             "together with -amdgpu-remat-cross-region."),
+    cl::init(false));
+
 namespace {
 
 struct VGPRThresholdParser : public cl::parser<unsigned> {
@@ -1480,6 +1494,106 @@ Printable PreRARematStage::ScoredRemat::print() const {
 }
 #endif
 
+/// Determines whether the value of \p Reg at \p RefIdx is still the definition
+/// reaching \p UseIdx, even though \p Reg's live range may end before it. This
+/// complements Rematerializer::isRegIdenticalAtUses, which additionally
+/// requires the register to be live at \p UseIdx: a register that merely died
+/// early can be re-used at \p UseIdx by extending its live range, whereas one
+/// that was redefined in between cannot.
+///
+/// Deliberately restricted to registers holding a single value defined in the
+/// same block as \p UseIdx, which is all that shared base addresses need.
+static bool isReachingDefUnclobberedAt(Register Reg, SlotIndex RefIdx,
+                                       SlotIndex UseIdx,
+                                       const LiveIntervals &LIS) {
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (LI.getNumValNums() != 1)
+    return false;
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    if (SR.getNumValNums() != 1)
+      return false;
+  }
+
+  const VNInfo *VN = LI.getVNInfoAt(RefIdx);
+  if (!VN || VN->isPHIDef() || VN->isUnused())
+    return false;
+  if (UseIdx < VN->def)
+    return false;
+  const MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(VN->def);
+  return DefMBB && DefMBB == LIS.getMBBFromIndex(UseIdx);
+}
+
+/// Collects into \p Defs, in program order, the instructions defining the value
+/// held by lanes \p Mask of \p Reg at \p RefIdx, provided that value can be
+/// recomputed just before \p UseIdx. This requires every such instruction to be
+/// rematerializable and to read only registers holding the same value at \p
+/// UseIdx. Returns whether the value can be recomputed.
+static bool collectRecomputableDefs(Register Reg, LaneBitmask Mask,
+                                    SlotIndex RefIdx, SlotIndex UseIdx,
+                                    const Rematerializer &Remater,
+                                    GCNScheduleDAGMILive &DAG,
+                                    SmallVectorImpl<MachineInstr *> &Defs) {
+  LiveIntervals &LIS = *DAG.getLIS();
+  const LiveInterval &LI = LIS.getInterval(Reg);
+
+  // Gather the value(s) covering the used lanes at the reference point.
+  SmallVector<const VNInfo *, 2> VNs;
+  if (LI.hasSubRanges()) {
+    LaneBitmask Uncovered = Mask;
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      if ((SR.LaneMask & Mask).none())
+        continue;
+      const VNInfo *VN = SR.getVNInfoAt(RefIdx);
+      if (!VN)
+        return false;
+      VNs.push_back(VN);
+      Uncovered &= ~SR.LaneMask;
+    }
+    if (Uncovered.any())
+      return false;
+  } else {
+    const VNInfo *VN = LI.getVNInfoAt(RefIdx);
+    if (!VN)
+      return false;
+    VNs.push_back(VN);
+  }
+
+  SmallPtrSet<MachineInstr *, 2> Seen;
+  for (const VNInfo *VN : VNs) {
+    if (VN->isPHIDef() || VN->isUnused())
+      return false;
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(VN->def);
+    if (!DefMI)
+      return false;
+    // A single instruction may define several of the used lanes.
+    if (!Seen.insert(DefMI).second)
+      continue;
+    if (!DAG.TII->isReMaterializable(*DefMI))
+      return false;
+
+    // The clone is placed in another region, so everything the definition
+    // reads must still hold the same value there.
+    for (MachineOperand &MO : DefMI->all_uses()) {
+      if (!MO.getReg())
+        continue;
+      if (MO.getReg().isPhysical()) {
+        if (DAG.MRI.isConstantPhysReg(MO.getReg()) ||
+            DAG.TII->isIgnorableUse(MO))
+          continue;
+        return false;
+      }
+      if (!Remater.isMOIdenticalAtUses(MO, {UseIdx}))
+        return false;
+    }
+    Defs.push_back(DefMI);
+  }
+
+  sort(Defs, [&LIS](MachineInstr *LHS, MachineInstr *RHS) {
+    return LIS.getInstructionIndex(*LHS) < LIS.getInstructionIndex(*RHS);
+  });
+  return !Defs.empty();
+}
+
 bool PreRARematStage::initGCNSchedStage() {
   // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for
   // regions inbetween the defs and region we sinked the def to. Will need to be
@@ -1543,10 +1657,33 @@ bool PreRARematStage::initGCNSchedStage() {
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
-    // All users must be in a single region.
-    if (CandReg.Uses.size() != 1)
-      continue;
-    const auto [UseRegion, Users] = *CandReg.Uses.begin();
+    // Determine the region to rematerialize into. Normally all users must be
+    // in a single region. In cross-region mode we also accept a register with
+    // users in its defining region and in exactly one other region: the
+    // original definition stays behind for the former while a clone serves the
+    // latter. Because the original's remaining users are then all in its
+    // defining region, its live range collapses there, which keeps the
+    // live-in/live-out bookkeeping below valid.
+    auto UsesIt = CandReg.Uses.begin();
+    if (CandReg.Uses.size() != 1) {
+      // Restricted to single-def registers: Rematerializer::shrinkToUses
+      // assumes the original never ends up with a dead definition, which a
+      // partial rematerialization of a register defined lane-by-lane can
+      // violate.
+      if (!RematCrossRegion || CandReg.Uses.size() != 2 ||
+          !CandReg.hasUsersInDefRegion() || CandReg.Defs.size() != 1)
+        continue;
+      if (UsesIt->first == CandReg.DefRegion)
+        ++UsesIt;
+    }
+    const unsigned UseRegion = UsesIt->first;
+    const auto &Users = UsesIt->second;
+    // Whether the original register survives the rematerialization. Only this
+    // mode relaxes the dependency requirements below; keeping the relaxations
+    // out of the single-use-region path also stops registers whose users are
+    // all in their defining region from becoming candidates, which would
+    // otherwise mark them and reject the candidates depending on them.
+    const bool PartialRemat = CandReg.Uses.size() == 2;
 
     // Rematerialization moves the defining instruction into the region of its
     // use, which may sit under different control dependencies (e.g., across a
@@ -1577,27 +1714,61 @@ bool PreRARematStage::initGCNSchedStage() {
         DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
     SlotIndex RefIdx =
         DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
-    if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
-          const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
-          Register DepDefReg = DepReg.getDefReg();
-          return MarkedRegs.contains(DepDefReg) ||
-                 !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
-                                               {FirstUseIdx});
-        }))
+    // Rematerializable dependencies are re-used rather than cloned, so they
+    // must hold the same value at the rematerialization point. A partial
+    // rematerialization also accepts one whose value still reaches that point
+    // but whose live range ends before it, in which case it gets extended.
+    SmallVector<RegisterIdx, 2> ExtendedDeps;
+    bool Reject = false;
+    for (RegisterIdx DepRegIdx : CandReg.Dependencies) {
+      const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+      Register DepDefReg = DepReg.getDefReg();
+      if (MarkedRegs.contains(DepDefReg)) {
+        Reject = true;
+        break;
+      }
+      if (Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
+                                       {FirstUseIdx}))
+        continue;
+      if (!PartialRemat || !isReachingDefUnclobberedAt(DepDefReg, RefIdx,
+                                                       FirstUseIdx, *DAG.LIS)) {
+        Reject = true;
+        break;
+      }
+      ExtendedDeps.push_back(DepRegIdx);
+    }
+    if (Reject)
       continue;
-    if (llvm::any_of(Remater.getUnrematableDeps(RegIdx),
-                     [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
-                       const auto &[Reg, Mask] = RegAndMask;
-                       return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
-                                                            {FirstUseIdx});
-                     }))
+
+    // Unrematerializable dependencies are read by the rematerialized
+    // instruction, so they too must hold the same value at the
+    // rematerialization point. A partial rematerialization also accepts one
+    // that got redefined in between, as long as the definitions producing the
+    // needed value can be cloned alongside.
+    SmallVector<ScoredRemat::RecomputedDep, 1> RecomputedDeps;
+    for (const auto &[DepReg, Mask] : Remater.getUnrematableDeps(RegIdx)) {
+      if (Remater.isRegIdenticalAtUses(DepReg, Mask, RefIdx, {FirstUseIdx}))
+        continue;
+      ScoredRemat::RecomputedDep Recomputed;
+      Recomputed.Reg = DepReg;
+      if (!PartialRemat ||
+          !collectRecomputableDefs(DepReg, Mask, RefIdx, FirstUseIdx, Remater,
+                                   DAG, Recomputed.Defs)) {
+        Reject = true;
+        break;
+      }
+      RecomputedDeps.push_back(std::move(Recomputed));
+    }
+    if (Reject)
       continue;
 
     MarkedRegs.insert(CandReg.getDefReg());
     ScoredRemat &Cand = Candidates.emplace_back();
-    Cand.init(RegIdx, FreqInfo, Remater, DAG);
+    Cand.init(RegIdx, UseRegion, FreqInfo, Remater, DAG);
+    Cand.ExtendedDeps = std::move(ExtendedDeps);
+    Cand.RecomputedDeps = std::move(RecomputedDeps);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
-    if (!Cand.hasNullScore())
+    if (!Cand.hasNullScore() || (RematForceAll && PartialRemat))
       CandidateOrder.push_back(Candidates.size() - 1);
   }
 
@@ -1613,13 +1784,21 @@ bool PreRARematStage::initGCNSchedStage() {
 
   // Rematerialize registers in successive rounds until all RP targets are
   // satisifed or until we run out of rematerialization candidates.
-  BitVector RecomputeRP(DAG.Regions.size());
+  const unsigned NumRegions = DAG.Regions.size();
+  BitVector RecomputeRP(NumRegions);
   for (;;) {
     RecomputeRP.reset();
 
     // Sort candidates in increasing score order.
     sort(CandidateOrder, [&](unsigned LHSIndex, unsigned RHSIndex) {
-      return Candidates[LHSIndex] < Candidates[RHSIndex];
+      const ScoredRemat &LHS = Candidates[LHSIndex];
+      const ScoredRemat &RHS = Candidates[RHSIndex];
+      // When forcing every rematerialization, scores no longer gate anything
+      // and may be null, which the comparison operator rejects. Fall back to
+      // the ordering its tie-break would give.
+      if (RematForceAll)
+        return LHS.RegIdx > RHS.RegIdx;
+      return LHS < RHS;
     });
 
     REMAT_DEBUG({
@@ -1646,7 +1825,7 @@ bool PreRARematStage::initGCNSchedStage() {
       // reality, in which case we interrupt this round and re-score. This also
       // ensures that every rematerialization we perform is possibly impactful
       // in at least one target region.
-      if (!Cand.maybeBeneficial(TargetRegions, RPTargets)) {
+      if (!RematForceAll && !Cand.maybeBeneficial(TargetRegions, RPTargets)) {
         REMAT_DEBUG(dbgs() << "Interrupt round on stale score for "
                            << Cand.print() << " | "
                            << Remater.printRematReg(Cand.RegIdx));
@@ -1698,7 +1877,38 @@ bool PreRARematStage::initGCNSchedStage() {
         Rollback->LiveMapUpdates.emplace_back(Cand.RegIdx, Cand.LiveIn,
                                               Cand.LiveOut);
       }
-      Cand.rematerialize(Remater);
+      SmallVector<std::pair<Register, LaneBitmask>, 2> ExtendedDepRegs;
+      for (RegisterIdx DepRegIdx : Cand.ExtendedDeps) {
+        const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+        ExtendedDepRegs.emplace_back(DepReg.getDefReg(), DepReg.Mask);
+      }
+      Cand.rematerialize(Remater, DAG);
+
+      // Dependencies whose live range the rematerialization extended are now
+      // live in regions they previously weren't. Live-in sets seed RP
+      // recomputation, so this has to be recorded or the extension goes
+      // uncounted. Region indices do not follow program order, so read the
+      // new liveness off the live interval instead of assuming a span.
+      BitVector ExtLiveIn(NumRegions), ExtLiveOut(NumRegions);
+      for (const auto &[DepDefReg, DepMask] : ExtendedDepRegs) {
+        const LiveInterval &DepLI = DAG.LIS->getInterval(DepDefReg);
+        ExtLiveIn.reset();
+        ExtLiveOut.reset();
+        for (unsigned I = 0; I != NumRegions; ++I) {
+          auto [RegionBegin, RegionEnd] = DAG.Regions[I];
+          if (RegionBegin == RegionEnd)
+            continue;
+          if (DepLI.liveAt(
+                  DAG.LIS->getInstructionIndex(*RegionBegin).getBaseIndex()))
+            ExtLiveIn.set(I);
+          const MachineInstr *LastMI =
+              getLastMIForRegion(RegionBegin, RegionEnd);
+          if (DepLI.liveAt(
+                  DAG.LIS->getInstructionIndex(*LastMI).getDeadSlot()))
+            ExtLiveOut.set(I);
+        }
+        addToLiveMaps(DepDefReg, DepMask, ExtLiveIn, ExtLiveOut);
+      }
 
       // Adjust RP targets. The save is guaranteed in regions in which the
       // register is live-through and unused but optimistic in all other regions
@@ -1706,13 +1916,32 @@ bool PreRARematStage::initGCNSchedStage() {
       updateRPTargets(Cand.Live, Cand.RPSave);
       RecomputeRP |= Cand.UnpredictableRPSave;
       RescheduleRegions |= Cand.Live;
-      if (!TargetRegions.any()) {
+      // Extending a dependency perturbs RP in every region it now spans, so
+      // those need re-measuring too.
+      if (!Cand.ExtendedDeps.empty()) {
+        RecomputeRP |= Cand.Live;
+        RescheduleRegions |= Cand.Live;
+      }
+      if (!RematForceAll && !TargetRegions.any()) {
         REMAT_DEBUG(dbgs() << "All targets cleared, verifying...\n");
         break;
       }
     }
 
-    if (!updateAndVerifyRPTargets(RecomputeRP) && !TargetRegions.any()) {
+    bool TooOptimistic = updateAndVerifyRPTargets(RecomputeRP);
+    if (RematForceAll) {
+      if (CandidateOrder.empty()) {
+        REMAT_DEBUG(dbgs() << "Stop on exhausted rematerialization candidates "
+                              "(forcing all)\n");
+        break;
+      }
+      // Scores no longer gate anything, but they still order the candidates.
+      for (unsigned CandIdx : CandidateOrder)
+        Candidates[CandIdx].update(TargetRegions, RPTargets, FreqInfo,
+                                   !TargetOcc);
+      continue;
+    }
+    if (!TooOptimistic && !TargetRegions.any()) {
       REMAT_DEBUG(dbgs() << "Objectives achieved!\n");
       break;
     }
@@ -3055,10 +3284,12 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
 }
 
 void PreRARematStage::ScoredRemat::init(RegisterIdx RegIdx,
+                                        unsigned TargetRegion,
                                         const FreqInfo &Freq,
                                         const Rematerializer &Remater,
                                         GCNScheduleDAGMILive &DAG) {
   this->RegIdx = RegIdx;
+  this->TargetRegion = TargetRegion;
   const unsigned NumRegions = DAG.Regions.size();
   LiveIn.resize(NumRegions);
   LiveOut.resize(NumRegions);
@@ -3067,8 +3298,8 @@ void PreRARematStage::ScoredRemat::init(RegisterIdx RegIdx,
 
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
   Register DefReg = Reg.getDefReg();
-  assert(Reg.Uses.size() == 1 && "expected users in single region");
-  const unsigned UseRegion = Reg.Uses.begin()->first;
+  assert(Reg.Uses.contains(TargetRegion) && "expected users in target region");
+  const unsigned UseRegion = TargetRegion;
 
   // Mark regions in which the rematerializable register is live.
   for (unsigned I = 0, E = NumRegions; I != E; ++I) {
@@ -3130,13 +3361,55 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
 }
 
 void PreRARematStage::ScoredRemat::rematerialize(
-    Rematerializer &Remater) const {
+    Rematerializer &Remater, GCNScheduleDAGMILive &DAG) const {
+  LiveIntervals &LIS = *DAG.LIS;
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
+
+  // Recompute dependencies that were redefined between the original definition
+  // and the rematerialization point, each into a fresh virtual register. They
+  // go just before the first user in the target region, which is also where
+  // the rematerializer inserts the clone, so they end up right above it.
+  SmallVector<std::pair<Register, Register>, 1> Substs;
+  if (!RecomputedDeps.empty()) {
+    MachineInstr *FirstUseMI = Reg.getRegionUseBounds(TargetRegion, LIS).first;
+    assert(FirstUseMI && "there must be a user in the region");
+    MachineBasicBlock &MBB = *FirstUseMI->getParent();
+    for (const RecomputedDep &Dep : RecomputedDeps) {
+      Register NewReg = DAG.MRI.cloneVirtualRegister(Dep.Reg);
+      for (MachineInstr *DefMI : Dep.Defs) {
+        DAG.TII->reMaterialize(MBB, FirstUseMI, NewReg, /*SubIdx=*/0, *DefMI);
+        LIS.InsertMachineInstrInMaps(*std::prev(FirstUseMI->getIterator()));
+      }
+      Substs.emplace_back(Dep.Reg, NewReg);
+    }
+  }
+
   Rematerializer::DependencyReuseInfo DRI;
   for (RegisterIdx DepRegIdx : Reg.Dependencies)
     DRI.reuse(DepRegIdx);
-  unsigned UseRegion = Reg.Uses.begin()->first;
-  Remater.rematerializeToRegion(RegIdx, UseRegion, DRI);
+  RegisterIdx NewRegIdx =
+      Remater.rematerializeToRegion(RegIdx, TargetRegion, DRI);
+
+  // Point the clone at the recomputed values instead of the redefined
+  // registers.
+  if (!Substs.empty()) {
+    for (MachineInstr *DefMI : Remater.getReg(NewRegIdx).Defs) {
+      for (const auto &[OldReg, NewReg] : Substs)
+        DefMI->substituteRegister(OldReg, NewReg, /*SubIdx=*/0, *DAG.TRI);
+    }
+    // Only now do the recomputed registers have a user, so this is the first
+    // point at which their live ranges can be derived. The redefined registers
+    // need theirs re-derived too, since the rematerializer extended them to
+    // the clone before we substituted them away.
+    for (const auto &[OldReg, NewReg] : Substs) {
+      LIS.createAndComputeVirtRegInterval(NewReg);
+      LIS.removeInterval(OldReg);
+      LIS.createAndComputeVirtRegInterval(OldReg);
+      REMAT_DEBUG(dbgs() << "  Recomputed "
+                         << printReg(OldReg, DAG.TRI, 0, &DAG.MRI) << " as "
+                         << printReg(NewReg, DAG.TRI, 0, &DAG.MRI) << '\n');
+    }
+  }
 }
 
 void PreRARematStage::updateRPTargets(const BitVector &Regions,
