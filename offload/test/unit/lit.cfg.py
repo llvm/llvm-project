@@ -38,6 +38,10 @@ if config.cuda_path:
 if config.operating_system == "Windows" and config.library_dir:
     prepend_executable_path(config.library_dir)
 
+# Allow running the whole suite with all device operations forced synchronous.
+if "OFFLOAD_FORCE_SYNC_OPS" in os.environ:
+    config.environment["OFFLOAD_FORCE_SYNC_OPS"] = os.environ["OFFLOAD_FORCE_SYNC_OPS"]
+
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.unittest_dir
