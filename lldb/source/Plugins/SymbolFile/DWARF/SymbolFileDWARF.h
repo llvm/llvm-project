@@ -60,6 +60,7 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
+struct StandaloneDWARFLineTableInfo;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -516,6 +517,8 @@ protected:
   void BuildCuTranslationTable();
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
+  StandaloneDWARFLineTableInfo &GetStandaloneLineTableInfo();
+
   void FindDwpSymbolFile();
 
   const SupportFileList *GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
@@ -537,6 +540,9 @@ protected:
 
   llvm::once_flag m_info_once_flag;
   std::unique_ptr<DWARFDebugInfo> m_info;
+
+  llvm::once_flag m_standalone_line_table_once_flag;
+  std::unique_ptr<StandaloneDWARFLineTableInfo> m_standalone_line_table_info;
 
   std::unique_ptr<llvm::DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
