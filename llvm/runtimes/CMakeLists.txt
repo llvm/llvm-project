@@ -580,7 +580,7 @@ if(build_runtimes)
     endif()
   endif()
 
-  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # Forward user-provided system configuration to runtimes for requirement introspection.
   # These are lists, so their separators have to survive being passed on the
   # sub-build's command line; an unescaped ';' would split them into separate
   # arguments.
