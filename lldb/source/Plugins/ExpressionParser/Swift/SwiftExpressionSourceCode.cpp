@@ -615,11 +615,16 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
   return status;
 }
 
-/// Format the OS name the way that Swift availability attributes do.
-static llvm::StringRef getAvailabilityName(const llvm::Triple &triple) {
-    swift::LangOptions lang_options;
+/// Format the OS name the way that Swift availability attributes do. Returns
+/// std::nullopt if the triple does not correspond to an availability platform.
+static std::optional<llvm::StringRef>
+getAvailabilityName(const llvm::Triple &triple) {
+  swift::LangOptions lang_options;
   lang_options.setTarget(triple);
-  return swift::platformString(swift::targetPlatform(lang_options));
+  auto platform = swift::targetPlatform(lang_options);
+  if (!platform)
+    return std::nullopt;
+  return swift::platformString(*platform);
 }
 
 uint32_t SwiftExpressionSourceCode::GetNumBodyLines() {
@@ -670,8 +675,12 @@ Status SwiftExpressionSourceCode::GetText(
     auto arch_spec = target->GetArchitecture();
     auto triple = arch_spec.GetTriple();
     if (triple.isOSDarwin()) {
-      if (auto process_sp = exe_ctx.GetProcessSP()) {
-        os_vers << getAvailabilityName(triple) << " ";
+      auto availability_name = getAvailabilityName(triple);
+      auto process_sp = exe_ctx.GetProcessSP();
+      // When the triple has no availability platform, os_vers stays empty.
+      // That suppresses the @available attribute in the wrapped expression.
+      if (availability_name && process_sp) {
+        os_vers << *availability_name << " ";
         if (options.GetUseContextFreeSwiftPrintObject()) {
           // Disable availability by setting the OS version to 9999. This
           // placeholder OS version used for future OS versions when building
