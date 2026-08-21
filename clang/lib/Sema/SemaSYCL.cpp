@@ -880,8 +880,6 @@ public:
     if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, BS->getBaseTypeLoc()))
       return false;
     return checkType(Ty) && checkDeviceCopyable(Ty);
-    // TODO: if a class inherits an is_device_copyable class, does that make it
-    // device copyable?
   }
 
   bool visitFieldDeclPre(const FieldDecl *FD) {
@@ -893,9 +891,6 @@ public:
     if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, FD->getLocation()))
       return false;
     return checkType(Ty) && checkDeviceCopyable(Ty);
-    // TODO: if a class has a field of type is_device_copyable, should I still
-    // check the field type? can I guarantee e.g. copy constructors and other
-    // special functions are going to be safe on the device?
   }
 
   // Returns true if subobjects should be visited and false otherwise.
