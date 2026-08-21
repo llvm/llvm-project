@@ -12,9 +12,7 @@
 
 #include "Capability/CapabilityRegistry.h"
 #include "Analysis/IR/RemarksAnalyzer.h"
-#include "Analysis/IR/RemarksMixAnalyzer.h"
 #include "Analysis/IR/RemarksRelationalAnalyzer.h"
-#include "Analysis/IR/RemarksSizeDiffAnalyzer.h"
 #include "Analysis/IR/RemarksHotspotAnalyzer.h"
 #include "Analysis/Inspection/RemarksDetailAnalyzer.h"
 #include "Utils/JSON.h"
@@ -223,10 +221,6 @@ CapabilityRegistry::createDeclarativeRunner(const CapabilitySpec &Spec) const {
 void CapabilityRegistry::addBuiltinRunners() {
   consumeError(addRunner("builtin.remarks_summary",
                          std::make_unique<RemarksAnalyzer>()));
-  consumeError(addRunner("builtin.remarks_mix",
-                         std::make_unique<RemarksMixAnalyzer>()));
-  consumeError(addRunner("builtin.remarks_size_diff",
-                         std::make_unique<RemarksSizeDiffAnalyzer>()));
   consumeError(addRunner("builtin.remarks_relational",
                          std::make_unique<RemarksRelationalAnalyzer>()));
   consumeError(addRunner("builtin.remarks_hotspot",
