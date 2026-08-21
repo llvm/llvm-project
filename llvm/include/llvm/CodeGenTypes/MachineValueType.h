@@ -40,8 +40,7 @@ namespace llvm {
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
 
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    Ty = n,
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) Ty,
 #define GET_VT_RANGES
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -64,6 +63,10 @@ namespace llvm {
     bool operator!=(const MVT& S) const { return SimpleTy != S.SimpleTy; }
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
+
+    // Support comparison with SimpleValueType.
+    bool operator==(SimpleValueType S) const { return SimpleTy == S; }
+    bool operator!=(SimpleValueType S) const { return SimpleTy != S; }
 
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
@@ -109,11 +112,21 @@ namespace llvm {
               SimpleTy <= MVT::LAST_VECTOR_VALUETYPE);
     }
 
+    /// Return true if this is a vector with matching element type.
+    bool isVectorOf(MVT EltVT) const {
+      return isVector() && getVectorElementType() == EltVT;
+    }
+
     /// Return true if this is a vector value type where the
     /// runtime length is machine dependent
     bool isScalableVector() const {
       return (SimpleTy >= MVT::FIRST_SCALABLE_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_SCALABLE_VECTOR_VALUETYPE);
+    }
+
+    /// Return true if this is a scalable vector with matching element type.
+    bool isScalableVectorOf(MVT EltVT) const {
+      return isScalableVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a RISCV vector tuple type where the
@@ -136,6 +149,11 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return (SimpleTy >= MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE);
+    }
+
+    /// Return true if this is a fixed length vector with matching element type.
+    bool isFixedLengthVectorOf(MVT EltVT) const {
+      return isFixedLengthVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a 16-bit vector type.
@@ -178,10 +196,16 @@ namespace llvm {
       return (isFixedLengthVector() && getFixedSizeInBits() == 2048);
     }
 
+    /// Return true if this is a CHERI capability type.
+    bool isCheriCapability() const {
+      return (SimpleTy >= MVT::FIRST_CHERI_CAPABILITY_VALUETYPE) &&
+             (SimpleTy <= MVT::LAST_CHERI_CAPABILITY_VALUETYPE);
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     case Ty:                                                                   \
       return Any;
 #include "llvm/CodeGen/GenVT.inc"
@@ -196,7 +220,7 @@ namespace llvm {
     /// bitwidth.
     MVT changeVectorElementTypeToInteger() const {
       MVT EltTy = getVectorElementType();
-      MVT IntTy = MVT::getIntegerVT(EltTy.getSizeInBits());
+      MVT IntTy = MVT::getIntegerVT(EltTy.getFixedSizeInBits());
       MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
@@ -212,13 +236,27 @@ namespace llvm {
       return VecTy;
     }
 
+    /// Return a VT for a vector type whose attributes match ourselves with
+    /// the exception of the element count that is chosen by the caller.
+    MVT changeVectorElementCount(ElementCount EC) const {
+      assert(isVector() && "Not a vector MVT!");
+      return MVT::getVectorVT(getVectorElementType(), EC);
+    }
+
+    /// Return a VT for a type whose attributes match ourselves with the
+    /// exception of the element type that is chosen by the caller.
+    MVT changeElementType(MVT EltVT) const {
+      EltVT = EltVT.getScalarType();
+      return isVector() ? changeVectorElementType(EltVT) : EltVT;
+    }
+
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
     MVT changeTypeToInteger() {
       if (isVector())
         return changeVectorElementTypeToInteger();
-      return MVT::getIntegerVT(getSizeInBits());
+      return MVT::getIntegerVT(getFixedSizeInBits());
     }
 
     /// Return a VT for a vector type with the same element type but
@@ -236,6 +274,21 @@ namespace llvm {
       MVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       return MVT::getVectorVT(EltVT, EltCnt * 2);
+    }
+
+    // Return a VT for an Integer or vetor of integer type doubled in size
+    MVT widenIntegerElementType() const {
+      MVT BaseTy = getScalarType();
+      assert(BaseTy.isInteger() && "Not an integer or vector of integer MVT!");
+      assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
+             "Widening of this Integer type not supported !");
+      MVT SclTy = getIntegerVT(BaseTy.getScalarSizeInBits() * 2);
+      assert((SclTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid scalar MVT!");
+      MVT ResTy = changeElementType(SclTy);
+      assert((ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid vector MVT!");
+      return ResTy;
     }
 
     /// Returns true if the given vector is a power of 2.
@@ -264,7 +317,7 @@ namespace llvm {
     MVT getVectorElementType() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr SimpleValueType EltTyTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     EltTy,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -278,7 +331,7 @@ namespace llvm {
     unsigned getVectorMinNumElements() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr uint16_t NElemTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     NElem,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -294,7 +347,7 @@ namespace llvm {
 
     unsigned getVectorNumElements() const {
       if (isScalableVector())
-        llvm::reportInvalidSizeRequest(
+        llvm::reportFatalInternalError(
             "Possible incorrect use of MVT::getVectorNumElements() for "
             "scalable vector. Scalable flag may be dropped, use "
             "MVT::getVectorElementCount() instead");
@@ -308,7 +361,7 @@ namespace llvm {
     /// base size.
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
                                                     */),
 #include "llvm/CodeGen/GenVT.inc"
@@ -431,7 +484,7 @@ namespace llvm {
     }
 
     static MVT getFloatingPointVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     if (FP == 3 && sz == BitWidth)                                             \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -441,7 +494,7 @@ namespace llvm {
     }
 
     static MVT getIntegerVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     if (Int == 3 && sz == BitWidth)                                            \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -471,7 +524,7 @@ namespace llvm {
     }
 
     static MVT getRISCVVectorTupleVT(unsigned Sz, unsigned NFields) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, nElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, nElem, EltTy)    \
     if (Tup && sz == Sz && NF == NFields)                                      \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -485,8 +538,7 @@ namespace llvm {
       assert(isRISCVVectorTuple() && SimpleTy >= FIRST_VALUETYPE &&
              SimpleTy <= LAST_VALUETYPE);
       static constexpr uint8_t NFTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    NF,
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) NF,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -574,6 +626,12 @@ namespace llvm {
     static auto fp_scalable_vector_valuetypes() {
       return enum_seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
                                 MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
+    }
+
+    static auto cheri_capability_valuetypes() {
+      return enum_seq_inclusive(MVT::FIRST_CHERI_CAPABILITY_VALUETYPE,
+                                MVT::LAST_CHERI_CAPABILITY_VALUETYPE,
                                 force_iteration_on_noniterable_enum);
     }
     /// @}

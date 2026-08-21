@@ -8,20 +8,36 @@
 
 include "llvm/TableGen/SetTheory.td"
 
+// Dag operators for composing predicates.
+def all_of;
+def any_of;
+def not;
+
+// Composable predicate leaf expressed as a C++ boolean over an
+// `Triple TT`. Generally should check a single triple property.
+class LibcallPredicate<code cond> {
+  code Cond = cond;
+}
+
 // Predicate for whether a libcall exists for the target ABI. This is
 // a module level property that should only be computed based on the
 // triple.
-class RuntimeLibcallPredicate<code cond> {
-  // Expression of an llvm::Triple named TT for whether a libcall
-  // should exist.
-  code Cond = cond;
+//
+// The condition is expressed as a `dag` of LibcallPredicates combined
+// with the all_of/any_of/not operators, which the emitter lowers to
+// the a boolean function of a Triple named TT (and other constructor
+// arguments of RuntimeLibcallsInfo).
+class RuntimeLibcallAvailability<dag cond = (?)> {
+  // Composable form: (all_of/any_of/not <LibcallPredicate>...). The `(?)`
+  // placeholder default means the libcall is always available.
+  dag CondDag = cond;
 }
 
 // Predicate for whether a libcall should be used for the current
 // function/subtarget.
 class LibcallLoweringPredicate<code cond> { code Cond = cond; }
 
-def AlwaysAvailable : RuntimeLibcallPredicate<[{}]>;
+def AlwaysAvailable : RuntimeLibcallAvailability;
 
 class LibcallCallingConv<code CC = [{}]> {
   // Enum value for the calling convention. Empty string defaults to
@@ -36,6 +52,9 @@ def ARM_AAPCS : LibcallCallingConv<[{CallingConv::ARM_AAPCS}]>;
 def ARM_AAPCS_VFP : LibcallCallingConv<[{CallingConv::ARM_AAPCS_VFP}]>;
 def X86_STDCALL : LibcallCallingConv<[{CallingConv::X86_StdCall}]>;
 def AVR_BUILTIN : LibcallCallingConv<[{CallingConv::AVR_BUILTIN}]>;
+def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0}]>;
+def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
+def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
@@ -58,14 +77,13 @@ class RuntimeLibcall {
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  list<LibcallLoweringPredicate> LoweringPredicates;
   bit IsDefault = false;
 }
 
 class LibcallImpls<dag funcList,
-                   RuntimeLibcallPredicate Pred = AlwaysAvailable> {
+                   RuntimeLibcallAvailability Pred = AlwaysAvailable> {
   // Function of the triple where this applies
-  RuntimeLibcallPredicate AvailabilityPredicate = Pred;
+  RuntimeLibcallAvailability AvailabilityPredicate = Pred;
   dag MemberList = funcList;
 
   // If set, applies calling convention to every entry instead of
@@ -75,19 +93,19 @@ class LibcallImpls<dag funcList,
 
 /// Convenience wrapper around LibcallImplSet to make a single libcall
 /// implementation conditionally conditionally available.
-class AvailableIf<RuntimeLibcallImpl Impl, RuntimeLibcallPredicate Pred>
+class AvailableIf<RuntimeLibcallImpl Impl, RuntimeLibcallAvailability Pred>
     : LibcallImpls<(add Impl), Pred>;
 
 class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
-                     RuntimeLibcallPredicate Pred = AlwaysAvailable>
+                     RuntimeLibcallAvailability Pred = AlwaysAvailable>
     : LibcallImpls<funcList, Pred> {
   LibcallCallingConv CallingConv = CC;
 }
 
 /// Define a complete top level set of runtime libcalls for a target.
-class SystemRuntimeLibrary<RuntimeLibcallPredicate Pred, dag funcList> {
+class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
   /// Set the default calling convention assumed for RuntimeLibcallImpl members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
-  RuntimeLibcallPredicate TriplePred = Pred;
+  RuntimeLibcallAvailability TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;
 }

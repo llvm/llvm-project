@@ -1,16 +1,17 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-lt60 -fopenmp -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-lt60 -fopenmp -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-ge60 -fopenmp -fopenmp-version=60 -ferror-limit 150 -o - %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-lt60 -fopenmp-simd -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-lt60 -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-lt60 -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp52,omp-lt60 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify=expected,omp-ge60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -ferror-limit 150 -o - %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 typedef void **omp_allocator_handle_t;
@@ -39,7 +40,7 @@ void foobar(int &ref) {
 
 void foobar1(int &ref) {
 #pragma omp taskgroup task_reduction(+:ref)
-#pragma omp task in_reduction(-:ref) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
+#pragma omp task in_reduction(-:ref) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int}}
   foo();
 }
 
@@ -123,8 +124,8 @@ public:
 S3 h, k;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
 
-template <class T>       // expected-note {{declared here}}
-T tmain(T argc) {
+template <class T, class S>       // expected-note {{declared here}}
+T tfoobar5(T argc, S ub[]) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
@@ -134,6 +135,7 @@ T tmain(T argc) {
   const T &r = da[(int)i];     // expected-note 2 {{'r' defined here}}
   T &q = qa[(int)i];
   T fl;
+  T *ptr;
 #pragma omp taskgroup task_reduction(+:argc)
 #pragma omp task in_reduction // expected-error {{expected '(' after 'in_reduction'}}
   foo();
@@ -163,7 +165,7 @@ T tmain(T argc) {
   foo();
 #pragma omp task in_reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
   foo();
-#pragma omp task in_reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+#pragma omp task in_reduction(foo : argc) //omp-lt60-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} omp-lt60-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}}
   foo();
 #pragma omp taskgroup task_reduction(&&:argc)
 #pragma omp task in_reduction(&& : argc)
@@ -210,11 +212,15 @@ T tmain(T argc) {
 #pragma omp task in_reduction(+ : fl)
     foo();
 #pragma omp parallel
-#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
+#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}}
   for (int i = 0; i < 10; ++i)
 #pragma omp taskgroup task_reduction(+:fl)
 #pragma omp task in_reduction(+ : fl)
     foo();
+#pragma omp task in_reduction(min:ub[:]) // expected-error 2 {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  foo();
+#pragma omp task in_reduction(min:ptr[:]) // expected-error 2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  foo();
 
   return T();
 }
@@ -227,7 +233,7 @@ namespace B {
 using A::x;
 }
 
-int main(int argc, char **argv) {
+int foobar5(int argc, float ub[]) {
   const int d = 5;       // expected-note 2 {{'d' defined here}}
   const int da[5] = {0}; // expected-note {{'da' defined here}}
   int qa[5] = {0};
@@ -239,6 +245,7 @@ int main(int argc, char **argv) {
   const int &r = da[i];        // expected-note {{'r' defined here}}
   int &q = qa[i];
   float fl;
+  float *ptr;
 #pragma omp task in_reduction // expected-error {{expected '(' after 'in_reduction'}}
   foo();
 #pragma omp task in_reduction + // expected-error {{expected '(' after 'in_reduction'}} expected-warning {{extra tokens at the end of '#pragma omp task' are ignored}}
@@ -253,7 +260,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp task in_reduction(\) // expected-error {{expected unqualified-id}} expected-warning {{missing ':' after reduction identifier - ignoring}}
   foo();
-#pragma omp task in_reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
+#pragma omp task in_reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} omp-lt60-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}} omp-ge60-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
   foo();
 #pragma omp taskgroup task_reduction(|:argc)
 {
@@ -262,10 +269,10 @@ int main(int argc, char **argv) {
 #pragma omp task in_reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{in_reduction variable must have the same reduction operation as in a task_reduction clause}}
   foo();
 }
-#pragma omp task in_reduction(| : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp task in_reduction(| : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: ub), allocate(ub) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   foo();
 }
-#pragma omp task in_reduction(|| : argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name, array element or array section}}
+#pragma omp task in_reduction(|| : argc > 0 ? ub[1] : ub[2]) // expected-error {{expected variable name, array element or array section}}
   foo();
 #pragma omp task in_reduction(~ : argc) // expected-error {{expected unqualified-id}}
   foo();
@@ -325,6 +332,10 @@ int main(int argc, char **argv) {
 #pragma omp taskgroup task_reduction(+:m)
 #pragma omp task in_reduction(+ : m) // OK
   m++;
+#pragma omp task in_reduction(min:ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  foo();
+#pragma omp task in_reduction(min:ptr[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  foo();
 
-  return tmain(argc) + tmain(fl); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<float>' requested here}}
+  return tfoobar5(argc, ub) + tfoobar5(fl, ub); // expected-note {{in instantiation of function template specialization 'tfoobar5<int, float>' requested here}} expected-note {{in instantiation of function template specialization 'tfoobar5<float, float>' requested here}}
 }

@@ -1,4 +1,3 @@
-
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
@@ -47,8 +46,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(clang_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  llvm_configure_doxygen()
 
   set(abs_top_srcdir)
   set(abs_top_builddir)
@@ -89,6 +87,7 @@ function (gen_rst_file_from_td output_file td_option source docs_targets)
   get_filename_component(TABLEGEN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${source}" DIRECTORY)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${TABLEGEN_INCLUDE_DIR}")
   clang_tablegen(${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
+  add_dependencies("gen-${output_file}" copy-clang-rst-docs)
   foreach(target ${docs_targets})
     add_dependencies(${target} gen-${output_file})
   endforeach()
@@ -97,20 +96,36 @@ endfunction()
 if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
   if (SPHINX_FOUND AND (${SPHINX_OUTPUT_HTML} OR ${SPHINX_OUTPUT_MAN}))
-    # Copy rst files to build directory before generating the html
-    # documentation.  Some of the rst files are generated, so they
+    # Copy documentation sources to the build directory before generating
+    # documentation.  Some of the files are generated, so they
     # only exist in the build directory.  Sphinx needs all files in
     # the same directory in order to generate the html, so we need to
-    # copy all the non-gnerated rst files from the source to the build
+    # copy all the non-generated source files from the source to the build
     # directory before we run sphinx.
-    add_custom_target(copy-clang-rst-docs
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+    set(clang_generated_docs
+      AttributeReference.rst
+      DiagnosticsReference.rst
+      AMDGPUBuiltinReference.rst
+      ClangCommandLineReference.rst
+      analyzer/user-docs/Options.rst)
+    add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
-
+      PRESERVE_DOCS ${clang_generated_docs})
+    add_custom_command(TARGET copy-clang-rst-docs POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.md"
       "${CMAKE_CURRENT_BINARY_DIR}"
     )
+
+    add_custom_command(TARGET copy-clang-rst-docs POST_BUILD
+      COMMAND "${Python3_EXECUTABLE}"
+      ARGS "${CMAKE_CURRENT_BINARY_DIR}/CIR/_raw/PostProcessCIRDocs.py"
+           "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/CIR/CIRDialect.md
+    )
+    if (CLANG_ENABLE_CIR)
+      add_dependencies(copy-clang-rst-docs clang-cir-doc)
+    endif()
 
     set(docs_targets "")
 
@@ -132,7 +147,8 @@ if (LLVM_ENABLE_SPHINX)
     # Generated files
     gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
     gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
-    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Driver/ClangOptionDocs.td "${docs_targets}")
+    gen_rst_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
+    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 
     # Another generated file from a different source
     set(docs_tools_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools)

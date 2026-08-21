@@ -17,7 +17,7 @@
 
 ; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash-module -filter-passes=blah < %s 2>&1 | FileCheck %s --check-prefix=CHECK_FILTERED
 
-; CHECK_SIMPLE: *** Dump of IR Before Last Pass {{.*}} Started ***
+; CHECK_SIMPLE: ; *** Dump of IR Before Last Pass {{.*}} Started ***
 ; CHECK_SIMPLE: @main
 ; CHECK_SIMPLE: entry:
 ; CHECK_NO_CRASH-NOT: *** Dump of IR

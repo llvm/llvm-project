@@ -17,7 +17,7 @@
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "clang/Basic/UnsignedOrNone.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -297,10 +297,10 @@ public:
   /// set of function templates, returns NULL.
   TemplateDecl *getAsTemplateDecl(bool IgnoreDeduced = false) const;
 
-  /// Retrieves the underlying template declaration that
+  /// Retrieves the underlying template name that
   /// this template name refers to, along with the
   /// deduced default arguments, if any.
-  std::pair<TemplateDecl *, DefaultArguments>
+  std::pair<TemplateName, DefaultArguments>
   getTemplateDeclAndDefaultArgs() const;
 
   /// Retrieve the underlying, overloaded function template
@@ -335,17 +335,17 @@ public:
   /// structure, if any.
   QualifiedTemplateName *getAsQualifiedTemplateName() const;
 
-  /// Retrieve the underlying qualified template name,
-  /// looking through underlying nodes.
-  QualifiedTemplateName *getAsAdjustedQualifiedTemplateName() const;
-
   /// Retrieve the underlying dependent template name
   /// structure, if any.
   DependentTemplateName *getAsDependentTemplateName() const;
 
-  // Retrieve the qualifier stored in either a underlying DependentTemplateName
-  // or QualifiedTemplateName.
-  NestedNameSpecifier getQualifier() const;
+  // Retrieve the qualifier and template keyword stored in either a underlying
+  // DependentTemplateName or QualifiedTemplateName.
+  std::tuple<NestedNameSpecifier, bool> getQualifierAndTemplateKeyword() const;
+
+  NestedNameSpecifier getQualifier() const {
+    return std::get<0>(getQualifierAndTemplateKeyword());
+  }
 
   /// Retrieve the using shadow declaration through which the underlying
   /// template declaration is introduced, if any.

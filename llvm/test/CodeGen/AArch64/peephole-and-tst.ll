@@ -13,27 +13,23 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-SD-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
 ; CHECK-SD-NEXT:    ldr x9, [x8]
 ; CHECK-SD-NEXT:    mov w8, wzr
-; CHECK-SD-NEXT:    b .LBB0_3
-; CHECK-SD-NEXT:  .LBB0_1: // in Loop: Header=BB0_3 Depth=1
-; CHECK-SD-NEXT:    str xzr, [x9, #8]
-; CHECK-SD-NEXT:  .LBB0_2: // in Loop: Header=BB0_3 Depth=1
+; CHECK-SD-NEXT:    b .LBB0_2
+; CHECK-SD-NEXT:  .LBB0_1: // in Loop: Header=BB0_2 Depth=1
 ; CHECK-SD-NEXT:    lsl w1, w1, #1
-; CHECK-SD-NEXT:    cbz w1, .LBB0_6
-; CHECK-SD-NEXT:  .LBB0_3: // %do.body
+; CHECK-SD-NEXT:    cbz w1, .LBB0_4
+; CHECK-SD-NEXT:  .LBB0_2: // %do.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ands w10, w1, w0
-; CHECK-SD-NEXT:    and w11, w2, w0
+; CHECK-SD-NEXT:    orr w11, w2, w10
 ; CHECK-SD-NEXT:    cinc w8, w8, ne
-; CHECK-SD-NEXT:    cmp w10, w11
-; CHECK-SD-NEXT:    b.eq .LBB0_1
-; CHECK-SD-NEXT:  // %bb.4: // %do.body
-; CHECK-SD-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-SD-NEXT:    cbnz w2, .LBB0_1
-; CHECK-SD-NEXT:  // %bb.5: // %do.body
-; CHECK-SD-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-SD-NEXT:    cbz w10, .LBB0_2
+; CHECK-SD-NEXT:    cmp w11, #0
+; CHECK-SD-NEXT:    and w11, w2, w0
+; CHECK-SD-NEXT:    ccmp w10, w11, #4, eq
+; CHECK-SD-NEXT:    b.ne .LBB0_1
+; CHECK-SD-NEXT:  // %bb.3: // in Loop: Header=BB0_2 Depth=1
+; CHECK-SD-NEXT:    str xzr, [x9, #8]
 ; CHECK-SD-NEXT:    b .LBB0_1
-; CHECK-SD-NEXT:  .LBB0_6: // %do.end
+; CHECK-SD-NEXT:  .LBB0_4: // %do.end
 ; CHECK-SD-NEXT:    mov w0, w8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -278,9 +274,9 @@ define i64 @test_and_4(i64 %x, i64 %y) {
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
-; CHECK-GI-NEXT:    and x20, x0, #0x3
 ; CHECK-GI-NEXT:    mov x19, x0
-; CHECK-GI-NEXT:    mov x0, x20
+; CHECK-GI-NEXT:    and x20, x0, #0x3
+; CHECK-GI-NEXT:    and x0, x0, #0x3
 ; CHECK-GI-NEXT:    bl callee
 ; CHECK-GI-NEXT:    tst x19, #0x3
 ; CHECK-GI-NEXT:    csel x0, x20, x0, eq

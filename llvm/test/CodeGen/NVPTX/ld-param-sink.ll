@@ -12,7 +12,7 @@ define ptr @foo(i1 %cond) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b8 %rs1, [foo_param_0];
@@ -21,14 +21,14 @@ define ptr @foo(i1 %cond) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 retval0;
 ; CHECK-NEXT:    call.uni (retval0), baz, ();
-; CHECK-NEXT:    ld.param.b64 %rd2, [retval0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    @%p1 bra $L__BB0_2;
 ; CHECK-NEXT:  // %bb.1: // %bb
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    call.uni (retval0), bar, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:  $L__BB0_2: // %common.ret

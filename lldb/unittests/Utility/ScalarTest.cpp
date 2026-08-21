@@ -118,11 +118,17 @@ TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;
   int c = 4;
+  unsigned d = 0xFFFFFFFF;
+  unsigned short e = 0xFFFF;
   Scalar a_scalar(a);
   Scalar b_scalar(b);
   Scalar c_scalar(c);
+  Scalar d_scalar(d);
+  Scalar e_scalar(e);
   ASSERT_EQ(a >> c, a_scalar >> c_scalar);
   ASSERT_EQ(b >> c, b_scalar >> c_scalar);
+  ASSERT_EQ(d >> c, d_scalar >> c_scalar);
+  ASSERT_EQ(e >> c, e_scalar >> c_scalar);
 }
 
 TEST(ScalarTest, GetBytes) {
@@ -337,6 +343,12 @@ TEST(ScalarTest, Division) {
   Scalar r = lhs / rhs;
   EXPECT_TRUE(r.IsValid());
   EXPECT_EQ(r, Scalar(2.5));
+
+  Scalar inf = Scalar(1) / Scalar(0.0f);
+  Scalar int0 = Scalar(1) / Scalar(0);
+  Scalar ref_inf = llvm::APFloat::getInf(llvm::APFloat::IEEEsingle());
+  EXPECT_EQ(inf, ref_inf);
+  EXPECT_FALSE(int0.IsValid());
 }
 
 TEST(ScalarTest, Promotion) {

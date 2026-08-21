@@ -51,7 +51,7 @@ private:
   /// Was this argument used to affect compilation?
   ///
   /// This is used to generate an "argument unused" warning (without
-  /// clang::driver::options::TargetSpecific) or "unsupported option" error
+  /// clang::options::TargetSpecific) or "unsupported option" error
   /// (with TargetSpecific).
   mutable unsigned Claimed : 1;
 

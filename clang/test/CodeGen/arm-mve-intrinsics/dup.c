@@ -244,8 +244,7 @@ uint32x4_t test_vdupq_m_n_u32(uint32x4_t inactive, uint32_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> poison, half [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> poison, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x half> [[DOTSPLAT]], <8 x half> undef
-// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+// CHECK-NEXT:    ret <8 x half> [[DOTSPLAT]]
 //
 float16x8_t test_vdupq_x_n_f16(float16_t a, mve_pred16_t p)
 {
@@ -258,8 +257,7 @@ float16x8_t test_vdupq_x_n_f16(float16_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[DOTSPLAT]], <4 x float> undef
-// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+// CHECK-NEXT:    ret <4 x float> [[DOTSPLAT]]
 //
 float32x4_t test_vdupq_x_n_f32(float32_t a, mve_pred16_t p)
 {
@@ -272,8 +270,7 @@ float32x4_t test_vdupq_x_n_f32(float32_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i8> [[DOTSPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[DOTSPLAT]], <16 x i8> undef
-// CHECK-NEXT:    ret <16 x i8> [[TMP2]]
+// CHECK-NEXT:    ret <16 x i8> [[DOTSPLAT]]
 //
 int8x16_t test_vdupq_x_n_s8(int8_t a, mve_pred16_t p)
 {
@@ -286,8 +283,7 @@ int8x16_t test_vdupq_x_n_s8(int8_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[DOTSPLAT]], <8 x i16> undef
-// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+// CHECK-NEXT:    ret <8 x i16> [[DOTSPLAT]]
 //
 int16x8_t test_vdupq_x_n_s16(int16_t a, mve_pred16_t p)
 {
@@ -300,8 +296,7 @@ int16x8_t test_vdupq_x_n_s16(int16_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[DOTSPLAT]], <4 x i32> undef
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    ret <4 x i32> [[DOTSPLAT]]
 //
 int32x4_t test_vdupq_x_n_s32(int32_t a, mve_pred16_t p)
 {
@@ -314,8 +309,7 @@ int32x4_t test_vdupq_x_n_s32(int32_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i8> [[DOTSPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[DOTSPLAT]], <16 x i8> undef
-// CHECK-NEXT:    ret <16 x i8> [[TMP2]]
+// CHECK-NEXT:    ret <16 x i8> [[DOTSPLAT]]
 //
 uint8x16_t test_vdupq_x_n_u8(uint8_t a, mve_pred16_t p)
 {
@@ -328,8 +322,7 @@ uint8x16_t test_vdupq_x_n_u8(uint8_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[DOTSPLAT]], <8 x i16> undef
-// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+// CHECK-NEXT:    ret <8 x i16> [[DOTSPLAT]]
 //
 uint16x8_t test_vdupq_x_n_u16(uint16_t a, mve_pred16_t p)
 {
@@ -342,8 +335,7 @@ uint16x8_t test_vdupq_x_n_u16(uint16_t a, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[DOTSPLAT]], <4 x i32> undef
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    ret <4 x i32> [[DOTSPLAT]]
 //
 uint32x4_t test_vdupq_x_n_u32(uint32_t a, mve_pred16_t p)
 {

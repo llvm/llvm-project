@@ -21,7 +21,7 @@ using namespace llvm::codeview;
 
 class TypeIndexIteratorTest : public testing::Test {
 public:
-  TypeIndexIteratorTest() {}
+  TypeIndexIteratorTest() = default;
 
   void SetUp() override {
     Refs.clear();
@@ -605,4 +605,11 @@ TEST_F(TypeIndexIteratorTest, UsingNamespace) {
   UN.Name = "std";
   writeSymbolRecords(UN);
   checkTypeReferences(0);
+}
+
+TEST_F(TypeIndexIteratorTest, RegRelativeIndir) {
+  RegRelativeIndirSym RR(SymbolRecordKind::RegRelativeIndirSym);
+  RR.Type = TypeIndex::Int32();
+  writeSymbolRecords(RR);
+  checkTypeReferences(0, RR.Type);
 }

@@ -201,8 +201,13 @@ private:
 
 public:
   /// A SwitchStmt, along with a flag indicating if its list of case statements
-  /// is incomplete (because we dropped an invalid one while parsing).
-  using SwitchInfo = llvm::PointerIntPair<SwitchStmt*, 1, bool>;
+  /// is incomplete (because we dropped an invalid one while parsing), as well
+  /// as the DeclContext containing the statement.
+  struct SwitchInfo : llvm::PointerIntPair<SwitchStmt *, 1, bool> {
+    DeclContext *EnclosingDC;
+    SwitchInfo(SwitchStmt *Switch, DeclContext *DC)
+        : PointerIntPair(Switch, false), EnclosingDC(DC) {}
+  };
 
   /// SwitchStack - This is the current set of active switch statements in the
   /// block.
@@ -244,6 +249,10 @@ public:
 
   /// The set of GNU address of label extension "&&label".
   llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
+
+  /// An unresolved identifier lookup expression for an implicit call
+  /// to a SYCL kernel launch function in a dependent context.
+  Expr *SYCLKernelLaunchIdExpr = nullptr;
 
 public:
   /// Represents a simple identification of a weak object.
@@ -324,14 +333,6 @@ public:
     // instantiated.
     class DenseMapInfo {
     public:
-      static inline WeakObjectProfileTy getEmptyKey() {
-        return WeakObjectProfileTy();
-      }
-
-      static inline WeakObjectProfileTy getTombstoneKey() {
-        return WeakObjectProfileTy::getSentinel();
-      }
-
       static unsigned getHashValue(const WeakObjectProfileTy &Val) {
         using Pair = std::pair<BaseInfoTy, const NamedDecl *>;
 
@@ -878,6 +879,8 @@ public:
   /// is known.
   bool AfterParameterList = true;
 
+  bool BeforeCompoundStatement = true;
+
   ParmVarDecl *ExplicitObjectParameter = nullptr;
 
   /// Source range covering the lambda introducer [...].
@@ -933,7 +936,7 @@ public:
   ///  to local variables that are usable as constant expressions and
   ///  do not involve an odr-use (they may still need to be captured
   ///  if the enclosing full-expression is instantiation dependent).
-  llvm::SmallSet<Expr *, 8> NonODRUsedCapturingExprs;
+  llvm::SmallPtrSet<Expr *, 8> NonODRUsedCapturingExprs;
 
   /// A map of explicit capture indices to their introducer source ranges.
   llvm::DenseMap<unsigned, SourceRange> ExplicitCaptureRanges;

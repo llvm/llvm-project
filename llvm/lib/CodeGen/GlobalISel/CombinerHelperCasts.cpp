@@ -38,14 +38,15 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 
   // Combines without nsw trunc.
   if (!Trunc->getFlag(MachineInstr::NoSWrap)) {
-    if (DstTy != SrcTy ||
-        !isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT_INREG, {DstTy, SrcTy}}))
-      return false;
-
     // Do this for 8 bit values and up. We don't want to do it for e.g. G_TRUNC
     // to i1.
     unsigned TruncWidth = MRI.getType(Trunc->getReg(0)).getScalarSizeInBits();
     if (TruncWidth < 8)
+      return false;
+
+    if (DstTy != SrcTy ||
+        !isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_SEXT_INREG, {DstTy, SrcTy}, {}, {TruncWidth}}))
       return false;
 
     MatchInfo = [=](MachineIRBuilder &B) {

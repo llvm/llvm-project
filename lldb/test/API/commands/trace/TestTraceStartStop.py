@@ -7,6 +7,8 @@ from lldbsuite.test.decorators import *
 
 @skipIfNoIntelPT
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def expectGenericHelpMessageForStartCommand(self):
         self.expect(
             "help thread trace start",
@@ -218,7 +220,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace stop",
             error=True,
-            substrs=["error: Process is not being traced"],
+            substrs=["error: process is not being traced"],
         )
 
         # the help command should be the intel-pt one now

@@ -13,8 +13,6 @@
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/Testing/Support/Error.h"
 
-#include <vector>
-
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::orc;
@@ -39,8 +37,8 @@ public:
     return Mapper->initialize(AI, std::move(OnInitialized));
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return Mapper->prepare(Addr, ContentSize);
+  char *prepare(LinkGraph &G, ExecutorAddr Addr, size_t ContentSize) override {
+    return Mapper->prepare(G, Addr, ContentSize);
   }
 
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,

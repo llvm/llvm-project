@@ -4,8 +4,7 @@
 
 include "APIDefs.td"
 
-def : Enum {
-  let name = "my_enum_t";
+def my_enum_t : Enum {
   let desc = "An example enum";
   let etors =[
     Etor<"VALUE_ONE", "The first enum value">,

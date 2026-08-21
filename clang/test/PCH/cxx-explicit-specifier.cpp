@@ -28,7 +28,7 @@ namespace inheriting_constructor {
 U<S, char> a = foo('0');
 }
 
-//CHECK: explicit(((void)char{} , true))
+//CHECK: explicit(((void)char{}, true))
 
 #endif
 
@@ -85,7 +85,7 @@ B<false> b_false;
 //expected-note@-8+ {{explicit conversion function is not a candidate (explicit specifier}}
 //expected-note@-11 {{explicit constructor is not a candidate (explicit specifier}}
 
-//CHECK: explicit(b){{ +}}templ::A<b>(B<b>)
+//CHECK: explicit(b){{ +}}A
 //CHECK: explicit(b{{ +}}^{{ +}}T::value){{ +}}operator
 
 A a = { b_true }; //expected-error {{class template argument deduction}}

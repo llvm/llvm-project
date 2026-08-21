@@ -1,4 +1,4 @@
-//===--- UseUncaughtExceptionsCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
-  std::string MatchText = "::std::uncaught_exception";
+  const std::string MatchText = "::std::uncaught_exception";
 
   // Using declaration: warning and fix-it.
   Finder->addMatcher(
@@ -29,7 +29,7 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl_ref_expr"),
       this);
 
-  auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
+  const auto DirectCallToUncaughtException = callee(expr(ignoringImpCasts(
       declRefExpr(hasDeclaration(functionDecl(hasName(MatchText)))))));
 
   // CallExpr: warning, fix-it.
@@ -69,8 +69,9 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
     EndLoc = U->getNameInfo().getEndLoc();
   }
 
-  auto Diag = diag(BeginLoc, "'std::uncaught_exception' is deprecated, use "
-                             "'std::uncaught_exceptions' instead");
+  const auto Diag =
+      diag(BeginLoc, "'std::uncaught_exception' is deprecated, use "
+                     "'std::uncaught_exceptions' instead");
 
   if (!BeginLoc.isMacroID()) {
     StringRef Text =
@@ -78,11 +79,10 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
                              *Result.SourceManager, getLangOpts());
 
     Text.consume_back("()");
-    int TextLength = Text.size();
+    const int TextLength = Text.size();
 
-    if (WarnOnly) {
+    if (WarnOnly)
       return;
-    }
 
     if (!C) {
       Diag << FixItHint::CreateInsertion(BeginLoc.getLocWithOffset(TextLength),

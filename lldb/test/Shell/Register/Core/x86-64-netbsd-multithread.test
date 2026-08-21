@@ -1,10 +1,10 @@
 # RUN: %lldb -b -s %s -c %p/Inputs/x86-64-netbsd-multithread.core | FileCheck %s
 
 thread list
-# CHECK: * thread #1: tid = 2, 0x0000000000400f82, stop reason = signal SIGSEGV 
-# CHECK-NEXT:   thread #2: tid = 4, 0x0000000000400f88, stop reason = signal 0 
-# CHECK-NEXT:   thread #3: tid = 3, 0x0000000000400f88, stop reason = signal 0 
-# CHECK-NEXT:   thread #4: tid = 1, 0x0000791280ca1faa, stop reason = signal 0 
+# CHECK: * thread #1: tid = 2, 0x0000000000400f82, stop reason = signal SIGSEGV
+# CHECK-NEXT:   thread #2: tid = 4, 0x0000000000400f88
+# CHECK-NEXT:   thread #3: tid = 3, 0x0000000000400f88
+# CHECK-NEXT:   thread #4: tid = 1, 0x0000791280ca1faa
 
 register read --all
 # CHECK-DAG: ecx = 0x04040404

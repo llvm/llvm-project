@@ -151,12 +151,10 @@ void MacOSXAPIChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   SubChecker SC =
-    llvm::StringSwitch<SubChecker>(Name)
-      .Cases("dispatch_once",
-             "_dispatch_once",
-             "dispatch_once_f",
-             &MacOSXAPIChecker::CheckDispatchOnce)
-      .Default(nullptr);
+      llvm::StringSwitch<SubChecker>(Name)
+          .Cases({"dispatch_once", "_dispatch_once", "dispatch_once_f"},
+                 &MacOSXAPIChecker::CheckDispatchOnce)
+          .Default(nullptr);
 
   if (SC)
     (this->*SC)(C, CE, Name);

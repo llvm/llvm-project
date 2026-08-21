@@ -85,9 +85,9 @@ define fastcc i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub.l #10, %d0
 ; CHECK-NEXT:    seq %d0
-; CHECK-NEXT:    and.l #255, %d0
-; CHECK-NEXT:    sub.l %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
+; CHECK-NEXT:    ext.w %d0
+; CHECK-NEXT:    ext.l %d0
+; CHECK-NEXT:    add.l %d1, %d0
 ; CHECK-NEXT:    rts
   %cmp = icmp eq i32 %x, 10
   %sub = sext i1 %cmp to i32

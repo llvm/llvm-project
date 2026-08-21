@@ -34,7 +34,7 @@ enum X86MachineCombinerPattern : unsigned {
 
 namespace X86 {
 
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
@@ -50,6 +50,9 @@ std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
                        bool HasNDD = false);
+
+/// Return a MOVri opcode for materializing \p Imm into a 32- or 64-bit GPR.
+unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm);
 
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
@@ -79,6 +82,15 @@ int getCCMPCondFlagsFromCondCode(CondCode CC);
 
 // Get the opcode of corresponding NF variant.
 unsigned getNFVariant(unsigned Opc);
+
+// If \p MI clobbers EFLAGS and that clobber can be removed by rewriting the
+// instruction to its NF (no-flags) variant, return that NF opcode; otherwise
+// return 0. The clobber is removable only if the EFLAGS def is dead, an NF
+// variant exists, and (for linker backward-compat) it is not an ADDrm/ADDmr
+// with relocation.
+unsigned
+getNFVariantIfClobberRemovable(const MachineInstr &MI,
+                               const TargetRegisterInfo *TRI = nullptr);
 
 // Get the opcode of corresponding NonND variant.
 unsigned getNonNDVariant(unsigned Opc);
@@ -222,7 +234,7 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
 }
 
 class X86InstrInfo final : public X86GenInstrInfo {
-  X86Subtarget &Subtarget;
+  const X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
@@ -238,7 +250,7 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          bool MakeChange) const;
 
 public:
-  explicit X86InstrInfo(X86Subtarget &STI);
+  explicit X86InstrInfo(const X86Subtarget &STI);
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL. Returned register class
@@ -246,10 +258,8 @@ public:
   /// GR*RegClass (definition in TD file)
   /// ->
   /// GR*_NOREX2RegClass (Returned register class)
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                         unsigned OpNum) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
@@ -341,11 +351,11 @@ public:
   Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   /// Given an operand within a MachineInstr, insert preceding code to put it
   /// into the right format for a particular kind of LEA instruction. This may
@@ -470,14 +480,13 @@ public:
                    bool RenamableSrc = false) const override;
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadStoreTileReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
@@ -495,19 +504,20 @@ public:
   /// is likely that the referenced instruction has been changed.
   ///
   /// \returns true on success.
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineInstr &LoadMI,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   bool
   unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
@@ -585,7 +595,8 @@ public:
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
                                       unsigned Size, Align Alignment,
-                                      bool AllowCommute) const;
+                                      bool AllowCommute, MachineInstr *&CopyMI,
+                                      VirtRegMap *VRM = nullptr) const;
 
   bool isHighLatencyDef(int opc) const override;
 
@@ -763,6 +774,25 @@ private:
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
 
+  /// Used by optimizeCompareInstr when the backward search for an equivalent
+  /// flag producer reaches a block (\p MultiPredMBB) with multiple
+  /// predecessors. Searches the dominator tree for an instruction that produces
+  /// the same flags as the compare \p CmpInstr and dominates it, such that on
+  /// every path from that producer to \p CmpInstr all EFLAGS clobbers can be
+  /// converted to their NF (no-flags) variants. Those clobbers are appended to
+  /// \p InstsToUpdate as (instruction, NF opcode) pairs for the caller to
+  /// rewrite. Restricted to producers that yield identical flags: it succeeds
+  /// only when isRedundantFlagInstr reports no operand swap and no immediate
+  /// delta, so on success \p IsSwapped is false and \p ImmDelta is 0. Returns
+  /// the flag producer on success, or nullptr otherwise. Requires the NF
+  /// feature (APX).
+  MachineInstr *findDominatingRedundantFlagInstr(
+      MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2,
+      int64_t CmpMask, int64_t CmpValue, MachineBasicBlock *MultiPredMBB,
+      bool &IsSwapped, int64_t &ImmDelta,
+      SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate)
+      const;
+
   /// Commute operands of \p MI for memory fold.
   ///
   /// \param Idx1 the index of operand to be commuted.
@@ -770,6 +800,11 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const override;
 };
 } // namespace llvm
 

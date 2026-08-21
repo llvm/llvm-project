@@ -27,10 +27,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -117,10 +115,7 @@ public:
                                                       op.getValue());
           return success();
         }
-      rewriter.startOpModification(op->getParentOp());
-      op.getResult().replaceAllUsesWith(op.getValue());
-      rewriter.finalizeOpModification(op->getParentOp());
-      rewriter.eraseOp(op);
+      rewriter.replaceOp(op, op.getValue());
     }
     return success();
   }

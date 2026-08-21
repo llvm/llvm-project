@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64--linux-android29 | FileCheck --check-prefixes=CHECK,CHECK29,NOALLGLOBALS %s
+; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64--linux-android29 -hwasan-static-linking=1 | FileCheck --check-prefixes=CHECK29,STATICLINKING %s
 ; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64--linux-android30 | FileCheck --check-prefixes=CHECK,CHECK30,NOALLGLOBALS %s
 ; RUN: opt < %s -S -passes=hwasan -mtriple=riscv64-unknown-elf -hwasan-globals=1 -hwasan-all-globals=1 | FileCheck --check-prefixes=CHECK,CHECK30,ALLGLOBALS %s
 
@@ -23,6 +24,8 @@
 ; CHECK: @__stop_hwasan_globals = external hidden constant [0 x i8]
 
 ; CHECK: @hwasan.note = private constant { i32, i32, i32, [8 x i8], i32, i32 } { i32 8, i32 8, i32 3, [8 x i8] c"LLVM\00\00\00\00", i32 trunc (i64 sub (i64 ptrtoint (ptr @__start_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @__stop_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32) }, section ".note.hwasan.globals", comdat($hwasan.module_ctor), align 4
+
+; STATICLINKING-NOT: @hwasan.note = private constant { i32, i32, i32, [8 x i8], i32, i32 } { i32 8, i32 8, i32 3, [8 x i8] c"LLVM\00\00\00\00", i32 trunc (i64 sub (i64 ptrtoint (ptr @__start_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @__stop_hwasan_globals to i64), i64 ptrtoint (ptr @hwasan.note to i64)) to i32) }, section ".note.hwasan.globals", comdat($hwasan.module_ctor), align 4
 
 ; CHECK: @hwasan.dummy.global = private constant [0 x i8] zeroinitializer, section "hwasan_globals", comdat($hwasan.module_ctor), !associated [[NOTE:![0-9]+]]
 

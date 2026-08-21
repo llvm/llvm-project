@@ -24,7 +24,8 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
 constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
-                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                     // both-note {{declared here}}
 
 
 [[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
@@ -32,6 +33,10 @@ constexpr int b = b; // both-error {{must be initialized by a constant expressio
                                                       // both-note {{read of non-const variable}} \
                                                       // both-note {{declared here}}
 
+
+  void func();
+  constexpr int (&fp4)() = (int(&)())func; // both-error {{constant expression}} \
+                                           // both-note {{reinterpret_cast}}
 
 struct S {
   int m;
@@ -146,6 +151,14 @@ void testValueInRangeOfEnumerationValues() {
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
+struct EnumTest {
+  enum type {
+      Type1,
+      BOUND
+  };
+  static const type binding_completed = type(BOUND + 1); // both-error {{in-class initializer for static data member is not a constant expression}} \
+                                                         // both-note {{integer value 2 is outside the valid range of values}}
+};
 
 template<class T, unsigned size> struct Bitfield {
   static constexpr T max = static_cast<T>((1 << size) - 1);
@@ -220,6 +233,13 @@ namespace ExternPointer {
   constexpr const int *pua = &pu.a; // Ok.
 }
 
+namespace ExternRedecl {
+  extern const int q; // both-note {{declared here}}
+  constexpr int g() { return q; } // both-note {{outside its lifetime}}
+  constexpr int q = g(); // both-error {{constant expression}} \
+                         // both-note {{in call}}
+}
+
 namespace PseudoDtor {
   typedef int I;
   constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
@@ -287,6 +307,8 @@ namespace OverlappingStrings {
   constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
 
 
+  /// Used to crash.
+  const bool x = &"ab"[0] == &"ba"[3];
 
 }
 
@@ -328,7 +350,18 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
+}
+
+namespace ReadAnonUnionInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    union {X a; };
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1;
 }
 
 namespace GH150709 {
@@ -339,7 +372,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];
@@ -352,11 +385,119 @@ namespace GH150709 {
   static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d1.*mp)() == 1, "");
   static_assert((f.*mp)() == 1, "");
-  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((c2[0].*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d2[0].*mp)() == 1, "");
 
   // incorrectly undiagnosed before fix of GH150709
-  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // both-error {{constant expression}}
+}
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
+          // both-warning {{expression result unused}}
+  }
+}
+
+struct Counter {
+  int copies;
+  constexpr Counter(int copies) : copies(copies) {}
+  constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+};
+// Passing an lvalue by value makes a non-elidable copy.
+constexpr int PassByValue(Counter c) { return c.copies; }
+static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+
+namespace PointerCast {
+  struct S { int x, y; } s;
+  constexpr S* sptr = &s;
+  struct U {};
+  struct Str {
+    int e : (Str*)(sptr) == (Str*)(sptr);
+    int f : &(U&)(*sptr) == &(U&)(*sptr);
+  };
+}
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
+}
+
+namespace AddSubMulNonNumber {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
+  typedef decltype(sizeof(int)) LabelDiffTy;
+  constexpr LabelDiffTy mulBy3(LabelDiffTy x) { return x * 3; } // both-note {{subexpression}}
+  void LabelDiffTest() {
+    static_assert(mulBy3(fold((LabelDiffTy)&&a-(LabelDiffTy)&&b)) == 3, ""); // both-error {{constant expression}} \
+                                                                             // both-note {{call to 'mulBy3(&&a - &&b)'}}
+    a:b:return;
+  }
+}
+
+namespace SubobjectCompare {
+  struct S {
+    int i;
+  };
+  constexpr S s[2] = {};
+  static_assert(&s[0].i < &s[1].i, "");
+  static_assert(&s[0].i != &s[1].i, "");
+  static_assert(!(&s[0] < &s[0]), "");
+
+  class A            { public: int a; };
+  class B : public A { public: int b; };
+  class C : public B {                };
+  constexpr C c{};
+  static_assert(&c.a < &c.b, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of address of base class subobject 'A' of class 'B' to field 'b' has unspecified value}}
+  static_assert(&c.a != &c.b, "");
+
+  class X { public: int x; };
+  class Y { public: int y; };
+  class Z : public X, public Y {};
+  constexpr Z z{};
+  static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert(&z.x != &z.y, "");
+  static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
+}
+
+namespace SubPtr {
+  struct A {};
+  struct B : A { int n; int m; };
+  B a[3][3];
+
+  constexpr int diff1 = &a[2] - &a[0];
+  constexpr int diff2 = &a[1][3] - &a[1][0];
+  constexpr int diff3 = &a[2][0] - &a[1][0]; // both-error {{constant expression}} \
+                                             // both-note {{subtracted pointers are not elements of the same array}}
+  // static_assert(&a[2][0] == &a[1][3], ""); FIXME
+  constexpr int diff4 = (&b + 1) - &b;
+  constexpr int diff5 = &a[1][2].n - &a[1][0].n; // both-error {{constant expression}} \
+                                                 // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr int diff6 = &a[1][2].n - &a[1][2].n;
+  constexpr int diff7 = (A*)&a[0][1] - (A*)&a[0][0]; // both-error {{constant expression}} \
+                                                     // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
 }

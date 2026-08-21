@@ -69,6 +69,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freelist_heap
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
   )
 endif()
 
@@ -109,7 +110,7 @@ add_libc_test(
   SUITE
     libc-support-tests
   SRCS
-  high_precision_decimal_test.cpp
+    high_precision_decimal_test.cpp
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
@@ -123,6 +124,8 @@ add_libc_test(
     str_to_float_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
+  HDRS
+    str_to_fp_test.h
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
@@ -149,7 +152,7 @@ add_libc_test(
     wcs_to_integer_test.cpp
   DEPENDS
     libc.src.__support.integer_literals
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
 )
 
 add_libc_test(
@@ -237,14 +240,13 @@ add_libc_test(
     hash_test.cpp
   DEPENDS
     libc.src.__support.hash
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
-  UNIT_TEST_ONLY
-    # Aligned Allocation is not supported in hermetic builds.
 )
 
 add_libc_test(
@@ -278,8 +280,31 @@ add_libc_test(
     libc.src.__support.CPP.bit
 )
 
+add_libc_test(
+  weak_avl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    weak_avl_test.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+)
+
+add_libc_test(
+  wctype_utils_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wctype_utils_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.macros.properties.os
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(printf_core)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
@@ -287,8 +312,8 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
-# Requires access to uchar header which is not on MacOS
-# Cannot currently build this on MacOS in overlay mode
-if(NOT(LIBC_TARGET_OS_IS_DARWIN))
-  add_subdirectory(wchar)
+add_subdirectory(wchar)
+add_subdirectory(wctype)
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
 endif()

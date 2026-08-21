@@ -1,16 +1,16 @@
-// RUN: mlir-opt -test-convert-to-spirv -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv -split-input-file -verify-diagnostics %s | FileCheck %s
 
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
 gpu.module @kernels {
-  // CHECK-LABEL: spirv.func @all_reduce
-  // CHECK-SAME: (%[[ARG0:.*]]: f32)
-  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %[[ARG0]] : f32 -> f32
   gpu.func @all_reduce(%arg0 : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{functions in 'spirv.module' can only contain spirv.* ops}}
     %reduced = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
     gpu.return
   }
@@ -27,11 +27,12 @@ module attributes {
 
 gpu.module @kernels {
   // CHECK-LABEL: spirv.func @subgroup_reduce
-  // CHECK-SAME: (%[[ARG0:.*]]: f32)
+  // CHECK-SAME: (%[[ARG0:.*]]: f32, [[BUF:.*]]: !spirv.ptr{{[^)]*}})
   // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %[[ARG0]] : f32 -> f32
-  gpu.func @subgroup_reduce(%arg0 : f32) kernel
+  gpu.func @subgroup_reduce(%arg0 : f32, %buf : memref<f32>) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %reduced = gpu.subgroup_reduce add %arg0 {} : (f32) -> (f32)
+    memref.store %reduced, %buf[] : memref<f32>
     gpu.return
   }
 }

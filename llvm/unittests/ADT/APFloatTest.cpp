@@ -1027,6 +1027,13 @@ TEST(APFloatTest, Denormal) {
     EXPECT_TRUE(NegT.isDenormal());
     EXPECT_EQ(fcNegSubnormal, NegT.classify());
   }
+
+  // Test E8M0
+  {
+    APInt bits(8, 0);
+    APFloat minExp(APFloat::Float8E8M0FNU(), bits);
+    EXPECT_FALSE(minExp.isDenormal());
+  }
 }
 
 TEST(APFloatTest, IsSmallestNormalized) {
@@ -1040,36 +1047,46 @@ TEST(APFloatTest, IsSmallestNormalized) {
       continue;
 
     EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
-      EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
+      if (Semantics.hasSignedRepr)
+        EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
 
       EXPECT_FALSE(APFloat::getQNaN(Semantics).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
     }
 
     EXPECT_FALSE(APFloat::getLargest(Semantics).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getSmallest(Semantics).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getSmallest(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(
+          APFloat::getSmallest(Semantics, true).isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getAllOnesValue(Semantics).isSmallestNormalized());
 
     APFloat PosSmallestNormalized =
         APFloat::getSmallestNormalized(Semantics, false);
-    APFloat NegSmallestNormalized =
-        APFloat::getSmallestNormalized(Semantics, true);
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
-    EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
-    EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
 
-    for (APFloat *Val : {&PosSmallestNormalized, &NegSmallestNormalized}) {
+    SmallVector<std::optional<APFloat>> Vals = {PosSmallestNormalized};
+    std::optional<APFloat> NegSmallestNormalized;
+    if (Semantics.hasSignedRepr) {
+      NegSmallestNormalized = APFloat::getSmallestNormalized(Semantics, true);
+      EXPECT_TRUE(NegSmallestNormalized->isSmallestNormalized());
+      EXPECT_EQ(fcNegNormal, NegSmallestNormalized->classify());
+      Vals.push_back(NegSmallestNormalized);
+    }
+
+    for (auto &Val : Vals) {
       bool OldSign = Val->isNegative();
 
       // Step down, make sure it's still not smallest normalized.
@@ -1660,6 +1677,90 @@ TEST(APFloatTest, toInteger) {
   EXPECT_EQ(APSInt::getMaxValue(5, false), result);
 }
 
+class APFloatConvertFromAPIntParamTest
+    : public ::testing::TestWithParam<const fltSemantics *> {
+protected:
+  // Helper to run a conversion and compare the integer result directly.
+  static void testConversionAndCompareInt(const APInt &InputValue,
+                                          const bool IsSigned,
+                                          APFloat::roundingMode RM,
+                                          const APInt &ExpectedIntValue) {
+    const fltSemantics &Sem = *GetParam();
+    APFloat F(Sem);
+    F.convertFromAPInt(InputValue, /*IsSigned=*/IsSigned, RM);
+
+    APSInt ResultInt(InputValue.getBitWidth(), /*isUnsigned=*/!IsSigned);
+    bool IsExact;
+    F.convertToInteger(ResultInt, APFloat::rmTowardZero, &IsExact);
+
+    EXPECT_TRUE(IsExact);
+    EXPECT_TRUE(ResultInt.eq(ExpectedIntValue))
+        << "InputValue: " << InputValue << "\n"
+        << ResultInt << " vs " << ExpectedIntValue << "\n";
+  }
+};
+
+TEST_P(APFloatConvertFromAPIntParamTest, HalfwayRounding) {
+  const fltSemantics &Sem = *GetParam();
+  const unsigned Precision = APFloat::semanticsPrecision(Sem);
+
+  if (Precision == 0)
+    GTEST_SKIP() << "Skipping test for semantics with no significand.";
+
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth = Precision + 1 + (IsSigned ? 1 : 0);
+
+    const APInt RoundedDownVal = APInt::getOneBitSet(BitWidth, Precision);
+    const APInt HalfwayVal = RoundedDownVal + 1;
+    const APInt RoundedUpVal = RoundedDownVal + 2;
+
+    testConversionAndCompareInt(HalfwayVal, IsSigned,
+                                APFloat::rmNearestTiesToEven, RoundedDownVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned,
+                                APFloat::rmNearestTiesToAway, RoundedUpVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardPositive,
+                                RoundedUpVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardNegative,
+                                RoundedDownVal);
+    testConversionAndCompareInt(HalfwayVal, IsSigned, APFloat::rmTowardZero,
+                                RoundedDownVal);
+  }
+}
+
+TEST_P(APFloatConvertFromAPIntParamTest, MaxMagnitude) {
+  const fltSemantics &Sem = *GetParam();
+  const unsigned Precision = APFloat::semanticsPrecision(Sem);
+
+  if (Precision == 0)
+    GTEST_SKIP() << "Skipping test for semantics with no significand.";
+
+  const APFloat Largest = APFloat::getLargest(Sem, /*Negative=*/false);
+  const int Exp = ilogb(Largest);
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth = Exp + 1 + (IsSigned ? 1 : 0);
+
+    bool IsExact;
+    APSInt LargestAsInt{BitWidth, /*IsUnsigned=*/!IsSigned};
+    const APFloat::opStatus ToIntStatus =
+        Largest.convertToInteger(LargestAsInt, APFloat::rmTowardZero, &IsExact);
+    EXPECT_EQ(ToIntStatus, APFloat::opOK);
+
+    for (const APFloat::roundingMode RM :
+         {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+          APFloat::rmTowardPositive, APFloat::rmTowardZero,
+          APFloat::rmNearestTiesToEven}) {
+      testConversionAndCompareInt(LargestAsInt, IsSigned, RM, LargestAsInt);
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(IEEESemantics, APFloatConvertFromAPIntParamTest,
+                         ::testing::Values(&APFloat::IEEEhalf(),
+                                           &APFloat::BFloat(),
+                                           &APFloat::IEEEsingle(),
+                                           &APFloat::IEEEdouble(),
+                                           &APFloat::IEEEquad()));
+
 static APInt nanbitsFromAPInt(const fltSemantics &Sem, bool SNaN, bool Negative,
                               uint64_t payload) {
   APInt appayload(64, payload);
@@ -1918,6 +2019,15 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0.5")));
   EXPECT_TRUE(APFloat(APFloat::x87DoubleExtended(), "2.0").getExactInverse(&inv));
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::x87DoubleExtended(), "0.5")));
+  // 0x1p1022 has a normal inverse for IEEE 754 binary64: 0x1p-1022.
+  EXPECT_TRUE(APFloat(0x1p1022).getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(0x1p-1022)));
+  // With regards to getExactInverse, IEEEdouble and PPCDoubleDouble should
+  // behave the same.
+  EXPECT_TRUE(
+      APFloat(APFloat::PPCDoubleDouble(), "0x1p1022").getExactInverse(&inv));
+  EXPECT_TRUE(
+      inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0x1p-1022")));
 
   // FLT_MIN
   EXPECT_TRUE(APFloat(1.17549435e-38f).getExactInverse(&inv));
@@ -1929,6 +2039,8 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_FALSE(APFloat(0.0).getExactInverse(nullptr));
   // Denormalized float
   EXPECT_FALSE(APFloat(1.40129846e-45f).getExactInverse(nullptr));
+  // Largest subnormal
+  EXPECT_FALSE(APFloat(0x1p-127f).getExactInverse(nullptr));
 }
 
 TEST(APFloatTest, roundToIntegral) {
@@ -2206,6 +2318,8 @@ TEST(APFloatTest, getLargest) {
             APFloat::getLargest(APFloat::FloatTF32()).convertToFloat());
   EXPECT_EQ(1.701411834e+38f,
             APFloat::getLargest(APFloat::Float8E8M0FNU()).convertToDouble());
+  EXPECT_EQ(0x1.cp016,
+            APFloat::getLargest(APFloat::Float8E5M3FNU()).convertToDouble());
   EXPECT_EQ(28, APFloat::getLargest(APFloat::Float6E3M2FN()).convertToDouble());
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
@@ -2295,6 +2409,13 @@ TEST(APFloatTest, getSmallest) {
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+
+  test = APFloat::getSmallest(APFloat::Float8E5M3FNU(), false);
+  expected = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-17");
+  EXPECT_FALSE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 }
 
@@ -2410,6 +2531,14 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
   EXPECT_TRUE(test.isSmallestNormalized());
+
+  test = APFloat::getSmallestNormalized(APFloat::Float8E5M3FNU(), false);
+  expected = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-14");
+  EXPECT_FALSE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 }
 
 TEST(APFloatTest, getZero) {
@@ -2436,6 +2565,7 @@ TEST(APFloatTest, getZero) {
       {&APFloat::Float8E5M2(), true, true, {0x80ULL, 0}, 1},
       {&APFloat::Float8E5M2FNUZ(), false, false, {0, 0}, 1},
       {&APFloat::Float8E5M2FNUZ(), true, false, {0, 0}, 1},
+      {&APFloat::Float8E5M3FNU(), false, false, {0, 0}, 1},
       {&APFloat::Float8E4M3(), false, true, {0, 0}, 1},
       {&APFloat::Float8E4M3(), true, true, {0x80ULL, 0}, 1},
       {&APFloat::Float8E4M3FN(), false, true, {0, 0}, 1},
@@ -2692,9 +2822,7 @@ static APFloat makeDoubleAPFloat(T Hi, U Lo) {
   return APFloat(APFloat::PPCDoubleDouble(), Bits);
 }
 
-static APFloat makeDoubleAPFloat(DD X) {
-  return makeDoubleAPFloat(X.Hi, X.Lo);
-}
+static APFloat makeDoubleAPFloat(DD X) { return makeDoubleAPFloat(X.Hi, X.Lo); }
 
 TEST(APFloatTest, PPCDoubleDouble) {
   APFloat test(APFloat::PPCDoubleDouble(), "1.0");
@@ -4969,8 +5097,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -4979,8 +5107,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5033,8 +5161,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.add(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5047,8 +5175,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.add(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5082,8 +5210,8 @@ TEST(APFloatTest, PPCDoubleDoubleSubtract) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.subtract(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5137,8 +5265,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected, A1.getCategory())
@@ -5147,8 +5275,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiplySpecial) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected, A2.getCategory())
@@ -5210,8 +5338,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A1.multiply(A2, RM);
 
       EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5224,8 +5352,8 @@ TEST(APFloatTest, PPCDoubleDoubleMultiply) {
                  .str();
     }
     {
-      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+      APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+      APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
       A2.multiply(A1, RM);
 
       EXPECT_EQ(Expected[0], A2.bitcastToAPInt().getRawData()[0])
@@ -5257,8 +5385,8 @@ TEST(APFloatTest, PPCDoubleDoubleDivide) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.divide(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5290,8 +5418,8 @@ TEST(APFloatTest, PPCDoubleDoubleRemainder) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.remainder(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5325,8 +5453,8 @@ TEST(APFloatTest, PPCDoubleDoubleMod) {
     uint64_t Op1[2], Op2[2], Expected[2];
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1]) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     A1.mod(A2);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
@@ -5799,6 +5927,363 @@ TEST_P(PPCDoubleDoubleRoundToIntegralValueTest,
   }
 }
 
+namespace PPCDoubleDoubleConvertToIntegerTestDetails {
+// Define the rounding modes for easier readability.
+static constexpr auto RNE = APFloat::rmNearestTiesToEven;
+static constexpr auto RNA = APFloat::rmNearestTiesToAway;
+static constexpr auto RTZ = APFloat::rmTowardZero;
+static constexpr auto RUP = APFloat::rmTowardPositive;
+static constexpr auto RDN = APFloat::rmTowardNegative;
+
+struct TestCase {
+  // Structure to hold the expected result of a conversion
+  struct ExpectedConversion {
+    // The expected integer value represented as a string (decimal).
+    // We use a string to easily represent arbitrary precision values in
+    // constexpr. The test runner should parse this into an APSInt matching the
+    // test configuration.
+    const char *ExpectedIntStr;
+    APFloat::opStatus Status;
+  };
+
+  DD Input;
+  unsigned IntegerWidth;
+  bool IsSigned;
+  // Array indexed by the rounding mode enum value.
+  std::array<ExpectedConversion, 5> Rounded = {};
+
+  // Helper to define the expected results for a specific rounding mode.
+  constexpr TestCase &with(APFloat::roundingMode RM, const char *ExpectedStr,
+                           APFloat::opStatus Status) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = {
+        ExpectedStr,
+        Status,
+    };
+    return *this;
+  }
+
+  // Helper to define the same result for all rounding modes.
+  constexpr TestCase &withAll(const char *ExpectedStr,
+                              APFloat::opStatus Status) {
+    return with(RNE, ExpectedStr, Status)
+        .with(RNA, ExpectedStr, Status)
+        .with(RTZ, ExpectedStr, Status)
+        .with(RUP, ExpectedStr, Status)
+        .with(RDN, ExpectedStr, Status);
+  }
+};
+
+auto testCases() {
+  // Define the status codes.
+  constexpr auto OK = llvm::APFloat::opOK;
+  constexpr auto Inexact = llvm::APFloat::opInexact;
+  // The API specifies opInvalidOp for out-of-range (overflow/underflow) and
+  // NaN.
+  constexpr auto Invalid = llvm::APFloat::opInvalidOp;
+
+  // Helper constants for constructing specific DD values.
+  constexpr double Infinity = std::numeric_limits<double>::infinity();
+  constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+  constexpr double DMAX = std::numeric_limits<double>::max();
+
+  // Powers of 2
+  constexpr double P53 = 0x1p53;
+  constexpr double P63 = 0x1p63;
+  constexpr double P64 = 0x1p64;
+  // 2^-100 (A very small delta demonstrating extended precision)
+  constexpr double PM100 = 0x1p-100;
+
+  static constexpr auto ConvertToIntegerTestCases = std::array{
+      // 1. Zeros, NaNs, and Infinities (Target: 64-bit Signed)
+      // INT64_MAX = 9223372036854775807
+      // INT64_MIN = -9223372036854775808
+
+      // Input: Positive Zero (0.0, 0.0)
+      TestCase{{0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: Negative Zero (-0.0, 0.0)
+      TestCase{{-0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: NaN. Expected behavior: Invalid, deterministic result of 0.
+      TestCase{{NaN, 0.0}, 64, true}.withAll("0", Invalid),
+
+      // Input: +Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MAX.
+      TestCase{{Infinity, 0.0}, 64, true}.withAll("9223372036854775807",
+                                                  Invalid),
+
+      // Input: -Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MIN.
+      TestCase{{-Infinity, 0.0}, 64, true}.withAll("-9223372036854775808",
+                                                   Invalid),
+
+      // 2. Basic Rounding and Tie-Breaking (Target: 32-bit Signed)
+
+      // Input: 2.5 (Tie, preceding integer is Even)
+      TestCase{{2.5, 0.0}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 3.5 (Tie, preceding integer is Odd)
+      TestCase{{3.5, 0.0}, 32, true}
+          .with(RTZ, "3", Inexact)
+          .with(RDN, "3", Inexact)
+          .with(RUP, "4", Inexact)
+          .with(RNA, "4", Inexact)
+          .with(RNE, "4", Inexact),
+
+      // Input: -2.5 (Tie, preceding integer is Even)
+      TestCase{{-2.5, 0.0}, 32, true}
+          .with(RTZ, "-2", Inexact)
+          .with(RDN, "-3", Inexact)
+          .with(RUP, "-2", Inexact)
+          .with(RNA, "-3", Inexact)
+          .with(RNE, "-2", Inexact),
+
+      // 3. Double-Double Precision (The role of 'lo')
+      // Testing how extended precision affects rounding decisions.
+
+      // Input: 2.5 + Epsilon (Slightly above tie)
+      TestCase{{2.5, PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "3", Inexact),
+
+      // Input: 2.5 - Epsilon (Slightly below tie)
+      TestCase{{2.5, -PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "2", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 1.0 + Epsilon (Just above 1.0, e.g., 1.00...1)
+      TestCase{{1.0, PM100}, 32, true}
+          .with(RTZ, "1", Inexact)
+          .with(RDN, "1", Inexact)
+          .with(RUP, "2", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: 1.0 - Epsilon (Just below 1.0, e.g. 0.999...)
+      TestCase{{1.0, -PM100}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RDN, "0", Inexact)
+          .with(RUP, "1", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: Large number tie-breaking (Crucial test for DD implementation)
+      // Input: 2^53 + 1.5.
+      // A standard double(2^53 + 1.5) rounds to 2^53 + 2.0.
+      // The DD representation must precisely hold 2^53 + 1.5.
+      // The canonical DD representation is {2^53 + 2.0, -0.5}.
+      // Value is 9007199254740993.5
+      TestCase{{P53 + 2.0, -0.5}, 64, true}
+          .with(RTZ, "9007199254740993", Inexact)
+          .with(RDN, "9007199254740993", Inexact)
+          .with(RUP, "9007199254740994", Inexact)
+          .with(RNA, "9007199254740994", Inexact)
+          .with(RNE, "9007199254740994", Inexact),
+
+      // 4. Overflow Boundaries (Signed)
+
+      // Input: Exactly INT64_MAX. (2^63 - 1)
+      // Represented precisely as (2^63, -1.0)
+      TestCase{{P63, -1.0}, 64, true}.withAll("9223372036854775807", OK),
+
+      // Input: INT64_MAX + 0.3.
+      // Represented as (2^63, -0.7)
+      TestCase{{P63, -0.7}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RDN, "9223372036854775807", Inexact)
+          .with(RNA, "9223372036854775807", Inexact)
+          .with(RNE, "9223372036854775807", Inexact)
+          .with(RUP, "9223372036854775807", Invalid),
+
+      // Input: INT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^63, -0.5). Target integers are MAX (odd) and 2^63
+      // (even).
+      TestCase{{P63, -0.5}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RDN, "9223372036854775807", Inexact)
+          .with(RUP, "9223372036854775807", Invalid)
+          .with(RNA, "9223372036854775807", Invalid)
+          .with(RNE, "9223372036854775807", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: Exactly 2^63 (One past INT64_MAX)
+      TestCase{{P63, 0.0}, 64, true}.withAll("9223372036854775807", Invalid),
+
+      // Input: Exactly INT64_MIN (-2^63)
+      TestCase{{-P63, 0.0}, 64, true}.withAll("-9223372036854775808", OK),
+
+      // Input: INT64_MIN - 0.5 (Tie at the lower boundary)
+      // Target integers are -2^63-1 (odd) and MIN (even).
+      TestCase{{-P63, -0.5}, 64, true}
+          .with(RTZ, "-9223372036854775808", Inexact)
+          .with(RUP, "-9223372036854775808", Inexact)
+          // RDN rounds down, causing overflow.
+          .with(RDN, "-9223372036854775808", Invalid)
+          // RNA rounds away (down), causing overflow.
+          .with(RNA, "-9223372036854775808", Invalid)
+          // RNE rounds to even (up to -2^63), which is OK.
+          .with(RNE, "-9223372036854775808", Inexact),
+
+      // 5. Overflow Boundaries (Unsigned)
+      // UINT64_MAX = 18446744073709551615 (2^64 - 1)
+
+      // Input: Exactly UINT64_MAX. (2^64 - 1)
+      // Represented precisely as (2^64, -1.0)
+      TestCase{{P64, -1.0}, 64, false}.withAll("18446744073709551615", OK),
+
+      // Input: UINT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^64, -0.5)
+      TestCase{{P64, -0.5}, 64, false}
+          .with(RTZ, "18446744073709551615", Inexact)
+          .with(RDN, "18446744073709551615", Inexact)
+          // RUP rounds up (2^64), causing overflow.
+          .with(RUP, "18446744073709551615", Invalid)
+          // RNA rounds away (up), causing overflow.
+          .with(RNA, "18446744073709551615", Invalid)
+          // RNE rounds to even (up to 2^64), causing overflow.
+          .with(RNE, "18446744073709551615", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: -0.3 (Slightly below zero)
+      TestCase{{-0.3, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RDN, "0", Invalid),
+
+      // Input: -0.5 (Tie at zero)
+      TestCase{{-0.5, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          // RNE rounds to even (0).
+          .with(RNE, "0", Inexact)
+          .with(RDN, "0", Invalid)
+          // RNA rounds away (-1), causing overflow.
+          .with(RNA, "0", Invalid),
+
+      // Input: -1.0 (Negative integer)
+      TestCase{{-1.0, 0.0}, 64, false}.withAll("0", Invalid),
+
+      // 6. High Precision Integers (Target: 128-bit Signed)
+      // INT128_MAX = 170141183460469231731687303715884105727
+
+      // Input: 2^100 (Exactly representable in DD)
+      // 2^100 = 1267650600228229401496703205376.0
+      TestCase{{1267650600228229401496703205376.0, 0.0}, 128, true}.withAll(
+          "1267650600228229401496703205376", OK),
+
+      // Input: DMAX. (Approx 1.8e308).
+      // This is vastly larger than INT128_MAX (Approx 1.7e38).
+      TestCase{{DMAX, 0.0}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
+      // Input: Largest semPPCDoubleDoubleLegacy
+      TestCase{{DMAX, 0x1.ffffffffffffep+969}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
+      // 7. Round to negative -0
+      TestCase{{-PM100, 0.0}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RDN, "-1", Inexact),
+  };
+  return ConvertToIntegerTestCases;
+}
+} // namespace PPCDoubleDoubleConvertToIntegerTestDetails
+
+class PPCDoubleDoubleConvertToIntegerValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleConvertToIntegerTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleConvertToIntegerValueParamTests,
+    PPCDoubleDoubleConvertToIntegerValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleConvertToIntegerTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleConvertToIntegerValueTest,
+       PPCDoubleDoubleConvertToInteger) {
+  const PPCDoubleDoubleConvertToIntegerTestDetails::TestCase Params =
+      GetParam();
+  const APFloat Input = makeDoubleAPFloat(Params.Input);
+  EXPECT_FALSE(Input.isDenormal())
+      << Params.Input.Hi << " + " << Params.Input.Lo;
+
+  for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const auto &Expected = Params.Rounded[I];
+    APSInt ActualInteger(Params.IntegerWidth, /*isUnsigned=*/!Params.IsSigned);
+
+    APSInt ExpectedInteger{Expected.ExpectedIntStr};
+    EXPECT_LE(ExpectedInteger.getBitWidth(), Params.IntegerWidth);
+    ExpectedInteger = ExpectedInteger.extend(Params.IntegerWidth);
+    if (ExpectedInteger.isUnsigned() && Params.IsSigned) {
+      ExpectedInteger.setIsSigned(Params.IsSigned);
+      EXPECT_FALSE(ExpectedInteger.isNegative());
+    }
+
+    const bool NegativeUnderflow =
+        ExpectedInteger.isZero() && Input.isNegative();
+    const bool ExpectedIsExact =
+        Expected.Status == APFloat::opOK && !NegativeUnderflow;
+    bool ActualIsExact;
+    const auto ActualStatus =
+        Input.convertToInteger(ActualInteger, RM, &ActualIsExact);
+    EXPECT_EQ(ActualStatus, Expected.Status);
+    EXPECT_EQ(ActualIsExact, ExpectedIsExact);
+    EXPECT_EQ(ActualInteger, ExpectedInteger);
+  }
+}
+
 TEST(APFloatTest, PPCDoubleDoubleCompare) {
   using DataType =
       std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, APFloat::cmpResult>;
@@ -5832,12 +6317,108 @@ TEST(APFloatTest, PPCDoubleDoubleCompare) {
     APFloat::cmpResult Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.compare(A2))
         << formatv("compare(({0:x} + {1:x}), ({2:x} + {3:x}))", Op1[0], Op1[1],
                    Op2[0], Op2[1])
                .str();
+  }
+}
+
+namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails {
+struct TestCase {
+  DD LHS;
+  DD RHS;
+  APFloat::cmpResult Result;
+};
+
+auto testCases() {
+  static constexpr auto CompareAbsoluteValueTestCases = std::array{
+      TestCase{
+          {1.0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, -0.0},
+          {1.0, +0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {0x1.0000000000001p+0, 0.0},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, -0x1p-1074},
+          {1.0, +0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, +0x1p-1074},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1073},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+  };
+  return CompareAbsoluteValueTestCases;
+}
+} // namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails
+
+class PPCDoubleDoubleCompareAbsoluteValueValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleCompareAbsoluteValueTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleCompareAbsoluteValueValueParamTests,
+    PPCDoubleDoubleCompareAbsoluteValueValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleCompareAbsoluteValueTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleCompareAbsoluteValueValueTest,
+       PPCDoubleDoubleCompareAbsoluteValue) {
+  auto Param = GetParam();
+  for (bool LHSNegate : {false, true}) {
+    auto LHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                           APFloat{Param.LHS.Hi},
+                                           APFloat{Param.LHS.Lo}};
+    if (LHSNegate)
+      LHS.changeSign();
+    for (bool RHSNegate : {false, true}) {
+      auto RHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                             APFloat{Param.RHS.Hi},
+                                             APFloat{Param.RHS.Lo}};
+      if (RHSNegate)
+        RHS.changeSign();
+
+      EXPECT_EQ(LHS.compareAbsoluteValue(RHS), Param.Result);
+    }
   }
 }
 
@@ -5864,8 +6445,8 @@ TEST(APFloatTest, PPCDoubleDoubleBitwiseIsEqual) {
     bool Expected;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, Op2));
     EXPECT_EQ(Expected, A1.bitwiseIsEqual(A2))
         << formatv("({0:x} + {1:x}) = ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
                    Op2[1])
@@ -5877,16 +6458,15 @@ TEST(APFloatTest, PPCDoubleDoubleHashValue) {
   uint64_t Data1[] = {0x3ff0000000000001ull, 0x0000000000000001ull};
   uint64_t Data2[] = {0x3ff0000000000001ull, 0};
   // The hash values are *hopefully* different.
-  EXPECT_NE(
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data1))),
-      hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data2))));
+  EXPECT_NE(hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data1))),
+            hash_value(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data2))));
 }
 
 TEST(APFloatTest, PPCDoubleDoubleChangeSign) {
   uint64_t Data[] = {
       0x400f000000000000ull, 0xbcb0000000000000ull,
   };
-  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, 2, Data));
+  APFloat Float(APFloat::PPCDoubleDouble(), APInt(128, Data));
   {
     APFloat Actual =
         APFloat::copySign(Float, APFloat(APFloat::IEEEdouble(), "1"));
@@ -5906,14 +6486,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0, 0,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getZero(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getLargest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
@@ -5921,12 +6501,12 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x0000000000000001ull, 0,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getSmallest(APFloat::PPCDoubleDouble()).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {0x0360000000000000ull, 0};
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble())
                   .bitcastToAPInt());
   }
@@ -5935,7 +6515,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0x8000000000000000ull, 0x0000000000000000ull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getZero(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
@@ -5943,14 +6523,14 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
         0xffefffffffffffffull, 0xfc8ffffffffffffeull,
     };
     EXPECT_EQ(
-        APInt(128, 2, Data),
+        APInt(128, Data),
         APFloat::getLargest(APFloat::PPCDoubleDouble(), true).bitcastToAPInt());
   }
   {
     uint64_t Data[] = {
         0x8000000000000001ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallest(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -5958,7 +6538,7 @@ TEST(APFloatTest, PPCDoubleDoubleFactories) {
     uint64_t Data[] = {
         0x8360000000000000ull, 0x0000000000000000ull,
     };
-    EXPECT_EQ(APInt(128, 2, Data),
+    EXPECT_EQ(APInt(128, Data),
               APFloat::getSmallestNormalized(APFloat::PPCDoubleDouble(), true)
                   .bitcastToAPInt());
   }
@@ -5977,7 +6557,7 @@ TEST(APFloatTest, PPCDoubleDoubleIsDenormal) {
         0x4010000000000000ull, 0x4008000000000000ull,
     };
     EXPECT_TRUE(
-        APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Data)).isDenormal());
+        APFloat(APFloat::PPCDoubleDouble(), APInt(128, Data)).isDenormal());
   }
 }
 
@@ -5987,26 +6567,335 @@ TEST(APFloatTest, PPCDoubleDoubleScalbn) {
       0x4008000000000000ull, 0x3cb8000000000000ull,
   };
   APFloat Result =
-      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Input)), 1,
+      scalbn(APFloat(APFloat::PPCDoubleDouble(), APInt(128, Input)), 1,
              APFloat::rmNearestTiesToEven);
   // 6.0 + 6.0 << 53
   EXPECT_EQ(0x4018000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x3cc8000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
 }
 
-TEST(APFloatTest, PPCDoubleDoubleFrexp) {
-  // 3.0 + 3.0 << 53
-  uint64_t Input[] = {
-      0x4008000000000000ull, 0x3cb8000000000000ull,
+namespace PPCDoubleDoubleFrexpTestDetails {
+// Define the rounding modes for easier readability.
+static constexpr auto RNE = APFloat::rmNearestTiesToEven;
+static constexpr auto RNA = APFloat::rmNearestTiesToAway;
+static constexpr auto RTZ = APFloat::rmTowardZero;
+static constexpr auto RUP = APFloat::rmTowardPositive;
+static constexpr auto RDN = APFloat::rmTowardNegative;
+
+struct TestCase {
+  // Structure to hold the expected result of a conversion
+  struct ExpectedFractionExponent {
+    DD Fraction;
+    int Exponent;
+    friend APFloat::cmpResult compare(const ExpectedFractionExponent &Lhs,
+                                      const ExpectedFractionExponent &Rhs) {
+      const APFloat LhsFraction = makeDoubleAPFloat(Lhs.Fraction);
+      const APFloat RhsFraction = makeDoubleAPFloat(Rhs.Fraction);
+      const APFloat::cmpResult FractionRelation =
+          LhsFraction.compare(RhsFraction);
+      if (FractionRelation == APFloat::cmpUnordered)
+        return APFloat::cmpUnordered;
+      if (LhsFraction.isZero() && RhsFraction.isZero())
+        return APFloat::cmpEqual;
+      if (!LhsFraction.isNegative() &&
+          (RhsFraction.isNegative() || RhsFraction.isZero()))
+        return APFloat::cmpGreaterThan;
+      if (!RhsFraction.isNegative() &&
+          (LhsFraction.isNegative() || LhsFraction.isZero()))
+        return APFloat::cmpLessThan;
+      if (Lhs.Exponent > Rhs.Exponent)
+        return LhsFraction.isNegative() ? APFloat::cmpLessThan
+                                        : APFloat::cmpGreaterThan;
+      if (Lhs.Exponent < Rhs.Exponent)
+        return RhsFraction.isNegative() ? APFloat::cmpGreaterThan
+                                        : APFloat::cmpLessThan;
+      return FractionRelation;
+    }
   };
-  int Exp;
-  // 0.75 + 0.75 << 53
-  APFloat Result =
-      frexp(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Input)), Exp,
-            APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(2, Exp);
-  EXPECT_EQ(0x3fe8000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
-  EXPECT_EQ(0x3c98000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
+
+  DD Input;
+  // Array indexed by the rounding mode enum value.
+  std::array<ExpectedFractionExponent, 5> Rounded = {};
+
+  // Helper to define the expected results for a specific rounding mode.
+  constexpr TestCase &with(APFloat::roundingMode RM, DD ExpectedDD,
+                           int ExpectedExponent) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = {
+        ExpectedDD,
+        ExpectedExponent,
+    };
+    return *this;
+  }
+
+  // Helper to define the same result for all rounding modes.
+  constexpr TestCase &withAll(DD ExpectedDD, int ExpectedExponent) {
+    return with(RNE, ExpectedDD, ExpectedExponent)
+        .with(RNA, ExpectedDD, ExpectedExponent)
+        .with(RTZ, ExpectedDD, ExpectedExponent)
+        .with(RUP, ExpectedDD, ExpectedExponent)
+        .with(RDN, ExpectedDD, ExpectedExponent);
+  }
+};
+
+auto testCases() {
+  static constexpr auto FrexpTestCases = std::array{
+      // Input: +infinity
+      TestCase{{std::numeric_limits<double>::infinity(), 0.0}}.withAll(
+          {std::numeric_limits<double>::infinity(), 0.0}, INT_MAX),
+
+      // Input: -infinity
+      TestCase{{-std::numeric_limits<double>::infinity(), 0.0}}.withAll(
+          {-std::numeric_limits<double>::infinity(), 0.0}, INT_MAX),
+
+      // Input: NaN
+      TestCase{{std::numeric_limits<double>::quiet_NaN(), 0.0}}.withAll(
+          {std::numeric_limits<double>::quiet_NaN(), 0.0}, INT_MIN),
+
+      // Input: 2^-1074
+      TestCase{{0x1p-1074, 0.0}}.withAll({0x1p-1, 0.0}, -1073),
+      TestCase{{-0x1p-1074, 0.0}}.withAll({-0x1p-1, 0.0}, -1073),
+
+      // Input: (2^1, -2^-1073 + -2^-1074)
+      TestCase{{0x1p1, -0x1.8p-1073}}
+          .withAll({0x1p0, -0x1p-1073}, 1)
+          .with(RNA, {0x1p0, -0x1p-1074}, 1)
+          .with(RUP, {0x1p0, -0x1p-1074}, 1),
+      TestCase{{-0x1p1, 0x1.8p-1073}}
+          .withAll({-0x1p0, 0x1p-1073}, 1)
+          .with(RNA, {-0x1p0, 0x1p-1074}, 1)
+          .with(RDN, {-0x1p0, 0x1p-1074}, 1),
+
+      // Input: (2^1, -2^-1073)
+      TestCase{{0x1p1, -0x1p-1073}}.withAll({0x1p0, -0x1p-1074}, 1),
+
+      // Input: (2^1, -2^-1074)
+      TestCase{{0x1p1, -0x1p-1074}}
+          .withAll({0x1p-1, -0.0}, 2)
+          .with(RDN, {0x1p0, -0x1p-1074}, 1)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 1),
+
+      // Input: (2^2, -2^-1072 + -2^-1073 + -2^-1074)
+      TestCase{{0x1p2, -0x1.cp-1072}}
+          .withAll({0x1p0, -0x1p-1073}, 2)
+          .with(RUP, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1072 + -2^-1073)
+      TestCase{{0x1p2, -0x1.8p-1072}}
+          .withAll({0x1p0, -0x1p-1073}, 2)
+          .with(RNA, {0x1p0, -0x1p-1074}, 2)
+          .with(RUP, {0x1p0, -0x1p-1074}, 2),
+      TestCase{{-0x1p2, 0x1.8p-1072}}
+          .withAll({-0x1p0, 0x1p-1073}, 2)
+          .with(RNA, {-0x1p0, 0x1p-1074}, 2)
+          .with(RDN, {-0x1p0, 0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1072 + -2^-1074)
+      TestCase{{0x1p2, -0x1.4cp-1072}}
+          .withAll({0x1p0, -0x1p-1074}, 2)
+          .with(RDN, {0x1p0, -0x1p-1073}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1073}, 2),
+
+      // Input: (2^2, -2^-1072)
+      TestCase{{0x1p2, -0x1p-1072}}.withAll({0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1073 + -2^-1074)
+      TestCase{{0x1p2, -0x1.8p-1073}}
+          .withAll({0x1p0, -0x1p-1074}, 2)
+          .with(RUP, {0x1p-1, -0.0}, 3),
+
+      // Input: (2^2, -2^-1073)
+      TestCase{{0x1p2, -0x1p-1073}}
+          .withAll({0x1p-1, -0.0}, 3)
+          .with(RDN, {0x1p0, -0x1p-1074}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1074)
+      TestCase{{0x1p2, -0x1p-1074}}
+          .withAll({0x1p-1, -0.0}, 3)
+          .with(RDN, {0x1p0, -0x1p-1074}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: 3+3*2^-53 canonicalized to (3+2^-51, -2^-53)
+      // Output: 0.75+0.75*2^-53 canonicalized to (.75+2^-53, -2^-55)
+      TestCase{{0x1.8000000000001p1, -0x1p-53}}.withAll(
+          {0x1.8000000000001p-1, -0x1p-55}, 2),
+      TestCase{{-0x1.8000000000001p1, 0x1p-53}}.withAll(
+          {-0x1.8000000000001p-1, 0x1p-55}, 2),
+
+      // Input: (2^1021+2^969, 2^968-2^915)
+      TestCase{{0x1.0000000000001p1021, 0x1.fffffffffffffp967}}.withAll(
+          {0x1.0000000000001p-1, 0x1.fffffffffffffp-55}, 1022),
+      TestCase{{-0x1.0000000000001p1021, -0x1.fffffffffffffp967}}.withAll(
+          {-0x1.0000000000001p-1, -0x1.fffffffffffffp-55}, 1022),
+
+      // Input: (2^1023, -2^-1)
+      TestCase{{0x1p+1023, -0x1p-1}}.withAll({0x1p0, -0x1p-1024}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-1}}.withAll({-0x1p0, 0x1p-1024}, 1023),
+
+      // Input: (2^1023, -2^-51)
+      TestCase{{0x1p+1023, -0x1p-51}}.withAll({0x1p0, -0x1p-1074}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-51}}.withAll({-0x1p0, 0x1p-1074}, 1023),
+
+      // Input: (2^1023, -2^-52)
+      TestCase{{0x1p+1023, -0x1p-52}}
+          .withAll({0x1p-1, -0x0p0}, 1024)
+          .with(RDN, {0x1p0, -0x1p-1074}, 1023)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-52}}
+          .withAll({-0x1p-1, 0x0p0}, 1024)
+          .with(RUP, {-0x1p0, 0x1p-1074}, 1023)
+          .with(RTZ, {-0x1p0, 0x1p-1074}, 1023),
+
+      // Input: (2^1023, 2^-1074)
+      TestCase{{0x1p+1023, 0x1p-1074}}
+          .withAll({0x1p-1, 0x0p+0}, 1024)
+          .with(RUP, {0x1p-1, 0x1p-1074}, 1024),
+      TestCase{{-0x1p+1023, -0x1p-1074}}
+          .withAll({-0x1p-1, -0x0p+0}, 1024)
+          .with(RDN, {-0x1p-1, -0x1p-1074}, 1024),
+
+      // Input: (2^1024-2^971, 2^970-2^918)
+      TestCase{{0x1.fffffffffffffp+1023, 0x1.ffffffffffffep+969}}.withAll(
+          {0x1.fffffffffffffp-1, 0x1.ffffffffffffep-55}, 1024),
+      TestCase{{-0x1.fffffffffffffp+1023, -0x1.ffffffffffffep+969}}.withAll(
+          {-0x1.fffffffffffffp-1, -0x1.ffffffffffffep-55}, 1024),
+  };
+  return FrexpTestCases;
+}
+} // namespace PPCDoubleDoubleFrexpTestDetails
+
+class PPCDoubleDoubleFrexpValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleFrexpTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleFrexpValueParamTests, PPCDoubleDoubleFrexpValueTest,
+    ::testing::ValuesIn(PPCDoubleDoubleFrexpTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleFrexpValueTest, PPCDoubleDoubleFrexp) {
+  const PPCDoubleDoubleFrexpTestDetails::TestCase Params = GetParam();
+  const APFloat Input = makeDoubleAPFloat(Params.Input);
+  auto RmToIdx = [](APFloat::roundingMode RM) {
+    return static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM);
+  };
+  // First, make sure our expected results are consistent with each other before
+  // bothering to test the implementation.
+  if (Input.isFinite()) {
+    // Make sure the input is canonical.
+    EXPECT_EQ(APFloat{Params.Input.Hi},
+              APFloat{Params.Input.Hi} + APFloat{Params.Input.Lo})
+        << Params.Input.Hi << " + " << Params.Input.Lo;
+
+    const auto Dn = Params.Rounded[RmToIdx(APFloat::rmTowardNegative)];
+    const auto Up = Params.Rounded[RmToIdx(APFloat::rmTowardPositive)];
+    const auto Tz = Params.Rounded[RmToIdx(APFloat::rmTowardZero)];
+    const auto Ne = Params.Rounded[RmToIdx(APFloat::rmNearestTiesToEven)];
+    const auto Na = Params.Rounded[RmToIdx(APFloat::rmNearestTiesToAway)];
+
+    // The rdn result must be no larger than the rup result.
+    const APFloat::cmpResult DnVsUp = compare(Dn, Up);
+    EXPECT_TRUE(DnVsUp == APFloat::cmpLessThan || DnVsUp == APFloat::cmpEqual);
+
+    for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+      const APFloat RoundedFraction =
+          makeDoubleAPFloat(Params.Rounded[I].Fraction);
+      // All possible results should be bracketed by [Dn, Up].
+      const APFloat::cmpResult VsDn = compare(Params.Rounded[I], Dn);
+      EXPECT_TRUE(VsDn == APFloat::cmpGreaterThan || VsDn == APFloat::cmpEqual);
+      const APFloat::cmpResult VsUp = compare(Params.Rounded[I], Up);
+      EXPECT_TRUE(VsUp == APFloat::cmpLessThan || VsUp == APFloat::cmpEqual);
+      // A rounding result is either equal to the rup or rdn result.
+      EXPECT_TRUE(VsUp == APFloat::cmpEqual || VsDn == APFloat::cmpEqual);
+      // frexp returns a result whose magnitude is in in [.5, 1) so its exponent
+      // should be -1.
+      if (!RoundedFraction.isZero())
+        EXPECT_EQ(ilogb(RoundedFraction), -1)
+            << static_cast<APFloat::roundingMode>(I);
+      // Decomposition preserves sign.
+      EXPECT_EQ(RoundedFraction.isNegative(), Input.isNegative());
+      // A rounding result must be canonical.
+      EXPECT_EQ(APFloat{Params.Rounded[I].Fraction.Hi},
+                APFloat{Params.Rounded[I].Fraction.Hi} +
+                    APFloat{Params.Rounded[I].Fraction.Lo})
+          << Params.Rounded[I].Fraction.Hi << " + "
+          << Params.Rounded[I].Fraction.Lo;
+    }
+
+    // The rtz result must be either rup or rdn depending on the sign.
+    if (Input.isNegative()) {
+      const APFloat::cmpResult TzVsUp = compare(Tz, Up);
+      EXPECT_EQ(TzVsUp, APFloat::cmpEqual);
+    } else {
+      const APFloat::cmpResult TzVsDn = compare(Tz, Dn);
+      EXPECT_EQ(TzVsDn, APFloat::cmpEqual);
+    }
+
+    // The recomposed up should be at least as big as the input.
+    const APFloat RecomposedUp =
+        scalbn(makeDoubleAPFloat(Up.Fraction), Up.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(RecomposedUp >= Input);
+    // The recomposed down can't be larger than the input.
+    const APFloat RecomposedDn =
+        scalbn(makeDoubleAPFloat(Dn.Fraction), Dn.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(RecomposedDn <= Input);
+    // The recomposed tz must have a smaller magnitude.
+    const APFloat RecomposedTz =
+        scalbn(makeDoubleAPFloat(Tz.Fraction), Tz.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(abs(RecomposedTz) <= abs(Input));
+    // Either both or neither of the recomposed round-to-nearest results are
+    // equal to the input.
+    const APFloat RecomposedNe =
+        scalbn(makeDoubleAPFloat(Ne.Fraction), Ne.Exponent,
+               APFloat::rmNearestTiesToEven);
+    const APFloat RecomposedNa =
+        scalbn(makeDoubleAPFloat(Na.Fraction), Na.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(RecomposedNe == Input, RecomposedNa == Input);
+    // Either the ne result equals the na result or the na result has a bigger
+    // magnitude.
+    const APFloat::cmpResult NeVsNa =
+        abs(RecomposedNe).compare(abs(RecomposedNa));
+    EXPECT_TRUE(NeVsNa == APFloat::cmpLessThan || NeVsNa == APFloat::cmpEqual);
+    // ne and na may only disagree if they broke a tie differently.
+    if (NeVsNa == APFloat::cmpLessThan) {
+      // ne's magnitude should be lower than input.
+      const APFloat::cmpResult NeVsInput =
+          abs(RecomposedNe).compare(abs(Input));
+      EXPECT_EQ(NeVsInput, APFloat::cmpLessThan);
+      // na's magnitude should be greater than input.
+      const APFloat::cmpResult NaVsInput =
+          abs(RecomposedNa).compare(abs(Input));
+      EXPECT_EQ(NaVsInput, APFloat::cmpGreaterThan);
+    }
+    // If up or down perfectly reconstructs the input, the round-to-nearest
+    // results should too.
+    if (RecomposedUp == Input || RecomposedDn == Input) {
+      EXPECT_EQ(RecomposedNe, Input);
+      EXPECT_EQ(RecomposedNa, Input);
+    }
+  }
+
+  for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const auto &Expected = Params.Rounded[I];
+    const APFloat ExpectedFraction = makeDoubleAPFloat(Expected.Fraction);
+
+    int ActualExponent;
+    const APFloat ActualFraction = frexp(Input, ActualExponent, RM);
+    if (ExpectedFraction.isNaN())
+      EXPECT_TRUE(ActualFraction.isNaN());
+    else
+      EXPECT_EQ(ActualFraction.compare(ExpectedFraction), APFloat::cmpEqual)
+          << ActualFraction << " vs " << ExpectedFraction << " for input "
+          << Params.Input.Hi << " + " << Params.Input.Lo << " RM " << RM;
+    EXPECT_EQ(ActualExponent, Expected.Exponent)
+        << "for input " << Params.Input.Hi << " + " << Params.Input.Lo
+        << " RM " << RM;
+  }
 }
 
 TEST(APFloatTest, PPCDoubleDoubleNext) {
@@ -6268,6 +7157,249 @@ TEST(APFloatTest, PPCDoubleDoubleNext) {
   EXPECT_FALSE(Test.isDenormal());
 }
 
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntInexact) {
+  // Create an integer which would not be exactly representable in
+  // PPCDoubleDoubleLegacy.
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth =
+        APFloat::semanticsPrecision(APFloat::IEEEdouble()) * 3 +
+        (IsSigned ? 1 : 0);
+
+    for (bool Negative :
+         IsSigned ? std::vector{false, true} : std::vector{false}) {
+      APInt Huge = APInt{BitWidth, 0};
+      // Set the highest bit without making Huge negative..
+      Huge.setBit(BitWidth - (IsSigned ? 2 : 1));
+      // Set the low bit.
+      Huge.setBit(0);
+      if (Negative)
+        Huge.negate();
+      for (const APFloat::roundingMode RM :
+           {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+            APFloat::rmTowardPositive, APFloat::rmTowardZero,
+            APFloat::rmNearestTiesToEven}) {
+        APFloat F{APFloat::PPCDoubleDouble()};
+        const APFloat::opStatus ConvertFromStatus =
+            F.convertFromAPInt(Huge, /*IsSigned=*/IsSigned, RM);
+        EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+
+        bool IsExact;
+        APSInt ResultInt{Huge.getBitWidth(), /*isUnsigned=*/!IsSigned};
+        const APFloat::opStatus ConvertToStatus =
+            F.convertToInteger(ResultInt, APFloat::rmTowardZero, &IsExact);
+
+        EXPECT_TRUE(IsExact) << "RM: " << RM;
+        EXPECT_TRUE(ResultInt.eq(Huge)) << ResultInt << " vs " << Huge << "\n";
+        EXPECT_EQ(ConvertToStatus, APFloat::opOK);
+      }
+    }
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntBoundary) {
+  const unsigned Binary64Precision =
+      APFloat::semanticsPrecision(APFloat::IEEEdouble());
+  APSInt Boundary =
+      APSInt::getMaxValue(Binary64Precision + 1, /*Unsigned=*/true);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p54, -0x1p0);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(Boundary, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+
+  Boundary = APSInt{APInt::getHighBitsSet(/*numBits=*/128,
+                                          /*hiBitsSet=*/Binary64Precision + 1),
+                    /*isUnsigned=*/true};
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p128, -0x1p74);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(Boundary, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntEnormous) {
+  APFloat Largest = APFloat::getLargest(APFloat::PPCDoubleDouble());
+  int Exponent = ilogb(Largest);
+  unsigned BitWidth = Exponent + 1;
+  APSInt HugeInt{BitWidth, /*isUnsigned=*/true};
+  bool IsExact;
+  APFloat::opStatus Status =
+      Largest.convertToInteger(HugeInt, APFloat::rmTowardPositive, &IsExact);
+  ASSERT_EQ(Status, APFloat::opOK);
+  ASSERT_TRUE(IsExact);
+
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Largest);
+  }
+
+  const unsigned MaxExponent =
+      APFloat::semanticsMaxExponent(APFloat::IEEEdouble());
+  const unsigned Binary64Precision =
+      APFloat::semanticsPrecision(APFloat::IEEEdouble());
+  const unsigned UlpOfLargest = MaxExponent - (2 * Binary64Precision);
+  const unsigned HalfUlpOfLargest = UlpOfLargest - 1;
+
+  // Add just under a half-ulp. This should never overflow for
+  // round-ties-to-nearest modes.
+  HugeInt.setLowBits(HalfUlpOfLargest);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    if (RM == APFloat::rmTowardPositive) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  // Now test adding a half-ulp. This should cause overflow for ties-to-away.
+  // ties-to-even will not overflow if the max finite value has a clear low bit.
+  ++HugeInt;
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow =
+        RM == APFloat::rmTowardPositive || RM == APFloat::rmNearestTiesToAway ||
+        (RM == APFloat::rmNearestTiesToEven && HugeInt[UlpOfLargest]);
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  // Now test adding just over a half-ulp. This should break all ties.
+  ++HugeInt;
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow = RM == APFloat::rmTowardPositive ||
+                          RM == APFloat::rmNearestTiesToAway ||
+                          RM == APFloat::rmNearestTiesToEven;
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  HugeInt.setAllBits();
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    const bool Overflow = RM == APFloat::rmTowardPositive ||
+                          RM == APFloat::rmNearestTiesToAway ||
+                          RM == APFloat::rmNearestTiesToEven;
+    if (Overflow) {
+      EXPECT_TRUE(F.isPosInfinity()) << F;
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
+    } else {
+      EXPECT_EQ(F, Largest);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+    }
+  }
+
+  HugeInt.clearAllBits();
+  HugeInt.setBit(2 * Binary64Precision + 1);
+  HugeInt.setLowBits(Binary64Precision + 1);
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat RoundUp = makeDoubleAPFloat(0x1p107, 0x1p54);
+    const APFloat RoundDown = makeDoubleAPFloat(0x1p107, 0x1.fffffffffffffp53);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+
+    if (RM == APFloat::rmNearestTiesToEven ||
+        RM == APFloat::rmNearestTiesToAway || RM == APFloat::rmTowardPositive)
+      EXPECT_EQ(F, RoundUp);
+    else
+      EXPECT_EQ(F, RoundDown);
+  }
+
+  ++HugeInt;
+  // 162259276829213381405976519770112 can be represented exactly.
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat Exact = makeDoubleAPFloat(0x1p107, 0x1p54);
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opOK);
+    EXPECT_EQ(F, Exact);
+  }
+
+  ++HugeInt;
+  // 162259276829213381405976519770113 rounds to either:
+  // 162259276829213381405976519770112
+  // 162259276829213381405976519770114
+  for (const APFloat::roundingMode RM :
+       {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
+        APFloat::rmTowardPositive, APFloat::rmTowardZero,
+        APFloat::rmNearestTiesToEven}) {
+    const APFloat RoundUp =
+        makeDoubleAPFloat(0x1.0000000000001p107, -0x1.fffffffffffffp53);
+    const APFloat RoundDown = makeDoubleAPFloat(0x1p107, 0x1p54);
+    EXPECT_LT(RoundDown, RoundUp);
+
+    APFloat F{APFloat::PPCDoubleDouble()};
+    const APFloat::opStatus ConvertFromStatus =
+        F.convertFromAPInt(HugeInt, /*IsSigned=*/false, RM);
+    EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+
+    if (RM == APFloat::rmNearestTiesToAway || RM == APFloat::rmTowardPositive)
+      EXPECT_EQ(F, RoundUp);
+    else
+      EXPECT_EQ(F, RoundDown);
+  }
+}
+
 TEST(APFloatTest, x87Largest) {
   APFloat MaxX87Val = APFloat::getLargest(APFloat::x87DoubleExtended());
   EXPECT_TRUE(MaxX87Val.isLargest());
@@ -6277,6 +7409,182 @@ TEST(APFloatTest, x87Next) {
   APFloat F(APFloat::x87DoubleExtended(), "-1.0");
   F.next(false);
   EXPECT_TRUE(ilogb(F) == -1);
+}
+
+static APInt makeX87Bits(bool sign, int64_t exponent, int integerBit,
+                         int64_t significand) {
+  return (APInt(80, (sign ? 1 : 0)) << 79) | (APInt(80, exponent) << 64) |
+         (APInt(80, integerBit) << 63) | APInt(80, significand);
+}
+
+static APFloat makeX87FromBits(bool sign, int64_t exponent, int integerBit,
+                               int64_t significand) {
+  return APFloat(APFloatBase::x87DoubleExtended(),
+                 makeX87Bits(sign, exponent, integerBit, significand));
+}
+
+static APFloat makeX87(float value) {
+  bool losesInfo = false;
+  APFloat apf(value);
+  apf.convert(APFloatBase::x87DoubleExtended(),
+              llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+  return apf;
+}
+
+TEST(APFloatTest, x87Bits) {
+  constexpr int bias = 16383;
+  EXPECT_TRUE(makeX87FromBits(false, 0, 0, 0).bitwiseIsEqual(makeX87(0.0)));
+  EXPECT_TRUE(makeX87FromBits(false, bias, 1, 0).bitwiseIsEqual(makeX87(1.0)));
+
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 1, 1, 0).bitwiseIsEqual(makeX87(2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 1, 1, 0).bitwiseIsEqual(makeX87(-2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 2, 1, 0).bitwiseIsEqual(makeX87(4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 2, 1, 0).bitwiseIsEqual(makeX87(-4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 8, 1, 0).bitwiseIsEqual(makeX87(256.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 8, 1, 0).bitwiseIsEqual(makeX87(-256.0)));
+
+  EXPECT_EQ(makeX87FromBits(false, (1u << 14u) - 1u, 1, 0).bitcastToAPInt(),
+            APInt(80, 0x7fff) << 63);
+  EXPECT_EQ(
+      makeX87FromBits(false, (1ull << 14ull) - 1ull, 1, (1ull << 63ull) - 1ull)
+          .bitcastToAPInt(),
+      (APInt(80, 1) << 78) - 1);
+
+  const fltSemantics &S = APFloat::x87DoubleExtended();
+
+  // Test valid infinity: exp=0x7fff, int_bit=1, significand=0
+  {
+    APFloat inf(S, APInt(80, {0x8000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(inf.isInfinity());
+    EXPECT_FALSE(inf.isNaN());
+    EXPECT_TRUE(inf.bitwiseIsEqual(APFloat::getInf(S, false)));
+  }
+
+  // Test valid NaN: exp=0x7fff, int_bit=1, significand!=0
+  {
+    APFloat nan(S, APInt(80, {0xC000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(nan.isNaN());
+    EXPECT_FALSE(nan.isInfinity());
+  }
+
+  // Test pseudoinfinity: exp=0x7fff, int_bit=0, significand=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoInf(S, APInt(80, {0x0000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoInf.isNaN());
+    EXPECT_TRUE(pseudoInf.isSignaling());
+    EXPECT_FALSE(pseudoInf.isInfinity());
+  }
+
+  // Test pseudoNaN: exp=0x7fff, int_bit=0, significand!=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoNan(S, APInt(80, {0x4000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoNan.isNaN());
+    EXPECT_FALSE(pseudoNan.isInfinity());
+  }
+
+  // Test unnormal: exp!=0 and !=0x7fff, int_bit=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat unnormal(S, APInt(80, {0x4000000000000000ull, 0x4000ull}));
+    EXPECT_TRUE(unnormal.isNaN());
+    EXPECT_FALSE(unnormal.isSignaling());
+  }
+
+  // Test pseudodenormal: exp=0, integer int_bit=1
+  {
+    APFloat pseudoDenormal(APFloat::x87DoubleExtended(),
+                           makeX87Bits(false, 0, 1, 0));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    APFloat scale(APFloat::x87DoubleExtended(),
+                  makeX87Bits(false, bias * 2 - 1, 1, 0));
+    EXPECT_TRUE((pseudoDenormal * scale).bitwiseIsEqual(makeX87(1.0)));
+  }
+
+  // Test pseudodenormal with non-zero significand
+  {
+    APFloat pseudoDenormal(S, makeX87Bits(false, 0, 1, 0x7FFF000000000000ull));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    EXPECT_TRUE(pseudoDenormal.isNormal());
+
+    // Verify the round-trip produces the normalized form
+    APInt result = pseudoDenormal.bitcastToAPInt();
+    APInt expected(80, {0xFFFF000000000000ull, 0x0001ull});
+    EXPECT_EQ(expected, result);
+  }
+}
+
+static bool isBitcastRoundtripSafe(APFloat value) {
+  APInt bits = value.bitcastToAPInt();
+  APFloat fromBits = APFloat(value.getSemantics(), bits);
+  return (value.isNaN() || value == fromBits) && value.bitwiseIsEqual(fromBits);
+}
+
+TEST(APFloatTest, bitcast) {
+  // 4, 6, and 8 bit types are handled in Float[468]ExhaustivePair below
+  for (APFloat::Semantics Sem : {
+           APFloat::S_IEEEhalf,
+           APFloat::S_BFloat,
+           APFloat::S_IEEEsingle,
+           APFloat::S_IEEEdouble,
+           APFloat::S_IEEEquad,
+           APFloat::S_PPCDoubleDouble,
+           APFloat::S_Float8E5M2,
+           APFloat::S_Float8E4M3,
+           APFloat::S_Float8E3M4,
+           APFloat::S_FloatTF32,
+           APFloat::S_x87DoubleExtended,
+       }) {
+    const fltSemantics &S = APFloatBase::EnumToSemantics(Sem);
+
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, true)));
+  }
+
+  {
+    // PPCDoubleDoubleLegacy format supports most but not all operations
+    const fltSemantics &S =
+        APFloatBase::EnumToSemantics(APFloat::S_PPCDoubleDoubleLegacy);
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+  }
 }
 
 TEST(APFloatTest, Float8ExhaustivePair) {
@@ -8259,13 +9567,8 @@ TEST(APFloatTest, getExactLog2) {
       continue;
 
     APFloat One(Semantics, "1.0");
-
-    if (I == APFloat::S_PPCDoubleDouble) {
-      // Not implemented
-      EXPECT_EQ(INT_MIN, One.getExactLog2());
-      EXPECT_EQ(INT_MIN, One.getExactLog2Abs());
-      continue;
-    }
+    APFloat Smallest = APFloat::getSmallest(Semantics);
+    APFloat Largest = APFloat::getLargest(Semantics);
 
     int MinExp = APFloat::semanticsMinExponent(Semantics);
     int MaxExp = APFloat::semanticsMaxExponent(Semantics);
@@ -8273,9 +9576,11 @@ TEST(APFloatTest, getExactLog2) {
 
     EXPECT_EQ(0, One.getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2Abs());
-    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
+    if (Semantics.hasSignedRepr) {
+      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
+    }
 
     if (I == APFloat::S_Float6E2M3FN || I == APFloat::S_Float4E2M1FN) {
       EXPECT_EQ(2, APFloat(Semantics, "4.0").getExactLog2());
@@ -8284,49 +9589,82 @@ TEST(APFloatTest, getExactLog2) {
       EXPECT_EQ(2, APFloat(Semantics, "-4.0").getExactLog2Abs());
     } else {
       EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
       EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
       EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
-      EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
-      EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
-      EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
+        EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
+        EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
+        EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
+      }
     }
 
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    if (Semantics.hasSignedRepr) {
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    }
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+      }
 
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
+      }
     }
-
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision - 1, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
 
     EXPECT_EQ(
         INT_MIN,
-        scalbn(One, MaxExp + 1, APFloat::rmNearestTiesToEven).getExactLog2());
+        scalbn(Smallest, -2, APFloat::rmNearestTiesToEven).getExactLog2());
+    EXPECT_EQ(
+        INT_MIN,
+        scalbn(Smallest, -1, APFloat::rmNearestTiesToEven).getExactLog2());
+
+    EXPECT_EQ(INT_MIN,
+              scalbn(Largest, 1, APFloat::rmNearestTiesToEven).getExactLog2());
 
     for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
       EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());
     }
   }
+}
+
+TEST(APFloatTest, isPowerOf2) {
+  const fltSemantics &Semantics = APFloat::IEEEdouble();
+
+  EXPECT_TRUE(APFloat(Semantics, "1.0").isPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "8.0").isPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "0.25").isPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "3.0").isPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isPowerOf2(0));
+
+  EXPECT_TRUE(APFloat(Semantics, "-1.0").isNegPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "-8.0").isNegPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "-0.25").isNegPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "-3.0").isNegPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isNegPowerOf2(0));
 }
 
 TEST(APFloatTest, Float8E8M0FNUGetZero) {
@@ -8571,6 +9909,276 @@ TEST(APFloatTest, ConvertDoubleToE8M0FNU) {
   EXPECT_TRUE(test.isSmallestNormalized());
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opUnderflow | APFloat::opInexact);
+}
+
+TEST(APFloatTest, Float8E5M3FNUValues) {
+  // High end of the range
+  auto test = APFloat(APFloat::Float8E5M3FNU(), "0x1.c0p16");
+  EXPECT_EQ(0x1.c0p16, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.c0p15");
+  EXPECT_EQ(0x1.cp15, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p14");
+  EXPECT_EQ(0x1.0p14, test.convertToDouble());
+
+  // tests overflow to nan
+  APFloat nan = APFloat(APFloat::Float8E5M3FNU(), "nan");
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.e0p+16");
+  EXPECT_TRUE(test.bitwiseIsEqual(nan));
+
+  // Mid of the range
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p0");
+  EXPECT_EQ(1.0, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p1");
+  EXPECT_EQ(2.0, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p2");
+  EXPECT_EQ(4.0, test.convertToDouble());
+
+  // Low end of the range
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-12");
+  EXPECT_EQ(0x1.0p-12, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-13");
+  EXPECT_EQ(0x1.0p-13, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-14");
+  EXPECT_EQ(0x1.0p-14, test.convertToDouble());
+  EXPECT_TRUE(test.isSmallestNormalized());
+
+  // Value below the smallest, but clamped to the smallest
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-18");
+  EXPECT_EQ(0, test.convertToDouble());
+}
+
+TEST(APFloatTest, Float8E5M3FNUFromString) {
+  // Exactly representable
+  EXPECT_EQ(64, APFloat(APFloat::Float8E5M3FNU(), "64").convertToDouble());
+  // Overflow to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "0x1.0p17").isNaN());
+  // Inf converted to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "inf").isNaN());
+  // NaN converted to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "nan").isNaN());
+}
+
+TEST(APFloatTest, Float8E5M3FNUDivideByZero) {
+  APFloat x(APFloat::Float8E5M3FNU(), "1");
+  APFloat zero(APFloat::Float8E5M3FNU(), "0");
+  EXPECT_EQ(x.divide(zero, APFloat::rmNearestTiesToEven), APFloat::opDivByZero);
+  EXPECT_TRUE(x.isNaN());
+}
+
+TEST(APFloatTest, Float8E5M3FNUGetSignedValues) {
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-64"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-0x1.0p17"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-inf"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getNaN(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getInf(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getSmallest(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getSmallestNormalized(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getLargest(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  APFloat x = APFloat(APFloat::Float8E5M3FNU(), "4");
+  APFloat y = APFloat(APFloat::Float8E5M3FNU(), "8");
+  EXPECT_DEATH(x.subtract(y, APFloat::rmNearestTiesToEven),
+               "This floating point format does not support signed values");
+#endif // NDEBUG
+#endif // GTEST_HAS_DEATH_TEST
+}
+
+TEST(APFloatTest, Float8E5M3FNUGetInf) {
+  // The Float8E5M3FNU format does not support infinity and the all ones
+  // representation is treated as NaN.
+  APFloat t = APFloat::getInf(APFloat::Float8E5M3FNU());
+  EXPECT_TRUE(t.isNaN());
+  EXPECT_FALSE(t.isInfinity());
+}
+
+TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
+  APFloat::Semantics Sem = APFloat::S_Float8E5M3FNU;
+  const llvm::fltSemantics &S = APFloat::EnumToSemantics(Sem);
+  for (int i = 0; i < 256; ++i) {
+    for (int j = 0; j < 256; ++j) {
+      SCOPED_TRACE("sem=" + std::to_string(Sem) + ",i=" + std::to_string(i) +
+                   ",j=" + std::to_string(j));
+      APFloat x(S, APInt(8, i));
+      APFloat y(S, APInt(8, j));
+
+      bool losesInfo;
+      APFloat xd = x;
+      xd.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                 &losesInfo);
+      EXPECT_FALSE(losesInfo);
+      APFloat yd = y;
+      yd.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                 &losesInfo);
+      EXPECT_FALSE(losesInfo);
+
+      APFloat z = x;
+      z.add(y, APFloat::rmNearestTiesToEven);
+      APFloat zd = xd;
+      zd.add(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      if (i >= j) {
+        z = x;
+        z.subtract(y, APFloat::rmNearestTiesToEven);
+        zd = xd;
+        zd.subtract(yd, APFloat::rmNearestTiesToEven);
+        zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+        EXPECT_TRUE(z.bitwiseIsEqual(zd))
+            << "sem=" << Sem << ", i=" << i << ", j=" << j;
+      }
+
+      z = x;
+      z.multiply(y, APFloat::rmNearestTiesToEven);
+      zd = xd;
+      zd.multiply(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      z = x;
+      z.divide(y, APFloat::rmNearestTiesToEven);
+      zd = xd;
+      zd.divide(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      z = x;
+      z.mod(y);
+      zd = xd;
+      zd.mod(yd);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      // Remainder: IEEE remainder can produce negative results, which this
+      // unsigned format cannot represent. Only test when the reference
+      // result is non-negative.
+      zd = xd;
+      zd.remainder(yd);
+      if (!zd.isNegative()) {
+        z = x;
+        z.remainder(y);
+        zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+        EXPECT_TRUE(z.bitwiseIsEqual(zd))
+            << "sem=" << Sem << ", i=" << i << ", j=" << j;
+      }
+    }
+  }
+}
+
+TEST(APFloatTest, Float8E5M3FNUExhaustive) {
+  for (int i = 0; i < 256; i++) {
+    APFloat test(APFloat::Float8E5M3FNU(), APInt(8, i));
+    SCOPED_TRACE("i=" + std::to_string(i));
+
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
+
+    // isLargest
+    if (i == 254) {
+      EXPECT_TRUE(test.isLargest());
+      EXPECT_EQ(test.convertToDouble(), 0x1.cp16);
+    } else {
+      EXPECT_FALSE(test.isLargest());
+    }
+
+    // isSmallest (smallest positive subnormal: bit pattern 0x01 = 2^-17)
+    if (i == 1) {
+      EXPECT_TRUE(test.isSmallest());
+      EXPECT_EQ(test.convertToDouble(), 0x1.0p-17);
+    } else {
+      EXPECT_FALSE(test.isSmallest());
+    }
+
+    // NaN is the all-ones bit pattern.
+    if (i == 255) {
+      EXPECT_TRUE(test.isNaN());
+      continue;
+    }
+
+    // convert to Double
+    bool losesInfo;
+    APFloat::opStatus status = test.convert(
+        APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(losesInfo);
+
+    // Expected value:
+    //   i == 0      -> +0
+    //   1..7        -> subnormal: i * 2^-17
+    //   8..254      -> normal:    (1 + (i & 7)/8) * 2^((i >> 3) - 15)
+    double expected;
+    if (i == 0)
+      expected = 0.0;
+    else if (i < 8)
+      expected = std::ldexp(static_cast<double>(i), -17);
+    else
+      expected = std::ldexp(1.0 + (i & 7) / 8.0, (i >> 3) - 15);
+    EXPECT_EQ(test.convertToDouble(), expected);
+  }
+}
+
+TEST(APFloatTest, Float8E5M3FNUNext) {
+  APFloat test(APFloat::getSmallest(APFloat::Float8E5M3FNU()));
+  // Smallest positive value is the smallest subnormal: 2^-17.
+  EXPECT_EQ(0x1.0p-17, test.convertToDouble());
+
+  // Increment of 1 should reach the next subnormal: 2^-16.
+  EXPECT_EQ(APFloat::opOK, test.next(false));
+  EXPECT_FALSE(test.isSmallest());
+  EXPECT_EQ(0x1.0p-16, test.convertToDouble());
+
+  // Decrement of 1 should return to the smallest subnormal.
+  EXPECT_EQ(APFloat::opOK, test.next(true));
+  EXPECT_TRUE(test.isSmallest());
+
+  // Decrement again should reach +0.
+  EXPECT_EQ(APFloat::opOK, test.next(true));
+  EXPECT_TRUE(test.isPosZero());
+}
+
+TEST(APFloatTest, Float8E5M3FNUFMA) {
+  APFloat f1(APFloat::Float8E5M3FNU(), "4.0");
+  APFloat f2(APFloat::Float8E5M3FNU(), "2.0");
+  APFloat f3(APFloat::Float8E5M3FNU(), "8.0");
+
+  // Exact value: 4*2 + 8 = 16.
+  f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(16.0, f1.convertToDouble());
+
+  // 4*2 + 4 = 12 (exactly representable with 3 mantissa bits).
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "4.0");
+  f1.fusedMultiplyAdd(f2, f1, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(12.0, f1.convertToDouble());
+
+  // 4*8 + 2 = 34. At exponent 5 the step is 4, so 34 ties between 32 and
+  // 36 and rounds to 32 under round-to-nearest-even.
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "4.0");
+  f1.fusedMultiplyAdd(f3, f2, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(32.0, f1.convertToDouble());
+
+  // All of them using the same value: 1*1 + 1 = 2.
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "1.0");
+  f1.fusedMultiplyAdd(f1, f1, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(2.0, f1.convertToDouble());
 }
 
 TEST(APFloatTest, Float6E3M2FNFromString) {
@@ -9027,7 +10635,7 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
 }
 
 TEST(APFloatTest, AddOrSubtractSignificand) {
-  typedef detail::IEEEFloatUnitTestHelper Helper;
+  using Helper = detail::IEEEFloatUnitTestHelper;
   // Test cases are all combinations of:
   // {equal exponents, LHS larger exponent, RHS larger exponent}
   // {equal significands, LHS larger significand, RHS larger significand}
@@ -9082,6 +10690,191 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+  EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E5M3FNU()));
+}
+
+TEST(APFloatTest, FrexpQuietSNaN) {
+  APFloat SNaN = APFloat::getSNaN(APFloat::PPCDoubleDouble());
+  int Exp;
+  APFloat Result = frexp(SNaN, Exp, APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(Result.isSignaling());
+}
+
+TEST(APFloatTest, isValidArbitraryFPFormat) {
+  // Test all valid format strings.
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3B11FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E3M4"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E8M0FNU"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E3M2FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E2M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float4E2M1FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M3FNU"));
+
+  // Test invalid format strings.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat(""));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float8"));
+  EXPECT_FALSE(
+      APFloat::isValidArbitraryFPFormat("Float8E5M2FN")); // Should be FNUZ.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float16E5M10"));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
+}
+
+TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
+  // Every valid format reports the bit width of its semantics.
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FN"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
+  EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
+
+  // Invalid formats report zero.
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits(""));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
+}
+
+TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
+  APFloat F(APFloat::IEEEsingle());
+
+  auto StatusOr = F.convertFromString("10384593717069655257060992658440193.0",
+                                      APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!StatusOr);
+
+  APFloat::opStatus Status = *StatusOr;
+
+  // The value is 2^113 + 1, not exactly representable in float.
+  EXPECT_TRUE(Status & APFloat::opInexact);
+
+  // But it should round to exactly 2^113.
+  APFloat Expected(APFloat::IEEEsingle());
+  auto ExpectedStatus =
+      Expected.convertFromString("0x1p113", APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!ExpectedStatus);
+  EXPECT_FALSE(*ExpectedStatus & APFloat::opInexact);
+
+  EXPECT_EQ(F.bitcastToAPInt(), Expected.bitcastToAPInt());
+}
+
+TEST(APFloatTest, expf) {
+  // exp(+-0) = 1.
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f))->convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f))->convertToFloat());
+  // exp(+Inf) = +Inf.
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), false))
+                ->convertToFloat());
+  // exp(-Inf) = 0.
+  EXPECT_EQ(0.0f, llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true))
+                      ->convertToFloat());
+  // exp(NaN) = NaN.
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()))->isNaN());
+  // exp(1)
+  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f))->convertToFloat());
+  // exp(float max)
+  EXPECT_EQ(std::numeric_limits<float>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false))
+                ->convertToFloat());
+  // exp(min_denormal)
+  EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false))
+                      ->convertToFloat());
+  // exp(-1)
+  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f))->convertToFloat());
+  // exp(-90)
+  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f))->convertToFloat());
+}
+
+TEST(APFloatTest, exp) {
+  // exp(+-0) = 1.
+  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0))->convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0))->convertToDouble());
+  // exp(+Inf) = +Inf.
+  EXPECT_EQ(std::numeric_limits<double>::infinity(),
+            llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), false))
+                ->convertToDouble());
+  // exp(-Inf) = 0.
+  EXPECT_EQ(0.0, llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), true))
+                     ->convertToDouble());
+  // exp(NaN) = NaN.
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble()))->isNaN());
+  // exp(1)
+  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0))->convertToDouble());
+  // exp(float max)
+  EXPECT_EQ(std::numeric_limits<double>::infinity(),
+            llvm::exp(APFloat::getLargest(APFloat::IEEEdouble(), false))
+                ->convertToDouble());
+  // exp(min_denormal)
+  EXPECT_EQ(1.0, llvm::exp(APFloat::getSmallest(APFloat::IEEEdouble(), false))
+                     ->convertToDouble());
+  // exp(-1)
+  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0))->convertToDouble());
+  // exp(-710)
+  EXPECT_EQ(0x1.9c017e9459e18p-1025,
+            llvm::exp(APFloat(-710.0))->convertToDouble());
+}
+
+TEST(APFloatTest, exp_exceptions) {
+  APFloat::opStatus status;
+
+  // exp(0) should be exact (no inexact, no overflow/underflow -> opOK).
+  status = APFloat::opInvalidOp; // initialize to a dummy flag
+  auto res1 = llvm::exp(APFloat(0.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res1.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(1) should be inexact (not representing an exact power of 2).
+  status = APFloat::opOK;
+  auto res2 = llvm::exp(APFloat(1.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res2.has_value());
+  EXPECT_EQ(APFloat::opInexact, status);
+
+  // exp(float max) should overflow and be inexact.
+  status = APFloat::opOK;
+  auto res3 = llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res3.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opOverflow | APFloat::opInexact),
+      status);
+
+  // exp(-90.0f) should underflow and be inexact.
+  status = APFloat::opOK;
+  auto res4 = llvm::exp(APFloat(-90.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res4.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opUnderflow | APFloat::opInexact),
+      status);
+
+  // exp(NaN) should be quiet and not raise any exceptions.
+  status = APFloat::opInvalidOp;
+  auto res5 = llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res5.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(sNaN) should raise an invalid operation exception.
+  status = APFloat::opOK;
+  auto res6 = llvm::exp(APFloat::getSNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res6.has_value());
+  EXPECT_EQ(APFloat::opInvalidOp, status);
+
+  // exp with unsupported rounding mode or unsupported semantics should
+  // return std::nullopt.
+  EXPECT_FALSE(llvm::exp(APFloat(1.0f), APFloat::rmTowardPositive).has_value());
+  EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
 } // namespace

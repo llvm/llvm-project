@@ -24,7 +24,7 @@ define void @RWBufferLoad() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
-          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.int_buf)
+          i32 16, i32 7, i32 1, i32 0, ptr nonnull @.str.int_buf)
   %ptr0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 24) %buffer0, i32 0)
   store i32 0, ptr %ptr0, align 4
 
@@ -32,7 +32,7 @@ define void @RWBufferLoad() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer1 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
-          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.int_buf)
+          i32 16, i32 7, i32 1, i32 0, ptr nonnull @.str.int_buf)
   %ptr1 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 24) %buffer1, i32 0)
   store i32 0, ptr %ptr1, align 4
   ret void
@@ -46,7 +46,7 @@ define void @UseDifferentGlobalVar() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeFloat]] [[FloatBufferVar]]
   %buffer0 = call target("spirv.Image", float, 5, 2, 0, 0, 2, 3)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_3(
-          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.float_buf )
+          i32 16, i32 7, i32 1, i32 0, ptr nonnull @.str.float_buf )
   %ptr0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 3) %buffer0, i32 0)
   store float 0.0, ptr %ptr0, align 4
   ret void
@@ -60,7 +60,7 @@ define void @ReuseGlobalVarFromFirstFunction() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer1 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_24(
-          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.int_buf)
+          i32 16, i32 7, i32 1, i32 0, ptr nonnull @.str.int_buf)
   %ptr1 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 24) %buffer1, i32 0)
   store i32 0, ptr %ptr1, align 4
   ret void

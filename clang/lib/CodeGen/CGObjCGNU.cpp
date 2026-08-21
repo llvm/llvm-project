@@ -195,7 +195,7 @@ protected:
   /// Helper function that generates a constant string and returns a pointer to
   /// the start of the string.  The result of this function can be used anywhere
   /// where the C code specifies const char*.
-  llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
+  llvm::Constant *MakeConstantString(StringRef Str, StringRef Name = "") {
     ConstantAddress Array =
         CGM.GetAddrOfConstantCString(std::string(Str), Name);
     return Array.getPointer();
@@ -563,7 +563,20 @@ public:
   CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       unsigned protocolClassVersion, unsigned classABI=1);
 
-  ConstantAddress GenerateConstantString(const StringLiteral *) override;
+  ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
+
+  ConstantAddress GenerateConstantNumber(const bool Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
+  ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects)
+      override;
 
   RValue
   GenerateMessageSend(CodeGenFunction &CGF, ReturnValueSlot Return,
@@ -600,6 +613,9 @@ public:
   // Map to unify direct method definitions.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
       DirectMethodDefinitions;
+  void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override;
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
@@ -1826,10 +1842,12 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // Instance size is negative for classes that have not yet had their ivar
     // layout calculated.
     classFields.addInt(
-        LongTy, 0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
-                         .getSize()
-                         .getQuantity() -
-                     superInstanceSize));
+        LongTy,
+        0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                 .getSize()
+                 .getQuantity() -
+             superInstanceSize),
+        /*isSigned=*/true);
 
     if (classDecl->all_declared_ivar_begin() == nullptr)
       classFields.addNullPointer(PtrTy);
@@ -2722,6 +2740,37 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   ObjCStrings[Str] = ObjCStr;
   ConstantStrings.push_back(ObjCStr);
   return ConstantAddress(ObjCStr, Int8Ty, Align);
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const bool Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APSInt &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APFloat &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress
+CGObjCGNU::GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC array literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantDictionary(
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC dictionary literal constant initializers");
 }
 
 ///Generates a message send where the super is the receiver.  This is a message
@@ -3883,7 +3932,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   // Generate the class structure
   llvm::Constant *ClassStruct = GenerateClassStructure(
       MetaClassStruct, SuperClass, 0x11L, ClassName.c_str(), nullptr,
-      llvm::ConstantInt::get(LongTy, instanceSize), IvarList, MethodList,
+      llvm::ConstantInt::getSigned(LongTy, instanceSize), IvarList, MethodList,
       GenerateProtocolList(Protocols), IvarOffsetArray, Properties,
       StrongIvarBitmap, WeakIvarBitmap);
   CGM.setGVProperties(cast<llvm::GlobalValue>(ClassStruct),
@@ -4196,11 +4245,19 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
   return Fn;
 }
 
+void CGObjCGNU::GenerateDirectMethodsPreconditionCheck(
+    CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+    const ObjCContainerDecl *CD) {
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
+}
+
 void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                              llvm::Function *Fn,
                                              const ObjCMethodDecl *OMD,
                                              const ObjCContainerDecl *CD) {
-  // GNU runtime doesn't support direct calls at this time
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
 }
 
 llvm::FunctionCallee CGObjCGNU::GetPropertyGetFunction() {

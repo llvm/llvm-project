@@ -15,6 +15,11 @@ __attribute__((availability(shadermodel, introduced = 5.0, environment = pixel))
 __attribute__((availability(shadermodel, introduced = 6.5, environment = mesh)))
 float fz(float); // #fz
 
+// A function that has a definition is diagnosed based on its availability
+// attribute as well; having a body does not make it available everywhere.
+__attribute__((availability(shadermodel, introduced = 6.5)))
+float fdef(float f) { return f; } // #fdef
+
 float also_alive(float f) {
   // expected-error@#also_alive_fx_call {{'fx' is only available on Shader Model 6.5 or newer}}
   // expected-note@#fx {{'fx' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
@@ -107,7 +112,7 @@ class MyClass
 };
 
 [numthreads(4,1,1)]
-float main() {
+void main() {
   float f = 3;
   MyClass C = { 1.0f };
   float a = alive(f);
@@ -115,5 +120,7 @@ float main() {
   float c = C.makeF();
   float d = test((float)1.0);
   float e = test((half)1.0);
-  return a * b * c;
+  // expected-error@#main_fdef_call {{'fdef' is only available on Shader Model 6.5 or newer}}
+  // expected-note@#fdef {{'fdef' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
+  float g = fdef(f); // #main_fdef_call
 }

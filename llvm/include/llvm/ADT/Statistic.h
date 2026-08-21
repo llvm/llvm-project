@@ -131,8 +131,8 @@ protected:
 
 class NoopStatistic {
 public:
-  NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
-                const char * /*Desc*/) {}
+  constexpr NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
+                          const char * /*Desc*/) {}
 
   uint64_t getValue() const { return 0; }
 
@@ -164,8 +164,13 @@ using Statistic = NoopStatistic;
 
 // STATISTIC - A macro to make definition of statistics really simple.  This
 // automatically passes the DEBUG_TYPE of the file into the statistic.
+#if LLVM_ENABLE_STATS
 #define STATISTIC(VARNAME, DESC)                                               \
   static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
+#else
+#define STATISTIC(VARNAME, DESC)                                               \
+  static llvm::Statistic VARNAME [[maybe_unused]] = {DEBUG_TYPE, #VARNAME, DESC}
+#endif
 
 // ALWAYS_ENABLED_STATISTIC - A macro to define a statistic like STATISTIC but
 // it is enabled even if LLVM_ENABLE_STATS is off.

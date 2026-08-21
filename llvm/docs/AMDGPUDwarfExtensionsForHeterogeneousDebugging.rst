@@ -4,8 +4,6 @@
 DWARF Extensions For Heterogeneous Debugging
 ********************************************
 
-.. contents::
-   :local:
 
 .. warning::
 
@@ -37,13 +35,13 @@ includes contributions to open source projects such as LLVM [:ref:`LLVM
 
 The LLVM compiler has upstream support for commercially available AMD GPU
 hardware (AMDGPU) [:ref:`AMDGPU-LLVM <amdgpu-dwarf-AMDGPU-LLVM>`]. The open
-source ROCgdb [:ref:`AMD-ROCgdb <amdgpu-dwarf-AMD-ROCgdb>`] GDB based debugger
+source ROCgdb [:ref:`AMD-ROCgdb <amdgpu-dwarf-AMD-ROCgdb>`] GDB-based debugger
 also has support for AMDGPU which is being upstreamed. Support for AMDGPU is
 also being added by third parties to the GCC [:ref:`GCC <amdgpu-dwarf-GCC>`]
 compiler and the Perforce TotalView HPC Debugger [:ref:`Perforce-TotalView
 <amdgpu-dwarf-Perforce-TotalView>`].
 
-To support debugging heterogeneous programs several features that are not
+To support debugging heterogeneous programs, several features that are not
 provided by current DWARF Version 5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] have
 been identified. The :ref:`amdgpu-dwarf-extensions` section gives an overview of
 the extensions devised to address the missing features. The extensions seek to
@@ -107,7 +105,7 @@ for each in terms of heterogeneous debugging.
 DWARF Version 5 does not allow location descriptions to be entries on the DWARF
 expression stack. They can only be the final result of the evaluation of a DWARF
 expression. However, by allowing a location description to be a first-class
-entry on the DWARF expression stack it becomes possible to compose expressions
+entry on the DWARF expression stack, it becomes possible to compose expressions
 containing both values and location descriptions naturally. It allows objects to
 be located in any kind of memory address space, in registers, be implicit
 values, be undefined, or a composite of any of these.
@@ -123,20 +121,20 @@ non-default address spaces and generalizing the power of composite location
 descriptions to any kind of location description.
 
 For those familiar with the definition of location descriptions in DWARF Version
-5, the definitions in these extensions are presented differently, but does in
+5, the definitions in these extensions are presented differently, but do in
 fact define the same concept with the same fundamental semantics. However, it
 does so in a way that allows the concept to extend to support address spaces,
 bit addressing, the ability for composite location descriptions to be composed
 of any kind of location description, and the ability to support objects located
 at multiple places. Collectively these changes expand the set of architectures
-that can be supported and improves support for optimized code.
+that can be supported and improve support for optimized code.
 
 Several approaches were considered, and the one presented, together with the
 extensions it enables, appears to be the simplest and cleanest one that offers
 the greatest improvement of DWARF's ability to support debugging optimized GPU
 and non-GPU code. Examining the GDB debugger and LLVM compiler, it appears only
 to require modest changes as they both already have to support general use of
-location descriptions. It is anticipated that will also be the case for other
+location descriptions. It is anticipated that this will also be the case for other
 debuggers and compilers.
 
 GDB has been modified to evaluate DWARF Version 5 expressions with location
@@ -156,7 +154,7 @@ DWARF Expression Stack* [:ref:`AMDGPU-DWARF-LOC
 2.2 Generalize CFI to Allow Any Location Description Kind
 ---------------------------------------------------------
 
-CFI describes restoring callee saved registers that are spilled. Currently CFI
+CFI describes restoring callee saved registers that are spilled. Currently, CFI
 only allows a location description that is a register, memory address, or
 implicit location description. AMDGPU optimized code may spill scalar registers
 into portions of vector registers. This requires extending CFI to allow any
@@ -223,7 +221,7 @@ infinite precision offsets to allow it to correctly track a series of positive
 and negative offsets that may transiently overflow or underflow, but end up in
 range. This is simple for the arithmetic operations as they are defined in terms
 of two's complement arithmetic on a base type of a fixed size. Therefore, the
-offset operation define that integer overflow is ill-formed. This is in contrast
+offset operation defines that integer overflow is ill-formed. This is in contrast
 to the ``DW_OP_plus``, ``DW_OP_plus_uconst``, and ``DW_OP_minus`` arithmetic
 operations which define that it causes wrap-around.
 
@@ -359,7 +357,7 @@ address space at a fixed address.
 
 The ``DW_OP_LLVM_form_aspace_address`` (see
 :ref:`amdgpu-dwarf-memory-location-description-operations`) operation is defined
-to create a memory location description from an address and address space. If
+to create a memory location description from an address and address space. It
 can be used to specify the location of a variable that is allocated in a
 specific address space. This allows the size of addresses in an address space to
 be larger than the generic type. It also allows a consumer great implementation
@@ -372,7 +370,7 @@ In contrast, if the ``DW_OP_LLVM_form_aspace_address`` operation had been
 defined to produce a value, and an implicit conversion to a memory location
 description was defined, then it would be limited to the size of the generic
 type (which matches the size of the default address space). An implementation
-would likely have to use *reserved ranges* of value to represent different
+would likely have to use *reserved ranges* of values to represent different
 address spaces. Such a value would likely not match any address value in the
 actual hardware. That would require the consumer to have special treatment for
 such values.
@@ -528,7 +526,7 @@ active. To describe the conceptual location of non-active lanes requires an
 attribute that has an expression that computes the source location PC for each
 lane.
 
-For efficiency, the expression calculates the source location the wavefront as a
+For efficiency, the expression calculates the source location of the wavefront as a
 whole. This can be done using the ``DW_OP_LLVM_select_bit_piece`` (see
 :ref:`amdgpu-dwarf-operation-to-create-vector-composite-location-descriptions`)
 operation.
@@ -556,56 +554,36 @@ object allocation is also added.
 
 See :ref:`amdgpu-dwarf-memory-spaces`.
 
-2.15 Define Augmentation Strings to Support Multiple Extensions
----------------------------------------------------------------
-
-A ``DW_AT_LLVM_augmentation`` attribute is added to a compilation unit debugger
-information entry to indicate that there is additional target architecture
-specific information in the debugging information entries of that compilation
-unit. This allows a consumer to know what extensions are present in the debugger
-information entries as is possible with the augmentation string of other
-sections. See .
-
-The format that should be used for an augmentation string is also recommended.
-This allows a consumer to parse the string when it contains information from
-multiple vendors. Augmentation strings occur in the ``DW_AT_LLVM_augmentation``
-attribute, in the lookup by name table, and in the CFI Common Information Entry
-(CIE).
-
-See :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`,
-:ref:`amdgpu-dwarf-name-index-section-header`, and
-:ref:`amdgpu-dwarf-structure_of-call-frame-information`.
-
-2.16 Support Embedding Source Text for Online Compilation
+2.15 Support Embedding Source Text for Online Compilation
 ---------------------------------------------------------
 
 AMDGPU supports programming languages that include online compilation where the
 source text may be created at runtime. For example, the OpenCL and HIP language
-runtimes support online compilation. To support is, a way to embed the source
+runtimes support online compilation. To support this, a way to embed the source
 text in the debug information is provided.
 
 See :ref:`amdgpu-dwarf-line-number-information`.
 
-2.17 Allow MD5 Checksums to be Optionally Present
+2.16 Allow MD5 Checksums to be Optionally Present
 -------------------------------------------------
 
-In DWARF Version 5 the file timestamp and file size can be optional, but if the
-MD5 checksum is present it must be valid for all files. This is a problem if
+In DWARF Version 5, the file timestamp and file size can be optional, but if the
+MD5 checksum is present, it must be valid for all files. This is a problem if
 using link time optimization to combine compilation units where some have MD5
-checksums and some do not. Therefore, sSupport to allow MD5 checksums to be
-optionally present in the line table is added.
+checksums, and others do not. Therefore, the line table is extended to allow MD5
+checksums to be optional.
 
 See :ref:`amdgpu-dwarf-line-number-information`.
 
-2.18 Add the HIP Programing Language
-------------------------------------
+2.17 Add the HIP Programming Language
+-------------------------------------
 
 The HIP programming language [:ref:`HIP <amdgpu-dwarf-HIP>`], which is supported
 by the AMDGPU, is added.
 
 See :ref:`amdgpu-dwarf-language-names-table`.
 
-2.19 Support for Source Language Optimizations that Result in Concurrent Iteration Execution
+2.18 Support for Source Language Optimizations that Result in Concurrent Iteration Execution
 --------------------------------------------------------------------------------------------
 
 A compiler can perform loop optimizations that result in the generated code
@@ -617,7 +595,7 @@ hardware to allow a single instruction to execute multiple iterations using
 vector registers.
 
 Note that although this is similar to SIMT execution, the way a client debugger
-uses the information is fundamentally different. In SIMT execution the debugger
+uses the information is fundamentally different. In SIMT execution, the debugger
 needs to present the concurrent execution as distinct source language threads
 that the user can list and switch focus between. With iteration concurrency
 optimizations, such as software pipelining and vectorized SIMD, the debugger
@@ -642,13 +620,13 @@ In addition, a way is needed for the compiler to communicate how many source
 language loop iterations are executing concurrently. See
 ``DW_AT_LLVM_iterations`` in :ref:`amdgpu-dwarf-low-level-information`.
 
-2.20 DWARF Operation to Create Runtime Overlay Composite Location Description
+2.19 DWARF Operation to Create Runtime Overlay Composite Location Description
 -----------------------------------------------------------------------------
 
 It is common in SIMD vectorization for the compiler to generate code that
 promotes portions of an array into vector registers. For example, if the
 hardware has vector registers with 8 elements, and 8 wide SIMD instructions, the
-compiler may vectorize a loop so that is executes 8 iterations concurrently for
+compiler may vectorize a loop so that it executes 8 iterations concurrently for
 each vectorized loop iteration.
 
 On the first iteration of the generated vectorized loop, iterations 0 to 7 of
@@ -691,7 +669,7 @@ Inside the loop body, the machine code loads ``src[i]`` and ``dst[i]`` into
 registers, adds them, and stores the result back into ``dst[i]``.
 
 Considering the location of ``dst`` and ``src`` in the loop body, the elements
-``dst[i]`` and ``src[i]`` would be located in registers, all other elements are
+``dst[i]`` and ``src[i]`` would be located in registers; all other elements are
 located in memory. Let register ``R0`` contain the base address of ``dst``,
 register ``R1`` contain ``i``, and register ``R2`` contain the registerized
 ``dst[i]`` element. We can describe the location of ``dst`` as a memory location
@@ -718,11 +696,11 @@ with a register location overlaid at a runtime offset involving ``i``:
   //    the register #2 positioned as an overlay at offset #3 of size #4:
   DW_OP_LLVM_overlay
 
-2.21 Support for Source Language Memory Spaces
+2.20 Support for Source Language Memory Spaces
 ----------------------------------------------
 
 AMDGPU supports languages, such as OpenCL, that define source language memory
-spaces. Support is added to define language specific memory spaces so they can
+spaces. Support is added to define language-specific memory spaces so they can
 be used in a consistent way by consumers. See :ref:`amdgpu-dwarf-memory-spaces`.
 
 A new attribute ``DW_AT_LLVM_memory_space`` is added to support using memory
@@ -730,7 +708,7 @@ spaces in defining source language pointer and reference types (see
 :ref:`amdgpu-dwarf-type-modifier-entries`) and data object allocation (see
 :ref:`amdgpu-dwarf-data-object-entries`).
 
-2.22 Expression Operation Vendor Extensibility Opcode
+2.21 Expression Operation Vendor Extensibility Opcode
 -----------------------------------------------------
 
 The vendor extension encoding space for DWARF expression operations
@@ -738,9 +716,9 @@ accommodates only 32 unique operations. In practice, the lack of a central
 registry and a desire for backwards compatibility means vendor extensions are
 never retired, even when standard versions are accepted into DWARF proper. This
 has produced a situation where the effective encoding space available for new
-vendor extensions is miniscule today.
+vendor extensions is minuscule today.
 
-To expand this encoding space a new DWARF operation ``DW_OP_LLVM_user`` is
+To expand this encoding space, a new DWARF operation ``DW_OP_LLVM_user`` is
 added which acts as a "prefix" for vendor extensions. It is followed by a
 ULEB128 encoded vendor extension opcode, which is then followed by the operands
 of the corresponding vendor extension operation.
@@ -776,7 +754,7 @@ A. Changes Relative to DWARF Version 5
   .. note::
 
     Notes are included to describe how the changes are to be applied to the
-    DWARF Version 5 standard. They also describe rational and issues that may
+    DWARF Version 5 standard. They also describe rationale and issues that may
     need further consideration.
 
 A.2 General Description
@@ -798,7 +776,6 @@ The following table provides the additional attributes.
    Attribute                    Usage
    ============================ ====================================
    ``DW_AT_LLVM_active_lane``   SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_augmentation``  Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
    ``DW_AT_LLVM_lane_pc``       SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_lanes``         SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_iterations``    Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
@@ -898,7 +875,7 @@ elements that can be specified are:
 
 *A current lane*
 
-  The 0 based SIMT lane identifier to be used in evaluating a user presented
+  The 0-based SIMT lane identifier to be used in evaluating a user presented
   expression. This applies to source languages that are implemented for a target
   architecture using a SIMT execution model. These implementations map source
   language threads of execution to lanes of the target architecture threads.
@@ -917,7 +894,7 @@ elements that can be specified are:
 
 *A current iteration*
 
-  The 0 based source language iteration instance to be used in evaluating a user
+  The 0-based source language iteration instance to be used in evaluating a user
   presented expression. This applies to target architectures that support
   optimizations that result in executing multiple source language loop iterations
   concurrently.
@@ -1845,7 +1822,7 @@ There are these special value operations currently defined:
       interpreted as a value of T. If a conversion is wanted it can be done
       explicitly using a ``DW_OP_convert`` operation.
 
-      GDB has a per register hook that allows a target specific conversion on a
+      GDB has a per register hook that allows a target-specific conversion on a
       register by register basis. It defaults to truncation of bigger registers.
       Removing use of the target hook does not cause any test failures in common
       architectures. If the compiler for a target architecture did want some
@@ -1855,7 +1832,7 @@ There are these special value operations currently defined:
       If T is a larger type than the register size, then the default GDB
       register hook reads bytes from the next register (or reads out of bounds
       for the last register!). Removing use of the target hook does not cause
-      any test failures in common architectures (except an illegal hand written
+      any test failures in common architectures (except an illegal hand-written
       assembly test). If a target architecture requires this behavior, these
       extensions allow a composite location description to be used to combine
       multiple registers.
@@ -2283,7 +2260,7 @@ bit offset equal to V scaled by 8 (the byte size).
   The implicit conversion could also be defined as target architecture specific.
   For example, GDB checks if V is an integral type. If it is not it gives an
   error. Otherwise, GDB zero-extends V to 64 bits. If the GDB target defines a
-  hook function, then it is called. The target specific hook function can modify
+  hook function, then it is called. The target-specific hook function can modify
   the 64-bit value, possibly sign extending based on the original value type.
   Finally, GDB treats the 64-bit value V as a memory location address.
 
@@ -3303,38 +3280,6 @@ are defined in :ref:`amdgpu-dwarf-language-names-table`.
 The HIP language [:ref:`HIP <amdgpu-dwarf-HIP>`] can be supported by extending
 the C++ language.
 
-.. note::
-
-  The following new attribute is added.
-
-1.  A ``DW_TAG_compile_unit`` debugger information entry for a compilation unit
-    may have a ``DW_AT_LLVM_augmentation`` attribute, whose value is an
-    augmentation string.
-
-    *The augmentation string allows producers to indicate that there is
-    additional vendor or target specific information in the debugging
-    information entries. For example, this might be information about the
-    version of vendor specific extensions that are being used.*
-
-    If not present, or if the string is empty, then the compilation unit has no
-    augmentation string.
-
-    The format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
 A.3.3 Subroutine and Entry Point Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3740,9 +3685,9 @@ constant may have the following attributes:
 
 3.  ``DW_AT_LLVM_memory_space``
 
-    A ``DW_AT_memory_space`` attribute with a constant value representing a source
+    A ``DW_AT_LLVM_memory_space`` attribute with a constant value representing a source
     language specific DWARF memory space (see 2.14 "Memory Spaces"). If omitted,
-    defaults to ``DW_MSPACE_none``.
+    defaults to ``DW_MSPACE_LLVM_none``.
 
 
 A.4.2 Common Block Entries
@@ -4018,45 +3963,6 @@ following rules:
   or ``DW_OP_form_tls_address`` operation are included; otherwise, they are
   excluded.
 
-A.6.1.1.4 Data Representation of the Name Index
-###############################################
-
-.. _amdgpu-dwarf-name-index-section-header:
-
-
-A.6.1.1.4.1 Section Header
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-  The following provides an addition to DWARF Version 5 section 6.1.1.4.1 item
-  14 ``augmentation_string``.
-
-A null-terminated UTF-8 vendor specific augmentation string, which provides
-additional information about the contents of this index. If provided, the
-recommended format for augmentation string is:
-
-  | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-version number of the extensions used in the DWARF of the compilation unit, and
-*options* is an optional string providing additional information about the
-extensions. The version number must conform to semantic versioning [:ref:`SEMVER
-<amdgpu-dwarf-SEMVER>`]. The *options* string must not contain the "\ ``]``\ "
-character.
-
-For example:
-
-  ::
-
-    [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
-.. note::
-
-  This is different to the definition in DWARF Version 5 but is consistent with
-  the other augmentation strings and allows multiple vendor extensions to be
-  supported.
-
 .. _amdgpu-dwarf-line-number-information:
 
 A.6.2 Line Number Information
@@ -4312,22 +4218,6 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     *Because the* ``.debug_frame`` *section is useful independently of any*
     ``.debug_info`` *section, the augmentation string always uses UTF-8
     encoding.*
-
-    The recommended format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
 
 5.  ``address_size`` (ubyte)
 
@@ -4775,14 +4665,13 @@ entry attributes.
    ================================== ====== ===================================
    Attribute Name                     Value  Classes
    ================================== ====== ===================================
-   ``DW_AT_LLVM_active_lane``         0x3e08 exprloc, loclist
-   ``DW_AT_LLVM_augmentation``        0x3e09 string
-   ``DW_AT_LLVM_lanes``               0x3e0a constant
-   ``DW_AT_LLVM_lane_pc``             0x3e0b exprloc, loclist
-   ``DW_AT_LLVM_vector_size``         0x3e0c constant
-   ``DW_AT_LLVM_iterations``          0x3e0a constant, exprloc, loclist
-   ``DW_AT_LLVM_address_space``       TBA    constant
-   ``DW_AT_LLVM_memory_space``        TBA    constant
+   ``DW_AT_LLVM_memory_space``        0x3e0f constant
+   ``DW_AT_LLVM_address_space``       0x3e10 constant
+   ``DW_AT_LLVM_lanes``               0x3e11 constant
+   ``DW_AT_LLVM_lane_pc``             0x3e12 exprloc, loclist
+   ``DW_AT_LLVM_vector_size``         0x3e13 constant
+   ``DW_AT_LLVM_iterations``          TBA    constant, exprloc, loclist
+   ``DW_AT_LLVM_active_lane``         TBA    exprloc, loclist
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:
@@ -5040,7 +4929,6 @@ debugger information entries.
    ``DW_TAG_variable``                * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_formal_parameter``        * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_constant``                * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_compile_unit``            * ``DW_AT_LLVM_augmentation``
    ``DW_TAG_entry_point``             * ``DW_AT_LLVM_active_lane``
                                       * ``DW_AT_LLVM_lane_pc``
                                       * ``DW_AT_LLVM_lanes``

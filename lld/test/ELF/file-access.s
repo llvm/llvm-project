@@ -1,4 +1,5 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
+# UNSUPPORTED: system-windows
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -r %t.o -o %t1.o

@@ -14,9 +14,10 @@
 _Float16 f;
 
 #ifdef HAVE
+// expected-no-diagnostics
 _Complex _Float16 a;
 void builtin_complex(void) {
   _Float16 a = 0;
-  (void)__builtin_complex(a, a); // expected-error {{'_Complex _Float16' is invalid}}
+  (void)__builtin_complex(a, a);
 }
 #endif

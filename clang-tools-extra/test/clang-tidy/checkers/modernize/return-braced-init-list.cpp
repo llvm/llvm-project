@@ -1,45 +1,5 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-return-braced-init-list %t
-
-namespace std {
-typedef decltype(sizeof(int)) size_t;
-
-// libc++'s implementation
-template <class _E>
-class initializer_list {
-  const _E *__begin_;
-  size_t __size_;
-
-  initializer_list(const _E *__b, size_t __s)
-      : __begin_(__b),
-        __size_(__s) {}
-
-public:
-  typedef _E value_type;
-  typedef const _E &reference;
-  typedef const _E &const_reference;
-  typedef size_t size_type;
-
-  typedef const _E *iterator;
-  typedef const _E *const_iterator;
-
-  initializer_list() : __begin_(nullptr), __size_(0) {}
-
-  size_t size() const { return __size_; }
-  const _E *begin() const { return __begin_; }
-  const _E *end() const { return __begin_ + __size_; }
-};
-
-template <typename T>
-struct allocator {};
-
-template <typename T, typename Allocator = ::std::allocator<T>>
-class vector {
-public:
-  vector(T);
-  vector(size_t, T, const Allocator &alloc = Allocator());
-  vector(std::initializer_list<T>);
-};
-} // namespace std
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t
+#include <vector>
 
 class Bar {};
 
@@ -80,10 +40,12 @@ Foo f2() {
   return {b2};
 }
 
+#if __cplusplus >= 201402L
 auto f3() {
   Bar b3;
   return Foo(b3);
 }
+#endif
 
 #define A(b) Foo(b)
 
@@ -104,8 +66,10 @@ Foo f6() {
 
 std::vector<int> vectorWithOneParameter() {
   int i7 = 1;
+  // No warning: std::vector has a std::initializer_list constructor, so
+  // `std::vector<int>{i7}` would select it (a 1-element vector) instead of
+  // `std::vector<int>(i7)` (an i7-element vector). Rewriting is unsound.
   return std::vector<int>(i7);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
 }
 
 std::vector<int> vectorIntWithTwoParameter() {
@@ -121,6 +85,72 @@ std::vector<A> vectorRecordWithTwoParameter() {
   return std::vector<A>(1, a);
 }
 
+
+struct WithInitList {
+  WithInitList(Bar) {}
+  WithInitList(std::initializer_list<WithInitList>) {}
+};
+
+// No warning: braces would select the std::initializer_list constructor
+// instead of WithInitList(Bar), changing overload resolution.
+WithInitList initListCtorNoRewrite() {
+  Bar b;
+  return WithInitList(b);
+}
+
+WithInitList initListCtorNoRewriteArg(Bar b) {
+  return WithInitList(b);
+}
+
+// `std::initializer_list` as the first parameter but with a non-defaulted
+// trailing parameter is NOT an initializer-list constructor, so braces cannot
+// select it. A warning is expected.
+struct NotInitListCtor {
+  NotInitListCtor(std::initializer_list<int>, int);
+  NotInitListCtor(Bar) {}
+};
+
+NotInitListCtor notInitListCtorRewrite(Bar b) {
+  return NotInitListCtor(b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {b};
+}
+
+struct TemplatedInitListCtor {
+  TemplatedInitListCtor(Bar) {}
+  template <typename T>
+  TemplatedInitListCtor(std::initializer_list<T>) {}
+};
+
+TemplatedInitListCtor templatedInitListCtorNoRewrite(Bar b) {
+  return TemplatedInitListCtor(b);
+}
+
+// An initializer-list constructor may take the list by (cv-qualified)
+// reference; braces still prefer it, so no rewrite.
+struct RefInitListCtor {
+  RefInitListCtor(Bar) {}
+  RefInitListCtor(const std::initializer_list<RefInitListCtor> &) {}
+};
+
+RefInitListCtor refInitListCtorNoRewrite(Bar b) {
+  return RefInitListCtor(b);
+}
+
+// No warning: the initializer-list constructor is inherited via `using`, so
+// braces would still select it instead of the inherited `Base(Bar)`.
+struct InitListBase {
+  InitListBase(Bar) {}
+  InitListBase(std::initializer_list<InitListBase>) {}
+};
+
+struct InheritsInitListCtor : InitListBase {
+  using InitListBase::InitListBase;
+};
+
+InheritsInitListCtor inheritedInitListCtorNoRewrite(Bar b) {
+  return InheritsInitListCtor(b);
+}
 
 Bar f8() {
   return {};
@@ -214,3 +244,92 @@ Foo i7 = bazQuux.m2(b0);
 
 auto v1 = []() { return std::vector<int>({1, 2}); }();
 auto v2 = []() -> std::vector<int> { return std::vector<int>({1, 2}); }();
+
+
+struct Saz {
+  Saz(const int&) {}
+};
+
+Saz fn1() {
+  return Saz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Saz fn2() {
+  int x = 1;
+  return Saz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct Taz {
+  Taz(const int) {}
+};
+
+Taz gn1() {
+  return Taz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Taz gn2() {
+  int x = 0;
+  return Taz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+Taz gn3() {
+  const int& x = 0;
+  return Taz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct MultiSaz {
+  MultiSaz(const int&, const double) {}
+};
+
+MultiSaz mfn1() {
+  int x = 1;
+  double y = 2.0;
+  return MultiSaz(x, y);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x, y};
+}
+
+struct Vol {
+  Vol(volatile int) {}
+};
+
+Vol vn1() {
+  int x = 1;
+  return Vol(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct Gaz {
+  Gaz(int) {}
+};
+
+Gaz hn1() {
+  return Gaz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Gaz hn2() {
+  const int x = 1;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+Gaz hn3() {
+  const int& x = 2;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}

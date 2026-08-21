@@ -1,4 +1,4 @@
-//===--- CloexecAcceptCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,9 +14,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecAcceptCheck::registerMatchers(MatchFinder *Finder) {
-  auto SockAddrPointerType =
+  const auto SockAddrPointerType =
       hasType(pointsTo(recordDecl(isStruct(), hasName("sockaddr"))));
-  auto SockLenPointerType = hasType(pointsTo(namedDecl(hasName("socklen_t"))));
+  const auto SockLenPointerType =
+      hasType(pointsTo(namedDecl(hasName("socklen_t"))));
 
   registerMatchersImpl(Finder,
                        functionDecl(returns(isInteger()), hasName("accept"),
@@ -26,10 +27,11 @@ void CloexecAcceptCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecAcceptCheck::check(const MatchFinder::MatchResult &Result) {
-  std::string ReplacementText = (Twine("accept4(") + getSpellingArg(Result, 0) +
-                                 ", " + getSpellingArg(Result, 1) + ", " +
-                                 getSpellingArg(Result, 2) + ", SOCK_CLOEXEC)")
-                                    .str();
+  const std::string ReplacementText =
+      (Twine("accept4(") + getSpellingArg(Result, 0) + ", " +
+       getSpellingArg(Result, 1) + ", " + getSpellingArg(Result, 2) +
+       ", SOCK_CLOEXEC)")
+          .str();
 
   replaceFunc(
       Result,

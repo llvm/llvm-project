@@ -59,6 +59,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const cpp17_output_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -109,6 +112,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const cpp17_input_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -157,6 +163,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const forward_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -203,6 +212,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const bidirectional_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -261,6 +273,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const random_access_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -390,6 +405,9 @@ public:
 
   template <class T>
   void operator,(T const&) = delete;
+
+  template <class T>
+  friend void operator,(const T&, const three_way_random_access_iterator&) = delete;
 };
 #if TEST_STD_VER > 14
 template <class It>
@@ -485,6 +503,9 @@ public:
 
   template <class T>
   void operator,(T const&) = delete;
+
+  template <class T>
+  friend void operator,(const T&, const cpp20_random_access_iterator&) = delete;
 };
 template <class It>
 cpp20_random_access_iterator(It) -> cpp20_random_access_iterator<It>;
@@ -578,6 +599,9 @@ public:
 
   template <class T>
   void operator,(T const&) = delete;
+
+  template <class T>
+  friend void operator,(const T&, const contiguous_iterator&) = delete;
 };
 template <class It>
 contiguous_iterator(It) -> contiguous_iterator<It>;
@@ -635,6 +659,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const three_way_contiguous_iterator&) = delete;
 };
 template <class It>
 three_way_contiguous_iterator(It) -> three_way_contiguous_iterator<It>;
@@ -746,7 +773,10 @@ struct ThrowingIterator {
     template <class T2>
     void operator,(T2 const &) = delete;
 
-private:
+    template <class T2>
+    friend void operator,(const T2&, const ThrowingIterator&) = delete;
+
+  private:
     const T* begin_;
     const T* end_;
     const T* current_;
@@ -817,7 +847,10 @@ struct NonThrowingIterator {
     template <class T2>
     void operator,(T2 const &) = delete;
 
-private:
+    template <class T2>
+    friend void operator,(const T2&, const NonThrowingIterator&) = delete;
+
+  private:
     const T *begin_;
     const T *end_;
     const T *current_;
@@ -847,6 +880,9 @@ public:
 
     template <class T>
     void operator,(T const &) = delete;
+
+    template <class T>
+    friend void operator,(const T&, const cpp20_input_iterator&) = delete;
 };
 template <class It>
 cpp20_input_iterator(It) -> cpp20_input_iterator<It>;
@@ -884,6 +920,9 @@ public:
 
   template <class T>
   void operator,(T const&) = delete;
+
+  template <class T>
+  friend void operator,(const T&, const cpp20_output_iterator&) = delete;
 };
 template <class It>
 cpp20_output_iterator(It) -> cpp20_output_iterator<It>;
@@ -1077,17 +1116,20 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 
-private:
-  constexpr void moved_by(difference_type n) {
-    if (counts_ == nullptr)
-      return;
-    if (n > 0)
-      ++counts_->increments;
-    else if (n < 0)
-      ++counts_->decrements;
-    else
-      ++counts_->zero_moves;
-  }
+    template <class T>
+    friend void operator,(const T&, const operation_counting_iterator&) = delete;
+
+  private:
+    constexpr void moved_by(difference_type n) {
+      if (counts_ == nullptr)
+        return;
+      if (n > 0)
+        ++counts_->increments;
+      else if (n < 0)
+        ++counts_->decrements;
+      else
+        ++counts_->zero_moves;
+    }
 
     decltype(base(std::declval<It>())) base_;
     IteratorOpCounts* counts_ = nullptr;
@@ -1132,6 +1174,36 @@ private:
 };
 template <class It>
 sized_sentinel(It) -> sized_sentinel<It>;
+
+template <class Base = int*>
+struct forward_sized_iterator {
+  Base it_ = nullptr;
+
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = int;
+  using difference_type   = std::intptr_t;
+  using pointer           = Base;
+  using reference         = decltype(*Base{});
+
+  forward_sized_iterator() = default;
+  constexpr forward_sized_iterator(Base it) : it_(it) {}
+
+  constexpr reference operator*() const { return *it_; }
+
+  constexpr forward_sized_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr forward_sized_iterator operator++(int) { return forward_sized_iterator(it_++); }
+
+  friend constexpr bool operator==(const forward_sized_iterator&, const forward_sized_iterator&) = default;
+
+  friend constexpr difference_type operator-(const forward_sized_iterator& x, const forward_sized_iterator& y) {
+    return x.it_ - y.it_;
+  }
+};
+static_assert(std::forward_iterator<forward_sized_iterator<>>);
+static_assert(std::sized_sentinel_for<forward_sized_iterator<>, forward_sized_iterator<>>);
 
 namespace adl {
 
@@ -1837,6 +1909,5 @@ using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
 #endif
 } // namespace types
-
 
 #endif // SUPPORT_TEST_ITERATORS_H

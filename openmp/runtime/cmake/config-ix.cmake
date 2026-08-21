@@ -16,7 +16,6 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
-include(LibompCheckFortranFlag)
 include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
@@ -97,13 +96,11 @@ if(WIN32)
     endforeach()
   endforeach()
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
-  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
-endif()
 
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
 check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_PTHREAD_SETNAME_NP)
 check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
+check_symbol_exists(pthread_cancel "pthread.h" LIBOMP_HAVE_PTHREAD_CANCEL)
 
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
@@ -154,20 +151,15 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking threading requirements. Note that compiling to WebAssembly threads
-# with either the Emscripten or wasi-threads flavor ends up using the pthreads
-# interface in a WebAssembly-compiled libc; CMake does not yet know how to
-# detect this.
-if (NOT WASM)
-  find_package(Threads REQUIRED)
-  if(WIN32)
-    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-      libomp_error_say("Need Win32 thread interface on Windows.")
-    endif()
-  else()
-    if(NOT CMAKE_USE_PTHREADS_INIT)
-      libomp_error_say("Need pthread interface on Unix-like systems.")
-    endif()
+# Checking threading requirements
+find_package(Threads REQUIRED)
+if(WIN32)
+  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+    libomp_error_say("Need Win32 thread interface on Windows.")
+  endif()
+else()
+  if(NOT CMAKE_USE_PTHREADS_INIT)
+    libomp_error_say("Need pthread interface on Unix-like systems.")
   endif()
 endif()
 
@@ -250,14 +242,14 @@ else()
 endif()
 
 # Check if adaptive locks are available
-if((${IA32} OR ${INTEL64}) AND NOT MSVC)
+if((IA32 OR INTEL64) AND NOT MSVC)
   set(LIBOMP_HAVE_ADAPTIVE_LOCKS TRUE)
 else()
   set(LIBOMP_HAVE_ADAPTIVE_LOCKS FALSE)
 endif()
 
 # Check if stats-gathering is available
-if(${LIBOMP_STATS})
+if(LIBOMP_STATS)
   check_c_source_compiles(
      "__thread int x;
      int main(int argc, char** argv)
@@ -268,7 +260,7 @@ if(${LIBOMP_STATS})
      { unsigned long long t = __builtin_readcyclecounter(); return 0; }"
      LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
   if(NOT LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
-    if(${IA32} OR ${INTEL64} OR ${MIC})
+    if(IA32 OR INTEL64 OR MIC)
       check_include_file(x86intrin.h LIBOMP_HAVE_X86INTRIN_H)
       libomp_append(CMAKE_REQUIRED_DEFINITIONS -DLIBOMP_HAVE_X86INTRIN_H LIBOMP_HAVE_X86INTRIN_H)
       check_c_source_compiles(
@@ -321,7 +313,7 @@ else()
       (LIBOMP_ARCH STREQUAL sparcv9))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
-      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+      (NOT (WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
@@ -331,7 +323,7 @@ endif()
 set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
-if(${LIBOMP_USE_HWLOC})
+if(LIBOMP_USE_HWLOC)
   find_path(LIBOMP_HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${LIBOMP_HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
   set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INCLUDE_DIR})
   check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
@@ -353,7 +345,7 @@ if(${LIBOMP_USE_HWLOC})
 endif()
 
 # Check if ThreadSanitizer support is available
-if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND ${INTEL64})
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND INTEL64)
   set(LIBOMP_HAVE_TSAN_SUPPORT TRUE)
 else()
   set(LIBOMP_HAVE_TSAN_SUPPORT FALSE)

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-isl-arg=--no-schedule-serialize-sccs '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-isl-arg=--no-schedule-serialize-sccs '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;
 ;    void tf(int C[256][256][256], int A0[256][256][256], int A1[256][256][256]) {

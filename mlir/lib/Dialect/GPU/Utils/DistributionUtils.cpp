@@ -14,6 +14,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -55,28 +57,30 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
     SmallVector<size_t> &indices) const {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-  llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
-                                              yield.getOperands().end());
+  gpu::YieldOp yield = warpOp.getTerminator();
+  SmallVector<Value> yieldValues(yield.getOperands().begin(),
+                                 yield.getOperands().end());
+  llvm::SmallDenseMap<Value, unsigned> indexLookup;
+  // Record the value -> first index mapping for faster lookup.
+  for (auto [i, v] : llvm::enumerate(yieldValues)) {
+    if (!indexLookup.count(v))
+      indexLookup[v] = i;
+  }
+
   for (auto [value, type] : llvm::zip_equal(newYieldedValues, newReturnTypes)) {
-    if (yieldValues.insert(value)) {
+    // If the value already exists in the yield, don't create a new output.
+    if (indexLookup.count(value)) {
+      indices.push_back(indexLookup[value]);
+    } else {
+      // If the value is new, add it to the yield and to the types.
+      yieldValues.push_back(value);
       types.push_back(type);
       indices.push_back(yieldValues.size() - 1);
-    } else {
-      // If the value already exit the region don't create a new output.
-      for (auto [idx, yieldOperand] :
-           llvm::enumerate(yieldValues.getArrayRef())) {
-        if (yieldOperand == value) {
-          indices.push_back(idx);
-          break;
-        }
-      }
     }
   }
-  yieldValues.insert_range(newYieldedValues);
+
   WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-      rewriter, warpOp, yieldValues.getArrayRef(), types);
+      rewriter, warpOp, yieldValues, types);
   rewriter.replaceOp(warpOp,
                      newWarpOp.getResults().take_front(warpOp.getNumResults()));
   return newWarpOp;
@@ -85,8 +89,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
 OpOperand *WarpDistributionPattern::getWarpResult(
     WarpExecuteOnLane0Op warpOp,
     llvm::function_ref<bool(Operation *)> fn) const {
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = warpOp.getTerminator();
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
     Value yieldValues = yieldOperand.get();
     Operation *definedOp = yieldValues.getDefiningOp();
@@ -116,8 +119,7 @@ bool WarpDistributionPattern::delinearizeLaneId(
       return false;
     sizes.push_back(large / small);
   }
-  if (std::accumulate(sizes.begin(), sizes.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(sizes) != warpSize)
     return false;
 
   AffineExpr s0, s1;

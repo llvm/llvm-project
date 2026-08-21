@@ -14,7 +14,6 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 
 namespace Fortran::parser {
@@ -67,30 +66,37 @@ static constexpr auto programUnit{
     lookAhead(maybe(label) >> validFunctionStmt) >>
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
-static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
-        skipMany(";"_tok) / space / recovery(endOfLine, SkipPast<'\n'>{})};
+
+// Note, F'23 6.3.1 states that "A Fortran program unit is a sequence of one or
+// more lines, organized as Fortran statements, comments, and INCLUDE lines."
+// which could be interpreted as implying program units must exist on mutually
+// exclusive lines. Nag interprets it this way. We have an extension to allow
+// multiple program units on the same line.
+static constexpr auto normalProgramUnit{
+    !consumedAllInput >> StartNewSubprogram{} >> programUnit /
+        recovery((maybe(semicolons) >> endOfLine) ||
+                (extension<LanguageFeature::MultipleProgramUnitsOnSameLine>(
+                    "nonstandard usage: end of program unit not terminated by new line"_port_en_US,
+                    semicolons >> not(endOfLine))),
+            skipToNextLineIfAny)};
+
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
 
 static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
-        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
-// F'2018 6.3.1 defines a program unit as a sequence of one or more lines,
-// implying that a line can't be part of two distinct program units.
-// Consequently, a program unit END statement should be the last statement
-// on its line.  We parse those END statements via unterminatedStatement()
-// and then skip over the end of the line here.
-TYPE_PARSER(
-    construct<Program>(extension<LanguageFeature::EmptySourceFile>(
-                           "nonstandard usage: empty source file"_port_en_US,
-                           skipStuffBeforeStatement >> !nextCh >>
-                               pure<std::list<ProgramUnit>>()) ||
-        some(globalCompilerDirective || globalOpenACCCompilerDirective ||
-            normalProgramUnit) /
-            skipStuffBeforeStatement))
+TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
+    (extension<LanguageFeature::EmptySourceFile>(
+         "nonstandard usage: empty source file"_port_en_US,
+         consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
+        some(skipStuffBeforeStatement >> (globalCompilerDirective ||
+                                             globalOpenACCCompilerDirective ||
+                                             normalProgramUnit)) /
+            skipStuffBeforeStatement)))
 
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
@@ -107,7 +113,7 @@ constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
     // first in the execution part
     "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
     "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
-constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
+constexpr auto execPartLookAhead{first(actionStmtLookAhead,
     openaccConstruct >> ok, openmpExecDirective >> ok, "ASSOCIATE ("_tok,
     "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
     "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
@@ -176,12 +182,14 @@ constexpr auto limitedSpecificationPart{inContext("specification part"_en_US,
         implicitPart, many(limitedDeclarationConstruct)))};
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
+//        derived-type-def | enum-def |  enumeration-type-def | generic-stmt |
+//        interface-block | parameter-stmt | procedure-declaration-stmt |
 //        other-specification-stmt | type-declaration-stmt
 TYPE_CONTEXT_PARSER("specification construct"_en_US,
     first(construct<SpecificationConstruct>(indirect(Parser<DerivedTypeDef>{})),
         construct<SpecificationConstruct>(indirect(Parser<EnumDef>{})),
+        construct<SpecificationConstruct>(
+            indirect(Parser<EnumerationTypeDef>{})),
         construct<SpecificationConstruct>(
             statement(indirect(Parser<GenericStmt>{}))),
         construct<SpecificationConstruct>(indirect(interfaceBlock)),
@@ -198,6 +206,9 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
         construct<SpecificationConstruct>(
             indirect(openaccDeclarativeConstruct)),
         construct<SpecificationConstruct>(indirect(openmpDeclarativeConstruct)),
+        construct<SpecificationConstruct>(
+            indirect(openmpMisplacedEndDirective)),
+        construct<SpecificationConstruct>(indirect(openmpInvalidDirective)),
         construct<SpecificationConstruct>(indirect(compilerDirective))))
 
 // R513 other-specification-stmt ->
@@ -250,7 +261,7 @@ TYPE_CONTEXT_PARSER("PROGRAM statement"_en_US,
 // R1403 end-program-stmt -> END [PROGRAM [program-name]]
 TYPE_CONTEXT_PARSER("END PROGRAM statement"_en_US,
     construct<EndProgramStmt>(
-        recovery("END" >> defaulted("PROGRAM" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("PROGRAM" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1404 module ->
@@ -268,7 +279,7 @@ TYPE_CONTEXT_PARSER(
 // R1406 end-module-stmt -> END [MODULE [module-name]]
 TYPE_CONTEXT_PARSER("END MODULE statement"_en_US,
     construct<EndModuleStmt>(
-        recovery("END" >> defaulted("MODULE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("MODULE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1407 module-subprogram-part -> contains-stmt [module-subprogram]...
@@ -282,6 +293,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
@@ -336,7 +349,7 @@ TYPE_PARSER(construct<ParentIdentifier>(name, maybe(":" >> name)))
 // R1419 end-submodule-stmt -> END [SUBMODULE [submodule-name]]
 TYPE_CONTEXT_PARSER("END SUBMODULE statement"_en_US,
     construct<EndSubmoduleStmt>(
-        recovery("END" >> defaulted("SUBMODULE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("SUBMODULE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1420 block-data -> block-data-stmt [specification-part] end-block-data-stmt
@@ -352,7 +365,7 @@ TYPE_CONTEXT_PARSER("BLOCK DATA statement"_en_US,
 // R1422 end-block-data-stmt -> END [BLOCK DATA [block-data-name]]
 TYPE_CONTEXT_PARSER("END BLOCK DATA statement"_en_US,
     construct<EndBlockDataStmt>(
-        recovery("END" >> defaulted("BLOCK DATA" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("BLOCK DATA" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1501 interface-block ->
@@ -361,9 +374,15 @@ TYPE_PARSER(construct<InterfaceBlock>(statement(Parser<InterfaceStmt>{}),
     many(Parser<InterfaceSpecification>{}),
     statement(Parser<EndInterfaceStmt>{})))
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
+// Flang extension: an OpenACC ROUTINE directive is also accepted directly
+// within an interface block (e.g. preceding the interface body it names).
 TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
-    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})))
+    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
+    construct<InterfaceSpecification>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
+    construct<InterfaceSpecification>(indirect(compilerDirective)))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -481,7 +500,7 @@ constexpr auto starOrExpr{
         applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
-                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+                 maybe("," >> scalarExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
 TYPE_CONTEXT_PARSER("CALL statement"_en_US,
@@ -500,15 +519,42 @@ TYPE_PARSER(construct<ProcedureDesignator>(Parser<ProcComponentRef>{}) ||
 TYPE_PARSER(construct<ActualArgSpec>(
     maybe(keyword / "=" / !"="_ch), Parser<ActualArg>{}))
 
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+// N.B. "variable" is subsumed by "expr" in the parser;
+// semantics determines the distinction.
+// C1544: "A consequent-arg that is an expr shall not be a variable."
+// This is a grammar disambiguation rule making the two alternatives of
+// R1528 mutually exclusive.  It is automatically satisfied here because
+// "variable" is subsumed by "expr" in the parser — there is only one
+// production, so no consequent-arg can accidentally match the wrong
+// alternative.  Semantics uses IsVariable() to distinguish the two
+// cases when it matters (e.g. C1541 requires variables for INTENT(OUT/
+// INOUT) dummies).
+constexpr auto consequent{construct<ConditionalArg::Consequent>(
+                              ".NIL." >> construct<ConditionalArgNil>()) ||
+    construct<ConditionalArg::Consequent>(indirect(expr))};
+
+// F2023 R1526 conditional-arg ->
+//   scalar-logical-expr ? consequent : conditional-arg-or-consequent
+// The outer parentheses are added at the ActualArg level.
+TYPE_PARSER(construct<ConditionalArg>(scalarLogicalExpr / "?", consequent / ":",
+    indirect(Parser<ConditionalArgTail>{})))
+
+// conditional-arg-part-or-consequent -> conditional-arg | consequent
+TYPE_PARSER(construct<ConditionalArgTail>(Parser<ConditionalArg>{}) ||
+    construct<ConditionalArgTail>(consequent))
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 // N.B. the "procedure-name" and "proc-component-ref" alternatives can't
 // yet be distinguished from "variable", many instances of which can't be
 // distinguished from "expr" anyway (to do so would misparse structure
 // constructors and function calls as array elements).
 // Semantics sorts it all out later.
-TYPE_PARSER(construct<ActualArg>(expr) ||
+TYPE_PARSER(construct<ActualArg>(parenthesized(Parser<ConditionalArg>{})) ||
+    construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
@@ -524,13 +570,15 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
-TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
-    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
-    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
-    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
+TYPE_PARSER(withMessage(
+    "expected DEVICE, GLOBAL, GRID_GLOBAL, or HOST attribute"_err_en_US,
+    first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+        "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+        "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+        "HOST" >> pure(common::CUDASubprogramAttrs::Host))))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -539,10 +587,14 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    construct<PrefixSpec>(construct<PrefixSpec::Simple>("SIMPLE"_tok)),
     extension<LanguageFeature::CUDA>(
-        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
-            parenthesized(
-                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
+            localRecovery("expected valid ATTRIBUTES specification"_err_en_US,
+                "ATTRIBUTES" >> parenthesized(nonemptyList(
+                                    Parser<common::CUDASubprogramAttrs>{})),
+                "ATTRIBUTES" >> SkipTo<')'>{} >> ")"_ch >>
+                    pure<std::list<common::CUDASubprogramAttrs>>())))),
     extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
         construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
             parenthesized(nonemptyList(
@@ -570,7 +622,7 @@ TYPE_PARSER(construct<Suffix>(
 
 // R1533 end-function-stmt -> END [FUNCTION [function-name]]
 TYPE_PARSER(construct<EndFunctionStmt>(
-    recovery("END" >> defaulted("FUNCTION" >> maybe(name)) / atEndOfStmt,
+    recovery("END " >> defaulted("FUNCTION" >> maybe(name)) / atEndOfStmt,
         progUnitEndStmtErrorRecovery)))
 
 // R1534 subroutine-subprogram ->
@@ -598,7 +650,7 @@ TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))
 
 // R1537 end-subroutine-stmt -> END [SUBROUTINE [subroutine-name]]
 TYPE_PARSER(construct<EndSubroutineStmt>(
-    recovery("END" >> defaulted("SUBROUTINE" >> maybe(name)) / atEndOfStmt,
+    recovery("END " >> defaulted("SUBROUTINE" >> maybe(name)) / atEndOfStmt,
         progUnitEndStmtErrorRecovery)))
 
 // R1538 separate-module-subprogram ->
@@ -616,7 +668,7 @@ TYPE_CONTEXT_PARSER("MODULE PROCEDURE statement"_en_US,
 // R1540 end-mp-subprogram-stmt -> END [PROCEDURE [procedure-name]]
 TYPE_CONTEXT_PARSER("END PROCEDURE statement"_en_US,
     construct<EndMpSubprogramStmt>(
-        recovery("END" >> defaulted("PROCEDURE" >> maybe(name)) / atEndOfStmt,
+        recovery("END " >> defaulted("PROCEDURE" >> maybe(name)) / atEndOfStmt,
             progUnitEndStmtErrorRecovery)))
 
 // R1541 entry-stmt -> ENTRY entry-name [( [dummy-arg-list] ) [suffix]]

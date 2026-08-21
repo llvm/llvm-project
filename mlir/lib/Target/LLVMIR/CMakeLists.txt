@@ -1,4 +1,5 @@
 add_subdirectory(Dialect)
+add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   ConvertFromLLVMIR.cpp
@@ -55,9 +56,9 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   MLIRGPUToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRNVVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRROCDLToLLVMIRTranslation
+  MLIRPtrToLLVMIRTranslation
   MLIRSPIRVToLLVMIRTranslation
   MLIRVCIXToLLVMIRTranslation
   MLIRXeVMToLLVMIRTranslation
@@ -73,6 +74,9 @@ add_mlir_translation_library(MLIRTargetLLVMIRImport
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
+
+  DEPENDS
+  MLIRLLVMImportDialectInterfaceIncGen
 
   LINK_COMPONENTS
   Core

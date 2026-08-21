@@ -1,9 +1,14 @@
-//===-- Holds an expected or unexpected value -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// \brief Implementation of C++23-style expected and unexpected utilities.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
@@ -35,6 +40,7 @@ template <class T, class E> class expected {
   bool is_expected;
 
 public:
+  LIBC_INLINE constexpr expected() : exp(), is_expected(true) {}
   LIBC_INLINE constexpr expected(T exp) : exp(exp), is_expected(true) {}
   LIBC_INLINE constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
@@ -46,7 +52,7 @@ public:
   LIBC_INLINE constexpr const T &value() const { return exp; }
   LIBC_INLINE constexpr const E &error() const { return unexp; }
 
-  LIBC_INLINE constexpr operator bool() const { return is_expected; }
+  LIBC_INLINE constexpr explicit operator bool() const { return is_expected; }
 
   LIBC_INLINE constexpr T &operator*() { return exp; }
   LIBC_INLINE constexpr const T &operator*() const { return exp; }

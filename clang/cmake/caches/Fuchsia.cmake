@@ -36,6 +36,8 @@ set(_FUCHSIA_BOOTSTRAP_PASSTHROUGH
   CURL_ROOT
   OpenSSL_ROOT
   httplib_ROOT
+  LLVM_ENABLE_OPENCSD
+  OPENCSD_ROOT
 
   # Deprecated
   CursesAndPanel_ROOT
@@ -97,7 +99,7 @@ set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 set(LLVM_ENABLE_BACKTRACES ON CACHE BOOL "")
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 elseif(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "")
 endif()
@@ -106,6 +108,8 @@ if(APPLE)
   set(COMPILER_RT_ENABLE_IOS OFF CACHE BOOL "")
   set(COMPILER_RT_ENABLE_TVOS OFF CACHE BOOL "")
   set(COMPILER_RT_ENABLE_WATCHOS OFF CACHE BOOL "")
+
+  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64;-DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF" CACHE STRING "")
 endif()
 
 if(WIN32)
@@ -140,7 +144,6 @@ else()
   set(SANITIZER_TEST_CXX "libc++" CACHE STRING "")
   set(SANITIZER_TEST_CXX_INTREE ON CACHE BOOL "")
   set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
 
 if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
@@ -179,7 +182,7 @@ set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 
 if(FUCHSIA_ENABLE_PGO)
-  set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED ON CACHE BOOL "")
+  set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED IR CACHE BOOL "")
 
   set(_FUCHSIA_BOOTSTRAP_TARGETS
     generate-profdata
@@ -190,6 +193,7 @@ if(FUCHSIA_ENABLE_PGO)
     stage2-install-toolchain-distribution-toolchain
     stage2-check-all
     stage2-check-clang
+    stage2-check-clang-extra
     stage2-check-lld
     stage2-check-llvm
     stage2-check-polly
@@ -207,6 +211,7 @@ else()
  set(_FUCHSIA_BOOTSTRAP_TARGETS
    check-all
    check-clang
+   check-clang-extra
    check-lld
    check-llvm
    check-polly

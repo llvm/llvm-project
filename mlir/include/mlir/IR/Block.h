@@ -52,6 +52,20 @@ public:
   /// model.
   Region *getParent() const;
 
+  /// Return an ID uniquely identifying this block within its parent region.
+  /// The ID is assigned when the block joins a region and reassigned when the
+  /// block is moved to a different region; it is stable while the block stays
+  /// in a region, and removing a block leaves a hole (IDs are not reused). Only
+  /// valid for a block that is in a region.
+  ///
+  /// Unlike computeBlockNumber(), this is O(1) and stable; it exists so that
+  /// generic graph algorithms (e.g. LoopInfo, DominatorTree) can index blocks
+  /// by ID.
+  unsigned getBlockID() const {
+    assert(getParent() && "only blocks in a region have a valid ID");
+    return blockID;
+  }
+
   /// Returns the closest surrounding operation that contains this block.
   Operation *getParentOp();
 
@@ -76,6 +90,16 @@ public:
 
   /// Unlink this Block from its parent region and delete it.
   void erase();
+
+  /// Compute the position of this block within its parent region using an O(N)
+  /// linear scan.
+  ///
+  /// Note: There is no semantic meaning to a block number. Blocks are used for
+  /// unstructured control flow and relying on block numbers for functional
+  /// purposes may indicate a design flaw. (You can give semantic meaning to
+  /// region numbers instead.) Block numbers are useful for debugging purposes
+  /// and for error messages.
+  unsigned computeBlockNumber();
 
   //===--------------------------------------------------------------------===//
   // Block argument management
@@ -205,12 +229,14 @@ public:
   }
 
   /// Return an iterator range over the operation within this block excluding
-  /// the terminator operation at the end.
+  /// the terminator operation at the end. If the block has no terminator,
+  /// return an iterator range over the entire block. If it is unknown if the
+  /// block has a terminator (i.e., last block operation is unregistered), also
+  /// return an iterator range over the entire block.
   iterator_range<iterator> without_terminator() {
     if (begin() == end())
       return {begin(), end()};
-    auto endIt = --end();
-    return {begin(), endIt};
+    return without_terminator_impl();
   }
 
   //===--------------------------------------------------------------------===//
@@ -221,7 +247,8 @@ public:
   /// the block might have a valid terminator operation.
   Operation *getTerminator();
 
-  /// Check whether this block might have a terminator.
+  /// Return "true" if this block might have a terminator. Return "true" if
+  /// the last operation is unregistered.
   bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
@@ -402,9 +429,16 @@ public:
   void printAsOperand(raw_ostream &os, AsmState &state);
 
 private:
+  /// Same as `without_terminator`, but assumes that the block is not empty.
+  iterator_range<iterator> without_terminator_impl();
+
   /// Pair of the parent object that owns this block and a bit that signifies if
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
+
+  /// Unique ID of this block within its parent region, (re)assigned when the
+  /// block joins a region; -1u while the block has no parent. See getBlockID().
+  unsigned blockID = -1u;
 
   /// This is the list of operations in the block.
   OpListType operations;
@@ -416,6 +450,7 @@ private:
   void operator=(Block &) = delete;
 
   friend struct llvm::ilist_traits<Block>;
+  friend class Region;
 };
 
 raw_ostream &operator<<(raw_ostream &, Block &);
@@ -424,14 +459,6 @@ raw_ostream &operator<<(raw_ostream &, Block &);
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::Block::iterator> {
-  static mlir::Block::iterator getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
-  static mlir::Block::iterator getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
   static unsigned getHashValue(mlir::Block::iterator iter) {
     return hash_value(iter.getNodePtr());
   }

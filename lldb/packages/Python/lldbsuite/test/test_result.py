@@ -16,6 +16,7 @@ import unittest
 
 # LLDB Modules
 from . import configuration
+from .skip_reason import UnsupportedReason, is_unsupported
 from lldbsuite.test_event import build_exception
 
 
@@ -162,9 +163,17 @@ class LLDBTestResult(unittest.TextTestResult):
         getattr(test, test._testMethodName).__func__.__unittest_skip__ = True
         getattr(
             test, test._testMethodName
-        ).__func__.__unittest_skip_why__ = (
+        ).__func__.__unittest_skip_why__ = UnsupportedReason(
             "test case does not fall in any category of interest for this run"
         )
+
+    def countUnsupported(self):
+        """Number of skipped tests that can never run in this configuration."""
+        return sum(1 for _, reason in self.skipped if is_unsupported(reason))
+
+    def countSkipped(self):
+        """Number of skipped tests that ought to run here but don't work yet."""
+        return len(self.skipped) - self.countUnsupported()
 
     def checkExclusion(self, exclusion_list, name):
         if exclusion_list:
@@ -282,9 +291,13 @@ class LLDBTestResult(unittest.TextTestResult):
         method = getattr(test, "markSkippedTest", None)
         if method:
             method()
+        # A test turned off by a `require*` decorator can never run in this
+        # configuration, so report it as UNSUPPORTED. Anything else is a test
+        # that ought to run here but doesn't work yet: report it as SKIPPED.
+        status = "UNSUPPORTED" if is_unsupported(reason) else "SKIPPED"
         self.stream.write(
-            "UNSUPPORTED: LLDB (%s) :: %s (%s) \n"
-            % (self._config_string(test), str(test), reason)
+            "%s: LLDB (%s) :: %s (%s) \n"
+            % (status, self._config_string(test), str(test), reason)
         )
 
     def addUnexpectedSuccess(self, test):
@@ -296,3 +309,10 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "XPASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+
+    def stopTest(self, test):
+        """Dump the session info for debugging."""
+        dumpSessionInfo = getattr(test, "dumpSessionInfo", None)
+        if dumpSessionInfo:
+            dumpSessionInfo()
+        super().stopTest(test)

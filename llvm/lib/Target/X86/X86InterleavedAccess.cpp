@@ -802,7 +802,7 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
 // Currently, lowering is supported for 4x64 bits with Factor = 4 on AVX.
 bool X86TargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
@@ -812,7 +812,7 @@ bool X86TargetLowering::lowerInterleavedLoad(
   auto *LI = dyn_cast<LoadInst>(Load);
   if (!LI)
     return false;
-  assert(!Mask && "Unexpected mask on a load");
+  assert(!Mask && GapMask.popcount() == Factor && "Unexpected mask on a load");
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
@@ -825,7 +825,8 @@ bool X86TargetLowering::lowerInterleavedLoad(
 bool X86TargetLowering::lowerInterleavedStore(Instruction *Store,
                                               Value *LaneMask,
                                               ShuffleVectorInst *SVI,
-                                              unsigned Factor) const {
+                                              unsigned Factor,
+                                              const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
 
@@ -836,7 +837,8 @@ bool X86TargetLowering::lowerInterleavedStore(Instruction *Store,
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.

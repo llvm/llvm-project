@@ -10,15 +10,17 @@
 
 constexpr const char *alignedAllocFunctionName = "aligned_alloc";
 constexpr const char *mallocFunctionName = "malloc";
+constexpr const char *freeFunctionName = "free";
+constexpr const char *memcpyFunctionName = "memcpy";
 constexpr const char *cppStandardLibraryHeader = "cstdlib";
 constexpr const char *cStandardLibraryHeader = "stdlib.h";
+constexpr const char *cppStringLibraryHeader = "cstring";
+constexpr const char *cStringLibraryHeader = "string.h";
 
 namespace mlir {
 class DialectRegistry;
 class RewritePatternSet;
 class TypeConverter;
-
-void populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter);
 
 void populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
                                              const TypeConverter &converter);

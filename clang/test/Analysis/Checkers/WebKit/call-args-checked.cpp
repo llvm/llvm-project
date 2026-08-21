@@ -2,20 +2,6 @@
 
 #include "mock-types.h"
 
-namespace std {
-
-template <typename T> struct remove_reference {
-  typedef T type;
-};
-
-template <typename T> struct remove_reference<T&> {
-  typedef T type;
-};
-
-template<typename T> typename remove_reference<T>::type&& move(T&& t);
-
-} // namespace std
-
 RefCountableAndCheckable* makeObj();
 CheckedRef<RefCountableAndCheckable> makeObjChecked();
 void someFunction(RefCountableAndCheckable*);
@@ -24,7 +10,7 @@ namespace call_args_unchecked_uncounted {
 
 static void foo() {
   someFunction(makeObj());
-  // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'makeObj()' (to 'someFunction') is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable'}}
 }
 
 } // namespace call_args_unchecked_uncounted
@@ -56,11 +42,11 @@ struct WrapperObj {
   void foo() {
     consume(checked);
     consume(checkedRef);
-    // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+    // expected-warning@-1{{Function argument 'this->checkedRef' (to 'call_args_member::consume') is a raw reference to CheckedPtr-capable type 'CheckedObj'}}
   }
   void bar(WrapperObj& other) {
     consume(other.checked);
-    // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+    // expected-warning@-1{{Function argument 'other.checked' (to 'call_args_member::consume') is a raw reference to CheckedPtr-capable type 'CheckedObj'}}
   }
 };
 
@@ -69,7 +55,7 @@ struct WrapperObj {
 namespace call_args_default {
 
 void someFunction(RefCountableAndCheckable* = makeObj());
-// expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+// expected-warning@-1{{Function argument 'makeObj()' (to 'call_args_default::someFunction') is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable'}}
 void otherFunction(RefCountableAndCheckable* = makeObjChecked().ptr());
 
 void foo() {
@@ -94,6 +80,7 @@ namespace call_with_std_move {
 void consume(CheckedObj&&);
 void foo(CheckedObj&& obj) {
   consume(std::move(obj));
+  consume(WTF::move(obj));
 }
 
 }

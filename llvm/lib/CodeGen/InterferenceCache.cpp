@@ -93,7 +93,7 @@ void InterferenceCache::Entry::revalidate(LiveIntervalUnion *LIUArray,
   PrevPos = SlotIndex();
   unsigned i = 0;
   for (MCRegUnit Unit : TRI->regunits(PhysReg))
-    RegUnits[i++].VirtTag = LIUArray[Unit].getTag();
+    RegUnits[i++].VirtTag = LIUArray[static_cast<unsigned>(Unit)].getTag();
 }
 
 void InterferenceCache::Entry::reset(MCRegister physReg,
@@ -110,7 +110,7 @@ void InterferenceCache::Entry::reset(MCRegister physReg,
   PrevPos = SlotIndex();
   RegUnits.clear();
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-    RegUnits.push_back(LIUArray[Unit]);
+    RegUnits.push_back(LIUArray[static_cast<unsigned>(Unit)]);
     RegUnits.back().Fixed = &LIS->getRegUnit(Unit);
   }
 }
@@ -121,7 +121,7 @@ bool InterferenceCache::Entry::valid(LiveIntervalUnion *LIUArray,
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     if (i == e)
       return false;
-    if (LIUArray[Unit].changedSince(RegUnits[i].VirtTag))
+    if (LIUArray[static_cast<unsigned>(Unit)].changedSince(RegUnits[i].VirtTag))
       return false;
     ++i;
   }

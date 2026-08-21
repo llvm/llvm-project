@@ -11,6 +11,7 @@ import os
 import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+from typing import List, Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.debugger.DAP import DAP
@@ -32,6 +33,12 @@ class LLDB(DebuggerBase):
         # condition. See get_triggered_breakpoint_ids usage for more info.
         self._breakpoint_conditions = {}
         super(LLDB, self).__init__(context, *args)
+        if self.has_loaded:
+            self._interface.SBDebugger.Initialize()
+
+    def __del__(self):
+        if self.has_loaded:
+            self._interface.SBDebugger.Terminate()
 
     def _custom_init(self):
         self._debugger = self._interface.SBDebugger.Create()
@@ -49,8 +56,10 @@ class LLDB(DebuggerBase):
     def _custom_exit(self):
         if getattr(self, "_process", None):
             self._process.Kill()
-        if getattr(self, "_debugger", None) and getattr(self, "_target", None):
-            self._debugger.DeleteTarget(self._target)
+        if getattr(self, "_debugger", None):
+            if getattr(self, "_target", None):
+                self._debugger.DeleteTarget(self._target)
+            self._interface.SBDebugger.Destroy(self._debugger)
 
     def _translate_stop_reason(self, reason):
         if reason == self._interface.eStopReasonNone:
@@ -232,7 +241,7 @@ class LLDB(DebuggerBase):
                     ):
                         stepped_to_breakpoint = True
             if stepped_to_breakpoint:
-                self._thread.StepInto()
+                self._process.Continue()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
@@ -309,6 +318,14 @@ class LLDB(DebuggerBase):
             stop_reason=reason,
             program_state=ProgramState(state_frames),
         )
+
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
+
+    def collect_watches(
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
+    ):
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
 
     @property
     def is_running(self):
@@ -419,6 +436,14 @@ class LLDBDAP(DAP):
             "_start",
         ]
 
+    def _sanitize_function_name(self, name: str):  # pylint: disable=no-self-use
+        # Remove the tags that LLDB may insert at the end of a function name; these appear in a fixed order, and we
+        # strip them in the reverse of that order below.
+        for tag in ["artificial", "inlined", "opt"]:
+            if name.endswith(f" [{tag}]"):
+                name = name[: -len(f" [{tag}]")]
+        return name
+
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
         if self._debugger_state.stopped_reason == "step":
@@ -431,8 +456,15 @@ class LLDBDAP(DAP):
             if not trace_response["success"]:
                 raise DebuggerException("failed to get stack frames")
             stackframes = trace_response["body"]["stackFrames"]
-            path = stackframes[0]["source"]["path"]
             addr = stackframes[0]["instructionPointerReference"]
+            try:
+                path = stackframes[0]["source"]["path"]
+            except KeyError:
+                # We may have no path, e.g., if the module hasn't loaded or
+                # there's no debug info. If that's the case we won't have
+                # bound a source-location breakpoint here, so we can bail now.
+                return
+
             if any(
                 self._debugger_state.bp_addr_map.get(self.dex_id_to_dap_id[dex_bp_id])
                 == addr
@@ -441,7 +473,7 @@ class LLDBDAP(DAP):
                 # Step again now to get to the breakpoint.
                 step_req_id = self.send_message(
                     self.make_request(
-                        "stepIn", {"threadId": self._debugger_state.thread}
+                        "continue", {"threadId": self._debugger_state.thread}
                     )
                 )
                 response = self._await_response(step_req_id)
@@ -458,7 +490,7 @@ class LLDBDAP(DAP):
 
     @staticmethod
     def _evaluate_result_value(
-        expression: str, result_string: str, type_string
+        expression: str, result_string: str, type_string: Optional[str]
     ) -> ValueIR:
         could_evaluate = not any(
             s in result_string
@@ -488,6 +520,7 @@ class LLDBDAP(DAP):
                 "couldn't read from memory",
                 "Cannot access memory at address",
                 "invalid address (fault address:",
+                "error: parent is NULL",
             ]
         )
 
@@ -528,6 +561,16 @@ class LLDBDAP(DAP):
         manually check conditions here."""
         confirmed_breakpoint_ids = set()
         for dex_bp_id in dex_bp_ids:
+            # Function and instruction breakpoints don't use conditions.
+            # FIXME: That's not a DAP restriction, so they could in future.
+            if dex_bp_id not in self.bp_info:
+                assert (
+                    dex_bp_id in self.function_bp_info
+                    or dex_bp_id in self.instruction_bp_info
+                )
+                confirmed_breakpoint_ids.add(dex_bp_id)
+                continue
+
             _, _, cond = self.bp_info[dex_bp_id]
             if cond is None:
                 confirmed_breakpoint_ids.add(dex_bp_id)

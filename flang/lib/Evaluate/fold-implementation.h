@@ -20,7 +20,6 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/formatting.h"
 #include "flang/Evaluate/intrinsics-library.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
@@ -33,7 +32,6 @@
 #include "flang/Semantics/tools.h"
 #include <algorithm>
 #include <cmath>
-#include <complex>
 #include <cstdio>
 #include <optional>
 #include <type_traits>
@@ -143,6 +141,8 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &, ArrayConstructor<T> &&);
 Expr<SomeDerived> FoldOperation(FoldingContext &, StructureConstructor &&);
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &, ConditionalExpr<T> &&);
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetNamedConstant(const Symbol &symbol0) {
@@ -1261,12 +1261,54 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // Don't fold the argument to KIND(); it might be a TypeParamInquiry
     // with a forced result type that doesn't match the parameter.
     for (std::optional<ActualArgument> &arg : args) {
-      if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+      if (arg && arg->GetConditionalArg()) {
+        FoldConditionalArg(context, arg);
+      } else if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
         *expr = Fold(context, std::move(*expr));
       }
     }
   }
   if (intrinsic) {
+    // Skip intrinsic folding if any argument is still a conditional arg
+    // (i.e. its condition was not a compile-time constant).  When the
+    // condition is a compile-time constant, FoldConditionalArg already resolved
+    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    //
+    // TODO:
+    // For elemental/pure intrinsics, distribute the call over each
+    // consequent of the conditional arg and fold each branch independently:
+    //   abs((c1 ? a : c2 ? b : c))
+    //     → (c1 ? abs(a) : c2 ? abs(b) : abs(c))
+    // Use ForEachConsequent to walk the chain, clone the call per
+    // consequent, fold each clone, and reassemble into a new ConditionalArg.
+    // When multiple arguments are conditional args, distribute one at a
+    // time to avoid a combinatorial cross-product expansion.
+    // This is NOT valid for non-elemental intrinsics like RESHAPE or
+    // TRANSFER whose results depend on seeing all arguments together.
+    //
+    // TODO (conformance):
+    // Type-inquiry intrinsics whose result depends only on the argument's
+    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
+    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
+    // are foldable even when the condition is not constant, because C1538/C1539
+    // guarantee every consequent has the same type and rank.  Because they are
+    // not folded here, a reference such as
+    //   integer, parameter :: k = kind((flag ? a : b))
+    // is wrongly rejected ("cannot be computed as a constant value") even
+    // though it is a valid F2023 constant expression.
+    // Fix:
+    // For such a curated allow-list of type-only inquiries, before the bailout
+    // below, a curated allow-list of type-only inquiries, before the bailout
+    // below, replace the conditional-arg argument with its first non-.NIL.
+    // consequent (a representative) and fold normally.  This must NOT be
+    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
+    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
+    // results can differ between consequents.
+    for (const std::optional<ActualArgument> &arg : args) {
+      if (arg && arg->isConditionalArg()) {
+        return Expr<T>{std::move(funcRef)};
+      }
+    }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
       return Folder<T>{context}.CSHIFT(std::move(funcRef));
@@ -1295,8 +1337,6 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   return Expr<T>{std::move(funcRef)};
 }
 
-Expr<ImpliedDoIndex::Result> FoldOperation(FoldingContext &, ImpliedDoIndex &&);
-
 // Array constructor folding
 template <typename T> class ArrayConstructorFolder {
 public:
@@ -1321,8 +1361,8 @@ public:
               *charLength_, std::move(elements_), ConstantSubscripts{n}}};
         }
       } else {
-        return Expr<T>{
-            Constant<T>{std::move(elements_), ConstantSubscripts{n}}};
+        return Expr<T>{Constant<T>{
+            std::move(elements_), ConstantSubscripts{n}, resultInfo_}};
       }
     }
     return Expr<T>{std::move(array)};
@@ -1342,6 +1382,11 @@ private:
       if constexpr (T::category == TypeCategory::Character) {
         if (!knownCharLength_) {
           charLength_ = std::max(c->LEN(), charLength_.value_or(-1));
+        }
+      } else if constexpr (T::category == TypeCategory::Real ||
+          T::category == TypeCategory::Complex) {
+        if (c->result().isFromInexactLiteralConversion()) {
+          resultInfo_.set_isFromInexactLiteralConversion();
         }
       }
       return true;
@@ -1395,6 +1440,7 @@ private:
   std::vector<Scalar<T>> elements_;
   std::optional<ConstantSubscript> charLength_;
   bool knownCharLength_{false};
+  typename Constant<T>::Result resultInfo_;
 };
 
 template <typename T>
@@ -1779,7 +1825,7 @@ common::IfNoLvalue<std::optional<TO>, FROM> ConvertString(FROM &&s) {
       if (static_cast<std::uint64_t>(*iter) > 127) {
         return std::nullopt;
       }
-      str.push_back(*iter);
+      str.push_back(static_cast<typename TO::value_type>(*iter));
     }
     return std::make_optional<TO>(std::move(str));
   }
@@ -1808,10 +1854,8 @@ Expr<TO> FoldOperation(
           if constexpr (TO::category == TypeCategory::Integer) {
             if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::ConvertSigned(*value)};
-              if (converted.overflow &&
-                  msvcWorkaround.context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
-                ctx.messages().Say(common::UsageWarning::FoldingException,
+              if (converted.overflow) {
+                ctx.Warn(common::UsageWarning::FoldingException,
                     "conversion of %s_%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
                     value->SignedDecimal(), Operand::kind, TO::kind,
                     converted.value.SignedDecimal());
@@ -1819,10 +1863,8 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Unsigned) {
               auto converted{Scalar<TO>::ConvertUnsigned(*value)};
-              if ((converted.overflow || converted.value.IsNegative()) &&
-                  msvcWorkaround.context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
-                ctx.messages().Say(common::UsageWarning::FoldingException,
+              if ((converted.overflow || converted.value.IsNegative())) {
+                ctx.Warn(common::UsageWarning::FoldingException,
                     "conversion of %s_U%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
                     value->UnsignedDecimal(), Operand::kind, TO::kind,
                     converted.value.SignedDecimal());
@@ -1830,17 +1872,14 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{value->template ToInteger<Scalar<TO>>()};
-              if (msvcWorkaround.context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
-                if (converted.flags.test(RealFlag::InvalidArgument)) {
-                  ctx.messages().Say(common::UsageWarning::FoldingException,
-                      "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
-                      Operand::kind, TO::kind);
-                } else if (converted.flags.test(RealFlag::Overflow)) {
-                  ctx.messages().Say(
-                      "REAL(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
-                      Operand::kind, TO::kind);
-                }
+              if (converted.flags.test(RealFlag::InvalidArgument)) {
+                ctx.Warn(common::UsageWarning::FoldingException,
+                    "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
+                    Operand::kind, TO::kind);
+              } else if (converted.flags.test(RealFlag::Overflow)) {
+                ctx.Warn(common::UsageWarning::FoldingException,
+                    "REAL(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
+                    Operand::kind, TO::kind);
               }
               return ScalarConstantToExpr(std::move(converted.value));
             }
@@ -1863,7 +1902,7 @@ Expr<TO> FoldOperation(
                 std::snprintf(buffer, sizeof buffer,
                     "INTEGER(%d) to REAL(%d) conversion", Operand::kind,
                     TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
@@ -1872,7 +1911,7 @@ Expr<TO> FoldOperation(
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
                     "REAL(%d) to REAL(%d) conversion", Operand::kind, TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               if (ctx.targetCharacteristics().areSubnormalsFlushedToZero()) {
                 converted.value = converted.value.FlushSubnormalToZero();
@@ -1960,10 +1999,8 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   } else if (auto value{GetScalarConstantValue<T>(operand)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto negated{value->Negate()};
-      if (negated.overflow &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        context.messages().Say(common::UsageWarning::FoldingException,
+      if (negated.overflow) {
+        context.Warn(common::UsageWarning::FoldingException,
             "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{std::move(negated.value)}};
@@ -2004,10 +2041,8 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto sum{folded->first.AddSigned(folded->second)};
-      if (sum.overflow &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        context.messages().Say(common::UsageWarning::FoldingException,
+      if (sum.overflow) {
+        context.Warn(common::UsageWarning::FoldingException,
             "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{sum.value}};
@@ -2017,11 +2052,30 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
     } else {
       auto sum{folded->first.Add(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, sum.flags, "addition");
+      context.RealFlagWarnings(sum.flags, "addition");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         sum.value = sum.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{sum.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
+    } else if (auto c{GetScalarConstantValue<T>(x.left())}) {
+      if (c->IsZero() && x.right().Rank() == 0) {
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};
@@ -2035,10 +2089,8 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto difference{folded->first.SubtractSigned(folded->second)};
-      if (difference.overflow &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        context.messages().Say(common::UsageWarning::FoldingException,
+      if (difference.overflow) {
+        context.Warn(common::UsageWarning::FoldingException,
             "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{difference.value}};
@@ -2048,11 +2100,22 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
     } else {
       auto difference{folded->first.Subtract(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, difference.flags, "subtraction");
+      context.RealFlagWarnings(difference.flags, "subtraction");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{difference.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};
@@ -2066,10 +2129,8 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto product{folded->first.MultiplySigned(folded->second)};
-      if (product.SignedMultiplicationOverflowed() &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        context.messages().Say(common::UsageWarning::FoldingException,
+      if (product.SignedMultiplicationOverflowed()) {
+        context.Warn(common::UsageWarning::FoldingException,
             "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{product.lower}};
@@ -2079,7 +2140,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
     } else {
       auto product{folded->first.Multiply(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, product.flags, "multiplication");
+      context.RealFlagWarnings(product.flags, "multiplication");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         product.value = product.value.FlushSubnormalToZero();
       }
@@ -2116,28 +2177,20 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto quotAndRem{folded->first.DivideSigned(folded->second)};
       if (quotAndRem.divisionByZero) {
-        if (context.languageFeatures().ShouldWarn(
-                common::UsageWarning::FoldingException)) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "INTEGER(%d) division by zero"_warn_en_US, T::kind);
-        }
+        context.Warn(common::UsageWarning::FoldingException,
+            "INTEGER(%d) division by zero"_warn_en_US, T::kind);
         return Expr<T>{std::move(x)};
       }
-      if (quotAndRem.overflow &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        context.messages().Say(common::UsageWarning::FoldingException,
+      if (quotAndRem.overflow) {
+        context.Warn(common::UsageWarning::FoldingException,
             "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
       auto quotAndRem{folded->first.DivideUnsigned(folded->second)};
       if (quotAndRem.divisionByZero) {
-        if (context.languageFeatures().ShouldWarn(
-                common::UsageWarning::FoldingException)) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "UNSIGNED(%d) division by zero"_warn_en_US, T::kind);
-        }
+        context.Warn(common::UsageWarning::FoldingException,
+            "UNSIGNED(%d) division by zero"_warn_en_US, T::kind);
         return Expr<T>{std::move(x)};
       }
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
@@ -2158,7 +2211,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
         }
       }
       if (!isCanonicalNaNOrInf) {
-        RealFlagWarnings(context, quotient.flags, "division");
+        context.RealFlagWarnings(quotient.flags, "division");
       }
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         quotient.value = quotient.value.FlushSubnormalToZero();
@@ -2177,24 +2230,21 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto power{folded->first.Power(folded->second)};
-      if (context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingException)) {
-        if (power.divisionByZero) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
-        } else if (power.overflow) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
-        } else if (power.zeroToZero) {
-          context.messages().Say(common::UsageWarning::FoldingException,
-              "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
-        }
+      if (power.divisionByZero) {
+        context.Warn(common::UsageWarning::FoldingException,
+            "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
+      } else if (power.overflow) {
+        context.Warn(common::UsageWarning::FoldingException,
+            "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
+      } else if (power.zeroToZero) {
+        context.Warn(common::UsageWarning::FoldingException,
+            "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
       if (folded->first.IsZero()) {
         if (folded->second.IsZero()) {
-          context.messages().Say(common::UsageWarning::FoldingException,
+          context.Warn(common::UsageWarning::FoldingException,
               "REAL/COMPLEX 0**0 is not defined"_warn_en_US);
         } else {
           return Expr<T>(Constant<T>{folded->first}); // 0. ** nonzero -> 0.
@@ -2202,9 +2252,8 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       } else if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
-      } else if (context.languageFeatures().ShouldWarn(
-                     common::UsageWarning::FoldingFailure)) {
-        context.messages().Say(common::UsageWarning::FoldingFailure,
+      } else {
+        context.Warn(common::UsageWarning::FoldingFailure,
             "Power for %s cannot be folded on host"_warn_en_US,
             T{}.AsFortran());
       }
@@ -2222,7 +2271,7 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           auto power{evaluate::IntPower(folded->first, folded->second)};
-          RealFlagWarnings(context, power.flags, "power with INTEGER exponent");
+          context.RealFlagWarnings(power.flags, "power with INTEGER exponent");
           if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
           }
@@ -2232,6 +2281,17 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
         }
       },
       x.right().u);
+}
+
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
+  x.condition() = Fold(context, std::move(x.condition()));
+  // If the condition is a scalar logical constant, select the branch.
+  if (auto cst{GetScalarConstantValue<LogicalResult>(x.condition())}) {
+    return cst->IsTrue() ? Fold(context, std::move(x.thenValue()))
+                         : Fold(context, std::move(x.elseValue()));
+  }
+  return Expr<T>{std::move(x)};
 }
 
 template <typename T>
@@ -2291,10 +2351,8 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
           CHECK(constant);
           Scalar<Result> real{constant->GetScalarValue().value()};
           From converted{From::ConvertUnsigned(real.RawBits()).value};
-          if (original != converted &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingValueChecks)) { // C1601
-            context.messages().Say(common::UsageWarning::FoldingValueChecks,
+          if (original != converted) { // C1601
+            context.Warn(common::UsageWarning::FoldingValueChecks,
                 "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
           }
         } else if constexpr (IsNumericCategoryExpr<From>()) {

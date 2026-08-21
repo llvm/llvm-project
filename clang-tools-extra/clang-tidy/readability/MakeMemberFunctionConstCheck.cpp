@@ -1,4 +1,4 @@
-//===--- MakeMemberFunctionConstCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,8 +37,8 @@ AST_MATCHER(CXXMethodDecl, isDependentContext) {
 
 AST_MATCHER(CXXMethodDecl, isInsideMacroDefinition) {
   const ASTContext &Ctxt = Finder->getASTContext();
-  return clang::Lexer::makeFileCharRange(
-             clang::CharSourceRange::getCharRange(
+  return Lexer::makeFileCharRange(
+             CharSourceRange::getCharRange(
                  Node.getTypeSourceInfo()->getTypeLoc().getSourceRange()),
              Ctxt.getSourceManager(), Ctxt.getLangOpts())
       .isInvalid();
@@ -59,7 +59,7 @@ public:
   UsageKind Usage = Unused;
 
   template <class T> const T *getParent(const Expr *E) {
-    DynTypedNodeList Parents = Ctxt.getParents(*E);
+    const DynTypedNodeList Parents = Ctxt.getParents(*E);
     if (Parents.size() != 1)
       return nullptr;
 
@@ -177,11 +177,9 @@ public:
     const auto *Parent = getParentExprIgnoreParens(E);
 
     // Look through deref of this.
-    if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
-      if (UnOp->getOpcode() == UO_Deref) {
-        Parent = getParentExprIgnoreParens(UnOp);
-      }
-    }
+    if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent);
+        UnOp && UnOp->getOpcode() == UO_Deref)
+      Parent = getParentExprIgnoreParens(UnOp);
 
     // It's okay to
     //  return (const S*)this;
@@ -196,9 +194,9 @@ public:
       //   (const T)(S->t)
       //   (LValueToRValue)(S->t)
       // when 't' is either of builtin type or a public member.
-    } else if (const auto *Member = dyn_cast_or_null<MemberExpr>(Parent)) {
-      if (visitUser(Member, /*OnConstObject=*/false))
-        return true;
+    } else if (const auto *Member = dyn_cast_or_null<MemberExpr>(Parent);
+               Member && visitUser(Member, /*OnConstObject=*/false)) {
+      return true;
     }
 
     // Unknown user of this.
@@ -225,9 +223,9 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(
-                  isExpansionInSystemHeader(), isVirtual(), isConst(),
-                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
-                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  isVirtual(), isConst(), isStatic(), hasTrivialBody(),
+                  cxxConstructorDecl(), cxxDestructorDecl(), isTemplate(),
+                  isDependentContext(),
                   ofClass(anyOf(isLambda(),
                                 hasAnyDependentBases()) // Method might become
                                                         // virtual depending on
@@ -241,11 +239,11 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
-  TypeSourceInfo *TSI = M->getTypeSourceInfo();
+  const TypeSourceInfo *TSI = M->getTypeSourceInfo();
   if (!TSI)
     return {};
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL)
     return {};
 
@@ -258,10 +256,11 @@ void MakeMemberFunctionConstCheck::check(
 
   const auto *Declaration = Definition->getCanonicalDecl();
 
-  auto Diag = diag(Definition->getLocation(), "method %0 can be made const")
-              << Definition
-              << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
-                                            " const");
+  const auto Diag =
+      diag(Definition->getLocation(), "method %0 can be made const")
+      << Definition
+      << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
+                                    " const");
   if (Declaration != Definition) {
     Diag << FixItHint::CreateInsertion(getConstInsertionPoint(Declaration),
                                        " const");

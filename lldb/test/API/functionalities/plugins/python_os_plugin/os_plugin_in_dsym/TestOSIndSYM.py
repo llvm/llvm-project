@@ -16,6 +16,7 @@ import shutil
 
 
 class TestOSPluginIndSYM(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     # The port used by debugserver.
@@ -41,42 +42,41 @@ class TestOSPluginIndSYM(TestBase):
         return None
 
     @skipUnlessDarwin
+    @skip(bugnumber="github.com/llvm/llvm-project/issues/213380")
     def test_python_os_plugin(self):
-        self.do_test_python_os_plugin(False)
-
-    @skipTestIfFn(no_debugserver)
-    @skipTestIfFn(port_not_available)
-    def test_python_os_plugin_remote(self):
-        self.do_test_python_os_plugin(True)
-
-    def do_test_python_os_plugin(self, remote):
-        """Test that the environment for os plugins in dSYM's is correct"""
+        """Test that the OS plugin in a dSYM works on attach."""
         executable = self.build_dsym("my_binary")
-
-        # Make sure we're set up to load the symbol file's python
         self.runCmd("settings set target.load-script-from-symbol-file true")
 
-        target = self.dbg.CreateTarget(None)
+        target = self.dbg.CreateTarget(executable)
+        self.assertTrue(target.IsValid(), "Got a valid target")
 
+        popen = self.spawnSubprocess(executable, [])
         error = lldb.SBError()
+        process = target.AttachToProcessWithID(lldb.SBListener(), popen.pid, error)
+        self.assertSuccess(error, "Attach succeeded")
 
-        # Now run the process, and then attach.  When the attach
-        # succeeds, make sure that we were in the right state when
-        # the OS plugins were run.
-        if not remote:
-            popen = self.spawnSubprocess(executable, [])
+        self.verify_os_plugin(process)
 
-            process = target.AttachToProcessWithID(lldb.SBListener(), popen.pid, error)
-            self.assertSuccess(error, "Attach succeeded")
-        else:
-            self.setup_remote_platform(executable)
-            process = target.process
-            self.assertTrue(process.IsValid(), "Got a valid process from debugserver")
+    @skipIfDarwinEmbedded
+    @skipTestIfFn(no_debugserver)
+    @skipTestIfFn(port_not_available)
+    @skip(bugnumber="github.com/llvm/llvm-project/issues/213380")
+    def test_python_os_plugin_remote(self):
+        """Test that the OS plugin in a dSYM works over a remote connection."""
+        executable = self.build_dsym("my_binary")
+        self.runCmd("settings set target.load-script-from-symbol-file true")
 
-        # We should have figured out the target from the result of the attach:
-        self.assertTrue(target.IsValid, "Got a valid target")
+        target = self.dbg.CreateTarget(executable)
+        self.assertTrue(target.IsValid(), "Got a valid target")
 
-        # Make sure that we got the right plugin:
+        self.setup_remote_platform(executable)
+        process = target.process
+        self.assertTrue(process.IsValid(), "Got a valid process from debugserver")
+
+        self.verify_os_plugin(process)
+
+    def verify_os_plugin(self, process):
         self.expect(
             "settings show target.process.python-os-plugin-path",
             substrs=["operating_system.py"],
@@ -86,10 +86,6 @@ class TestOSPluginIndSYM(TestBase):
             stack_depth = thread.num_frames
             reg_threads = thread.frames[0].reg
 
-        # OKAY, that realized the threads, now see if the creation
-        # state was correct.  The way we use the OS plugin, it doesn't need
-        # to create a thread, and doesn't have to call get_register_info,
-        # so we don't expect those to get called.
         self.expect(
             "test_report_command",
             substrs=[

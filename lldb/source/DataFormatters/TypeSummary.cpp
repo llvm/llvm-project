@@ -8,13 +8,16 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-#include "FormatterBytecode.h"
+#include "lldb/Core/FormatEntity.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/Interfaces/ScriptedStringSummaryInterface.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -59,6 +62,8 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
     return "c++";
   case Kind::eBytecode:
     return "bytecode";
+  case Kind::eScriptedClass:
+    return "python class";
   }
   llvm_unreachable("Unknown type kind name");
 }
@@ -105,9 +110,9 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     retval = std::string(s.GetString());
     return true;
   } else {
-    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
-                             &sc.line_entry.range.GetBaseAddress(), valobj,
-                             false, false)) {
+    if (FormatEntity::Formatter(
+            &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), false, false)
+            .Format(m_format, s, valobj)) {
       retval.assign(std::string(s.GetString()));
       return true;
     } else {
@@ -241,6 +246,77 @@ std::string ScriptSummaryFormat::GetDescription() {
 
 std::string ScriptSummaryFormat::GetName() { return m_script_formatter_name; }
 
+ScriptedSummaryFormat::ScriptedSummaryFormat(
+    const TypeSummaryImpl::Flags &flags, const char *class_name,
+    uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eScriptedClass, flags, ptr_match_depth),
+      m_class_name(class_name ? class_name : ""), m_interface_sp() {}
+
+bool ScriptedSummaryFormat::FormatObject(ValueObject *valobj,
+                                         std::string &retval,
+                                         const TypeSummaryOptions &options) {
+  if (!valobj)
+    return false;
+
+  TargetSP target_sp(valobj->GetTargetSP());
+
+  if (!target_sp) {
+    retval.assign("error: no target");
+    return false;
+  }
+
+  ScriptInterpreter *script_interpreter =
+      target_sp->GetDebugger().GetScriptInterpreter();
+
+  if (!script_interpreter) {
+    retval.assign("error: no ScriptInterpreter");
+    return false;
+  }
+
+  if (!m_interface_sp) {
+    m_interface_sp = script_interpreter->CreateScriptedStringSummaryInterface();
+    if (!m_interface_sp) {
+      retval.assign("error: no ScriptedStringSummaryInterface");
+      return false;
+    }
+
+    llvm::Expected<StructuredData::GenericSP> obj_or_err =
+        m_interface_sp->CreatePluginObject(m_class_name);
+    if (!obj_or_err) {
+      retval.assign(llvm::toString(obj_or_err.takeError()));
+      m_interface_sp.reset();
+      return false;
+    }
+  }
+
+  llvm::Expected<std::string> summary =
+      m_interface_sp->GetSummary(*valobj, options);
+  if (!summary) {
+    retval.assign(llvm::toString(summary.takeError()));
+    return false;
+  }
+
+  retval = std::move(*summary);
+  return true;
+}
+
+std::string ScriptedSummaryFormat::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u\n  ",
+              Cascades() ? "" : " (not cascading)",
+              !DoesPrintChildren(nullptr) ? "" : " (show children)",
+              !DoesPrintValue(nullptr) ? " (hide value)" : "",
+              IsOneLiner() ? " (one-line printout)" : "",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
+  sstr.PutCString(m_class_name);
+  return std::string(sstr.GetString());
+}
+
+std::string ScriptedSummaryFormat::GetName() { return m_class_name; }
+
 BytecodeSummaryFormat::BytecodeSummaryFormat(
     const TypeSummaryImpl::Flags &flags,
     std::unique_ptr<llvm::MemoryBuffer> bytecode)
@@ -260,11 +336,10 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     return false;
   }
 
-  std::vector<FormatterBytecode::ControlStackElement> control(
-      {m_bytecode->getBuffer()});
+  FormatterBytecode::ControlStack control({m_bytecode->getBuffer()});
   FormatterBytecode::DataStack data({valobj->GetSP()});
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sel_summary);
+      control, data, FormatterBytecode::sig_summary);
   if (error) {
     retval = llvm::toString(std::move(error));
     return false;

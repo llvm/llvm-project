@@ -73,13 +73,10 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   RTNAME(CUFFreeDescriptor)(desc);
 }
 
-TEST(AllocatableCUFTest, CUFSetAllocatorIndex) {
-  using Fortran::common::TypeCategory;
-  RTNAME(CUFRegisterAllocator)();
-  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
-  auto a{createAllocatable(TypeCategory::Real, 4)};
-  EXPECT_EQ((int)kDefaultAllocator, a->GetAllocIdx());
-  RTNAME(CUFSetAllocatorIndex)(
-      a.get(), kDeviceAllocatorPos, __FILE__, __LINE__);
-  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
+TEST(AllocatableCUFTest, DeviceIsActiveKeepsLastErrorClean) {
+  // CUFDeviceIsActive() probes primary-context state (including a version-
+  // skew fallback). It must not leave a sticky cudaGetLastError behind.
+  (void)cudaGetLastError(); // start from a clean error state
+  (void)RTNAME(CUFDeviceIsActive)();
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 }

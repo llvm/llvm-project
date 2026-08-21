@@ -61,7 +61,7 @@ public:
     SourceLocation Loc = TL.getNameLoc();
     TypedefNameDecl *ND = TL.getDecl();
     if (ND->isTransparentTag()) {
-      TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
+      auto *Underlying = ND->getUnderlyingType()->castAsTagDecl();
       return IndexCtx.handleReference(Underlying, Loc, Parent,
                                       ParentDC, SymbolRoleSet(), Relations);
     }
@@ -117,7 +117,7 @@ public:
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TL) {
-    TagDecl *D = TL.getOriginalDecl();
+    TagDecl *D = TL.getDecl();
     if (!IndexCtx.shouldIndexFunctionLocalSymbols() &&
         D->getParentFunctionOrMethod())
       return true;
@@ -183,8 +183,8 @@ public:
     // so clear them while visiting the args.
     SmallVector<SymbolRelation, 3> SavedRelations = Relations;
     Relations.clear();
-    auto ResetSavedRelations =
-        llvm::make_scope_exit([&] { this->Relations = SavedRelations; });
+    llvm::scope_exit ResetSavedRelations(
+        [&] { this->Relations = SavedRelations; });
     for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
       if (!TraverseTemplateArgumentLoc(TL.getArgLoc(I)))
         return false;

@@ -8,6 +8,7 @@
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -41,7 +42,19 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  auto TU = tooling::buildASTFromCodeWithArgs(
+      Code, {"-std=c++23"}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(),
+      tooling::FileContentMappings(), nullptr, llvm::vfs::getRealFileSystem(),
+      CaptureDiagsKind::All);
+
+  for (const auto &D : TU->storedDiagnostics()) {
+    EXPECT_TRUE(D.getLevel() < DiagnosticsEngine::Error)
+        << "Unexpected error diagnostic while building AST for test code: "
+        << D.getMessage();
+  }
+
   auto &Ctx = TU->getASTContext();
   auto InputMatches = match(IM, Ctx);
   ASSERT_EQ(1u, InputMatches.size());
@@ -203,7 +216,6 @@ TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction2) {
     struct B {
       int waldo;
     };
-
     template <typename T>
     struct A {
       B b;
@@ -236,6 +248,103 @@ TEST(HeuristicResolver, MemberExpr_Chained) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_Chained_ReferenceType) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    struct A {
+      B &foo();
+    };
+    template <typename T>
+    void bar(A<T> a) {
+      a.foo().waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "a.foo().waldo"
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_Chained_PointerArrow) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    B* foo(T);
+    template <class T>
+    void bar(T t) {
+      foo(t)->waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "foo(t)->waldo"
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_Chained_PointerDeref) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    B* foo(T);
+    template <class T>
+    void bar(T t) {
+      (*foo(t)).waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "foo(t)->waldo"
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_Chained_Overload) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    B overloaded(int);
+    B overloaded(double);
+    template <typename T>
+    void foo(T t) {
+      overloaded(t).waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "overloaded(t).waldo"
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_CallToFunctionTemplate) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    B bar(T);
+    template <typename T>
+    void foo(T t) {
+      bar(t).waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "bar(t).waldo"
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
 }
 
 TEST(HeuristicResolver, MemberExpr_ReferenceType) {
@@ -415,6 +524,28 @@ TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
+TEST(HeuristicResolver, MemberExpr_HangOnLongCallChain) {
+  const size_t CallChainLength = 50;
+  std::string Code = R"cpp(
+    template <typename T>
+    void foo(T t) {
+      t
+    )cpp";
+  for (size_t I = 0; I < CallChainLength; ++I)
+    Code.append(".method()\n");
+  Code.append(R"cpp(
+      .lastMethod();
+    }
+  )cpp");
+  // Test that resolution of a name whose base is a long call chain
+  // does not hang. Note that the hang for which this is a regression
+  // test is finite (exponential runtime in the length of the chain),
+  // so a "failure" here manifests as abnormally long runtime.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("lastMethod")).bind("input"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument) {
   std::string Code = R"cpp(
     struct Default {
@@ -447,6 +578,41 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct vector {
+      void push_back(T);
+    };
+    template <typename Element, template <typename> class Container = vector>
+    void foo(Container<Element> c, Element e) {
+      c.push_back(e);
+    }
+  )cpp";
+  // Test resolution of "push_back" in "c.push_back(e)".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("push_back")).bind("input"),
+      cxxMethodDecl(hasName("push_back")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_ExplicitObjectParameter) {
+  std::string Code = R"cpp(
+    struct Foo {
+      int m_int;
+
+      int bar(this auto&& self) {
+        return self.m_int;
+      }
+    };
+  )cpp";
+  // Test resolution of "m_int" in "self.m_int()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("m_int")).bind("input"),
+      fieldDecl(hasName("m_int")).bind("output"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {

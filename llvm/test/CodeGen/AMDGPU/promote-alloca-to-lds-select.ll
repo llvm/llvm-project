@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu7.00-unknown-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32
@@ -104,7 +104,7 @@ bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
   %tmp2 = icmp eq i32 %arg1, 0
-  %tmp3 = select i1 %tmp2, ptr addrspace(5) %tmp, ptr addrspace(5) null
+  %tmp3 = select i1 %tmp2, ptr addrspace(5) %tmp, ptr addrspace(5) zeroinitializer
   store double 1.000000e+00, ptr addrspace(5) %tmp3, align 8
   %tmp4 = load double, ptr addrspace(5) %tmp, align 8
   store double %tmp4, ptr addrspace(1) %arg
@@ -119,7 +119,7 @@ bb:
   %tmp = alloca double, align 8, addrspace(5)
   store double 0.000000e+00, ptr addrspace(5) %tmp, align 8
   %tmp2 = icmp eq i32 %arg1, 0
-  %tmp3 = select i1 %tmp2, ptr addrspace(5) null, ptr addrspace(5) %tmp
+  %tmp3 = select i1 %tmp2, ptr addrspace(5) zeroinitializer, ptr addrspace(5) %tmp
   store double 1.000000e+00, ptr addrspace(5) %tmp3, align 8
   %tmp4 = load double, ptr addrspace(5) %tmp, align 8
   store double %tmp4, ptr addrspace(1) %arg

@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// UNSUPPORTED: intelgpu
+
 #include <cstdio>
 #include <cstdlib>
 
@@ -7,7 +9,8 @@ typedef struct {
   int a;
   double *b;
 } C;
-#pragma omp declare mapper(id1 : C s) map(to : s.a) map(from : s.b[0 : 2])
+#pragma omp declare mapper(id1 : C s) map(to : s.a) map(alloc : s.b)           \
+    map(from : s.b[0 : 2])
 
 typedef struct {
   int e;
@@ -16,7 +19,7 @@ typedef struct {
   short *g;
 } D;
 #pragma omp declare mapper(default : D r) map(from : r.e)                      \
-    map(mapper(id1), tofrom : r.f) map(tofrom : r.g[0 : r.h])
+    map(mapper(id1), tofrom : r.f) map(alloc : r.g) map(tofrom : r.g[0 : r.h])
 
 int main() {
   constexpr int N = 10;
@@ -42,8 +45,8 @@ int main() {
   int spp00fa = -1, spp00fb_r = -1, spp00fg1 = -1, spp00fg_r = -1;
   __intptr_t p = reinterpret_cast<__intptr_t>(&x[0]),
              p1 = reinterpret_cast<__intptr_t>(&y[0]);
-#pragma omp target map(tofrom : spp[0][0]) firstprivate(p, p1)                  \
-                   map(from: spp00fa, spp00fb_r, spp00fg1, spp00fg_r)
+#pragma omp target map(tofrom : spp[0][0]) map(alloc : spp[0])                 \
+    firstprivate(p, p1) map(from : spp00fa, spp00fb_r, spp00fg1, spp00fg_r)
   {
     spp00fa = spp[0][0].f.a;
     spp00fb_r = spp[0][0].f.b == reinterpret_cast<void *>(p) ? 1 : 0;
@@ -56,7 +59,7 @@ int main() {
     spp[0][0].f.b[1] = 40;
     spp[0][0].g[1] = 50;
   }
-    printf("%d %d %d %d\n", spp00fa, spp00fb_r, spp00fg1, spp00fg_r);
+  printf("%d %d %d %d\n", spp00fa, spp00fb_r, spp00fg1, spp00fg_r);
   // CHECK: 222 0 30 0
   printf("%d %d %4.5f %d %d %d\n", spp[0][0].e, spp[0][0].f.a, spp[0][0].f.b[1],
          spp[0][0].f.b == &x[0] ? 1 : 0, spp[0][0].g[1],

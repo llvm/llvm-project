@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_WASM_REGISTERCONTEXTWASM_H
 
 #include "Plugins/Process/gdb-remote/GDBRemoteRegisterContext.h"
+#include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
 #include "ThreadWasm.h"
 #include "Utility/WasmVirtualRegisters.h"
 #include "lldb/lldb-private-types.h"
@@ -33,9 +34,9 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
 class RegisterContextWasm
     : public process_gdb_remote::GDBRemoteRegisterContext {
 public:
-  RegisterContextWasm(
-      wasm::ThreadWasm &thread, uint32_t concrete_frame_idx,
-      process_gdb_remote::GDBRemoteDynamicRegisterInfoSP reg_info_sp);
+  RegisterContextWasm(process_gdb_remote::ThreadGDBRemote &thread,
+                      uint32_t concrete_frame_idx,
+                      lldb::DynamicRegisterInfoSP reg_info_sp);
 
   ~RegisterContextWasm() override;
 

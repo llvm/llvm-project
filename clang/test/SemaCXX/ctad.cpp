@@ -74,7 +74,7 @@ template <int>
 using AstNode = variant<>;
 // expected-note@-1 {{couldn't infer template argument ''}} \
 // expected-note@-1 2{{implicit deduction guide declared as}} \
-// expected-note@-1 {{candidate function template not viable}}
+// expected-note@-1 {{candidate function not viable}}
 
 
 AstNode tree; // expected-error {{no viable constructor or deduction guide}}
@@ -190,3 +190,10 @@ namespace GH136624 {
   foo::Alias t = 0;
   // expected-error@-1 {{no viable conversion from 'int' to 'GH136624::A<int>' (aka 'A<int>')}}
 } // namespace GH136624
+
+namespace GH131342 {
+  template <class> constexpr int val{0};
+  template <class T, int> struct A { A(T) {} };
+  template <class T> using AA = A<T, val<T>>;
+  AA a{0};
+} // namespace GH131342

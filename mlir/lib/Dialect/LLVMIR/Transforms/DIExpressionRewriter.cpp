@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 using namespace LLVM;
@@ -63,9 +63,8 @@ DIExpressionRewriter::simplify(DIExpressionAttr expr,
   }
 
   if (maxNumRewrites && numRewrites >= *maxNumRewrites) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "LLVMDIExpressionSimplifier exceeded max num rewrites ("
-               << maxNumRewrites << ")\n");
+    LDBG() << "LLVMDIExpressionSimplifier exceeded max num rewrites ("
+           << maxNumRewrites << ")";
     // Skip rewriting the rest.
     result.append(inputs.begin(), inputs.end());
   }

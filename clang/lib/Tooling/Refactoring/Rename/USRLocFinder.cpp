@@ -157,12 +157,6 @@ SourceLocation StartLocationForType(TypeLoc TL) {
       return QualifierLoc.getBeginLoc();
     return TTL.getNameLoc();
   }
-  case TypeLoc::DependentTemplateSpecialization: {
-    auto TTL = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getTemplateNameLoc();
-  }
   default:
     llvm_unreachable("unhandled TypeLoc class");
   }

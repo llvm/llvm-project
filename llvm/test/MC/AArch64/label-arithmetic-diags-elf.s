@@ -49,24 +49,14 @@ negative:
   // CHECK-NEXT: ^
 
   add w0, w1, #:lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
   // CHECK-NEXT: add w0, w1, #:lo12:external - end
-  // CHECK-NEXT: ^
 
   cmp w0, #:lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: cmp w0, #:lo12:external - end
-  // CHECK-NEXT: ^
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
 
   add w0, w1, #:got_lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: add w0, w1, #:got_lo12:external - end
-  // CHECK-NEXT: ^
-
-  cmp w0, #:got_lo12:external - end
-  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
-  // CHECK-NEXT: cmp w0, #:got_lo12:external - end
-  // CHECK-NEXT: ^
+  // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected relocatable expression
 
   .section sec_y
 end_across_sec:

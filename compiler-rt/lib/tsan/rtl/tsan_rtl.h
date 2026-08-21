@@ -34,6 +34,7 @@
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_defs.h"
 #include "tsan_flags.h"
 #include "tsan_ignoreset.h"
@@ -235,6 +236,12 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
   int nomalloc;
 
   const ReportDesc *current_report;
+
+#if SANITIZER_APPLE && !SANITIZER_GO
+  bool in_internal_write_call;
+#endif
+
+  AdaptiveDelayState adaptive_delay_state;
 
   explicit ThreadState(Tid tid);
 };

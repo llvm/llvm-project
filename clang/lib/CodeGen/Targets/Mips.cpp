@@ -23,9 +23,22 @@ class MipsABIInfo : public ABIInfo {
   const unsigned MinABIStackAlignInBytes, StackAlignInBytes;
   void CoerceToIntArgs(uint64_t TySize,
                        SmallVectorImpl<llvm::Type *> &ArgList) const;
-  llvm::Type* HandleAggregates(QualType Ty, uint64_t TySize) const;
+  llvm::Type *HandleAggregates(QualType Ty, uint64_t TySize,
+                               bool ComplexFitsInFPRs) const;
   llvm::Type* returnAggregateInRegs(QualType RetTy, uint64_t Size) const;
   llvm::Type* getPaddingType(uint64_t Align, uint64_t Offset) const;
+
+  /// Whether `_Complex` values with an integer element type are returned the
+  /// way GCC returns them. Clang 23 and earlier returned the real and the
+  /// imaginary part in two separate GPRs, later versions match GCC and pack
+  /// them into one when possible.
+  bool isComplexGnuABI() const {
+    return !getContext().getLangOpts().isCompatibleWith(
+        LangOptions::ClangABI::Ver23);
+  }
+
+  ABIArgInfo classifyComplexReturnType(QualType RetTy, uint64_t Size) const;
+
 public:
   MipsABIInfo(CodeGenTypes &CGT, bool _IsO32) :
     ABIInfo(CGT), IsO32(_IsO32), MinABIStackAlignInBytes(IsO32 ? 4 : 8),
@@ -142,7 +155,8 @@ void MipsABIInfo::CoerceToIntArgs(
 
 // In N32/64, an aligned double precision floating point field is passed in
 // a register.
-llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
+llvm::Type *MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize,
+                                          bool ComplexFitsInFPRs) const {
   SmallVector<llvm::Type*, 8> ArgList, IntArgList;
 
   if (IsO32) {
@@ -150,10 +164,17 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
     return llvm::StructType::get(getVMContext(), ArgList);
   }
 
-  if (Ty->isComplexType())
-    return CGT.ConvertType(Ty);
+  // A `_Complex` value that stays in FPRs is passed as its two parts.
+  // When that does not fit, it is passed like an integer of the same size.
+  if (Ty->isComplexType()) {
+    if (ComplexFitsInFPRs)
+      return CGT.ConvertType(Ty);
 
-  const RecordType *RT = Ty->getAs<RecordType>();
+    CoerceToIntArgs(TySize, ArgList);
+    return llvm::StructType::get(getVMContext(), ArgList);
+  }
+
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
 
   // Unions/vectors are passed in integer registers.
   if (!RT || !RT->isStructureOrClassType()) {
@@ -161,7 +182,7 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
     return llvm::StructType::get(getVMContext(), ArgList);
   }
 
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
   assert(!(TySize % 8) && "Size of structure must be multiple of 8.");
 
@@ -219,6 +240,26 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
   unsigned CurrOffset = llvm::alignTo(Offset, Align);
   Offset = CurrOffset + llvm::alignTo(TySize, Align * 8) / 8;
 
+  // Only pass _Complex float and _Complex double in FPRs when there are 2 free
+  // slots, otherwise use GPRs (or the stack).
+  //
+  // _Complex long double never uses GPRs. Its parts are an FPR pair each,
+  // so passing them as they are puts each part in a pair and spills to
+  // the stack the parts that don't fit.
+  bool ComplexFitsInFPRs = true;
+  if (!IsO32 && Ty->isComplexType() && isComplexGnuABI() && TySize < 256) {
+    unsigned NumArgSlots = 8;
+    uint64_t SlotsUsed = CurrOffset / MinABIStackAlignInBytes;
+    if (SlotsUsed + 2 <= NumArgSlots)
+      // Claim 2 slots. Only a `_Complex float` needs this,
+      // a `_Complex double` is already two slots.
+      Offset = CurrOffset + 2 * MinABIStackAlignInBytes;
+    else
+      // Pass like an integer of the same size, packing both parts into GPRs
+      // (or the stack).
+      ComplexFitsInFPRs = false;
+  }
+
   if (isAggregateTypeForABI(Ty) || Ty->isVectorType()) {
     // Ignore empty aggregates.
     if (TySize == 0)
@@ -234,15 +275,15 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
     // another structure type. Padding is inserted if the offset of the
     // aggregate is unaligned.
     ABIArgInfo ArgInfo =
-        ABIArgInfo::getDirect(HandleAggregates(Ty, TySize), 0,
-                              getPaddingType(OrigOffset, CurrOffset));
+        ABIArgInfo::getDirect(HandleAggregates(Ty, TySize, ComplexFitsInFPRs),
+                              0, getPaddingType(OrigOffset, CurrOffset));
     ArgInfo.setInReg(true);
     return ArgInfo;
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -261,11 +302,11 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
 
 llvm::Type*
 MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
-  const RecordType *RT = RetTy->getAs<RecordType>();
+  const RecordType *RT = RetTy->getAsCanonical<RecordType>();
   SmallVector<llvm::Type*, 8> RTList;
 
   if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
     unsigned FieldCnt = Layout.getFieldCount();
 
@@ -301,6 +342,20 @@ MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
   return llvm::StructType::get(getVMContext(), RTList);
 }
 
+ABIArgInfo MipsABIInfo::classifyComplexReturnType(QualType RetTy,
+                                                  uint64_t Size) const {
+  // A `_Complex` value with a floating-point element type is returned in FPRs,
+  // `_Complex long long` is returned in 2 GPRs. For older ABI versions all
+  // `_Complex {integer}` types are returned in 2 GPRs.
+  uint64_t RegisterWidth = MinABIStackAlignInBytes * 8;
+  if (!isComplexGnuABI() || RetTy->isFloatingType() || Size > RegisterWidth)
+    return ABIArgInfo::getDirect();
+
+  // Match GCC for `_Complex int`, `_Complex short` and `_Complex char` by
+  // packing the real and imaginary field into one GPR.
+  return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
+}
+
 ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   uint64_t Size = getContext().getTypeSize(RetTy);
 
@@ -315,7 +370,7 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   if (isAggregateTypeForABI(RetTy) || RetTy->isVectorType()) {
     if (Size <= 128) {
       if (RetTy->isAnyComplexType())
-        return ABIArgInfo::getDirect();
+        return classifyComplexReturnType(RetTy, Size);
 
       // O32 returns integer vectors in registers and N32/N64 returns all small
       // aggregates in registers.
@@ -332,8 +387,8 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = RetTy->getAsEnumDecl())
+    RetTy = ED->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = RetTy->getAs<BitIntType>())

@@ -110,6 +110,43 @@ class Math_FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
                           attr-dict `:` type($result) }];
 }
 
+// Base class for floating point ternary operations with an optional rounding
+// mode.
+class Math_FloatTernaryOpWithRoundingMode<string mnemonic,
+                                          list<Trait> traits = []> :
+    Math_FloatTernaryOp<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<ArithRoundingModeInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$a, FloatLike:$b, FloatLike:$c,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath,
+      OptionalAttr<Arith_RoundingModeAttr>:$roundingmode);
+  let builders = [
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, a, b, c, fastmath,
+            ::mlir::arith::RoundingModeAttr{});
+    }]>,
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, a, b, c, fastmath,
+            ::mlir::arith::RoundingModeAttr{});
+    }]>,
+    OpBuilder<(ins "Type":$type, "Value":$a, "Value":$b, "Value":$c,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, type, a, b, c,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::RoundingModeAttr{});
+    }]>,
+  ];
+  let assemblyFormat = [{ $a `,` $b `,` $c ($roundingmode^)?
+                          (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
+}
+
 //===----------------------------------------------------------------------===//
 // AbsFOp
 //===----------------------------------------------------------------------===//
@@ -329,6 +366,8 @@ def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
 
     Note: This op is not equivalent to powf(..., 1/3.0).
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -350,6 +389,38 @@ def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
     ```
   }];
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ClampFOp
+//===----------------------------------------------------------------------===//
+
+def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
+  let summary = "floating point clamping operation";
+  let description = [{
+    The `clampf` operation takes three operands and returns one result, each of
+    these is required to be the same type. Operands must be of floating point type
+    (i.e., scalar, tensor or vector).
+
+    The semantics of the operation are described by:
+    ```
+      clampf(value, min, max) = maxf(minf(value, max), min)
+    ```
+    If `min > max` the resulting value is poison.
+
+    Example:
+
+    ```mlir
+    %d = math.clampf %value to [%min, %max] : f64
+    ```
+  }];
+  let arguments = (ins FloatLike:$value, FloatLike:$min, FloatLike:$max,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let assemblyFormat = [{
+    $value `to` ` ` `[` $min `,` $max `]` (`fastmath` `` $fastmath^)?
+    attr-dict `:` type($result)
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -476,6 +547,44 @@ def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
     %a = math.sinh %b : f64
     ```
   }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SinCosOp
+//===----------------------------------------------------------------------===//
+
+def Math_SincosOp : Math_Op<"sincos",
+    [SameOperandsAndResultType,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "sine and cosine of the specified value";
+  let description = [{
+    The `sincos` operation computes both the sine and cosine of a given value
+    simultaneously. It takes one operand of floating point type (i.e., scalar,
+    tensor or vector) and returns two results of the same type. This operation
+    can be more efficient than computing sine and cosine separately when both
+    values are needed.
+
+    Example:
+
+    ```mlir
+    // Scalar sine and cosine values.
+    %sin, %cos = math.sincos %input : f64
+    ```
+  }];
+
+  let arguments = (ins FloatLike:$operand,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs FloatLike:$sin, FloatLike:$cos);
+
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($operand) }];
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+
   let hasFolder = 1;
 }
 
@@ -678,7 +787,7 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 // FmaOp
 //===----------------------------------------------------------------------===//
 
-def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
+def Math_FmaOp : Math_FloatTernaryOpWithRoundingMode<"fma"> {
   let summary = "floating point fused multipy-add operation";
   let description = [{
     The `fma` operation takes three operands and returns one result, each of
@@ -690,12 +799,16 @@ def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
     ```mlir
     // Scalar fused multiply-add: d = a*b + c
     %d = math.fma %a, %b, %c : f64
+
+    // With an explicit IEEE-754 rounding mode.
+    %e = math.fma %a, %b, %c to_nearest_even : f64
     ```
 
     The semantics of the operation correspond to those of the `llvm.fma`
-    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-fma-intrinsic). In the
-    particular case of lowering to LLVM, this is guaranteed to lower
-    to the `llvm.fma.*` intrinsic.
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-fma-intrinsic). When
+    no rounding mode is set, lowering to LLVM is guaranteed to produce the
+    `llvm.fma.*` intrinsic. When a rounding mode is set, the LLVM lowering
+    instead produces `llvm.experimental.constrained.fma`.
   }];
 }
 
@@ -926,6 +1039,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
     %a = math.rsqrt %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1078,7 +1192,7 @@ def Math_FPowIOp : Math_Op<"fpowi",
     The operation is elementwise for non-scalars, e.g.:
 
     ```mlir
-    %v = math.fpowi %base, %power : vector<2xf32>, vector<2xi32
+    %v = math.fpowi %base, %power : vector<2xf32>, vector<2xi32>
     ```
 
     The result is a vector of:
@@ -1102,9 +1216,7 @@ def Math_FPowIOp : Math_Op<"fpowi",
   let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($lhs) `,` type($rhs) }];
 
-  // TODO: add a constant folder using pow[f] for cases, when
-  //       the power argument is exactly representable in floating
-  //       point type of the base.
+  let hasFolder = 1;
 }
 
 #endif // MATH_OPS

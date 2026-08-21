@@ -12,7 +12,7 @@ define <3 x i32> @fptoui_v3f32_to_v3i32(<3 x float> %in, ptr %dst) {
 
 define <5 x i32> @fptoui_v5f32_to_v5i32(<5 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptoui_v5f32_to_v5i32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptoui <5 x float> %in to <5 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %conv = fptoui <5 x float> %in to <5 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <5 x i32> %conv
 ;
   %conv = fptoui <5 x float> %in to <5 x i32>
@@ -21,7 +21,7 @@ define <5 x i32> @fptoui_v5f32_to_v5i32(<5 x float> %in, ptr %dst) {
 
 define <3 x i16> @fptoui_v3f32_to_v3i16(<3 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptoui_v3f32_to_v3i16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptoui <3 x float> %in to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:9 Lat:15 SizeLat:15 for: %conv = fptoui <3 x float> %in to <3 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <3 x i16> %conv
 ;
   %conv = fptoui <3 x float> %in to <3 x i16>
@@ -30,7 +30,7 @@ define <3 x i16> @fptoui_v3f32_to_v3i16(<3 x float> %in, ptr %dst) {
 
 define <5 x i16> @fptoui_v5f32_to_v5i16(<5 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptoui_v5f32_to_v5i16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptoui <5 x float> %in to <5 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:15 Lat:25 SizeLat:25 for: %conv = fptoui <5 x float> %in to <5 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <5 x i16> %conv
 ;
   %conv = fptoui <5 x float> %in to <5 x i16>
@@ -39,7 +39,7 @@ define <5 x i16> @fptoui_v5f32_to_v5i16(<5 x float> %in, ptr %dst) {
 
 define <3 x i8> @fptoui_v3f32_to_v3i8(<3 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptoui_v3f32_to_v3i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptoui <3 x float> %in to <3 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:9 Lat:15 SizeLat:15 for: %conv = fptoui <3 x float> %in to <3 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <3 x i8> %conv
 ;
   %conv = fptoui <3 x float> %in to <3 x i8>
@@ -48,7 +48,7 @@ define <3 x i8> @fptoui_v3f32_to_v3i8(<3 x float> %in, ptr %dst) {
 
 define <9 x i8> @fptoui_v9f32_to_v9i8(<9 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptoui_v9f32_to_v9i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:45 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptoui <9 x float> %in to <9 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:45 CodeSize:27 Lat:45 SizeLat:45 for: %conv = fptoui <9 x float> %in to <9 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <9 x i8> %conv
 ;
   %conv = fptoui <9 x float> %in to <9 x i8>
@@ -66,7 +66,7 @@ define <3 x i32> @fptosi_v3f32_to_v3i32(<3 x float> %in, ptr %dst) {
 
 define <6 x i32> @fptosi_v6f32_to_v6i32(<6 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptosi_v6f32_to_v6i32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptosi <6 x float> %in to <6 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %conv = fptosi <6 x float> %in to <6 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <6 x i32> %conv
 ;
   %conv = fptosi <6 x float> %in to <6 x i32>
@@ -75,7 +75,7 @@ define <6 x i32> @fptosi_v6f32_to_v6i32(<6 x float> %in, ptr %dst) {
 
 define <3 x i16> @fptosi_v3f32_to_v3i16(<3 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptosi_v3f32_to_v3i16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptosi <3 x float> %in to <3 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:9 Lat:15 SizeLat:15 for: %conv = fptosi <3 x float> %in to <3 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <3 x i16> %conv
 ;
   %conv = fptosi <3 x float> %in to <3 x i16>
@@ -84,7 +84,7 @@ define <3 x i16> @fptosi_v3f32_to_v3i16(<3 x float> %in, ptr %dst) {
 
 define <6 x i16> @fptosi_v6f32_to_v6i16(<6 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptosi_v6f32_to_v6i16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptosi <6 x float> %in to <6 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:18 Lat:30 SizeLat:30 for: %conv = fptosi <6 x float> %in to <6 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <6 x i16> %conv
 ;
   %conv = fptosi <6 x float> %in to <6 x i16>
@@ -93,7 +93,7 @@ define <6 x i16> @fptosi_v6f32_to_v6i16(<6 x float> %in, ptr %dst) {
 
 define <3 x i8> @fptosi_v3f32_to_v3i8(<3 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptosi_v3f32_to_v3i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptosi <3 x float> %in to <3 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:9 Lat:15 SizeLat:15 for: %conv = fptosi <3 x float> %in to <3 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <3 x i8> %conv
 ;
   %conv = fptosi <3 x float> %in to <3 x i8>
@@ -102,7 +102,7 @@ define <3 x i8> @fptosi_v3f32_to_v3i8(<3 x float> %in, ptr %dst) {
 
 define <5 x i8> @fptosi_v5f32_to_v5i8(<5 x float> %in, ptr %dst) {
 ; CHECK-LABEL: 'fptosi_v5f32_to_v5i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:1 SizeLat:1 for: %conv = fptosi <5 x float> %in to <5 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:15 Lat:25 SizeLat:25 for: %conv = fptosi <5 x float> %in to <5 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <5 x i8> %conv
 ;
   %conv = fptosi <5 x float> %in to <5 x i8>
@@ -120,7 +120,7 @@ define <3 x float> @uitofp_v3i32_to_v3f32(<3 x i32> %in, ptr %dst) {
 
 define <5 x float> @uitofp_v5i32_to_v5f32(<5 x i32> %in, ptr %dst) {
 ; CHECK-LABEL: 'uitofp_v5i32_to_v5f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %conv = uitofp <5 x i32> %in to <5 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %conv = uitofp <5 x i32> %in to <5 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <5 x float> %conv
 ;
   %conv = uitofp <5 x i32> %in to <5 x float>
@@ -138,7 +138,7 @@ define <3 x float> @uitofp_v3i16_to_v3f32(<3 x i16> %in, ptr %dst) {
 
 define <7 x float> @uitofp_v7i16_to_v7f32(<7 x i16> %in, ptr %dst) {
 ; CHECK-LABEL: 'uitofp_v7i16_to_v7f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:1 Lat:1 SizeLat:1 for: %conv = uitofp <7 x i16> %in to <7 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:17 Lat:27 SizeLat:27 for: %conv = uitofp <7 x i16> %in to <7 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <7 x float> %conv
 ;
   %conv = uitofp <7 x i16> %in to <7 x float>
@@ -156,7 +156,7 @@ define <3 x float> @uitofp_v3i8_to_v3f32(<3 x i8> %in, ptr %dst) {
 
 define <11 x float> @uitofp_v11i8_to_v11f32(<11 x i8> %in, ptr %dst) {
 ; CHECK-LABEL: 'uitofp_v11i8_to_v11f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %conv = uitofp <11 x i8> %in to <11 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %conv = uitofp <11 x i8> %in to <11 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <11 x float> %conv
 ;
   %conv = uitofp <11 x i8> %in to <11 x float>
@@ -174,7 +174,7 @@ define <3 x float> @sitofp_v3i32_to_v3f32(<3 x i32> %in, ptr %dst) {
 
 define <7 x float> @sitofp_v7i32_to_v7f32(<7 x i32> %in, ptr %dst) {
 ; CHECK-LABEL: 'sitofp_v7i32_to_v7f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %conv = sitofp <7 x i32> %in to <7 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %conv = sitofp <7 x i32> %in to <7 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <7 x float> %conv
 ;
   %conv = sitofp <7 x i32> %in to <7 x float>
@@ -192,7 +192,7 @@ define <3 x float> @sitofp_v3i16_to_v3f32(<3 x i16> %in, ptr %dst) {
 
 define <6 x float> @sitofp_v6i16_to_v6f32(<6 x i16> %in, ptr %dst) {
 ; CHECK-LABEL: 'sitofp_v6i16_to_v6f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %conv = sitofp <6 x i16> %in to <6 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:14 Lat:22 SizeLat:22 for: %conv = sitofp <6 x i16> %in to <6 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <6 x float> %conv
 ;
   %conv = sitofp <6 x i16> %in to <6 x float>
@@ -210,7 +210,7 @@ define <3 x float> @sitofp_v3i8_to_v3f32(<3 x i8> %in, ptr %dst) {
 
 define <8 x float> @sitofp_v8i8_to_v8f32(<8 x i8> %in, ptr %dst) {
 ; CHECK-LABEL: 'sitofp_v8i8_to_v8f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %conv = sitofp <8 x i8> %in to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %conv = sitofp <8 x i8> %in to <8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x float> %conv
 ;
   %conv = sitofp <8 x i8> %in to <8 x float>
@@ -219,7 +219,7 @@ define <8 x float> @sitofp_v8i8_to_v8f32(<8 x i8> %in, ptr %dst) {
 
 define <7 x float> @sitofp_v7i8_to_v7f32(<7 x i8> %in, ptr %dst) {
 ; CHECK-LABEL: 'sitofp_v7i8_to_v7f32'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:1 Lat:1 SizeLat:1 for: %conv = sitofp <7 x i8> %in to <7 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:17 Lat:27 SizeLat:27 for: %conv = sitofp <7 x i8> %in to <7 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <7 x float> %conv
 ;
   %conv = sitofp <7 x i8> %in to <7 x float>

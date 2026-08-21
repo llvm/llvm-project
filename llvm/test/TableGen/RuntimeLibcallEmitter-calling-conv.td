@@ -16,10 +16,15 @@ def __target_override_cc : RuntimeLibcallImpl<TARGET_OVERRIDE_CC>;
 
 def malloc : RuntimeLibcallImpl<MALLOC>;
 
-def isAVR : RuntimeLibcallPredicate<[{TT.getArch() == Triple::avr}]>;
+def IsAVR : LibcallPredicate<[{TT.getArch() == Triple::avr}]>;
+def IsOSHurd : LibcallPredicate<[{TT.isOSHurd()}]>;
+def IsMSP430 : LibcallPredicate<[{TT.getArch() == Triple::msp430}]>;
+def IsFooLeaf : LibcallPredicate<[{ isFoo() }]>;
+def IsBarLeaf : LibcallPredicate<[{ isBar() }]>;
 
-def isAVRHurd : RuntimeLibcallPredicate<
-  [{TT.getArch() == Triple::avr && TT.isOSHurd()}]>;
+def isAVR : RuntimeLibcallAvailability<(all_of IsAVR)>;
+
+def isAVRHurd : RuntimeLibcallAvailability<(all_of IsAVR, IsOSHurd)>;
 
 def AVRLibrary : SystemRuntimeLibrary<isAVR,
   (add malloc, LibcallsWithCC<(add __divmodqi4, __udivmodhi4), AVR_BUILTIN>)
@@ -32,37 +37,42 @@ def AVRHurdLibrary : SystemRuntimeLibrary<isAVRHurd,
     = LibcallCallingConv<[{isFoo() ? CallingConv::Fast : CallingConv::GHC}]>;
 }
 
-def isMSP430 : RuntimeLibcallPredicate<[{TT.getArch() == Triple::msp430}]>;
+def isMSP430 : RuntimeLibcallAvailability<(all_of IsMSP430)>;
 
 def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
   (add malloc,
-       LibcallsWithCC<(add __divmodqi4), AVR_BUILTIN, RuntimeLibcallPredicate<[{ isFoo() }]>>,
-       LibcallsWithCC<(add __udivmodhi4), MSP430_BUILTIN, RuntimeLibcallPredicate<[{ isBar() }]>>)
+       LibcallsWithCC<(add __divmodqi4), AVR_BUILTIN, RuntimeLibcallAvailability<(all_of IsFooLeaf)>>,
+       LibcallsWithCC<(add __udivmodhi4), MSP430_BUILTIN, RuntimeLibcallAvailability<(all_of IsBarLeaf)>>)
 >;
 
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
 // CHECK: if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
 // CHECK-NEXT:   const CallingConv::ID DefaultCC = isFoo() ? CallingConv::Fast : CallingConv::GHC;
 // CHECK-NEXT:   for (CallingConv::ID &Entry : LibcallImplCallingConvs) {
 // CHECK-NEXT:     Entry = DefaultCC;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
-// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::malloc}, // malloc
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
+// CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
-// CHECK-NEXT:    static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
-// CHECK-NEXT:        {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls_AlwaysAvailable_AVR_BUILTIN[] = {
+// CHECK-NEXT:        RTLIB::impl___divmodqi4, // __divmodqi4
+// CHECK-NEXT:        RTLIB::impl___udivmodhi4, // __udivmodhi4
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
-// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:      setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
@@ -70,21 +80,26 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:   static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::malloc}, // malloc
-// CHECK-NEXT:   };
+// CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:     0x0000000000001a
+// CHECK-NEXT:   });
+// CHECK-NEXT:   AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
-// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:     setAvailable(Impl);
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
-// CHECK-NEXT:   static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
-// CHECK-NEXT:       {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
-// CHECK-NEXT:       {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
+// CHECK-NEXT:   static const RTLIB::LibcallImpl LibraryCalls_AlwaysAvailable_AVR_BUILTIN[] = {
+// CHECK-NEXT:       RTLIB::impl___divmodqi4, // __divmodqi4
+// CHECK-NEXT:       RTLIB::impl___udivmodhi4, // __udivmodhi4
 // CHECK-NEXT:   };
 // CHECK-EMPTY:
-// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
-// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:   for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
+// CHECK-NEXT:     setAvailable(Impl);
 // CHECK-NEXT:     setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
@@ -92,33 +107,38 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::malloc}, // malloc
+// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
+// CHECK-NEXT:      0x00000000000010
+// CHECK-NEXT:    });
+// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_malloc, // malloc
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isFoo() ) {
-// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_anonymous_3[] = {
-// CHECK-NEXT:          {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
+// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_anonymous_3_AVR_BUILTIN[] = {
+// CHECK-NEXT:          RTLIB::impl___divmodqi4, // __divmodqi4
 // CHECK-NEXT:      };
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_anonymous_3) {
-// CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_3_AVR_BUILTIN) {
+// CHECK-NEXT:        setAvailable(Impl);
 // CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isBar() ) {
-// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_anonymous_5[] = {
-// CHECK-NEXT:          {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
+// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_anonymous_5_MSP430_BUILTIN[] = {
+// CHECK-NEXT:          RTLIB::impl___udivmodhi4, // __udivmodhi4
 // CHECK-NEXT:      };
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_anonymous_5) {
-// CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_5_MSP430_BUILTIN) {
+// CHECK-NEXT:        setAvailable(Impl);
 // CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::MSP430_BUILTIN);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:

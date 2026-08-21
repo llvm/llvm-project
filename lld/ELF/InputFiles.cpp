@@ -20,7 +20,6 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
@@ -208,12 +207,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
-    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
-  // All files within the same --{start,end}-group get the same group ID.
-  // Otherwise, a new file will get a new group ID.
-  if (!ctx.driver.isInGroup)
-    ++ctx.driver.nextGroupId;
-}
+    : ctx(ctx), mb(m), fileKind(k) {}
 
 InputFile::~InputFile() {}
 
@@ -543,16 +537,19 @@ template <class ELFT>
 static void
 handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
                                 const AArch64BuildAttrSubsections &baInfo) {
+  // Missing subsections have zero-initialized data fields, so we must check
+  // presence before comparing against GNU properties.
+  bool baPauthInfoPresent = baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema;
+
   if (file->aarch64PauthAbiCoreInfo) {
     // Check for data mismatch.
-    if (file->aarch64PauthAbiCoreInfo) {
-      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
-          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
-        Err(ctx) << file
-                 << " GNU properties and build attributes have conflicting "
-                    "AArch64 PAuth data";
-    }
-    if (baInfo.AndFeatures != file->andFeatures)
+    if (baPauthInfoPresent &&
+        (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+         baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version))
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+    if (baInfo.AndFeatures && baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
                << " GNU properties and build attributes have conflicting "
                   "AArch64 PAuth data";
@@ -563,14 +560,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
     // PAuthAbiCoreInfo when there is at least one non-zero value. The
     // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
     // 'Invalid' GNU property section with platform = 0, version = 0.
-    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+    if (baPauthInfoPresent) {
       if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
         file->aarch64PauthAbiCoreInfo = {0, 0};
       else
         file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
                                          baInfo.Pauth.TagSchema};
     }
-    file->andFeatures = baInfo.AndFeatures;
+    file->andFeatures |= baInfo.AndFeatures;
   }
 }
 
@@ -610,6 +607,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .try_emplace(CachedHashStringRef(signature), this)
                            .second;
       if (keepGroup) {
+        keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
           sections[i] = createInputSection(
               i, sec, check(obj.getSectionName(sec, shstrtab)));
@@ -775,6 +773,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  ArrayRef<uint32_t> keptGroups = this->keptGroups;
+  size_t keptIdx = 0;
   AArch64BuildAttrSubsections aarch64BAsubSections;
   bool hasAArch64BuildAttributes = false;
   for (size_t i = 0; i != size; ++i) {
@@ -832,14 +832,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_GROUP: {
       if (!ctx.arg.relocatable)
         sections[i] = &InputSection::discarded;
-      StringRef signature =
-          cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
-      ArrayRef<Elf_Word> entries =
-          cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec));
-      if ((entries[0] & GRP_COMDAT) == 0 || ignoreComdats ||
-          ctx.symtab->comdatGroups.find(CachedHashStringRef(signature))
-                  ->second == this)
-        selectedGroups.push_back(entries);
+      // Use the verdict parse() recorded for this group instead of repeating
+      // the signature hashing and comdatGroups lookup.
+      while (keptIdx != keptGroups.size() && keptGroups[keptIdx] < i)
+        ++keptIdx;
+      if (keptIdx != keptGroups.size() && keptGroups[keptIdx] == i)
+        selectedGroups.push_back(
+            cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec)));
       break;
     }
     case SHT_SYMTAB_SHNDX:
@@ -874,10 +873,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
-      if (type == SHT_LLVM_SYMPART)
-        ctx.hasSympart.store(true, std::memory_order_relaxed);
-      else if (ctx.arg.rejectMismatch &&
-               !isKnownSpecificSectionType(type, sec.sh_flags))
+      if (ctx.arg.rejectMismatch &&
+          !isKnownSpecificSectionType(type, sec.sh_flags))
         Err(ctx) << this->sections[i] << ": unknown section type 0x"
                  << Twine::utohexstr(type);
       break;
@@ -1262,7 +1259,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
   if (!firstGlobal)
     return;
   SymbolUnion *locals = makeThreadLocalN<SymbolUnion>(firstGlobal);
-  memset(locals, 0, sizeof(SymbolUnion) * firstGlobal);
 
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
@@ -1298,7 +1294,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else
       new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
-    symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
   }
 }
@@ -1629,7 +1624,8 @@ template <class ELFT> void SharedFile::parse() {
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
   // user can add an extra DSO with --no-as-needed to force it to be added to
   // the dependency list.
-  it->second->isNeeded |= isNeeded;
+  if (isNeeded)
+    it->second->isNeeded.store(true, std::memory_order_relaxed);
   if (!wasInserted)
     return;
 
@@ -1676,8 +1672,9 @@ template <class ELFT> void SharedFile::parse() {
 
     const uint16_t ver = versyms[i], idx = ver & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
-      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
-      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      // Index 0 (VER_NDX_LOCAL) is used for unversioned undefined symbols.
+      // GNU ld versions between 2.35 and 2.45 also generate VER_NDX_GLOBAL
+      // for this case (https://sourceware.org/PR33577).
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
           ErrAlways(ctx) << "corrupt input file: version need index " << idx
@@ -1752,7 +1749,7 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::aarch64:
   case Triple::aarch64_be:
     return EM_AARCH64;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:
@@ -1812,39 +1809,6 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-// For DTLTO, bitcode member names must be valid paths to files on disk.
-// For thin archives, resolve `memberPath` relative to the archive's location.
-// Returns true if adjusted; false otherwise. Non-thin archives are unsupported.
-static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
-                                               std::string &memberPath) {
-  assert(!archivePath.empty());
-
-  if (ctx.arg.dtltoDistributor.empty())
-    return false;
-
-  // Read the archive header to determine if it's a thin archive.
-  auto bufferOrErr =
-      MemoryBuffer::getFileSlice(archivePath, sizeof(ThinArchiveMagic) - 1, 0);
-  if (std::error_code ec = bufferOrErr.getError()) {
-    ErrAlways(ctx) << "cannot open " << archivePath << ": " << ec.message();
-    return false;
-  }
-
-  if (!bufferOrErr->get()->getBuffer().starts_with(ThinArchiveMagic))
-    return false;
-
-  SmallString<128> resolvedPath;
-  if (path::is_relative(memberPath)) {
-    resolvedPath = path::parent_path(archivePath);
-    path::append(resolvedPath, memberPath);
-  } else
-    resolvedPath = memberPath;
-
-  path::remove_dots(resolvedPath, /*remove_dot_dot=*/true);
-  memberPath = resolvedPath.str();
-  return true;
-}
-
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
@@ -1855,25 +1819,22 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two archives define two members with the same name, this
+  // causes a collision which result in only one of the objects being taken
+  // into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage). So we append file offset to make
+  // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name;
-  if (archiveName.empty() ||
-      dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)) {
-    name = ss.save(path);
-  } else {
-    // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
-    // name. If two archives define two members with the same name, this
-    // causes a collision which result in only one of the objects being taken
-    // into consideration at LTO time (which very likely causes undefined
-    // symbols later in the link stage). So we append file offset to make
-    // filename unique.
-    name = ss.save(archiveName + "(" + path::filename(path) + " at " +
-                   utostr(offsetInArchive) + ")");
-  }
+  StringRef name = archiveName.empty()
+                       ? ss.save(path)
+                       : ss.save(archiveName + "(" + path::filename(path) +
+                                 " at " + utostr(offsetInArchive) + ")");
 
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);

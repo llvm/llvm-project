@@ -247,10 +247,9 @@ define void @test_copysign_v64f32_v64f32(ptr %ap, ptr %bp) vscale_range(16,0) #0
 define void @test_copysign_v2f64_v2f64(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: test_copysign_v2f64_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    mov z0.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    fneg v0.2d, v0.2d
 ; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -393,11 +392,10 @@ define void @test_copysign_v4f32_v4f64(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 define void @test_copysign_v2f64_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: test_copysign_v2f64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    mov z0.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    fcvtl v1.2d, v1.2s
-; CHECK-NEXT:    fneg v0.2d, v0.2d
 ; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret

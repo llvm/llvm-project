@@ -48,17 +48,10 @@ void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
   fir::CallOp::create(builder, loc, func, args);
 }
 
-void fir::runtime::cuda::genSetAllocatorIndex(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              mlir::Value desc,
-                                              mlir::Value index) {
+mlir::Value fir::runtime::cuda::genDeviceIsActive(fir::FirOpBuilder &builder,
+                                                  mlir::Location loc) {
   mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(CUFSetAllocatorIndex)>(loc, builder);
-  auto fTy = func.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, fTy, desc, index, sourceFile, sourceLine)};
-  fir::CallOp::create(builder, loc, func, args);
+      fir::runtime::getRuntimeFunc<mkRTKey(CUFDeviceIsActive)>(loc, builder);
+  auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
+  return builder.createConvert(loc, builder.getI1Type(), call.getResult(0));
 }

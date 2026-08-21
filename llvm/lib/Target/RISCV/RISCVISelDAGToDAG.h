@@ -45,28 +45,56 @@ public:
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
+  bool areOffsetsWithinAlignment(SDValue Addr, Align Alignment);
+
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectAddrRegImm26(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
-  bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
+  bool SelectAddrRegRegScale(SDValue Addr, ArrayRef<unsigned> Amounts,
                              SDValue &Base, SDValue &Index, SDValue &Scale);
+
+  template <unsigned ShiftAmount>
+  bool SelectAddrRegRegFixedScale(SDValue Addr, SDValue &Base, SDValue &Index) {
+    SDValue Scale;
+    if (!SelectAddrRegRegScale(Addr, ShiftAmount, Base, Index, Scale))
+      return false;
+    assert(Scale->getAsZExtVal() == ShiftAmount &&
+           "ShiftAmount doesn't match!");
+    return true;
+  }
 
   template <unsigned MaxShift>
   bool SelectAddrRegRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                              SDValue &Scale) {
-    return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
+    std::array<unsigned, MaxShift + 1> Amounts;
+    std::iota(Amounts.begin(), Amounts.end(), 0);
+    return SelectAddrRegRegScale(Addr, Amounts, Base, Index, Scale);
   }
 
-  bool SelectAddrRegZextRegScale(SDValue Addr, unsigned MaxShiftAmount,
+  bool SelectAddrRegZextRegScale(SDValue Addr, ArrayRef<unsigned> Amounts,
                                  unsigned Bits, SDValue &Base, SDValue &Index,
                                  SDValue &Scale);
+
+  template <unsigned ShiftAmount, unsigned Bits>
+  bool SelectAddrRegZextRegFixedScale(SDValue Addr, SDValue &Base,
+                                      SDValue &Index) {
+    SDValue Scale;
+    if (!SelectAddrRegZextRegScale(Addr, ShiftAmount, Bits, Base, Index, Scale))
+      return false;
+    assert(Scale->getAsZExtVal() == ShiftAmount &&
+           "ShiftAmount doesn't match!");
+    return true;
+  }
 
   template <unsigned MaxShift, unsigned Bits>
   bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                                  SDValue &Scale) {
-    return SelectAddrRegZextRegScale(Addr, MaxShift, Bits, Base, Index, Scale);
+    std::array<unsigned, MaxShift + 1> Amounts;
+    std::iota(Amounts.begin(), Amounts.end(), 0);
+    return SelectAddrRegZextRegScale(Addr, Amounts, Bits, Base, Index, Scale);
   }
 
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -74,19 +102,19 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
-  bool trySignedBitfieldInsertInMask(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
                                        SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
+  bool tryWideningMulAcc(SDNode *Node, const SDLoc &DL);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Subtarget->getXLen(), ShAmt);
   }
-  bool selectShiftMask32(SDValue N, SDValue &ShAmt) {
-    return selectShiftMask(N, 32, ShAmt);
+  template <unsigned Size> bool selectShiftMask(SDValue N, SDValue &ShAmt) {
+    return selectShiftMask(N, Size, ShAmt);
   }
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
@@ -151,6 +179,9 @@ public:
     return selectRVVSimm5(N, Width, Imm);
   }
 
+  bool selectVMNOTOp(SDValue N, SDValue &Res);
+  bool selectVMNOT_VLOp(SDNode *Parent, SDValue N, SDValue &Res);
+
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
                                   const SDLoc &DL, unsigned CurOp,
                                   bool IsMasked, bool IsStridedOrIndexed,
@@ -164,6 +195,7 @@ public:
   void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
+  void selectXSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 

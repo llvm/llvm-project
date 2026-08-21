@@ -135,7 +135,7 @@ func.func @reduce_scatter_empty_grid_axes(
 // CHECK-NOT: shard.reduce_scatter
   %0 = shard.reduce_scatter %arg0 on @grid0
     grid_axes = []
-    scatter_axis = 0
+    scatter_dim = 0
     : tensor<4xf32> -> tensor<4xf32>
 // CHECK: return %[[ARG]]
   return %0 : tensor<4xf32>
@@ -148,7 +148,7 @@ func.func @reduce_scatter_empty_grid_axes_different_return_type(
   %0 = shard.reduce_scatter %arg0 on @grid0
 // CHECK-NOT: grid_axes
     grid_axes = []
-    scatter_axis = 0
+    scatter_dim = 0
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -160,7 +160,7 @@ func.func @reduce_scatter_default_reduction(
     grid_axes = [0]
 // CHECK-NOT: reduction
     reduction = sum
-    scatter_axis = 0
+    scatter_dim = 0
     : tensor<4xf32> -> tensor<2xf64>
   return %0 : tensor<2xf64>
 }
@@ -172,7 +172,7 @@ func.func @scatter_empty_grid_axes(
 // CHECK-NOT: shard.scatter
   %0 = shard.scatter %arg0 on @grid0
     grid_axes = []
-    scatter_axis = 0
+    scatter_dim = 0
     root = []
     : (tensor<4xf32>) -> tensor<4xf32>
 // CHECK: return %[[ARG]]

@@ -11,6 +11,7 @@ tablegen(LLVM SystemZGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM SystemZGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SystemZGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SystemZGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM SystemZGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM SystemZGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(SystemZCommonTableGen)

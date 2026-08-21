@@ -1,4 +1,4 @@
-//===--- ReturnBracedInitListCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReturnBracedInitListCheck.h"
+#include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -15,6 +17,33 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
+
+static bool hasInitListConstructor(const CXXRecordDecl *RD) {
+  if (RD == nullptr || !RD->hasDefinition())
+    return false;
+  auto IsInitListCtor = [](const CXXConstructorDecl *Ctor) {
+    return Ctor->hasOneParamOrDefaultArgs() &&
+           utils::type_traits::isStdInitializerList(
+               Ctor->getParamDecl(0)->getType().getNonReferenceType());
+  };
+  auto TestDecl = [&](const Decl *D) {
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+      return IsInitListCtor(Ctor);
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      if (const auto *Ctor =
+              dyn_cast<CXXConstructorDecl>(FTD->getTemplatedDecl()))
+        return IsInitListCtor(Ctor);
+    return false;
+  };
+  const ASTContext &Ctx = RD->getASTContext();
+  const DeclarationName Name =
+      Ctx.DeclarationNames.getCXXConstructorName(Ctx.getCanonicalTagType(RD));
+  return llvm::any_of(RD->lookup(Name), [&](const NamedDecl *D) {
+    if (const auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(D))
+      return TestDecl(Shadow->getTargetDecl());
+    return TestDecl(D);
+  });
+}
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
   auto SemanticallyDifferentContainer = allOf(
@@ -28,7 +57,7 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
                                        "::std::deque", "::std::forward_list",
                                        "::std::list"))));
 
-  auto ConstructExpr =
+  const auto ConstructExpr =
       cxxConstructExpr(
           unless(anyOf(
               // Skip explicit constructor.
@@ -54,7 +83,7 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
 
   // Don't make replacements in macro.
-  SourceLocation Loc = MatchedConstructExpr->getExprLoc();
+  const SourceLocation Loc = MatchedConstructExpr->getExprLoc();
   if (Loc.isMacroID())
     return;
 
@@ -66,8 +95,16 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   if (ReturnType != ConstructType)
     return;
 
-  auto Diag = diag(Loc, "avoid repeating the return type from the "
-                        "declaration; use a braced initializer list instead");
+  // Rewriting `T(args)` to a braced-init-list changes overload resolution when
+  // `T` has a std::initializer_list constructor: list-initialization prefers
+  // the initializer_list overload, so the braced form may silently select a
+  // different constructor than the parenthesized call.
+  if (hasInitListConstructor(ConstructType->getAsCXXRecordDecl()))
+    return;
+
+  const auto Diag =
+      diag(Loc, "avoid repeating the return type from the "
+                "declaration; use a braced initializer list instead");
 
   const SourceRange CallParensRange =
       MatchedConstructExpr->getParenOrBraceRange();
@@ -79,16 +116,18 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   // Make sure that the ctor arguments match the declaration.
   for (unsigned I = 0, NumParams = MatchedConstructExpr->getNumArgs();
        I < NumParams; ++I) {
-    if (const auto *VD = dyn_cast<VarDecl>(
-            MatchedConstructExpr->getConstructor()->getParamDecl(I))) {
-      if (MatchedConstructExpr->getArg(I)->getType().getCanonicalType() !=
-          VD->getType().getCanonicalType())
+    if (const ParmVarDecl *VD =
+            MatchedConstructExpr->getConstructor()->getParamDecl(I)) {
+      const auto ArgType = MatchedConstructExpr->getArg(I)->getType();
+      const auto ParamType = VD->getType().getNonReferenceType();
+      if (ArgType.getCanonicalType().getUnqualifiedType() !=
+          ParamType.getCanonicalType().getUnqualifiedType())
         return;
     }
   }
 
   // Range for constructor name and opening brace.
-  CharSourceRange CtorCallSourceRange = CharSourceRange::getTokenRange(
+  const CharSourceRange CtorCallSourceRange = CharSourceRange::getTokenRange(
       Loc, CallParensRange.getBegin().getLocWithOffset(-1));
 
   Diag << FixItHint::CreateRemoval(CtorCallSourceRange)

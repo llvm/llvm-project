@@ -6,15 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/signal_macros.h"
 #include "src/string/memchr.h"
-#include "test/UnitTest/Test.h"
+
 #include <stddef.h>
+
+#include "hdr/signal_macros.h"
+#include "test/UnitTest/Test.h"
+
+namespace {
 
 // A helper function that calls memchr and abstracts away the explicit cast for
 // readability purposes.
 const char *call_memchr(const void *src, int c, size_t size) {
   return reinterpret_cast<const char *>(LIBC_NAMESPACE::memchr(src, c, size));
+}
+
+TEST(LlvmLibcMemChrTest, WideReadMultiIteration) {
+  const char *src = "abcdefghijklmnopqrst$\n";
+  ASSERT_STREQ(call_memchr(src, '$', 22), "$\n");
 }
 
 TEST(LlvmLibcMemChrTest, FindsCharacterAfterNullTerminator) {
@@ -130,3 +139,5 @@ TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
 }
 
 #endif // defined(LIBC_ADD_NULL_CHECKS)
+
+} // namespace

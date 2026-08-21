@@ -59,6 +59,7 @@ class PseudoOpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  RT_API_ATTRS int fd() const { return 1 /*stdout*/; }
   RT_API_ATTRS const char *path() const { return nullptr; }
   RT_API_ATTRS std::size_t pathLength() const { return 0; }
   RT_API_ATTRS void set_path(OwningPtr<char> &&, std::size_t bytes) {}
@@ -71,10 +72,10 @@ public:
   // at the end of IO statement.
   RT_API_ATTRS bool isTerminal() const { return true; }
   RT_API_ATTRS bool isWindowsTextFile() const { return false; }
-  RT_API_ATTRS Fortran::common::optional<FileOffset> knownSize() const;
+  RT_API_ATTRS common::optional<FileOffset> knownSize() const;
   RT_API_ATTRS bool IsConnected() const { return false; }
-  RT_API_ATTRS void Open(OpenStatus, Fortran::common::optional<Action>,
-      Position, IoErrorHandler &);
+  RT_API_ATTRS void Open(
+      OpenStatus, common::optional<Action>, Position, IoErrorHandler &);
   RT_API_ATTRS void Predefine(int fd) {}
   RT_API_ATTRS void Close(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS std::size_t Read(FileOffset, char *, std::size_t minBytes,
@@ -88,7 +89,7 @@ public:
       FileOffset, const char *, std::size_t, IoErrorHandler &);
   RT_API_ATTRS void Wait(int id, IoErrorHandler &);
   RT_API_ATTRS void WaitAll(IoErrorHandler &);
-  RT_API_ATTRS Position InquirePosition() const;
+  RT_API_ATTRS Position InquirePosition(FileOffset) const;
 };
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
@@ -98,14 +99,18 @@ using FileFrameClass = FileFrame<ExternalFileUnit>;
 #else // defined(RT_USE_PSEUDO_FILE_UNIT)
 using OpenFileClass = PseudoOpenFile;
 // Use not so big buffer for the pseudo file unit frame.
-using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
 public:
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+  static constexpr int maxAsyncIds{64};
+#else
   static constexpr int maxAsyncIds{64 * 16};
+#endif
 
   explicit RT_API_ATTRS ExternalFileUnit(int unitNumber)
       : unitNumber_{unitNumber} {
@@ -123,29 +128,28 @@ public:
     return createdForInternalChildIo_;
   }
 
-  static RT_API_ATTRS ExternalFileUnit *LookUp(int unit);
+  static RT_API_ATTRS ExternalFileUnit *LookUp(int unit, Terminator &);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
-      Direction, Fortran::common::optional<bool> isUnformatted,
-      IoErrorHandler &);
+      Direction, common::optional<bool> isUnformatted, IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
-      const char *path, std::size_t pathLen);
+      const char *path, std::size_t pathLen, Terminator &);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
-  static RT_API_ATTRS ExternalFileUnit *LookUpForClose(int unit);
+  static RT_API_ATTRS ExternalFileUnit *LookUpForClose(int unit, Terminator &);
   static RT_API_ATTRS ExternalFileUnit &NewUnit(
       const Terminator &, bool forChildIo);
   static RT_API_ATTRS void CloseAll(IoErrorHandler &);
   static RT_API_ATTRS void FlushAll(IoErrorHandler &);
 
   // Returns true if an existing unit was closed
-  RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
+  RT_API_ATTRS bool OpenUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
+  RT_API_ATTRS bool OpenAnonymousUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
-  RT_API_ATTRS void DestroyClosed();
+  RT_API_ATTRS void DestroyClosed(Terminator &);
 
   RT_API_ATTRS Iostat SetDirection(Direction);
 
@@ -191,16 +195,20 @@ public:
     return frameOffsetInFile_ + recordOffsetInFrame_ + positionInRecord + 1;
   }
 
-  RT_API_ATTRS ChildIo *GetChildIo() { return child_.get(); }
+  RT_API_ATTRS ChildIo *GetChildIo() { return child_; }
   RT_API_ATTRS ChildIo &PushChildIo(IoStatementState &);
   RT_API_ATTRS void PopChildIo(ChildIo &);
 
   RT_API_ATTRS int GetAsynchronousId(IoErrorHandler &);
   RT_API_ATTRS bool Wait(int);
+  RT_API_ATTRS Position InquirePosition() const {
+    return OpenFileClass::InquirePosition(
+        static_cast<std::int64_t>(frameOffsetInFile_ + recordOffsetInFrame_));
+  }
 
 private:
-  static RT_API_ATTRS UnitMap &CreateUnitMap();
-  static RT_API_ATTRS UnitMap &GetUnitMap();
+  static RT_API_ATTRS UnitMap &CreateUnitMap(const Terminator &);
+  static RT_API_ATTRS UnitMap &GetUnitMap(const Terminator &);
   RT_API_ATTRS const char *FrameNextInput(IoErrorHandler &, std::size_t);
   RT_API_ATTRS void SetPosition(std::int64_t zeroBasedPos);
   RT_API_ATTRS void Sought(std::int64_t zeroBasedPos);
@@ -250,11 +258,11 @@ private:
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 
   // A stack of child I/O pseudo-units for defined I/O that have this
   // unit number.
-  OwningPtr<ChildIo> child_;
+  ChildIo *child_{nullptr};
 };
 
 // A pseudo-unit for child I/O statements in defined I/O subroutines;
@@ -262,8 +270,8 @@ private:
 // be a child I/O statement.
 class ChildIo {
 public:
-  RT_API_ATTRS ChildIo(IoStatementState &parent, OwningPtr<ChildIo> &&previous)
-      : parent_{parent}, previous_{std::move(previous)} {}
+  RT_API_ATTRS ChildIo(IoStatementState &parent, ChildIo *previous)
+      : parent_{parent}, previous_{previous} {}
 
   RT_API_ATTRS IoStatementState &parent() const { return parent_; }
 
@@ -276,15 +284,13 @@ public:
     return *io_;
   }
 
-  RT_API_ATTRS OwningPtr<ChildIo> AcquirePrevious() {
-    return std::move(previous_);
-  }
+  RT_API_ATTRS ChildIo *AcquirePrevious() { return previous_; }
 
   RT_API_ATTRS Iostat CheckFormattingAndDirection(bool unformatted, Direction);
 
 private:
   IoStatementState &parent_;
-  OwningPtr<ChildIo> previous_;
+  ChildIo *previous_;
   std::variant<std::monostate,
       ChildFormattedIoStatementState<Direction::Output>,
       ChildFormattedIoStatementState<Direction::Input>,
@@ -294,7 +300,7 @@ private:
       ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
       ErroneousIoStatementState, ExternalMiscIoStatementState>
       u_;
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 };
 
 RT_OFFLOAD_API_GROUP_END

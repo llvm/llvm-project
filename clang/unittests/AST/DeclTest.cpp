@@ -12,18 +12,26 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
+#include <cassert>
+#include <memory>
+#include <string>
 
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
@@ -100,6 +108,124 @@ TEST(Decl, AsmLabelAttr) {
 
   ASSERT_EQ(MangleF, "\x01"
                      "foo");
+}
+
+TEST(Decl, AsmLabelAttr_LLDB) {
+  StringRef Code = R"(
+    struct S {
+      void f() {}
+      S() = default;
+      ~S() = default;
+    };
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *DeclS =
+      selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
+
+  auto *DeclF = *DeclS->method_begin();
+  auto *Ctor = *DeclS->ctor_begin();
+  auto *Dtor = DeclS->getDestructor();
+
+  ASSERT_TRUE(DeclF);
+  ASSERT_TRUE(Ctor);
+  ASSERT_TRUE(Dtor);
+
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:_Z1fv"));
+  Ctor->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:S"));
+  Dtor->addAttr(AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:~S"));
+
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(DeclF, OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func::123:123:_Z1fv");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Complete), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:C0:123:123:S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:C1:123:123:S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Dtor, CXXDtorType::Dtor_Deleting), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:D0:123:123:~S");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Dtor, CXXDtorType::Dtor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:D2:123:123:~S");
+  };
+}
+
+TEST(Decl, AsmLabelAttr_LLDB_Inherit) {
+  StringRef Code = R"(
+    struct Base {
+      Base(int x) {}
+    };
+
+    struct Derived : Base {
+      using Base::Base;
+    } d(5);
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *Ctor = selectFirst<CXXConstructorDecl>(
+      "ctor",
+      match(cxxConstructorDecl(isInheritingConstructor()).bind("ctor"), Ctx));
+
+  const_cast<CXXConstructorDecl *>(Ctor)->addAttr(
+      AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:Derived"));
+
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Complete), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI0:123:123:Derived");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI1:123:123:Derived");
+  };
 }
 
 TEST(Decl, MangleDependentSizedArray) {
@@ -569,4 +695,217 @@ void instantiate_template() {
   EXPECT_EQ(GetNameInfoRange(Matches[0]), "<input.cc:3:3, col:4>");
   EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
   EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
+}
+
+TEST(Decl, getQualifiedNameAsString) {
+  llvm::Annotations Code(R"cpp(
+namespace x::y {
+  template <class T> class Foo { Foo() {} };
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *FD = selectFirst<CXXConstructorDecl>(
+      "ctor", match(cxxConstructorDecl().bind("ctor"), Ctx));
+  ASSERT_NE(FD, nullptr);
+  ASSERT_EQ(FD->getQualifiedNameAsString(), "x::y::Foo::Foo<T>");
+}
+
+TEST(Decl, NoWrittenArgsInImplicitlyInstantiatedVarSpec) {
+  const char *Code = R"cpp(
+    template <typename>
+    int VarTpl;
+
+    void fn() {
+      (void)VarTpl<char>;
+    }
+  )cpp";
+
+  auto AST = tooling::buildASTFromCode(Code);
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto *VTSD = selectFirst<VarTemplateSpecializationDecl>(
+      "id", match(varDecl(isTemplateInstantiation()).bind("id"), Ctx));
+  ASSERT_NE(VTSD, nullptr);
+  EXPECT_EQ(VTSD->getTemplateArgsAsWritten(), nullptr);
+}
+
+TEST(Decl, ObjCMethodDeclNameForDiagnostic) {
+  const char *Code = R"objc(
+    @protocol MyProtocol
+    - (void)myProtocolMethod;
+    @end
+
+    @interface MyClass
+    - (void)myMethod:(int)x;
+    + (void)myClassMethod;
+    @end
+
+    @interface MyClass (MyCategory)
+    - (void)myCategoryMethod;
+    @end
+
+    @interface MyClass ()
+    - (void)myExtensionMethod;
+    @end
+  )objc";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-x", "objective-c"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *IM = selectFirst<ObjCMethodDecl>(
+      "im", match(objcMethodDecl(hasName("myMethod:")).bind("im"), Ctx));
+  ASSERT_NE(IM, nullptr);
+
+  std::string IMQualifiedName;
+  llvm::raw_string_ostream IMQualifiedOS(IMQualifiedName);
+  IM->getNameForDiagnostic(IMQualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/true);
+  EXPECT_EQ(IMQualifiedOS.str(), "-[MyClass myMethod:]");
+
+  std::string IMUnqualifiedName;
+  llvm::raw_string_ostream IMUnqualifiedOS(IMUnqualifiedName);
+  IM->getNameForDiagnostic(IMUnqualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/false);
+  EXPECT_EQ(IMUnqualifiedOS.str(), "myMethod:");
+
+  auto const *CM = selectFirst<ObjCMethodDecl>(
+      "cm", match(objcMethodDecl(hasName("myClassMethod")).bind("cm"), Ctx));
+  ASSERT_NE(CM, nullptr);
+
+  std::string CMQualifiedName;
+  llvm::raw_string_ostream CMQualifiedOS(CMQualifiedName);
+  CM->getNameForDiagnostic(CMQualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/true);
+  EXPECT_EQ(CMQualifiedOS.str(), "+[MyClass myClassMethod]");
+
+  std::string CMUnqualifiedName;
+  llvm::raw_string_ostream CMUnqualifiedOS(CMUnqualifiedName);
+  CM->getNameForDiagnostic(CMUnqualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/false);
+  EXPECT_EQ(CMUnqualifiedOS.str(), "myClassMethod");
+
+  auto const *PM = selectFirst<ObjCMethodDecl>(
+      "pm", match(objcMethodDecl(hasName("myProtocolMethod")).bind("pm"), Ctx));
+  ASSERT_NE(PM, nullptr);
+
+  std::string PMQualifiedName;
+  llvm::raw_string_ostream PMQualifiedOS(PMQualifiedName);
+  PM->getNameForDiagnostic(PMQualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/true);
+  EXPECT_EQ(PMQualifiedOS.str(), "-[MyProtocol myProtocolMethod]");
+
+  auto const *CatM = selectFirst<ObjCMethodDecl>(
+      "catm",
+      match(objcMethodDecl(hasName("myCategoryMethod")).bind("catm"), Ctx));
+  ASSERT_NE(CatM, nullptr);
+
+  std::string CatMQualifiedName;
+  llvm::raw_string_ostream CatMQualifiedOS(CatMQualifiedName);
+  CatM->getNameForDiagnostic(CatMQualifiedOS, Ctx.getPrintingPolicy(),
+                             /*Qualified=*/true);
+  EXPECT_EQ(CatMQualifiedOS.str(), "-[MyClass myCategoryMethod]");
+
+  auto const *ExtM = selectFirst<ObjCMethodDecl>(
+      "extm",
+      match(objcMethodDecl(hasName("myExtensionMethod")).bind("extm"), Ctx));
+  ASSERT_NE(ExtM, nullptr);
+
+  std::string ExtMQualifiedName;
+  llvm::raw_string_ostream ExtMQualifiedOS(ExtMQualifiedName);
+  ExtM->getNameForDiagnostic(ExtMQualifiedOS, Ctx.getPrintingPolicy(),
+                             /*Qualified=*/true);
+  EXPECT_EQ(ExtMQualifiedOS.str(), "-[MyClass myExtensionMethod]");
+}
+
+TEST(Decl, ObjCPropertyDeclNameForDiagnostic) {
+  const char *Code = R"objc(
+    @protocol MyProtocol
+    @property int myProtocolProp;
+    @end
+
+    @interface MyClass
+    @property int myProp;
+    @property(class) int myClassProp;
+    @end
+
+    @interface MyClass (MyCategory)
+    @property int myCategoryProp;
+    @end
+
+    @interface MyClass ()
+    @property int extensionProp;
+    @end
+  )objc";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-x", "objective-c"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *P = selectFirst<ObjCPropertyDecl>(
+      "p", match(objcPropertyDecl(hasName("myProp")).bind("p"), Ctx));
+  ASSERT_NE(P, nullptr);
+
+  std::string PQualifiedName;
+  llvm::raw_string_ostream PQualifiedOS(PQualifiedName);
+  P->getNameForDiagnostic(PQualifiedOS, Ctx.getPrintingPolicy(),
+                          /*Qualified=*/true);
+  EXPECT_EQ(PQualifiedOS.str(), "-[MyClass myProp]");
+
+  std::string PUnqualifiedName;
+  llvm::raw_string_ostream PUnqualifiedOS(PUnqualifiedName);
+  P->getNameForDiagnostic(PUnqualifiedOS, Ctx.getPrintingPolicy(),
+                          /*Qualified=*/false);
+  EXPECT_EQ(PUnqualifiedOS.str(), "myProp");
+
+  auto const *CP = selectFirst<ObjCPropertyDecl>(
+      "cp", match(objcPropertyDecl(hasName("myClassProp")).bind("cp"), Ctx));
+  ASSERT_NE(CP, nullptr);
+
+  std::string CPQualifiedName;
+  llvm::raw_string_ostream CPQualifiedOS(CPQualifiedName);
+  CP->getNameForDiagnostic(CPQualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/true);
+  EXPECT_EQ(CPQualifiedOS.str(), "+[MyClass myClassProp]");
+
+  std::string CPUnqualifiedName;
+  llvm::raw_string_ostream CPUnqualifiedOS(CPUnqualifiedName);
+  CP->getNameForDiagnostic(CPUnqualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/false);
+  EXPECT_EQ(CPUnqualifiedOS.str(), "myClassProp");
+
+  auto const *PP = selectFirst<ObjCPropertyDecl>(
+      "pp", match(objcPropertyDecl(hasName("myProtocolProp")).bind("pp"), Ctx));
+  ASSERT_NE(PP, nullptr);
+
+  std::string PPQualifiedName;
+  llvm::raw_string_ostream PPQualifiedOS(PPQualifiedName);
+  PP->getNameForDiagnostic(PPQualifiedOS, Ctx.getPrintingPolicy(),
+                           /*Qualified=*/true);
+  EXPECT_EQ(PPQualifiedOS.str(), "-[MyProtocol myProtocolProp]");
+
+  auto const *CatP = selectFirst<ObjCPropertyDecl>(
+      "catp",
+      match(objcPropertyDecl(hasName("myCategoryProp")).bind("catp"), Ctx));
+  ASSERT_NE(CatP, nullptr);
+
+  std::string CatPQualifiedName;
+  llvm::raw_string_ostream CatPQualifiedOS(CatPQualifiedName);
+  CatP->getNameForDiagnostic(CatPQualifiedOS, Ctx.getPrintingPolicy(),
+                             /*Qualified=*/true);
+  // We expect MyClass if getter is available, or if fallback looks through
+  // categories. Let's see what happens.
+  EXPECT_EQ(CatPQualifiedOS.str(), "-[MyClass myCategoryProp]");
+
+  auto const *ExtP = selectFirst<ObjCPropertyDecl>(
+      "extp",
+      match(objcPropertyDecl(hasName("extensionProp")).bind("extp"), Ctx));
+  ASSERT_NE(ExtP, nullptr);
+
+  std::string ExtPQualifiedName;
+  llvm::raw_string_ostream ExtPQualifiedOS(ExtPQualifiedName);
+  ExtP->getNameForDiagnostic(ExtPQualifiedOS, Ctx.getPrintingPolicy(),
+                             /*Qualified=*/true);
+  EXPECT_EQ(ExtPQualifiedOS.str(), "-[MyClass extensionProp]");
 }

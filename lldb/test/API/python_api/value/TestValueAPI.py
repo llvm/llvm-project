@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class ValueAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -17,7 +19,6 @@ class ValueAPITestCase(TestBase):
         # Find the line number to of function 'c'.
         self.line = line_number("main.c", "// Break at this line")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Exercise some SBValue APIs."""
         d = {"EXE": self.exe_name}
@@ -83,7 +84,7 @@ class ValueAPITestCase(TestBase):
 
         fmt = lldbutil.BasicFormatter()
         cvf = lldbutil.ChildVisitingFormatter(indent_child=2)
-        rdf = lldbutil.RecursiveDecentFormatter(indent_child=2)
+        rdf = lldbutil.RecursiveDescentFormatter(indent_child=2)
         if self.TraceOn():
             print(fmt.format(days_of_week))
             print(cvf.format(days_of_week))

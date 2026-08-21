@@ -11,7 +11,10 @@ class TestBasicDeque(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(macos_version=["<", "15.0"])
-    @skipUnlessDarwin
+    @skipIf(
+        bugnumber="ASTImport of lambdas not supported: https://github.com/llvm/llvm-project/issues/149477"
+    )
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

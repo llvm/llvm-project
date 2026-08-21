@@ -1,4 +1,4 @@
-//===--- PointerArithmeticOnPolymorphicObjectCheck.cpp - clang-tidy--------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,7 +53,9 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
                                        ? PointerExprWithVirtualMethod
                                        : PolymorphicPointerExpr;
 
-  const auto ArraySubscript = arraySubscriptExpr(hasBase(SelectedPointerExpr));
+  const auto ArraySubscript =
+      expr(arraySubscriptExpr(hasBase(SelectedPointerExpr)),
+           unless(isInstantiationDependent()));
 
   const auto BinaryOperators =
       binaryOperator(hasAnyOperatorName("+", "-", "+=", "-="),

@@ -13,7 +13,7 @@ $_ZN1A3fooEi = comdat any
 @_ZTIi = external dso_local constant i8*
 
 ; Function Attrs: noinline optnone uwtable
-define dso_local void @_Z5test1v() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !7 {
+define dso_local void @_Z5test1v() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !7 {
 entry:
   %retval = alloca %struct.A, align 1
   %a = alloca %struct.A, align 1
@@ -40,13 +40,13 @@ lpad:                                             ; preds = %entry
 
 catch.dispatch:                                   ; preds = %lpad
   %sel = load i32, i32* %ehselector.slot, align 4, !dbg !13
-  %3 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #4, !dbg !13
+  %3 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)), !dbg !13
   %matches = icmp eq i32 %sel, %3, !dbg !13
   br i1 %matches, label %catch, label %eh.resume, !dbg !13
 
 catch:                                            ; preds = %catch.dispatch
   %exn = load i8*, i8** %exn.slot, align 8, !dbg !13
-  %4 = call i8* @__cxa_begin_catch(i8* %exn) #4, !dbg !13
+  %4 = call i8* @__cxa_begin_catch(i8* %exn), !dbg !13
   %5 = bitcast i8* %4 to i32*, !dbg !13
   %6 = load i32, i32* %5, align 4, !dbg !13
   store i32 %6, i32* %e, align 4, !dbg !13
@@ -55,7 +55,7 @@ catch:                                            ; preds = %catch.dispatch
           to label %invoke.cont2 unwind label %lpad1, !dbg !15
 
 invoke.cont2:                                     ; preds = %catch
-  call void @__cxa_end_catch() #4, !dbg !16
+  call void @__cxa_end_catch(), !dbg !16
   br label %return
 
 lpad1:                                            ; preds = %catch
@@ -65,7 +65,7 @@ lpad1:                                            ; preds = %catch
   store i8* %9, i8** %exn.slot, align 8, !dbg !12
   %10 = extractvalue { i8*, i32 } %8, 1, !dbg !12
   store i32 %10, i32* %ehselector.slot, align 4, !dbg !12
-  call void @__cxa_end_catch() #4, !dbg !16
+  call void @__cxa_end_catch(), !dbg !16
   br label %eh.resume, !dbg !16
 
 try.cont:                                         ; No predecessors!
@@ -84,7 +84,7 @@ eh.resume:                                        ; preds = %lpad1, %catch.dispa
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define linkonce_odr dso_local void @_ZN1AC2Ev(%struct.A* %this) unnamed_addr #1 comdat align 2 !dbg !17 {
+define linkonce_odr dso_local void @_ZN1AC2Ev(%struct.A* %this) unnamed_addr comdat align 2 !dbg !17 {
 entry:
   %this.addr = alloca %struct.A*, align 8
   store %struct.A* %this, %struct.A** %this.addr, align 8
@@ -93,7 +93,7 @@ entry:
 }
 
 ; Function Attrs: noinline optnone uwtable
-define linkonce_odr dso_local void @_ZN1A3fooEi(%struct.A* %this, i32 %i) #0 comdat align 2 !dbg !19 {
+define linkonce_odr dso_local void @_ZN1A3fooEi(%struct.A* %this, i32 %i) comdat align 2 !dbg !19 {
 entry:
   %retval = alloca %struct.A, align 1
   %this.addr = alloca %struct.A*, align 8
@@ -106,10 +106,10 @@ entry:
   br i1 %cmp, label %if.then, label %if.end, !dbg !20
 
 if.then:                                          ; preds = %entry
-  %exception = call i8* @__cxa_allocate_exception(i64 4) #4, !dbg !22
+  %exception = call i8* @__cxa_allocate_exception(i64 4), !dbg !22
   %1 = bitcast i8* %exception to i32*, !dbg !22
   store i32 1, i32* %1, align 16, !dbg !22
-  call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #5, !dbg !22
+  call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null), !dbg !22
   unreachable, !dbg !22
 
 if.end:                                           ; preds = %entry
@@ -119,17 +119,17 @@ if.end:                                           ; preds = %entry
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #2
+declare i32 @llvm.eh.typeid.for(i8*)
 
 declare dso_local i8* @__cxa_begin_catch(i8*)
 
 declare dso_local void @__cxa_end_catch()
 
 ; Function Attrs: noreturn nounwind
-declare void @llvm.trap() #3
+declare void @llvm.trap()
 
 ; Function Attrs: noinline optnone uwtable
-define dso_local void @_Z5test2v() #0 !dbg !24 {
+define dso_local void @_Z5test2v() !dbg !24 {
 entry:
   %a = alloca %struct.A, align 1
   %b = alloca %struct.A, align 1
@@ -142,13 +142,6 @@ entry:
 declare dso_local i8* @__cxa_allocate_exception(i64)
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*)
-
-attributes #0 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone }
-attributes #3 = { noreturn nounwind }
-attributes #4 = { nounwind }
-attributes #5 = { noreturn }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

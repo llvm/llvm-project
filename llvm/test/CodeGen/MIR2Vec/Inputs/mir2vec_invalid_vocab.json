@@ -1,0 +1,5 @@
+{
+    "invalid_structure": {
+        "ADD": [ 1, 2, 3]
+    }
+}

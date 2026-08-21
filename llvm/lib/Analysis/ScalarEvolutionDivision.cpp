@@ -15,17 +15,19 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
+
+#define DEBUG_TYPE "scev-division"
 
 namespace llvm {
 class Type;
 } // namespace llvm
 
 using namespace llvm;
-
-namespace {
 
 static inline int sizeOfSCEV(const SCEV *S) {
   struct FindSCEVSize {
@@ -48,14 +50,14 @@ static inline int sizeOfSCEV(const SCEV *S) {
   return F.Size;
 }
 
-} // namespace
-
 // Computes the Quotient and Remainder of the division of Numerator by
 // Denominator.
 void SCEVDivision::divide(ScalarEvolution &SE, const SCEV *Numerator,
                           const SCEV *Denominator, const SCEV **Quotient,
                           const SCEV **Remainder) {
   assert(Numerator && Denominator && "Uninitialized SCEV");
+  assert(Numerator->getType() == Denominator->getType() &&
+         "Numerator and Denominator must have the same type");
 
   SCEVDivision D(SE, Numerator, Denominator);
 
@@ -109,13 +111,8 @@ void SCEVDivision::visitConstant(const SCEVConstant *Numerator) {
   if (const SCEVConstant *D = dyn_cast<SCEVConstant>(Denominator)) {
     APInt NumeratorVal = Numerator->getAPInt();
     APInt DenominatorVal = D->getAPInt();
-    uint32_t NumeratorBW = NumeratorVal.getBitWidth();
-    uint32_t DenominatorBW = DenominatorVal.getBitWidth();
-
-    if (NumeratorBW > DenominatorBW)
-      DenominatorVal = DenominatorVal.sext(NumeratorBW);
-    else if (NumeratorBW < DenominatorBW)
-      NumeratorVal = NumeratorVal.sext(DenominatorBW);
+    assert(NumeratorVal.getBitWidth() == DenominatorVal.getBitWidth() &&
+           "Numerator and Denominator must have the same bit width");
 
     APInt QuotientVal(NumeratorVal.getBitWidth(), 0);
     APInt RemainderVal(NumeratorVal.getBitWidth(), 0);
@@ -141,14 +138,15 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
   if (Ty != StartQ->getType() || Ty != StartR->getType() ||
       Ty != StepQ->getType() || Ty != StepR->getType())
     return cannotDivide(Numerator);
+
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              Numerator->getNoWrapFlags());
+                              SCEV::NoWrapFlags::FlagAnyWrap);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               Numerator->getNoWrapFlags());
+                               SCEV::NoWrapFlags::FlagAnyWrap);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs, Rs;
+  SmallVector<SCEVUse, 2> Qs, Rs;
   Type *Ty = Denominator->getType();
 
   for (const SCEV *Op : Numerator->operands()) {
@@ -174,7 +172,7 @@ void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
 }
 
 void SCEVDivision::visitMulExpr(const SCEVMulExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs;
+  SmallVector<SCEVUse, 2> Qs;
   Type *Ty = Denominator->getType();
 
   bool FoundDenominatorTerm = false;
@@ -256,4 +254,32 @@ SCEVDivision::SCEVDivision(ScalarEvolution &S, const SCEV *Numerator,
 void SCEVDivision::cannotDivide(const SCEV *Numerator) {
   Quotient = Zero;
   Remainder = Numerator;
+}
+
+void SCEVDivisionPrinterPass::runImpl(Function &F, ScalarEvolution &SE) {
+  OS << "Printing analysis 'Scalar Evolution Division' for function '"
+     << F.getName() << "':\n";
+  for (Instruction &Inst : instructions(F)) {
+    BinaryOperator *Div = dyn_cast<BinaryOperator>(&Inst);
+    if (!Div || Div->getOpcode() != Instruction::SDiv)
+      continue;
+
+    const SCEV *Numerator = SE.getSCEV(Div->getOperand(0));
+    const SCEV *Denominator = SE.getSCEV(Div->getOperand(1));
+    const SCEV *Quotient, *Remainder;
+    SCEVDivision::divide(SE, Numerator, Denominator, &Quotient, &Remainder);
+
+    OS << "Instruction: " << *Div << "\n";
+    OS.indent(2) << "Numerator: " << *Numerator << "\n";
+    OS.indent(2) << "Denominator: " << *Denominator << "\n";
+    OS.indent(2) << "Quotient: " << *Quotient << "\n";
+    OS.indent(2) << "Remainder: " << *Remainder << "\n";
+  }
+}
+
+PreservedAnalyses SCEVDivisionPrinterPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  runImpl(F, SE);
+  return PreservedAnalyses::all();
 }

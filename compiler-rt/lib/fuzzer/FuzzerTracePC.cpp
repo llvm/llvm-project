@@ -69,6 +69,9 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
 }
 
 void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
+  if (Start == Stop) {
+    return;
+  }
   const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
   const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
   if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;
@@ -221,22 +224,11 @@ const TracePC::PCTableEntry *TracePC::PCTableEntryByIdx(uintptr_t Idx) {
   return nullptr;
 }
 
-static std::string GetModuleName(uintptr_t PC) {
-  char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
-  void *OffsetRaw = nullptr;
-  if (!EF->__sanitizer_get_module_and_offset_for_pc(
-      reinterpret_cast<void *>(PC), ModulePathRaw,
-      sizeof(ModulePathRaw), &OffsetRaw))
-    return "";
-  return ModulePathRaw;
-}
-
 template<class CallBack>
 void TracePC::IterateCoveredFunctions(CallBack CB) {
   for (size_t i = 0; i < NumPCTables; i++) {
     auto &M = ModulePCTable[i];
     assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(M.Start->PC);
     for (auto NextFE = M.Start; NextFE < M.Stop; ) {
       auto FE = NextFE;
       assert(PcIsFuncEntry(FE) && "Not a function entry point");

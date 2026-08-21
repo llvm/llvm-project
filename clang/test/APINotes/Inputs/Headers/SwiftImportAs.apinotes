@@ -32,6 +32,23 @@ Tags:
   SwiftEscapable: false
 - Name: EscapableType
   SwiftEscapable: true
+- Name: EscapableAnnotatedInHeader
+  SwiftEscapable: true
+- Name: NoncopyableAnnotatedInHeader
+  SwiftCopyable: false
+- Name: EscapabilityConflict
+  SwiftEscapable: false
+- Name: NoncopyableWithDestroyType
+  SwiftCopyable: false
+  SwiftDestroyOp: NCDDestroy
+- Name: ImportAsUnsafeStruct
+  SwiftSafety: unsafe
+- Name: StructWithUnsafeMethod
+  Methods:
+    - Name: ImportAsUnsafeMethod
+      SwiftSafety: unsafe
+    - Name: ImportAsUnsafeMethodActuallySafe
+      SwiftSafety: safe
 
 Functions:
   - Name: functionReturningFrt__
@@ -39,3 +56,20 @@ Functions:
     SwiftReturnOwnership: unretained
   - Name: functionReturningFrt_returns_retained
     SwiftReturnOwnership: retained
+  - Name: ImportAsUnsafe
+    SwiftSafety: unsafe
+  - Name: ImportAsUnsafeAlreadyAnnotated
+    SwiftSafety: unspecified
+Typedefs:
+  - Name: WrappedOptions
+    SwiftWrapper: struct
+    SwiftConformsTo: Swift.OptionSet
+SwiftVersions:
+  - Version: 3.0
+    Functions:
+      - Name: ImportAsUnsafeVersioned
+        SwiftSafety: unsafe
+  - Version: 6.0
+    Functions:
+      - Name: ImportAsUnsafeVersioned
+        SwiftSafety: safe

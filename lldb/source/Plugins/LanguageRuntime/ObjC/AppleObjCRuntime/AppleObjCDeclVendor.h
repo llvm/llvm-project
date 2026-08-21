@@ -11,15 +11,15 @@
 
 #include "lldb/lldb-private.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Symbol/DeclVendor.h"
 
 namespace lldb_private {
 
 class AppleObjCExternalASTSource;
 
-class AppleObjCDeclVendor : public ClangDeclVendor {
+class AppleObjCDeclVendor : public DeclVendor {
 public:
   AppleObjCDeclVendor(ObjCLanguageRuntime &runtime);
 

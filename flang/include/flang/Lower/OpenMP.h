@@ -14,13 +14,14 @@
 #define FORTRAN_LOWER_OPENMP_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cinttypes>
-#include <utility>
 
 namespace mlir {
 class Operation;
 class Location;
+class Type;
 namespace omp {
 enum class DeclareTargetDeviceType : uint32_t;
 enum class DeclareTargetCaptureClause : uint32_t;
@@ -35,12 +36,12 @@ namespace Fortran {
 namespace parser {
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
 struct OmpClauseList;
 } // namespace parser
 
 namespace semantics {
 class Symbol;
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 
@@ -80,7 +81,7 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &,
 void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
-int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
+void genGroupprivateOp(AbstractConverter &, const pft::Variable &);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
@@ -97,6 +98,36 @@ bool markOpenMPDeferredDeclareTargetFunctions(
     mlir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &,
     AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
+
+// Materialize omp.declare_mapper ops for mapper declarations found in
+// imported modules. If \p scope is null, materialize for the whole
+// semantics global scope; otherwise, operate recursively starting at \p scope.
+void materializeOpenMPDeclareMappers(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    const Fortran::semantics::Scope *scope = nullptr);
+
+namespace omp {
+/// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
+/// that best matches the enclosing OpenMP context, or nullptr if none matches.
+/// \p base is expected to have variant entries.
+const Fortran::semantics::Symbol *
+resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
+                            AbstractConverter &converter);
+} // namespace omp
+
+// Materialize (idempotently) the omp.declare_reduction op for one already-
+// resolved imported user reduction and one requested element type, at module
+// scope, for separate compilation. Only the per-type instance whose scoped op
+// name equals \p requestedOpName is emitted, so a multi-type declaration's
+// other listed types (and any unsupported sibling type) are left alone. No-op
+// if the requested type's shape is not lowerable (a combiner-in-clause form or
+// an unsupported element type) or the op already exists. Safe to call
+// mid-function (uses createDeclareReductionHelper's InsertionGuard). \p
+// isByRef selects the by-ref/by-value naming variant used by the clause.
+void materializeUserReduction(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    const Fortran::semantics::Symbol &resolvedReduction,
+    llvm::StringRef requestedOpName, mlir::Type requestedType, bool isByRef);
 
 } // namespace lower
 } // namespace Fortran

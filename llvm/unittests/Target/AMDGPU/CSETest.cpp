@@ -10,12 +10,13 @@
 #include "AMDGPUUnitTests.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-TEST(AMDGPU, TestCSEForRegisterClassOrBankAndLLT) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx1100", "");
+TEST_F(AMDGPUTestBase, TestCSEForRegisterClassOrBankAndLLT) {
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu11.00-amd-"), "", "");
   if (!TM)
     GTEST_SKIP();
 

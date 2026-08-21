@@ -33,7 +33,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/CopyOpInterface.h"
 #include "mlir/Interfaces/DerivedAttributeOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -43,6 +42,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace test {
 class TestDialect;
@@ -51,9 +51,65 @@ class TestDialect;
 // TestResource
 //===----------------------------------------------------------------------===//
 
-/// A test resource for side effects.
-struct TestResource : public mlir::SideEffects::Resource::Base<TestResource> {
-  llvm::StringRef getName() final { return "<Test>"; }
+/// A test resource for side effects (under DefaultResource).
+struct TestResource : public mlir::SideEffects::Resource::Base<
+                          TestResource, mlir::SideEffects::DefaultResource> {
+  llvm::StringRef getName() const final { return "<Test>"; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return mlir::SideEffects::DefaultResource::get();
+  }
+};
+
+/// A test resource that is a root (disjoint from DefaultResource).
+struct TestNonAddressableResource
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResource> {
+  llvm::StringRef getName() const final { return "<TestNonAddressable>"; }
+  bool isAddressable() const override { return false; }
+};
+
+/// Two disjoint sub-resources (roots) for testing sibling disjointness.
+struct TestNonAddressableSubResourceA
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableSubResourceA> {
+  TestNonAddressableSubResourceA() = default;
+  llvm::StringRef getName() const override {
+    return "TestNonAddressableSubResourceA";
+  }
+  bool isAddressable() const override { return false; }
+
+protected:
+  TestNonAddressableSubResourceA(mlir::TypeID id) : Base(id) {}
+};
+
+struct TestNonAddressableSubResourceB
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableSubResourceB> {
+  TestNonAddressableSubResourceB() = default;
+  llvm::StringRef getName() const override {
+    return "TestNonAddressableSubResourceB";
+  }
+  bool isAddressable() const override { return false; }
+
+protected:
+  TestNonAddressableSubResourceB(mlir::TypeID id) : Base(id) {}
+};
+
+struct TestNonAddressableResourceA
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceA,
+                                               TestNonAddressableSubResourceA> {
+  llvm::StringRef getName() const final { return "<TestNonAddressableA>"; }
+  bool isAddressable() const override { return false; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return TestNonAddressableSubResourceA::get();
+  }
+};
+
+struct TestNonAddressableResourceB
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceB,
+                                               TestNonAddressableSubResourceB> {
+  llvm::StringRef getName() const final { return "<TestNonAddressableB>"; }
+  bool isAddressable() const override { return false; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return TestNonAddressableSubResourceB::get();
+  }
 };
 
 //===----------------------------------------------------------------------===//

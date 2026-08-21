@@ -101,8 +101,8 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (Ctx.hasSameType(QT, Ctx.VoidTy))
     return Value::K_Void;
 
-  if (const auto *ET = QT->getAs<EnumType>())
-    QT = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = QT->getAsEnumDecl())
+    QT = ED->getIntegerType();
 
   const auto *BT = QT->getAs<BuiltinType>();
   if (!BT || BT->isNullPtrType())
@@ -147,15 +147,12 @@ Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
         } while (ArrTy);
         ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
       }
-      if (const auto *RT = DtorTy->getAs<RecordType>()) {
-        if (CXXRecordDecl *CXXRD =
-                llvm::dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-          if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
-                  Interp.CompileDtorCall(CXXRD->getDefinitionOrSelf()))
-            DtorF = reinterpret_cast<void *>(Addr->getValue());
-          else
-            llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
-        }
+      if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
+        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
+                Interp.CompileDtorCall(CXXRD))
+          DtorF = reinterpret_cast<void *>(Addr->getValue());
+        else
+          llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
       }
 
       size_t AllocSize =
@@ -180,9 +177,10 @@ Value::Value(Value &&RHS) noexcept {
   Data = RHS.Data;
   ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
   IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
-
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
+  // The move transfers ownership of the storage refcount from RHS to *this;
+  // RHS.IsManuallyAlloc is now false so its dtor won't Release, leaving
+  // *this as the sole owner of the existing reference. No Retain/Release is
+  // needed -- the physical RefCnt is unchanged across the move.
 }
 
 Value &Value::operator=(const Value &RHS) {
@@ -232,9 +230,9 @@ void *Value::getPtr() const {
   return Data.m_Ptr;
 }
 
-void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
-  assert(NBits <= sizeof(Storage) && "Greater than the total size");
-  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
+void Value::setRawBits(void *Ptr, unsigned NBytes /*= sizeof(Storage)*/) {
+  assert(NBytes <= sizeof(Storage) && "Greater than the total size");
+  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBytes);
 }
 
 QualType Value::getType() const {

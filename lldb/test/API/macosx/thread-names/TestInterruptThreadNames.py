@@ -9,7 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class TestInterruptThreadNames(TestBase):
-    @skipUnlessDarwin
+    NO_DEBUG_INFO_TESTCASE = True
+
+    @requireDarwin
     @add_test_categories(["pyapi"])
     def test_with_python_api(self):
         """Test that we get thread names when interrupting a process."""

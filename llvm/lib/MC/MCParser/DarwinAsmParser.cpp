@@ -192,6 +192,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseTargetTripleDirective>(
+        ".target_triple");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
         ".cg_profile");
 
@@ -457,6 +459,7 @@ public:
   }
 
   bool parseBuildVersion(StringRef Directive, SMLoc Loc);
+  bool parseTargetTripleDirective(StringRef Directive, SMLoc Loc);
   bool parseVersionMin(StringRef Directive, SMLoc Loc, MCVersionMinType Type);
   bool parseMajorMinorVersionComponent(unsigned *Major, unsigned *Minor,
                                        const char *VersionName);
@@ -501,12 +504,9 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
 /// parseDirectiveAltEntry
 ///  ::= .alt_entry identifier
 bool DarwinAsmParser::parseDirectiveAltEntry(StringRef, SMLoc) {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Look up symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (Sym->isDefined())
     return TokError(".alt_entry must preceed symbol definition");
@@ -521,12 +521,9 @@ bool DarwinAsmParser::parseDirectiveAltEntry(StringRef, SMLoc) {
 /// parseDirectiveDesc
 ///  ::= .desc identifier , expression
 bool DarwinAsmParser::parseDirectiveDesc(StringRef, SMLoc) {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in '.desc' directive");
@@ -560,18 +557,17 @@ bool DarwinAsmParser::parseDirectiveIndirectSymbol(StringRef, SMLoc Loc) {
     return Error(Loc, "indirect symbol not in a symbol pointer or stub "
                       "section");
 
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in .indirect_symbol directive");
-
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   // Assembler local symbols don't make any sense here. Complain loudly.
   if (Sym->isTemporary())
     return TokError("non-local symbol required in directive");
 
   if (!getStreamer().emitSymbolAttribute(Sym, MCSA_IndirectSymbol))
-    return TokError("unable to emit indirect symbol attribute for: " + Name);
+    return TokError("unable to emit indirect symbol attribute for: " +
+                    Sym->getName());
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in '.indirect_symbol' directive");
@@ -633,12 +629,9 @@ bool DarwinAsmParser::parseDirectiveLinkerOption(StringRef IDVal, SMLoc) {
 /// parseDirectiveLsym
 ///  ::= .lsym identifier , expression
 bool DarwinAsmParser::parseDirectiveLsym(StringRef, SMLoc) {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in '.lsym' directive");
@@ -826,12 +819,9 @@ bool DarwinAsmParser::parseDirectiveSubsectionsViaSymbols(StringRef, SMLoc) {
 ///  ::= .tbss identifier, size, align
 bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in directive");
@@ -911,12 +901,9 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   Lex();
 
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef IDStr;
-  if (getParser().parseIdentifier(IDStr))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(IDStr);
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("unexpected token in directive");
@@ -1202,16 +1189,31 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
+/// parseTargetTripleDirective
+///   ::= .target_triple parseTargetTriple
+bool DarwinAsmParser::parseTargetTripleDirective(StringRef Directive,
+                                                 SMLoc Loc) {
+  StringRef TargetTriple;
+  SMLoc TargetTripleLoc = getTok().getLoc();
+  if (getParser().parseIdentifier(TargetTriple))
+    return TokError("target triple expected");
+  std::string NormalizedTriple = Triple::normalize(TargetTriple);
+  if (!Triple(NormalizedTriple).isOSDarwin())
+    return Error(TargetTripleLoc, "non-Darwin target triple");
+
+  if (parseEOL())
+    return addErrorSuffix(" in '.target_triple' directive");
+
+  getStreamer().emitTargetTriple(NormalizedTriple);
+  return false;
+}
+
 /// parseDirectiveCGProfile
 ///   ::= .cg_profile from, to, count
 bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createDarwinAsmParser() {
+MCAsmParserExtension *llvm::createDarwinAsmParser() {
   return new DarwinAsmParser;
 }
-
-} // end llvm namespace

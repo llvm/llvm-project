@@ -14,23 +14,22 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias %cp, i32 %i)
 ; CHECK-LABEL: define void @merge_tbaa_interleave_group(
 ; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], ptr noalias [[CP:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_VEC4R:%.*]], ptr [[P]], i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_VEC4R:%.*]], ptr [[P]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP3]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], splat (double 2.000000e+00)
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [20 x %struct.Vec2r], ptr [[CP]], i64 0, i64 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [20 x [[STRUCT_VEC2R:%.*]]], ptr [[CP]], i64 0, i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[TMP10]], align 8, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP11]], align 8, !tbaa [[TBAA5]]
@@ -45,24 +44,6 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[X]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP19]], 2.000000e+00
-; CHECK-NEXT:    [[X4:%.*]] = getelementptr inbounds [20 x %struct.Vec2r], ptr [[CP]], i64 0, i64 [[IV]], i32 0
-; CHECK-NEXT:    store double [[MUL]], ptr [[X4]], align 8, !tbaa [[TBAA10:![0-9]+]]
-; CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[IV]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[Y]], align 8, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[MUL7:%.*]] = fmul double [[TMP20]], 3.000000e+00
-; CHECK-NEXT:    [[Y10:%.*]] = getelementptr inbounds [20 x %struct.Vec2r], ptr [[CP]], i64 0, i64 [[IV]], i32 1
-; CHECK-NEXT:    store double [[MUL7]], ptr [[Y10]], align 8, !tbaa [[TBAA12:![0-9]+]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -70,7 +51,7 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %x = getelementptr inbounds %struct.Vec4r, ptr %p, i64 %iv, i32 0
   %0 = load double, ptr %x, align 8, !tbaa !3
@@ -95,21 +76,18 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @ir_tbaa_different(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[BASE3:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
+; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[END2]], [[BASE2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP16]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[END2]], -8
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP10]], [[BASE3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END2]], -8
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP17]], [[BASE2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP12]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
@@ -118,29 +96,29 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SRC]], align 4, !alias.scope [[META10:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SRC]], align 4, !alias.scope [[META14:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META10]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[STRIDED_VEC3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META13]], !noalias [[META10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -151,15 +129,15 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[L_INVAR:%.*]] = load float, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
-; CHECK-NEXT:    [[L_0:%.*]] = load float, ptr [[PTR_IV]], align 4
-; CHECK-NEXT:    [[MUL_0:%.*]] = fmul float [[L_0]], [[L_INVAR]]
-; CHECK-NEXT:    store float [[MUL_0]], ptr [[PTR_IV]], align 4, !tbaa [[TBAA10]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
-; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[GEP_1]], align 4, !tbaa [[TBAA12]]
+; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[L_1]], [[L_INVAR]]
-; CHECK-NEXT:    store float [[MUL_1]], ptr [[GEP_1]], align 4
+; CHECK-NEXT:    store float [[MUL_1]], ptr [[PTR_IV]], align 4, !tbaa [[TBAA16:![0-9]+]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
+; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[GEP_1]], align 4, !tbaa [[TBAA18:![0-9]+]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[L_2]], [[L_INVAR]]
+; CHECK-NEXT:    store float [[MUL_2]], ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -189,23 +167,23 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @noalias_metadata_from_versioning(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[END1]], [[TMP10]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP11]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -217,7 +195,7 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -235,7 +213,7 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[L_1]], 1.000000e+01
 ; CHECK-NEXT:    store float [[MUL_1]], ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -279,15 +257,16 @@ exit:
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META11]] = !{!"Vec2r", [[META2]], i64 0, [[META2]], i64 8}
-; CHECK: [[TBAA12]] = !{[[META11]], [[META2]], i64 8}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META8]]}
-; CHECK: [[META14]] = !{[[META15:![0-9]+]]}
-; CHECK: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]]}
-; CHECK: [[META16]] = distinct !{[[META16]], !"LVerDomain"}
-; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META8]], [[META9]]}
-; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META8]]}
-; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META8]], [[META9]]}
-; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]], [[META8]]}
+; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META13]] = !{[[META14:![0-9]+]]}
+; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META8]], [[META9]]}
+; CHECK: [[TBAA16]] = !{[[META17:![0-9]+]], [[META2]], i64 0}
+; CHECK: [[META17]] = !{!"Vec2r", [[META2]], i64 0, [[META2]], i64 8}
+; CHECK: [[TBAA18]] = !{[[META17]], [[META2]], i64 8}
+; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META8]]}
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META8]], [[META9]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META9]], [[META8]]}
 ;.

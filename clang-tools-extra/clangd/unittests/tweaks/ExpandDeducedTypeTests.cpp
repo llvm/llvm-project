@@ -47,7 +47,7 @@ TEST_F(ExpandDeducedTypeTest, Test) {
             "namespace ns { void f() { Class C = Class(); } }");
   // undefined functions should not be replaced
   EXPECT_THAT(apply("au^to x = doesnt_exist(); // error-ok"),
-              StartsWith("fail: Could not deduce type for 'auto' type"));
+              StartsWith("fail: Could not expand a dependent type"));
   // function pointers should not be replaced
   EXPECT_THAT(apply("au^to x = &ns::Func;"),
               StartsWith("fail: Could not expand type"));
@@ -91,7 +91,7 @@ TEST_F(ExpandDeducedTypeTest, Test) {
 
   // unknown types in a template should not be replaced
   EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
-              StartsWith("fail: Could not deduce type for 'auto' type"));
+              StartsWith("fail: Could not expand a dependent type"));
 
   // check primitive type
   EXPECT_EQ(apply("decl^type(0) i;"), "int i;");

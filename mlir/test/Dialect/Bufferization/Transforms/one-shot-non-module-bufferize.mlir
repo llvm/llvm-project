@@ -24,10 +24,8 @@
     // CHECK-NOT: copy
     // CHECK: %[[call:.*]]:2 = call @inner_func(%[[arg0]])
     %0, %1 = call @inner_func(%t0) : (tensor<?xf32>) -> (tensor<?xf32>, f32)
-    // CHECK: return %[[call]]#1, %[[call]]#0 : f32, memref<?xf32,{{.*}}>
+    // CHECK: return %[[call]]#1, %[[call]]#0 : f32, memref<?xf32{{.*}}>
     return %1, %0 : f32, tensor<?xf32>
   }
   "test.finish" () : () -> ()
 }) : () -> ()
-
-

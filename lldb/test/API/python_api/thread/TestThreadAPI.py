@@ -10,6 +10,8 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
         self.build()
@@ -52,6 +54,7 @@ class ThreadAPITestCase(TestBase):
         self.build()
         self.validate_negative_indexing()
  
+    @skipIfWasm  # the test calls a function with an expression
     def test_StepInstruction(self):
         """Test that StepInstruction preserves the plan stack."""
         self.build()
@@ -137,6 +140,11 @@ class ThreadAPITestCase(TestBase):
         self.assertEqual(
             "breakpoint 1.1", thread.GetStopDescription(len("breakpoint 1.1") + 100)
         )
+
+        # Test the stream variation
+        stream = lldb.SBStream()
+        self.assertTrue(thread.GetStopDescription(stream))
+        self.assertEqual("breakpoint 1.1", stream.GetData())
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""

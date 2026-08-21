@@ -159,7 +159,8 @@ public:
 
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
-  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
 private:
   struct SecContribInfo {

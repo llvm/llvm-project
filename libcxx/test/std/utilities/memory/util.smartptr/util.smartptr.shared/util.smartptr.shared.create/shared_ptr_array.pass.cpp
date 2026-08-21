@@ -10,7 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // These compiler versions and platforms don't enable sized deallocation by default.
-// ADDITIONAL_COMPILE_FLAGS(apple-clang-16): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
 
@@ -20,11 +19,11 @@
 #include <memory>
 
 int main(int, char**) {
-  std::allocate_shared<int[]>(std::allocator<int>{}, 10);
-  std::make_shared<int[]>(10);
+  (void)std::allocate_shared<int[]>(std::allocator<int>{}, 10);
+  (void)std::make_shared<int[]>(10);
 
-  std::allocate_shared<int[10]>(std::allocator<int>{});
-  std::make_shared<int[10]>();
+  (void)std::allocate_shared<int[10]>(std::allocator<int>{});
+  (void)std::make_shared<int[10]>();
 
   return 0;
 }

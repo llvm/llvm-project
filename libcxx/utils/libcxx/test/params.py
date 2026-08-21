@@ -11,11 +11,10 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
+from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
-    "-Werror",
     "-Wall",
     "-Wctad-maybe-unsupported",
     "-Wextra",
@@ -75,6 +74,9 @@ _warningFlags = [
 
     # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
     "-Wno-nullability-completeness",
+
+    # Technically not a warning flag, but might as well be:
+    "-flax-vector-conversions=none",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -286,14 +288,14 @@ DEFAULT_PARAMETERS = [
         actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
     ),
     Parameter(
-        name="enable_warnings",
+        name="enable_werror",
         choices=[True, False],
         type=bool,
         default=True,
-        help="Whether to enable warnings when compiling the test suite.",
-        actions=lambda warnings: [] if not warnings else
-            [AddOptionalWarningFlag(w) for w in _warningFlags] +
-            [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")],
+        help="Whether to treat warnings as errors when compiling the test suite.",
+        actions=lambda werror: [AddOptionalWarningFlag(w) for w in _warningFlags] +
+                               [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")] +
+                               ([AddCompileFlag("-Werror")] if werror else []),
     ),
     Parameter(
         name="use_sanitizer",
@@ -359,6 +361,7 @@ DEFAULT_PARAMETERS = [
         if experimental
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
+            AddFeature("libcpp-has-no-experimental-optional-iterator"),
             AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
             AddFeature("libcpp-has-no-experimental-hardening-observe-semantic"),
@@ -373,6 +376,28 @@ DEFAULT_PARAMETERS = [
         default="run",
         help="Whether to run the benchmarks in the test suite, to only dry-run them or to disable them entirely.",
         actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
+    ),
+    Parameter(
+        name="benchmark_min_time",
+        type=str,
+        default="0.2s",
+        help="The minimum amount of time each benchmark is run for, passed to GoogleBenchmark's "
+             "--benchmark_min_time flag. By default, we use a lower value than GoogleBenchmark's "
+             "default of 0.5s because that speeds up the test suite without severely impacting "
+             "noise. This can be increased to get more precise results, but running the benchmark "
+             "suite several times may reduce noise more than increasing this threshold.",
+        actions=lambda min_time: [AddSubstitution("%{benchmark_min_time}", min_time)],
+    ),
+    Parameter(
+        name="spec_dir",
+        type=str,
+        default="none",
+        help="Path to the SPEC benchmarks. This is required in order to run the SPEC benchmarks as part of "
+             "the libc++ test suite. If provided, the appropriate SPEC toolset must already be built and installed.",
+        actions=lambda spec_dir: [
+            AddSubstitution("%{spec_dir}", spec_dir),
+            AddFeature('enable-spec-benchmarks')
+        ] if spec_dir != "none" else [],
     ),
     Parameter(
         name="long_tests",
@@ -405,7 +430,6 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
-                AddFeature("libcpp-hardening-mode={}".format(hardening_mode))               if hardening_mode != "undefined" else None,
             ],
         ),
     ),
@@ -470,7 +494,6 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE")       if assertion_semantic == "observe" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE") if assertion_semantic == "quick_enforce" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE")       if assertion_semantic == "enforce" else None,
-                AddFeature("libcpp-assertion-semantic={}".format(assertion_semantic))                   if assertion_semantic != "undefined" else None,
             ],
         ),
     ),

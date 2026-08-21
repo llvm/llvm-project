@@ -101,8 +101,8 @@ protected:
   }
   DICompileUnit *getUnit() {
     return DICompileUnit::getDistinct(
-        Context, 1, getFile(), "clang", false, "-g", 2, "",
-        DICompileUnit::FullDebug, getTuple(), getTuple(), getTuple(),
+        Context, DISourceLanguageName(1), getFile(), "clang", false, "-g", 2,
+        "", DICompileUnit::FullDebug, getTuple(), getTuple(), getTuple(),
         getTuple(), getTuple(), 0, true, false,
         DICompileUnit::DebugNameTableKind::Default, false, "/", "");
   }
@@ -2896,13 +2896,14 @@ TEST_F(DICompileUnitTest, get) {
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
   auto *N = DICompileUnit::getDistinct(
-      Context, SourceLanguage, File, Producer, IsOptimized, Flags,
-      RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, GlobalVariables, ImportedEntities, Macros, DWOId, true,
-      false, DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
+      Context, DISourceLanguageName(SourceLanguage), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
-  EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
+  EXPECT_EQ(SourceLanguage, N->getSourceLanguage().getUnversionedName());
   EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Producer, N->getProducer());
   EXPECT_EQ(IsOptimized, N->isOptimized());
@@ -2918,10 +2919,11 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(DWOId, N->getDWOId());
   EXPECT_EQ(SysRoot, N->getSysRoot());
   EXPECT_EQ(SDK, N->getSDK());
+  EXPECT_EQ(0u, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
-  EXPECT_EQ(SourceLanguage, Temp->getSourceLanguage());
+  EXPECT_EQ(SourceLanguage, Temp->getSourceLanguage().getUnversionedName());
   EXPECT_EQ(File, Temp->getFile());
   EXPECT_EQ(Producer, Temp->getProducer());
   EXPECT_EQ(IsOptimized, Temp->isOptimized());
@@ -2936,11 +2938,43 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(SysRoot, Temp->getSysRoot());
   EXPECT_EQ(SDK, Temp->getSDK());
+  EXPECT_EQ(0u, Temp->getDialect());
 
   auto *TempAddress = Temp.get();
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));
   EXPECT_TRUE(Clone->isDistinct());
   EXPECT_EQ(TempAddress, Clone);
+}
+
+TEST_F(DICompileUnitTest, getWithDialect) {
+  unsigned SourceLanguage = 1;
+  DIFile *File = getFile();
+  StringRef Producer = "some producer";
+  bool IsOptimized = false;
+  StringRef Flags = "flag after flag";
+  unsigned RuntimeVersion = 2;
+  StringRef SplitDebugFilename = "another/file";
+  auto EmissionKind = DICompileUnit::FullDebug;
+  MDTuple *EnumTypes = getTuple();
+  MDTuple *RetainedTypes = getTuple();
+  MDTuple *GlobalVariables = getTuple();
+  MDTuple *ImportedEntities = getTuple();
+  uint64_t DWOId = 0x10000000c0ffee;
+  MDTuple *Macros = getTuple();
+  StringRef SysRoot = "/";
+  StringRef SDK = "TestSDK";
+  uint16_t Dialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
+  auto *N = DICompileUnit::getDistinct(
+      Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
+
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, N->getDialect());
+
+  TempDICompileUnit Temp = N->clone();
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, Temp->getDialect());
 }
 
 TEST_F(DICompileUnitTest, replaceArrays) {
@@ -2959,10 +2993,10 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
   auto *N = DICompileUnit::getDistinct(
-      Context, SourceLanguage, File, Producer, IsOptimized, Flags,
-      RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false,
-      DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
+      Context, DISourceLanguageName(SourceLanguage), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true,
+      false, DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
 
   auto *GlobalVariables = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
@@ -4235,6 +4269,7 @@ TEST_F(DIExpressionTest, isValid) {
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID(dwarf::DW_OP_constu, 5, dwarf::DW_OP_swap);
   EXPECT_VALID(dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
@@ -4249,6 +4284,7 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus, 0);
   EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
+  EXPECT_INVALID(dwarf::DW_OP_swap);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
@@ -4759,6 +4795,47 @@ TEST_F(DIExpressionTest, appendToStackAssert) {
   EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
 }
 
+TEST_F(DIExpressionTest, appendToStackSkipsTagOffset) {
+  // DW_OP_LLVM_tag_offset doesn't emit anything, so it shouldn't make
+  // appendToStack add a DW_OP_deref.
+  DIExpression *Expr =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{3}});
+  uint64_t Ops[] = {
+      dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, 64, dwarf::DW_ATE_signed,
+  };
+  Expr = DIExpression::appendToStack(Expr, Ops);
+
+  uint64_t Expected[] = {dwarf::DW_OP_LLVM_tag_offset,
+                         3,
+                         dwarf::DW_OP_LLVM_convert,
+                         32,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_LLVM_convert,
+                         64,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_stack_value};
+  EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
+}
+
+TEST_F(DIExpressionTest, TagOffsetsAreNotComplex) {
+  // Tag offsets don't emit anything, so they don't make an expression complex.
+  // Keep looking past them for an operation that does.
+  auto *TagOffset =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1}});
+  EXPECT_FALSE(TagOffset->isComplex());
+
+  auto *TagOffsetAndFragment = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                dwarf::DW_OP_LLVM_fragment, uint64_t{0}, uint64_t{32}});
+  EXPECT_FALSE(TagOffsetAndFragment->isComplex());
+
+  auto *TagOffsetAndOperation =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                                  dwarf::DW_OP_plus_uconst, uint64_t{1}});
+  EXPECT_TRUE(TagOffsetAndOperation->isComplex());
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {
@@ -5181,24 +5258,13 @@ TEST_F(FunctionAttachmentTest, Verifier) {
   EXPECT_FALSE(verifyFunction(*F));
 }
 
-TEST_F(FunctionAttachmentTest, RealEntryCount) {
+TEST_F(FunctionAttachmentTest, EntryCount) {
   Function *F = getFunction("foo");
   EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(12304, Function::PCT_Real);
+  F->setEntryCount(12304);
   auto Count = F->getEntryCount();
   EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(12304u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Real, Count->getType());
-}
-
-TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
-  Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(123, Function::PCT_Synthetic);
-  auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(123u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
+  EXPECT_EQ(12304u, *Count);
 }
 
 TEST_F(FunctionAttachmentTest, SubprogramAttachment) {
@@ -5460,6 +5526,59 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
   EXPECT_EQ(A->getOperand(0), Value2);
   EXPECT_EQ(A->getOperand(1), Value2);
   EXPECT_EQ(A->getOperand(2), Value2);
+}
+
+TEST_F(MDNodeTest, MergedProfMetadata) {
+  // Check that identical profile metadata is merged correctly.
+  Metadata *Ops[] = {
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1))),
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 10))),
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 20)))};
+  MDNode *Prof = MDNode::get(Context, Ops);
+
+  // Create instructions to pass to getMergedProfMetadata.
+  // It requires the instructions to be of a supported type (e.g., SelectInst).
+  Value *C = ConstantInt::get(Context, APInt(1, 1));
+  Value *V1 = ConstantInt::get(Context, APInt(32, 1));
+  Value *V2 = ConstantInt::get(Context, APInt(32, 2));
+  std::unique_ptr<SelectInst> SI1(SelectInst::Create(C, V1, V2));
+  std::unique_ptr<SelectInst> SI2(SelectInst::Create(C, V1, V2));
+
+  SI1->setMetadata(LLVMContext::MD_prof, Prof);
+  SI2->setMetadata(LLVMContext::MD_prof, Prof);
+
+  MDNode *Merged =
+      MDNode::getMergedProfMetadata(Prof, Prof, SI1.get(), SI2.get());
+  EXPECT_EQ(Merged, Prof);
+}
+
+TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
+  // Check that identical profile metadata on CallInsts is SUMMED, not
+  // preserved.
+  Metadata *Ops[] = {
+      MDString::get(Context, "branch_weights"),
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 10)))};
+  MDNode *Prof = MDNode::get(Context, Ops);
+
+  // Create two CallInsts.
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  std::unique_ptr<CallInst> CI1(
+      CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+  std::unique_ptr<CallInst> CI2(
+      CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+
+  CI1->setMetadata(LLVMContext::MD_prof, Prof);
+  CI2->setMetadata(LLVMContext::MD_prof, Prof);
+
+  MDNode *Merged =
+      MDNode::getMergedProfMetadata(Prof, Prof, CI1.get(), CI2.get());
+
+  // Expect merged node to be different (summed weights).
+  EXPECT_NE(Merged, Prof);
+  // Verify value is 20.
+  ASSERT_EQ(Merged->getNumOperands(), 2u);
+  ConstantInt *W = mdconst::extract<ConstantInt>(Merged->getOperand(1));
+  EXPECT_EQ(W->getZExtValue(), 20u);
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)

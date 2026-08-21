@@ -38,21 +38,22 @@ public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options);
 
-  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+  void addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
-
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  /// Check whether an alignment fragment needs linker relaxation.
+  static bool shouldRelaxAlign(const MCFragment &F);
+
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
-  bool relaxDwarfLineAddr(MCFragment &F, bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const override;
+  bool relaxDwarfLineAddr(MCFragment &) const override;
+  bool relaxDwarfCFA(MCFragment &) const override;
   std::pair<bool, bool> relaxLEB128(MCFragment &F,
                                     int64_t &Value) const override;
 

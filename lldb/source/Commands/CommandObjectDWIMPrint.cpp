@@ -18,14 +18,11 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
 
 #include <regex>
 
@@ -37,7 +34,8 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
     : CommandObjectRaw(interpreter, "dwim-print",
                        "Print a variable or expression.",
                        "dwim-print [<variable-name> | <expression>]",
-                       eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock |
+                           eCommandAllowsDummyTarget) {
 
   AddSimpleArgumentList(eArgTypeVarName);
 
@@ -78,9 +76,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
-  Target *target_ptr = m_exe_ctx.GetTargetPtr();
-  // Fallback to the dummy target, which can allow for expression evaluation.
-  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+  Target &target = m_exe_ctx.GetTargetRef();
 
   EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
@@ -93,14 +89,14 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   dump_options.SetHideRootName(suppress_result)
       .SetExpandPointerTypeFlags(lldb::eTypeIsObjC);
 
-  bool is_po = m_varobj_options.use_objc;
+  bool is_po = m_varobj_options.use_object_desc;
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
   // Either the language was explicitly specified, or we check the frame.
-  lldb::LanguageType language = m_expr_options.language;
-  if (language == lldb::eLanguageTypeUnknown && frame)
-    language = frame->GuessLanguage().AsLanguageType();
+  SourceLanguage language{m_expr_options.language};
+  if (!language && frame)
+    language = frame->GuessLanguage();
 
   // Add a hint if object description was requested, but no description
   // function was implemented.
@@ -113,44 +109,49 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // Objective-C
     // "<Name: 0x...>. The regex is:
     // - Start with "<".
-    // - Followed by 1 or more non-whitespace characters.
+    // - Capture 1 or more non-whitespace characters (the class name).
     // - Followed by ": 0x".
     // - Followed by 5 or more hex digits.
     // - Followed by ">".
     // - End with zero or more whitespace characters.
     static const std::regex swift_class_regex(
-        "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+        "^<(\\S+): 0x[[:xdigit:]]{5,}>\\s*$");
 
-    if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
-        (language == lldb::eLanguageTypeSwift ||
-         language == lldb::eLanguageTypeObjC) &&
-        std::regex_match(output.data(), swift_class_regex)) {
+    std::cmatch match;
+    if (GetDebugger().GetShowDontUsePoHint() && !target.IsDummyTarget() &&
+        (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
+         language.IsObjC()) &&
+        std::regex_match(output.data(), match, swift_class_regex)) {
 
-      result.AppendNote(
-          "object description requested, but type doesn't implement "
-          "a custom object description. Consider using \"p\" instead of "
-          "\"po\" (this note will only be shown once per debug session).\n");
+      result.AppendNoteWithFormatv(
+          "{0} has no custom object description, use \"p\" to see its children",
+          match[1].str());
       note_shown = true;
     }
   };
 
   // Dump `valobj` according to whether `po` was requested or not.
-  auto dump_val_object = [&](ValueObject &valobj) -> Error {
+  auto dump_val_object = [&](ValueObject &valobj) {
     if (is_po) {
       StreamString temp_result_stream;
-      if (Error err = valobj.Dump(temp_result_stream, dump_options))
-        return err;
+      if (llvm::Error error = valobj.Dump(temp_result_stream, dump_options)) {
+        result.AppendError(toString(std::move(error)));
+        return;
+      }
       llvm::StringRef output = temp_result_stream.GetString();
       maybe_add_hint(output);
       result.GetOutputStream() << output;
     } else {
-      if (Error err = valobj.Dump(result.GetOutputStream(), dump_options))
-        return err;
+      llvm::Error error =
+        valobj.Dump(result.GetOutputStream(), dump_options);
+      if (error) {
+        result.AppendError(toString(std::move(error)));
+        return;
+      }
     }
     m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
                                            m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return Error::success();
   };
 
   // First, try `expr` as a _limited_ frame variable expression path: only the
@@ -168,8 +169,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
         expr, eval_options.GetUseDynamic(),
-        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
-        status);
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+            StackFrame::eExpressionPathOptionsDisallowGlobals,
+        var_sp, status, lldb::eDILModeSimple);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
@@ -184,29 +186,19 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                      expr);
       }
 
-      Error err = dump_val_object(*valobj_sp);
-      if (!err)
-        return;
-
-      // Dump failed, continue on to expression evaluation.
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
-                     "could not print frame variable '{1}': {0}", expr);
+      dump_val_object(*valobj_sp);
+      return;
     }
   }
 
   // Second, try `expr` as a persistent variable.
   if (expr.starts_with("$"))
-    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(
+            language.AsLanguageType()))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
-          Error err = dump_val_object(*valobj_sp);
-          if (!err)
-            return;
-
-          // Dump failed, continue on to expression evaluation.
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
-                         "could not print persistent variable '{1}': {0}",
-                         expr);
+          dump_val_object(*valobj_sp);
+          return;
         }
 
   // Third, and lastly, try `expr` as a source expression to evaluate.
@@ -257,12 +249,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       result.AppendNoteWithFormatv("ran `expression {0}{1}`", flags, expr);
     }
 
-    if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
-      if (Error err = dump_val_object(*valobj_sp))
-        result.SetError(std::move(err));
-    } else {
+    if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
+      dump_val_object(*valobj_sp);
+    else
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    }
 
     if (suppress_result)
       if (auto result_var_sp =

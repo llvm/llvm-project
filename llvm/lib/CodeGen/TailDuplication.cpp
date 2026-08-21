@@ -20,11 +20,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
@@ -46,6 +46,7 @@ public:
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -53,17 +54,13 @@ public:
 class TailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {
-    initializeTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {}
 };
 
 class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {
-    initializeEarlyTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {}
 
   MachineFunctionProperties getClearedProperties() const override {
     return MachineFunctionProperties().setNoPHIs();

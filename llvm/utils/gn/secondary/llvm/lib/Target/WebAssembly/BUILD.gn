@@ -12,10 +12,57 @@ tablegen("WebAssemblyGenFastISel") {
   td_file = "WebAssembly.td"
 }
 
+tablegen("WebAssemblyGenGlobalISel") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=WebAssemblyPostLegalizerCombiner",
+  ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=WebAssemblyPreLegalizerCombiner",
+  ]
+  td_file = "WebAssemblyGISel.td"
+}
+
+tablegen("WebAssemblyGenRegisterBank") {
+  visibility = [
+    ":LLVMWebAssemblyCodeGen",
+    "//llvm/unittests/Target/WebAssembly:WebAssemblyTests",
+  ]
+  args = [ "-gen-register-bank" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenSDNodeInfo") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "WebAssembly.td"
+}
+
 static_library("LLVMWebAssemblyCodeGen") {
   deps = [
     ":WebAssemblyGenDAGISel",
     ":WebAssemblyGenFastISel",
+    ":WebAssemblyGenGlobalISel",
+    ":WebAssemblyGenPostLegalizeGICombiner",
+    ":WebAssemblyGenPreLegalizeGICombiner",
+    ":WebAssemblyGenRegisterBank",
+    ":WebAssemblyGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -25,19 +72,29 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
+     "//llvm/lib/Transforms/ObjCARC",
   ]
   include_dirs = [ "." ]
   sources = [
+    "GISel/WebAssemblyCallLowering.cpp",
+    "GISel/WebAssemblyInstructionSelector.cpp",
+    "GISel/WebAssemblyLegalizerInfo.cpp",
+    "GISel/WebAssemblyPostLegalizerCombiner.cpp",
+    "GISel/WebAssemblyPreLegalizerCombiner.cpp",
+    "GISel/WebAssemblyRegisterBankInfo.cpp",
     "WebAssemblyAddMissingPrototypes.cpp",
     "WebAssemblyArgumentMove.cpp",
     "WebAssemblyAsmPrinter.cpp",
     "WebAssemblyCFGSort.cpp",
     "WebAssemblyCFGStackify.cpp",
     "WebAssemblyCleanCodeAfterTrap.cpp",
+    "WebAssemblyCoalesceFeaturesAndStripAtomics.cpp",
+    "WebAssemblyCodeGenPassBuilder.cpp",
     "WebAssemblyDebugFixup.cpp",
     "WebAssemblyDebugValueManager.cpp",
     "WebAssemblyExceptionInfo.cpp",
@@ -53,7 +110,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyLateEHPrepare.cpp",
     "WebAssemblyLowerBrUnless.cpp",
     "WebAssemblyLowerEmscriptenEHSjLj.cpp",
-    "WebAssemblyLowerRefTypesIntPtrConv.cpp",
     "WebAssemblyMCInstLower.cpp",
     "WebAssemblyMCLowerPrePass.cpp",
     "WebAssemblyMachineFunctionInfo.cpp",
@@ -62,6 +118,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyOptimizeLiveIntervals.cpp",
     "WebAssemblyOptimizeReturned.cpp",
     "WebAssemblyPeephole.cpp",
+    "WebAssemblyReduceToAnyAllTrue.cpp",
     "WebAssemblyRefTypeMem2Local.cpp",
     "WebAssemblyRegColoring.cpp",
     "WebAssemblyRegNumbering.cpp",

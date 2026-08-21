@@ -209,6 +209,7 @@ Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value, const Twine &Comment) {
 
 Error CodeViewRecordIO::mapStringZ(StringRef &Value, const Twine &Comment) {
   if (isStreaming()) {
+    assert(Value.data()[Value.size()] == '\0' && "Expected null terminator.");
     auto NullTerminatedString = StringRef(Value.data(), Value.size() + 1);
     emitComment(Comment);
     Streamer->emitBytes(NullTerminatedString);
@@ -307,8 +308,8 @@ void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
   } else {
     Streamer->emitIntValue(LF_QUADWORD, 2);
     emitComment(Comment);
-    Streamer->emitIntValue(Value, 4); // FIXME: Why not 8 (size of quadword)?
-    incrStreamedLen(6);               // FIXME: Why not 10 (8 + 2)?
+    Streamer->emitIntValue(Value, 8);
+    incrStreamedLen(10);
   }
 }
 
@@ -329,11 +330,10 @@ void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
     Streamer->emitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
-    // FIXME: There are no test cases covering this block.
     Streamer->emitIntValue(LF_UQUADWORD, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 8);
-    incrStreamedLen(6); // FIXME: Why not 10 (8 + 2)?
+    incrStreamedLen(10);
   }
 }
 

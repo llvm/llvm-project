@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify %s
 
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify %s -fexperimental-new-constant-interpreter
+
 #if !__has_builtin(__builtin_verbose_trap)
 #error
 #endif
@@ -44,4 +47,15 @@ void f2() {
 
 void test() {
   f<constCat3, constMsg3>(nullptr);
+}
+
+/// Arguments must be null terminated.
+int foo() {
+  constexpr char K[] = {'a', 'b'};
+  __builtin_verbose_trap("hehe", K); // expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+  __builtin_verbose_trap(K, "hehe"); //expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+
+  constexpr char K2[] = {'a', 'b', '\0'};
+  __builtin_verbose_trap("hehe", K2);
+  __builtin_verbose_trap(K2, "hehe");
 }

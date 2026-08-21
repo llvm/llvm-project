@@ -20,6 +20,8 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
+namespace llvm {
+
 // Upper bound on lifetime access density (accesses per byte per lifetime sec)
 // for marking an allocation cold.
 LLVM_ABI cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
@@ -47,6 +49,8 @@ LLVM_ABI cl::opt<bool>
     MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
                        cl::desc("Enable use of hot hints (only supported for "
                                 "unambigously hot allocations)"));
+
+} // end namespace llvm
 
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,

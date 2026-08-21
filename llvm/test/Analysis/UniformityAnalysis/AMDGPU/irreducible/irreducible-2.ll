@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu6.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @cycle_diverge_enter(i32 %n, i32 %a, i32 %b) #0 {
 ;      entry(div)
@@ -571,7 +571,7 @@ X:
 
 define amdgpu_kernel void @always_uniform() {
 ; CHECK-LABEL: UniformityInfo for function 'always_uniform':
-; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(bb2 bb3)
 
 bb:

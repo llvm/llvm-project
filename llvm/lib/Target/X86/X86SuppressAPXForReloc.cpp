@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -38,9 +39,9 @@ cl::opt<bool> X86EnableAPXForRelocation(
     cl::init(false));
 
 namespace {
-class X86SuppressAPXForRelocationPass : public MachineFunctionPass {
+class X86SuppressAPXForRelocationLegacy : public MachineFunctionPass {
 public:
-  X86SuppressAPXForRelocationPass() : MachineFunctionPass(ID) {}
+  X86SuppressAPXForRelocationLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 Suppress APX features for relocation";
@@ -48,19 +49,24 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   static char ID;
 };
 } // namespace
 
-char X86SuppressAPXForRelocationPass::ID = 0;
+char X86SuppressAPXForRelocationLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationLegacy, DEBUG_TYPE,
                       "X86 Suppress APX features for relocation", false, false)
-INITIALIZE_PASS_END(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86SuppressAPXForRelocationLegacy, DEBUG_TYPE,
                     "X86 Suppress APX features for relocation", false, false)
 
-FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
-  return new X86SuppressAPXForRelocationPass();
+FunctionPass *llvm::createX86SuppressAPXForRelocationLegacyPass() {
+  return new X86SuppressAPXForRelocationLegacy();
 }
 
 static void suppressEGPRRegClass(MachineRegisterInfo *MRI, MachineInstr &MI,
@@ -243,8 +249,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
   return true;
 }
 
-bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool suppressAPXForRelocation(MachineFunction &MF) {
   if (X86EnableAPXForRelocation)
     return false;
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
@@ -252,4 +257,18 @@ bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
   Changed |= handleNDDOrNFInstructions(MF, ST);
 
   return Changed;
+}
+
+bool X86SuppressAPXForRelocationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return suppressAPXForRelocation(MF);
+}
+
+PreservedAnalyses
+X86SuppressAPXForRelocationPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  return suppressAPXForRelocation(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

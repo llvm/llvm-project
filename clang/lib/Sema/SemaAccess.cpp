@@ -21,6 +21,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace sema;
@@ -439,10 +440,8 @@ static AccessResult MatchesFriend(Sema &S,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   CanQualType Friend) {
-  if (const RecordType *RT = Friend->getAs<RecordType>())
-    return MatchesFriend(
-        S, EC,
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf());
+  if (const auto *RD = Friend->getAsCXXRecordDecl())
+    return MatchesFriend(S, EC, RD);
 
   // TODO: we can do better than this
   if (Friend->isDependentType())
@@ -1614,6 +1613,15 @@ bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
   // Suppress diagnostics.
   Entity.setDiag(Diag);
 
+  // We don't want to delay access checking even we are inside an enclosing
+  // delayed-diagnostics scope (e.g. when parsing a later declaration whose
+  // initializer requires explaining why a defaulted comparison operator is
+  // deleted)
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
+
   switch (CheckAccess(*this, Loc, Entity)) {
   case AR_accessible: return true;
   case AR_inaccessible: return false;
@@ -1786,10 +1794,7 @@ Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
   if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
-  const RecordType *RT = ObjectExpr->getType()->castAs<RecordType>();
-  CXXRecordDecl *NamingClass =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
-
+  auto *NamingClass = ObjectExpr->getType()->castAsCXXRecordDecl();
   AccessTarget Entity(Context, AccessTarget::Member, NamingClass, Found,
                       ObjectExpr->getType());
   Entity.setDiag(diag::err_access) << ObjectExpr->getSourceRange() << Range;

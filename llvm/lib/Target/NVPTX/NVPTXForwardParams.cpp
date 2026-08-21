@@ -65,9 +65,9 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
     LoadInsts.push_back(&U);
     return true;
   }
-  case NVPTX::cvta_local:
+  case NVPTX::cvta_local_32:
   case NVPTX::cvta_local_64:
-  case NVPTX::cvta_to_local:
+  case NVPTX::cvta_to_local_32:
   case NVPTX::cvta_to_local_64: {
     for (auto &U2 : MRI.use_instructions(U.operands_begin()->getReg()))
       if (!traverseMoveUse(U2, MRI, RemoveList, LoadInsts))
@@ -96,13 +96,30 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 5;
-  constexpr unsigned LDInstAddrSpaceOpIdx = 2;
-  for (auto *LI : LoadInsts) {
-    (LI->uses().begin() + LDInstBasePtrOpIdx)
-        ->ChangeToES(ParamSymbol->getSymbolName());
-    (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::Param);
+  for (MachineInstr *LI : LoadInsts) {
+    unsigned Opc = LI->getOpcode();
+    int Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addr);
+    assert(Idx != -1 && "no addr operand");
+    LI->getOperand(Idx).ChangeToES(ParamSymbol->getSymbolName());
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addsp);
+    assert(Idx != -1 && "no addsp operand");
+    LI->getOperand(Idx).ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+    // PTX cache hints and policy are not allowed on ld.param
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::evictionAndPrefetchHint);
+    assert(Idx != -1 && "no evictionAndPrefetchHint operand");
+    LI->getOperand(Idx).ChangeToImmediate(0);
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::policy);
+    assert(Idx != -1 && "no policy operand");
+    MachineOperand &Policy = LI->getOperand(Idx);
+    Register PolicyReg = Policy.getReg();
+    MachineInstr *PolicyDef =
+        PolicyReg.isValid() ? MRI.getVRegDef(PolicyReg) : nullptr;
+    Policy.ChangeToRegister(NVPTX::NoRegister, false);
+    // Remove the policy register's definition if it is now dead.
+    if (PolicyDef && PolicyDef->isDead(MRI))
+      RemoveList.push_back(PolicyDef);
   }
   return true;
 }

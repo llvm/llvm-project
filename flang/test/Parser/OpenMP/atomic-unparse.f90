@@ -151,7 +151,7 @@ program main
    if (i .eq. j + 1) then
       i = j
    end if
-   
+
 !$omp atomic compare acquire
    if (i .eq. j) then
       i = k
@@ -178,7 +178,20 @@ program main
    if (i .eq. k) then
       i = j
    end if
-   
+
+!$omp atomic compare weak
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic weak compare
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic compare seq_cst weak
+   if (i .eq. k) then
+      i = j
+   end if
+
 !ATOMIC
 !$omp atomic
    i = j
@@ -279,6 +292,9 @@ end program main
 !CHECK: !$OMP ATOMIC COMPARE FAIL(RELAXED)
 !CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE
 !CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE ACQUIRE
+!CHECK: !$OMP ATOMIC COMPARE WEAK
+!CHECK: !$OMP ATOMIC WEAK COMPARE
+!CHECK: !$OMP ATOMIC COMPARE SEQ_CST WEAK
 
 !ATOMIC
 !CHECK: !$OMP ATOMIC

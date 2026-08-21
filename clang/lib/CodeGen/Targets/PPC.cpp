@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -128,7 +129,37 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
+
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                         raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                         raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  if (!Info.CPU.empty()) {
+    assert(Info.Features.empty() && "cannot have both a CPU and a feature");
+    Out << ".cpu_" << Info.CPU;
+    return;
+  }
+
+  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+}
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
   const bool Is64Bit;
@@ -153,8 +184,8 @@ public:
 // extended to 32/64 bits.
 bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (getContext().isPromotableIntegerType(Ty))
@@ -294,10 +325,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     ASTContext &Context = D->getASTContext();
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
-    const RecordDecl *RDecl =
-        Ty->isRecordType()
-            ? Ty->getAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf()
-            : nullptr;
+    const RecordDecl *RDecl = Ty->getAsRecordDecl();
 
     bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
     auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {
@@ -493,7 +521,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
   llvm::Type *DirectTy = CGF.ConvertType(Ty), *ElementTy = DirectTy;
   if (isIndirect)
-    DirectTy = CGF.UnqualPtrTy;
+    DirectTy = CGF.DefaultPtrTy;
 
   // Case 1: consume registers.
   Address RegAddr = Address::invalid();
@@ -708,8 +736,8 @@ public:
 bool
 PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (isPromotableIntegerTypeForABI(Ty))
@@ -1019,15 +1047,19 @@ void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
   if (CGM.getTypes().isLongDoubleReferenced()) {
     llvm::LLVMContext &Ctx = CGM.getLLVMContext();
     const auto *flt = &CGM.getTarget().getLongDoubleFormat();
+    std::optional<llvm::LongDoubleFormat> Format;
     if (flt == &llvm::APFloat::PPCDoubleDouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "doubledouble"));
+      Format = llvm::LongDoubleFormat::PPCDoubleDouble;
     else if (flt == &llvm::APFloat::IEEEquad())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeequad"));
+      Format = llvm::LongDoubleFormat::IEEEquad;
     else if (flt == &llvm::APFloat::IEEEdouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeedouble"));
+      Format = llvm::LongDoubleFormat::IEEEdouble;
+
+    if (Format) {
+      CGM.getModule().addModuleFlag(
+          llvm::Module::Error, "long-double-type",
+          llvm::MDString::get(Ctx, llvm::getLongDoubleFormatName(*Format)));
+    }
   }
 }
 

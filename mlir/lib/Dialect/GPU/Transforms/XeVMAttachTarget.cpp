@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Target/LLVM/XeVM/Target.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {

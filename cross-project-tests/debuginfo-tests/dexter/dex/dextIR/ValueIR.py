@@ -6,6 +6,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 
+from typing import List, Optional
+
+
 class ValueIR:
     """Data class to store the result of an expression evaluation."""
 
@@ -26,6 +29,7 @@ class ValueIR:
         self.error_string = error_string
         self.is_optimized_away = is_optimized_away
         self.is_irretrievable = is_irretrievable
+        self.sub_values: list[ValueIR] = []
 
     def __str__(self):
         prefix = '"{}": '.format(self.expression)
@@ -39,3 +43,9 @@ class ValueIR:
                 self.could_evaluate, self.is_irretrievable, self.is_optimized_away
             )
         )
+
+    def dump_nested(self, lines: List[str], indent: int = 0):
+        indent_str = "  " * indent
+        lines.append(f"{indent_str}{self}")
+        for v in self.sub_values:
+            v.dump_nested(lines, indent + 1)

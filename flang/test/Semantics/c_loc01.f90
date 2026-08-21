@@ -48,6 +48,8 @@ module m
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok
+    !ERROR: alternate return specification may not appear on function reference
+666 cp = c_loc(*666)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cp = c_ptr(0)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
@@ -66,3 +68,12 @@ module m
     purefun2 = 1
   end
 end module
+
+module m2
+  use iso_c_binding
+  ! In this context (structure constructor from intrinsic module being used directly
+  ! in another module), emit only a warning, since this module might have originally
+  ! been a module file that was converted back into Fortran.
+  !WARNING: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
+  type(c_ptr) :: p = c_ptr(0)
+end

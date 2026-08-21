@@ -21,6 +21,7 @@
 #include "make_string.h"
 #include "test_macros.h"
 #include "asan_testing.h"
+#include "type_algorithms.h"
 
 template <class S>
 constexpr void test_appending(std::size_t k, size_t N, size_t new_capacity) {
@@ -77,17 +78,30 @@ constexpr bool test() {
   return true;
 }
 
-void test_value_categories() {
+constexpr bool test_value_categories() {
   std::string s;
   s.resize_and_overwrite(10, [](char*&&, std::size_t&&) { return 0; });
   LIBCPP_ASSERT(is_string_asan_correct(s));
   s.resize_and_overwrite(10, [](char* const&, const std::size_t&) { return 0; });
   LIBCPP_ASSERT(is_string_asan_correct(s));
   struct RefQualified {
-    int operator()(char*, std::size_t) && { return 0; }
+    constexpr int operator()(char*, std::size_t) && { return 0; }
   };
   s.resize_and_overwrite(10, RefQualified{});
   LIBCPP_ASSERT(is_string_asan_correct(s));
+  return true;
+}
+
+constexpr bool test_integer_like_return_types() {
+  types::for_each(types::integer_types(), []<typename IntegerType> {
+    std::string s;
+    s.resize_and_overwrite(10, [](char* p, std::size_t n) -> IntegerType {
+      std::fill(p, p + n, 'f');
+      return n;
+    });
+    assert(s.size() == 10);
+  });
+  return true;
 }
 
 int main(int, char**) {
@@ -105,5 +119,12 @@ int main(int, char**) {
   test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>();
   static_assert(test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>());
 #endif
+
+  test_value_categories();
+  test_integer_like_return_types();
+
+  static_assert(test_value_categories());
+  static_assert(test_integer_like_return_types());
+
   return 0;
 }

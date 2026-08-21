@@ -48,7 +48,10 @@ void dumpProvenance(CompilerInstance &ci) {
 void dumpPreFIRTree(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
-  if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext())}) {
+  // Use default lowering options for PFT dump
+  lower::LoweringOptions loweringOptions{};
+  if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext(),
+                                loweringOptions)}) {
     lower::dumpPFT(llvm::outs(), *ast);
   } else {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -88,7 +91,8 @@ struct MeasurementVisitor {
 
 void debugMeasureParseTree(CompilerInstance &ci, llvm::StringRef filename) {
   // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
+  const common::LangOptions &langOptions = ci.getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::outs(), langOptions);
 
   if ((ci.getParsing().parseTree().has_value() &&
        !ci.getParsing().consumedWholeFile()) ||
@@ -143,7 +147,8 @@ void debugUnparseWithModules(CompilerInstance &ci) {
 }
 
 void debugDumpParsingLog(CompilerInstance &ci) {
-  ci.getParsing().Parse(llvm::errs());
+  const common::LangOptions &langOptions = ci.getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::errs(), langOptions);
   ci.getParsing().DumpParsingLog(llvm::outs());
 }
 } // namespace Fortran::frontend

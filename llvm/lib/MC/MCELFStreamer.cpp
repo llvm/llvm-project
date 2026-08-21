@@ -18,9 +18,11 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -28,8 +30,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include <cassert>
@@ -48,14 +50,11 @@ ELFObjectWriter &MCELFStreamer::getWriter() {
   return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
-                    &STI);
-
-  if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+                    STI);
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -81,6 +80,13 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
 
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
+  if (isBundleLocked()) {
+    getContext().reportError(
+        getStartTokLoc(), "unterminated .bundle_lock when changing a section");
+    // Clean up bundle state to allow continuing.
+    BundleLocked = false;
+    BundleBA = nullptr;
+  }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
   const MCSymbol *Grp = SectionELF->getGroup();
   if (Grp)
@@ -152,6 +158,8 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_IndirectSymbol:
   case MCSA_Exported:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_NoDeadStrip:
@@ -272,8 +280,7 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                          " redeclared as different type");
   }
 
-  static_cast<MCSymbolELF *>(Symbol)->setSize(
-      MCConstantExpr::create(Size, getContext()));
+  Symbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
 void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
@@ -314,6 +321,88 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
   emitBytes(IdentString);
   emitInt8(0);
   popSection();
+}
+
+void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
+
+  if (!Asm.getBackend().allowBundling())
+    return getContext().reportError(
+        Loc, "aligned bundling is not supported by this target");
+  if (Asm.isBundlingEnabled()) {
+    if (Asm.getBundleAlign() != Alignment)
+      getContext().reportError(Loc,
+                               ".bundle_align_mode cannot be changed once set");
+    return;
+  }
+  // Enable bundling even after the error, to avoid cascading diagnostics from
+  // later .bundle_lock directives.
+  if (Asm.getBackend().allowAutoPadding())
+    getContext().reportError(
+        Loc, ".bundle_align_mode is incompatible with branch alignment");
+
+  setAllowAutoPadding(true);
+  Asm.setBundleAlign(Alignment);
+}
+
+void MCELFStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
+
+  if (!Asm.isBundlingEnabled())
+    return getContext().reportError(
+        Loc, ".bundle_lock forbidden when bundling is disabled");
+  if (isBundleLocked())
+    return getContext().reportError(Loc, "nested .bundle_lock is not allowed");
+  // Padding a group is only meaningful where nops are instructions.
+  if (!getCurrentSectionOnly()->isText())
+    return getContext().reportError(
+        Loc, ".bundle_lock is only allowed in an executable section");
+
+  BundleLocked = true;
+  BundleBA =
+      newSpecialFragment<MCBoundaryAlignFragment>(Asm.getBundleAlign(), STI);
+  BundleBA->setAlignToEnd(AlignToEnd);
+}
+
+void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
+
+  if (!Asm.isBundlingEnabled())
+    return getContext().reportError(
+        Loc, ".bundle_unlock forbidden when bundling is disabled");
+  if (!isBundleLocked())
+    return getContext().reportError(Loc,
+                                    ".bundle_unlock without matching lock");
+
+  BundleLocked = false;
+  MCFragment *CF = getCurrentFragment();
+  BundleBA->setLastFragment(CF);
+
+  uint64_t GroupSize = 0;
+  for (const MCFragment *F = BundleBA->getNext();; F = F->getNext()) {
+    if (F->getKind() == MCFragment::FT_Align ||
+        F->getKind() == MCFragment::FT_Org) {
+      getContext().reportError(Loc, "alignment and .org directives are not "
+                                    "supported inside a .bundle_lock group");
+      break;
+    }
+    GroupSize += Asm.computeFragmentSize(*F);
+    if (F == BundleBA->getLastFragment())
+      break;
+  }
+  BundleBA = nullptr;
+
+  if (GroupSize > Asm.getBundleAlign().value())
+    getContext().reportError(
+        Loc, ".bundle_lock group is larger than the bundle size");
+
+  newFragment();
+
+  CF->getParent()->ensureMinAlignment(Asm.getBundleAlign());
 }
 
 void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,
@@ -358,6 +447,16 @@ void MCELFStreamer::finalizeCGProfile() {
 }
 
 void MCELFStreamer::finishImpl() {
+  if (isBundleLocked())
+    getContext().reportError(getStartTokLoc(), "unterminated .bundle_lock");
+
+  // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
+  MCContext &Ctx = getContext();
+  auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,
+                                                    /*Exec=*/false);
+  if (StackSec && Ctx.getTargetOptions().MCNoExecStack)
+    switchSection(StackSec);
+
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {
     MCSection *DummyAttributeSection = nullptr;
@@ -365,8 +464,11 @@ void MCELFStreamer::finishImpl() {
                             DummyAttributeSection, GNUAttributes);
   }
 
+  if (Ctx.getTargetTriple().isLFI())
+    emitLFINoteSection(*this, Ctx);
+
   finalizeCGProfile();
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }

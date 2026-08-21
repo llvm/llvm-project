@@ -43,7 +43,8 @@ class SDNode;
 class SUnit;
 class ScheduleDAG;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
   /// Scheduling dependency. This represents one direction of an edge in the
@@ -237,7 +238,7 @@ class TargetRegisterInfo;
   };
 
   /// Keep record of which SUnit are in the same cluster group.
-  typedef SmallSet<SUnit *, 8> ClusterInfo;
+  typedef SmallPtrSet<SUnit *, 8> ClusterInfo;
   constexpr unsigned InvalidClusterId = ~0u;
 
   /// Return whether the input cluster ID's are the same and valid.
@@ -480,6 +481,8 @@ class TargetRegisterInfo;
     /// Orders this node's predecessor edges such that the critical path
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
+
+    bool isClustered() const { return ParentClusterIdx != InvalidClusterId; }
 
     LLVM_ABI void dumpAttributes() const;
 
@@ -743,6 +746,9 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
+    /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
+    /// The keys are SUnit NodeNums.
+    DenseMap<std::pair<int, int>, bool> Reachable;
 
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
     /// These nodes will later get new topological indexes by means of the Shift

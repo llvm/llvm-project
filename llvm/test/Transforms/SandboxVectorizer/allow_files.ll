@@ -1,11 +1,11 @@
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="some_other_file" %s -S | FileCheck %s --check-prefix=ALLOW_OTHER
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="allow_files.ll" %s -S | FileCheck %s --check-prefix=ALLOW_THIS
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="al.*_files.ll" %s -S | FileCheck %s --check-prefix=ALLOW_REGEX
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="some_file,.*_files.ll,some_other_file" %s -S | FileCheck %s --check-prefix=ALLOW_REGEX_CSV
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="allow" %s -S | FileCheck %s --check-prefix=ALLOW_BAD_REGEX
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="some_file,some_other_file1,some_other_file2" %s -S | FileCheck %s --check-prefix=ALLOW_OTHER_CSV
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" -sbvec-allow-files="" %s -S | FileCheck %s --check-prefix=ALLOW_EMPTY
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bottom-up-vec,tr-accept>" %s -S | FileCheck %s --check-prefix=DEFAULT
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="some_other_file" %s -S | FileCheck %s --check-prefix=ALLOW_OTHER
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="allow_files.ll" %s -S | FileCheck %s --check-prefix=ALLOW_THIS
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="al.*_files.ll" %s -S | FileCheck %s --check-prefix=ALLOW_REGEX
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="some_file,.*_files.ll,some_other_file" %s -S | FileCheck %s --check-prefix=ALLOW_REGEX_CSV
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="allow" %s -S | FileCheck %s --check-prefix=ALLOW_BAD_REGEX
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="some_file,some_other_file1,some_other_file2" %s -S | FileCheck %s --check-prefix=ALLOW_OTHER_CSV
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" -sbvec-allow-files="" %s -S | FileCheck %s --check-prefix=ALLOW_EMPTY
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -sbvec-allow-non-pow2 -sbvec-passes="seed-collection<tr-save,bundle-vec(bottom-up),tr-accept>" %s -S | FileCheck %s --check-prefix=DEFAULT
 
 ; Checks the command-line option `-sbvec-allow-files`.
 define void @widen(ptr %ptr) {

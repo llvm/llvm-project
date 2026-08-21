@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -317,8 +316,7 @@ public:
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
         LastEMS(EMS_None) {
-    auto *TO = getContext().getTargetOptions();
-    ImplicitMapSyms = TO && TO->ImplicitMapSyms;
+    ImplicitMapSyms = getContext().getTargetOptions().ImplicitMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {

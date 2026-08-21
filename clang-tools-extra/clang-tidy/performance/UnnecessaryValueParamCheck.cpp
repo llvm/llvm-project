@@ -1,4 +1,4 @@
-//===--- UnnecessaryValueParamCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,17 +21,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
-std::string paramNameOrIndex(StringRef Name, size_t Index) {
+static std::string paramNameOrIndex(StringRef Name, size_t Index) {
   return (Name.empty() ? llvm::Twine('#') + llvm::Twine(Index + 1)
                        : llvm::Twine('\'') + Name + llvm::Twine('\''))
       .str();
 }
 
-bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
-                         ASTContext &Context) {
-  auto Matches = match(
+static bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
+                                ASTContext &Context) {
+  const auto Matches = match(
       traverse(TK_AsIs,
                decl(forEachDescendant(declRefExpr(
                    equalsNode(&DeclRef),
@@ -40,8 +38,6 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
       Decl, Context);
   return Matches.empty();
 }
-
-} // namespace
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -55,11 +51,11 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
-      hasType(qualType(
-          hasCanonicalType(matchers::isExpensiveToCopy()),
-          unless(anyOf(hasCanonicalType(referenceType()),
-                       hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes))))))),
+      hasType(qualType(hasCanonicalType(matchers::isExpensiveToCopy()),
+                       unless(anyOf(hasCanonicalType(referenceType()),
+                                    hasDeclaration(namedDecl(
+                                        matchers::matchesAnyListedRegexName(
+                                            AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
       traverse(TK_AsIs,
@@ -77,7 +73,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   FunctionParmMutationAnalyzer *Analyzer =
       FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
@@ -94,10 +90,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // In this case wrap DeclRefExpr with std::move() to avoid the unnecessary
   // copy.
   if (!IsConstQualified) {
-    auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
+    const auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
         *Param, *Function, *Result.Context);
     if (AllDeclRefExprs.size() == 1) {
-      auto CanonicalType = Param->getType().getCanonicalType();
+      const auto CanonicalType = Param->getType().getCanonicalType();
       const auto &DeclRefExpr = **AllDeclRefExprs.begin();
 
       if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
@@ -141,7 +137,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
   const bool IsConstQualified =
       Param.getType().getCanonicalType().isConstQualified();
 
-  auto Diag =
+  const auto Diag =
       diag(Param.getLocation(),
            "the %select{|const qualified }0parameter %1 of type %2 is copied "
            "for each "
@@ -153,7 +149,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
   // 3. the function is an explicit template/ specialization.
-  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(&Function);
+  const auto *Method = dyn_cast<CXXMethodDecl>(&Function);
   if (Param.getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
       Function.getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
@@ -175,7 +171,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
                                                const DeclRefExpr &CopyArgument,
                                                ASTContext &Context) {
-  auto Diag =
+  const auto Diag =
       diag(CopyArgument.getBeginLoc(),
            "parameter %0 of type %1 is passed by value and only copied once; "
            "consider moving it to avoid unnecessary copies")
@@ -184,8 +180,8 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
   if (CopyArgument.getBeginLoc().isMacroID())
     return;
   const auto &SM = Context.getSourceManager();
-  auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM,
-                                           Context.getLangOpts());
+  const auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0,
+                                                 SM, Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")")
        << Inserter.createIncludeInsertion(

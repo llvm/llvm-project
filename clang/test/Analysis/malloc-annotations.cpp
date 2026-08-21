@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true %s
 

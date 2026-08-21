@@ -27,6 +27,8 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -214,11 +216,13 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  StringRef getMergeDestination(StringRef fromSection, StringRef toSection);
   void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
   void removeUnusedSections();
+  void layoutSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
                  MachineTypes machine);
@@ -263,7 +267,7 @@ private:
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
-  void fixTlsAlignment();
+  void fixTlsAlignment(SymbolTable &symtab);
   PartialSection *createPartialSection(StringRef name, uint32_t outChars);
   PartialSection *findPartialSection(StringRef name, uint32_t outChars);
 
@@ -280,6 +284,8 @@ private:
   void prepareLoadConfig();
   template <typename T>
   void prepareLoadConfig(SymbolTable &symtab, T *loadConfig);
+
+  void printSummary();
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
@@ -319,6 +325,7 @@ private:
   OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
+  OutputSection *cvinfoSec;
   OutputSection *dataSec;
   OutputSection *pdataSec;
   OutputSection *idataSec;
@@ -783,6 +790,7 @@ void Writer::run() {
     appendECImportTables();
     createDynamicRelocs();
     removeUnusedSections();
+    layoutSections();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -807,7 +815,7 @@ void Writer::run() {
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
     if (tlsAlignment)
-      fixTlsAlignment();
+      ctx.forEachSymtab([&](SymbolTable &symtab) { fixTlsAlignment(symtab); });
   }
 
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
@@ -821,6 +829,8 @@ void Writer::run() {
 
   writePEChecksum();
 
+  printSummary();
+
   if (errorCount())
     return;
 
@@ -831,8 +841,10 @@ void Writer::run() {
                << "': " << toString(std::move(e));
 }
 
-static StringRef getOutputSectionName(StringRef name) {
+static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
   StringRef s = name.split('$').first;
+  if (!isMinGW)
+    return s;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
@@ -1084,6 +1096,7 @@ void Writer::createSections() {
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
+  cvinfoSec = createSection(".cvinfo", data | r);
   dataSec = createSection(".data", data | r | w);
   pdataSec = createSection(".pdata", data | r);
   idataSec = createSection(".idata", data | r);
@@ -1103,6 +1116,10 @@ void Writer::createSections() {
       if (ctx.config.verbose)
         sc->printDiscardedMessage();
       continue;
+    }
+    if (auto *cc = dyn_cast<CommonChunk>(c)) {
+      if (!cc->live)
+        continue;
     }
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
@@ -1141,7 +1158,7 @@ void Writer::createSections() {
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    StringRef name = getOutputSectionName(pSec->name);
+    StringRef name = getOutputSectionName(pSec->name, ctx.config.mingw);
     uint32_t outChars = pSec->characteristics;
 
     if (name == ".CRT") {
@@ -1220,9 +1237,17 @@ void Writer::createMiscChunks() {
   });
 
   // Create Debug Information Chunks
-  debugInfoSec = config->mingw ? buildidSec : rdataSec;
+  if (config->mingw) {
+    debugInfoSec = buildidSec;
+  } else if (!config->mergeDebugDirectory) {
+    debugInfoSec = cvinfoSec;
+  } else {
+    debugInfoSec = rdataSec;
+  }
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || config->cetCompatStrict ||
+      config->cetCompatIpValidationRelaxed ||
+      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1243,10 +1268,26 @@ void Writer::createMiscChunks() {
     });
   }
 
-  if (config->cetCompat) {
-    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
-                              make<ExtendedDllCharacteristicsChunk>(
-                                  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  uint16_t ex_characteristics_flags = 0;
+  if (config->cetCompat)
+    ex_characteristics_flags |= IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT;
+  if (config->cetCompatStrict)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE;
+  if (config->cetCompatIpValidationRelaxed)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE;
+  if (config->cetCompatDynamicApisInProcOnly)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY;
+  if (config->hotpatchCompat)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE;
+
+  if (ex_characteristics_flags) {
+    debugRecords.emplace_back(
+        COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+        make<ExtendedDllCharacteristicsChunk>(ex_characteristics_flags));
   }
 
   // Align and add each chunk referenced by the debug data directory.
@@ -1292,7 +1333,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "
@@ -1411,6 +1452,33 @@ void Writer::removeUnusedSections() {
     return s->chunks.empty();
   };
   llvm::erase_if(ctx.outputSections, isUnused);
+}
+
+void Writer::layoutSections() {
+  llvm::TimeTraceScope timeScope("Layout sections");
+  if (ctx.config.sectionOrder.empty())
+    return;
+
+  llvm::stable_sort(ctx.outputSections,
+                    [this](const OutputSection *a, const OutputSection *b) {
+                      auto itA = ctx.config.sectionOrder.find(a->name.str());
+                      auto itB = ctx.config.sectionOrder.find(b->name.str());
+                      bool aInOrder = itA != ctx.config.sectionOrder.end();
+                      bool bInOrder = itB != ctx.config.sectionOrder.end();
+
+                      // Put unspecified sections after all specified sections
+                      if (aInOrder && bInOrder) {
+                        return itA->second < itB->second;
+                      } else if (aInOrder && !bInOrder) {
+                        return true; // ordered sections come before unordered
+                      } else {
+                        // (!aInOrder && bInOrder): unordered comes after
+                        // ordered
+                        // (!aInOrder && !bInOrder): both unspecified, preserve
+                        // the original order
+                        return false;
+                      }
+                    });
 }
 
 // The Windows loader doesn't seem to like empty sections,
@@ -1559,7 +1627,7 @@ void Writer::createSymbolAndStringTable() {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
                     createSymbol(dthunk->wrappedSym)) {
-              if (d->getName().size() > COFF::NameSize)
+              if (dthunk->wrappedSym->getName().size() > COFF::NameSize)
                 longNameSymbols.emplace_back(outputSymtab.size(),
                                              dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
@@ -1589,25 +1657,32 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
-void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
-  StringRef toName = p.second;
-  if (p.first == toName)
-    return;
+StringRef Writer::getMergeDestination(StringRef fromSection,
+                                      StringRef toSection) {
   StringSet<> names;
   while (true) {
-    if (!names.insert(toName).second)
-      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-    auto i = ctx.config.merge.find(toName);
+    if (!names.insert(toSection).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << fromSection << "'";
+    auto i = ctx.config.merge.find(toSection);
     if (i == ctx.config.merge.end())
       break;
-    toName = i->second;
+    toSection = i->second;
   }
+  return toSection;
+}
+
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  if (p.first == p.second)
+    return;
+
+  StringRef toSection = getMergeDestination(p.first, p.second);
+
   OutputSection *from = findSection(p.first);
-  OutputSection *to = findSection(toName);
+  OutputSection *to = findSection(toSection);
   if (!from)
     return;
   if (!to) {
-    from->name = toName;
+    from->name = toSection;
     return;
   }
   to->merge(from);
@@ -1649,8 +1724,17 @@ void Writer::mergeSections() {
   // whatever section it is being merged into (usually .data) so that the image
   // need not actually contain all of the zeros.
   auto it = ctx.config.merge.find(".bss");
-  if (it != ctx.config.merge.end())
-    mergeSection(*it);
+  if (it != ctx.config.merge.end()) {
+    // Resolve the final merge target name following the chain.
+    StringRef toSection = getMergeDestination(it->first, it->second);
+    // Don't merge .bss into a shared section. MSVC link.exe keeps .bss
+    // separate when the target has IMAGE_SCN_MEM_SHARED, preventing unexpected
+    // sharing across processes.
+    auto secIt = ctx.config.section.find(toSection);
+    if (secIt == ctx.config.section.end() ||
+        !(secIt->second & IMAGE_SCN_MEM_SHARED))
+      mergeSection({it->first, toSection});
+  }
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -1791,7 +1875,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1817,7 +1902,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1884,7 +1969,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {
@@ -2552,12 +2638,17 @@ void Writer::writeSections() {
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
         (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
       uint32_t prevEnd = 0;
+      uint32_t rawSize = sec->getRawSize();
       for (Chunk *c : sec->chunks) {
         uint32_t off = c->getRVA() - sec->getRVA();
+        // Chunks without data (e.g., .bss) have virtual addresses beyond
+        // rawSize; stop filling when we reach the end of raw data.
+        if (off >= rawSize)
+          break;
         memset(secBuf + prevEnd, 0xCC, off - prevEnd);
-        prevEnd = off + c->getSize();
+        prevEnd = std::min(off + static_cast<uint32_t>(c->getSize()), rawSize);
       }
-      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+      memset(secBuf + prevEnd, 0xCC, rawSize - prevEnd);
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {
@@ -2849,6 +2940,24 @@ void Writer::createDynamicRelocs() {
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
                          ctx.symtab.loadConfigSize);
+
+  auto nativeTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.hybridSymtab->findUnderscore("_tls_used"));
+  auto ecTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+  if (nativeTlsUsed || ecTlsUsed) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               TLS_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           Arm64XRelocVal(ecTlsUsed));
+    if (!nativeTlsUsed || !ecTlsUsed)
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          dataDirOffset64 + TLS_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          ecTlsUsed ? sizeof(coff_tls_directory64) : 0);
+  }
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2867,9 +2976,9 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
   return nullptr;
 }
 
-void Writer::fixTlsAlignment() {
+void Writer::fixTlsAlignment(SymbolTable &symtab) {
   Defined *tlsSym =
-      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+      dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used"));
   if (!tlsSym)
     return;
 
@@ -2998,4 +3107,44 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
 #undef IF_CONTAINS
 #undef CHECK_VA
 #undef CHECK_ABSOLUTE
+}
+
+void Writer::printSummary() {
+  if (!ctx.config.showSummary)
+    return;
+
+  SmallString<256> buffer;
+  raw_svector_ostream stream(buffer);
+
+  stream << center_justify("Summary", 80) << '\n'
+         << std::string(80, '-') << '\n';
+
+  auto print = [&](uint64_t v, StringRef s) {
+    stream << formatv("{0}",
+                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
+           << " " << s << '\n';
+  };
+
+  bool hasStats = ctx.pdbStats.has_value();
+
+  print(ctx.objFileInstances.size(),
+        "Input OBJ files (expanded from all cmd-line inputs)");
+  print(ctx.consumedInputsSize,
+        "Size of all consumed OBJ files (non-lazy), in bytes");
+  print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
+  print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
+  print(hasStats ? ctx.pdbStats->nbTypeRecords : 0, "Input debug type records");
+  print(hasStats ? ctx.pdbStats->nbTypeRecordsBytes : 0,
+        "Size of all input debug type records, in bytes");
+  print(hasStats ? ctx.pdbStats->nbTPIrecords : 0, "Merged TPI records");
+  print(hasStats ? ctx.pdbStats->nbIPIrecords : 0, "Merged IPI records");
+  print(hasStats ? ctx.pdbStats->strTabSize : 0, "Output PDB strings");
+  print(hasStats ? ctx.pdbStats->globalSymbols : 0, "Global symbol records");
+  print(hasStats ? ctx.pdbStats->moduleSymbols : 0, "Module symbol records");
+  print(hasStats ? ctx.pdbStats->publicSymbols : 0, "Public symbol records");
+
+  if (hasStats)
+    stream << ctx.pdbStats->largeInputTypeRecs;
+
+  Msg(ctx) << buffer;
 }

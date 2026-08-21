@@ -7,7 +7,7 @@ define dso_local void @gather_mask_dps(<16 x i32> %ind, <16 x float> %src, i16 %
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vscatterdps %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -24,7 +24,7 @@ define dso_local void @gather_mask_dpd(<8 x i32> %ind, <8 x double> %src, i8 %ma
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherdpd (%rsi,%ymm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vscatterdpd %zmm1, (%rdx,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -41,7 +41,7 @@ define dso_local void @gather_mask_qps(<8 x i64> %ind, <8 x float> %src, i8 %mas
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherqps (%rsi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -58,7 +58,7 @@ define dso_local void @gather_mask_qpd(<8 x i64> %ind, <8 x double> %src, i8 %ma
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherqpd (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vscatterqpd %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -78,7 +78,7 @@ define dso_local void @gather_mask_dd(<16 x i32> %ind, <16 x i32> %src, i16 %mas
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherdd (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpscatterdd %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -95,7 +95,7 @@ define dso_local void @gather_mask_qd(<8 x i64> %ind, <8 x i32> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherqd (%rsi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpscatterqd %ymm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -112,7 +112,7 @@ define dso_local void @gather_mask_qq(<8 x i64> %ind, <8 x i64> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherqq (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpscatterqq %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -129,7 +129,7 @@ define dso_local void @gather_mask_dq(<8 x i32> %ind, <8 x i64> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherdq (%rsi,%ymm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpscatterdq %zmm1, (%rdx,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -251,11 +251,11 @@ define dso_local void @scatter_mask_qps_execdomain(<8 x i64> %ind, ptr %src, i8 
 define dso_local void @gather_qps(<8 x i64> %ind, <8 x float> %src, ptr %base, ptr %stbuf) {
 ; CHECK-LABEL: gather_qps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k2
+; CHECK-NEXT:    kxnorb %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rsi,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -523,7 +523,7 @@ define <8 x float> @test_int_x86_avx512_mask_gather3siv8_sf(<8 x float> %x0, ptr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm0, %ymm0
@@ -774,7 +774,7 @@ define dso_local void@test_int_x86_avx512_scattersiv8_sf(ptr %x0, i8 %x1, <8 x i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vscatterdps %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -789,7 +789,7 @@ define dso_local void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -802,9 +802,9 @@ define dso_local void@test_int_x86_avx512_scattersiv8_si(ptr %x0, i8 %x1, <8 x i
 define dso_local void @scatter_mask_test(ptr %x0, <8 x i32> %x2, <8 x i32> %x3) {
 ; CHECK-LABEL: scatter_mask_test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,2) {%k1}
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
+; CHECK-NEXT:    kxorb %k0, %k0, %k1
 ; CHECK-NEXT:    vpscatterdd %ymm1, (%rdi,%ymm0,4) {%k1}
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    kmovd %eax, %k1
@@ -856,7 +856,7 @@ define <16 x float> @gather_mask_test(<16 x i32> %ind, <16 x float> %src, ptr %b
 define <8 x float> @gather_global(<8 x i64>, ptr nocapture readnone) {
 ; CHECK-LABEL: gather_global:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    kxnorb %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vgatherqps x(,%zmm0,4), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0

@@ -81,6 +81,7 @@ protected:
   friend class SBFileSpec;
   friend class SBFileSpecList;
   friend class SBFrame;
+  friend class SBFrameList;
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBInstructionList;
@@ -107,7 +108,7 @@ protected:
   friend class SBValue;
   friend class SBWatchpoint;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb_private::Stream *operator->();
 

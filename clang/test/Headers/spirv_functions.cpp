@@ -15,7 +15,7 @@
 // NV: call noundef ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi
 // NV: addrspacecast ptr %{{.*}} to ptr addrspace(1)
 // NV: addrspacecast ptr %{{.*}} to ptr addrspace(3)
-void test_cast(int* p) {
+[[clang::sycl_external]] void test_cast(int* p) {
   __spirv_GenericCastToPtrExplicit_ToGlobal(p, 5);
   __spirv_GenericCastToPtrExplicit_ToLocal(p, 4);
   __spirv_GenericCastToPtrExplicit_ToPrivate(p, 7);

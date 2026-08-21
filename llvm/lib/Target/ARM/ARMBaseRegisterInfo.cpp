@@ -232,6 +232,7 @@ getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, ARM::SP);
   markSuperRegs(Reserved, ARM::PC);
   markSuperRegs(Reserved, ARM::FPSCR);
+  markSuperRegs(Reserved, ARM::FPSCR_RM);
   markSuperRegs(Reserved, ARM::APSR_NZCV);
   if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, STI.getFramePointerReg());
@@ -310,8 +311,7 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-ARMBaseRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
-                                                                         const {
+ARMBaseRegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &ARM::GPRRegClass;
 }
 
@@ -447,6 +447,12 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
+  // For Windows SEH, the runtime does not preserve SP or R11 for EH funclets.
+  // Fortunately, R4-R10 are always preserved.
+  // Therefore, we force these functions to set up a base pointer.
+  if (MF.hasEHFunclets())
+    return true;
+
   // If we have stack realignment and VLAs, we have no pointer to use to
   // access the stack. If we have stack realignment, and a large call frame,
   // we have no place to allocate the emergency spill slot.
@@ -518,6 +524,16 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   if (TFI->hasFP(MF))
     return STI.getFramePointerReg();
   return ARM::SP;
+}
+
+unsigned
+ARMBaseRegisterInfo::getLocalAddressRegister(const MachineFunction &MF) const {
+  const auto &MFI = MF.getFrameInfo();
+  if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
+    return ARM::SP;
+  else if (MF.hasEHFunclets() || hasStackRealignment(MF))
+    return getBaseRegister();
+  return getFrameRegister(MF);
 }
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
@@ -708,7 +724,7 @@ ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   Register BaseReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0));
 
   MachineInstrBuilder MIB = BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
@@ -833,6 +849,13 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);
 
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    StackOffset Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    FI.ChangeToImmediate(Offset.getFixed());
+    return false;
+  }
+
   // PEI::scavengeFrameVirtualRegs() cannot accurately track SPAdj because the
   // call frame setup/destroy instructions have already been eliminated.  That
   // means the stack pointer cannot be used to access the emergency spill slot
@@ -881,8 +904,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register PredReg = (PIdx == -1) ? Register() : MI.getOperand(PIdx+1).getReg();
 
   const MCInstrDesc &MCID = MI.getDesc();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(MCID, FIOperandNum, this, *MI.getParent()->getParent());
+  const TargetRegisterClass *RegClass = TII.getRegClass(MCID, FIOperandNum);
 
   if (Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg)))
     // Must be addrmode4/6.
@@ -960,18 +982,4 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
     return true;
   }
   return false;
-}
-
-bool ARMBaseRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                               unsigned DefSubReg,
-                                               const TargetRegisterClass *SrcRC,
-                                               unsigned SrcSubReg) const {
-  // We can't extract an SPR from an arbitary DPR (as opposed to a DPR_VFP2).
-  if (DefRC == &ARM::SPRRegClass && DefSubReg == 0 &&
-      SrcRC == &ARM::DPRRegClass &&
-      (SrcSubReg == ARM::ssub_0 || SrcSubReg == ARM::ssub_1))
-    return false;
-
-  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
-                                                  SrcRC, SrcSubReg);
 }

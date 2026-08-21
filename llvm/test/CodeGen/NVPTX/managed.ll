@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %}
+; RUN: %if ptxas-isa-4.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %}
 
 ; RUN: not --crash llc < %s -mtriple=nvptx64 -mcpu=sm_20 2>&1 | FileCheck %s --check-prefix ERROR
 ; ERROR: LLVM ERROR: .attribute(.managed) requires PTX version >= 4.0 and sm_30
@@ -14,6 +14,12 @@
 ; CHECK: .extern .global .attribute(.managed) .align 8 .b64 managed_decl_g;
 @managed_decl_g = external addrspace(1) global ptr, align 8
 
-!nvvm.annotations = !{!0, !1}
+; A cyclic managed definition needs an exactly matching managed declaration.
+; CHECK:      .extern .global .attribute(.managed) .align 8 .u64 managed_self;
+; CHECK-NEXT: .visible .global .attribute(.managed) .align 8 .u64 managed_self = managed_self;
+@managed_self = addrspace(1) global ptr addrspace(1) @managed_self, align 8
+
+!nvvm.annotations = !{!0, !1, !2}
 !0 = !{ptr addrspace(1) @managed_g, !"managed", i32 1}
 !1 = !{ptr addrspace(1) @managed_decl_g, !"managed", i32 1}
+!2 = !{ptr addrspace(1) @managed_self, !"managed", i32 1}

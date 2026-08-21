@@ -18,8 +18,6 @@
 // If n <= 1, return n. If n is a power of 2, return n.
 // Otherwise, return the next power of 2.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__hash_table>
 #include <cassert>
 #include <cstdint>

@@ -68,7 +68,8 @@ concept __cpp17_default_constructible = is_default_constructible_v<_Tp>;
 template <class _Iter>
 concept __cpp17_iterator =
     __cpp17_copy_constructible<_Iter> && __cpp17_copy_assignable<_Iter> && __cpp17_destructible<_Iter> &&
-    (is_signed_v<__iter_diff_t<_Iter>> || is_void_v<__iter_diff_t<_Iter>>) && requires(_Iter __iter) {
+    (is_signed_v<__iterator_difference_type<_Iter>> || is_void_v<__iterator_difference_type<_Iter>>) &&
+    requires(_Iter __iter) {
       { *__iter };
       { ++__iter } -> same_as<_Iter&>;
     };
@@ -81,8 +82,8 @@ concept __cpp17_input_iterator =
       { __lhs != std::as_const(__rhs) } -> __boolean_testable;
       { std::as_const(__lhs) != std::as_const(__rhs) } -> __boolean_testable;
 
-      { *__lhs } -> same_as<__iter_reference<_Iter>>;
-      { *std::as_const(__lhs) } -> same_as<__iter_reference<_Iter>>;
+      { *__lhs } -> same_as<__iterator_reference<_Iter>>;
+      { *std::as_const(__lhs) } -> same_as<__iterator_reference<_Iter>>;
 
       { ++__lhs } -> same_as<_Iter&>;
       { (void)__lhs++ };
@@ -101,19 +102,19 @@ template <class _Iter>
 concept __cpp17_forward_iterator =
     __cpp17_input_iterator<_Iter> && __cpp17_default_constructible<_Iter> && requires(_Iter __iter) {
       { __iter++ } -> convertible_to<const _Iter&>;
-      { *__iter++ } -> same_as<__iter_reference<_Iter>>;
+      { *__iter++ } -> same_as<__iterator_reference<_Iter>>;
     };
 
 template <class _Iter>
 concept __cpp17_bidirectional_iterator = __cpp17_forward_iterator<_Iter> && requires(_Iter __iter) {
   { --__iter } -> same_as<_Iter&>;
   { __iter-- } -> convertible_to<const _Iter&>;
-  { *__iter-- } -> same_as<__iter_reference<_Iter>>;
+  { *__iter-- } -> same_as<__iterator_reference<_Iter>>;
 };
 
 template <class _Iter>
 concept __cpp17_random_access_iterator =
-    __cpp17_bidirectional_iterator<_Iter> && requires(_Iter __iter, __iter_diff_t<_Iter> __n) {
+    __cpp17_bidirectional_iterator<_Iter> && requires(_Iter __iter, __iterator_difference_type<_Iter> __n) {
       { __iter += __n } -> same_as<_Iter&>;
 
       { __iter + __n } -> same_as<_Iter>;
@@ -125,13 +126,13 @@ concept __cpp17_random_access_iterator =
       { __iter - __n } -> same_as<_Iter>;
       { std::as_const(__iter) - __n } -> same_as<_Iter>;
 
-      { __iter - __iter } -> same_as<__iter_diff_t<_Iter>>;
-      { std::as_const(__iter) - __iter } -> same_as<__iter_diff_t<_Iter>>;
-      { __iter - std::as_const(__iter) } -> same_as<__iter_diff_t<_Iter>>;
-      { std::as_const(__iter) - std::as_const(__iter) } -> same_as<__iter_diff_t<_Iter>>;
+      { __iter - __iter } -> same_as<__iterator_difference_type<_Iter>>;
+      { std::as_const(__iter) - __iter } -> same_as<__iterator_difference_type<_Iter>>;
+      { __iter - std::as_const(__iter) } -> same_as<__iterator_difference_type<_Iter>>;
+      { std::as_const(__iter) - std::as_const(__iter) } -> same_as<__iterator_difference_type<_Iter>>;
 
-      { __iter[__n] } -> convertible_to<__iter_reference<_Iter>>;
-      { std::as_const(__iter)[__n] } -> convertible_to<__iter_reference<_Iter>>;
+      { __iter[__n] } -> convertible_to<__iterator_reference<_Iter>>;
+      { std::as_const(__iter)[__n] } -> convertible_to<__iterator_reference<_Iter>>;
 
       { __iter < __iter } -> __boolean_testable;
       { std::as_const(__iter) < __iter } -> __boolean_testable;

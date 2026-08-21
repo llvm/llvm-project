@@ -21,7 +21,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -46,8 +45,12 @@ void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // sections because we don't have other cases that hit this problem yet.
   // if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
   //   QualName->setFragment(F);
-  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR)
-    Sec->getQualNameSymbol()->setFragment(CurFrag);
+  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR) {
+    MCSymbol *QualNameSymbol = Sec->getQualNameSymbol();
+    // Only set the fragment the first time we're switching to the section.
+    if (!QualNameSymbol->isInSection())
+      QualNameSymbol->setFragment(CurFrag);
+  }
 }
 
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -129,14 +132,14 @@ void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
-  auto *Sym = static_cast<MCSymbolXCOFF *>(Symbol);
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   getAssembler().registerSymbol(*Symbol);
-  Symbol->setExternal(Sym->getStorageClass() != XCOFF::C_HIDEXT);
+  Sym.setExternal(Sym.getStorageClass() != XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
 
   // Default csect align is 4, but common symbols have explicit alignment values
   // and we should honor it.
-  Sym->getRepresentedCsect()->setAlignment(ByteAlignment);
+  Sym.getRepresentedCsect()->setAlignment(ByteAlignment);
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);

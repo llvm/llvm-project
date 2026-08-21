@@ -9,12 +9,11 @@ define i32 @test_urem_odd(i32 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    mov w9, #13108 // =0x3334
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    movk w9, #13107, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
   %urem = urem i32 %X, 5
   %cmp = icmp eq i32 %urem, 0

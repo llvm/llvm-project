@@ -32,6 +32,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +45,6 @@
 #include <cstdint>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -55,11 +55,11 @@ using namespace llvm;
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
+namespace llvm {
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 extern cl::opt<bool> EnableVTableProfileUse;
-}
+} // namespace llvm
 
 // Command line option to disable indirect-call promotion with the default as
 // false. This is for debug purpose.
@@ -83,7 +83,7 @@ static cl::opt<unsigned>
 // ICP the candidate function even when only a declaration is present.
 static cl::opt<bool> ICPAllowDecls(
     "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the defintion "
+    cl::desc("Promote the target candidate even when the definition "
              " is not available"));
 
 // ICP hot candidate functions only. When setting to false, non-cold functions
@@ -161,13 +161,21 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "binary could be different due to profiling limitations. Type info "
         "names are those string literals used in LLVM type metadata"));
 
+static cl::opt<int> HotFuncCutoffForICP(
+    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(-1),
+    cl::desc("A count is hot for indirect call promotion if it exceeds "
+             "the minimum count to reach this percentile of total counts."
+             "Note that this percentile is specified as "
+             "percentile * 10000 = HotFuncCutoffForICP."
+             "Default value -1 means that if the flag is unspecified then "
+             "the value of ProfileSummaryCutoffHot will be used instead."));
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, std::unordered_map<int, Constant *>>;
+    SmallDenseMap<const GlobalVariable *, DenseMap<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -213,12 +221,11 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
   Module &M = *VTable->getParent();
   LLVMContext &Context = M.getContext();
-  assert(AddressPointOffset <
-             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+  assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
-  return ConstantExpr::getInBoundsGetElementPtr(
-      Type::getInt8Ty(Context), VTable,
+  return ConstantExpr::getInBoundsPtrAdd(
+      VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
@@ -642,9 +649,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    // There shouldn't be duplicate GUIDs in one !prof metadata (except
-    // duplicated zeros), so assign counters directly won't cause overwrite or
-    // counter loss.
+    // There should never be duplicate GUIDs in one !prof metdata, as this is
+    // an IR invariant enforced by the verifier. Assigning counters directly
+    // won't cause overwrite or counter loss.
     Candidate.VTableGUIDAndCounts[VTableVal] = V.Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));
@@ -672,8 +679,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       createBranchWeights(CB.getContext(), Count, TotalCount - Count));
 
   if (AttachProfToDirectCall)
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(NewInst, {Count},
+                           /*IsExpected=*/false);
 
   using namespace ore;
 
@@ -883,8 +890,14 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
                           << TotalCount << "\n");
         continue;
       }
-      // Only pormote hot if ICPAllowHotOnly is true.
-      if (ICPAllowHotOnly && !PSI->isHotCount(TotalCount)) {
+      // Only promote hot if ICPAllowHotOnly is true. ICP has its own cutoff
+      // threshold for hotness, which defaults to ProfileSummaryCutoffHot if
+      // unspecified.
+      if (ICPAllowHotOnly &&
+          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP == -1
+                                            ? ProfileSummaryCutoffHot
+                                            : HotFuncCutoffForICP,
+                                        TotalCount)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
         continue;

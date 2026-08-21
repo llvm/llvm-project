@@ -9,7 +9,6 @@
 #include "SchedClassResolution.h"
 
 #include <cassert>
-#include <memory>
 
 #include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"

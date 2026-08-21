@@ -153,6 +153,9 @@ __isl_give isl_printer *isl_printer_print_val(__isl_take isl_printer *p,
 void isl_val_dump(__isl_keep isl_val *v);
 __isl_give char *isl_val_to_str(__isl_keep isl_val *v);
 
+__isl_export
+isl_bool isl_multi_val_is_equal(__isl_keep isl_multi_val *mv1,
+	__isl_keep isl_multi_val *mv2);
 isl_bool isl_multi_val_is_zero(__isl_keep isl_multi_val *mv);
 
 __isl_overload

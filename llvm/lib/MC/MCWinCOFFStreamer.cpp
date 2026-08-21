@@ -30,7 +30,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
@@ -126,8 +125,7 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCObjectWriter> OW)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {
-  auto *TO = Context.getTargetOptions();
-  if (TO && TO->MCIncrementalLinkerCompatible)
+  if (Context.getTargetOptions().MCIncrementalLinkerCompatible)
     getWriter().setIncrementalLinkerCompatible(true);
 }
 
@@ -135,19 +133,18 @@ WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
   return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCWinCOFFStreamer::initSections(bool NoExecStack,
-                                     const MCSubtargetInfo &STI) {
+void MCWinCOFFStreamer::initSections(const MCSubtargetInfo &STI) {
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getDataSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getBSSSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }

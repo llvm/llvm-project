@@ -261,7 +261,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       return TL.getType().getLocalQualifiers().getAsString(
           Ctx.getPrintingPolicy());
     if (const auto *TT = dyn_cast<TagType>(TL.getTypePtr()))
-      return getDetail(TT->getOriginalDecl());
+      return getDetail(TT->getDecl());
     if (const auto *DT = dyn_cast<DeducedType>(TL.getTypePtr()))
       if (DT->isDeduced())
         return DT->getDeducedType().getAsString(Ctx.getPrintingPolicy());
@@ -347,8 +347,8 @@ public:
     });
   }
   bool TraverseTemplateName(const TemplateName &TN) {
-    return traverseNode("template name", TN,
-                        [&] { Base::TraverseTemplateName(TN); });
+    return TN.isNull() || traverseNode("template name", TN,
+                                       [&] { Base::TraverseTemplateName(TN); });
   }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
     return traverseNode("template argument", TAL,

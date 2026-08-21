@@ -9,14 +9,6 @@
 #include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
-// Match Android's default configuration, which disables Scudo's mismatch
-// allocation check, as it is being triggered by some third party code.
-#if SCUDO_ANDROID
-#define DEALLOC_TYPE_MISMATCH "false"
-#else
-#define DEALLOC_TYPE_MISMATCH "true"
-#endif
-
 static void EnableMemoryTaggingIfSupported() {
   if (!scudo::archSupportsMemoryTagging())
     return;
@@ -39,10 +31,12 @@ __scudo_default_options() {
   // will disable the feature entirely.
   EnableMemoryTaggingIfSupported();
   if (!UseQuarantine)
-    return "dealloc_type_mismatch=" DEALLOC_TYPE_MISMATCH;
+    return "dealloc_type_mismatch=true:delete_size_mismatch=true:dealloc_align_"
+           "mismatch=true";
   return "quarantine_size_kb=256:thread_local_quarantine_size_kb=128:"
          "quarantine_max_chunk_size=512:"
-         "dealloc_type_mismatch=" DEALLOC_TYPE_MISMATCH;
+         "dealloc_type_mismatch=true:delete_size_mismatch=true:dealloc_align_"
+         "mismatch=true";
 }
 
 #if !defined(SCUDO_NO_TEST_MAIN)

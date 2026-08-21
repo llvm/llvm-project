@@ -128,13 +128,13 @@ getOrderedPossibleShardingAttrs(ArrayRef<Sharding> mustShardings,
       curShardingAttrs.push_back(optionalShardings[i]);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
-      curShardingAttrs.push_back({});
+      curShardingAttrs.emplace_back();
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
       return;
     }
 
-    curShardingAttrs.push_back({});
+    curShardingAttrs.emplace_back();
     dfsCreateShardingAttrs(i + 1);
     curShardingAttrs.pop_back();
   };
@@ -153,7 +153,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<Sharding> mustShardings,
 //     `annotate_for_users`.
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
-ReshardingRquirementKind getReshardingRquirementKind(
+static ReshardingRquirementKind getReshardingRquirementKind(
     Operation *op, const std::vector<Sharding> &operandAndResultShardings) {
   ReshardingRquirementKind res = ReshardingRquirementKind::NO_RESHARDING;
 
@@ -184,7 +184,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
 
   for (auto [result, sharding] :
        llvm::zip_equal(op->getResults(), resultShardings)) {
-    for (auto user : result.getUsers()) {
+    for (auto *user : result.getUsers()) {
       ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
       if (!shardOp) {
         continue;
@@ -364,12 +364,19 @@ struct ShardingPropagation
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     Region &region = funcOp.getFunctionBody();
-    OpBuilder builder(ctx);
+
+    if (region.empty())
+      return;
+
+    Block &block = region.front();
+    // Nothing to propagate if there is no sharding annotation in the block.
+    if (block.getOps<shard::ShardOp>().empty())
+      return;
+
     if (!region.hasOneBlock()) {
       funcOp.emitOpError() << "only one block is supported!";
       return signalPassFailure();
     }
-    Block &block = region.front();
 
     LLVM_DEBUG(
         DBGS() << "print all the ops' iterator types and indexing maps in the "
@@ -379,6 +386,7 @@ struct ShardingPropagation
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
 
+    OpBuilder builder(ctx);
     auto traverse = [&](auto &&range, OpBuilder &builder,
                         const char *order) -> bool {
       for (Operation &op : range) {

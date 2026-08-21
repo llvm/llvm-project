@@ -36,6 +36,7 @@ namespace {
 
 struct SCFToControlFlowPass
     : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -382,8 +383,11 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison = arith::CmpIOp::create(
-      rewriter, loc, arith::CmpIPredicate::slt, iv, upperBound);
+  arith::CmpIPredicate predicate = forOp.getUnsignedCmp()
+                                       ? arith::CmpIPredicate::ult
+                                       : arith::CmpIPredicate::slt;
+  auto comparison =
+      arith::CmpIOp::create(rewriter, loc, predicate, iv, upperBound);
 
   cf::CondBranchOp::create(rewriter, loc, comparison, firstBodyBlock,
                            ArrayRef<Value>(), endBlock, ArrayRef<Value>());
@@ -680,7 +684,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
 
   // Convert the case regions.
   SmallVector<Block *> caseSuccessors;
-  SmallVector<int32_t> caseValues;
+  SmallVector<APInt> caseValues;
   caseSuccessors.reserve(op.getCases().size());
   caseValues.reserve(op.getCases().size());
   for (auto [region, value] : llvm::zip(op.getCaseRegions(), op.getCases())) {
@@ -688,7 +692,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
     if (failed(block))
       return failure();
     caseSuccessors.push_back(*block);
-    caseValues.push_back(value);
+    caseValues.push_back(APInt(64, value));
   }
 
   // Convert the default region.
@@ -700,13 +704,12 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   rewriter.setInsertionPointToEnd(condBlock);
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
 
-  // Cast switch index to integer case value.
+  // Cast switch index to i64 to avoid truncation for large case values.
   Value caseValue = arith::IndexCastOp::create(
-      rewriter, op.getLoc(), rewriter.getI32Type(), op.getArg());
+      rewriter, op.getLoc(), rewriter.getI64Type(), op.getArg());
 
   cf::SwitchOp::create(rewriter, op.getLoc(), caseValue, *defaultBlock,
-                       ValueRange(), rewriter.getDenseI32ArrayAttr(caseValues),
-                       caseSuccessors, caseOperands);
+                       ValueRange(), caseValues, caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
 }
@@ -733,7 +736,9 @@ void SCFToControlFlowPass::runOnOperation() {
   target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
                       scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns),
+                                    config)))
     signalPassFailure();
 }

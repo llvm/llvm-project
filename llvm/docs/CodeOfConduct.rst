@@ -171,6 +171,7 @@ The current committee members are:
 Transparency Reports
 ====================
 
+* `July 15, 2025 <https://discourse.llvm.org/t/llvm-code-of-conduct-transparency-report-july-15-2024-july-15-2025/88622>`_
 * `July 15, 2024 <https://discourse.llvm.org/t/llvm-code-of-conduct-transparency-report-july-15-2023-july-15-2024/82687>`_
 * `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
 * `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_

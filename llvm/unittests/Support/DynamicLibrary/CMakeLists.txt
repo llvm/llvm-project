@@ -16,7 +16,7 @@ set_output_directory(DynamicLibraryLib
   )
 
 # FIXME: Find out why AIX fails with new DynamicLibrary symbols behavior.
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_llvm_unittest(DynamicLibraryTests
     DynamicLibraryTest.cpp
     )
@@ -28,7 +28,7 @@ else()
     )
 endif()
 target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   export_executable_symbols(DynamicLibraryTests)
 endif()
 
@@ -64,7 +64,7 @@ endfunction(dynlib_add_module)
 
 # Revert -Wl,-z,nodelete on this test since it relies on the file
 # being unloaded.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   string(REPLACE "-Wl,-z,nodelete" "" CMAKE_MODULE_LINKER_FLAGS
     ${CMAKE_MODULE_LINKER_FLAGS})
 endif()

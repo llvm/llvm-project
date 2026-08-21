@@ -46,8 +46,13 @@ private:
       std::string_view v(__PRETTY_FUNCTION__);
       // Extract the "xyz" from the "pretty function" string:
       // "... [with T = xyz; std::string_view = ...]"
-      std::string_view front("with T = ");
+#ifdef __clang__
+      std::string_view front("[T = ");
+      std::string_view back("]");
+#else
+      std::string_view front("[with T = ");
       std::string_view back("; std::string_view =");
+#endif
 
 #elif defined(_MSC_VER)
 #define DUMP_EXPR_SHOW_TYPE
@@ -69,7 +74,6 @@ private:
         }
       }
 #endif
-
       return "";
     }
 
@@ -197,9 +201,22 @@ private:
     Show(op.right());
     Outdent();
   }
+  template <typename T> void Show(const evaluate::ConditionalExpr<T> &x) {
+    Indent("conditional expr "s + std::string(TypeOf<T>::name));
+    Indent("condition");
+    Show(x.condition());
+    Outdent();
+    Indent("then");
+    Show(x.thenValue());
+    Outdent();
+    Indent("else");
+    Show(x.elseValue());
+    Outdent();
+    Outdent();
+  }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
-    Indent("expr <" + std::string(TypeOf<T>::name) + ">");
+    Indent("expr <"s + std::string(TypeOf<T>::name) + ">"s);
     Show(x.u);
     Outdent();
   }

@@ -32,7 +32,7 @@ args = parser.parse_args()
 
 # Regexes to extract FDATA lines from input and parse FDATA and pre-aggregated
 # profile data
-prefix_pat = re.compile(f"^# {args.prefix}: (.*)")
+prefix_pat = re.compile(f"^(#|//) {args.prefix}: (.*)")
 
 # FDATA records:
 # <is symbol?> <closest elf symbol or DSO name> <relative FROM address>
@@ -61,7 +61,7 @@ with open(args.input, "r") as f:
         prefix_match = prefix_pat.match(line)
         if not prefix_match:
             continue
-        profile_line = prefix_match.group(1)
+        profile_line = prefix_match.group(2)
         fdata_match = fdata_pat.match(profile_line)
         preagg_match = preagg_pat.match(profile_line)
         nolbr_match = nolbr_pat.match(profile_line)

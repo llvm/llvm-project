@@ -111,11 +111,11 @@ def : Pat<(srem (sexti32 (i64 GPR:$rs1)), (sexti32 (i64 GPR:$rs2))),
           (REMW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtM, IsRV64]
 
-let Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba] in {
+let Predicates = [HasStdExtZmmul, IsRV64, NoStdExtZba] in {
 // Special case for calculating the full 64-bit product of a 32x32 unsigned
 // multiply where the inputs aren't known to be zero extended. We can shift the
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
-} // Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba]
+} // Predicates = [HasStdExtZmmul, IsRV64, NoStdExtZba]

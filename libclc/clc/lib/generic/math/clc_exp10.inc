@@ -69,7 +69,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_exp10(__CLC_GENTYPE x) {
                           0x1.000000p-1f),
                 r * r, r);
 
-  __CLC_GENTYPE two_to_jby64 = USE_TABLE(exp_tbl, j);
+  __CLC_GENTYPE two_to_jby64 = __CLC_USE_TABLE(exp_tbl, j);
   z2 = __clc_mad(two_to_jby64, z2, two_to_jby64);
 
   __CLC_GENTYPE z2s = z2 * __CLC_AS_GENTYPE((__CLC_UINTN)0x1 << (m + 149));
@@ -122,8 +122,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_exp10(__CLC_GENTYPE x) {
                         0x1.0000000000000p-1),
               1.0);
 
-  __CLC_GENTYPE tv0 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
-  __CLC_GENTYPE tv1 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
+  __CLC_GENTYPE tv0 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_head, j);
+  __CLC_GENTYPE tv1 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_tail, j);
   z2 = __clc_fma(tv0 + tv1, z2, tv1) + tv0;
 
   __CLC_INTN small_value =

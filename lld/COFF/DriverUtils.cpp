@@ -122,17 +122,19 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
   auto [sysStr, ver] = arg.split(',');
   std::string sysStrLower = sysStr.lower();
   *sys = StringSwitch<WindowsSubsystem>(sysStrLower)
-    .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
-    .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
-    .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
-    .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
-    .Case("efi_boot_service_driver", IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
-    .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
-    .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
-    .Case("native", IMAGE_SUBSYSTEM_NATIVE)
-    .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
-    .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
-    .Default(IMAGE_SUBSYSTEM_UNKNOWN);
+             .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
+             .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
+             .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
+             .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
+             .Case("efi_boot_service_driver",
+                   IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+             .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
+             .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+             .Case("native", IMAGE_SUBSYSTEM_NATIVE)
+             .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
+             .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
+             .Case("xbox", IMAGE_SUBSYSTEM_XBOX)
+             .Default(IMAGE_SUBSYSTEM_UNKNOWN);
   if (*sys == IMAGE_SUBSYSTEM_UNKNOWN && sysStrLower != "default")
     Fatal(ctx) << "unknown subsystem: " << sysStr;
   if (!ver.empty())
@@ -212,6 +214,43 @@ void LinkerDriver::parseSection(StringRef s) {
   if (name.empty() || attrs.empty())
     Fatal(ctx) << "/section: invalid argument: " << s;
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
+}
+
+// Parses /sectionlayout: option argument.
+void LinkerDriver::parseSectionLayout(StringRef path) {
+  if (path.starts_with("@"))
+    path = path.substr(1);
+  std::unique_ptr<MemoryBuffer> layoutFile =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  StringRef content = layoutFile->getBuffer();
+  int index = 0;
+
+  while (!content.empty()) {
+    size_t pos = content.find_first_of("\r\n");
+    StringRef line;
+
+    if (pos == StringRef::npos) {
+      line = content;
+      content = StringRef();
+    } else {
+      line = content.substr(0, pos);
+      content = content.substr(pos).ltrim("\r\n");
+    }
+
+    line = line.trim();
+    if (line.empty())
+      continue;
+
+    StringRef sectionName = line.split(' ').first;
+
+    if (ctx.config.sectionOrder.count(sectionName.str())) {
+      Warn(ctx) << "duplicate section '" << sectionName.str()
+                << "' in section layout file, ignoring";
+      continue;
+    }
+
+    ctx.config.sectionOrder[sectionName.str()] = index++;
+  }
 }
 
 void LinkerDriver::parseDosStub(StringRef path) {
@@ -403,7 +442,7 @@ std::string LinkerDriver::createDefaultXml() {
      << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
      << "          manifestVersion=\"1.0\">\n";
   if (ctx.config.manifestUAC) {
-    os << "  <trustInfo>\n"
+    os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"
        << "         <requestedExecutionLevel level=" << ctx.config.manifestLevel
@@ -824,6 +863,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
       Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
                 << "', did you mean '" << nearest << "'";
   }
+
+  if (args.hasArg(OPT_link))
+    Warn(ctx) << "ignoring /link, did you pass it multiple times?";
 
   if (args.hasArg(OPT_lib))
     Warn(ctx) << "ignoring /lib since it's not the first argument";

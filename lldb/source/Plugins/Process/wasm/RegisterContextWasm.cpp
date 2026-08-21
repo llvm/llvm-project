@@ -21,9 +21,9 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private::wasm;
 
-RegisterContextWasm::RegisterContextWasm(
-    wasm::ThreadWasm &thread, uint32_t concrete_frame_idx,
-    GDBRemoteDynamicRegisterInfoSP reg_info_sp)
+RegisterContextWasm::RegisterContextWasm(ThreadGDBRemote &thread,
+                                         uint32_t concrete_frame_idx,
+                                         DynamicRegisterInfoSP reg_info_sp)
     : GDBRemoteRegisterContext(thread, concrete_frame_idx, reg_info_sp, false,
                                false) {}
 
@@ -64,14 +64,27 @@ const RegisterSet *RegisterContextWasm::GetRegisterSet(size_t reg_set) {
 
 bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
                                        RegisterValue &value) {
-  // The only real registers is the PC.
-  if (reg_info->name)
+  ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
+
+  // The only real register is the PC.
+  if (reg_info->name) {
+    // A caller frame's PC is the unwound return address, which the base
+    // register context cannot provide because it only sees the innermost
+    // frame's live PC. Use the PC the unwinder recorded for this frame.
+    if (m_concrete_frame_idx > 0) {
+      lldb::addr_t pc = wasm_thread.GetConcreteFramePC(m_concrete_frame_idx);
+      if (pc != LLDB_INVALID_ADDRESS) {
+        value.SetUInt(pc, reg_info->byte_size);
+        return true;
+      }
+    }
     return GDBRemoteRegisterContext::ReadRegister(reg_info, value);
+  }
 
   // Read the virtual registers.
-  ThreadWasm *thread = static_cast<ThreadWasm *>(&GetThread());
-  ProcessWasm *process = static_cast<ProcessWasm *>(thread->GetProcess().get());
-  if (!thread)
+  ProcessWasm *process =
+      static_cast<ProcessWasm *>(wasm_thread.GetProcess().get());
+  if (!process)
     return false;
 
   uint32_t frame_index = m_concrete_frame_idx;

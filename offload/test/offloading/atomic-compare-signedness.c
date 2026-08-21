@@ -7,6 +7,8 @@
 // RUN: %libomptarget-run-generic | %fcheck-generic
 // RUN: %libomptarget-compileopt-generic -fopenmp-version=51
 // RUN: %libomptarget-run-generic | %fcheck-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 // High parallelism increases our chances of detecting a lack of atomicity.
 #define NUM_THREADS_TRY 256

@@ -14,7 +14,6 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 
 namespace Fortran::parser {
@@ -49,8 +48,9 @@ constexpr auto executableConstruct{first(
     construct<ExecutableConstruct>(indirect(Parser<SelectTypeConstruct>{})),
     construct<ExecutableConstruct>(indirect(whereConstruct)),
     construct<ExecutableConstruct>(indirect(forallConstruct)),
-    construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
     construct<ExecutableConstruct>(indirect(openmpConstruct)),
+    construct<ExecutableConstruct>(indirect(openmpMisplacedEndDirective)),
+    construct<ExecutableConstruct>(indirect(openmpInvalidDirective)),
     construct<ExecutableConstruct>(indirect(Parser<OpenACCConstruct>{})),
     construct<ExecutableConstruct>(indirect(compilerDirective)),
     construct<ExecutableConstruct>(indirect(Parser<CUFKernelDoConstruct>{})))};
@@ -65,21 +65,26 @@ constexpr auto obsoleteExecutionPartConstruct{recovery(ignoredStatementPrefix >>
         statement("REDIMENSION" >> name /
                 parenthesized(nonemptyList(Parser<AllocateShapeSpec>{}))))))};
 
-TYPE_PARSER(recovery(
-    CONTEXT_PARSER("execution part construct"_en_US,
-        first(construct<ExecutionPartConstruct>(executableConstruct),
-            construct<ExecutionPartConstruct>(statement(indirect(formatStmt))),
-            construct<ExecutionPartConstruct>(statement(indirect(entryStmt))),
-            construct<ExecutionPartConstruct>(statement(indirect(dataStmt))),
-            extension<LanguageFeature::ExecutionPartNamelist>(
-                "nonstandard usage: NAMELIST in execution part"_port_en_US,
+// The "!consumedAllInput >>" test prevents a cascade of errors at EOF.
+TYPE_PARSER(!consumedAllInput >>
+    recovery(
+        CONTEXT_PARSER("execution part construct"_en_US,
+            first(construct<ExecutionPartConstruct>(executableConstruct),
                 construct<ExecutionPartConstruct>(
-                    statement(indirect(Parser<NamelistStmt>{})))),
-            obsoleteExecutionPartConstruct,
-            lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
-                fail<ExecutionPartConstruct>(
-                    "misplaced declaration in the execution part"_err_en_US))),
-    construct<ExecutionPartConstruct>(executionPartErrorRecovery)))
+                    statement(indirect(formatStmt))),
+                construct<ExecutionPartConstruct>(
+                    statement(indirect(entryStmt))),
+                construct<ExecutionPartConstruct>(
+                    statement(indirect(dataStmt))),
+                extension<LanguageFeature::ExecutionPartNamelist>(
+                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
+                    construct<ExecutionPartConstruct>(
+                        statement(indirect(Parser<NamelistStmt>{})))),
+                obsoleteExecutionPartConstruct,
+                lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
+                    fail<ExecutionPartConstruct>(
+                        "misplaced declaration in the execution part"_err_en_US))),
+        construct<ExecutionPartConstruct>(executionPartErrorRecovery)))
 
 // R509 execution-part -> executable-construct [execution-part-construct]...
 TYPE_CONTEXT_PARSER("execution part"_en_US,
@@ -577,7 +582,9 @@ TYPE_PARSER("<<<" >>
 
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)),
+        // Accept !$CUF KERNEL DO, !$CUF KERNEL DO(), and
+        // !$CUF KERNEL DO(<scalar-int-constant-expr>).
+        defaulted(parenthesized(maybe(scalarIntConstantExpr))),
         maybe(Parser<CUFKernelDoConstruct::LaunchConfiguration>{}),
         many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,

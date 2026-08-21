@@ -563,7 +563,7 @@ public:
   }
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const clang::TypedefNameDecl *, 4> &Decls) override {
+      llvm::SmallPtrSetImpl<const clang::TypedefNameDecl *> &Decls) override {
     for (auto &Source : Sources)
       Source->ReadUnusedLocalTypedefNameCandidates(Decls);
   }
@@ -580,6 +580,13 @@ public:
           &WI) override {
     for (auto &Source : Sources)
       Source->ReadWeakUndeclaredIdentifiers(WI);
+  }
+
+  void ReadExtnameUndeclaredIdentifiers(
+      llvm::SmallVectorImpl<std::pair<clang::IdentifierInfo *,
+                                      clang::AsmLabelAttr *>> &EI) override {
+    for (auto &Source : Sources)
+      Source->ReadExtnameUndeclaredIdentifiers(EI);
   }
 
   void ReadUsedVTables(

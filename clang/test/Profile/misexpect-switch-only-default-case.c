@@ -1,7 +1,7 @@
 // Test that misexpect emits no warning when there is only one switch case
 
 // RUN: llvm-profdata merge %S/Inputs/misexpect-switch-default-only.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -verify -Wmisexpect -debug-info-kind=line-tables-only
+// RUN: %clang_cc1 %s -O2 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -verify -Wmisexpect -debug-info-kind=line-tables-only
 
 // expected-no-diagnostics
 

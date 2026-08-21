@@ -175,7 +175,7 @@ define void @early_128_128(i1 %flag) {
 ; CHECK-LABEL: early_128_128:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #320
-; CHECK-NEXT:    str x29, [sp, #304] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #304] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 320
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    tbz w0, #0, .LBB7_4

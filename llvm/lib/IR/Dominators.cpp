@@ -49,18 +49,6 @@ static constexpr bool ExpensiveChecksEnabled = true;
 static constexpr bool ExpensiveChecksEnabled = false;
 #endif
 
-bool BasicBlockEdge::isSingleEdge() const {
-  unsigned NumEdgesToEnd = 0;
-  for (const BasicBlock *Succ : successors(Start)) {
-    if (Succ == End)
-      ++NumEdgesToEnd;
-    if (NumEdgesToEnd >= 2)
-      return false;
-  }
-  assert(NumEdgesToEnd == 1);
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //  DominatorTree Implementation
 //===----------------------------------------------------------------------===//
@@ -78,50 +66,6 @@ template class LLVM_EXPORT_TEMPLATE
     llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
 
 template class llvm::cfg::Update<BasicBlock *>;
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::CalculateWithUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BBUpdates U);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT);
-// No CalculateWithUpdates<PostDomTree> instantiation, unless a usecase arises.
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, DomTreeBuilder::BBDomTreeGraphDiff &,
-    DomTreeBuilder::BBDomTreeGraphDiff *);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, DomTreeBuilder::BBPostDomTreeGraphDiff &,
-    DomTreeBuilder::BBPostDomTreeGraphDiff *);
-
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
-    const DomTreeBuilder::BBDomTree &DT,
-    DomTreeBuilder::BBDomTree::VerificationLevel VL);
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBPostDomTree>(
-    const DomTreeBuilder::BBPostDomTree &DT,
-    DomTreeBuilder::BBPostDomTree::VerificationLevel VL);
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
@@ -419,9 +363,7 @@ PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
 
 char DominatorTreeWrapperPass::ID = 0;
 
-DominatorTreeWrapperPass::DominatorTreeWrapperPass() : FunctionPass(ID) {
-  initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DominatorTreeWrapperPass::DominatorTreeWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS(DominatorTreeWrapperPass, "domtree",
                 "Dominator Tree Construction", true, true)

@@ -62,7 +62,7 @@ static LogicalResult legalizeBlockArguments(Block &block, Operation *op,
 namespace {
 /// Converts cf.br to spirv.Branch.
 struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(cf::BranchOp op, OpAdaptor adaptor,
@@ -79,7 +79,7 @@ struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
 
 /// Converts cf.cond_br to spirv.BranchConditional.
 struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(cf::CondBranchOp op, OpAdaptor adaptor,

@@ -529,7 +529,7 @@ PGI passes host instance links in descriptors in additional arguments
 that are not always successfully forwarded across implicit interfaces,
 sometimes leading to crashes when they turn out to be needed.
 
-F18 will manage a pool of trampolines in its runtime support library
+Flang will manage a pool of trampolines in its runtime support library
 that can be used to pass internal procedures as effective arguments
 to F77ish procedures, so that
 a bare code address can serve to represent the effective argument.
@@ -569,14 +569,14 @@ Fortran 2018 explicitly enables us to do this with a correction to Fortran
 2003 in 4.3.4(5).
 
 Last, there must be reasonably permanent naming conventions used
-by the F18 runtime library for those unrestricted specific intrinsic
+by Flang's runtime library for those unrestricted specific intrinsic
 functions (table 16.2 in 16.8) and extensions that can be passed as
 arguments.
 
 In these cases where external naming is at the discretion
 of the implementation, we should use names that are not in the C language
 user namespace, begin with something that identifies
-the current incompatible version of F18, the module, the submodule, and
+the current incompatible version of Flang, the module, the submodule, and
 elemental SIMD width, and are followed by the external name.
 The parts of the external name can be separated by some character that
 is acceptable for use in LLVM IR and assembly language but not in user

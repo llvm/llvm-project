@@ -22,6 +22,9 @@
 // We don't control the implementation of these functions on windows
 // UNSUPPORTED: windows
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cmath>
 #include <cstdlib>
 #include <cassert>
@@ -200,9 +203,9 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmaf(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmal(1.0L, 1.0L, 1.0L) == 2.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0f) == FP_NORMAL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0) == FP_NORMAL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0L) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0f) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0L) == FP_NORMAL);
 
   ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0f) == 1);
   ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0) == 1);
@@ -220,40 +223,33 @@ int main(int, char**) {
   ASSERT_CONSTEXPR_CXX23(std::isnormal(-1.0) == 1);
   ASSERT_CONSTEXPR_CXX23(std::isnormal(-1.0L) == 1);
 
-// TODO(LLVM 22): Remove `__has_constexpr_builtin` conditional once support for Clang 19 is dropped.
-#if !__has_constexpr_builtin(__builtin_signbit)
-  ASSERT_NOT_CONSTEXPR_CXX23(std::signbit(-1.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::signbit(-1.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::signbit(-1.0L) == 1);
-#else
   ASSERT_CONSTEXPR_CXX23(std::signbit(-1.0f) == 1);
   ASSERT_CONSTEXPR_CXX23(std::signbit(-1.0) == 1);
   ASSERT_CONSTEXPR_CXX23(std::signbit(-1.0L) == 1);
-#endif
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreater(-1.0f, 0.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreater(-1.0, 0.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreater(-1.0L, 0.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreater(-1.0f, 0.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreater(-1.0, 0.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreater(-1.0L, 0.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0f, 0.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0, 0.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0L, 0.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0f, 0.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0, 0.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0L, 0.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0f, 0.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0, 0.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0L, 0.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0f, 0.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0, 0.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0L, 0.0L) == 0);
 
   assert(!ImplementedP0533R9 && R"(
 Congratulations! You just have implemented P0533R9 (https://wg21.link/p0533r9).

@@ -8,8 +8,13 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
+filegroup(
+    name = "siphash_header",
+    srcs = ["include/siphash/SipHash.h"],
+)
+
 cc_library(
     name = "siphash",
-    hdrs = ["include/siphash/SipHash.h"],
+    hdrs = [":siphash_header"],
     strip_include_prefix = "include",
 )

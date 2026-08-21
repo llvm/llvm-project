@@ -26,15 +26,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Container>
 class back_insert_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<output_iterator_tag, void, void, void, void>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+    : public __iterator_base<back_insert_iterator<_Container>, output_iterator_tag, void, void, void, void> {
 protected:
   _Container* container;
 
@@ -64,7 +58,9 @@ public:
     return *this;
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 back_insert_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 back_insert_iterator& operator*() {
+    return *this;
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 back_insert_iterator& operator++() { return *this; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 back_insert_iterator operator++(int) { return *this; }
 

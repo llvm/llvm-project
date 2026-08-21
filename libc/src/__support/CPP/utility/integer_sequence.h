@@ -5,11 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
 
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/macros/config.h"
+
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -33,6 +36,13 @@ template <typename T> struct make_integer_sequence<T, -1> {
 template <typename T, int N>
 using make_integer_sequence =
     typename detail::make_integer_sequence<T, N - 1>::type;
+
+// index sequence
+template <size_t... Ints>
+using index_sequence = integer_sequence<size_t, Ints...>;
+template <int N>
+using make_index_sequence =
+    typename detail::make_integer_sequence<size_t, N - 1>::type;
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL

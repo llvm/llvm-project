@@ -15,12 +15,37 @@
 
 #include "llvm/Support/CommandLine.h"
 
+namespace llvm {
+namespace bolt {
+class BinaryFunction;
+}
+} // namespace llvm
+
 namespace opts {
 
 enum HeatmapModeKind {
   HM_None = 0,
   HM_Exclusive, // llvm-bolt-heatmap
   HM_Optional   // perf2bolt --heatmap
+};
+
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split each function into N fragments at a randomly chosen split points
+  /// (ignoring any available profiling information).
+  RandomN,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
 };
 
 using HeatmapBlockSizes = std::vector<unsigned>;
@@ -47,6 +72,14 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
+extern llvm::cl::opt<bool> AlignBlocks;
+extern llvm::cl::opt<unsigned> AlignBlocksMinSize;
+extern llvm::cl::opt<unsigned> AlignBlocksThreshold;
+extern llvm::cl::opt<unsigned> AlignFunctionsMaxBytes;
+extern llvm::cl::opt<unsigned> BlockAlignment;
+extern llvm::cl::opt<bool> PreserveBlocksAlignment;
+extern llvm::cl::opt<bool> UseCompactAligner;
+extern llvm::cl::opt<bool> X86AlignBranchBoundaryHotOnly;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
@@ -69,12 +102,14 @@ extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
-extern llvm::cl::opt<std::string> PerfData;
+extern llvm::cl::list<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
+extern llvm::cl::opt<bool> UpdateBranchProtection;
+extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;
@@ -97,12 +132,37 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
 
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> FixBranchesWithLiveness;
+
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 
-enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+/// Return true if we should dump dot graphs for the given function.
+bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
+/// Bitmask representing a subset of possible gadget kinds.
+enum GadgetKindBitmask : unsigned {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
+
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 

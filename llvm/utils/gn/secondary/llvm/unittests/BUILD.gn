@@ -8,6 +8,7 @@ group("unittests") {
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
     "Bitstream:BitstreamTests",
+    "CAS:CASTests",
     "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
 
@@ -32,6 +33,7 @@ group("unittests") {
     "FileCheck:FileCheckTests",
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
+    "HTTP:HTTPTests",
     "IR:IRTests",
     "InterfaceStub:InterfaceStubTests",
     "LineEditor:LineEditorTests",
@@ -50,6 +52,7 @@ group("unittests") {
     "SandboxIR:SandboxIRTests",
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
+    "Support/LSP:LSPTests",
     "TableGen:TableGenTests",
     "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",

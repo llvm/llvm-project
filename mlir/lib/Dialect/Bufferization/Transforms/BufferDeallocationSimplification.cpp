@@ -37,8 +37,12 @@ using namespace mlir::bufferization;
 /// Given a memref value, return the "base" value by skipping over all
 /// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
 static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>()) {
+    if (value != viewLikeOp.getViewDest()) {
+      break;
+    }
     value = viewLikeOp.getViewSource();
+  }
   return value;
 }
 
@@ -465,12 +469,24 @@ struct BufferDeallocationSimplificationPass
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
                                                                 analysis);
 
-    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
     // We don't want that the block structure changes invalidating the
     // `BufferOriginAnalysis` so we apply the rewrites with `Normal` level of
-    // region simplification
+    // region simplification and disable folding.
     if (failed(applyPatternsGreedily(
             getOperation(), std::move(patterns),
+            GreedyRewriteConfig()
+                .setRegionSimplificationLevel(GreedySimplifyRegionLevel::Normal)
+                .enableFolding(false))))
+      signalPassFailure();
+
+    // We run canonicalization separately so it can benefit from
+    // folding, which was disabled previously to avoid invalidating
+    // `BufferOriginAnalysis`.
+    RewritePatternSet canonicalizationPatterns(&getContext());
+    populateDeallocOpCanonicalizationPatterns(canonicalizationPatterns,
+                                              &getContext());
+    if (failed(applyPatternsGreedily(
+            getOperation(), std::move(canonicalizationPatterns),
             GreedyRewriteConfig().setRegionSimplificationLevel(
                 GreedySimplifyRegionLevel::Normal))))
       signalPassFailure();

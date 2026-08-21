@@ -41,7 +41,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <list>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -120,6 +119,14 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
   return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
+/// Return the prefix of the name of the variables to function as a filter.
+inline StringRef getInstrProfVarPrefix() { return "__prof"; }
+
+/// Return the name of the GPU wave-cooperative counter increment helper.
+inline StringRef getInstrProfInstrumentGPUFuncName() {
+  return INSTR_PROF_INSTRUMENT_GPU_FUNC_STR;
+}
+
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
@@ -144,6 +151,10 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 /// Return the name of the variable holding the strings (possibly compressed)
 /// of all function's PGO names.
 inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
+
+inline StringRef getInstrProfNamesVarPostfixVarName() {
+  return "__llvm_prf_nm_postfix";
+}
 
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
@@ -423,6 +434,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  coverage_count_mismatch,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -507,9 +519,9 @@ class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
-  // Returns the canonical name of the given PGOName. In a canonical name, all
-  // suffixes that begins with "." except ".__uniq." are stripped.
-  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  // Returns the canonical name of the given PGOName. This shares the same
+  // logic of FunctionSamples::getCanonicalFnName() but only strips ".llvm."
+  // and ".part", and leaves out ".__uniq.".
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
 private:
@@ -526,24 +538,27 @@ private:
   // so it doesn't use a StringSet for function names.
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
-  std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
+  mutable std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
-  std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
+  mutable std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
   // A map from MD5 to the global variable. This map is only populated when
   // building the symtab from a module. Use separate container instances for
   // `MD5FuncMap` and `MD5VTableMap`.
   // TODO: Unify the container type and the lambda function 'mapName' inside
   // add{Func,VTable}WithName.
-  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
+  mutable DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
-  AddrHashMap AddrToMD5Map;
+  mutable AddrHashMap AddrToMD5Map;
 
   AddrIntervalMap::Allocator VTableAddrMapAllocator;
   // This map is only populated and used by raw instr profile reader.
   AddrIntervalMap VTableAddrMap;
-  bool Sorted = false;
+
+  // "dirty" flag for the rest of the mutable state. lookup APIs (like
+  // getFunction) need the mutable state to be sorted.
+  mutable bool Sorted = false;
 
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
 
@@ -565,8 +580,10 @@ private:
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
   // This is required because the underlying map is a vector (for space
-  // efficiency) which needs to be sorted.
-  inline void finalizeSymtab();
+  // efficiency) which needs to be sorted. The API is `const` because it's part
+  // of the implementation detail of `const` APIs that need to first ensure this
+  // property of ordering on the other mutable state.
+  inline void finalizeSymtab() const;
 
 public:
   InstrProfSymtab() : VTableAddrMap(VTableAddrMapAllocator) {}
@@ -660,6 +677,10 @@ public:
     return Error::success();
   }
 
+  const std::vector<std::pair<uint64_t, Function *>> &getIDToNameMap() const {
+    return MD5FuncMap;
+  }
+
   const StringSet<> &getVTableNames() const { return VTableNames; }
 
   /// Map a function address to its name's MD5 hash. This interface
@@ -676,24 +697,25 @@ public:
   }
 
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
-  LLVM_ABI uint64_t getFunctionHashFromAddress(uint64_t Address);
+  LLVM_ABI uint64_t getFunctionHashFromAddress(uint64_t Address) const;
 
   /// Return a vtable's hash, or 0 if the vtable doesn't exist in this SymTab.
-  LLVM_ABI uint64_t getVTableHashFromAddress(uint64_t Address);
+  LLVM_ABI uint64_t getVTableHashFromAddress(uint64_t Address) const;
 
   /// Return function's PGO name from the function name's symbol
   /// address in the object file. If an error occurs, return
   /// an empty string.
-  LLVM_ABI StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
+  LLVM_ABI StringRef getFuncName(uint64_t FuncNameAddress,
+                                 size_t NameSize) const;
 
   /// Return name of functions or global variables from the name's md5 hash
   /// value. If not found, return an empty string.
-  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash);
+  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash) const;
 
   /// Just like getFuncOrVarName, except that it will return literal string
   /// 'External Symbol' if the function or global variable is external to
   /// this symbol table.
-  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash);
+  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash) const;
 
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
@@ -701,11 +723,11 @@ public:
   }
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
-  inline Function *getFunction(uint64_t FuncMD5Hash);
+  inline Function *getFunction(uint64_t FuncMD5Hash) const;
 
   /// Return the global variable corresponding to md5 hash. Return nullptr if
   /// not found.
-  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash) const;
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -748,24 +770,24 @@ Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
   return Error::success();
 }
 
-void InstrProfSymtab::finalizeSymtab() {
+void InstrProfSymtab::finalizeSymtab() const {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
-  llvm::sort(MD5FuncMap, less_first());
+  llvm::stable_sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(llvm::unique(AddrToMD5Map), AddrToMD5Map.end());
   Sorted = true;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
-  StringRef ret = getFuncOrVarName(MD5Hash);
-  if (ret.empty())
+StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) const {
+  StringRef Ret = getFuncOrVarName(MD5Hash);
+  if (Ret.empty())
     return InstrProfSymtab::getExternalSymbol();
-  return ret;
+  return Ret;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
+StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) const {
   finalizeSymtab();
   auto Result = llvm::lower_bound(MD5NameMap, MD5Hash,
                                   [](const std::pair<uint64_t, StringRef> &LHS,
@@ -775,7 +797,7 @@ StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   return StringRef();
 }
 
-Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
+Function *InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) const {
   finalizeSymtab();
   auto Result = llvm::lower_bound(MD5FuncMap, FuncMD5Hash,
                                   [](const std::pair<uint64_t, Function *> &LHS,
@@ -785,7 +807,7 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
   return nullptr;
 }
 
-GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) const {
   return MD5VTableMap.lookup(MD5Hash);
 }
 
@@ -885,6 +907,14 @@ struct InstrProfValueSiteRecord {
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
+  /// For AMDGPU offload profiling: raw or merged uniform counters. One uint64_t
+  /// per instrumented block, tracking entries where all lanes were active.
+  std::vector<uint64_t> UniformCounts;
+  /// For AMDGPU offload profiling: 1 bit per basic block indicating whether
+  /// the block is usually entered with all lanes active. Raw uniform counters
+  /// are reduced to these bits when profiles are written or merged.
+  std::vector<uint8_t> UniformityBits;
+  uint16_t OffloadDeviceWaveSize = 0;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
@@ -894,6 +924,8 @@ struct InstrProfRecord {
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
       : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
+        UniformCounts(RHS.UniformCounts), UniformityBits(RHS.UniformityBits),
+        OffloadDeviceWaveSize(RHS.OffloadDeviceWaveSize),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
@@ -901,6 +933,9 @@ struct InstrProfRecord {
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
     BitmapBytes = RHS.BitmapBytes;
+    UniformCounts = RHS.UniformCounts;
+    UniformityBits = RHS.UniformityBits;
+    OffloadDeviceWaveSize = RHS.OffloadDeviceWaveSize;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -911,6 +946,20 @@ struct InstrProfRecord {
       *ValueData = *RHS.ValueData;
     return *this;
   }
+
+  /// Check if a basic block is entered via a wave-uniform branch.
+  /// Returns true if uniform (safe for PGO spill optimization) or if no
+  /// uniformity data is available (conservative default).
+  bool isBlockUniform(unsigned BlockIdx) const {
+    if (UniformityBits.empty())
+      return true; // No uniformity data, assume uniform (conservative)
+    if (BlockIdx / 8 >= UniformityBits.size())
+      return true; // Out of range, assume uniform
+    return (UniformityBits[BlockIdx / 8] >> (BlockIdx % 8)) & 1;
+  }
+
+  /// Recompute uniformity metadata from raw uniform counters, when present.
+  LLVM_ABI void computeBlockUniformity();
 
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
@@ -951,9 +1000,12 @@ struct InstrProfRecord {
         SR.sortByCount();
   }
 
-  /// Clear value data entries and edge counters.
+  /// Clear value data entries, edge counters, and uniformity data.
   void Clear() {
     Counts.clear();
+    UniformCounts.clear();
+    UniformityBits.clear();
+    OffloadDeviceWaveSize = 0;
     clearValueData();
   }
 
@@ -1048,8 +1100,10 @@ struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
 
-  // We reserve this bit as the flag for context sensitive profile record.
-  static const int CS_FLAG_IN_FUNC_HASH = 60;
+  // We reserve the highest 4 bits as flags.
+  static constexpr uint64_t FUNC_HASH_MASK = 0x0FFF'FFFF'FFFF'FFFF;
+  // The 60th bit is for context sensitive profile record.
+  static constexpr unsigned CS_FLAG_IN_FUNC_HASH = 60;
 
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
@@ -1060,6 +1114,14 @@ struct NamedInstrProfRecord : InstrProfRecord {
                        std::vector<uint8_t> BitmapBytes)
       : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
         Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes,
+                       std::vector<uint8_t> UniformityBits)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {
+    this->UniformityBits = std::move(UniformityBits);
+  }
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -1164,7 +1226,11 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
-  // The current version is 12.
+  // In this version, the frontend PGO stable hash algorithm defaults to V4.
+  Version13 = 13,
+  // UniformityBits added for AMDGPU offload profiling divergence detection.
+  Version14 = 14,
+  // The current version is 14.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1174,7 +1240,7 @@ const HashT HashType = HashT::MD5;
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
 // This structure defines the file header of the LLVM profile
-// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
+// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.md
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic = IndexedInstrProf::Magic;

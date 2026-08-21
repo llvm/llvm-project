@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_PROGRAM_H
 #define LLVM_CLANG_AST_INTERP_PROGRAM_H
 
+#include "DeclOrExpr.h"
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -54,11 +55,13 @@ public:
     }
   }
 
+  const Context &getContext() const { return Ctx; }
+
   /// Marshals a native pointer to an ID for embedding in bytecode.
   unsigned getOrCreateNativePointer(const void *Ptr);
 
   /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx);
+  const void *getNativePointer(unsigned Idx) const;
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S,
@@ -73,22 +76,27 @@ public:
     return Globals[Idx]->block();
   }
 
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
+  }
+
   /// Finds a global's index.
-  std::optional<unsigned> getGlobal(const ValueDecl *VD);
-  std::optional<unsigned> getGlobal(const Expr *E);
+  UnsignedOrNone getGlobal(const ValueDecl *VD);
+  UnsignedOrNone getGlobal(const Expr *E);
 
   /// Returns or creates a global an creates an index to it.
-  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
-                                            const Expr *Init = nullptr);
+  UnsignedOrNone getOrCreateGlobal(const ValueDecl *VD,
+                                   const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(const DeclTy &D);
+  unsigned getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown = false);
 
   /// Creates a global and returns its index.
-  std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
+  UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
+                              bool IsConstexprUnknown = false);
 
   /// Creates a global from a lifetime-extended temporary.
-  std::optional<unsigned> createGlobal(const Expr *E);
+  UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
 
   /// Creates a new function from a code range.
   template <typename... Ts>
@@ -112,7 +120,7 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+  Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
@@ -123,7 +131,7 @@ public:
   }
 
   /// Creates a descriptor for a composite type.
-  Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
+  Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
@@ -152,7 +160,7 @@ public:
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
       return std::nullopt;
     return CurrentDeclaration;
@@ -161,9 +169,10 @@ public:
 private:
   friend class DeclScope;
 
-  std::optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
-                                       bool IsStatic, bool IsExtern,
-                                       bool IsWeak, const Expr *Init = nullptr);
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
+                              bool IsExtern, bool IsWeak,
+                              bool IsConstexprUnknown,
+                              const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
@@ -171,9 +180,6 @@ private:
   llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
 
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;
@@ -204,7 +210,6 @@ private:
     const Block *block() const { return &B; }
 
   private:
-    /// Required metadata - does not actually track pointers.
     Block B;
   };
 

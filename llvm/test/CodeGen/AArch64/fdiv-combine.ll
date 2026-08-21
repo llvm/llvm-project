@@ -11,160 +11,149 @@
 ;   a / D; b / D; c / D;
 ;                =>
 ;   recip = 1.0 / D; a * recip; b * recip; c * recip;
-define void @three_fdiv_float(float %D, float %a, float %b, float %c) #0 {
-; CHECK-SD-LABEL: three_fdiv_float:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s4, #1.00000000
-; CHECK-SD-NEXT:    fdiv s4, s4, s0
-; CHECK-SD-NEXT:    fmul s0, s1, s4
-; CHECK-SD-NEXT:    fmul s1, s2, s4
-; CHECK-SD-NEXT:    fmul s2, s3, s4
-; CHECK-SD-NEXT:    b foo_3f
-;
-; CHECK-GI-LABEL: three_fdiv_float:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fdiv s4, s1, s0
-; CHECK-GI-NEXT:    fdiv s1, s2, s0
-; CHECK-GI-NEXT:    fdiv s2, s3, s0
-; CHECK-GI-NEXT:    fmov s0, s4
-; CHECK-GI-NEXT:    b foo_3f
-  %div = fdiv float %a, %D
-  %div1 = fdiv float %b, %D
-  %div2 = fdiv float %c, %D
+define void @three_fdiv_float(float %D, float %a, float %b, float %c) {
+; CHECK-LABEL: three_fdiv_float:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s4, #1.00000000
+; CHECK-NEXT:    fdiv s4, s4, s0
+; CHECK-NEXT:    fmul s0, s1, s4
+; CHECK-NEXT:    fmul s1, s2, s4
+; CHECK-NEXT:    fmul s2, s3, s4
+; CHECK-NEXT:    b foo_3f
+  %div = fdiv arcp float %a, %D
+  %div1 = fdiv arcp float %b, %D
+  %div2 = fdiv arcp float %c, %D
   tail call void @foo_3f(float %div, float %div1, float %div2)
   ret void
 }
 
-define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
-; CHECK-SD-LABEL: three_fdiv_double:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d4, #1.00000000
-; CHECK-SD-NEXT:    fdiv d4, d4, d0
-; CHECK-SD-NEXT:    fmul d0, d1, d4
-; CHECK-SD-NEXT:    fmul d1, d2, d4
-; CHECK-SD-NEXT:    fmul d2, d3, d4
-; CHECK-SD-NEXT:    b foo_3d
-;
-; CHECK-GI-LABEL: three_fdiv_double:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fdiv d4, d1, d0
-; CHECK-GI-NEXT:    fdiv d1, d2, d0
-; CHECK-GI-NEXT:    fdiv d2, d3, d0
-; CHECK-GI-NEXT:    fmov d0, d4
-; CHECK-GI-NEXT:    b foo_3d
-  %div = fdiv double %a, %D
-  %div1 = fdiv double %b, %D
-  %div2 = fdiv double %c, %D
+define void @three_fdiv_double(double %D, double %a, double %b, double %c) {
+; CHECK-LABEL: three_fdiv_double:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d4, #1.00000000
+; CHECK-NEXT:    fdiv d4, d4, d0
+; CHECK-NEXT:    fmul d0, d1, d4
+; CHECK-NEXT:    fmul d1, d2, d4
+; CHECK-NEXT:    fmul d2, d3, d4
+; CHECK-NEXT:    b foo_3d
+  %div = fdiv arcp double %a, %D
+  %div1 = fdiv arcp double %b, %D
+  %div2 = fdiv arcp double %c, %D
   tail call void @foo_3d(double %div, double %div1, double %div2)
   ret void
 }
 
-define void @three_fdiv_4xfloat(<4 x float> %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
-; CHECK-SD-LABEL: three_fdiv_4xfloat:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov v4.4s, #1.00000000
-; CHECK-SD-NEXT:    fdiv v4.4s, v4.4s, v0.4s
-; CHECK-SD-NEXT:    fmul v0.4s, v1.4s, v4.4s
-; CHECK-SD-NEXT:    fmul v1.4s, v2.4s, v4.4s
-; CHECK-SD-NEXT:    fmul v2.4s, v3.4s, v4.4s
-; CHECK-SD-NEXT:    b foo_3_4xf
-;
-; CHECK-GI-LABEL: three_fdiv_4xfloat:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fdiv v4.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fdiv v1.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    fdiv v2.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    b foo_3_4xf
-  %div = fdiv <4 x float> %a, %D
-  %div1 = fdiv <4 x float> %b, %D
-  %div2 = fdiv <4 x float> %c, %D
+define void @three_fdiv_4xfloat(<4 x float> %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: three_fdiv_4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v4.4s, #1.00000000
+; CHECK-NEXT:    fdiv v4.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v4.4s
+; CHECK-NEXT:    fmul v1.4s, v2.4s, v4.4s
+; CHECK-NEXT:    fmul v2.4s, v3.4s, v4.4s
+; CHECK-NEXT:    b foo_3_4xf
+  %div = fdiv arcp <4 x float> %a, %D
+  %div1 = fdiv arcp <4 x float> %b, %D
+  %div2 = fdiv arcp <4 x float> %c, %D
   tail call void @foo_3_4xf(<4 x float> %div, <4 x float> %div1, <4 x float> %div2)
   ret void
 }
 
-define void @three_fdiv_2xdouble(<2 x double> %D, <2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
-; CHECK-SD-LABEL: three_fdiv_2xdouble:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov v4.2d, #1.00000000
-; CHECK-SD-NEXT:    fdiv v4.2d, v4.2d, v0.2d
-; CHECK-SD-NEXT:    fmul v0.2d, v1.2d, v4.2d
-; CHECK-SD-NEXT:    fmul v1.2d, v2.2d, v4.2d
-; CHECK-SD-NEXT:    fmul v2.2d, v3.2d, v4.2d
-; CHECK-SD-NEXT:    b foo_3_2xd
-;
-; CHECK-GI-LABEL: three_fdiv_2xdouble:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fdiv v4.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    fdiv v1.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    fdiv v2.2d, v3.2d, v0.2d
-; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    b foo_3_2xd
-  %div = fdiv <2 x double> %a, %D
-  %div1 = fdiv <2 x double> %b, %D
-  %div2 = fdiv <2 x double> %c, %D
+define void @three_fdiv_2xdouble(<2 x double> %D, <2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: three_fdiv_2xdouble:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v4.2d, #1.00000000
+; CHECK-NEXT:    fdiv v4.2d, v4.2d, v0.2d
+; CHECK-NEXT:    fmul v0.2d, v1.2d, v4.2d
+; CHECK-NEXT:    fmul v1.2d, v2.2d, v4.2d
+; CHECK-NEXT:    fmul v2.2d, v3.2d, v4.2d
+; CHECK-NEXT:    b foo_3_2xd
+  %div = fdiv arcp <2 x double> %a, %D
+  %div1 = fdiv arcp <2 x double> %b, %D
+  %div2 = fdiv arcp <2 x double> %c, %D
   tail call void @foo_3_2xd(<2 x double> %div, <2 x double> %div1, <2 x double> %div2)
   ret void
 }
 
 ; Following test cases check we never combine two FDIVs if neither of them
 ; calculates a reciprocal.
-define void @two_fdiv_float(float %D, float %a, float %b) #0 {
+define void @two_fdiv_float(float %D, float %a, float %b) {
 ; CHECK-LABEL: two_fdiv_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fdiv s3, s1, s0
 ; CHECK-NEXT:    fdiv s1, s2, s0
 ; CHECK-NEXT:    fmov s0, s3
 ; CHECK-NEXT:    b foo_2f
-  %div = fdiv float %a, %D
-  %div1 = fdiv float %b, %D
+  %div = fdiv arcp float %a, %D
+  %div1 = fdiv arcp float %b, %D
   tail call void @foo_2f(float %div, float %div1)
   ret void
 }
 
-define void @two_fdiv_double(double %D, double %a, double %b) #0 {
+define void @two_fdiv_double(double %D, double %a, double %b) {
 ; CHECK-LABEL: two_fdiv_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fdiv d3, d1, d0
 ; CHECK-NEXT:    fdiv d1, d2, d0
 ; CHECK-NEXT:    fmov d0, d3
 ; CHECK-NEXT:    b foo_2d
-  %div = fdiv double %a, %D
-  %div1 = fdiv double %b, %D
+  %div = fdiv arcp double %a, %D
+  %div1 = fdiv arcp double %b, %D
   tail call void @foo_2d(double %div, double %div1)
   ret void
 }
 
-define void @splat_three_fdiv_4xfloat(float %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
-; CHECK-SD-LABEL: splat_three_fdiv_4xfloat:
+define void @four_fdiv_multi_float(float %D, float %a, float %b, float %c) #0 {
+; CHECK-SD-LABEL: four_fdiv_multi_float:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    fmov v4.4s, #1.00000000
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-SD-NEXT:    fdiv v4.4s, v4.4s, v0.4s
-; CHECK-SD-NEXT:    fmul v0.4s, v1.4s, v4.4s
-; CHECK-SD-NEXT:    fmul v1.4s, v2.4s, v4.4s
-; CHECK-SD-NEXT:    fmul v2.4s, v3.4s, v4.4s
-; CHECK-SD-NEXT:    b foo_3_4xf
+; CHECK-SD-NEXT:    fmov s4, #1.00000000
+; CHECK-SD-NEXT:    fdiv s5, s4, s0
+; CHECK-SD-NEXT:    fmul s4, s1, s5
+; CHECK-SD-NEXT:    fmul s1, s2, s5
+; CHECK-SD-NEXT:    fmul s2, s3, s5
+; CHECK-SD-NEXT:    fmul s3, s0, s5
+; CHECK-SD-NEXT:    fmov s0, s4
+; CHECK-SD-NEXT:    b foo_4f
 ;
-; CHECK-GI-LABEL: splat_three_fdiv_4xfloat:
+; CHECK-GI-LABEL: four_fdiv_multi_float:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-GI-NEXT:    dup v4.4s, v0.s[0]
-; CHECK-GI-NEXT:    fdiv v0.4s, v1.4s, v4.4s
-; CHECK-GI-NEXT:    fdiv v1.4s, v2.4s, v4.4s
-; CHECK-GI-NEXT:    fdiv v2.4s, v3.4s, v4.4s
-; CHECK-GI-NEXT:    b foo_3_4xf
+; CHECK-GI-NEXT:    fmov s4, #1.00000000
+; CHECK-GI-NEXT:    fdiv s5, s4, s0
+; CHECK-GI-NEXT:    fdiv s4, s0, s0
+; CHECK-GI-NEXT:    fmul s0, s1, s5
+; CHECK-GI-NEXT:    fmul s1, s2, s5
+; CHECK-GI-NEXT:    fmul s2, s3, s5
+; CHECK-GI-NEXT:    fmov s3, s4
+; CHECK-GI-NEXT:    b foo_4f
+  %div = fdiv arcp float %a, %D
+  %div1 = fdiv arcp float %b, %D
+  %div2 = fdiv arcp float %c, %D
+  %div3 = fdiv arcp float %D, %D
+  tail call void @foo_4f(float %div, float %div1, float %div2, float %div3)
+  ret void
+}
+
+define void @splat_three_fdiv_4xfloat(float %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: splat_three_fdiv_4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    fmov v4.4s, #1.00000000
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    fdiv v4.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v4.4s
+; CHECK-NEXT:    fmul v1.4s, v2.4s, v4.4s
+; CHECK-NEXT:    fmul v2.4s, v3.4s, v4.4s
+; CHECK-NEXT:    b foo_3_4xf
   %D.ins = insertelement <4 x float> poison, float %D, i64 0
   %splat = shufflevector <4 x float> %D.ins, <4 x float> poison, <4 x i32> zeroinitializer
-  %div = fdiv <4 x float> %a, %splat
-  %div1 = fdiv <4 x float> %b, %splat
-  %div2 = fdiv <4 x float> %c, %splat
+  %div = fdiv arcp <4 x float> %a, %splat
+  %div1 = fdiv arcp <4 x float> %b, %splat
+  %div2 = fdiv arcp <4 x float> %c, %splat
   tail call void @foo_3_4xf(<4 x float> %div, <4 x float> %div1, <4 x float> %div2)
   ret void
 }
 
-define <4 x float> @splat_fdiv_v4f32(float %D, <4 x float> %a) #1 {
+define <4 x float> @splat_fdiv_v4f32(float %D, <4 x float> %a) #0 {
 ; CHECK-SD-LABEL: splat_fdiv_v4f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
@@ -183,11 +172,11 @@ define <4 x float> @splat_fdiv_v4f32(float %D, <4 x float> %a) #1 {
 entry:
   %D.ins = insertelement <4 x float> poison, float %D, i64 0
   %splat = shufflevector <4 x float> %D.ins, <4 x float> poison, <4 x i32> zeroinitializer
-  %div = fdiv <4 x float> %a, %splat
+  %div = fdiv arcp <4 x float> %a, %splat
   ret <4 x float> %div
 }
 
-define <vscale x 4 x float> @splat_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a) #1 {
+define <vscale x 4 x float> @splat_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a) #0 {
 ; CHECK-LABEL: splat_fdiv_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s2, #1.00000000
@@ -198,11 +187,11 @@ define <vscale x 4 x float> @splat_fdiv_nxv4f32(float %D, <vscale x 4 x float> %
 entry:
   %D.ins = insertelement <vscale x 4 x float> poison, float %D, i64 0
   %splat = shufflevector <vscale x 4 x float> %D.ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %div = fdiv <vscale x 4 x float> %a, %splat
+  %div = fdiv arcp <vscale x 4 x float> %a, %splat
   ret <vscale x 4 x float> %div
 }
 
-define void @splat_three_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #1 {
+define void @splat_three_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #0 {
 ; CHECK-LABEL: splat_three_fdiv_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s4, #1.00000000
@@ -215,14 +204,14 @@ define void @splat_three_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a, <vscale
 entry:
   %D.ins = insertelement <vscale x 4 x float> poison, float %D, i64 0
   %splat = shufflevector <vscale x 4 x float> %D.ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %div = fdiv <vscale x 4 x float> %a, %splat
-  %div1 = fdiv <vscale x 4 x float> %b, %splat
-  %div2 = fdiv <vscale x 4 x float> %c, %splat
+  %div = fdiv arcp <vscale x 4 x float> %a, %splat
+  %div1 = fdiv arcp <vscale x 4 x float> %b, %splat
+  %div2 = fdiv arcp <vscale x 4 x float> %c, %splat
   tail call void @foo_3_nxv4f32(<vscale x 4 x float> %div, <vscale x 4 x float> %div1, <vscale x 4 x float> %div2)
   ret void
 }
 
-define <vscale x 2 x double> @splat_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a) #1 {
+define <vscale x 2 x double> @splat_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a) #0 {
 ; CHECK-LABEL: splat_fdiv_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -237,7 +226,7 @@ entry:
   ret <vscale x 2 x double> %div
 }
 
-define void @splat_two_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1 {
+define void @splat_two_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: splat_two_fdiv_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov d3, #1.00000000
@@ -249,13 +238,14 @@ define void @splat_two_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a, <vscale
 entry:
   %D.ins = insertelement <vscale x 2 x double> poison, double %D, i64 0
   %splat = shufflevector <vscale x 2 x double> %D.ins, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-  %div = fdiv <vscale x 2 x double> %a, %splat
-  %div1 = fdiv <vscale x 2 x double> %b, %splat
+  %div = fdiv arcp <vscale x 2 x double> %a, %splat
+  %div1 = fdiv arcp <vscale x 2 x double> %b, %splat
   tail call void @foo_2_nxv2f64(<vscale x 2 x double> %div, <vscale x 2 x double> %div1)
   ret void
 }
 
 declare void @foo_3f(float, float, float)
+declare void @foo_4f(float, float, float, float)
 declare void @foo_3d(double, double, double)
 declare void @foo_3_4xf(<4 x float>, <4 x float>, <4 x float>)
 declare void @foo_3_2xd(<2 x double>, <2 x double>, <2 x double>)
@@ -264,5 +254,4 @@ declare void @foo_2d(double, double)
 declare void @foo_3_nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare void @foo_2_nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
 
-attributes #0 = { "unsafe-fp-math"="true" }
-attributes #1 = { "unsafe-fp-math"="true" "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" }

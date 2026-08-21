@@ -2,7 +2,7 @@
 /// (annotated by generated temporary labels .Ltmp*) are associated
 /// with the corresponding callee type identifiers.
 
-// RUN: llvm-mc -triple=x86_64 -filetype=obj -o - < %s | llvm-readelf -x .callgraph - | FileCheck %s
+// RUN: llvm-mc -triple=x86_64 -filetype=obj -o - < %s | llvm-readelf -x .llvm.callgraph - | FileCheck %s
 	
 	.text
 	.globl	ball                            # -- Begin function ball
@@ -38,7 +38,7 @@ ball:                                   # @ball
 	addq	$32, %rsp	
 	popq	%rbx	
 	retq
-	.section	.callgraph,"o",@progbits,.text
+	.section	.llvm.callgraph,"o",@progbits,.text
 	.quad	0
 	.quad	.Lfunc_begin0
 	.quad	1

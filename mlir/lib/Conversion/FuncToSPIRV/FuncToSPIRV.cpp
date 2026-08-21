@@ -34,7 +34,7 @@ namespace {
 /// Converts func.return to spirv.Return.
 class ReturnOpPattern final : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
@@ -55,7 +55,7 @@ public:
 /// Converts func.call to spirv.FunctionCall.
 class CallOpPattern final : public OpConversionPattern<func::CallOp> {
 public:
-  using OpConversionPattern<func::CallOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,

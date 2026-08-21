@@ -307,11 +307,21 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
       LLVM_DEBUG(dbgs() << "    Convergent call site found.\n");
       return false;
     }
+    if (!Call->willReturn()) {
+      LLVM_DEBUG(dbgs() << "    Call site that may not return found.\n");
+      return false;
+    }
 
-    if (!AA->doesNotAccessMemory(Call)) {
+    // Calls that only access inaccessible memory cannot alias loop memory and
+    // are safe to duplicate during loop versioning. This covers
+    // llvm.pseudoprobe (used for sample-based profiling under
+    // -fpseudo-probe-for-profiling).
+    if (Call->mayThrow() ||
+        !AA->getMemoryEffects(Call).onlyAccessesInaccessibleMem()) {
       LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
       return false;
     }
+    return true;
   }
 
   // Avoid loops with possiblity of throw
@@ -413,7 +423,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
     LLVM_DEBUG(dbgs() << "    Found a read-only loop!\n");
     return false;
   }
-  // Profitablity check:
+  // Profitability check:
   // Check invariant threshold, should be in limit.
   if (InvariantCounter * 100 < InvariantThreshold * LoadAndStoreCounter) {
     LLVM_DEBUG(
@@ -540,8 +550,6 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
   return Changed;
 }
 
-namespace llvm {
-
 PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &LAR,
                                               LPMUpdater &U) {
@@ -556,4 +564,3 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }
-} // namespace llvm

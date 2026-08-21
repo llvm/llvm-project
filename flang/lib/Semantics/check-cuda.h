@@ -49,6 +49,7 @@ public:
   void Leave(const parser::OpenACCLoopConstruct &);
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
+  void Enter(const parser::PrintStmt &);
 
 private:
   SemanticsContext &context_;

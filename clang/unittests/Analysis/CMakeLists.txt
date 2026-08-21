@@ -1,4 +1,6 @@
 add_clang_unittest(ClangAnalysisTests
+  AnyCallTest.cpp
+  CFGBackEdgesTest.cpp
   CFGDominatorTree.cpp
   CFGTest.cpp
   CloneDetectionTest.cpp
@@ -11,6 +13,7 @@ add_clang_unittest(ClangAnalysisTests
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex

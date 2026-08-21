@@ -25,14 +25,14 @@ int main(int argc, char** argv) {
 
   // {std,ranges}::copy_n(normal container)
   {
-    auto bm = []<class Container>(std::string name, auto copy_backward) {
+    auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto copy_backward) {
       benchmark::RegisterBenchmark(name, [copy_backward](auto& st) {
         std::size_t const n = st.range(0);
-        using ValueType     = typename Container::value_type;
-        Container c;
+        using ValueType     = typename InputContainer::value_type;
+        InputContainer c;
         std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-        std::vector<ValueType> out(n);
+        OutputContainer out(n);
 
         for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(c);
@@ -42,12 +42,13 @@ int main(int argc, char** argv) {
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>>("std::copy_backward(vector<int>)", std_copy_backward);
-    bm.operator()<std::deque<int>>("std::copy_backward(deque<int>)", std_copy_backward);
-    bm.operator()<std::list<int>>("std::copy_backward(list<int>)", std_copy_backward);
-    bm.operator()<std::vector<int>>("rng::copy_backward(vector<int>)", std::ranges::copy_backward);
-    bm.operator()<std::deque<int>>("rng::copy_backward(deque<int>)", std::ranges::copy_backward);
-    bm.operator()<std::list<int>>("rng::copy_backward(list<int>)", std::ranges::copy_backward);
+    // clang-format off
+    bm.operator()<std::vector<int>, std::vector<int>>("std::copy_backward(vector<int>, vector<int>::iterator)", std_copy_backward);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::copy_backward(vector<int>, deque<int>::iterator)", std_copy_backward);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::copy_backward(deque<int>, vector<int>::iterator)", std_copy_backward);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::copy_backward(deque<int>, deque<int>::iterator)", std_copy_backward);
+    bm.operator()<std::list<int>, std::vector<int>>("std::copy_backward(list<int>, vector<int>::iterator)", std_copy_backward);
+    // clang-format on
   }
 
   // {std,ranges}::copy_n(vector<bool>)
@@ -69,12 +70,8 @@ int main(int argc, char** argv) {
         }
       })->Range(64, 1 << 20);
     };
-    bm.operator()<true>("std::copy_backward(vector<bool>) (aligned)", std_copy_backward);
-    bm.operator()<false>("std::copy_backward(vector<bool>) (unaligned)", std_copy_backward);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("rng::copy_backward(vector<bool>) (aligned)", std::ranges::copy_backward);
-    bm.operator()<false>("rng::copy_backward(vector<bool>) (unaligned)", std::ranges::copy_backward);
-#endif
+    bm.operator()<true>("std::copy_backward(vector<bool>, vector<bool>::iterator) (aligned)", std_copy_backward);
+    bm.operator()<false>("std::copy_backward(vector<bool>, vector<bool>::iterator) (unaligned)", std_copy_backward);
   }
 
   benchmark::Initialize(&argc, argv);

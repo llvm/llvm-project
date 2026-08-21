@@ -138,6 +138,7 @@ struct TransferrableTargetInfo {
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
+  bool VectorsAreElementAligned;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
@@ -229,12 +230,14 @@ class TargetInfo : public TransferrableTargetInfo,
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
+  bool HasMustTail;
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
   bool NoAsmVariants;  // True if {|} are normal characters.
-  bool HasLegalHalfType; // True if the backend supports operations on the half
-                         // LLVM IR type.
+  bool HasFastHalfType;    // True if the backend has native half float support,
+                           // and performing calculations in float instead does
+                           // not have a performance advantage.
   bool HalfArgsAndReturns; // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half) type.
   bool HasFloat128;
   bool HasFloat16;
@@ -270,6 +273,9 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBuiltinZOSVaList : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -280,6 +286,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasAMDGPUTypes : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -294,9 +303,11 @@ protected:
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
-  // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
-  // as a DataLayout object.
-  void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
+  /// Set the data layout to the given string.
+  void resetDataLayout(StringRef DL);
+
+  /// Set the data layout based on current triple and ABI.
+  void resetDataLayout();
 
   // Target features that are read-only and should not be disabled/enabled
   // by command line options. Such features are for emitting predefined
@@ -668,6 +679,8 @@ public:
                                        : getLongFractScale() + 1;
   }
 
+  virtual bool hasMustTail() const { return HasMustTail; }
+
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
     return (getPointerWidth(LangAS::Default) >= 64) ||
@@ -700,8 +713,9 @@ public:
     return 128;
   }
 
-  /// Determine whether _Float16 is supported on this target.
-  virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
+  /// Determine whether the target has fast native support for operations
+  /// on half types.
+  virtual bool hasFastHalfType() const { return HasFastHalfType; }
 
   /// Whether half args and returns are supported.
   virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
@@ -862,6 +876,9 @@ public:
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
 
+  /// True if vectors are element-aligned for this target.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
 
@@ -1006,14 +1023,6 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether llvm intrinsics such as llvm.convert.to.fp16 should be used
-  /// to convert to and from __fp16.
-  /// FIXME: This function should be removed once all targets stop using the
-  /// conversion intrinsics.
-  virtual bool useFP16ConversionIntrinsics() const {
-    return true;
-  }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {
@@ -1059,9 +1068,17 @@ public:
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
 
+  /// Returns whether or not type \c __builtin_zos_va_list type is
+  /// available on this target.
+  bool hasBuiltinZOSVaList() const { return HasBuiltinZOSVaList; }
+
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
   bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
+
+  /// Returns whether or not the AMDGPU built-in types are
+  /// available on this target.
+  bool hasAMDGPUTypes() const { return HasAMDGPUTypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.
@@ -1124,6 +1141,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_OutputOperandBounds = 0x40, // Output operand bounds.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1209,6 +1227,25 @@ public:
       TiedOperand = N;
       // Don't copy Name or constraint string.
     }
+
+    // For output operand constraints, the target can set bounds to indicate
+    // that the result value is guaranteed to fall within a certain range.
+    // This will cause corresponding assertions to be emitted that will allow
+    // for potential optimization based of that guarantee.
+    //
+    // NOTE: This re-uses the `ImmRange` fields to store the range, which are
+    // otherwise unused for constraint types used for output operands.
+    void setOutputOperandBounds(unsigned Min, unsigned Max) {
+      ImmRange.Min = Min;
+      ImmRange.Max = Max;
+      Flags |= CI_OutputOperandBounds;
+    }
+    std::optional<std::pair<unsigned, unsigned>>
+    getOutputOperandBounds() const {
+      return (Flags & CI_OutputOperandBounds) != 0
+                 ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                 : std::optional<std::pair<unsigned, unsigned>>();
+    }
   };
 
   /// Validate register name used for global register variables.
@@ -1257,6 +1294,10 @@ public:
                            ArrayRef<ConstraintInfo> OutputConstraints,
                            unsigned &Index) const;
 
+  std::string
+  simplifyConstraint(StringRef Constraint,
+                     SmallVectorImpl<ConstraintInfo> *OutCons = nullptr) const;
+
   // Constraint parm will be left pointing at the last character of
   // the constraint.  In practice, it won't be changed unless the
   // constraint is longer than one character.
@@ -1287,10 +1328,10 @@ public:
     return Triple;
   }
 
-  /// Returns the target ID if supported.
-  virtual std::optional<std::string> getTargetID() const {
-    return std::nullopt;
-  }
+  /// Returns true if the target's processor is compatible with the processor
+  /// named by \p Name, i.e. \p Name names this target's processor or a
+  /// compatible processor.
+  virtual bool isProcessorName(StringRef Name) const { return false; }
 
   const char *getDataLayoutString() const {
     assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
@@ -1367,9 +1408,7 @@ public:
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
-  virtual bool setCPU(const std::string &Name) {
-    return false;
-  }
+  virtual bool setCPU(StringRef Name) { return false; }
 
   /// Fill a SmallVectorImpl with the valid values to setCPU.
   virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}
@@ -1534,7 +1573,7 @@ public:
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
     return getTriple().isX86() || getTriple().isAArch64() ||
-           getTriple().isRISCV();
+           getTriple().isRISCV() || getTriple().isOSAIX();
   }
 
   /// Identify whether this target supports IFuncs.
@@ -1545,9 +1584,19 @@ public:
       return true;
     if (getTriple().getArch() == llvm::Triple::ArchType::avr)
       return true;
+    if (getTriple().isOSAIX())
+      return getTriple().getOSMajorVersion() == 0 ||
+             getTriple().getOSVersion() >= VersionTuple(7, 2);
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
+  }
+
+  // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
+  StringRef getDefaultOrdinaryLiteralEncoding() const {
+    if (getTriple().getOS() == llvm::Triple::ZOS)
+      return "IBM-1047";
+    return "UTF-8";
   }
 
   // Identify whether this target supports __builtin_cpu_supports and
@@ -1628,7 +1677,8 @@ public:
   bool isSEHTrySupported() const {
     return getTriple().isOSWindows() &&
            (getTriple().isX86() ||
-            getTriple().getArch() == llvm::Triple::aarch64);
+            getTriple().getArch() == llvm::Triple::aarch64 ||
+            getTriple().isThumb());
   }
 
   /// Return true if {|} are normal characters in the asm string.
@@ -1658,7 +1708,7 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const {
     if (isTargetAddressSpace(AS))
       return toTargetAddressSpace(AS);
-    return getAddressSpaceMap()[(unsigned)AS];
+    return getAddressSpaceMap()[AS];
   }
 
   /// Determine whether the given pointer-authentication key is valid.
@@ -1760,6 +1810,23 @@ public:
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
 
+  /// Returns whether the target's ABI guarantees that a class's vtable has a
+  /// unique address program-wide.
+  virtual VTableUniquenessKind getVTableUniqueness() const;
+
+  /// Controls whether global operator delete is called by the deleting
+  /// destructor or at the point where ::delete was called. Historically Clang
+  /// called global operator delete outside of the deleting destructor for both
+  /// Microsoft and Itanium ABI. In Clang 21 support for ::delete was aligned
+  /// with Microsoft ABI, so it will call global operator delete in the deleting
+  /// destructor body.
+  virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
+
+  /// Controls whether to emit MSVC vector deleting destructors. The support for
+  /// vector deleting affects vtable layout and therefore is an ABI breaking
+  /// change. The support was only implemented at Clang 22 timeframe.
+  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
+
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
@@ -1811,6 +1878,9 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
+
+  /// Set features that depend on other features.
+  virtual void setDependentOpenCLOpts();
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {
@@ -1911,6 +1981,8 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+unsigned Microsoft64BitMinGlobalAlign(uint64_t TypeSize);
 
 namespace targets {
 std::unique_ptr<clang::TargetInfo>

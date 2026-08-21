@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TargetAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -69,20 +71,6 @@ class TargetAPITestCase(TestBase):
         platform = target.platform
         self.assertTrue(platform, VALID_PLATFORM)
 
-    def test_get_data_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.data_byte_size, 1)
-
-    def test_get_code_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.code_byte_size, 1)
-
     def test_resolve_file_address(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -105,6 +93,25 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
+    def test_get_arch_name(self):
+        d = {"EXE": "b.out"}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target("b.out")
+
+        arch_name = target.arch_name
+        self.assertTrue(len(arch_name) > 0, "Got an arch name")
+
+        # Test consistency with triple.
+        triple = target.triple
+        self.assertTrue(len(triple) > 0, "Got a triple")
+        self.assertEqual(
+            triple.split("-")[0],
+            arch_name,
+            "Arch name is equal to the first item of the triple",
+        )
+
+    @skipIfWasm  # there is no ABI plugin for Wasm to name
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -128,6 +135,7 @@ class TargetAPITestCase(TestBase):
             abi_pre_launch, abi_after_launch, "ABI's match before and during run"
         )
 
+    @skipIfWasm  # zero is a valid address in a Wasm linear memory, so a read of it succeeds
     def test_read_memory(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -492,6 +500,7 @@ class TargetAPITestCase(TestBase):
         )
 
     @skipIfRemote
+    @skipIfWasm  # the default architecture is the host's, which no Wasm module matches
     def test_default_arch(self):
         """Test the other two target create methods using LLDB_ARCH_DEFAULT."""
         self.build()

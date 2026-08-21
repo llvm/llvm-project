@@ -20,6 +20,7 @@ Initial expression                      Result
 --------------------------------------  -------------------------------------
 ``myMap.find(x) == myMap.end()``        ``!myMap.contains(x)``
 ``myMap.find(x) != myMap.end()``        ``myMap.contains(x)``
+``myStr.find(x) != std::string::npos``  ``myStr.contains(x)``
 ``if (myMap.count(x))``                 ``if (myMap.contains(x))``
 ``bool exists = myMap.count(x)``        ``bool exists = myMap.contains(x)``
 ``bool exists = myMap.count(x) > 0``    ``bool exists = myMap.contains(x)``
@@ -29,5 +30,5 @@ Initial expression                      Result
 
 This check will apply to any class that has a ``contains`` method, notably
 including ``std::set``, ``std::unordered_set``, ``std::map``, and
-``std::unordered_map`` as of C++20, and ``std::string`` and ``std::string_view``
-as of C++23.
+``std::unordered_map`` as of C++20, and ``std::string`` and
+``std::string_view`` as of C++23.

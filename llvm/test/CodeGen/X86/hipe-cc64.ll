@@ -21,14 +21,13 @@ define void @zap(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movl $2, %ecx
 ; CHECK-NEXT:    movl $3, %r8d
 ; CHECK-NEXT:    movq %rax, %r9
-; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    retq
+; CHECK-NEXT:    jmp foo@PLT # TAILCALL
 entry:
   %0 = call cc 11 {i64, i64, i64} @addfour(i64 undef, i64 undef, i64 %a, i64 %b, i64 8, i64 9)
   %res = extractvalue {i64, i64, i64} %0, 2
@@ -56,14 +55,12 @@ entry:
 define cc 11 void @foo(i64 %hp, i64 %p, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $48, %rsp
-; CHECK-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rbp, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r8, (%rsp)
-; CHECK-NEXT:    addq $48, %rsp
+; CHECK-NEXT:    movq %r15, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp bar@PLT # TAILCALL
 entry:
   %hp_var   = alloca i64

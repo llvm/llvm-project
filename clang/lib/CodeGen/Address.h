@@ -176,6 +176,11 @@ public:
   static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer.getPointer() != nullptr; }
 
+  llvm::Value *getPointerIfNotSigned() const {
+    assert(isValid() && "pointer isn't valid");
+    return !isSigned() ? Pointer.getPointer() : nullptr;
+  }
+
   /// This function is used in situations where the caller is doing some sort of
   /// opaque "laundering" of the pointer.
   void replaceBasePointer(llvm::Value *P) {

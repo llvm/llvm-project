@@ -153,9 +153,17 @@ public:
 
   MemRefDependenceGraph(Block &block) : block(block) {}
 
-  // Initializes the dependence graph based on operations in `block'.
-  // Returns true on success, false otherwise.
-  bool init();
+  // Initializes the data dependence graph by iterating over the operations of
+  // the MDG's `block`. A `Node` is created for every top-level op except for
+  // side-effect-free operations with zero results and no regions. Assigns each
+  // node in the graph a node id based on the order in block. Fails if certain
+  // kinds of operations, for which `Node` creation isn't supported, are
+  // encountered (unknown region holding ops). If `fullAffineDependences` is
+  // set, affine memory dependence analysis is performed before concluding that
+  // conflicting affine memory accesses lead to a dependence check; otherwise, a
+  // pair of conflicting affine memory accesses (where one of them is a store
+  // and they are to the same memref) always leads to an edge (conservatively).
+  bool init(bool fullAffineDependences = true);
 
   // Returns the graph node for 'id'.
   const Node *getNode(unsigned id) const;

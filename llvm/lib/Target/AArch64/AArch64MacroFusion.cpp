@@ -13,10 +13,29 @@
 
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
+#define DEBUG_TYPE "aarch64-macro-fusion"
+
 using namespace llvm;
+
+STATISTIC(NumFusedArithmeticBcc, "Number of arithmetic-Bcc fusions");
+STATISTIC(NumFusedArithmeticCbz, "Number of arithmetic-Cbz fusions");
+STATISTIC(NumFusedAES, "Number of AES fusions");
+STATISTIC(NumFusedCryptoEOR, "Number of crypto-EOR fusions");
+STATISTIC(NumFusedAdrpAdd, "Number of ADRP-ADD fusions");
+STATISTIC(NumFusedLiterals, "Number of literal-generation fusions");
+STATISTIC(NumFusedAddress, "Number of address-generation load/store fusions");
+STATISTIC(NumFusedCmpCSel, "Number of compare-CSEL fusions");
+STATISTIC(NumFusedFCmpFCSel, "Number of FP-compare-FCSEL fusions");
+STATISTIC(NumFusedCmpCSet, "Number of compare-CSET fusions");
+STATISTIC(NumFusedArithmeticLogic, "Number of arithmetic-logic fusions");
+STATISTIC(NumFusedAddSub2RegAndConstOne,
+          "Number of add/sub-two-register-and-constant-one fusions");
+STATISTIC(NumFusedAppleSMECompute, "Number of Apple SME compute fusions");
+STATISTIC(NumFusedFMinFMax, "Number of FMIN-FMAX fusions");
 
 /// CMN, CMP, TST followed by Bcc
 static bool isArithmeticBccPair(const MachineInstr *FirstMI,
@@ -73,7 +92,11 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   if (SecondMI.getOpcode() != AArch64::CBZW &&
       SecondMI.getOpcode() != AArch64::CBZX &&
       SecondMI.getOpcode() != AArch64::CBNZW &&
-      SecondMI.getOpcode() != AArch64::CBNZX)
+      SecondMI.getOpcode() != AArch64::CBNZX &&
+      SecondMI.getOpcode() != AArch64::TBZW &&
+      SecondMI.getOpcode() != AArch64::TBZX &&
+      SecondMI.getOpcode() != AArch64::TBNZW &&
+      SecondMI.getOpcode() != AArch64::TBNZX)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -97,15 +120,25 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   case AArch64::ORRWrr:
   case AArch64::ORRXri:
   case AArch64::ORRXrr:
+  case AArch64::ORNWrr:
+  case AArch64::ORNXrr:
   case AArch64::SUBWri:
   case AArch64::SUBWrr:
   case AArch64::SUBXri:
   case AArch64::SUBXrr:
+  case AArch64::BICWrr:
+  case AArch64::BICXrr:
     return true;
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
   case AArch64::ANDWrs:
   case AArch64::ANDXrs:
+  case AArch64::EORWrs:
+  case AArch64::EORXrs:
+  case AArch64::ORNWrs:
+  case AArch64::ORNXrs:
+  case AArch64::ORRWrs:
+  case AArch64::ORRXrs:
   case AArch64::SUBWrs:
   case AArch64::SUBXrs:
   case AArch64::BICWrs:
@@ -117,19 +150,42 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
+static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
+                                 const MachineInstr &SecondMI) {
+  Register DestFirst = FirstMI.getOperand(0).getReg();
+  Register DestSecond = SecondMI.getOperand(0).getReg();
+  if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
+    return true;
+  return DestFirst == DestSecond;
+}
+
 /// AES crypto encoding or decoding.
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
-  switch (SecondMI.getOpcode()) {
+  unsigned SecondOpcode = SecondMI.getOpcode();
+  switch (SecondOpcode) {
   // AES encode.
   case AArch64::AESMCrr:
   case AArch64::AESMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESErr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESErr)
+      return false;
+    return SecondOpcode == AArch64::AESMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESDrr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESDrr)
+      return false;
+    return SecondOpcode == AArch64::AESIMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
@@ -237,8 +293,8 @@ static bool isAddressLdStPair(const MachineInstr *FirstMI,
 }
 
 /// Compare and conditional select.
-static bool isCCSelectPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
+static bool isCmpCSelPair(const MachineInstr *FirstMI,
+                          const MachineInstr &SecondMI) {
   // 32 bits
   if (SecondMI.getOpcode() == AArch64::CSELWr) {
     // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -272,6 +328,69 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
         return !AArch64InstrInfo::hasExtendedReg(*FirstMI);
       case AArch64::SUBSXrr:
       case AArch64::SUBSXri:
+        return true;
+      }
+  }
+
+  return false;
+}
+
+/// Floating-point compare and floating-point conditional select.
+static bool isFCmpFCSelPair(const MachineInstr *FirstMI,
+                            const MachineInstr &SecondMI) {
+  switch (SecondMI.getOpcode()) {
+  case AArch64::FCSELSrrr:
+  case AArch64::FCSELDrrr:
+  case AArch64::FCSELHrrr:
+    break;
+  default:
+    return false;
+  }
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  switch (FirstMI->getOpcode()) {
+  case AArch64::FCMPSrr:
+  case AArch64::FCMPDrr:
+  case AArch64::FCMPESrr:
+  case AArch64::FCMPEDrr:
+  case AArch64::FCMPHrr:
+  case AArch64::FCMPEHrr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Compare and cset.
+static bool isCmpCSetPair(const MachineInstr *FirstMI,
+                          const MachineInstr &SecondMI) {
+  if ((SecondMI.getOpcode() == AArch64::CSINCWr &&
+       SecondMI.getOperand(1).getReg() == AArch64::WZR &&
+       SecondMI.getOperand(2).getReg() == AArch64::WZR) ||
+      (SecondMI.getOpcode() == AArch64::CSINCXr &&
+       SecondMI.getOperand(1).getReg() == AArch64::XZR &&
+       SecondMI.getOperand(2).getReg() == AArch64::XZR)) {
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (FirstMI == nullptr)
+      return true;
+
+    if (FirstMI->definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+        FirstMI->definesRegister(AArch64::XZR, /*TRI=*/nullptr))
+      switch (FirstMI->getOpcode()) {
+      case AArch64::SUBSWrs:
+      case AArch64::SUBSXrs:
+        return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
+      case AArch64::SUBSWrx:
+      case AArch64::SUBSXrx:
+      case AArch64::SUBSXrx64:
+        return !AArch64InstrInfo::hasExtendedReg(*FirstMI);
+      case AArch64::SUBSWri:
+      case AArch64::SUBSWrr:
+      case AArch64::SUBSXri:
+      case AArch64::SUBSXrr:
         return true;
       }
   }
@@ -437,41 +556,197 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
+static bool definesRegInClass(const MachineInstr &MI,
+                              const TargetRegisterInfo *TRI,
+                              const TargetRegisterClass &Class) {
+  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
+    return MI.definesRegister(Reg, TRI);
+  });
+}
+
+static bool readsRegInClass(const MachineInstr &MI,
+                            const TargetRegisterInfo *TRI,
+                            const TargetRegisterClass &Class) {
+  return llvm::any_of(
+      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+}
+
+static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
+                                       const TargetInstrInfo &TII,
+                                       const TargetRegisterInfo *TRI) {
+  const bool ReadOrWriteZA = MI.readsRegister(AArch64::ZA, TRI) ||
+                             MI.definesRegister(AArch64::ZA, TRI);
+
+  // (read/write ZA or read/write Z)
+  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+    return false;
+
+  // (NOT load/store)
+  if (MI.mayLoad() || MI.mayStore())
+    return false;
+
+  // (NOT write P)
+  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+    return false;
+
+  // (NOT write GPR)
+  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
+                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  if (WriteGPR)
+    return false;
+
+  // (NOT read/write NZCV)
+  if (MI.readsRegister(AArch64::NZCV, TRI) ||
+      MI.definesRegister(AArch64::NZCV, TRI))
+    return false;
+
+  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
+                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+
+  // ( (NOT read GPR) or read/write ZA )
+  if (ReadGPR && !ReadOrWriteZA)
+    return false;
+
+  return true;
+}
+
+static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
+                                  const MachineInstr &SecondMI,
+                                  const TargetInstrInfo &TII,
+                                  const TargetRegisterInfo *TRI) {
+  if (!isFusableAppleSMEComputeOp(SecondMI, TII, TRI))
+    return false;
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+  if (isFusableAppleSMEComputeOp(*FirstMI, TII, TRI))
+    return true;
+  return false;
+}
+
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
+static bool isFMinFMax(unsigned Opcode) {
+  switch (Opcode) {
+  // Scalar.
+  case AArch64::FMAXHrr:
+  case AArch64::FMAXSrr:
+  case AArch64::FMAXDrr:
+  case AArch64::FMINHrr:
+  case AArch64::FMINSrr:
+  case AArch64::FMINDrr:
+  // Vector.
+  case AArch64::FMAXv4f16:
+  case AArch64::FMAXv8f16:
+  case AArch64::FMAXv2f32:
+  case AArch64::FMAXv4f32:
+  case AArch64::FMAXv2f64:
+  case AArch64::FMINv4f16:
+  case AArch64::FMINv8f16:
+  case AArch64::FMINv2f32:
+  case AArch64::FMINv4f32:
+  case AArch64::FMINv2f64:
+    return true;
+  }
+  return false;
+}
+
+// FMIN + FMAX.
+static bool isFMinFMaxPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI) {
+  if (!isFMinFMax(SecondMI.getOpcode()))
+    return false;
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  if (!isFMinFMax(FirstMI->getOpcode()))
+    return false;
+
+  return mayHaveWAWDependency(*FirstMI, SecondMI);
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
+
+  // FuseAppleSMECompute does not require a specific dependency kind
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
+    ++NumFusedAppleSMECompute;
+    return true;
+  }
+
+  // All the other fusions require RAW dependency
+  if (isNonDataDep(Dep))
+    return false;
+
   if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
     bool CmpOnly = !ST.hasArithmeticBccFusion();
-    if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly))
+    if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly)) {
+      ++NumFusedArithmeticBcc;
       return true;
+    }
   }
-  if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI))
+  if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI)) {
+    ++NumFusedArithmeticCbz;
     return true;
-  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI)) {
+    ++NumFusedAES;
     return true;
-  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstMI, SecondMI)) {
+    ++NumFusedCryptoEOR;
     return true;
-  if (ST.hasFuseAdrpAdd() && isAdrpAddPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAdrpAdd() && isAdrpAddPair(FirstMI, SecondMI)) {
+    ++NumFusedAdrpAdd;
     return true;
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+    ++NumFusedLiterals;
     return true;
-  if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI)) {
+    ++NumFusedAddress;
     return true;
-  if (ST.hasFuseCCSelect() && isCCSelectPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI)) {
+    ++NumFusedCmpCSel;
     return true;
-  if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseFCmpFCSel() && isFCmpFCSelPair(FirstMI, SecondMI)) {
+    ++NumFusedFCmpFCSel;
     return true;
+  }
+  if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI)) {
+    ++NumFusedCmpCSet;
+    return true;
+  }
+  if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI)) {
+    ++NumFusedArithmeticLogic;
+    return true;
+  }
   if (ST.hasFuseAddSub2RegAndConstOne() &&
-      isAddSub2RegAndConstOnePair(FirstMI, SecondMI))
+      isAddSub2RegAndConstOnePair(FirstMI, SecondMI)) {
+    ++NumFusedAddSub2RegAndConstOne;
     return true;
+  }
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {
+    ++NumFusedFMinFMax;
+    return true;
+  }
 
   return false;
 }
