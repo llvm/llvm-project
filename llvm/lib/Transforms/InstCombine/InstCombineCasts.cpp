@@ -24,7 +24,9 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <iterator>
 #include <optional>
@@ -33,6 +35,11 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+static cl::opt<unsigned> MaxTypeEvalDepth(
+    "instcombine-max-type-eval-depth", cl::Hidden, cl::init(128),
+    cl::desc("Maximum recursion depth when checking whether an expression can "
+             "be evaluated in a different type"));
 
 using EvaluatedMap = SmallDenseMap<Value *, Value *, 8>;
 
@@ -337,6 +344,9 @@ private:
   [[nodiscard]] bool
   canEvaluate(Value *V, Type *Ty,
               llvm::function_ref<bool(Value *, Type *Type)> Pred) {
+    if (Depth >= MaxTypeEvalDepth)
+      return false;
+
     if (canAlwaysEvaluateInType(V, Ty))
       return true;
 
@@ -437,6 +447,7 @@ private:
       }
     }
 
+    SaveAndRestore RestoreDepth(Depth, Depth + 1);
     const bool Result = Pred(V, Ty);
     // We have to set result this way and not via It because Pred is recursive
     // and it is very likely that we grew Visited and invalidated It.
@@ -460,6 +471,9 @@ private:
                                           Instruction *CxtI);
   [[nodiscard]] bool canEvaluateSExtdImpl(Value *V, Type *Ty);
   [[nodiscard]] bool canEvaluateSExtdPred(Value *V, Type *Ty);
+
+  /// The recursion depth of this traversal.
+  unsigned Depth = 0;
 
   /// A bookkeeping map to memorize an already made decision for a traversed
   /// value.
@@ -1469,6 +1483,9 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
                                                 InstCombinerImpl &IC,
                                                 Instruction *CxtI) {
   BitsToClear = 0;
+  if (Depth >= MaxTypeEvalDepth)
+    return false;
+
   if (canAlwaysEvaluateInType(V, Ty))
     return true;
   // We stick to the one-user limit for the ZExt transform due to the fact
@@ -1476,6 +1493,9 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
   if (canNotEvaluateInType(V, Ty))
     return false;
 
+  // canEvaluateZExtd does not go through canEvaluate (it also returns
+  // BitsToClear), so it has to track the depth itself.
+  SaveAndRestore RestoreDepth(Depth, Depth + 1);
   auto *I = cast<Instruction>(V);
   unsigned Tmp;
   switch (I->getOpcode()) {
