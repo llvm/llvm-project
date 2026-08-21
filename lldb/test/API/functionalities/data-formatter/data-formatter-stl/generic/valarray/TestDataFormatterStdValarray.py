@@ -31,8 +31,8 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect("frame variable va_empty", substrs=["va_empty = size=0"])
         self.expect(
             "frame variable va_ref",
+            patterns=[r"va_ref = (0x[0-9a-fA-F]+ )?size=4"],
             substrs=[
-                "va_ref = size=4",
                 "[0] = 0",
                 "[1] = 0",
                 "[2] = 0",
@@ -55,8 +55,8 @@ class StdValarrayDataFormatterTestCase(TestBase):
         )
         self.expect(
             "frame variable va_ref",
+            patterns=[r"va_ref = (0x[0-9a-fA-F]+ )?size=4"],
             substrs=[
-                "va_ref = size=4",
                 "[0] = 1",
                 "[1] = 12",
                 "[2] = 123",
