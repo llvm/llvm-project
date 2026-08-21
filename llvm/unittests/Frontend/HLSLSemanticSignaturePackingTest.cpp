@@ -577,4 +577,259 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsSignatureOverflow) {
                      SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/MaxSignatureRows);
 }
+
+//===----------------------------------------------------------------------===//
+// Prefix-stable row compatibility tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeneralPacking) {
+  // Native 16-bit types are enabled.
+  // struct PSIn {
+  //   float16_t2 A : A;
+  //   float2 B     : B;
+  //   float16_t3 C : C;
+  //   float2 D     : D;
+  //   int E        : E;
+  //   float16_t2 F : F;
+  //   float16_t G  : G;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::In,
+      /*UseNative16BitTypes=*/true,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.xy | F.zw
+  // reg1: B.xy | D.zw
+  // reg2: C.xyz | G.w
+  // reg3: E.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/2, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/2},
+                 {/*Row=*/3, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/2},
+                 {/*Row=*/2, /*Col=*/3}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableNative16BitWidth) {
+  // struct VSOut {
+  //   float16_t2 A : A;
+  //   float2 B     : B;
+  //   float16_t2 C : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/true,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.xy | C.zw
+  // reg1: B.xy | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableInterpolationMode) {
+  // struct VSOut {
+  //   float2 A                : A;
+  //   nointerpolation float2 B : B;
+  //   float2 C                : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.xy | C.zw
+  // reg1: B.xy | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableCompatible16BitTypes) {
+  // struct VSOut {
+  //   nointerpolation int16_t A    : A;
+  //   nointerpolation float16_t3 B : B;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/true,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I16, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Constant}});
+
+  // Expected layout:
+  // reg0: A.x | B.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableNormalized16BitTypes) {
+  // A normalized 16-bit type has the same component width as any other 16-bit
+  // type, so it co-packs with them but not with a 32-bit type.
+
+  // struct VSOut {
+  //   nointerpolation snorm half A : A;
+  //   nointerpolation float16_t B  : B;
+  //   nointerpolation float C      : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/true,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::SNormF16, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant}});
+
+  // Expected layout:
+  // reg0: A.x | B.y | unused.zw
+  // reg1: C.x | unused.yzw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMinPrecisionWidth) {
+  // Without native 16-bit types, 16-bit types are min-precision types which
+  // occupy a full 32-bit component, so they co-pack with 32-bit types. This is
+  // the same signature as PrefixStableNative16BitWidth, which packs
+  // differently.
+
+  // struct VSOut {
+  //   min16float2 A : A;
+  //   float2 B      : B;
+  //   min16float2 C : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F16, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.xy | B.zw
+  // reg1: C.xy | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableUndefinedInterpMode) {
+  // An undefined interpolation mode does not constrain a register, but the
+  // first defined mode packed into it does.
+
+  // struct VSOut {
+  //   float2 A                : A; // undefined interpolation mode
+  //   float B                 : B; // linear
+  //   nointerpolation float C : C; // nointerpolation
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant}});
+
+  // Expected layout:
+  // reg0: A.xy | B.z | unused.w
+  // reg1: C.x  | unused.yzw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableUndefinedInterpModeAfterDefined) {
+  // Once a register has a defined interpolation mode, an element with an
+  // undefined mode cannot be packed into it.
+
+  // struct VSOut {
+  //   float2 A : A; // linear
+  //   float2 B : B; // undefined interpolation mode
+  //   float2 C : C; // linear
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.xy | C.zw
+  // reg1: B.xy | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableDistinctInterpModes) {
+  // Every distinct interpolation mode requires its own register, including
+  // modes that only differ by their centroid or noperspective qualifier.
+
+  // struct VSOut {
+  //   float2 A               : A;
+  //   centroid float2 B      : B;
+  //   noperspective float2 C : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::LinearCentroid},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::LinearNoperspective}});
+
+  // Expected layout:
+  // reg0: A.xy | unused.zw
+  // reg1: B.xy | unused.zw
+  // reg2: C.xy | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
+}
 } // namespace
