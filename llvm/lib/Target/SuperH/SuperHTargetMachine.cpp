@@ -13,11 +13,14 @@
 #include "SuperHTargetMachine.h"
 #include "SuperH.h"
 #include "SuperHSubtarget.h"
+#include "SuperHMachineFunctionInfo.h"
 #include "TargetInfo/SuperHTargetInfo.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 
@@ -26,6 +29,12 @@ using namespace llvm;
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSuperHTarget() {
   RegisterTargetMachine<SuperHTargetMachine> SH(getTheSuperHTarget());
   RegisterTargetMachine<SuperHTargetMachine> SHLE(getTheSuperHLETarget());
+
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeSuperHAsmPrinterPass(Registry);
+  initializeSuperHFillDelaySlotsPass(Registry);
+  initializeSuperHConstantIslandsPass(Registry);
+  initializeSuperHDAGToDAGISelLegacyPass(Registry);
 }
 
 //
@@ -40,6 +49,8 @@ public:
 
   bool addInstSelector() override;
   void addPreSched2() override;
+  void addPreEmitPass() override;
+  void addPreEmitPass2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
   }
@@ -51,7 +62,20 @@ bool SuperHPassConfig::addInstSelector() {
 }
 
 void SuperHPassConfig::addPreSched2() {
+}
+
+void SuperHPassConfig::addPreEmitPass() {
+  addPass(&BranchFolderPassID);
+  addPass(&IfConverterID);
   addPass(createSuperHFillDelaySlotsPass());
+}
+
+void SuperHPassConfig::addPreEmitPass2() {
+
+  // Inserts Constant Islands. Block sizes cannot be increased after this point,
+  // as this may push the branch ranges and load offsets of accessing constant
+  // pools out of range.
+  addPass(createSuperHConstantIslandPass());
 }
 
 } // namespace
@@ -100,4 +124,11 @@ SuperHTargetMachine::getSubtargetImpl(const Function &F) const {
     ST = std::make_unique<SuperHSubtarget>(CPU, TuneCPU, FS, *this);
   }
   return ST.get();
+}
+
+MachineFunctionInfo *
+SuperHTargetMachine::createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                          const TargetSubtargetInfo *STI) const {
+  return SuperHMachineFunctionInfo::create<SuperHMachineFunctionInfo>(Allocator, F,
+                                                                  STI);
 }

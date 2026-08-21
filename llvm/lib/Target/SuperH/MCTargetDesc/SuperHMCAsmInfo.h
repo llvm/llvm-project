@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_SUPERH_MCTARGETDESC_SUPERHMCASMINFO_H
 
 #include "llvm/MC/MCAsmInfoELF.h"
+#include "llvm/MC/MCExpr.h"
 
 namespace llvm {
 class Triple;
@@ -34,6 +35,20 @@ public:
                              const MCTargetOptions &Options);
 };
 
-} // end namespace llvm
+namespace SH {
+using Specifier = uint16_t;
+enum {
+  S_None,
+
+  S_SH_NONE = MCSymbolRefExpr::FirstTargetSpecifier,
+  S_GOT,
+  S_GOT_OFF,
+  S_GOT_PCREL,
+  S_PCREL,
+  S_DIR,
+};
+} // namespace SH
+
+} // namespace llvm
 
 #endif

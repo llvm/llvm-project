@@ -46,8 +46,14 @@ def ptr_op : RegisterOperand<sh_ptr_rc> {
 //===--------------------------------------------------------------------------===//
 
 def SHSDT_CallSeqStart  : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SHSDT_CallSeqEnd  : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SHSDT_Call        : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def SHSDT_CallSeqEnd    : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SHSDT_Call          : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def SHSDT_PICAdd        : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>,
+                                          SDTCisPtrTy<1>, SDTCisVT<2, i32>]>;
+def SHSDT_Brcond        : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisInt<1>]>;
+def SHSDT_Cmp           : SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisInt<2>]>;
+def SHSDT_SelectCC      : SDTypeProfile<1, 3,
+                          [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisInt<3>]>;
 
 //===--------------------------------------------------------------------------===//
 // SuperH Specific Nodes
@@ -66,6 +72,15 @@ def SHCall          : SDNode<"SHISD::CALL", SHSDT_Call,
 def SHRetGlue       : SDNode<"SHISD::RET_GLUE", SDTNone,
                             [SDNPHasChain, SDNPOptInGlue, 
                              SDNPVariadic]>;
+
+def SHWrapper       : SDNode<"SHISD::WRAPPER", SDTIntUnaryOp>;
+def SHPICAdd        : SDNode<"SHISD::PIC_ADD", SHSDT_PICAdd>;
+
+// Conditional Branching and Comparison
+def SHselectcc      : SDNode<"SHISD::SELECT_CC", SHSDT_SelectCC, [SDNPInGlue]>;
+def SHbrcond        : SDNode<"SHISD::BRCOND", SHSDT_Brcond, [SDNPHasChain, SDNPInGlue]>;
+def SHcmp           : SDNode<"SHISD::CMP", SHSDT_Cmp, [SDNPOutGlue]>;
+
 
 //===--------------------------------------------------------------------------===//
 // Operand Classes
@@ -126,7 +141,17 @@ def disp4   : SHDispOp<4, i4>;
 def disp8   : SHDispOp<8, i8>;
 def disp12  : SHDispOp<12, i16>;
 
+def brtarget       : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeBranchTarget";
+  let PrintMethod = "printPCRelImm";
+  let OperandType = "OPERAND_PCREL";
+}
 
+// An operand for the CONSTPOOL_ENTRY pseudo-instruction.
+def cpinst_operand : Operand<i32> {
+  let PrintMethod = "printCPInstOperand";
+}
 
 // Memory
 class SHMemRegOp<RegisterClass regClass> 
@@ -135,38 +160,6 @@ class SHMemRegOp<RegisterClass regClass>
     let OperandType = "OPERAND_MEMORY";
 }
 def GPRMem : SHMemRegOp<GPR>;
-
-// Memory Indirect (Register + Register)
-def MemRRI : Operand<iPTR> {
-  let ParserMatchClass = SHMemClass;
-  let OperandType = "OPERAND_MEMORY";
-  let MIOperandInfo = (ops GPR, GPR);
-}
-
-// Memory Indirect (Register + Disp)
-def MemRD : Operand<iPTR> {
-  let ParserMatchClass = SHMemClass;
-  let OperandType = "OPERAND_MEMORY";
-  let MIOperandInfo = (ops GPR, disp8);
-}
-
-// Memory Indirect (GBR + disp)
-def MemGBRI : Operand<iPTR> {
-  let ParserMatchClass = SHMemClass;
-  let OperandType = "OPERAND_MEMORY";
-  let MIOperandInfo = (ops R_GBR, disp8);
-}
-
-// Memory Indirect (R0 + disp)
-def MemR0I : Operand<iPTR> {
-  let ParserMatchClass = SHMemClass;
-  let OperandType = "OPERAND_MEMORY";
-  let MIOperandInfo = (ops R_R0, disp8);
-}
-
-// Addressing mode pattern reg+disp
-let WantsRoot = true in
-def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
 //===--------------------------------------------------------------------------===//
 // Predicates
@@ -228,26 +221,26 @@ def MOVI8Rn       : InstRnI8<0b1110000000000000,
                             "mov #$imm,$Rn",
                             [(set i32:$Rn, imm8:$imm)]>;
 
-// mov @(disp, PC), R0
+// mova @(disp, PC), R0
 let hasSideEffects = 0, mayLoad = 1, Defs = [R0], isDelayIllegal = 1 in
 def MOVAD8PCR0      : InstD8<0b1100011100000000,
                             (outs), (ins disp8:$disp),
-                            "mov @($disp,PC),R0",
-                            []>;
+                            "mova @($disp,PC),R0",
+                            [(set R0, (load disp8:$disp))]>;
 
 // mov.w @(disp,PC), Rn 
 let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVWD8PCRn    : InstRnD8<0b1001000000000000,
                             (outs GPR:$Rn), (ins disp8:$disp),
                             "mov.w @($disp,PC),$Rn",
-                            [(set i32:$Rn, (sextloadi16 addr:$disp))]>;
+                            [(set i32:$Rn, (sextloadi16 disp8:$disp))]>;
 
 // mov.l @(disp,PC), Rn 
 let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVLD8PCRn    : InstRnD8<0b1101000000000000,
                             (outs GPR:$Rn), (ins disp8:$disp),
                             "mov.l @($disp,PC),$Rn",
-                            [(set i32:$Rn, (load addr:$disp))]>;
+                            [(set i32:$Rn, (load disp8:$disp))]>;
 
 // movt Rn
 def MOVTRn          : InstRn<0b0000000000101001,
@@ -490,7 +483,6 @@ let hasSideEffects = 0, mayStore = 1 in {
 
 
 
-
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 //                            Arithmetic Instructions
@@ -506,17 +498,16 @@ let hasSideEffects = 0, mayStore = 1 in {
 let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   
   // add Rm, Rn
-  let isCommutable = 1 in
   def ADDRmRn       : InstRmRn<0b0011000000001100, 
                               (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
                               "add $Rm,$Rn",
                               [(set i32:$Rn, (add i32:$Rm, i32:$src))]>;
   
   // add imm:8, Rn
-  def ADDI8Rn       : InstRnI8<0b0011000000001100, 
-                              (outs GPR:$Rn), (ins imm8:$imm, GPR:$src),
+  def ADDI8Rn       : InstRnI8<0b0111000000000000, 
+                              (outs GPR:$Rn), (ins GPR:$src, imm8:$imm),
                               "add #$imm,$Rn",
-                              [(set i32:$Rn, (add imm8:$imm, i32:$src))]>;
+                              [(set i32:$Rn, (add i32:$src, imm8:$imm))]>;
 
   // addc Rm, Rn
   let Defs = [SR], Uses = [SR], isCommutable = 1 in
@@ -723,69 +714,64 @@ def CMPSTRRmRn      : InstRmRn<0b0010000000001100,
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
+// and Rm,Rn
+let Constraints = "$src = $Rn" in
+def ANDRmRn       : InstRmRn<0b0010000000001001, 
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            "and $Rm,$Rn",
+                            [(set i32:$Rn, (and i32:$Rm, i32:$src))]>;
+// and #imm,R0
+let Defs = [R0], Uses = [R0] in
+def ANDI8R0         : InstI8<0b1100100100000000, 
+                            (outs), (ins imm8:$imm),
+                            "and #$imm,R0",
+                            []>;
 
-let hasSideEffects = 0 in {
+// not Rm,Rn
+def NOTRmRn       : InstRmRn<0b0110000000000111, 
+                            (outs GPR:$Rn), (ins GPR:$Rm),
+                            "not $Rm,$Rn",
+                            [(set i32:$Rn, (not i32:$Rm))]>;
 
-  // and Rm,Rn
-  let Constraints = "$src = $Rn" in
-  def ANDRmRn       : InstRmRn<0b0010000000001001, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
-                              "and $Rm,$Rn",
-                              []>;
-  // and #imm,R0
-  let Defs = [R0], Uses = [R0] in
-  def ANDI8R0         : InstI8<0b1100100100000000, 
-                              (outs), (ins imm8:$imm),
-                              "and #$imm,R0",
-                              []>;
+// or Rm,Rn
+let Constraints = "$src = $Rn" in
+def ORRmRn        : InstRmRn<0b0010000000001011, 
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            "or $Rm,$Rn",
+                            [(set i32:$Rn, (or i32:$Rm, i32:$src))]>;
+// or #imm,R0
+let Defs = [R0], Uses = [R0] in
+def ORI8R0          : InstI8<0b1100101100000000, 
+                            (outs), (ins imm8:$imm),
+                            "or #$imm,R0",
+                            []>;
 
-  // not Rm,Rn
-  let Constraints = "$src = $Rn" in
-  def NOTRmRn       : InstRmRn<0b0110000000000111, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
-                              "not $Rm,$Rn",
-                              []>;
+// xor Rm,Rn
+let Constraints = "$src = $Rn" in
+def XORRmRn       : InstRmRn<0b0010000000001010, 
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            "xor $Rm,$Rn",
+                            [(set i32:$Rn, (xor i32:$Rm, i32:$src))]>;
+// xor #imm,R0
+let Defs = [R0], Uses = [R0] in
+def XORI8R0         : InstI8<0b1100101000000000, 
+                            (outs), (ins imm8:$imm),
+                            "xor #$imm,R0",
+                            []>;
 
-  // or Rm,Rn
-  let Constraints = "$src = $Rn" in
-  def ORRmRn        : InstRmRn<0b0010000000001011, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
-                              "or $Rm,$Rn",
-                              []>;
-  // or #imm,R0
-  let Defs = [R0], Uses = [R0] in
-  def ORI8R0          : InstI8<0b1100101100000000, 
-                              (outs), (ins imm8:$imm),
-                              "or #$imm,R0",
-                              []>;
+// tst Rm,Rn
+let Defs = [SR] in
+def TSTRmRn       : InstRmRn<0b0010000000001000, 
+                            (outs), (ins GPR:$Rm, GPR:$Rn),
+                            "tst $Rm,$Rn",
+                            []>;
+// tst #imm,R0
+let Defs = [SR], Uses = [R0] in
+def TSTI8R0         : InstI8<0b1100100000000000, 
+                            (outs), (ins imm8:$imm),
+                            "tst #$imm,R0",
+                            []>;
 
-  // xor Rm,Rn
-  let Constraints = "$src = $Rn" in
-  def XORRmRn       : InstRmRn<0b0010000000001010, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
-                              "xor $Rm,$Rn",
-                              []>;
-  // xor #imm,R0
-  let Defs = [R0], Uses = [R0] in
-  def XORI8R0         : InstI8<0b1100101000000000, 
-                              (outs), (ins imm8:$imm),
-                              "xor #$imm,R0",
-                              []>;
-
-  // tst Rm,Rn
-  let Defs = [SR], Constraints = "$src = $Rn" in
-  def TSTRmRn       : InstRmRn<0b0010000000001000, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
-                              "tst $Rm,$Rn",
-                              []>;
-  // tst #imm,R0
-  let Defs = [R0, SR], Uses = [R0] in
-  def TSTI8R0         : InstI8<0b1100100000000000, 
-                              (outs), (ins imm8:$imm),
-                              "tst #$imm,R0",
-                              []>;
-
-}
 
 
 
@@ -817,14 +803,14 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   def ROTLRn          : InstRn<0b0100000000000100, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "rotl $Rn",
-                              []>;
+                              [(set i32:$Rn, (rotl i32:$src, (i8 1)))]>;
 
   // rotr Rn
   let Defs = [SR] in
   def ROTRRn          : InstRn<0b0100000000000101, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "rotr $Rn",
-                              []>;
+                              [(set i32:$Rn, (rotr i32:$src, (i8 1)))]>;
 
   // shal Rn
   let Defs = [SR] in
@@ -838,58 +824,58 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   def SHARRn          : InstRn<0b0100000000100001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shar $Rn",
-                              []>;
+                              [(set i32:$Rn, (sra i32:$src, (i8 1)))]>;
 
   // shll Rn
   let Defs = [SR] in
   def SHLLRn          : InstRn<0b0100000000000000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll $Rn",
-                              []>;
+                              [(set i32:$Rn, (shl i32:$src, (i8 1)))]>;
 
   // shll2 Rn
   let Defs = [SR] in
   def SHLL2Rn          : InstRn<0b0100000000001000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll2 $Rn",
-                              []>;
+                              [(set i32:$Rn, (shl i32:$src, (i8 2)))]>;
 
   // shll8 Rn
   def SHLL8Rn          : InstRn<0b0100000000011000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll8 $Rn",
-                              []>;
+                              [(set i32:$Rn, (shl i32:$src, (i8 8)))]>;
 
   // shll16 Rn
   def SHLL16Rn          : InstRn<0b0100000000101000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll16 $Rn",
-                              []>;
+                              [(set i32:$Rn, (shl i32:$src, (i8 16)))]>;
 
   // shlr Rn
   let Defs = [SR] in
   def SHLRRn          : InstRn<0b0100000000000001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr $Rn",
-                              []>;
+                              [(set i32:$Rn, (srl i32:$src, (i8 1)))]>;
 
   // shlr2 Rn
   def SHLR2Rn          : InstRn<0b0100000000001001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr2 $Rn",
-                              []>;
+                              [(set i32:$Rn, (srl i32:$src, (i8 2)))]>;
 
   // shlr8 Rn
   def SHLR8Rn          : InstRn<0b0100000000011001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr8 $Rn",
-                              []>;
+                              [(set i32:$Rn, (srl i32:$src, (i8 8)))]>;
 
   // shlr16 Rn
   def SHLR16Rn          : InstRn<0b0100000000101001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr16 $Rn",
-                              []>;
+                              [(set i32:$Rn, (srl i32:$src, (i8 16)))]>;
 
 }
 
@@ -900,29 +886,78 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
-// TODO: Port these to the updated way.
-// def BF_Disp      : BrOp_Disp8<0b1000101100000000, "bf">;
-// def BFS_Disp    : BrOpD_Disp8<0b1000111100000000, "bf/s">;
-// def BT_Disp      : BrOp_Disp8<0b1000100100000000, "bt">;
-// def BTS_Disp    : BrOpD_Disp8<0b1000110100000000, "bt/s">;
-// def BRA_Disp    : BrOp_Disp12<0b1010000000000000, "bra">;
-// def BRAF_Rm         : BrOp_Rm<0b0000000000100011, "braf">;
-// def BSR_Disp    : BrOp_Disp12<0b1011000000000000, "bsr">;
-// def BSRF_Rm         : BrOp_Rm<0b0000000000000011, "bsrf">;
-// def JMP_Rmi        : BrOp_Rmi<0b0100000000101011, "jmp">;
+let isTerminator = 1 in {
+  let isBranch = 1, Uses = [SR] in
+  def BF              : InstD8<0b1000101100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bf $disp",
+                              []>;
+
+  let isBranch = 1, hasDelaySlot = 1, Uses = [SR] in
+  def BFS             : InstD8<0b1000111100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bf/s $disp",
+                              []>;
+
+  let isBranch = 1, Uses = [SR] in
+  def BT              : InstD8<0b1000100100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bt $disp",
+                              []>;
+
+  let isBranch = 1, hasDelaySlot = 1, Uses = [SR] in
+  def BTS             : InstD8<0b1000110100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bt/s $disp",
+                              []>;
+
+  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BRA            : InstD12<0b1010000000000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bra $disp",
+                              [(br bb:$disp)]>;
+
+  let isIndirectBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BRAF            : InstRm<0b0000000000100011, 
+                              (outs), (ins GPR:$Rm),
+                              "braf $Rm",
+                              []>;
+
+  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BSR            : InstD12<0b1011000000000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bsr $disp",
+                              []>;
+
+  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BSRF            : InstRm<0b0000000000000011, 
+                              (outs), (ins GPR:$Rm),
+                              "bsrf $Rm",
+                              []>;
+
+  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def JMP             : InstRm<0b0100000000101011, 
+                              (outs), (ins GPR:$Rm),
+                              "jmp @$Rm",
+                              []>;
+}
+
 
 
 //===--------------------------------------------------------------------------===//
 // Call Instructions
 //===--------------------------------------------------------------------------===//
 
-let isCall = 1, hasDelaySlot = 1 in {
-  let Uses = [GBR] in
+let isCall = 1, isBarrier = 1, isTerminator = 1, hasDelaySlot = 1 in {
+  let Uses = [SR, GBR] in
   def JSRRmi          : InstRm<0b0100000000001011,
                               (outs), (ins GPRMem:$Rm),
                               "jsr @$Rm",
                               [(SHCall GPRMem:$Rm)]>;
 }
+
+
+
 
 
 //===--------------------------------------------------------------------------===//
@@ -1038,7 +1073,7 @@ def LDSLRminciPR      : InstRm<0b0100000000100110,
                               []>;
 
 // nop
-let hasSideEffects = 1 in
+let hasSideEffects = 1, isTerminator = 1 in
 def NOP                 : Inst<0b0000000000001001, (outs), (ins), "nop", []>;
 
 // rte
@@ -1164,9 +1199,6 @@ include "SuperHInstrDSP.td"
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
-
-
-
 //===--------------------------------------------------------------------------===//
 // Stack Frame
 //===--------------------------------------------------------------------------===//
@@ -1175,6 +1207,15 @@ include "SuperHInstrDSP.td"
 // offsets.
 let Defs = [SR], hasSideEffects = 0 in
 def SHFrmIdx : SHPseudo<(outs GPR:$dst), (ins GPR:$src, disp12:$src2)>;
+
+/// CONSTPOOL_ENTRY - This instruction represents a floating constant pool in
+/// the function.  The first operand is the ID# for this instruction, the second
+/// is the index into the MachineConstantPool that this is, the third is the
+/// size in bytes of this constant pool entry.
+let hasSideEffects = 0, isNotDuplicable = 1, hasNoSchedulingInfo = 1 in
+def CONSTPOOL_ENTRY : SHPseudo<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx, i32imm:$size), 
+                              "!CONSTPOOL_ENTRY $instid, $cpidx, $size",
+                              []>;
 
 let Defs = [R0], Uses = [R0] in {
 def ADJCALLSTACKDOWN : SHPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
