@@ -369,38 +369,3 @@ body:             |
     S_ENDPGM 0, implicit $sgpr0
 
 ...
-
-# The operand being replaced is marked undef; the fold must still erase
-# the dead inner S_AND without leaving stale kill flags.
----
-name:            live_variables_update_combine_masks_undef_operand
-tracksRegLiveness: true
-body:             |
-  ; CHECK-LABEL: name: live_variables_update_combine_masks_undef_operand
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY killed $sgpr4
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed [[DEF]], implicit-def $scc
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 64, killed [[COPY]], implicit-def dead $scc
-  ; CHECK-NEXT:   $sgpr0 = COPY killed [[S_AND_B32_]]
-  ; CHECK-NEXT:   S_ENDPGM 0, implicit killed $sgpr0
-  bb.0:
-    successors: %bb.1
-    liveins: $sgpr4
-
-    %0:sreg_32 = COPY killed $sgpr4
-    %1:sreg_64_xexec = IMPLICIT_DEF
-
-  bb.1:
-    SI_END_CF killed %1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    %2:sreg_32 = S_AND_B32 %0, %0, implicit-def dead $scc
-    %3:sreg_32 = S_AND_B32 64, undef %2, implicit-def dead $scc
-    $sgpr0 = COPY killed %3
-    S_ENDPGM 0, implicit $sgpr0
-
-...

@@ -639,6 +639,7 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI,
 
   Register Reg = MI.getOperand(OpToReplace).getReg();
   MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+  assert(Def);
   MI.removeOperand(OpToReplace);
   MI.addOperand(*KeepOp);
 
