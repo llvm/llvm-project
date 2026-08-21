@@ -151,3 +151,46 @@ define amdgpu_vs <6 x float> @test_6xf16_6xf32_add_ext_mul_rhs(<6 x half> inreg 
     %c = fadd fast <6 x float> %z, %b
     ret <6 x float> %c
 }
+
+; This test has two fpext(fmul) operands where the first fmul has multiple uses
+; and the second has only one use. The one with fewer uses (i.e. the second one)
+; should be folded.
+define amdgpu_vs <2 x float> @test_fpext_fmul_multiple_uses(half inreg %x1, half inreg %y1, half inreg %x2, half inreg %y2, half inreg %z) {
+; GFX9-FAST-DENORM-LABEL: test_fpext_fmul_multiple_uses:
+; GFX9-FAST-DENORM:       ; %bb.0: ; %.entry
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-FAST-DENORM-NEXT:    v_mac_f16_e32 v1, s0, v0
+; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s3
+; GFX9-FAST-DENORM-NEXT:    v_mul_f16_e32 v2, s2, v2
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v0, s0, v0, v2 op_sel_hi:[1,1,1]
+; GFX9-FAST-DENORM-NEXT:    ; return to shader part epilog
+;
+; GFX10-FAST-DENORM-LABEL: test_fpext_fmul_multiple_uses:
+; GFX10-FAST-DENORM:       ; %bb.0: ; %.entry
+; GFX10-FAST-DENORM-NEXT:    v_mul_f16_e64 v0, s0, s1
+; GFX10-FAST-DENORM-NEXT:    v_mul_f16_e64 v1, s2, s3
+; GFX10-FAST-DENORM-NEXT:    v_add_f16_e32 v2, s4, v0
+; GFX10-FAST-DENORM-NEXT:    v_fma_mix_f32 v0, s0, s1, v1 op_sel_hi:[1,1,1]
+; GFX10-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; GFX10-FAST-DENORM-NEXT:    ; return to shader part epilog
+.entry:
+    ; First fpext(fmul) operand: %mul1 has multiple uses
+    %mul1 = fmul fast half %x1, %y1
+    %ext1 = fpext half %mul1 to float
+    %add_f16 = fadd fast half %mul1, %z  ; Second use of %mul1 at f16 level
+
+    ; Second fpext(fmul) operand: %mul2 has only one use
+    %mul2 = fmul fast half %x2, %y2
+    %ext2 = fpext half %mul2 to float
+
+    ; This fadd has two fpext(fmul) operands
+    %add = fadd fast float %ext1, %ext2
+
+    %ext_add_f16 = fpext half %add_f16 to float
+    %ret0 = insertelement <2 x float> undef, float %add, i32 0
+    %ret1 = insertelement <2 x float> %ret0, float %ext_add_f16, i32 1
+
+    ret <2 x float> %ret1
+}
