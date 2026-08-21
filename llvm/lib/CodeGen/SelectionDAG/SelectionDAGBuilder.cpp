@@ -3639,8 +3639,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
+      TLI.getExceptionSelectorRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -9805,9 +9807,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // some reason.
     // This code should not handle libcalls that are already canonicalized to
     // intrinsics by the middle-end.
-    LibFunc Func;
-    if (!I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName() &&
-        LibInfo->getLibFunc(*F, Func) && LibInfo->hasOptimizedCodeGen(Func)) {
+    LibFunc Func = !I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName()
+                       ? LibInfo->getLibFunc(*F)
+                       : NotLibFunc;
+    if (LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {
       default: break;
       case LibFunc_bcmp:

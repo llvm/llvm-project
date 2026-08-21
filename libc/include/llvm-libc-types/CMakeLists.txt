@@ -119,14 +119,29 @@ add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_id_np_t HDR pthread_id_np_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(rlim_t HDR rlim_t.h)
+add_header(sem_t HDR sem_t.h DEPENDS .__futex_word)
 add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(timer_t HDR timer_t.h)
+add_header(sig_t HDR sig_t.h)
 add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_posix_dent HDR struct_posix_dent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(
+  struct_link_map
+  HDR struct_link_map.h
+  DEPENDS
+    libc.include.llvm-libc-macros.link_macros
+)
+add_header(
+  struct_r_debug
+  HDR struct_r_debug.h
+  DEPENDS
+    .struct_link_map
+    libc.include.llvm-libc-macros.link_macros
+)
 add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
@@ -190,6 +205,7 @@ add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
+add_header(struct_sigevent HDR struct_sigevent.h DEPENDS .union_sigval .pthread_attr_t .pid_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
 add_header(
   struct_stat

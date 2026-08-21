@@ -1235,6 +1235,11 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
       CharUnits::fromQuantity(align));
+  // Note: createOrReplaceCXXRuntimeVariable isn't exactly what classic-codegen
+  // does here: it just does a getOrInsertGlobal at the module level. However,
+  // the above function does MOST of what we want, except it sets the global as
+  // constant, when we don't want that.  So set it here instead.
+  vTable.setConstant(false);
 
   // The vtable address point is 2.
   mlir::Attribute field{};

@@ -487,10 +487,16 @@ LogicalResult mlir::inlineCall(
   auto *entryBlock = &src->front();
   ArrayRef<Type> callableResultTypes = callable.getResultTypes();
 
+  // Inlining replaces the call with the body of the callee, so the call must
+  // not have any results that are produced by the call operation itself: there
+  // would be nothing left to compute them.
+  if (call.getForwardedResults().size() != call->getNumResults())
+    return failure();
+
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
   SmallVector<Value, 8> callOperands(call.getArgOperands());
-  SmallVector<Value, 8> callResults(call->getResults());
+  SmallVector<Value, 8> callResults(call.getForwardedResults());
   if (callOperands.size() != entryBlock->getNumArguments() ||
       callResults.size() != callableResultTypes.size())
     return failure();

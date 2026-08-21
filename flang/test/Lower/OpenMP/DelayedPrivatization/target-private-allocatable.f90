@@ -69,7 +69,7 @@ end subroutine target_allocatable
 ! CPU-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CPU:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 ! CPU:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> [[MEMBER_TYPE:.*]]
-! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32) -> {{.*}}
+! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32) name("") -> {{.*}}
 ! CPU:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses({{.*}}to{{.*}}) capture(ByRef) members(%[[MEMBER]] : [0] : [[MEMBER_TYPE]]) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CPU:  %[[ATTACH:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE]], i32) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 

@@ -957,6 +957,31 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
+void OmpStructureChecker::CheckDirectiveInPureProcedure(
+    parser::CharBlock source, llvm::omp::Directive id) {
+  const Scope &scope{context_.FindScope(source)};
+  if (!FindPureProcedureContaining(scope)) {
+    return;
+  }
+  unsigned version{context_.langOptions().OpenMPVersion};
+  // A directive's "pure" property is version-specific: pureSince is the
+  // OpenMP version at which the directive gained that property.
+  unsigned pureSince{llvm::omp::getDirectivePureSince(id)};
+  if (version >= pureSince) {
+    return;
+  }
+  if (pureSince != 0x7FFFFFFF) {
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), ThisVersion(version),
+        TryVersion(pureSince));
+  } else {
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
+        parser::omp::GetUpperName(id, version));
+  }
+}
+
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
 OmpStructureChecker::FindMutuallyExclusiveClauses(
     llvm::omp::ClauseSet exclusive,
@@ -1305,6 +1330,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
 
   // Verify clauses
   common::visit(
@@ -1361,6 +1387,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
       llvm::iterator_range(std::list<parser::OmpClause>{}));
 
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
   EnterDirectiveNest(DeclarativeNest);
 }
 
@@ -2923,11 +2950,16 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
 
   auto visitDoacross{[&](const parser::OmpDoacross &doa,
                          const parser::CharBlock &src) {
-    common::visit(
-        common::visitors{
-            [&](const parser::OmpDoacross::Source &) { dependSourceCount++; },
-            [&](const parser::OmpDoacross::Sink &) { dependSinkCount++; }},
-        doa.u);
+    // Modifiers should have been verified by now.
+    auto &modifiers{OmpGetModifiers(doa)};
+    if (auto *source{
+            OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)}) {
+      if (source->v == parser::OmpDependenceType::Value::Source) {
+        ++dependSourceCount;
+      } else {
+        ++dependSinkCount;
+      }
+    }
     if (!exclusiveShown && dependSinkCount > 0 && dependSourceCount > 0) {
       exclusiveShown = true;
       context_.Say(src,
@@ -2983,11 +3015,17 @@ void OmpStructureChecker::CheckOrderedDependClause(
     std::optional<int64_t> orderedValue) {
   auto visitDoacross{[&](const parser::OmpDoacross &doa,
                          const parser::CharBlock &src) {
-    if (auto *sinkVector{std::get_if<parser::OmpDoacross::Sink>(&doa.u)}) {
-      int64_t numVar = sinkVector->v.v.size();
-      if (orderedValue != numVar) {
-        context_.Say(src,
-            "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+    auto &modifiers{OmpGetModifiers(doa)};
+    auto *depType{OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)};
+    assert(depType && "Expecting dependence-type");
+    if (depType->v == parser::OmpDependenceType::Value::Sink) {
+      auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
+      if (iterVec) {
+        int64_t numVar = iterVec->v.size();
+        if (orderedValue != numVar) {
+          context_.Say(src,
+              "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+        }
       }
     }
   }};
@@ -5051,7 +5089,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       "Unexpected alternative in update clause");
 
   if (doaDep) {
-    CheckDoacross(*doaDep);
+    CheckDoacross(*doaDep, llvm::omp::Clause::OMPC_depend);
     CheckDependenceType(doaDep->GetDepType());
   } else {
     using Modifier = parser::OmpDependClause::TaskDep::Modifier;
@@ -5130,12 +5168,33 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Doacross &x) {
-  CheckDoacross(x.v.v);
+  CheckDoacross(x.v.v, llvm::omp::Clause::OMPC_doacross);
 }
 
-void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
-  if (std::holds_alternative<parser::OmpDoacross::Source>(doa.u)) {
-    // Nothing to check here.
+void OmpStructureChecker::CheckDoacross(
+    const parser::OmpDoacross &doa, llvm::omp::Clause clauseId) {
+  parser::CharBlock clauseSource{GetContext().clauseSource};
+
+  if (!OmpVerifyModifiers(doa, clauseId, clauseSource, context_)) {
+    return;
+  }
+
+  auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
+
+  auto &modifiers{OmpGetModifiers(doa)};
+  auto &depType{*OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)};
+  if (depType.v == parser::OmpDependenceType::Value::Source) {
+    if (iterVec) {
+      context_.Say(OmpGetModifierSource(modifiers, &depType),
+          "Iteration vector may not be specified with SOURCE dependence type"_err_en_US);
+    }
+    return;
+  }
+  assert(depType.v == parser::OmpDependenceType::Value::Sink &&
+      "Unexpected dependence-type");
+  if (!iterVec) {
+    context_.Say(OmpGetModifierSource(modifiers, &depType),
+        "Iteration vector must be specified with SINK dependence type"_err_en_US);
     return;
   }
 
@@ -5143,8 +5202,7 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
   // which references a prior ORDERED(n) clause on a DO or SIMD construct
   // that marks the top of the loop nest.
 
-  auto &sink{std::get<parser::OmpDoacross::Sink>(doa.u)};
-  const std::list<parser::OmpIteration> &vec{sink.v.v};
+  const std::list<parser::OmpIteration> &vec{iterVec->v};
 
   // Check if the variables in the iteration vector are unique.
   struct Less {

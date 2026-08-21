@@ -32,12 +32,12 @@ std::string rename(std::string str, std::string_view replacement) {
 
 template <class Func, class Mod = decltype([](auto) {})>
 void bench(std::string name, Func func, Mod modifier = {}) {
-  benchmark::RegisterBenchmark(rename(name, "string"), [=](benchmark::State& state) {
+  benchmark::RegisterBenchmark(rename(name, "string"), [=](benchmark::State& state) TEST_ALIGN_BENCHMARK {
     func(std::type_identity<char>(), state);
   })->Apply(modifier);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  benchmark::RegisterBenchmark(rename(name, "wstring"), [=](benchmark::State& state) {
+  benchmark::RegisterBenchmark(rename(name, "wstring"), [=](benchmark::State& state) TEST_ALIGN_BENCHMARK {
     func(std::type_identity<wchar_t>(), state);
   })->Apply(modifier);
 #endif
