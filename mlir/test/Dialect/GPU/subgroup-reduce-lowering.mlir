@@ -27,12 +27,12 @@ gpu.module @kernels {
   // CHECK-GFX-LABEL: gpu.func @kernel0(
   gpu.func @kernel0(%arg0: vector<5xf16>) kernel {
     // CHECK-SUB: %[[VZ:.+]] = arith.constant dense<0.0{{.*}}> : vector<5xf16>
-    // CHECK-SUB: %[[E0:.+]] = vector.extract_strided_slice %[[ARG0]] {offsets = [0], sizes = [2], strides = [1]} : vector<5xf16> to vector<2xf16>
+    // CHECK-SUB: %[[E0:.+]] = vector.extract_strided_slice %[[ARG0]] offsets = [0], sizes = [2], strides = [1] : vector<5xf16> to vector<2xf16>
     // CHECK-SUB: %[[R0:.+]] = gpu.subgroup_reduce add %[[E0]] : (vector<2xf16>) -> vector<2xf16>
-    // CHECK-SUB: %[[V0:.+]] = vector.insert_strided_slice %[[R0]], %[[VZ]] {offsets = [0], strides = [1]} : vector<2xf16> into vector<5xf16>
-    // CHECK-SUB: %[[E1:.+]] = vector.extract_strided_slice %[[ARG0]] {offsets = [2], sizes = [2], strides = [1]} : vector<5xf16> to vector<2xf16>
+    // CHECK-SUB: %[[V0:.+]] = vector.insert_strided_slice %[[R0]], %[[VZ]] offsets = [0], strides = [1] : vector<2xf16> into vector<5xf16>
+    // CHECK-SUB: %[[E1:.+]] = vector.extract_strided_slice %[[ARG0]] offsets = [2], sizes = [2], strides = [1] : vector<5xf16> to vector<2xf16>
     // CHECK-SUB: %[[R1:.+]] = gpu.subgroup_reduce add %[[E1]] : (vector<2xf16>) -> vector<2xf16>
-    // CHECK-SUB: %[[V1:.+]] = vector.insert_strided_slice %[[R1]], %[[V0]] {offsets = [2], strides = [1]} : vector<2xf16> into vector<5xf16>
+    // CHECK-SUB: %[[V1:.+]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [2], strides = [1] : vector<2xf16> into vector<5xf16>
     // CHECK-SUB: %[[E2:.+]] = vector.extract %[[ARG0]][4] : f16 from vector<5xf16>
     // CHECK-SUB: %[[R2:.+]] = gpu.subgroup_reduce add %[[E2]] : (f16) -> f16
     // CHECK-SUB: %[[V2:.+]] = vector.insert %[[R2]], %[[V1]] [4] : f16 into vector<5xf16>
@@ -368,7 +368,7 @@ gpu.module @kernels {
   // CHECK-GFX-NOT: amdgpu.dpp
   gpu.func @kernel6(%arg0: vector<3xi8>) kernel {
     // CHECK-SHFL: %[[CZ:.+]] = arith.constant dense<0> : vector<4xi8>
-    // CHECK-SHFL: %[[V0:.+]] = vector.insert_strided_slice %[[ARG0]], %[[CZ]] {offsets = [0], strides = [1]} : vector<3xi8> into vector<4xi8>
+    // CHECK-SHFL: %[[V0:.+]] = vector.insert_strided_slice %[[ARG0]], %[[CZ]] offsets = [0], strides = [1] : vector<3xi8> into vector<4xi8>
     // CHECK-SHFL: %[[BC0:.+]] = vector.bitcast %[[V0]] : vector<4xi8> to vector<1xi32>
     // CHECK-SHFL: %[[I0:.+]] = vector.extract %[[BC0]][0] : i32 from vector<1xi32>
     // CHECK-SHFL: %[[S0:.+]], %{{.+}} = gpu.shuffle xor %[[I0]], {{.+}} : i32
@@ -378,7 +378,7 @@ gpu.module @kernels {
     // CHECK-SHFL: %[[BC2:.+]] = vector.bitcast %[[ADD0]] : vector<4xi8> to vector<1xi32>
     // CHECK-SHFL: %[[I1:.+]] = vector.extract %[[BC2]][0] : i32 from vector<1xi32>
     // CHECK-SHFL-COUNT-4: gpu.shuffle xor
-    // CHECK-SHFL: %[[ESS:.+]] = vector.extract_strided_slice %{{.+}} {offsets = [0], sizes = [3], strides = [1]} : vector<4xi8> to vector<3xi8>
+    // CHECK-SHFL: %[[ESS:.+]] = vector.extract_strided_slice %{{.+}} offsets = [0], sizes = [3], strides = [1] : vector<4xi8> to vector<3xi8>
     // CHECK-SHFL: "test.consume"(%[[ESS]]) : (vector<3xi8>) -> ()
     %sum0 = gpu.subgroup_reduce add %arg0 : (vector<3xi8>) -> (vector<3xi8>)
     "test.consume"(%sum0) : (vector<3xi8>) -> ()
