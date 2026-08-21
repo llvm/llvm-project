@@ -3,10 +3,8 @@
 
 define i1 @e8m1_min_i64() #0 {
 ; CHECK-LABEL: define i1 @e8m1_min_i64(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[VL]], 15
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
   %cmp = icmp uge i64 %vl, 16
@@ -15,10 +13,8 @@ define i1 @e8m1_min_i64() #0 {
 
 define i1 @e8m1_max_i64() #0 {
 ; CHECK-LABEL: define i1 @e8m1_max_i64(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[VL]], 8193
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
   %cmp = icmp ule i64 %vl, 8192
@@ -27,10 +23,8 @@ define i1 @e8m1_max_i64() #0 {
 
 define i1 @e32mf2_min_i32() #0 {
 ; CHECK-LABEL: define i1 @e32mf2_min_i32(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i32 @llvm.riscv.vsetvlimax.i32(i32 2, i32 7)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[VL]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i32 @llvm.riscv.vsetvlimax.i32(i32 2, i32 7)
   %cmp = icmp uge i32 %vl, 2
@@ -39,10 +33,8 @@ define i1 @e32mf2_min_i32() #0 {
 
 define i1 @e8m8_min_i64() #0 {
 ; CHECK-LABEL: define i1 @e8m8_min_i64(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[VL]], 127
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
   %cmp = icmp uge i64 %vl, 128
@@ -51,10 +43,8 @@ define i1 @e8m8_min_i64() #0 {
 
 define i1 @e8m8_max_i64() #0 {
 ; CHECK-LABEL: define i1 @e8m8_max_i64(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[VL]], 65537
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
   %cmp = icmp ule i64 %vl, 65536
@@ -63,10 +53,8 @@ define i1 @e8m8_max_i64() #0 {
 
 define i1 @fixed_e16m2_i64() #1 {
 ; CHECK-LABEL: define i1 @fixed_e16m2_i64(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 1, i64 1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VL]], 32
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 1, i64 1)
   %cmp = icmp eq i64 %vl, 32
@@ -75,9 +63,7 @@ define i1 @fixed_e16m2_i64() #1 {
 
 define i1 @no_vscale_range_i64() {
 ; CHECK-LABEL: define i1 @no_vscale_range_i64() {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[VL]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
   %cmp = icmp uge i64 %vl, 4
@@ -86,9 +72,7 @@ define i1 @no_vscale_range_i64() {
 
 define i1 @no_vscale_range_e8m8_i64() {
 ; CHECK-LABEL: define i1 @no_vscale_range_e8m8_i64() {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[VL]], 31
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 3)
   %cmp = icmp uge i64 %vl, 32
@@ -97,7 +81,7 @@ define i1 @no_vscale_range_e8m8_i64() {
 
 define i1 @e64mf8_zero_i64() #0 {
 ; CHECK-LABEL: define i1 @e64mf8_zero_i64(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 3, i64 5)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -109,10 +93,8 @@ define i1 @e64mf8_zero_i64() #0 {
 
 define i64 @power_of_two_i64() #0 {
 ; CHECK-LABEL: define i64 @power_of_two_i64(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 15) i64 @llvm.ctpop.i64(i64 [[VL]])
-; CHECK-NEXT:    ret i64 [[COUNT]]
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    ret i64 1
 ;
   %vl = call i64 @llvm.riscv.vsetvlimax.i64(i64 0, i64 0)
   %count = call i64 @llvm.ctpop.i64(i64 %vl)

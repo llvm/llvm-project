@@ -87,6 +87,38 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+// Return the architectural range for VLMAX. RISC-V defines VLEN in the range
+// [32, 65536], while vscale_range can provide tighter bounds for VLEN >= 64.
+static ConstantRange getRISCVVSetVLMaxRange(const IntrinsicInst &II,
+                                            unsigned ArgOffset = 0) {
+  unsigned Width = II.getType()->getScalarSizeInBits();
+  constexpr unsigned MinVLen = 32;
+  constexpr unsigned MaxVLen = 65536;
+  ConstantRange VLenRange(APInt(Width, MinVLen), APInt(Width, MaxVLen + 1));
+  if (II.getFunction() &&
+      II.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
+    ConstantRange VScaleRange = getVScaleRange(II.getFunction(), Width);
+    VScaleRange = VScaleRange.intersectWith(ConstantRange(
+        APInt(Width, 1),
+        APInt(Width, MaxVLen / RISCV::RVVBitsPerBlock + 1)));
+    VLenRange = VScaleRange.multiply(
+        ConstantRange(APInt(Width, RISCV::RVVBitsPerBlock)));
+  }
+
+  auto *VSEW = dyn_cast<ConstantInt>(II.getArgOperand(ArgOffset));
+  auto *VLMULArg = dyn_cast<ConstantInt>(II.getArgOperand(ArgOffset + 1));
+  // These are immarg operands, but keep this helper conservative for malformed
+  // IR rather than asserting while performing generic value analysis.
+  if (!VSEW || !VLMULArg || VSEW->getZExtValue() > 3 ||
+      VLMULArg->getZExtValue() > 7 || VLMULArg->getZExtValue() == 4)
+    return ConstantRange::getFull(Width);
+
+  unsigned SEW = RISCVVType::decodeVSEW(VSEW->getZExtValue());
+  auto VLMUL = static_cast<RISCVVType::VLMUL>(VLMULArg->getZExtValue());
+  unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+  return VLenRange.udiv(ConstantRange(APInt(Width, Ratio)));
+}
+
 // Controls the number of uses of the value searched for possible
 // dominating comparisons.
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
@@ -2275,19 +2307,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax: {
         bool HasAVL = II->getIntrinsicID() == Intrinsic::riscv_vsetvli;
-        const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
-        uint64_t SEW = RISCVVType::decodeVSEW(
-            cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
-        RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(
-            cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
-        uint64_t MaxVLEN =
-            Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
-        uint64_t MaxVL = MaxVLEN / RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+        ConstantRange Range = getRISCVVSetVLMaxRange(*II, HasAVL);
+        if (Range.isFullSet())
+          break;
+        uint64_t MaxVL = Range.getUnsignedMax().getZExtValue();
 
         // Result of vsetvli must be not larger than AVL.
         if (HasAVL)
           if (auto *CI = dyn_cast<ConstantInt>(II->getArgOperand(0)))
             MaxVL = std::min(MaxVL, CI->getZExtValue());
+
+        if (MaxVL == 0) {
+          Known.setAllZero();
+          break;
+        }
 
         unsigned KnownZeroFirstBit = Log2_32(MaxVL) + 1;
         if (BitWidth > KnownZeroFirstBit)
@@ -2871,6 +2904,12 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         if (II->getArgOperand(0) == II->getArgOperand(1))
           return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Q, Depth);
         break;
+      case Intrinsic::riscv_vsetvlimax:
+        // VLEN and LMUL are powers of two, and SEW is a power of two.
+        if (ConstantRange Range = getRISCVVSetVLMaxRange(*II);
+            !Range.isFullSet())
+          return OrZero || !Range.contains(APInt(Range.getBitWidth(), 0));
+        return false;
       default:
         break;
       }
@@ -10390,6 +10429,8 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
   unsigned Width = II.getType()->getScalarSizeInBits();
   const APInt *C;
   switch (II.getIntrinsicID()) {
+  case Intrinsic::riscv_vsetvlimax:
+    return getRISCVVSetVLMaxRange(II);
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
     APInt Upper(Width, Width);
