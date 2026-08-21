@@ -2559,8 +2559,8 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode, Type *ResultTy) {
   case Instruction::Select:
   case Instruction::PHI:
   case Instruction::Call:
-    // Selects, phis and calls only have fast-math flags if they produce a
-    // floating-point value.
+    // Selects, phis and calls only have fast-math flags if they have a
+    // supported floating-point result type.
     if (FPMathOperator::isSupportedFloatingPointType(ResultTy))
       return FastMathFlags();
     return VPIRFlags();
