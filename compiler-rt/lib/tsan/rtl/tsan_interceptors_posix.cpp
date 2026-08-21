@@ -165,6 +165,7 @@ namespace __tsan {
 struct SignalDesc {
   bool armed;
   __sanitizer_siginfo siginfo;
+  bool ctx_valid;
   ucontext_t ctx;
 };
 
@@ -2279,7 +2280,7 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
     if (signal->armed) {
       signal->armed = false;
       CallUserSignalHandler(thr, false, true, sig, &signal->siginfo,
-                            &signal->ctx);
+                            signal->ctx_valid ? &signal->ctx : nullptr);
     }
   }
   res = REAL(pthread_sigmask)(SIG_SETMASK, oldset, 0);
@@ -2343,7 +2344,9 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
   if (signal->armed == false) {
     signal->armed = true;
     internal_memcpy(&signal->siginfo, info, sizeof(*info));
-    internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
+    signal->ctx_valid = (ctx != nullptr);
+    if (ctx)
+      internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
     atomic_store(&thr->pending_signals, 1, memory_order_relaxed);
   }
 }
