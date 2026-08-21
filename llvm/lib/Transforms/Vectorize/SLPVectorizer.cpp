@@ -468,7 +468,7 @@ static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 static InstructionCost
 getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
                     Type *ScalarTy, unsigned NumElts,
-                    TTI::TargetCostKind CostKind,
+                    const TTI::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr) {
   FixedVectorType *PaddedVecTy =
       getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts);
@@ -543,10 +543,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    // Undef can be represented as an undef element in a vector.
+    // Undef, or a copyable lane modeled on an extract main op, can be
+    // represented as an undef element in a vector.
     if (isa<UndefValue>(VL[I]))
       continue;
-    auto *EI = cast<ExtractElementInst>(VL[I]);
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI)
+      continue;
     if (isa<ScalableVectorType>(EI->getVectorOperandType()))
       return std::nullopt;
     auto *Vec = EI->getVectorOperand();
@@ -2765,9 +2768,10 @@ private:
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
   /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
   /// be a FixedVectorType in ReVec mode or an adjusted type due to MinBWs.
-  InstructionCost getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
-                                           Type *VecTy, Type *FinalVecTy,
-                                           TTI::TargetCostKind CostKind) const;
+  InstructionCost
+  getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy, Type *VecTy,
+                           Type *FinalVecTy,
+                           const TTI::TargetCostKind CostKind) const;
 
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
@@ -4628,7 +4632,8 @@ private:
           }
           // The commutative user with the same operands can be safely
           // considered as non-commutative, operands reordering does not change
-          // the semantics.
+          // the semantics. Same for cmps with the same operands: inverting
+          // the predicate does not change the operand columns in this case.
           assert(
               (!IsCommutativeUser ||
                (((isCommutative(User) && isCommutableOperand(User, User, 0) &&
@@ -4642,7 +4647,8 @@ private:
           bool IsCommutativeWithSameOps =
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
-              !isa<CmpInst>(User)) {
+              (!isa<CmpInst>(User) ||
+               User->getOperand(0) == User->getOperand(1))) {
             if (CurNumOps != NumOps)
               continue;
             // A reassociated node flattens the operand chain, so the operand
@@ -5549,7 +5555,8 @@ private:
   DemandedBits *DB;
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
-  /// Cached cost-model mode for this function (-Os/-Oz => CodeSize).
+  /// Cached cost-model mode for this function.
+  /// If -Os/-Oz, use CodeSize. Otherwise use RecipThroughput.
   const TargetTransformInfo::TargetCostKind CostKind;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
@@ -6140,7 +6147,7 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 static InstructionCost getScalarizationOverhead(
     const TargetTransformInfo &TTI, Type *ScalarTy, VectorType *Ty,
     const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+    const TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
     ArrayRef<Value *> VL = {},
     TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) {
   assert(!isa<ScalableVectorType>(Ty) &&
@@ -6158,10 +6165,10 @@ static InstructionCost getScalarizationOverhead(
       if (!DemandedElts[I])
         continue;
       if (Insert)
-        Cost += getShuffleCost(TTI, TTI::SK_InsertSubvector, Ty, {}, CostKind,
+        Cost += getShuffleCost(TTI, TTI::SK_InsertSubvector, Ty, CostKind, {},
                                I * ScalarTyNumElements, VecTy);
       if (Extract)
-        Cost += getShuffleCost(TTI, TTI::SK_ExtractSubvector, Ty, {}, CostKind,
+        Cost += getShuffleCost(TTI, TTI::SK_ExtractSubvector, Ty, CostKind, {},
                                I * ScalarTyNumElements, VecTy);
     }
     return Cost;
@@ -6174,14 +6181,14 @@ static InstructionCost getScalarizationOverhead(
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
 static InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, Type *ScalarTy, unsigned Opcode, Type *Val,
-    TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
+    const TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(SLPReVec && "Only supported by REVEC.");
       assert(isa<VectorType>(Val) && "Val must be a vector type.");
       return getShuffleCost(TTI, TTI::SK_ExtractSubvector,
-                            cast<VectorType>(Val), {}, CostKind,
+                            cast<VectorType>(Val), CostKind, {},
                             Index * VecTy->getNumElements(), VecTy);
     }
   }
@@ -6191,16 +6198,15 @@ static InstructionCost getVectorInstrCost(
 
 /// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
-static InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
-                                                unsigned Opcode, Type *Dst,
-                                                VectorType *VecTy,
-                                                unsigned Index,
-                                                TTI::TargetCostKind CostKind) {
+static InstructionCost
+getExtractWithExtendCost(const TargetTransformInfo &TTI, unsigned Opcode,
+                         Type *Dst, VectorType *VecTy, unsigned Index,
+                         const TTI::TargetCostKind CostKind) {
   if (isVectorizedTy(Dst)) {
     assert(SLPReVec && "Only supported by REVEC.");
     auto *SubTp = cast<FixedVectorType>(
         getWidenedType(toScalarizedTy(VecTy), getNumElements(Dst)));
-    return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
+    return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, CostKind, {},
                           Index * getNumElements(Dst), SubTp) +
            TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
                                 CostKind);
@@ -6283,16 +6289,15 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-static bool
-isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-                     const DataLayout &DL, ScalarEvolution &SE,
-                     AssumptionCache &AC, const DominatorTree &DT,
-                     const TargetLibraryInfo &TLI, TTI::TargetCostKind CostKind,
-                     const function_ref<bool(Value *)> AreAllUsersVectorized,
-                     bool &IsMasked, unsigned &InterleaveFactor,
-                     SmallVectorImpl<int> &CompressMask,
-                     VectorType *&LoadVecTy) {
+static bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TTI::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool &IsMasked,
+    unsigned &InterleaveFactor, SmallVectorImpl<int> &CompressMask,
+    VectorType *&LoadVecTy) {
   InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
@@ -6410,7 +6415,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   if (VectorGEPCost + LoadCost >= GatherCost)
     return false;
   InstructionCost CompressCost = getShuffleCost(
-      TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
+      TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind, CompressMask);
   if (!Order.empty()) {
     SmallVector<int> NewMask(Sz, PoisonMaskElem);
     for (unsigned I : seq<unsigned>(Sz)) {
@@ -6429,7 +6434,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                      ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
                      const DataLayout &DL, ScalarEvolution &SE,
                      AssumptionCache &AC, const DominatorTree &DT,
-                     const TargetLibraryInfo &TLI, TTI::TargetCostKind CostKind,
+                     const TargetLibraryInfo &TLI,
+                     const TTI::TargetCostKind CostKind,
                      const function_ref<bool(Value *)> AreAllUsersVectorized) {
   bool IsMasked;
   unsigned InterleaveFactor;
@@ -6993,7 +6999,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           getScalarizationOverhead(
               TTI, PtrScalarTy, PtrVecTy, APInt::getOneBitSet(Sz, 0),
               /*Insert=*/true, /*Extract=*/false, CostKind) +
-          getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, {}, CostKind);
+          getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, CostKind);
     // The cost of scalar loads.
     InstructionCost ScalarLoadsCost =
         accumulate(VL, InstructionCost(),
@@ -7098,7 +7104,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                 getScalarizationOverhead(
                     TTI, ScalarTy, SubVecTy, APInt::getOneBitSet(SliceVF, 0),
                     /*Insert=*/true, /*Extract=*/false, CostKind) +
-                getShuffleCost(TTI, TTI::SK_Broadcast, SubVecTy, {}, CostKind);
+                getShuffleCost(TTI, TTI::SK_Broadcast, SubVecTy, CostKind);
         }
         switch (LS) {
         case LoadsState::Vectorize:
@@ -7118,13 +7124,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                        VectorGEPCost;
           break;
         case LoadsState::CompressVectorize:
-          VecLdCost += TTI.getMemIntrinsicInstrCost(
-                           MemIntrinsicCostAttributes(
-                               Intrinsic::masked_load, SubVecTy,
-                               CommonAlignment, LI0->getPointerAddressSpace()),
-                           CostKind) +
-                       getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy,
-                                      {}, CostKind);
+          VecLdCost +=
+              TTI.getMemIntrinsicInstrCost(
+                  MemIntrinsicCostAttributes(Intrinsic::masked_load, SubVecTy,
+                                             CommonAlignment,
+                                             LI0->getPointerAddressSpace()),
+                  CostKind) +
+              getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy, CostKind);
           break;
         case LoadsState::ScatterVectorize:
           VecLdCost += TTI.getMemIntrinsicInstrCost(
@@ -7151,8 +7157,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           ShuffleMask[Idx] = Idx / VF == SliceIdx ? VL.size() + Idx % VF : Idx;
         if (SliceStart > 0)
           VecLdCost +=
-              getShuffleCost(TTI, TTI::SK_InsertSubvector, VecTy, ShuffleMask,
-                             CostKind, SliceStart, SubVecTy);
+              getShuffleCost(TTI, TTI::SK_InsertSubvector, VecTy, CostKind,
+                             ShuffleMask, SliceStart, SubVecTy);
       }
       // If masked gather cost is higher - better to vectorize, so
       // consider it as a gather node. It will be better estimated
@@ -7455,7 +7461,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     SmallVector<int> ReusedMask(TE.ReuseShuffleIndices.begin(),
                                 TE.ReuseShuffleIndices.end());
     if (TE.hasState() && TE.getOpcode() == Instruction::ExtractElement &&
-        all_of(TE.Scalars, [Sz](Value *V) {
+        !TE.hasCopyableElements() && all_of(TE.Scalars, [Sz](Value *V) {
           if (isa<PoisonValue>(V))
             return true;
           std::optional<unsigned> Idx = getExtractIndex(cast<Instruction>(V));
@@ -7654,7 +7660,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       allSameType(TE.Scalars)) {
     // TODO: add analysis of other gather nodes with extractelement
     // instructions and other values/instructions, not only undefs.
-    if (((TE.hasState() && TE.getOpcode() == Instruction::ExtractElement) ||
+    // Nodes with copyable lanes may mix in non-extract lanes, for which the
+    // extract-index order is not applicable.
+    if (((TE.hasState() && TE.getOpcode() == Instruction::ExtractElement &&
+          !TE.hasCopyableElements()) ||
          (all_of(TE.Scalars, IsaPred<UndefValue, ExtractElementInst>) &&
           any_of(TE.Scalars, IsaPred<ExtractElementInst>))) &&
         all_of(TE.Scalars, [](Value *V) {
@@ -7691,9 +7700,9 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
         SmallVector<int> Mask;
         inversePermutation(Order, Mask);
         InstructionCost PermuteCost =
-            TopToBottom
-                ? 0
-                : getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, Ty, Mask);
+            TopToBottom ? 0
+                        : getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, Ty,
+                                         CostKind, Mask);
         InstructionCost InsertFirstCost =
             TTI->getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, 0,
                                     PoisonValue::get(Ty), *It);
@@ -9870,7 +9879,7 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
                    const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
-                   TTI::TargetCostKind CostKind) {
+                   const TTI::TargetCostKind CostKind) {
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
@@ -10162,6 +10171,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   }
   case Instruction::ExtractElement:
     if (any_of(VL, [&](Value *V) {
+          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            return false;
           auto *EI = dyn_cast<ExtractElementInst>(V);
           if (!EI)
             return true;
@@ -10175,6 +10186,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     [[fallthrough]];
   case Instruction::ExtractValue: {
     bool Reuse = canReuseExtract(VL, CurrentOrder);
+    // Copyable lanes are inserted into the reused source vector at their own
+    // index, which is correct only for the identity extract order (empty
+    // CurrentOrder) and without a reuse shuffle; other cases fall back to
+    // gather.
+    if (S.areInstructionsWithCopyableElements() &&
+        (!Reuse || !ReuseShuffleIndices.empty()))
+      return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
     SmallVector<unsigned> Indices;
@@ -10902,10 +10920,10 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     }
     const TTI::TargetCostKind CostKind = R.getCostKind();
     InstructionCost ReusesCost = getShuffleCost(
-        TTI, TTI::SK_PermuteSingleSrc, VecTy,
+        TTI, TTI::SK_PermuteSingleSrc, VecTy, CostKind,
         NumUniqueScalarValues > VL.size() / 2 ? ArrayRef<int>()
                                               : ArrayRef(ReuseShuffleIndices),
-        CostKind, /*Index=*/0, UniquesVecTy);
+        /*Index=*/0, UniquesVecTy);
     // For vectorizable (non-gather) nodes with low duplication, prefer keeping
     // the original values over packing uniques + reshuffling:
     // - A single duplicate (non-load) adds negligible overhead.
@@ -11082,11 +11100,11 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   if (NumParts >= VL.size())
     return false;
   InstructionCost InsertCost = getShuffleCost(
-      *TTI, TTI::SK_InsertSubvector, VecTy, {}, CostKind, Op1.size(), Op2VecTy);
+      *TTI, TTI::SK_InsertSubvector, VecTy, CostKind, {}, Op1.size(), Op2VecTy);
   auto *SubVecTy = cast<VectorType>(
       getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size())));
   InstructionCost NewShuffleCost =
-      getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, CostKind);
+      getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, CostKind, Mask);
   if (!LocalState.isCmpOp() && NumParts <= 1 &&
       (Mask.empty() || InsertCost >= NewShuffleCost))
     return false;
@@ -11108,7 +11126,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
     }
     InstructionCost OriginalCost =
         OriginalVecOpsCost + getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy,
-                                            OriginalMask, CostKind);
+                                            CostKind, OriginalMask);
     InstructionCost NewVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, Op1VecTy, CostKind) +
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind);
@@ -11156,10 +11174,14 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if \p I can be the main op for copyable analysis: a supported
   /// binary operator, fmuladd, or an integer min/max intrinsic, the only
   /// call with a well-defined idempotent value (FP min/max lacks one because of
-  /// NaNs).
+  /// NaNs). An extractelement with constant index from a fixed vector is also
+  /// supported: the matching lanes reuse the source vector and the copyable
+  /// lanes are inserted into it.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
-           RecurrenceDescriptor::isFMulAddIntrinsic(I);
+           RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
+           (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
+            isa<FixedVectorType>(I->getOperand(0)->getType()));
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11775,6 +11797,18 @@ public:
       return OrigS;
     if (!WithProfitabilityCheck)
       return S;
+    // ExtractElement copyable nodes reuse the source vector and insert the
+    // copyable lanes; the binary-operator operand heuristics below do not
+    // apply, so defer profitability to the full tree cost.
+    if (isa<ExtractElementInst>(MainOp)) {
+      // A load as a copyable lane would be pulled out of the consecutive-load
+      // vectorization; keep the original state so the node can be split.
+      if (any_of(VL, [&](Value *V) {
+            return S.isCopyableElement(V) && isa<LoadInst>(V);
+          }))
+        return OrigS;
+      return S;
+    }
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
@@ -11961,6 +11995,14 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
+      // ExtractElement copyable nodes carry a single operand (the shared
+      // source vector); copyable lanes are inserted during codegen and do
+      // not contribute an operand column.
+      if (MainOpcode == Instruction::ExtractElement) {
+        Operands.assign(1,
+                        BoUpSLP::ValueList(VL.size(), MainOp->getOperand(0)));
+        return Operands;
+      }
       // Excludes the trailing callee operand (2 for min/max, 3 for fmuladd).
       // getNumberOfPotentiallyCommutativeOps collapses fmuladd to 2 and must
       // not be used here. Only the 2-operand case is commutative-normalized.
@@ -12317,7 +12359,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
       Type *ScalarTy = VL.front()->getType();
       auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
       InstructionCost VectorizeCostEstimate =
-          getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, CostKind) +
+          getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, CostKind) +
           ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
                                      /*Insert=*/false, /*Extract=*/true,
                                      CostKind);
@@ -13512,9 +13554,6 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
   const auto *It = find_if(VL, IsaPred<ExtractElementInst, ExtractValueInst>);
   assert(It != VL.end() && "Expected at least one extract instruction.");
   auto *E0 = cast<Instruction>(*It);
-  assert(
-      all_of(VL, IsaPred<UndefValue, ExtractElementInst, ExtractValueInst>) &&
-      "Invalid opcode");
   // Check if all of the extracts come from the same vector and from the
   // correct offset.
   Value *Vec = E0->getOperand(0);
@@ -13541,9 +13580,11 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
   SmallVector<int> Indices(E, PoisonMaskElem);
   unsigned MinIdx = NElts, MaxIdx = 0;
   for (auto [I, V] : enumerate(VL)) {
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
+    // Non-extract lanes (copyable elements modeled on an extract main op, or
+    // undefs) are treated as holes.
+    if (!isa<ExtractElementInst, ExtractValueInst>(V))
       continue;
+    auto *Inst = cast<Instruction>(V);
     if (Inst->getOperand(0) != Vec)
       return false;
     if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
@@ -13605,7 +13646,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       TTI::TargetCostKind CostKind);
+                                       const TTI::TargetCostKind CostKind);
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -14355,7 +14396,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   auto *ScalarTy = TE.Scalars.front()->getType();
   auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, TE.Scalars.size()));
   for (auto [Idx, Sz] : SubVectors) {
-    Cost += getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+    Cost += getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, CostKind, {},
                            Idx, cast<VectorType>(getWidenedType(ScalarTy, Sz)));
   }
   Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElts,
@@ -14376,7 +14417,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
                          any_of(ReorderMask, [&](int I) { return I >= Sz; })
                              ? TTI::SK_PermuteTwoSrc
                              : TTI::SK_PermuteSingleSrc,
-                         VecTy, ReorderMask);
+                         VecTy, CostKind, ReorderMask);
   DemandedElts = APInt::getAllOnes(TE.Scalars.size());
   ReorderMask.assign(Sz, PoisonMaskElem);
   for (unsigned I : seq<unsigned>(Sz)) {
@@ -14393,7 +14434,8 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
       getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElts,
                                /*Insert=*/true, /*Extract=*/false, CostKind);
   if (!DemandedElts.isAllOnes())
-    BVCost += getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, ReorderMask);
+    BVCost += getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, CostKind,
+                             ReorderMask);
   if (Cost >= BVCost) {
     SmallVector<int> Mask(TE.ReorderIndices.begin(), TE.ReorderIndices.end());
     reorderScalars(TE.Scalars, Mask);
@@ -14408,7 +14450,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       TTI::TargetCostKind CostKind) {
+                                       const TTI::TargetCostKind CostKind) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -14590,7 +14632,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     SmallVector<int> Mask;
     inversePermutation(Order, Mask);
     BitcastCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, SrcVecTy,
-                                  Mask, CostKind);
+                                  CostKind, Mask);
   }
   // Check if the combination can be modeled as a bitcast+byteswap operation.
   constexpr unsigned ByteSize = 8;
@@ -15098,7 +15140,7 @@ void BoUpSLP::transformNodes() {
             TTI->getMemoryOpCost(Instruction::Load, VecTy, BaseLI->getAlign(),
                                  BaseLI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
-            getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+            getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
                                        VecTy, BaseLI->getPointerOperand(),
@@ -15139,7 +15181,7 @@ void BoUpSLP::transformNodes() {
             TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
                                  BaseSI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
-            getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+            getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
                                        VecTy, BaseSI->getPointerOperand(),
@@ -15491,7 +15533,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
                                  PoisonValue::get(VecTy), *It);
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
-                                         VecTy, ShuffleMask, CostKind,
+                                         VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
                                          /*Args=*/*It);
     }
@@ -15599,14 +15641,16 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 MaskSlice, std::max<unsigned>(NumElts, MaskSlice.size())))
           Cost += getShuffleCost(
               TTI, *ShuffleKinds[Part],
-              cast<VectorType>(getWidenedType(ScalarTy, NumElts)), MaskSlice);
+              cast<VectorType>(getWidenedType(ScalarTy, NumElts)), CostKind,
+              MaskSlice);
         continue;
       }
       if (*RegShuffleKind != TTI::SK_PermuteSingleSrc ||
           !ShuffleVectorInst::isIdentityMask(SubMask, EltsPerVector)) {
         Cost += getShuffleCost(
             TTI, *RegShuffleKind,
-            cast<VectorType>(getWidenedType(ScalarTy, EltsPerVector)), SubMask);
+            cast<VectorType>(getWidenedType(ScalarTy, EltsPerVector)), CostKind,
+            SubMask);
       }
       const unsigned BaseVF = getFullVectorNumberOfElements(
           *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector));
@@ -15615,16 +15659,17 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                "SK_ExtractSubvector index out of range");
         Cost += getShuffleCost(
             TTI, TTI::SK_ExtractSubvector,
-            cast<VectorType>(getWidenedType(ScalarTy, BaseVF)), {}, CostKind,
+            cast<VectorType>(getWidenedType(ScalarTy, BaseVF)), CostKind, {},
             Idx, cast<VectorType>(getWidenedType(ScalarTy, SubVecSize)));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
       SubMask.assign(NumElts, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
-      InstructionCost OriginalCost = getShuffleCost(
-          TTI, *ShuffleKinds[Part],
-          cast<VectorType>(getWidenedType(ScalarTy, NumElts)), SubMask);
+      InstructionCost OriginalCost =
+          getShuffleCost(TTI, *ShuffleKinds[Part],
+                         cast<VectorType>(getWidenedType(ScalarTy, NumElts)),
+                         CostKind, SubMask);
       if (OriginalCost < Cost)
         Cost = OriginalCost;
     }
@@ -15712,7 +15757,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
 
   public:
     ShuffleCostBuilder(const TargetTransformInfo &TTI,
-                       TTI::TargetCostKind CostKind)
+                       const TTI::TargetCostKind CostKind)
         : TTI(TTI), CostKind(CostKind) {}
     ~ShuffleCostBuilder() = default;
     InstructionCost createShuffleVector(Value *V1, Value *,
@@ -15723,7 +15768,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
       return getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
-                            cast<VectorType>(V1->getType()), Mask);
+                            cast<VectorType>(V1->getType()), CostKind, Mask);
     }
     InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask,
                                         ArrayRef<Value *> VL) const {
@@ -15733,7 +15778,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
       return getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
-                            cast<VectorType>(V1->getType()), Mask, CostKind,
+                            cast<VectorType>(V1->getType()), CostKind, Mask,
                             /*Index=*/0, /*SubTp=*/nullptr, VL);
     }
     InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
@@ -16305,7 +16350,7 @@ public:
         Cost += getShuffleCost(
             TTI, TTI::SK_PermuteTwoSrc,
             cast<VectorType>(getWidenedType(ScalarTy, CommonMask.size())),
-            SVMask, CostKind);
+            CostKind, SVMask);
       }
       for (auto [E, Idx] : SubVectors) {
         Type *EScalarTy = E->Scalars.front()->getType();
@@ -16328,8 +16373,8 @@ public:
         }
         Cost += getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
-            cast<VectorType>(getWidenedType(ScalarTy, CommonMask.size())), {},
-            CostKind, Idx,
+            cast<VectorType>(getWidenedType(ScalarTy, CommonMask.size())),
+            CostKind, {}, Idx,
             cast<VectorType>(getWidenedType(ScalarTy, E->getVectorFactor())));
         if (!CommonMask.empty()) {
           std::iota(std::next(CommonMask.begin(), Idx),
@@ -16565,7 +16610,7 @@ uint64_t BoUpSLP::getEntryEffectiveScale(const TreeEntry &TE, Instruction *U) {
 InstructionCost
 BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
                                   Type *VecTy, Type *FinalVecTy,
-                                  TTI::TargetCostKind CostKind) const {
+                                  const TTI::TargetCostKind CostKind) const {
   InstructionCost SpillsReloads = 0;
 
   // Estimate vector register pressure per target register class: operand
@@ -16767,8 +16812,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     InstructionCost VectorCost = 0;
     if (E->ReorderIndices.empty()) {
       VectorCost = getShuffleCost(
-          *TTI, TTI::SK_InsertSubvector, cast<VectorType>(FinalVecTy), {},
-          CostKind, E->CombinedEntriesWithIndices.back().second,
+          *TTI, TTI::SK_InsertSubvector, cast<VectorType>(FinalVecTy), CostKind,
+          {}, E->CombinedEntriesWithIndices.back().second,
           cast<VectorType>(getWidenedType(
               ScalarTy,
               VectorizableTree[E->CombinedEntriesWithIndices.back().first]
@@ -16782,7 +16827,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       VectorCost =
           getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
                          cast<VectorType>(getWidenedType(ScalarTy, CommonVF)),
-                         E->getSplitMask(), CostKind);
+                         CostKind, E->getSplitMask());
     }
     VectorCost += SpillsReloads;
     LLVM_DEBUG(dumpTreeCosts(E, 0, VectorCost, 0, "Calculated costs for Tree"));
@@ -16809,7 +16854,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     assert(!isa<StructType>(FinalVecTy) &&
            "Expected non-struct vector type for shuffle cost calculation.");
     CommonCost = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                                cast<VectorType>(FinalVecTy), Mask, CostKind,
+                                cast<VectorType>(FinalVecTy), CostKind, Mask,
                                 /*Index=*/0, cast<VectorType>(VecTy));
   }
   assert((E->State == TreeEntry::Vectorize ||
@@ -17031,10 +17076,20 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     if (ShuffleOrOp == Instruction::ExtractValue && !E->StructEVIndices.empty())
       return CommonCost;
     APInt DemandedElts;
+    APInt CopyableInsertElts;
     VectorType *SrcVecTy = nullptr;
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
+
+      // Copyable lanes are not extracts; they are inserted into the reused
+      // source vector, so charge the insert to the vector side only.
+      if (E->isCopyableElement(UniqueValues[Idx])) {
+        if (CopyableInsertElts.isZero())
+          CopyableInsertElts = APInt::getZero(E->getVectorFactor());
+        CopyableInsertElts.setBit(Idx);
+        return InstructionCost(TTI::TCC_Free);
+      }
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
       if (!SrcVecTy) {
@@ -17074,11 +17129,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
-      return CommonCost - (DemandedElts.isZero()
-                               ? TTI::TCC_Free
-                               : TTI.getScalarizationOverhead(
-                                     SrcVecTy, DemandedElts, /*Insert=*/false,
-                                     /*Extract=*/true, CostKind));
+      return CommonCost +
+             (CopyableInsertElts.isZero()
+                  ? TTI::TCC_Free
+                  : TTI.getScalarizationOverhead(
+                        cast<VectorType>(
+                            getWidenedType(OrigScalarTy, E->getVectorFactor())),
+                        CopyableInsertElts, /*Insert=*/true,
+                        /*Extract=*/false, CostKind)) -
+             (DemandedElts.isZero()
+                  ? TTI::TCC_Free
+                  : TTI.getScalarizationOverhead(SrcVecTy, DemandedElts,
+                                                 /*Insert=*/false,
+                                                 /*Extract=*/true, CostKind));
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -17156,7 +17219,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto *InsertVecTy = cast<VectorType>(getWidenedType(ScalarTy, InsertVecSz));
     if (!IsIdentity)
       Cost += getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             InsertVecTy, Mask);
+                             InsertVecTy, CostKind, Mask);
     auto *FirstInsert = cast<Instruction>(*find_if(E->Scalars, [E](Value *V) {
       return !is_contained(E->Scalars, cast<Instruction>(V)->getOperand(0));
     }));
@@ -17174,8 +17237,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = cast<VectorType>(getWidenedType(ScalarTy, VecSz));
-        Cost += getShuffleCost(*TTI, TTI::SK_InsertSubvector, ActualVecTy, {},
-                               CostKind, OffsetBeg - Offset, InsertVecTy);
+        Cost += getShuffleCost(*TTI, TTI::SK_InsertSubvector, ActualVecTy,
+                               CostKind, {}, OffsetBeg - Offset, InsertVecTy);
       } else {
         for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
           Mask[I] = InMask.test(I) ? PoisonMaskElem : I;
@@ -17186,7 +17249,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
           Mask[I] =
               ((I >= InMask.size()) || InMask.test(I)) ? PoisonMaskElem : I;
-        Cost += getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
+        Cost += getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy,
+                               CostKind, Mask);
       }
     }
     if (ShuffleOrOp == Instruction::InsertValue &&
@@ -17415,7 +17479,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             // When the return type is i1 but the source is fixed vector type,
             // we need to duplicate the condition value.
             VecCost += getShuffleCost(
-                *TTI, TTI::SK_PermuteSingleSrc, MaskTy,
+                *TTI, TTI::SK_PermuteSingleSrc, MaskTy, CostKind,
                 createReplicatedMask(VecTyNumElements / CondNumElements,
                                      CondNumElements));
           }
@@ -17739,14 +17803,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CompressMask, CostKind);
+                                      CostKind, CompressMask);
         } else {
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, LoadVecTy, CommonAlignment,
               LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CompressMask, CostKind);
+                                      CostKind, CompressMask);
         }
         break;
       }
@@ -18022,7 +18086,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           },
           Mask);
       VecCost += getShuffleCost(TTIRef, TargetTransformInfo::SK_PermuteTwoSrc,
-                                cast<VectorType>(FinalVecTy), Mask, CostKind);
+                                cast<VectorType>(FinalVecTy), CostKind, Mask);
       // Patterns like [fadd,fsub] can be combined into a single instruction
       // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
       // need to take into account their order when looking for the most used
@@ -18075,7 +18139,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                   }))
                 return getShuffleCost(*TTI,
                                       TargetTransformInfo::SK_PermuteSingleSrc,
-                                      cast<VectorType>(VecTy),
+                                      cast<VectorType>(VecTy), CostKind,
                                       calculateShufflevectorMask(E->Scalars));
             }
             return TTI::TCC_Free;
@@ -18100,8 +18164,11 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                    [this](Value *V) { return EphValues.contains(V); }) &&
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
+            // Nodes with copyable lanes may mix in non-extract lanes, which
+            // are not representable as a shuffle of the source vector.
             (((TE->hasState() &&
-               TE->getOpcode() == Instruction::ExtractElement) ||
+               TE->getOpcode() == Instruction::ExtractElement &&
+               !TE->hasCopyableElements()) ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
              isFixedVectorShuffle(TE->Scalars, Mask, AC)) ||
             (TE->hasState() && TE->getOpcode() == Instruction::Load &&
@@ -18488,11 +18555,14 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere. TreeSize >= 1 is guaranteed, so the multi-node case reduces to
   // a simple TreeSize > 1 short-circuit.
+  // A gather with copyable lanes is not a real instruction node; do not let
+  // its state qualify it as a buildvector-forming node.
   const bool IsAllowedSingleBVNode =
-      TreeSize > 1 || (FrontHasState && !Front.isAltShuffle() &&
-                       FrontOpcode != Instruction::PHI &&
-                       FrontOpcode != Instruction::GetElementPtr &&
-                       allSameBlock(Front.Scalars));
+      TreeSize > 1 ||
+      (FrontHasState && !Front.isAltShuffle() && !Front.hasCopyableElements() &&
+       FrontOpcode != Instruction::PHI &&
+       FrontOpcode != Instruction::GetElementPtr &&
+       allSameBlock(Front.Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, Constant>(V) ||
@@ -19479,7 +19549,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       addMask(Mask, TE->ReuseShuffleIndices);
     if (!Mask.empty() && !ShuffleVectorInst::isIdentityMask(Mask, EntryVF))
       GatherCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                                   cast<VectorType>(VecTy), Mask);
+                                   cast<VectorType>(VecTy), CostKind, Mask);
     // If all scalars are reused in gather node(s) or other vector nodes, there
     // might be extra cost for inserting them.
     if ((!TE->hasState() || !TE->isAltShuffle()) &&
@@ -19805,13 +19875,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // On AArch64, this helps in fusing a mov instruction, associated with
   // extractelement, with fmul in the backend so that extractelement is free.
   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+  // Record every external use: a missing entry is indistinguishable from
+  // lane 0 and is priced as a free extract by the extract-fusion cost model.
+  for (ExternalUser &EU : ExternalUses)
+    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
   // Detect external uses that drive address computations: the scalar (through
   // an optional single-use index-promotion cast) is used as a GEP index.
   bool AllUsersGEPSWithStoresLoads = true;
   SmallVector<const Value *> Pointers;
   Type *UserScalarTy = nullptr;
   for (ExternalUser &EU : ExternalUses) {
-    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
     Value *Usr = EU.User;
     if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
       Usr = cast<Instruction>(Usr)->user_back();
@@ -19822,9 +19895,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (User && User->hasOneUse() &&
         isa<LoadInst, StoreInst>(User->user_back()))
       AccessTy = getValueType(User->user_back());
-    if (!AccessTy || isa<ScalableVectorType>(AccessTy))
-      User = nullptr;
-    if (User && (!UserScalarTy || UserScalarTy == AccessTy)) {
+    if (AccessTy && !isa<ScalableVectorType>(AccessTy) &&
+        (!UserScalarTy || UserScalarTy == AccessTy)) {
       UserScalarTy = AccessTy;
       Pointers.push_back(User);
     } else {
@@ -20213,19 +20285,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // address chain. Add the delta once rather than per external use.
   if (AllUsersGEPSWithStoresLoads && !Pointers.empty()) {
     const TreeEntry &RootEntry = getRootNode();
-    const Value *CommonBase = nullptr;
-    bool HaveCommonBase = true;
-    for (const Value *P : Pointers) {
-      const Value *Op = getUnderlyingObject(P);
-      if (!CommonBase)
-        CommonBase = Op;
-      else if (CommonBase != Op) {
-        HaveCommonBase = false;
-        break;
-      }
-    }
-    if (HaveCommonBase) {
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    const Value *CommonBase = getUnderlyingObject(Pointers.front());
+    if (all_of(Pointers, [CommonBase](const Value *P) {
+          return getUnderlyingObject(P) == CommonBase;
+        })) {
       auto *VecTy = getWidenedType(UserScalarTy, RootEntry.Scalars.size());
       InstructionCost ScalarGEPCost = TTI->getPointersChainCost(
           Pointers, CommonBase, TTI::PointersChainInfo::getUnitStride(),
@@ -20307,7 +20370,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         C = getShuffleCost(
             *TTI, TTI::SK_PermuteSingleSrc,
             cast<VectorType>(getWidenedType(TE->getMainOp()->getType(), VecVF)),
-            OrigMask);
+            CostKind, OrigMask);
         LLVM_DEBUG(
             dbgs() << "SLP: Adding cost " << C
                    << " for final shuffle of insertelement external users.\n";
@@ -20326,7 +20389,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           C = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
                              cast<VectorType>(getWidenedType(
                                  TE->getMainOp()->getType(), VecVF)),
-                             ResizeMask);
+                             CostKind, ResizeMask);
         LLVM_DEBUG(
             dbgs() << "SLP: Adding cost " << C
                    << " for final shuffle of insertelement external users.\n";
@@ -20356,8 +20419,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                      (Data.index() < VF &&
                       static_cast<int>(Data.index()) == Data.value());
             })) {
-          InstructionCost C = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                                             cast<VectorType>(FTy), Mask);
+          InstructionCost C =
+              getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                             cast<VectorType>(FTy), CostKind, Mask);
           C = ScaleCost(C, *TEs.front());
           LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                             << " for final shuffle of insertelement "
@@ -20375,8 +20439,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             VF = Mask.size();
         }
         auto *FTy = getWidenedType(TEs.back()->Scalars.front()->getType(), VF);
-        InstructionCost C = getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
-                                           cast<VectorType>(FTy), Mask);
+        InstructionCost C = getShuffleCost(
+            *TTI, TTI::SK_PermuteTwoSrc, cast<VectorType>(FTy), CostKind, Mask);
         C = ScaleCost(C, *TEs.back());
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                           << " for final shuffle of vector node and external "
@@ -20443,8 +20507,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           break;
         }
         InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                  CostKind);
+            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH, CostKind);
         CastCost = ScaleCost(CastCost, getRootNode(), /*Scalar=*/nullptr,
                              ReductionRoot);
         Cost += CastCost;
@@ -21284,7 +21347,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       return getShuffleCost(TTI,
                             Entries.size() > 1 ? TTI::SK_PermuteTwoSrc
                                                : TTI::SK_PermuteSingleSrc,
-                            VecTy, Mask, CostKind);
+                            VecTy, CostKind, Mask);
     };
     InstructionCost ShuffleCost = GetShuffleCost(SubMask, Entries, VecTy);
     InstructionCost FirstShuffleCost = 0;
@@ -21479,8 +21542,9 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       any_of(VL, [](Value *V) { return !isa<UndefValue>(V) && isConstant(V); });
   // 1. Shuffle input source vector and constant vector.
   if (!ForPoisonSrc && IsAnyNonUndefConst) {
-    Cost += getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc,
-                           cast<VectorType>(VecTy), ConstantShuffleMask);
+    Cost +=
+        getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc,
+                       cast<VectorType>(VecTy), CostKind, ConstantShuffleMask);
   }
 
   // 2. Insert unique non-constants.
@@ -23012,7 +23076,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                   NewMask[Idx] = Mask.size();
               SplatCost +=
                   getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
-                                 cast<VectorType>(VecTy), NewMask, CostKind);
+                                 cast<VectorType>(VecTy), CostKind, NewMask);
               InstructionCost BVCost = TTI->getVectorInstrCost(
                   Instruction::InsertElement, VecTy, CostKind,
                   *find_if(Mask, not_equal_to(PoisonMaskElem)), Vec, V);
@@ -23025,7 +23089,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                     NewMask[Idx] = I;
                 BVCost +=
                     getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                                   cast<VectorType>(VecTy), NewMask, CostKind);
+                                   cast<VectorType>(VecTy), CostKind, NewMask);
               }
               return SplatCost <= BVCost;
             };
@@ -23483,6 +23547,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = E->getSingleOperand(0);
       setInsertPointAfterBundle(E);
       V = FinalShuffle(V, E);
+      // Insert the copyable lanes (non-extract scalars modeled on the extract
+      // main op) into the reused source vector. The identity extract order and
+      // absence of a reuse shuffle are guaranteed when the node is created, so
+      // a lane maps to its own index.
+      if (E->hasCopyableElements()) {
+        assert(E->ReorderIndices.empty() && E->ReuseShuffleIndices.empty() &&
+               "Copyable extract lanes require identity order and no reuse.");
+        for (auto [Idx, Scalar] : enumerate(E->Scalars))
+          if (E->isCopyableElement(Scalar))
+            V = Builder.CreateInsertElement(V, Scalar, Builder.getInt32(Idx));
+      }
       E->VectorizedValue = V;
       return V;
     }
@@ -31810,7 +31885,7 @@ private:
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
       DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
-    TTI::TargetCostKind CostKind = R.getCostKind();
+    const TTI::TargetCostKind CostKind = R.getCostKind();
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
     FixedVectorType *VectorTy = R.getReductionType();
@@ -31909,8 +31984,8 @@ private:
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
               VectorCost +=
-                  getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
-                                 CostKind, I * ScalarTyNumElements, VecTy);
+                  getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy,
+                                 CostKind, {}, I * ScalarTyNumElements, VecTy);
             }
             // We get one less arithmetic instruction compared to number of
             // reduced values. We are also passing CtxI so that the backend can

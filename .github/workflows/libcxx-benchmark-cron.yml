@@ -167,4 +167,4 @@ jobs:
           fi
 
           libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --lnt-url "${LNT_URL}"  \
-                                                  --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"
+                                                  --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}" --extra-attempts 6

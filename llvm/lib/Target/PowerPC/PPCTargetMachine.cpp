@@ -595,7 +595,7 @@ bool PPCPassConfig::addLegalizeMachineIR() {
 }
 
 bool PPCPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

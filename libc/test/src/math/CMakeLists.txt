@@ -393,6 +393,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  truncf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    truncf128_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   truncf16_test
   NEED_MPFR
   SUITE

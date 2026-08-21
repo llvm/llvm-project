@@ -2609,27 +2609,25 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     Invalid = true;
   };
 
-  if (Ptr.isBlockPointer()) {
-    uint64_t IOffset = static_cast<uint64_t>(Offset);
-    uint64_t MaxOffset = MaxIndex - Index;
+  uint64_t IOffset = static_cast<uint64_t>(Offset);
+  uint64_t MaxOffset = MaxIndex - Index;
 
-    if constexpr (Op == ArithOp::Add) {
-      // If the new offset would be negative, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -IOffset > Index))
-        DiagInvalidOffset();
+  if constexpr (Op == ArithOp::Add) {
+    // If the new offset would be negative, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -IOffset > Index))
+      DiagInvalidOffset();
 
-      // If the new offset would be out of bounds, bail out.
-      if (Offset.isPositive() && IOffset > MaxOffset)
-        DiagInvalidOffset();
-    } else {
-      // If the new offset would be negative, bail out.
-      if (Offset.isPositive() && Index < IOffset)
-        DiagInvalidOffset();
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isPositive() && IOffset > MaxOffset)
+      DiagInvalidOffset();
+  } else {
+    // If the new offset would be negative, bail out.
+    if (Offset.isPositive() && Index < IOffset)
+      DiagInvalidOffset();
 
-      // If the new offset would be out of bounds, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -IOffset > MaxOffset))
-        DiagInvalidOffset();
-    }
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -IOffset > MaxOffset))
+      DiagInvalidOffset();
   }
 
   if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))

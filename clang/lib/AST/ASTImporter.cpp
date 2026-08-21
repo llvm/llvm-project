@@ -1748,10 +1748,14 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  Expected<TemplateDecl *> ToTypeConstraint =
-      import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraint)
-    return ToTypeConstraint.takeError();
+  TemplateName ToTypeConstraint;
+  if (TemplateName FromTypeConstraint = T->getTypeConstraintConcept();
+      !FromTypeConstraint.isNull()) {
+    Expected<TemplateName> ToTypeConstraintOrErr = import(FromTypeConstraint);
+    if (!ToTypeConstraintOrErr)
+      return ToTypeConstraintOrErr.takeError();
+    ToTypeConstraint = *ToTypeConstraintOrErr;
+  }
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1760,7 +1764,7 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
 
   return Importer.getToContext().getAutoType(
       T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
-      *ToTypeConstraint, ToTemplateArgs);
+      ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -2044,9 +2048,10 @@ ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
-  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  HLSLAttributedResourceType::Attributes ToAttrs = T->getAttrs();
   QualType ToWrappedType = importChecked(Err, T->getWrappedType());
   QualType ToContainedType = importChecked(Err, T->getContainedType());
+  ToAttrs.SampleCountExpr = importChecked(Err, T->getSampleCountExpr());
   if (Err)
     return std::move(Err);
 

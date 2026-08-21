@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
+#include <optional>
 
 namespace {
 class GeneratedRTChecks;
@@ -299,13 +300,18 @@ public:
     return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
   }
 
+  /// Create a select of \p TrueVal and \p FalseVal based on \p Cond, using the
+  /// default flags for the result type, unless \p Flags is set.
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "",
-                              const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
+                              std::optional<VPIRFlags> Flags = std::nullopt) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                          Flags.value_or(VPIRFlags::getDefaultFlags(
+                              Instruction::Select, TrueVal->getScalarType())),
+                          {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -359,12 +365,18 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
+  /// Create a phi with \p IncomingValues, using the default flags for the
+  /// result type, unless \p Flags is set.
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         const Twine &Name = "",
+                         std::optional<VPIRFlags> Flags = std::nullopt,
                          Type *ResultTy = nullptr) {
-    return tryInsertInstruction(
-        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
+    Type *ScalarTy = ResultTy ? ResultTy : IncomingValues[0]->getScalarType();
+    return tryInsertInstruction(new VPPhi(
+        IncomingValues,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Instruction::PHI, ScalarTy)),
+        DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -411,18 +423,11 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
+                                  std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
-        DL));
-  }
-
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+        Opcode, Op, ResultTy,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -465,7 +470,7 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
     return tryInsertInstruction(
         new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
@@ -983,10 +988,6 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
-
-  /// Returns true if \p Plan requires a scalar epilogue after the vector
-  /// loop. Asserts that the VPlan decision matches the legacy cost model.
-  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
