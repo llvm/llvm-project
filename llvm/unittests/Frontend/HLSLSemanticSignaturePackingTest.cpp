@@ -90,10 +90,16 @@ protected:
     }
   }
 
-  void expectPackingError(const TestConfig &Config, StringRef Message) {
+  void expectPackingError(const TestConfig &Config,
+                          SignaturePackingError::ErrorKind ExpectedKind,
+                          unsigned ExpectedElementIndex) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-    EXPECT_THAT_ERROR(packStacked(Elements, Config),
-                      FailedWithMessage(Message));
+    Error E = packStacked(Elements, Config);
+    ASSERT_TRUE(E.isA<SignaturePackingError>());
+    handleAllErrors(std::move(E), [&](const SignaturePackingError &PackingErr) {
+      EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
+      EXPECT_EQ(PackingErr.getElementIndex(), ExpectedElementIndex);
+    });
   }
 };
 

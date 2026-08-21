@@ -21,6 +21,32 @@
 
 namespace llvm::hlsl {
 
+/// Denotes the element that could not be packed and why.
+class SignaturePackingError : public ErrorInfo<SignaturePackingError> {
+public:
+  enum ErrorKind {
+    SignatureOverflow,
+  };
+
+  LLVM_ABI static char ID;
+
+  SignaturePackingError(ErrorKind Kind, unsigned ElementIndex)
+      : Kind(Kind), ElementIndex(ElementIndex) {}
+
+  ErrorKind getErrorKind() const { return Kind; }
+  unsigned getElementIndex() const { return ElementIndex; }
+
+  LLVM_ABI void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+private:
+  ErrorKind Kind;
+  unsigned ElementIndex;
+};
+
 /// Iterates through Elements that belong to the signature described by
 /// ShaderStage and IOTy and packs each element into 32 registers with 4
 /// components by updating its StartRow and StartCol in place. An element is
@@ -32,7 +58,8 @@ namespace llvm::hlsl {
 /// interpolation mode, component type, and semantic kind do not otherwise
 /// affect placement.
 ///
-/// Returns an error if all eligible elements cannot be placed.
+/// Returns a SignaturePackingError that denotes the first element that cannot
+/// be placed, or success if all eligible elements were placed.
 LLVM_ABI Error
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
