@@ -913,6 +913,23 @@ public:
     return false;
   }
 
+  /// Return true if \p First and \p Second form an AUIPC/JALR call pair with
+  /// linker-resolved immediates instead of a symbol reference. Such pairs can
+  /// be emitted for intra-section calls and need to be resymbolized before the
+  /// caller is moved.
+  virtual bool isUnsymbolizedRISCVCall(const MCInst &First,
+                                       const MCInst &Second) const {
+    return false;
+  }
+
+  /// Return the byte offset from AUIPC to the target of an unsymbolized
+  /// AUIPC/JALR call pair, including JALR's clearing of target bit zero.
+  virtual int64_t getUnsymbolizedRISCVCallOffset(const MCInst &First,
+                                                 const MCInst &Second) const {
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
   /// Used to fill the executable space with instructions
   /// that will trap.
   virtual StringRef getTrapFillValue() const {

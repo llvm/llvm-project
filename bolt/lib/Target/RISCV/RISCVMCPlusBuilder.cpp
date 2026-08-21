@@ -28,6 +28,34 @@ using namespace bolt;
 
 namespace {
 
+bool isValidUnsymbolizedCallAUIPC(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::AUIPC ||
+      MCPlus::getNumPrimeOperands(Inst) != 2)
+    return false;
+
+  const MCOperand &Destination = Inst.getOperand(0);
+  return Destination.isReg() && Destination.getReg() != RISCV::X0 &&
+         Inst.getOperand(1).isImm();
+}
+
+bool isValidUnsymbolizedCallJALR(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
+    return false;
+
+  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm();
+}
+
+bool hasSupportedUnsymbolizedCallRegisters(const MCInst &First,
+                                           const MCInst &Second) {
+  const MCRegister Base = First.getOperand(0).getReg();
+  if (Second.getOperand(1).getReg() != Base)
+    return false;
+
+  const MCRegister Link = Second.getOperand(0).getReg();
+  return Link == RISCV::X0 || (Base == RISCV::X1 && Link == RISCV::X1);
+}
+
 class RISCVMCPlusBuilder : public MCPlusBuilder {
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
@@ -563,7 +591,9 @@ public:
   }
 
   bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC)
+    if (Inst.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
+        Inst.getOperand(0).getReg() == RISCV::X0)
       return false;
 
     const auto &ImmOp = Inst.getOperand(1);
@@ -584,11 +614,30 @@ public:
   }
 
   bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First))
+    if (!isCallAuipc(First) || !isValidUnsymbolizedCallJALR(Second))
       return false;
 
-    assert(Second.getOpcode() == RISCV::JALR);
     return true;
+  }
+
+  bool isUnsymbolizedRISCVCall(const MCInst &First,
+                               const MCInst &Second) const override {
+    if (!isValidUnsymbolizedCallAUIPC(First) ||
+        !isValidUnsymbolizedCallJALR(Second))
+      return false;
+
+    return hasSupportedUnsymbolizedCallRegisters(First, Second);
+  }
+
+  int64_t getUnsymbolizedRISCVCallOffset(const MCInst &First,
+                                         const MCInst &Second) const override {
+    // The RV32I "Integer Computational Instructions" section defines AUIPC's
+    // offset as the sign-extended 20-bit U-immediate shifted left by 12. The
+    // "Control Transfer Instructions" section defines JALR as adding its
+    // sign-extended 12-bit I-immediate and clearing target bit zero. The
+    // symbolic AUIPC decoder passes the sign-extended, shifted value directly.
+    const int64_t Hi = First.getOperand(1).getImm();
+    return (Hi + Second.getOperand(2).getImm()) & ~1LL;
   }
 
   uint16_t getMinFunctionAlignment() const override {

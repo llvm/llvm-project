@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCSymbolizer.h"
+#include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 
 #define DEBUG_TYPE "bolt-symbolizer"
@@ -98,8 +100,50 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   // handling moved into the symbolizer.
   const Relocation *Rel =
       Function.getRelocationInRange(InstOffset, InstOffset + InstSize);
-  if (!Rel)
-    return false;
+  if (!Rel) {
+    // Recover RV64 linker-resolved intra-section calls without relocations.
+    // Decode the following JALR and attach a call expression to the AUIPC
+    // before function reordering can move the caller relative to the callee.
+    if (Inst.getOpcode() != RISCV::AUIPC || !CreateNewSymbols ||
+        !BC.TheTriple->isRISCV64() || InstOffset + 8 > Function.getSize() ||
+        Function.isDataInCodeAt(InstOffset + 4) ||
+        Function.getRelocationInRange(InstOffset, InstOffset + 8))
+      return false;
+
+    ErrorOr<ArrayRef<uint8_t>> FunctionData = Function.getData();
+    if (!FunctionData)
+      return false;
+
+    MCInst JALR;
+    uint64_t JALRSize = 0;
+    if (!BC.DisAsm->getInstruction(JALR, JALRSize,
+                                   FunctionData->slice(InstOffset + 4),
+                                   InstAddress + 4, nulls()) ||
+        JALRSize != 4)
+      return false;
+
+    MCInst AUIPC = Inst;
+    AUIPC.addOperand(MCOperand::createImm(Value));
+    if (!BC.MIB->isUnsymbolizedRISCVCall(AUIPC, JALR))
+      return false;
+
+    const uint64_t Target =
+        InstAddress + BC.MIB->getUnsymbolizedRISCVCallOffset(AUIPC, JALR);
+    BinaryFunction *TargetBF = BC.getBinaryFunctionContainingAddress(Target);
+    if (!TargetBF)
+      return false;
+
+    BC.addInterproceduralReference(&Function, Target);
+    MCSymbol *TargetSymbol =
+        BC.handleExternalBranchTarget(Target, Function, *TargetBF);
+    if (!TargetSymbol)
+      return false;
+
+    const MCExpr *Expr = MCSymbolRefExpr::create(TargetSymbol, *Ctx);
+    Inst.addOperand(MCOperand::createExpr(
+        BC.MIB->getTargetExprFor(Inst, Expr, *Ctx, ELF::R_RISCV_CALL_PLT)));
+    return true;
+  }
 
   MCSymbol *Symbol = Rel->Symbol;
   uint64_t Addend = Rel->Addend;
