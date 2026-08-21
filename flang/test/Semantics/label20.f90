@@ -9,6 +9,12 @@
 ! `write(*,fmt=L)` names L as a format; every statement here is something other
 ! than a FORMAT statement, so each one is reported.
 
+! Labeled END statement of the first program unit in the file.
+subroutine end_first_unit()
+  write(*,fmt=53)
+!ERROR: '53' not a FORMAT
+53 end subroutine
+
 subroutine construct_stmts(n)
   integer :: n
 
@@ -75,3 +81,28 @@ program end_program
   write(*,fmt=52)
 !ERROR: '52' not a FORMAT
 52 end program
+
+! A labeled program-unit END as the terminal statement of a labeled DO
+! construct.
+subroutine do_terminal()
+  integer :: i
+  do 54 i = 1, 3
+    print *, i
+!ERROR: This statement cannot terminate the DO loop
+54 end subroutine
+
+! Labeled END PROCEDURE statement of a separate module subprogram.
+module m_sub
+  interface
+    module subroutine sub()
+    end subroutine
+  end interface
+end module
+
+submodule (m_sub) m_sub_impl
+contains
+  module procedure sub
+    write(*,fmt=55)
+!ERROR: '55' not a FORMAT
+55 end procedure
+end submodule
