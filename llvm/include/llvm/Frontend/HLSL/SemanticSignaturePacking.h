@@ -57,6 +57,13 @@ LLVM_ABI Error
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
+/// Packs eligible signature elements at rows selected by semantic index.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#indexed-packing for details.
+LLVM_ABI Error
+packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
+                     Triple::EnvironmentType ShaderStage, IOType IOTy);
+
 } // namespace llvm::hlsl
 
 #endif // LLVM_FRONTEND_HLSL_SEMANTICSIGNATUREPACKING_H

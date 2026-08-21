@@ -173,3 +173,30 @@ reg1: B[0].xyz   | unused.w
 reg2: B[1].xyz   | unused.w
 reg3: VertexID.x | unused.yzw
 ```
+
+### Indexed Packing
+
+Indexed packing is used for a pixel shader output signature. Each eligible
+`SV_Target` element occupies one row and starts at column zero. Its semantic
+index directly selects that row, so declaration order does not affect placement
+and rows without a corresponding semantic index remain unused. Elements that do
+not contribute to the target register space remain unallocated.
+
+For example:
+
+```hlsl
+struct PSOut {
+  float4 Color3 : SV_Target3;
+  float Color0  : SV_Target0;
+  float2 Color2 : SV_Target2;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: Color0.x  | unused.yzw
+reg1: unused.xyzw
+reg2: Color2.xy | unused.zw
+reg3: Color3.xyzw
+```
