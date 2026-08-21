@@ -57,13 +57,9 @@ LLVM_ABI Error
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
-/// Packs each eligible element at the row denoted by its semantic index and at
-/// column zero. Declaration order does not affect placement, and gaps between
-/// semantic indices remain unused. An element is left unallocated if it is not
-/// part of the signature.
+/// Packs eligible signature elements at rows selected by semantic index.
 ///
-/// Returns a SignaturePackingError that denotes the first element that cannot
-/// be placed, or success if all eligible elements were placed.
+/// See llvm/docs/DirectX/SemanticSignatures.md#indexed-packing for details.
 LLVM_ABI Error
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
