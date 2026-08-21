@@ -1825,3 +1825,34 @@ define i1 @test_fabs_used_is_fpclass_pzero(float %x) {
   %is_fpclass = call i1 @llvm.is.fpclass.f32(float %sel, i32 64)
   ret i1 %is_fpclass
 }
+
+define i1 @fptosi_fabs_is_never_negative(float %x) {
+; CHECK-LABEL: @fptosi_fabs_is_never_negative(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = call float @llvm.fabs.f32(float %x)
+  %fptosi = fptosi float %fabs to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @fptosi_fabs_is_never_negative_vec(<2 x float> %x) {
+; CHECK-LABEL: @fptosi_fabs_is_never_negative_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %fptosi = fptosi <2 x float> %fabs to <2 x i32>
+  %cmp = icmp slt <2 x i32> %fptosi, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @fptosi_no_fabs_unknown_sign(float %x) {
+; CHECK-LABEL: @fptosi_no_fabs_unknown_sign(
+; CHECK-NEXT:    [[FPTOSI:%.*]] = fptosi float [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FPTOSI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}

@@ -3110,6 +3110,27 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
   EXPECT_EQ(0, Known.One);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIFabs) {
+  // fptosi(fabs(x)) is never negative.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %fabs = call float @llvm.fabs.f32(float %a)\n"
+                "  %A = fptosi float %fabs to i32\n"
+                "  ret i32 %A\n"
+                "}\n"
+                "declare float @llvm.fabs.f32(float)\n");
+  expectKnownBits(/*Zero*/ 0x80000000u, /*One*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIUnknownSign) {
+  // Without any knowledge of the sign of the source, nothing is known about
+  // the sign of the result.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %A = fptosi float %a to i32\n"
+                "  ret i32 %A\n"
+                "}\n");
+  expectKnownBits(/*Zero*/ 0u, /*One*/ 0u);
+}
+
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).

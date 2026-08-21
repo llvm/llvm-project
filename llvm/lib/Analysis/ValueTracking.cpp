@@ -1476,10 +1476,22 @@ static void computeKnownBitsFromOperator(const Operator *I,
             .intersectWith(ComputeForArm(I->getOperand(2), /*Invert=*/true));
     break;
   }
+  case Instruction::FPToSI: {
+    // fptosi is poison if the rounded value doesn't fit in the result type,
+    // so we can assume the conversion is well-defined and rounds towards
+    // zero. Negative subnormals and negative zero round to 0, so only
+    // negative normals and negative infinity (i.e. values <= -1.0) can
+    // produce a negative result.
+    FPClassTest NegativeResultClasses = fcNegNormal | fcNegInf;
+    KnownFPClass SrcFPClass = computeKnownFPClass(
+        I->getOperand(0), DemandedElts, NegativeResultClasses, Q, Depth + 1);
+    if (SrcFPClass.isKnownNever(NegativeResultClasses))
+      Known.makeNonNegative();
+    break;
+  }
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
     break; // Can't work with floating point.
