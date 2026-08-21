@@ -19,7 +19,6 @@
 #include "hdr/types/pid_t.h"
 #include "hdr/types/struct_sigevent.h"
 #include "hdr/types/timer_t.h"
-#include "src/__support/CPP/cstddef.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -55,8 +54,7 @@ struct KernelSigevent {
     sigev_value = sev.sigev_value;
     sigev_signo = sev.sigev_signo;
     sigev_notify = sev.sigev_notify;
-    // Zero initialize `_sigev_un`.
-    for (size_t i = 0; i < __SIGEV_PAD_SIZE; ++i)
+    for (unsigned i = 0; i < __SIGEV_PAD_SIZE; ++i)
       _sigev_un._pad[i] = 0;
     if ((sev.sigev_notify & SIGEV_THREAD_ID) != 0) {
       _sigev_un._tid = sev.sigev_notify_thread_id;

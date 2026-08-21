@@ -1017,7 +1017,6 @@ add_header_library(
     libc.hdr.types.struct_sigevent
     libc.hdr.types.timer_t
     libc.include.sys_syscall
-    libc.src.__support.CPP.cstddef
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
