@@ -5536,8 +5536,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   SCEVUnionPredicate StridePredicates({}, *SE);
 
   for (VPInstruction *VPI : MemOps) {
-    VPValue *PtrOp = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
-                                                           : VPI->getOperand(1);
+    bool IsLoad = VPI->getOpcode() == Instruction::Load;
+    VPValue *PtrOp = IsLoad ? VPI->getOperand(0) : VPI->getOperand(1);
 
     const SCEV *PtrSCEV =
         vputils::getSCEVExprForVPValue(PtrOp, CostCtx.PSE, CostCtx.L);
@@ -5547,13 +5547,11 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
                                             m_SpecificLoop(CostCtx.L))))
       continue;
 
-    Type *ScalarTy = VPI->getOpcode() == Instruction::Load
-                         ? VPI->getScalarType()
-                         : VPI->getOperand(0)->getScalarType();
+    Type *ScalarTy =
+        IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
 
     if (VPI->getMask()) {
       Instruction *I = VPI->getUnderlyingInstr();
-      bool IsLoad = VPI->getOpcode() == Instruction::Load;
       // Don't speculate unit-strideness if it won't result in any unit-strided
       // loads, as we'd pay the price of not taking vector loop if the runtime
       // condition is false for no benefits.
