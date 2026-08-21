@@ -2019,9 +2019,6 @@ static Value *materializeScalarizedGEPIndex(Value *Idx, IntegerType *GEPIndexTy,
   if (SrcBits >= DstBits)
     return Idx;
 
-  if (auto *C = dyn_cast<ConstantInt>(Idx))
-    return ConstantInt::get(GEPIndexTy, C->getValue().zext(DstBits));
-
   return Builder.CreateZExt(Idx, GEPIndexTy, Idx->getName() + ".gepidx");
 }
 
