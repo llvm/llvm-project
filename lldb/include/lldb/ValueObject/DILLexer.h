@@ -27,8 +27,10 @@ public:
   enum Kind {
     amp,
     ampamp,
+    ampequal,
     arrow,
     caret,
+    caretequal,
     colon,
     coloncolon,
     eof,
@@ -58,6 +60,7 @@ public:
     percentequal,
     period,
     pipe,
+    pipeequal,
     pipepipe,
     plus,
     plusequal,

@@ -1372,6 +1372,27 @@ Interpreter::Visit(const BinaryOpNode &node) {
       return ret_or_err;
     return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
   }
+  case BinaryOpKind::AndAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::And, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::XorAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::Xor, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::OrAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::Or, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
   case BinaryOpKind::ShlAssign: {
     auto ret_or_err =
         EvaluateBinaryShift(BinaryOpKind::Shl, lhs, rhs, node.GetLocation());

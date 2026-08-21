@@ -154,8 +154,9 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
   // Check if it's an assignment expression.
   if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal,
                           Token::starequal, Token::slashequal,
-                          Token::percentequal, Token::lesslessequal,
-                          Token::greatergreaterequal})) {
+                          Token::percentequal, Token::ampequal,
+                          Token::caretequal, Token::pipeequal,
+                          Token::lesslessequal, Token::greatergreaterequal})) {
     // That's an assignment!
     Token token = CurToken();
     m_dil_lexer.Advance();

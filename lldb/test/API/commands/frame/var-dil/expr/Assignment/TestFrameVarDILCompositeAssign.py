@@ -120,12 +120,49 @@ class TestFrameVarDILAssignment(TestBase):
         )
 
         self.expect("frame variable 'i = 0xF'", substrs=["15"])
+        self.expect("frame variable 'i &= 0b101'", substrs=["5"])
+        self.expect("frame variable 'iref &= 0b100'", substrs=["4"])
+        self.expect(
+            "frame variable 'i &= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 0xF'", substrs=["15"])
+        self.expect("frame variable 'i ^= 0b1000'", substrs=["7"])
+        self.expect("frame variable 'iref ^= 0b11'", substrs=["4"])
+        self.expect(
+            "frame variable 'i ^= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 1'", substrs=["1"])
+        self.expect("frame variable 'i |= 0b110'", substrs=["7"])
+        self.expect("frame variable 'iref |= 0b1001'", substrs=["15"])
+        self.expect(
+            "frame variable 'i |= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
+
+        self.expect("frame variable 'i = 0xF'", substrs=["15"])
         self.expect("frame variable 'i >>= 1'", substrs=["7"])
         self.expect("frame variable 'iref >>= 2'", substrs=["1"])
+        self.expect(
+            "frame variable 'i >>= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
 
         self.expect("frame variable 'i = 1'", substrs=["1"])
         self.expect("frame variable 'i <<= 1'", substrs=["2"])
         self.expect("frame variable 'iref <<= 2'", substrs=["8"])
+        self.expect(
+            "frame variable 'i <<= 1.0'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int' and 'double')"],
+        )
 
         # Check that there can be only one assignment and only at top level
         self.expect(

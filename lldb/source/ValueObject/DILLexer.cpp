@@ -24,10 +24,14 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::ampamp:
     return "ampamp";
+  case Kind::ampequal:
+    return "ampequal";
   case Kind::arrow:
     return "arrow";
   case Kind::caret:
     return "caret";
+  case Kind::caretequal:
+    return "caretequal";
   case Kind::colon:
     return "colon";
   case Kind::coloncolon:
@@ -86,6 +90,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "period";
   case Kind::pipe:
     return "pipe";
+  case Kind::pipeequal:
+    return "pipeequal";
   case Kind::pipepipe:
     return "pipepipe";
   case Kind::plus:
@@ -241,7 +247,9 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::greatergreaterequal, ">>="},
       {Token::lesslessequal, "<<="},
       {Token::ampamp, "&&"},
+      {Token::ampequal, "&="},
       {Token::arrow, "->"},
+      {Token::caretequal, "^="},
       {Token::coloncolon, "::"},
       {Token::equalequal, "=="},
       {Token::exclaimequal, "!="},
@@ -252,6 +260,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::minusequal, "-="},
       {Token::minusminus, "--"},
       {Token::percentequal, "%="},
+      {Token::pipeequal, "|="},
       {Token::pipepipe, "||"},
       {Token::plusequal, "+="},
       {Token::plusplus, "++"},

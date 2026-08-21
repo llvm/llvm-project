@@ -45,6 +45,12 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::DivAssign;
   case Token::percentequal:
     return BinaryOpKind::RemAssign;
+  case Token::ampequal:
+    return BinaryOpKind::AndAssign;
+  case Token::caretequal:
+    return BinaryOpKind::XorAssign;
+  case Token::pipeequal:
+    return BinaryOpKind::OrAssign;
   case Token::lesslessequal:
     return BinaryOpKind::ShlAssign;
   case Token::greatergreaterequal:
