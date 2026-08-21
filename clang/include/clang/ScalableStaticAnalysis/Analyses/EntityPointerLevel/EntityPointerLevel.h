@@ -154,12 +154,6 @@ createEntityPointerLevel(const NamedDecl *ND, TUSummaryExtractor &Extractor,
 /// a no-lower-than pointer level. The pointer level of each element is bounded
 /// by the type of the NamedDecl of \p DPL.
 DeclPointerLevels elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL);
-
-/// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s
-/// pointer level.
-/// \return the EPL that is associated with the pointee (or array element) type
-/// of `E`'s associated pointer/array type of the same entity.
-EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E);
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_ENTITYPOINTERLEVEL_ENTITYPOINTERLEVEL_H
