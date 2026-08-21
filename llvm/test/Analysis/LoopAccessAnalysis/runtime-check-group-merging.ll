@@ -293,8 +293,6 @@ exit:
 ;; Test 4: Invariant + strided reads from same base -> different access ranges.
 ;; A strided read {%a,+,8} and an invariant read from %a have different
 ;; access ranges (8*n vs 8), so merging must NOT combine them.
-;; Both reads are in the same DepSet (same underlying object, both reads),
-;; so they pass the write-access guard and reach the access-range check.
 ;; Same result with and without flag: 2 checks, 3 separate groups.
 define void @different_steps_no_merge(ptr %a, ptr %out, i64 %n) {
 ; CHECK-LABEL: 'different_steps_no_merge'
@@ -1065,9 +1063,7 @@ exit:
 
 ;; Test 12: equal access ranges but different recurrence steps -> no merge.
 ;; In a single-iteration loop every access spans just its element size, so the
-;; ranges are equal even though the steps differ (8 vs 16). The access-range
-;; check passes here, so the step check is the guard that stops the merge. Both
-;; modes: groups stay separate.
+;; ranges are equal even though the steps differ (8 vs 16).
 define void @equal_range_different_step_no_merge(ptr %a, ptr %out, i64 %cdj) {
 ; CHECK-LABEL: 'equal_range_different_step_no_merge'
 ; CHECK-NEXT:    loop:
@@ -1183,7 +1179,7 @@ declare i64 @llvm.smax.i64(i64, i64)
 ;; the -1, so that member is keyed on s1 and s2 like the others. It then
 ;; defines the low bound alone: Low is plain %p with no umin. Both strides
 ;; are known positive, so no predicate is emitted.
-;; The merge saves 3 loads x 1 external check = 3 and costs 1 check.
+;; Checks: 3 before the merge, 1 after.
 define void @stencil_merge_summed_stride(ptr %p, ptr %q, i64 %s1in, i64 %s2in, i64 %n) {
 ; MERGE-LABEL: 'stencil_merge_summed_stride'
 ; MERGE-NEXT:    loop:
@@ -1292,11 +1288,9 @@ done:
 ;; Test 15: A member that uses two strides at once.
 ;; 6 loads from %a: +0, -5*s1, +5*s1, -5*s2, +5*s2, and the mixed
 ;; +5*s1+5*s2. Store to %out.
-;; The members at -5*s1 and -5*s2 can each be the lowest address: which one
-;; is lower depends on whether s1 or s2 is bigger. So Low is a umin over
-;; those two members. The mixed member is at or above every other member in
-;; both strides at once, so High is just that member's own End - no umax.
-;; No bound is an invented corner like base - 5*s1 - 5*s2.
+;; Low is a umin over the members at -5*s1 and -5*s2: which one is lower
+;; depends on s1 and s2. High is the End of the +5*s1+5*s2 member, because it
+;; is always above every other member. No umax.
 define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %s2) {
 ; MERGE-LABEL: 'stencil_merge_mixed_member'
 ; MERGE-NEXT:    loop:
@@ -1594,14 +1588,12 @@ exit:
 ;; 4 loads from %p at byte offsets {0, 64*s1, 64*s2, 64*(s1+s2)}; the last
 ;; offset is computed as (s1 + s2) * 64, and SCEV keeps the factored form.
 ;; Stores to %q and %q2.
-;; decomposeStencilOffset distributes the 64, so the factored member is keyed
-;; on s1 and s2 like the others. With strides of at least 1 that member sits
-;; at or above every other member, and the member at offset 0 sits at or
-;; below every other member. So High is the factored member's own End, Low is
-;; plain %p with no umin, and only two predicates (s1 > 0, s2 > 0) are
-;; emitted - no (s1 + s2) > 0.
-;; The two stores keep the merge profitable: the merge saves 4 loads x 2
-;; external checks = 8 and costs 2 checks + 2 predicates = 4.
+;; The depth cap is not reached here, so the 64 is multiplied into the sum
+;; and the member is keyed on s1 and s2 like the others. That is enough to
+;; prove it is the highest member and %p is the lowest. So the merged bounds
+;; are simple: Low is %p, High is the End of the 64*(s1+s2) member, no umin
+;; or umax, and only two predicates, s1 > 0 and s2 > 0.
+;; Two stores, so the cost model accepts the merge: 8 checks before, 4 after.
 define void @stencil_merge_factored_diagonal(ptr %p, ptr %q, ptr %q2, i64 %s1, i64 %s2, i64 %n) {
 ; MERGE-LABEL: 'stencil_merge_factored_diagonal'
 ; MERGE-NEXT:    loop:
@@ -1773,24 +1765,13 @@ done:
   ret void
 }
 
-;; Test 18: The depth cap keeps a deep term as one opaque key.
+;; Test 18: A term at the depth cap stays one stride key.
 ;; 3 loads from %p at byte offsets {0, 64*s1, 8 + 64*(s1 + s2 + 4*s3)}.
-;; The deep offset is an add (depth 0) holding 64*(...) (depth 1) holding a
-;; 3-operand add (depth 2) whose term 4*s3 sits at depth 3.
-;; SCEV keeps 64*(s1 + s2 + 4*s3) factored: it only distributes a constant
-;; over a 2-operand add.
-;; decomposeStencilOffset distributes down to depth 3 and then stops: s1 and
-;; s2 get their own keys, and (4 * s3) stays one opaque key. The
-;; decomposition still succeeds - the cap is not a bailout - so the group
-;; still merges.
-;; Predicates: s1 > 0, s2 > 0, and (4 * s3) > 0 for the opaque key.
-;; The deep load comes first in the loop on purpose. That makes %p the
-;; base of the relative decomposition. With the deep member as base, SCEV
-;; cancellation flattens 4*s3 into a plain s3 coefficient and the cap is
-;; never tested. If the (4 * %s3) predicate ever disappears from the CHECK
-;; lines, the test has stopped covering the cap.
-;; The three stores keep the merge profitable: the merge saves 3 loads x 3
-;; external checks = 9 and costs 3 checks + 3 predicates = 6.
+;; Stores to %q, %q2 and %q3.
+;; In the last offset, 4*s3 sits at depth 3, the cap. It is not split into
+;; 4 times s3. The keys are s1, s2 and (4 * s3), each with a > 0 predicate,
+;; and the group still merges.
+;; Three stores, so the cost model accepts the merge: 9 checks before, 6 after.
 define void @stencil_merge_depth_cap(ptr %p, ptr %q, ptr %q2, ptr %q3, i64 %s1, i64 %s2, i64 %s3, i64 %n) {
 ; MERGE-LABEL: 'stencil_merge_depth_cap'
 ; MERGE-NEXT:    loop:
@@ -2004,9 +1985,7 @@ done:
 ;; positive cdj: at cdj = 1 the -16 member is lower, at cdj = 100 the -cdj
 ;; member is lower. So Low is a umin over those two members. The +16 and
 ;; +cdj members mirror this on the high side, so High is a umax over them.
-;; The two constant-offset loads share one group before the merge, so the
-;; merge saves 3 groups x 2 external checks = 6 and costs 2 checks + 1
-;; predicate + 1 umin operand + 1 umax operand = 5.
+;; Checks: 6 before the merge, 5 after.
 define void @stencil_merge_constant_and_stride_candidates(ptr %a, ptr %out, ptr %out2, i64 %n, i64 %cdj) {
 ; MERGE-LABEL: 'stencil_merge_constant_and_stride_candidates'
 ; MERGE-NEXT:    loop:
@@ -2170,8 +2149,7 @@ exit:
 ;; depends on which stride is biggest. So Low is a umin over those three
 ;; members, and High is a umax over +s1, +s2, +s3. The center member at +0
 ;; sits between -s1 and +s1, so it is never a bound.
-;; The merge saves 7 groups x 2 external checks = 14 and costs 2 checks +
-;; 3 predicates + 2 umin operands + 2 umax operands = 9.
+;; Checks: 14 before the merge, 9 after.
 define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n, i64 %s1, i64 %s2, i64 %s3) {
 ; MERGE-LABEL: 'stencil_merge_three_stride_star'
 ; MERGE-NEXT:    loop:
@@ -2572,15 +2550,14 @@ exit:
   ret void
 }
 
-;; Test 23: A forked pointer. The last load's address is a select between
-;; base + 2*cdj and base + 3*cdj. LAA splits that one load into two
-;; runtime-check entries, one per select arm, each with its own Start and
-;; End. The merge sees them as two ordinary members and needs no special
-;; case for the fork. The merged High comes from the 3*cdj arm, so both
-;; arms stay inside the merged bounds.
-;; With merge: 4 groups become 1 group, 4 checks become 1 check plus the
-;;   cdj > 0 predicate.
-;; Without merge: 4 groups, 4 checks, no predicate.
+;; Test 23: A forked pointer: one load's address is a select.
+;; 3 loads from %a at byte offsets {0, cdj, select(2*cdj, 3*cdj)}. Store to
+;; %out.
+;; LAA turns the select load into two members, one per arm, each with its
+;; own Start and End. The merge treats them like any other member. High is
+;; the End of the 3*cdj arm, so both arms are inside the merged bounds.
+;; With merge: 1 group, 1 check, 1 predicate (cdj > 0).
+;; Without merge: 4 groups, 4 checks, no predicates.
 define void @forked_pointer_merge(ptr %a, ptr %out, i64 %n, i64 %cdj, i32 %c) {
 ; MERGE-LABEL: 'forked_pointer_merge'
 ; MERGE-NEXT:    loop:
@@ -2687,5 +2664,288 @@ loop:
   br i1 %cond, label %loop, label %exit
 
 exit:
+  ret void
+}
+
+;; Test 24: A sum at the depth cap becomes one stride key, next to a plain
+;; key it overlaps with.
+;; 3 loads from %p at byte offsets {0, 64*s1, 64*(s3 + s4 + 65*(s1 + s2))}.
+;; Stores to %q, %q2, %q3 and %q4.
+;; In the last offset, (s1 + s2) sits at depth 3, the cap. It is not split
+;; into s1 and s2: it becomes one stride key, like a new stride. So the keys
+;; are s1 (from the second load), s3, s4 and (s1 + s2), each with a > 0
+;; predicate. The merge cannot tell that 64*s1 is below the deep member,
+;; because s1 and (s1 + s2) are different keys to it. So High is a umax over
+;; those two members, and Low is %p. Still correct, just less precise.
+;; The inner sum (s1 + s2) must not share a stride with the outer sum:
+;; SCEV would combine them and nothing would be left at depth 3. The deep
+;; load comes first in the loop on purpose, so that %p is the base for the
+;; offsets. If the (%s1 + %s2) predicate disappears from the CHECK lines,
+;; the test no longer covers the cap.
+;; Four stores, so the cost model accepts the merge: 12 checks before, 9 after.
+define void @stencil_merge_depth_cap_sum(ptr %p, ptr %q, ptr %q2, ptr %q3, ptr %q4, i64 %s1, i64 %s2, i64 %s3, i64 %s4, i64 %n) {
+; MERGE-LABEL: 'stencil_merge_depth_cap_sum'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; MERGE-NEXT:      Check 3:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP4:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Check 4:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:      Check 5:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; MERGE-NEXT:      Check 6:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP4:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Check 7:
+; MERGE-NEXT:        Comparing group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; MERGE-NEXT:      Check 8:
+; MERGE-NEXT:        Comparing group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:        Against group GRP4:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Check 9:
+; MERGE-NEXT:        Comparing group GRP3:
+; MERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; MERGE-NEXT:        Against group GRP4:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; MERGE-NEXT:            Member: {%q,+,8}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; MERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %q3 High: (1 + (8 * %n) + %q3))
+; MERGE-NEXT:            Member: {%q3,+,8}<%loop>
+; MERGE-NEXT:        Group GRP3:
+; MERGE-NEXT:          (Low: %q4 High: (1 + (8 * %n) + %q4))
+; MERGE-NEXT:            Member: {%q4,+,8}<%loop>
+; MERGE-NEXT:        Group GRP4:
+; MERGE-NEXT:          (Low: %p High: ((1 + (8 * %n) + (64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + (ptrtoaddr ptr %p to i64)) umax (1 + (8 * %n) + (64 * %s1) + (ptrtoaddr ptr %p to i64))))
+; MERGE-NEXT:            Member: {%p,+,8}<%loop>
+; MERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p),+,8}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q3,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q4,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
+; MERGE-NEXT:      Compare predicate: (%s1 + %s2) sgt) 0
+; MERGE-NEXT:      Compare predicate: %s3 sgt) 0
+; MERGE-NEXT:      Compare predicate: %s4 sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_depth_cap_sum'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:      Check 8:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 9:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 10:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 11:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:      Check 12:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 13:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 14:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 15:
+; NOMERGE-NEXT:        Comparing group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 16:
+; NOMERGE-NEXT:        Comparing group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 17:
+; NOMERGE-NEXT:        Comparing group GRP3:
+; NOMERGE-NEXT:          %aq4 = getelementptr i8, ptr %q4, i64 %idx
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; NOMERGE-NEXT:            Member: {%q,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; NOMERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: %q3 High: (1 + (8 * %n) + %q3))
+; NOMERGE-NEXT:            Member: {%q3,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %q4 High: (1 + (8 * %n) + %q4))
+; NOMERGE-NEXT:            Member: {%q4,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + %p))
+; NOMERGE-NEXT:            Member: {%p,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: ((64 * %s1) + %p) High: (1 + (8 * %n) + (64 * %s1) + %p))
+; NOMERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP6:
+; NOMERGE-NEXT:          (Low: ((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p) High: (1 + (8 * %n) + (64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p))
+; NOMERGE-NEXT:            Member: {((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p),+,8}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q3,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q4,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %pos64s1 = mul i64 %s1, 64
+  %sum12 = add i64 %s1, %s2
+  %m65 = mul i64 %sum12, 65
+  %sum34 = add i64 %s3, %s4
+  %sum = add i64 %sum34, %m65
+  %deep = mul i64 %sum, 64
+  %p1 = getelementptr i8, ptr %p, i64 %pos64s1
+  %p2 = getelementptr i8, ptr %p, i64 %deep
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = mul i64 %iv, 8
+  %a2 = getelementptr i8, ptr %p2, i64 %idx
+  %v2 = load i8, ptr %a2
+  %a1 = getelementptr i8, ptr %p1, i64 %idx
+  %v1 = load i8, ptr %a1
+  %a0 = getelementptr i8, ptr %p, i64 %idx
+  %v0 = load i8, ptr %a0
+  %s01 = add i8 %v0, %v1
+  %s = add i8 %s01, %v2
+  %aq = getelementptr i8, ptr %q, i64 %idx
+  store i8 %s, ptr %aq
+  %aq2 = getelementptr i8, ptr %q2, i64 %idx
+  store i8 %s, ptr %aq2
+  %aq3 = getelementptr i8, ptr %q3, i64 %idx
+  store i8 %s, ptr %aq3
+  %aq4 = getelementptr i8, ptr %q4, i64 %idx
+  store i8 %s, ptr %aq4
+  %iv.next = add i64 %iv, 1
+  %c = icmp eq i64 %iv, %n
+  br i1 %c, label %done, label %loop
+
+done:
   ret void
 }

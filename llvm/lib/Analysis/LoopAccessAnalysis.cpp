@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -789,25 +790,50 @@ struct StencilDecomposition {
   SmallMapVector<const SCEV *, int64_t, 4> Coefficients;
 };
 
-/// Recursion cap for addScaledStencilTerm. Depth 3 covers the deepest chain
-/// we distribute: a top-level add (depth 0), a constant-times-X term inside
-/// it (depth 1), a factored add inside that (depth 2), and the leaves
-/// (depth 3). SCEV can nest deeper; a deeper term stays one opaque key with
-/// its multiplier, which is safe but less precise. Constants and leaf
-/// strides are handled at any depth; only the add and constant-times-X
-/// cases recurse.
+/// Recursion cap for addScaledStencilTerm. Depth counts how deep a term
+/// sits inside the offset expression. Example, the offset
+///   8 + (64 * (s1 + s2 + (4 * s3)))
+/// is visited like this:
+///   depth 0: the whole add
+///   depth 1: its operands 8 and (64 * (s1 + s2 + (4 * s3)))
+///   depth 2: (s1 + s2 + (4 * s3)), the operand of the multiply
+///   depth 3: s1, s2 and (4 * s3), the operands of that add
+/// At depth 3 addScaledStencilTerm stops going deeper. s1 and s2 are plain
+/// strides anyway. (4 * s3) is not split into 4 times s3: it becomes one
+/// stride key as it is, with coefficient 64. The result is Constant = 8
+/// and coefficients {s1: 64, s2: 64, (4 * s3): 64}.
+/// Three levels cover the stencil offsets we care about: a top-level add,
+/// a constant times a sum inside it, and the strides in that sum. A deeper
+/// term is kept whole as one stride key. The merge does not care what is
+/// inside a key. It only needs a loop-invariant value with a
+/// positive-stride predicate, and a whole term has both. The only cost is
+/// precision, when another member uses a part of that term, here s3 alone,
+/// as a key of its own. isNeverAbove sees two unrelated keys, so a member
+/// that is in fact always lower or higher may stay a candidate.
 constexpr unsigned MaxStencilDecomposeDepth = 3;
 
-/// Fold one term of a stencil offset into \p D, scaled by \p Mult:
-///   constant K     -> D.Constant += Mult * K
-///   (K * X)        -> recurse into X with multiplier Mult * K
-///   (a + b + ...)  -> recurse into each operand with the same Mult
-///   anything else  -> D.Coefficients[Term] += Mult
-/// Example: 8 + (-64 * (s1 + s2)) + (-32 * s1) gives Constant = 8 and
-/// coefficients {s1: -96, s2: -64}.
+/// Add one term of a stencil offset to \p D. \p Mult is the factor in
+/// front of the term; the top-level call passes 1.
+/// Example: the offset 8 + (-64 * (s1 + s2)) + (-32 * s1), Mult = 1. It is
+/// an add, so each operand is visited in turn with the same Mult = 1:
+///   8                  a constant: D.Constant += 1 * 8
+///   (-64 * (s1 + s2))  a constant times X: visit X = (s1 + s2) with
+///                      Mult = 1 * -64. X is an add, so each operand is
+///                      visited with Mult = -64:
+///     s1                 a stride: D.Coefficients[s1] += -64
+///     s2                 a stride: D.Coefficients[s2] += -64
+///   (-32 * s1)         a constant times X: visit X = s1 with Mult = -32:
+///     s1                 a stride: D.Coefficients[s1] += -32
+/// Result: Constant = 8, Coefficients {s1: -96, s2: -64}. The -64 and the
+/// -32 for s1 come from two different terms and add up in the map.
+/// So, by the kind of term:
+///   constant K       D.Constant += Mult * K
+///   (K * X)          visit X with Mult * K
+///   (a + b + ...)    visit a, b, ... each with this same Mult
+///   anything else    a stride key: D.Coefficients[Term] += Mult
 /// The two recursive cases only fire while Depth is below
-/// MaxStencilDecomposeDepth. At the cap a term becomes one opaque stride key
-/// with coefficient Mult; that is not a bailout.
+/// MaxStencilDecomposeDepth. At the cap, (K * X) and (a + b + ...) are
+/// stride keys like anything else; that is not a bailout.
 /// Returns false when a constant does not fit in int64_t or an update
 /// overflows. The caller then drops the whole decomposition.
 static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
@@ -869,28 +895,30 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   return D;
 }
 
-/// Return true if member \p A can never sit at a higher address than member
-/// \p B, for any whole-number stride values of 1 or more.
+/// Return true if A's address is never higher than B's address.
+/// A and B are these sums:
+///   A = A.Constant + CoefA_1 * stride_1 + CoefA_2 * stride_2 + ...
+///   B = B.Constant + CoefB_1 * stride_1 + CoefB_2 * stride_2 + ...
+/// A stride missing from a member's map has coefficient 0. Every stride
+/// is 1 or more: strides are integers, and the merge adds an "s > 0"
+/// predicate for each stride that is not already known positive.
 /// Example:
 ///   A: 0   - 80*s1
 ///   B: -40 - 40*s1
-/// At s1 = 1 both sit at -80. For bigger s1, A's steeper slope puts it
-/// lower. So A is never above B.
-/// The general rule needs two facts:
-/// - every coefficient of A is <= the matching coefficient of B, and
-/// - A's address at all-strides-1 (Constant plus the sum of all
-///   coefficients) is <= B's address at that same point.
-/// Strides of 1 or more is a safe assumption: every stride is an integer,
-/// and a merged check only runs with an "s > 0" predicate on each stride
-/// (or the stride is already known positive), so every stride is at least 1.
-/// The decompositions hold signed offsets, but the merged bounds compare
-/// unsigned addresses at runtime. The order carries over: both members
-/// read the same underlying object, and an object never wraps around the
-/// address space, so the member with the smaller offset sits at the
-/// smaller address.
-/// A stride missing from a member's map counts as coefficient 0.
-/// Returns false when a sum overflows. The caller then keeps the member,
-/// which is the safe direction.
+/// At s1 = 1 both are -80. For bigger s1, A goes down faster. So A is
+/// never above B.
+/// The rule checks two things:
+/// 1. CoefA_i <= CoefB_i for every stride. So when a stride grows, B - A
+///    grows too, or stays the same.
+/// 2. B - A >= 0 when every stride is 1. That is ACorner <= BCorner, with
+///    ACorner = A.Constant + the sum of all CoefA_i, same for BCorner.
+/// B - A starts at or above zero and never goes down, so B - A >= 0 for
+/// all stride values.
+/// Offsets are signed and addresses are unsigned, but both members read
+/// one object, and an object does not wrap around the address space, so
+/// the smaller offset is the smaller address.
+/// Returns false when ACorner or BCorner overflows int64_t. The caller
+/// then keeps the member, which is the safe side.
 static bool isNeverAbove(const StencilDecomposition &A,
                          const StencilDecomposition &B) {
   int64_t ACorner = A.Constant, BCorner = B.Constant;
@@ -930,25 +958,25 @@ collectCandidateMembers(ArrayRef<StencilDecomposition> Offsets, bool ForMin) {
   };
   // Skipping a beaten member loses nothing: Beats is transitive, so
   // whoever beat it also beats anyone it would have beaten.
-  SmallVector<bool, 8> Beaten(Offsets.size(), false);
+  BitVector Beaten(Offsets.size());
   for (unsigned K = 0; K < Offsets.size(); ++K) {
-    if (Beaten[K])
+    if (Beaten.test(K))
       continue;
     for (unsigned J = K + 1; J < Offsets.size(); ++J) {
-      if (Beaten[J])
+      if (Beaten.test(J))
         continue;
       // Checking K first settles ties: on equal offsets K survives.
       if (Beats(K, J)) {
-        Beaten[J] = true;
+        Beaten.set(J);
       } else if (Beats(J, K)) {
-        Beaten[K] = true;
+        Beaten.set(K);
         break;
       }
     }
   }
   SmallVector<unsigned, 4> Candidates;
   for (unsigned K = 0; K < Offsets.size(); ++K)
-    if (!Beaten[K])
+    if (!Beaten.test(K))
       Candidates.push_back(K);
   return Candidates;
 }
