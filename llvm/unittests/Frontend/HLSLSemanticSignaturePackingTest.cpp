@@ -27,6 +27,7 @@ protected:
     uint8_t Cols;
     dxil::ElementType CompType;
     dxbc::PSV::InterpolationMode InterpMode;
+    uint32_t SemanticIndex = 0;
   };
 
   struct ExpectedLocation {
@@ -53,7 +54,7 @@ protected:
     for (const ElementConfig &Element : Config.Elements) {
       SmallVector<uint32_t> SemanticIndices;
       for (uint32_t Row = 0; Row != Element.Rows; ++Row)
-        SemanticIndices.push_back(Row);
+        SemanticIndices.push_back(Element.SemanticIndex + Row);
 
       Elements.emplace_back(
           /*SigId=*/static_cast<uint32_t>(Elements.size()),
@@ -73,12 +74,28 @@ protected:
     return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
   }
 
-  void verifyPacking(const TestConfig &Config, unsigned ExpectedRows,
-                     std::initializer_list<ExpectedLocation> Locations) {
+  Expected<unsigned>
+  packIndexed(SmallVectorImpl<SemanticSignatureElement> &Elements,
+              const TestConfig &Config) {
+    if (Error E =
+            packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy))
+      return std::move(E);
+
+    unsigned Rows = 0;
+    for (const SemanticSignatureElement &Element : Elements)
+      if (Element.isAllocated())
+        Rows = std::max(Rows, Element.StartRow + Element.Rows);
+    return Rows;
+  }
+
+  void verifyPackingImpl(const TestConfig &Config, unsigned ExpectedRows,
+                         std::initializer_list<ExpectedLocation> Locations,
+                         bool Indexed) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
     ASSERT_EQ(Elements.size(), Locations.size());
 
-    Expected<unsigned> Rows = packStacked(Elements, Config);
+    Expected<unsigned> Rows =
+        Indexed ? packIndexed(Elements, Config) : packStacked(Elements, Config);
     ASSERT_THAT_EXPECTED(Rows, Succeeded());
     EXPECT_EQ(*Rows, ExpectedRows);
 
@@ -90,11 +107,22 @@ protected:
     }
   }
 
-  void verifyPackingError(const TestConfig &Config,
-                          SignaturePackingError::ErrorKind ExpectedKind,
-                          unsigned ExpectedElementIndex) {
+  void verifyPacking(const TestConfig &Config, unsigned ExpectedRows,
+                     std::initializer_list<ExpectedLocation> Locations) {
+    verifyPackingImpl(Config, ExpectedRows, Locations, /*Indexed=*/false);
+  }
+
+  void verifyIndexedPacking(const TestConfig &Config, unsigned ExpectedRows,
+                            std::initializer_list<ExpectedLocation> Locations) {
+    verifyPackingImpl(Config, ExpectedRows, Locations, /*Indexed=*/true);
+  }
+
+  void verifyPackingErrorImpl(const TestConfig &Config,
+                              SignaturePackingError::ErrorKind ExpectedKind,
+                              unsigned ExpectedElementIndex, bool Indexed) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-    Expected<unsigned> Rows = packStacked(Elements, Config);
+    Expected<unsigned> Rows =
+        Indexed ? packIndexed(Elements, Config) : packStacked(Elements, Config);
     if (Rows) {
       ADD_FAILURE() << "expected a SignaturePackingError";
       return;
@@ -109,6 +137,20 @@ protected:
           ADD_FAILURE() << "expected a SignaturePackingError, got: "
                         << Other.message();
         });
+  }
+
+  void verifyPackingError(const TestConfig &Config,
+                          SignaturePackingError::ErrorKind ExpectedKind,
+                          unsigned ExpectedElementIndex) {
+    verifyPackingErrorImpl(Config, ExpectedKind, ExpectedElementIndex,
+                           /*Indexed=*/false);
+  }
+
+  void verifyIndexedPackingError(const TestConfig &Config,
+                                 SignaturePackingError::ErrorKind ExpectedKind,
+                                 unsigned ExpectedElementIndex) {
+    verifyPackingErrorImpl(Config, ExpectedKind, ExpectedElementIndex,
+                           /*Indexed=*/true);
   }
 };
 
@@ -342,6 +384,82 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
 
   verifyPackingError(Config, SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/1);
+}
+
+//===----------------------------------------------------------------------===//
+// Indexed packing tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesSemanticIndices) {
+  // Target elements are assigned the row denoted by their semantic index, not
+  // their declaration order. Every target starts at column zero.
+
+  // struct PSOut {
+  //   float4 Color3 : SV_Target3;
+  //   float Color0  : SV_Target0;
+  //   float2 Color2 : SV_Target2;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/3},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/0},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/2}});
+
+  // Expected layout:
+  // reg0: Color0.x    | unused.yzw
+  // reg1: unused.xyzw
+  // reg2: Color2.xy   | unused.zw
+  // reg3: Color3.xyzw
+  verifyIndexedPacking(
+      Config, /*ExpectedRows=*/4,
+      {{/*Row=*/3, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedLeavesSemanticIndexGaps) {
+  // Rows without a corresponding target semantic remain unused.
+
+  // struct PSOut {
+  //   float4 Color1 : SV_Target1;
+  //   float4 Color7 : SV_Target7;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/1},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/7}});
+
+  // Expected layout:
+  // reg0: unused.xyzw
+  // reg1: Color1.xyzw
+  // reg2-6: unused.xyzw
+  // reg7: Color7.xyzw
+  verifyIndexedPacking(Config, /*ExpectedRows=*/8,
+                       {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
+  // A semantic index outside the 32-row signature cannot be allocated.
+
+  // struct PSOut {
+  //   float4 Color32 : SV_Target32;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/MaxSignatureRows}});
+
+  verifyIndexedPackingError(Config, SignaturePackingError::SignatureOverflow,
+                            /*ExpectedElementIndex=*/0);
 }
 
 } // namespace
