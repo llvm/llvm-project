@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -335,6 +336,32 @@ bool isOnceUsedSeed(const Instruction *I);
 /// removed: both casts must allow contraction and the widening cast cannot
 /// produce nan/inf.
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
+/// Narrow reduction leaf: the value, the shift applied after widening and
+/// the mask applied in the narrow type before widening, clearing the bits
+/// the absorbed narrow shls shift out and applying the absorbed narrow
+/// and-masks. Lossless narrow shls contribute their known-zero bits to the
+/// mask so matching lanes can form a splat. All-ones mask means nothing
+/// was absorbed and no 'and' is needed.
+struct NarrowedLeafInfo {
+  NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
+      : V(V), Shift(Shift), Mask(std::move(Mask)) {}
+
+  Value *V;
+  unsigned Shift;
+  APInt Mask;
+};
+
+/// Recursively collects the narrow leaves of the widened reduction value
+/// \p V. zext is looked through directly, same-kind binops per operand,
+/// shl of a zext - only if no bits are shifted out in the current type,
+/// shls in narrower types fold into the shift and ands with a constant into
+/// the mask applied in the narrow type. Also collects the looked-through
+/// instructions into \p ChainInsts.
+void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                           unsigned MaxDepth,
+                           SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                           SmallVectorImpl<Instruction *> &ChainInsts);
 
 } // namespace llvm::slpvectorizer
 

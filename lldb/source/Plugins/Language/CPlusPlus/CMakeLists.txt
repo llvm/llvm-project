@@ -43,6 +43,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStl.cpp
   MsvcStlAtomic.cpp
   MsvcStlDeque.cpp
+  MsvcStlExpected.cpp
   MsvcStlSmartPointer.cpp
   MsvcStlSpan.cpp
   MsvcStlTree.cpp
