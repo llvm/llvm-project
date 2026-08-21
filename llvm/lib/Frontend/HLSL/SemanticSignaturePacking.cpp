@@ -105,6 +105,42 @@ static uint8_t getStartColumn(uint8_t ColumnMask) {
   return countr_zero(ColumnMask);
 }
 
+// Returns a lower value for groups that must be packed earlier.
+static unsigned
+getOptimizedPackingPriority(const SemanticSignatureElement &Element,
+                            Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  const SemanticInterpretation Interpretation =
+      getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
+  assert((Interpretation != SemanticInterpretation::Invalid &&
+          Interpretation != SemanticInterpretation::Target) &&
+         "unexpected semantic interpretation for optimized packing");
+
+  if (Element.Cols == MaxSignatureCols &&
+      (Interpretation == SemanticInterpretation::Arbitrary ||
+       Interpretation == SemanticInterpretation::SV))
+    return 0;
+
+  if (Interpretation == SemanticInterpretation::TessFactor && Element.Rows > 1)
+    return 1;
+
+  switch (Interpretation) {
+  case SemanticInterpretation::Arbitrary:
+    return 2;
+  case SemanticInterpretation::SV:
+  case SemanticInterpretation::TessFactor:
+    return 3;
+  case SemanticInterpretation::ClipCull:
+    return 4;
+  case SemanticInterpretation::SGV:
+    return 5;
+  case SemanticInterpretation::NotAllocated:
+    return 6;
+  default:
+    break;
+  }
+  llvm_unreachable("unexpected semantic interpretation for optimized packing");
+}
+
 static unsigned getComponentWidth(dxil::ElementType ComponentType,
                                   bool UseNative16BitTypes) {
   assert(ComponentType != dxil::ElementType::I64 &&
@@ -504,7 +540,49 @@ Error llvm::hlsl::packSignatureOptimized(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
-  // TODO: Sort Elements for optimal packing.
-  return packSignaturePrefixStable(Elements, ShaderStage, IOTy,
-                                   UseNative16BitTypes);
+  SmallVector<unsigned> SortedIndices;
+  SortedIndices.reserve(Elements.size());
+  for (unsigned Index = 0; Index != Elements.size(); ++Index)
+    SortedIndices.push_back(Index);
+
+  llvm::sort(SortedIndices, [&](unsigned LeftIndex, unsigned RightIndex) {
+    const SemanticSignatureElement &Left = Elements[LeftIndex];
+    const SemanticSignatureElement &Right = Elements[RightIndex];
+    const unsigned LeftPriority =
+        getOptimizedPackingPriority(Left, ShaderStage, IOTy);
+    const unsigned RightPriority =
+        getOptimizedPackingPriority(Right, ShaderStage, IOTy);
+
+    if (LeftPriority != RightPriority)
+      return LeftPriority < RightPriority;
+    if (Left.InterpMode != Right.InterpMode)
+      return Left.InterpMode < Right.InterpMode;
+    if (Left.Rows != Right.Rows)
+      return Left.Rows > Right.Rows;
+    if (Left.Cols != Right.Cols)
+      return Left.Cols > Right.Cols;
+    return Left.SigId < Right.SigId;
+  });
+
+  // Pack a copy so Elements remains in its original signature order.
+  SmallVector<SemanticSignatureElement> SortedElements;
+  SortedElements.reserve(Elements.size());
+  for (unsigned Index : SortedIndices)
+    SortedElements.push_back(Elements[Index]);
+
+  Error PackingError = packSignaturePrefixStable(SortedElements, ShaderStage,
+                                                 IOTy, UseNative16BitTypes);
+
+  for (const auto &[SortedIndex, OriginalIndex] : enumerate(SortedIndices)) {
+    Elements[OriginalIndex].StartRow = SortedElements[SortedIndex].StartRow;
+    Elements[OriginalIndex].StartCol = SortedElements[SortedIndex].StartCol;
+  }
+
+  return handleErrors(
+      std::move(PackingError), [&](const SignaturePackingError &Err) -> Error {
+        assert(Err.getElementIndex() < SortedIndices.size() &&
+               "invalid sorted element index");
+        return make_error<SignaturePackingError>(
+            Err.getErrorKind(), SortedIndices[Err.getElementIndex()]);
+      });
 }
