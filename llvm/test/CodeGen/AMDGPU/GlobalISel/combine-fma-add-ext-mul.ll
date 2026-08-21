@@ -188,7 +188,7 @@ define amdgpu_vs <2 x float> @test_fpext_fmul_multiple_uses(half inreg %x1, half
     %add = fadd fast float %ext1, %ext2
 
     %ext_add_f16 = fpext half %add_f16 to float
-    %ret0 = insertelement <2 x float> undef, float %add, i32 0
+    %ret0 = insertelement <2 x float> poison, float %add, i32 0
     %ret1 = insertelement <2 x float> %ret0, float %ext_add_f16, i32 1
 
     ret <2 x float> %ret1
