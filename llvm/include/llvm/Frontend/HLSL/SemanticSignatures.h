@@ -41,6 +41,8 @@ enum IOType {
   InOut = 0b011,
   PatchConstantOrPrimitive = 0b100,
   All = 0b111,
+
+  LLVM_MARK_AS_BITMASK_ENUM(PatchConstantOrPrimitive),
 };
 
 enum class SemanticInterpretation {
