@@ -4170,10 +4170,23 @@ happens-before must be perfectly overlapping to act atomically.
     read-modify-write operation M ({ref}`cmpxchg <i_cmpxchg>` and
     {ref}`atomicrmw <i_atomicrmw>`) reads from a perfectly overlapping
     `monotonic` (or stronger) write W, W must be immediately before M in
-    the relevant modification order. If one atomic read happens before
-    another perfectly overlapping atomic read and both are at least
-    `monotonic`, the later read must not see an earlier value in the
-    address's modification order. This disallows reordering of perfectly
+    the relevant modification order.
+
+    Atomic accesses that are `monotonic` (or stronger) satisfy coherence rules:
+    - read-read coherence: If one atomic read happens before another
+        perfectly overlapping atomic read and both are at least
+        `monotonic`, the later read must not see an earlier value in the
+        address's modification order.
+    - read-write coherence: If an atomic read R happens before a
+        perfectly overlapping atomic write W and both are at least
+        `monotonic`, R must not read from writes that are later than W
+        in the address's modification order.
+    - write-read coherence: If an atomic read R happens after a
+        perfectly overlapping atomic write W and both are at least
+        `monotonic`, R must not read from from writes that are earlier
+        than W in the address's modification order.
+
+    This disallows reordering of perfectly
     overlapping `monotonic` (or stronger) operations. If an address is
     written `monotonic`-ally by one thread, and other threads
     `monotonic`-ally read that address repeatedly with perfectly
