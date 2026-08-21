@@ -537,16 +537,19 @@ template <class ELFT>
 static void
 handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
                                 const AArch64BuildAttrSubsections &baInfo) {
+  // Missing subsections have zero-initialized data fields, so we must check
+  // presence before comparing against GNU properties.
+  bool baPauthInfoPresent = baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema;
+
   if (file->aarch64PauthAbiCoreInfo) {
     // Check for data mismatch.
-    if (file->aarch64PauthAbiCoreInfo) {
-      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
-          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
-        Err(ctx) << file
-                 << " GNU properties and build attributes have conflicting "
-                    "AArch64 PAuth data";
-    }
-    if (baInfo.AndFeatures != file->andFeatures)
+    if (baPauthInfoPresent &&
+        (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+         baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version))
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+    if (baInfo.AndFeatures && baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
                << " GNU properties and build attributes have conflicting "
                   "AArch64 PAuth data";
@@ -557,14 +560,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
     // PAuthAbiCoreInfo when there is at least one non-zero value. The
     // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
     // 'Invalid' GNU property section with platform = 0, version = 0.
-    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+    if (baPauthInfoPresent) {
       if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
         file->aarch64PauthAbiCoreInfo = {0, 0};
       else
         file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
                                          baInfo.Pauth.TagSchema};
     }
-    file->andFeatures = baInfo.AndFeatures;
+    file->andFeatures |= baInfo.AndFeatures;
   }
 }
 

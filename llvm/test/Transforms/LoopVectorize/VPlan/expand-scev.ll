@@ -294,7 +294,7 @@ define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
 ; CHECK-NEXT:    IR   %sub = sub i32 %rem.neg, 1
 ; CHECK-NEXT:    IR   %shl = shl i32 %sub, 31
 ; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw ir<%rem.neg>, ir<31>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-2147483547>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add ir<-2147483547>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
@@ -658,5 +658,5 @@ exit:
 }
 
 !0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

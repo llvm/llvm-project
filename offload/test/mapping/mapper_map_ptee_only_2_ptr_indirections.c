@@ -42,10 +42,8 @@ int main() {
   print_status(&s2.s1p->y, "y");         // CHECK: y is present
   print_status(&s2.z, "z");              // CHECK: z is present
   print_status(&s2.s1p->dummy, "dummy"); // CHECK: dummy is not present
-  print_status(&s2.s1p->p, "p");         // CHECK: p is present
-  // FIXME: mapper should emit attach-style maps for pointer members.
-  //                                        EXPECTED: p is not present
-  print_status(&s2.s1p->p[0], "p[0]"); // CHECK: p[0] is present
+  print_status(&s2.s1p->p, "p");         // CHECK: p is not present
+  print_status(&s2.s1p->p[0], "p[0]");   // CHECK: p[0] is present
   printf("\n");
 
 #pragma omp target exit data map(delete : s2)

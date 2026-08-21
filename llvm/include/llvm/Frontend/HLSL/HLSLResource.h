@@ -16,6 +16,8 @@
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
+class Type;
+
 namespace hlsl {
 
 // For now we use DXIL ABI enum values directly. This may change in the future.
@@ -23,6 +25,11 @@ using dxil::ResourceClass;
 using dxil::ResourceDimension;
 
 const unsigned CBufferRowSizeInBytes = 16U;
+
+/// Converts a scalar or vector LLVM type to its DXIL element type. Integer
+/// signedness must be supplied separately because LLVM integer types are
+/// signless.
+LLVM_ABI dxil::ElementType getDXILElementType(Type *Ty, bool IsSigned);
 
 } // namespace hlsl
 } // namespace llvm

@@ -85,6 +85,11 @@ public:
 };
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
+//
+// Per-element entries (N = __tgt_mapper_num_components()):
+//   &s,      &s.a,     sizeof(int),       MEMBER_OF(N) | TO | FROM | modifiers
+//   &s.b[0], &s.b[0],  sizeof(double)*2,  TO | FROM | modifiers
+//   &s.b,    &s.b[0],  sizeof(double*),   ATTACH
 
 // CK0: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK0-64-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
@@ -114,20 +119,14 @@ public:
 // CK0: [[PTR:%.+]] = phi ptr [ [[BEGIN]], %{{.+}} ], [ [[PTRNEXT:%.+]], %[[LCORRECT:[^,]+]] ]
 // CK0-DAG: [[ABEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 0
 // CK0-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
+// CK0-DAG: [[BARRBASE:%.+]] = load ptr, ptr [[BBEGIN]]
 // CK0-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK0-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
 // CK0-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
-// CK0-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
-// CK0-64-DAG: [[ABEGINI:%.+]] = ptrtoaddr ptr [[ABEGIN]] to i64
-// CK0-64-DAG: [[BENDI:%.+]] = ptrtoaddr ptr [[BEND]] to i64
-// CK0-64-DAG: [[CUSIZE:%.+]] = sub i64 [[BENDI]], [[ABEGINI]]
-// CK0-32-DAG: [[ABEGINI:%.+]] = ptrtoaddr ptr [[ABEGIN]] to i32
-// CK0-32-DAG: [[BENDI:%.+]] = ptrtoaddr ptr [[BEND]] to i32
-// CK0-32-DAG: [[CSIZE:%.+]] = sub i32 [[BENDI]], [[ABEGINI]]
-// CK0-32-DAG: [[CUSIZE:%.+]] = zext i32 [[CSIZE]] to i64
 // CK0-DAG: [[PRESIZE:%.+]] = call i64 @__tgt_mapper_num_components(ptr [[HANDLE]])
 // CK0-DAG: [[SHIPRESIZE:%.+]] = shl i64 [[PRESIZE]], 48
-// CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
+//   &s,      &s.a,     sizeof(int),       MEMBER_OF(N) | TO | FROM | modifiers
+// CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 3, [[SHIPRESIZE]]
 // CK0-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK0-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
@@ -150,57 +149,48 @@ public:
 // CK0-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK0-DAG: [[MODMASK0:%.+]] = and i64 [[TYPE]], 1036
 // CK0-DAG: [[PHITYPE0_MOD:%.+]] = or i64 [[PHITYPE0]], [[MODMASK0]]
-// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 [[CUSIZE]], i64 [[PHITYPE0_MOD]], {{.*}})
-// 281474976710659 == 0x1,000,000,003
-// CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710659, [[SHIPRESIZE]]
+// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[PHITYPE0_MOD]], {{.*}})
+//   &s.b[0], &s.b[0],  sizeof(double)*2,  TO | FROM | modifiers
 // CK0-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK0-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK0-DAG: [[ALLOC]]
-// CK0-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
 // CK0-DAG: br label %[[TYEND:[^,]+]]
 // CK0-DAG: [[ALLOCELSE]]
 // CK0-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
 // CK0-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
 // CK0-DAG: [[TO]]
-// CK0-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TOELSE]]
 // CK0-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
 // CK0-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
 // CK0-DAG: [[FROM]]
-// CK0-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
-// CK0-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK0-DAG: [[TYPE1:%.+]] = phi i64 [ 0, %[[ALLOC]] ], [ 1, %[[TO]] ], [ 2, %[[FROM]] ], [ 3, %[[TOELSE]] ]
 // CK0-DAG: [[MODMASK1:%.+]] = and i64 [[TYPE]], 1036
 // CK0-DAG: [[TYPE1_MOD:%.+]] = or i64 [[TYPE1]], [[MODMASK1]]
-// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[TYPE1_MOD]], {{.*}})
-// 281474976710675 == 0x1,000,000,013
-// CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710675, [[SHIPRESIZE]]
+// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BARRBASE]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE1_MOD]], {{.*}})
+//   &s.b,    &s.b[0],  sizeof(double*),   ATTACH
 // CK0-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK0-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK0-DAG: [[ALLOC]]
-// CK0-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
 // CK0-DAG: br label %[[TYEND:[^,]+]]
 // CK0-DAG: [[ALLOCELSE]]
 // CK0-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
 // CK0-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
 // CK0-DAG: [[TO]]
-// CK0-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TOELSE]]
 // CK0-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
 // CK0-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
 // CK0-DAG: [[FROM]]
-// CK0-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
-// CK0-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0-DAG: [[MODMASK2:%.+]] = and i64 [[TYPE]], 1036
-// CK0-DAG: [[TYPE2_MOD:%.+]] = or i64 [[TYPE2]], [[MODMASK2]]
-// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE2_MOD]], {{.*}})
+// CK0-DAG: [[TYPE2:%.+]] = phi i64 [ 16384, %[[ALLOC]] ], [ 16384, %[[TO]] ], [ 16384, %[[FROM]] ], [ 16384, %[[TOELSE]] ]
+// CK0-64: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 8, i64 [[TYPE2]], {{.*}})
+// CK0-32: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 4, i64 [[TYPE2]], {{.*}})
 // CK0: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK0: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
 // CK0: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -592,6 +582,9 @@ public:
 };
 
 #pragma omp declare mapper(id: C<int> s) map(s.a)
+//
+// Per-element entries (N = __tgt_mapper_num_components()):
+//   &s, &s.a, sizeof(int), MEMBER_OF(N) | TO | FROM | modifiers
 
 // CK1:     define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id{{.*}}(ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK1-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 4
@@ -699,6 +692,9 @@ public:
 #pragma omp declare mapper(B s) map(s.a)
 
 #pragma omp declare mapper(id: C s) map(s.b)
+//
+// Per-element entries emitted (N = __tgt_mapper_num_components()):
+//   &s, &s.b, sizeof(B), MEMBER_OF(N) | TO | FROM | modifiers  (dispatches to B mapper)
 
 // CK2: define {{.*}}void [[BMPRFUNC:@[.]omp_mapper[.].*B[.]default]](ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
 
@@ -894,6 +890,11 @@ public:
 };
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
+//
+// Per-element entries (N = __tgt_mapper_num_components()):
+//   &s,      &s.a,     sizeof(int),       MEMBER_OF(N) | TO | FROM | modifiers
+//   &s.b[0], &s.b[0],  sizeof(double)*2,  TO | FROM | modifiers
+//   &s.b,    &s.b[0],  sizeof(double*),   ATTACH
 
 // CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK4-64-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
@@ -924,20 +925,14 @@ public:
 // CK4: [[PTR:%.+]] = phi ptr [ [[BEGIN]], %{{.+}} ], [ [[PTRNEXT:%.+]], %[[LCORRECT:[^,]+]] ]
 // CK4-DAG: [[ABEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 0
 // CK4-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
+// CK4-DAG: [[BARRBASE:%.+]] = load ptr, ptr [[BBEGIN]]
 // CK4-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK4-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
 // CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
-// CK4-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
-// CK4-64-DAG: [[ABEGINI:%.+]] = ptrtoaddr ptr [[ABEGIN]] to i64
-// CK4-64-DAG: [[BENDI:%.+]] = ptrtoaddr ptr [[BEND]] to i64
-// CK4-64-DAG: [[CUSIZE:%.+]] = sub i64 [[BENDI]], [[ABEGINI]]
-// CK4-32-DAG: [[ABEGINI:%.+]] = ptrtoaddr ptr [[ABEGIN]] to i32
-// CK4-32-DAG: [[BENDI:%.+]] = ptrtoaddr ptr [[BEND]] to i32
-// CK4-32-DAG: [[CSIZE:%.+]] = sub i32 [[BENDI]], [[ABEGINI]]
-// CK4-32-DAG: [[CUSIZE:%.+]] = zext i32 [[CSIZE]] to i64
 // CK4-DAG: [[PRESIZE:%.+]] = call i64 @__tgt_mapper_num_components(ptr [[HANDLE]])
 // CK4-DAG: [[SHIPRESIZE:%.+]] = shl i64 [[PRESIZE]], 48
-// CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
+//   &s,      &s.a,     sizeof(int),       MEMBER_OF(N) | TO | FROM | modifiers
+// CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 3, [[SHIPRESIZE]]
 // CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
@@ -960,57 +955,48 @@ public:
 // CK4-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK4-DAG: [[MODMASK0:%.+]] = and i64 [[TYPE]], 1036
 // CK4-DAG: [[PHITYPE0_MOD:%.+]] = or i64 [[PHITYPE0]], [[MODMASK0]]
-// CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 [[CUSIZE]], i64 [[PHITYPE0_MOD]], {{.*}})
-// 281474976710659 == 0x1,000,000,003
-// CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710659, [[SHIPRESIZE]]
+// CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[PHITYPE0_MOD]], {{.*}})
+//   &s.b[0], &s.b[0],  sizeof(double)*2,  TO | FROM | modifiers
 // CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK4-DAG: [[ALLOC]]
-// CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
 // CK4-DAG: br label %[[TYEND:[^,]+]]
 // CK4-DAG: [[ALLOCELSE]]
 // CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
 // CK4-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
 // CK4-DAG: [[TO]]
-// CK4-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TOELSE]]
 // CK4-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
 // CK4-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
 // CK4-DAG: [[FROM]]
-// CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
-// CK4-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4-DAG: [[TYPE1:%.+]] = phi i64 [ 0, %[[ALLOC]] ], [ 1, %[[TO]] ], [ 2, %[[FROM]] ], [ 3, %[[TOELSE]] ]
 // CK4-DAG: [[MODMASK1:%.+]] = and i64 [[TYPE]], 1036
 // CK4-DAG: [[TYPE1_MOD:%.+]] = or i64 [[TYPE1]], [[MODMASK1]]
-// CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[TYPE1_MOD]], {{.*}})
-// 281474976710675 == 0x1,000,000,013
-// CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710675, [[SHIPRESIZE]]
+// CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BARRBASE]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE1_MOD]], {{.*}})
+//   &s.b,    &s.b[0],  sizeof(double*),   ATTACH
 // CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK4-DAG: [[ALLOC]]
-// CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
 // CK4-DAG: br label %[[TYEND:[^,]+]]
 // CK4-DAG: [[ALLOCELSE]]
 // CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
 // CK4-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
 // CK4-DAG: [[TO]]
-// CK4-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TOELSE]]
 // CK4-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
 // CK4-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
 // CK4-DAG: [[FROM]]
-// CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
-// CK4-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK4-DAG: [[MODMASK2:%.+]] = and i64 [[TYPE]], 1036
-// CK4-DAG: [[TYPE2_MOD:%.+]] = or i64 [[TYPE2]], [[MODMASK2]]
-// CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE2_MOD]], {{.*}})
+// CK4-DAG: [[TYPE2:%.+]] = phi i64 [ 16384, %[[ALLOC]] ], [ 16384, %[[TO]] ], [ 16384, %[[FROM]] ], [ 16384, %[[TOELSE]] ]
+// CK4-64: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 8, i64 [[TYPE2]], {{.*}})
+// CK4-32: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 4, i64 [[TYPE2]], {{.*}})
 // CK4: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK4: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
 // CK4: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -1083,9 +1069,14 @@ typedef struct myvec {
 } myvec_t;
 
 #pragma omp declare mapper(id: myvec_t v) map(iterator(it=0:v.a), tofrom: v.b[it])
+//
+// Per-element entries emitted for struct v (N = __tgt_mapper_num_components()):
+//   &v.b[it], &v.b[it], sizeof(double), TO | FROM | modifiers
+//   &v.b,     &v.b[it], sizeof(double*), ATTACH
+
 // CK5: @[[ITER:[a-zA-Z0-9_]+]] = global i32 0, align 4
 
-void foo(){ 
+void foo(){
   myvec_t s;
   #pragma omp target map(mapper(id), to:s)
   {
@@ -1117,34 +1108,51 @@ void foo(){
 // CK5: br i1 [[ISEMPTY]], label %[[DONE:[^,]+]], label %[[LBODY:[^,]+]]
 // CK5: [[LBODY]]
 // CK5: [[PTR:%.+]] = phi ptr [ [[BEGIN]], %{{.+}} ], [ [[PTRNEXT:%.+]], %[[LCORRECT:[^,]+]] ]
-// CK5-DAG: [[ABEGIN:%.+]] = getelementptr inbounds nuw %struct.myvec, ptr [[PTR]], i32 0, i32 1
+// CK5-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %struct.myvec, ptr [[PTR]], i32 0, i32 1
+// CK5-DAG: [[BBASE:%.+]] = load ptr, ptr [[BBEGIN]], align {{.*}}
 // CK5-DAG: load i32, ptr @[[ITER]], align 4
 // CK5-DAG: [[PRESIZE:%.+]] = call i64 @__tgt_mapper_num_components(ptr [[HANDLE]])
 // CK5-DAG: [[SHIPRESIZE:%.+]] = shl i64 [[PRESIZE]], 48
-// CK5-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
+//   &v.b[it], &v.b[it], sizeof(double), TO | FROM | modifiers
 // CK5-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK5-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK5-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK5-DAG: [[ALLOC]]
-// CK5-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
 // CK5-DAG: br label %[[TYEND:[^,]+]]
 // CK5-DAG: [[ALLOCELSE]]
 // CK5-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
 // CK5-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
 // CK5-DAG: [[TO]]
-// CK5-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
 // CK5-DAG: br label %[[TYEND]]
 // CK5-DAG: [[TOELSE]]
 // CK5-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
 // CK5-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
 // CK5-DAG: [[FROM]]
-// CK5-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK5-DAG: br label %[[TYEND]]
 // CK5-DAG: [[TYEND]]
-// CK5-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK5-DAG: [[TYPE1:%.+]] = phi i64 [ 0, %[[ALLOC]] ], [ 1, %[[TO]] ], [ 2, %[[FROM]] ], [ 3, %[[TOELSE]] ]
 // CK5-DAG: [[MODMASK:%.+]] = and i64 [[TYPE]], 1036
 // CK5-DAG: [[TYPE1_MOD:%.+]] = or i64 [[TYPE1]], [[MODMASK]]
-// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 {{.*}}, i64 [[TYPE1_MOD]], {{.*}})
+// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBASE]], ptr {{.*}}, i64 {{.*}}, i64 [[TYPE1_MOD]], {{.*}})
+//   &v.b,     &v.b[it], sizeof(double*), ATTACH
+// CK5-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
+// CK5-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
+// CK5-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
+// CK5-DAG: [[ALLOC]]
+// CK5-DAG: br label %[[TYEND:[^,]+]]
+// CK5-DAG: [[ALLOCELSE]]
+// CK5-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
+// CK5-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
+// CK5-DAG: [[TO]]
+// CK5-DAG: br label %[[TYEND]]
+// CK5-DAG: [[TOELSE]]
+// CK5-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
+// CK5-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
+// CK5-DAG: [[FROM]]
+// CK5-DAG: br label %[[TYEND]]
+// CK5-DAG: [[TYEND]]
+// CK5-DAG: [[TYPE2:%.+]] = phi i64 [ 16384, %[[ALLOC]] ], [ 16384, %[[TO]] ], [ 16384, %[[FROM]] ], [ 16384, %[[TOELSE]] ]
+// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr {{.*}}, i64 {{.*}}, i64 [[TYPE2]], {{.*}})
 // CK5: [[PTRNEXT]] = getelementptr %struct.myvec, ptr [[PTR]], i32 1
 // CK5: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
 // CK5: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]

@@ -127,6 +127,18 @@ MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
 }
 
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//

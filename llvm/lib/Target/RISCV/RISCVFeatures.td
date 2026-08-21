@@ -185,8 +185,8 @@ def FeatureStdExtZicfilp
                                  [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<1, 0, "Shadow stack",
-                                 [FeatureStdExtZicsr, FeatureStdExtZimop]>,
+    : RISCVExtension<1, 0, "Shadow stack",
+                     [FeatureStdExtZicsr, FeatureStdExtZimop]>,
       RISCVExtensionBitmask<1, 27>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
@@ -1099,6 +1099,22 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmijt
+    : RISCVExperimentalExtension<0, 19,
+                                 "Interrupt Jump Table at Machine Level">;
+def FeatureStdExtSsijt
+    : RISCVExperimentalExtension<0, 19,
+                                 "Interrupt Jump Table at Supervisor Level">;
+
+def FeatureStdExtSmehv
+    : RISCVExperimentalExtension<0, 19,
+                                 "Synchronous Exception Hardware Vectoring at Machine Level",
+                                 [FeatureStdExtSmijt]>;
+def FeatureStdExtSsehv
+    : RISCVExperimentalExtension<0, 19,
+                                 "Synchronous Exception Hardware Vectoring at Supervisor Level",
+                                 [FeatureStdExtSsijt]>;
+
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
 
@@ -1681,6 +1697,8 @@ def HasVendorXqcibi
     : Predicate<"Subtarget->hasVendorXqcibi()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibi),
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+def NoVendorXqcibiOrNoShortForwardBranch
+    : Predicate<"!Subtarget->hasVendorXqcibi() || !Subtarget->hasShortForwardBranchIALU()">;
 
 def FeatureVendorXqcibm
     : RISCVExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
@@ -2150,13 +2168,6 @@ def TuneShortForwardBranchILoad
           "Enable short forward branch optimization for load instructions",
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
-
-def TuneShortForwardBranchImm
-    : RISCVSimpleTuneFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
-                             "true", "Enable short forward branch optimization for branches with immediates",
-                             [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
-def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

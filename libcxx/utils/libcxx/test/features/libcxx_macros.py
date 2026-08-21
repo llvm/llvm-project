@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import Feature, compilerMacros, programSucceeds
+from libcxx.test.dsl import Feature, compilerMacros
 
 features = []
 
@@ -60,15 +60,8 @@ for macro, feature in true_false_macros.items():
     )
 
 inverted_macros = {
-    "_LIBCPP_HAS_TIME_ZONE_DATABASE": "no-tzdb",
-    "_LIBCPP_HAS_FILESYSTEM": "no-filesystem",
-    "_LIBCPP_HAS_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_THREADS": "no-threads",
     "_LIBCPP_HAS_MONOTONIC_CLOCK": "no-monotonic-clock",
-    "_LIBCPP_HAS_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
-    "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
-    "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
 }
 for macro, feature in inverted_macros.items():
     features.append(
@@ -76,24 +69,5 @@ for macro, feature in inverted_macros.items():
             name=feature,
             when=lambda cfg, m=macro: m in compilerMacros(cfg)
             and compilerMacros(cfg)[m] == "0",
-        )
-    )
-
-for mode in ("none", "fast", "extensive", "debug"):
-    check_program = f"""
-        #include <stddef.h> // any header to get the definitions
-        int main(int, char**) {{
-        #if defined(_LIBCPP_VERSION) && \\
-                defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()}
-            return 0;
-        #else
-            return 1;
-        #endif
-        }}
-    """
-    features.append(
-        Feature(
-            name=f"libcpp-hardening-mode={mode}",
-            when=lambda cfg, prog=check_program: programSucceeds(cfg, prog)
         )
     )

@@ -1,3 +1,4 @@
+-r ci/lnt/requirements.txt
 click
 GitPython
 numpy
@@ -5,5 +6,4 @@ pandas
 plotly
 scipy
 statsmodels
-tabulate
 tqdm

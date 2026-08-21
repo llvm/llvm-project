@@ -502,7 +502,7 @@ define bfloat @mixlo_fptrunc(float %a, float %b) #0 {
 ; GFX1250:       ; %bb.0: ; %.entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, 0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, neg(0)
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %mul = fmul float %a, %b
@@ -515,7 +515,7 @@ define bfloat @mixlo_fptrunc_no_flush(float %a, float %b) {
 ; GFX1250:       ; %bb.0: ; %.entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, 0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, neg(0)
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %mul = fmul float %a, %b
@@ -528,7 +528,7 @@ define bfloat @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
 ; GFX1250:       ; %bb.0: ; %.entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, |v0|, v1, 0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, |v0|, v1, neg(0)
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %a.fabs = call float @llvm.fabs.f32(float %a)
@@ -542,7 +542,7 @@ define bfloat @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
 ; GFX1250:       ; %bb.0: ; %.entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, -v0, v1, 0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, -v0, v1, neg(0)
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %a.fneg = fneg float %a

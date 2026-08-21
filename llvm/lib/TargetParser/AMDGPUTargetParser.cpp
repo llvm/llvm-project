@@ -38,6 +38,7 @@ struct GPUInfo {
   StringTable::Offset Name;
   Triple::SubArchType SubArch;
   unsigned ArchFeatures;
+  AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
 };
@@ -53,6 +54,7 @@ struct R600Info {
 #define GET_AMDGPU_GPU_ALIAS_TABLE
 #define GET_AMDGPU_MAJOR_SUBARCH
 #define GET_AMDGPU_SUBARCH_NAME
+#define GET_AMDGPU_FEATURE_NAME_TABLE
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 
 #define GET_R600_NAME_TABLE
@@ -316,6 +318,20 @@ R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
   return Info ? Info->ArchFeatures : R600_FEATURE_NONE;
 }
 
+const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
+  static constexpr AMDGPUFeatureBitset Empty{};
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->Features : Empty;
+}
+
+void AMDGPU::getFeatureNames(const AMDGPUFeatureBitset &Features,
+                             SmallVectorImpl<StringRef> &Names) {
+  for (unsigned I = 0; I != NUM_FEATURES; ++I) {
+    if (Features.test(I))
+      Names.push_back(AMDGPUNameStrTab[AMDGPUFeatureNames[I]]);
+  }
+}
+
 void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values,
                                      Triple::SubArchType SubArch) {
   // XXX: Should this only report unique canonical names?
@@ -365,7 +381,7 @@ unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
-  if (getArchAttrAMDGCN(AK) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(AK).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(getSubArch(AK));
@@ -377,7 +393,7 @@ unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
-  if (getArchAttrAMDGCN(SubArch) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(getGPUKindFromSubArch(SubArch)).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(SubArch);
@@ -415,16 +431,49 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
+// Capability features clang queries via the feature bitset but must not
+// serialize into the target-feature string.
+//
+// FIXME: This is hacky, we shouldn't have mismatches between the bitset and
+// feature string map.
+static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
+    FEAT_FAST_FMAF,         FEAT_FAST_DENORMAL_F32, FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP,      FEAT_XNACK_SUPPORT,     FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES};
+
+// Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
+// Overwrite false, existing entries are kept so user -mattr overrides win.
+static void addGPUFeatures(const GPUInfo &Info, bool Overwrite,
+                           StringMap<bool> &Features) {
+  SmallVector<StringRef, NUM_FEATURES> Names;
+  getFeatureNames(Info.Features & ~FrontendOnlyFeatures, Names);
+  for (StringRef Name : Names) {
+    if (Overwrite)
+      Features[Name] = true;
+    else
+      Features.insert({Name, true});
+  }
+}
+
+/// Add a GPU's default features to \p Features (preserving user overrides) and
+/// validate any requested wavesize.
 static std::pair<FeatureError, StringRef>
-insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                      const StringMap<bool> &DefaultFeatures,
-                      StringMap<bool> &Features) {
+fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
+                     StringMap<bool> &Features) {
+  // With no explicit GPU, the triple's subarch identifies the target.
+  GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
+                     ? getGPUKindFromSubArch(T.getSubArch())
+                     : parseArchAMDGCN(GPU);
+  const GPUInfo *Info = getAMDGPUInfo(Kind);
+
   // A bare subarch triple (no -target-cpu) still pins down the target, so it is
-  // not a null GPU: DefaultFeatures has already been populated from the
-  // subarch.
+  // not a null GPU. The target's native wavesize (if single-mode) is in the
+  // feature bitset; a dual-mode GPU has neither wave bit set.
   const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
-  const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
-  const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
+  const bool TargetHasWave32 =
+      Info && Info->Features.test(FEAT_WAVEFRONTSIZE32);
+  const bool TargetHasWave64 =
+      Info && Info->Features.test(FEAT_WAVEFRONTSIZE64);
 
   auto Wave32Itr = Features.find("wavefrontsize32");
   auto Wave64Itr = Features.find("wavefrontsize64");
@@ -464,509 +513,13 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
   // Default to wave32 if target supports both.
   if (!IsNullGPU && !EnableWave32 && !EnableWave64 && !TargetHasWave32 &&
       !TargetHasWave64)
-    Features.insert(std::make_pair("wavefrontsize32", true));
+    Features.insert({"wavefrontsize32", true});
 
-  for (const auto &Entry : DefaultFeatures) {
-    if (!Features.count(Entry.getKey()))
-      Features[Entry.getKey()] = Entry.getValue();
-  }
+  // Merge the target defaults, keeping any user -mattr overrides.
+  if (Info)
+    addGPUFeatures(*Info, /*Overwrite=*/false, Features);
 
   return {NO_ERROR, StringRef()};
-}
-
-/// Fills Features map with default values for given target GPU.
-/// \p Features contains overriding target features and this function returns
-/// default target features with entries overridden by \p Features.
-static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
-                                 StringMap<bool> &Features) {
-  // With no explicit GPU, the triple's subarch identifies the target.
-  AMDGPU::GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
-                             ? getGPUKindFromSubArch(T.getSubArch())
-                             : parseArchAMDGCN(GPU);
-  switch (Kind) {
-  case GK_GFX1310:
-  case GK_GFX13_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["gfx12-insts"] = true;
-    Features["gfx1250-insts"] = true;
-    Features["gfx13-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["bitop3-insts"] = true;
-    Features["prng-inst"] = true;
-    Features["tanh-insts"] = true;
-    Features["tensor-cvt-lut-insts"] = true;
-    Features["bf16-trans-insts"] = true;
-    Features["bf16-cvt-insts"] = true;
-    Features["cvt-sr-pk-bf16-f32-inst"] = true;
-    Features["bf16-pk-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["permlane16-swap"] = true;
-    Features["ashr-pk-insts"] = true;
-    Features["atomic-buffer-pk-add-bf16-inst"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["s-wakeup-barrier-inst"] = true;
-    Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
-    Features["f32-to-fp6bf6-cvt-scale-insts"] = true;
-    Features["clusters"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["cvt-pknorm-vop3-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["async-load-to-lds-insts"] = true;
-    Features["smem-prefetch-insts"] = true;
-    break;
-  case GK_GFX1251:
-    Features["gfx1251-gemm-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX1250:
-    Features["swmmac-gfx1200-insts"] = true;
-    Features["swmmac-gfx1250-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["qsad-insts"] = true;
-    Features["sad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX12_5_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["gfx12-insts"] = true;
-    Features["gfx1250-insts"] = true;
-    Features["bitop3-insts"] = true;
-    Features["prng-inst"] = true;
-    Features["tanh-insts"] = true;
-    Features["tensor-cvt-lut-insts"] = true;
-    Features["transpose-load-f4f6-insts"] = true;
-    Features["bf16-trans-insts"] = true;
-    Features["bf16-cvt-insts"] = true;
-    Features["cvt-sr-pk-bf16-f32-inst"] = true;
-    Features["bf16-pk-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["fp8e5m3-insts"] = true;
-    Features["permlane16-swap"] = true;
-    Features["ashr-pk-insts"] = true;
-    Features["add-min-max-insts"] = true;
-    Features["pk-add-min-max-insts"] = true;
-    Features["atomic-buffer-pk-add-bf16-inst"] = true;
-    Features["vmem-pref-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["setprio-inc-wg-inst"] = true;
-    Features["s-wakeup-barrier-inst"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["wavefrontsize32"] = true;
-    Features["clusters"] = true;
-    Features["mcast-load-insts"] = true;
-    Features["async-load-to-lds-insts"] = true;
-    Features["async-store-from-lds-insts"] = true;
-    Features["asynccnt"] = true;
-    Features["smem-prefetch-insts"] = true;
-    break;
-  case GK_GFX1201:
-  case GK_GFX1200:
-  case GK_GFX12_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dot9-insts"] = true;
-    Features["dot10-insts"] = true;
-    Features["dot11-insts"] = true;
-    Features["dot12-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-buffer-pk-add-bf16-inst"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["gfx12-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["bvh-ray-tracing-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["wmma-128b-insts"] = true;
-    Features["swmmac-gfx1200-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["smem-prefetch-insts"] = true;
-    break;
-  case GK_GFX1170:
-  case GK_GFX1171:
-  case GK_GFX1172:
-  case GK_GFX11_7_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dot9-insts"] = true;
-    Features["dot10-insts"] = true;
-    Features["dot12-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["bvh-ray-tracing-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["gws"] = true;
-    Features["dot11-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["wmma-128b-insts"] = true;
-    Features["swmmac-gfx1200-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    break;
-  case GK_GFX1154:
-  case GK_GFX1153:
-  case GK_GFX1152:
-  case GK_GFX1151:
-  case GK_GFX1150:
-  case GK_GFX1103:
-  case GK_GFX1102:
-  case GK_GFX1101:
-  case GK_GFX1100:
-  case GK_GFX11_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot5-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dot9-insts"] = true;
-    Features["dot10-insts"] = true;
-    Features["dot12-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["bvh-ray-tracing-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["gws"] = true;
-    Features["wmma-256b-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    break;
-  case GK_GFX1036:
-  case GK_GFX1035:
-  case GK_GFX1034:
-  case GK_GFX1033:
-  case GK_GFX1032:
-  case GK_GFX1031:
-  case GK_GFX1030:
-  case GK_GFX10_3_GENERIC:
-    Features["ci-insts"] = true;
-    Features["dot1-insts"] = true;
-    Features["dot2-insts"] = true;
-    Features["dot5-insts"] = true;
-    Features["dot6-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot10-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["bvh-ray-tracing-insts"] = true;
-    Features["s-memrealtime"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    break;
-  case GK_GFX1012:
-  case GK_GFX1011:
-    Features["dot1-insts"] = true;
-    Features["dot2-insts"] = true;
-    Features["dot5-insts"] = true;
-    Features["dot6-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot10-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX1013:
-  case GK_GFX1010:
-  case GK_GFX10_1_GENERIC:
-    if (Kind == GK_GFX1013)
-      Features["bvh-ray-tracing-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["ci-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["s-memrealtime"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    break;
-  case GK_GFX950:
-    Features["bitop3-insts"] = true;
-    Features["fp6bf6-cvt-scale-insts"] = true;
-    Features["fp4-cvt-scale-insts"] = true;
-    Features["bf8-cvt-scale-insts"] = true;
-    Features["fp8-cvt-scale-insts"] = true;
-    Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
-    Features["f32-to-f16bf16-cvt-sr-insts"] = true;
-    Features["prng-inst"] = true;
-    Features["permlane16-swap"] = true;
-    Features["permlane32-swap"] = true;
-    Features["ashr-pk-insts"] = true;
-    Features["dot12-insts"] = true;
-    Features["dot13-insts"] = true;
-    Features["atomic-buffer-pk-add-bf16-inst"] = true;
-    Features["gfx950-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX942:
-    Features["fp8-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    if (Kind != GK_GFX950)
-      Features["xf32-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX9_4_GENERIC:
-    Features["gfx940-insts"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
-    Features["gfx90a-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["dot3-insts"] = true;
-    Features["dot4-insts"] = true;
-    Features["dot5-insts"] = true;
-    Features["dot6-insts"] = true;
-    Features["mai-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["dot1-insts"] = true;
-    Features["dot2-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot10-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["gfx8-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["s-memrealtime"] = true;
-    Features["ci-insts"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["wavefrontsize64"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    break;
-  case GK_GFX90A:
-    Features["gfx90a-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    [[fallthrough]];
-  case GK_GFX908:
-    Features["dot3-insts"] = true;
-    Features["dot4-insts"] = true;
-    Features["dot5-insts"] = true;
-    Features["dot6-insts"] = true;
-    Features["mai-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX906:
-    Features["dl-insts"] = true;
-    Features["dot1-insts"] = true;
-    Features["dot2-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot10-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX90C:
-  case GK_GFX909:
-  case GK_GFX904:
-  case GK_GFX902:
-  case GK_GFX900:
-  case GK_GFX9_GENERIC:
-    Features["gfx9-insts"] = true;
-    Features["flat-global-insts"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX810:
-  case GK_GFX805:
-  case GK_GFX803:
-  case GK_GFX802:
-  case GK_GFX801:
-    Features["gfx8-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["s-memrealtime"] = true;
-    Features["ci-insts"] = true;
-    Features["image-insts"] = true;
-    if (Kind != GK_GFX90A)
-      Features["extended-image-insts"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["wavefrontsize64"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    break;
-  case GK_GFX705:
-  case GK_GFX704:
-  case GK_GFX703:
-  case GK_GFX702:
-  case GK_GFX701:
-  case GK_GFX700:
-    Features["ci-insts"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["qsad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["mqsad-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["wavefrontsize64"] = true;
-    break;
-  case GK_GFX602:
-  case GK_GFX601:
-  case GK_GFX600:
-    Features["image-insts"] = true;
-    Features["extended-image-insts"] = true;
-    Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["wavefrontsize64"] = true;
-    Features["cube-insts"] = true;
-    Features["lerp-inst"] = true;
-    Features["sad-insts"] = true;
-    Features["msad-insts"] = true;
-    Features["mqsad-pk-insts"] = true;
-    Features["cvt-pknorm-vop2-insts"] = true;
-    break;
-  case GK_NONE:
-    break;
-  default:
-    llvm_unreachable("Unhandled GPU!");
-  }
 }
 
 /// Fills Features map with default values for given target GPU.
@@ -980,20 +533,13 @@ AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     // AMDGCN SPIRV must support the union of all AMDGCN features.
     SmallVector<StringRef> GPUs;
     fillValidArchListAMDGCN(GPUs);
-
-    static const Triple AMDGCN("amdgcn-amd-amdhsa");
-    StringMap<bool> Tmp;
-    for (auto &&GPU : GPUs) {
-      fillAMDGCNFeatureMap(GPU, AMDGCN, Tmp);
-      for (auto &&[F, B] : Tmp)
-        Features[F] = B;
-    }
+    for (StringRef G : GPUs)
+      if (const GPUInfo *Info = getAMDGPUInfo(parseArchAMDGCN(G)))
+        addGPUFeatures(*Info, /*Overwrite=*/true, Features);
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
   } else if (T.isAMDGCN()) {
-    StringMap<bool> DefaultFeatures;
-    fillAMDGCNFeatureMap(GPU, T, DefaultFeatures);
-    return insertWaveSizeFeature(GPU, T, DefaultFeatures, Features);
+    return fillAMDGCNFeatureMap(GPU, T, Features);
   } else {
     if (GPU.empty())
       GPU = "r600";
@@ -1060,12 +606,13 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
 static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
                                     TargetIDSetting &XnackSetting,
                                     TargetIDSetting &SramEccSetting) {
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  XnackSetting = (ArchAttr & FEATURE_XNACK_ON_OFF_MODES)
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  XnackSetting = Features.test(FEAT_XNACK_ON_OFF_MODES)
                      ? TargetIDSetting::Any
                      : TargetIDSetting::Unsupported;
-  SramEccSetting = (ArchAttr & FEATURE_SRAMECC) ? TargetIDSetting::Any
-                                                : TargetIDSetting::Unsupported;
+  SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
+                       ? TargetIDSetting::Any
+                       : TargetIDSetting::Unsupported;
 
   // The first component is the processor; the rest are feature modifiers of the
   // form "<feature><+|->".

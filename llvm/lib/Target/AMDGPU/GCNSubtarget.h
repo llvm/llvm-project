@@ -84,8 +84,6 @@ protected:
   unsigned DataCacheLineSize = 0;
 
   // Dynamically set bits that enable features.
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
@@ -578,6 +576,12 @@ public:
   // if also at the end of the allocation block.
   bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
 
+  // v_dot2c_f32_f16 unconditionally flushes f16 subnormal inputs to zero
+  // regardless of the MODE register, unlike v_fma_mix_f32 which respects it.
+  bool dot2UnconditionalFlush() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
+
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
   bool hasTransForwardingHazard() const { return HasGFX940Insts; }
@@ -968,11 +972,6 @@ public:
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
   bool requiresWaitIdleBeforeGetReg() const { return HasGFX1250Insts; }
-
-  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
-  unsigned getDynamicVGPRBlockSize() const {
-    return DynamicVGPRBlockSize32 ? 32 : 16;
-  }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
