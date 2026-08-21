@@ -22,56 +22,56 @@
 
 define noundef half @copysign_half(half noundef %a, half noundef %b) {
 entry:
-  ; CHECK: %[[#a:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#b:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#ai:]] = OpBitcast %[[#int_16]] %[[#a]]
-  ; CHECK: %[[#bi:]] = OpBitcast %[[#int_16]] %[[#b]]
-  ; CHECK: %[[#am:]] = OpBitwiseAnd %[[#int_16]] %[[#ai]] %[[#magn_16]]
-  ; CHECK: %[[#bs:]] = OpBitwiseAnd %[[#int_16]] %[[#bi]] %[[#sign_16]]
-  ; CHECK: %[[#or:]] = OpBitwiseOr %[[#int_16]] %[[#am]] %[[#bs]]
-  ; CHECK: %[[#]] = OpBitcast %[[#float_16]] %[[#or]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_16]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_16]]
+  ; CHECK: %[[#arg0_int:]] = OpBitcast %[[#int_16]] %[[#arg0]]
+  ; CHECK: %[[#arg1_int:]] = OpBitcast %[[#int_16]] %[[#arg1]]
+  ; CHECK: %[[#arg0_magn:]] = OpBitwiseAnd %[[#int_16]] %[[#arg0_int]] %[[#magn_16]]
+  ; CHECK: %[[#arg1_sign:]] = OpBitwiseAnd %[[#int_16]] %[[#arg1_int]] %[[#sign_16]]
+  ; CHECK: %[[#combined:]] = OpBitwiseOr %[[#int_16]] %[[#arg0_magn]] %[[#arg1_sign]]
+  ; CHECK: %[[#]] = OpBitcast %[[#float_16]] %[[#combined]]
   %r = call half @llvm.copysign.f16(half %a, half %b)
   ret half %r
 }
 
 define noundef float @copysign_float(float noundef %a, float noundef %b) {
 entry:
-  ; CHECK: %[[#a:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#b:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#ai:]] = OpBitcast %[[#int_32]] %[[#a]]
-  ; CHECK: %[[#bi:]] = OpBitcast %[[#int_32]] %[[#b]]
-  ; CHECK: %[[#am:]] = OpBitwiseAnd %[[#int_32]] %[[#ai]] %[[#magn_32]]
-  ; CHECK: %[[#bs:]] = OpBitwiseAnd %[[#int_32]] %[[#bi]] %[[#sign_32]]
-  ; CHECK: %[[#or:]] = OpBitwiseOr %[[#int_32]] %[[#am]] %[[#bs]]
-  ; CHECK: %[[#]] = OpBitcast %[[#float_32]] %[[#or]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg0_int:]] = OpBitcast %[[#int_32]] %[[#arg0]]
+  ; CHECK: %[[#arg1_int:]] = OpBitcast %[[#int_32]] %[[#arg1]]
+  ; CHECK: %[[#arg0_magn:]] = OpBitwiseAnd %[[#int_32]] %[[#arg0_int]] %[[#magn_32]]
+  ; CHECK: %[[#arg1_sign:]] = OpBitwiseAnd %[[#int_32]] %[[#arg1_int]] %[[#sign_32]]
+  ; CHECK: %[[#combined:]] = OpBitwiseOr %[[#int_32]] %[[#arg0_magn]] %[[#arg1_sign]]
+  ; CHECK: %[[#]] = OpBitcast %[[#float_32]] %[[#combined]]
   %r = call float @llvm.copysign.f32(float %a, float %b)
   ret float %r
 }
 
 define noundef double @copysign_double(double noundef %a, double noundef %b) {
 entry:
-  ; CHECK: %[[#a:]] = OpFunctionParameter %[[#float_64]]
-  ; CHECK: %[[#b:]] = OpFunctionParameter %[[#float_64]]
-  ; CHECK: %[[#ai:]] = OpBitcast %[[#int_64]] %[[#a]]
-  ; CHECK: %[[#bi:]] = OpBitcast %[[#int_64]] %[[#b]]
-  ; CHECK: %[[#am:]] = OpBitwiseAnd %[[#int_64]] %[[#ai]] %[[#magn_64]]
-  ; CHECK: %[[#bs:]] = OpBitwiseAnd %[[#int_64]] %[[#bi]] %[[#sign_64]]
-  ; CHECK: %[[#or:]] = OpBitwiseOr %[[#int_64]] %[[#am]] %[[#bs]]
-  ; CHECK: %[[#]] = OpBitcast %[[#float_64]] %[[#or]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_64]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_64]]
+  ; CHECK: %[[#arg0_int:]] = OpBitcast %[[#int_64]] %[[#arg0]]
+  ; CHECK: %[[#arg1_int:]] = OpBitcast %[[#int_64]] %[[#arg1]]
+  ; CHECK: %[[#arg0_magn:]] = OpBitwiseAnd %[[#int_64]] %[[#arg0_int]] %[[#magn_64]]
+  ; CHECK: %[[#arg1_sign:]] = OpBitwiseAnd %[[#int_64]] %[[#arg1_int]] %[[#sign_64]]
+  ; CHECK: %[[#combined:]] = OpBitwiseOr %[[#int_64]] %[[#arg0_magn]] %[[#arg1_sign]]
+  ; CHECK: %[[#]] = OpBitcast %[[#float_64]] %[[#combined]]
   %r = call double @llvm.copysign.f64(double %a, double %b)
   ret double %r
 }
 
 define noundef <4 x float> @copysign_float4(<4 x float> noundef %a, <4 x float> noundef %b) {
 entry:
-  ; CHECK: %[[#a:]] = OpFunctionParameter %[[#vec4_float_32]]
-  ; CHECK: %[[#b:]] = OpFunctionParameter %[[#vec4_float_32]]
-  ; CHECK: %[[#ai:]] = OpBitcast %[[#vec4_int_32]] %[[#a]]
-  ; CHECK: %[[#bi:]] = OpBitcast %[[#vec4_int_32]] %[[#b]]
-  ; CHECK: %[[#am:]] = OpBitwiseAnd %[[#vec4_int_32]] %[[#ai]] %[[#vec4_magn_32]]
-  ; CHECK: %[[#bs:]] = OpBitwiseAnd %[[#vec4_int_32]] %[[#bi]] %[[#vec4_sign_32]]
-  ; CHECK: %[[#or:]] = OpBitwiseOr %[[#vec4_int_32]] %[[#am]] %[[#bs]]
-  ; CHECK: %[[#]] = OpBitcast %[[#vec4_float_32]] %[[#or]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg0_int:]] = OpBitcast %[[#vec4_int_32]] %[[#arg0]]
+  ; CHECK: %[[#arg1_int:]] = OpBitcast %[[#vec4_int_32]] %[[#arg1]]
+  ; CHECK: %[[#arg0_magn:]] = OpBitwiseAnd %[[#vec4_int_32]] %[[#arg0_int]] %[[#vec4_magn_32]]
+  ; CHECK: %[[#arg1_sign:]] = OpBitwiseAnd %[[#vec4_int_32]] %[[#arg1_int]] %[[#vec4_sign_32]]
+  ; CHECK: %[[#combined:]] = OpBitwiseOr %[[#vec4_int_32]] %[[#arg0_magn]] %[[#arg1_sign]]
+  ; CHECK: %[[#]] = OpBitcast %[[#vec4_float_32]] %[[#combined]]
   %r = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %r
 }

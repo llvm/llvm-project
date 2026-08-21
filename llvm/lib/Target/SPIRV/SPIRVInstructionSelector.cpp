@@ -1616,15 +1616,15 @@ bool SPIRVInstructionSelector::selectCopySign(Register ResVReg,
     return selectOpWithSrcs(ResReg, IntType, I, SrcRegs, Opcode);
   };
 
-  Register MagnitudeInt, SignInt, MagnitudeBits, SignBits, ResInt;
+  Register MagnitudeInt, SignInt, MagnitudeBits, SignBits, CombinedInt;
   if (!EmitBitOp(MagnitudeInt, {MagnitudeReg}, SPIRV::OpBitcast) ||
       !EmitBitOp(SignInt, {SignReg}, SPIRV::OpBitcast) ||
       !EmitBitOp(MagnitudeBits, {MagnitudeInt, NotSignMask}, AndOpcode) ||
       !EmitBitOp(SignBits, {SignInt, SignMask}, AndOpcode) ||
-      !EmitBitOp(ResInt, {MagnitudeBits, SignBits}, OrOpcode))
+      !EmitBitOp(CombinedInt, {MagnitudeBits, SignBits}, OrOpcode))
     return false;
 
-  return selectOpWithSrcs(ResVReg, ResType, I, {ResInt}, SPIRV::OpBitcast);
+  return selectOpWithSrcs(ResVReg, ResType, I, {CombinedInt}, SPIRV::OpBitcast);
 }
 
 bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
