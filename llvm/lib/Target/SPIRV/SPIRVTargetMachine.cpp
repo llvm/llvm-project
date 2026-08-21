@@ -41,6 +41,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
@@ -285,19 +286,8 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
              "instructions"),
     cl::Optional, cl::init(false));
 
-namespace {
-// A custom subclass of InstructionSelect, which is mostly the same except from
-// not requiring RegBankSelect to occur previously.
-class SPIRVInstructionSelect : public InstructionSelect {
-  // We don't use register banks, so unset the requirement for them
-  MachineFunctionProperties getRequiredProperties() const override {
-    return InstructionSelect::getRequiredProperties().resetRegBankSelected();
-  }
-};
-} // namespace
-
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new SPIRVInstructionSelect());
+  addPass(new InstructionSelect(CodeGenOptLevel::Default, false));
   return false;
 }
