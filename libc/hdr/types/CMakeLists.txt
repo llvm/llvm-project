@@ -720,6 +720,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_sysinfo
+  HDRS
+    struct_sysinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sysinfo
+    libc.include.sys_sysinfo
+)
+
+add_proxy_header_library(
   struct_utsname
   HDRS
     struct_utsname.h
