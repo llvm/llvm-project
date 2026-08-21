@@ -24,7 +24,7 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 void operator()() {
+  TEST_CONSTEXPR_CXX23 void operator()() {
     using lim = std::numeric_limits<T>;
 
     assert(!std::signbit(T(0)));
@@ -42,7 +42,7 @@ struct TestFloat {
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 void operator()() {
+  TEST_CONSTEXPR_CXX23 void operator()() {
     using lim = std::numeric_limits<T>;
 
     assert(!std::signbit(lim::max()));
