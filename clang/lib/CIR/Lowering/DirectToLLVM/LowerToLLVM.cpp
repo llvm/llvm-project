@@ -76,15 +76,6 @@ mlir::Type elementTypeIfVector(mlir::Type type) {
 }
 } // namespace
 
-/// In-memory storage width in bits for a _BitInt(N): N rounded up to the type's
-/// ABI alignment.  This equals sizeof(_BitInt(N)) * 8 on the default target
-/// (e.g. _BitInt(6) -> 8, _BitInt(17) -> 32, _BitInt(128) -> 128).
-static unsigned getBitIntMemoryStorageBits(cir::IntType ty,
-                                           const mlir::DataLayout &dataLayout) {
-  uint64_t alignBits = ty.getABIAlignment(dataLayout, {}) * 8;
-  return llvm::alignTo(ty.getWidth(), alignBits);
-}
-
 /// A _BitInt(N) whose padded storage integer iM has a larger alloc size than
 /// its M/8 store size is laid out by clang as a byte array, not a plain integer
 /// (e.g. _BitInt(129) -> i192 with alloc size 32 != store size 24).  That
@@ -94,7 +85,7 @@ static bool isSplitStorageBitInt(cir::IntType ty,
                                  const mlir::DataLayout &dataLayout) {
   if (!ty.isBitInt())
     return false;
-  unsigned storageBits = getBitIntMemoryStorageBits(ty, dataLayout);
+  uint64_t storageBits = ty.storageBitwidth(dataLayout);
   auto storageTy = mlir::IntegerType::get(ty.getContext(), storageBits);
   uint64_t storeSize = storageBits / 8;
   uint64_t allocSize =
@@ -133,7 +124,7 @@ static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
     if (isSplitStorageBitInt(intTy, dataLayout))
       return {};
     return mlir::IntegerType::get(
-        type.getContext(), getBitIntMemoryStorageBits(intTy, dataLayout));
+        type.getContext(), intTy.storageBitwidth(dataLayout));
   }
 
   return converter.convertType(type);
@@ -179,7 +170,7 @@ static mlir::Value
 castBitIntMemoryStorage(mlir::ConversionPatternRewriter &rewriter,
                         const mlir::DataLayout &dataLayout, cir::IntType intTy,
                         mlir::Value value, bool toMemory) {
-  unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
+  uint64_t storageBits = intTy.storageBitwidth(dataLayout);
   if (storageBits == intTy.getWidth())
     return value;
   unsigned dstBits = toMemory ? storageBits : intTy.getWidth();

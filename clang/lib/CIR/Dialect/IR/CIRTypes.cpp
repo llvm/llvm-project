@@ -1016,6 +1016,14 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
 }
 
+uint64_t IntType::storageBitwidth(const mlir::DataLayout &dataLayout) const {
+  if (!isBitInt())
+    return getWidth();
+
+  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  return llvm::alignTo(getWidth(), alignBits);
+}
+
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                 unsigned width, bool isSigned, bool isBitInt) {

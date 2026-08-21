@@ -132,13 +132,36 @@ struct CIRRecordLowering final {
   void calculateZeroInit();
 
   CharUnits getSize(mlir::Type Ty) {
+    auto intTy = mlir::dyn_cast<cir::IntType>(Ty);
+    // Just like with getAlignment, the storage size of a bitint is the
+    // full-memory layout (adjusted for alignment), not just its width. So we
+    // have to special case that here too.
+    if (intTy && intTy.isBitInt())
+      return CharUnits::fromQuantity(intTy.storageBitwidth(dataLayout.layout) /
+                                     8);
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+
   }
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
-  CharUnits getAlignment(mlir::Type Ty) {
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
+
+  CharUnits getAlignment(mlir::Type ty) {
+    CharUnits abiAlign =
+        CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(ty));
+    auto intTy = mlir::dyn_cast<cir::IntType>(ty);
+    if (!intTy || !intTy.isBitInt())
+      return abiAlign;
+
+    // _BitInt gets lowered to an LLVM-IR type of its size, which is going to
+    // have an incorrect alignment in LLVM if >64 bits. So we report THAT
+    // alignment here so that it gets laid out in a way that requires
+    // padding/packing to set the type alignments correctly.
+
+    mlir::Type storageTy = mlir::IntegerType::get(
+        intTy.getContext(), intTy.storageBitwidth(dataLayout.layout));
+    return CharUnits::fromQuantity(
+        dataLayout.layout.getTypeABIAlignment(storageTy));
   }
 
   bool isZeroInitializable(const FieldDecl *fd) {

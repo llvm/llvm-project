@@ -88,6 +88,10 @@ def CIR_IntType : CIR_Type<"Int", "int", [
       return isFundamentalUIntType(*this);
     }
 
+    /// Returns the width of this type as lowered to LLVM-IR. This only differs
+    /// from the int-size for bit-int types greater than 64 bits.
+    uint64_t storageBitwidth(const mlir::DataLayout &dataLayout) const;
+
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
     /// Returns a maximum bitwidth of cir::IntType.
