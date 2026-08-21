@@ -66,6 +66,11 @@ public:
     return "EH Cont Guard catchret targets";
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
     return runEHContGuardTargets(MF);
   }
@@ -88,5 +93,5 @@ EHContGuardTargetsPass::run(MachineFunction &MF,
   if (!runEHContGuardTargets(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
