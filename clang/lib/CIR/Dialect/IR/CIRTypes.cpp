@@ -61,6 +61,18 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
   }
 }
 
+static bool isPureCIRType(mlir::Type ty) {
+  if (!ty)
+    return true;
+  return !ty.walk([](mlir::Type t) {
+              if (!t)
+                return mlir::WalkResult::advance();
+              return mlir::isa<cir::CIRDialect>(t.getDialect())
+                         ? mlir::WalkResult::advance()
+                         : mlir::WalkResult::interrupt();
+            }).wasInterrupted();
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
@@ -172,7 +184,8 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
-static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
+                                                  "bitfield"};
 
 static std::optional<RecordMemberKind>
 parseMemberKind(mlir::AsmParser &parser) {
@@ -685,9 +698,7 @@ bool RecordType::isEmptyForABI() const {
   // holding no data.
   if (isIncomplete())
     return false;
-  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
-    return kind == RecordMemberKind::Data;
-  });
+  return llvm::none_of(getMemberKinds(), holdsDataForABI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -868,9 +879,9 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Tail padding is the trailing run of pad members.  An empty member stays
-  // inside the data size: it is storage the source declared, which a derived
-  // class may not reuse.
+  // Tail padding is the trailing run of pad members.  A member of any other
+  // kind stays inside the data size, only pad being reusable by a derived
+  // class.
   llvm::ArrayRef<mlir::Type> members = getMembers();
   llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
   assert(kinds.size() == members.size() &&
@@ -1243,6 +1254,18 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
+
+  // The calling convention lowering pass expects all types in a function
+  // signature to be CIR types.
+  for (mlir::Type type : argTypes) {
+    if (!isPureCIRType(type))
+      return emitError()
+             << "expected all types in the function signature to be CIR types";
+  }
+  if (!isPureCIRType(returnType))
+    return emitError()
+           << "expected all types in the function signature to be CIR types";
+
   return mlir::success();
 }
 

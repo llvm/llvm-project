@@ -337,8 +337,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
-  Args.addOptInFlag(CmdArgs, options::OPT_ffp_sum_reassociation,
-                    options::OPT_fno_fp_sum_reassociation);
+  Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
+                  options::OPT_fno_fp_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -1233,6 +1233,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
+
+  addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

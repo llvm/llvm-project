@@ -16,10 +16,10 @@ using namespace llvm;
 
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
   initializeIRTranslatorLegacyPass(Registry);
-  initializeLegalizerPass(Registry);
-  initializeLoadStoreOptPass(Registry);
-  initializeLocalizerPass(Registry);
-  initializeRegBankSelectPass(Registry);
+  initializeLegalizerLegacyPass(Registry);
+  initializeLoadStoreOptLegacyPass(Registry);
+  initializeLocalizerLegacyPass(Registry);
+  initializeRegBankSelectLegacyPass(Registry);
   initializeInstructionSelectPass(Registry);
   initializeGISelValueTrackingAnalysisLegacyPass(Registry);
   initializeGISelCSEAnalysisWrapperPassPass(Registry);
