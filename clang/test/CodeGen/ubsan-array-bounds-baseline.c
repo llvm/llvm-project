@@ -73,19 +73,19 @@ void c_compound_paren(int i) { (a[i]) += 1; }
 void c_compound_deref_addr(int i) { *&a[i] += 1; }
 
 // CHECK-LABEL: define {{.*}}@c_postinc(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_postinc(int i) { a[i]++; }
 
 // CHECK-LABEL: define {{.*}}@c_postdec(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_postdec(int i) { a[i]--; }
 
 // CHECK-LABEL: define {{.*}}@c_preinc(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_preinc(int i) { ++a[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_predec(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_predec(int i) { --a[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_agg_store(

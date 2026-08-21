@@ -693,20 +693,24 @@ public:
   Value *VisitStmtExpr(const StmtExpr *E);
 
   // Unary Operators.
+  LValue EmitIncDecOperand(const UnaryOperator *E) {
+    return CGF.EmitLValue(E->getSubExpr(), NotKnownNonNull,
+                          CodeGenFunction::ObjectRequired);
+  }
   Value *VisitUnaryPostDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, false, false);
   }
   Value *VisitUnaryPostInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, true, false);
   }
   Value *VisitUnaryPreDec(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, false, true);
   }
   Value *VisitUnaryPreInc(const UnaryOperator *E) {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitIncDecOperand(E);
     return EmitScalarPrePostIncDec(E, LV, true, true);
   }
 
