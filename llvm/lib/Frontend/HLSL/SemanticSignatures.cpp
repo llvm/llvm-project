@@ -93,6 +93,17 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Vertex, IOType::InOut}, {Triple::Pixel, IOType::In}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::ClipDistance:
+  case dxbc::PSV::SemanticKind::CullDistance: {
+    static constexpr IOType AllIOTypes =
+        static_cast<IOType>(IOType::InOut | IOType::PatchConstantOrPrimitive);
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::InOut}, {Triple::Hull, AllIOTypes},
+        {Triple::Domain, AllIOTypes},    {Triple::Geometry, IOType::InOut},
+        {Triple::Pixel, IOType::In},     {Triple::Mesh, IOType::Out},
+    };
+    return Stages;
+  }
   default:
     llvm_unreachable(
         "available stages for given semantic kind are not handled");
