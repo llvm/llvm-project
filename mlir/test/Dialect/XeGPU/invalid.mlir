@@ -75,7 +75,7 @@ func.func @create_nd_tdesc_10(%src: memref<24xindex>) {
 func.func @prefetch_nd_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
-  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}>: !xegpu.tensor_desc<8x16xf16>
+  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}> : !xegpu.tensor_desc<8x16xf16>
   return
 }
 
@@ -163,7 +163,7 @@ func.func @store_nd_vc_1(%dst: memref<24x32xf16>) {
   %1 = arith.constant dense<1.0>: vector<24x32xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
-  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<streaming>}>: vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
+  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<streaming>}> : vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
   return
 }
 
@@ -181,7 +181,7 @@ func.func @store_nd_vc_4(%dst: memref<8x24x32xf16>) {
   %1 = arith.constant dense<1.0>: vector<8x24x16xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
   // expected-error@+1 {{Value shape [8, 24, 16] is not consistent with tensor descriptor}}
-  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x16xf16>, !xegpu.tensor_desc<8x24x32xf16>
+  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<8x24x16xf16>, !xegpu.tensor_desc<8x24x32xf16>
   return
 }
 
@@ -293,7 +293,7 @@ func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
 func.func @prefetch_offset_wi_4(%src: memref<16xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{offset_align_byte only allowed with integer source.}}
-  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}>: memref<16xf32>, vector<1xindex>
+  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}> : memref<16xf32>, vector<1xindex>
   return
 }
 
