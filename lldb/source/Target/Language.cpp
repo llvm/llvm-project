@@ -396,6 +396,20 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   }
 }
 
+bool Language::LanguageIsFortran(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypeFortran95:
+  case eLanguageTypeFortran03:
+  case eLanguageTypeFortran08:
+  case eLanguageTypeFortran18:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool Language::LanguageIsPascal(LanguageType language) {
   switch (language) {
   case eLanguageTypePascal83:
