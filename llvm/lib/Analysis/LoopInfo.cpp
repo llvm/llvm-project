@@ -530,6 +530,24 @@ bool Loop::isSafeToClone() const {
   return true;
 }
 
+bool Loop::isSafeToCloneConditionally() const {
+  if (!isSafeToClone())
+    return false;
+
+  for (BasicBlock *BB : this->blocks()) {
+    for (Instruction &I : *BB) {
+      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
+        return false;
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
 

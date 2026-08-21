@@ -2507,17 +2507,6 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   return false;
 }
 
-bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
-    return true;
-
-  // We can only use the BRKB + CNTP sequence with legal predicate types. We can
-  // also support fixed-width predicates.
-  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
-         VT != MVT::nxv2i1 && VT != MVT::v16i1 && VT != MVT::v8i1 &&
-         VT != MVT::v4i1 && VT != MVT::v2i1;
-}
-
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
@@ -11503,6 +11492,17 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // returns the address of the variable in this thread.
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, DescAddr, SDValue());
 
+  auto &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+
+  SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
+
+  if (RequiresSMChange)
+    Chain =
+        changeStreamingMode(DAG, DL, /*Enable=*/false, Chain, Chain.getValue(1),
+                            getSMToggleCondition(TLSCallAttrs));
+
   unsigned Opcode = AArch64ISD::CALL;
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
@@ -11520,6 +11520,16 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   Ops.push_back(DAG.getRegisterMask(Mask));
   Ops.push_back(Chain.getValue(1));
   Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+
+  if (std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(TLSCallAttrs))
+    Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+                        {Chain, Chain.getValue(1)});
+
+  if (RequiresSMChange)
+    Chain =
+        changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Chain.getValue(1),
+                            getSMToggleCondition(TLSCallAttrs));
+
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Chain.getValue(1));
 }
 
@@ -11542,7 +11552,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
+    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
+                                      Var,
+                                      DAG.getTargetConstant(0, DL, MVT::i32)),
+                   0);
   }
 
   case 24: {
@@ -11558,10 +11571,9 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    // Emit the low part as an ADDlow so that it can be folded into the
-    // addressing mode of a following load or store, turning the add into a
-    // :tprel_lo12_nc: relocation on the memory access itself.
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
+    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr, LoVar,
+                                      DAG.getTargetConstant(0, DL, MVT::i32)),
+                   0);
   }
 
   case 32: {
@@ -28010,8 +28022,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   auto *MemN = cast<MemSDNode>(N);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Pred;
     if (IsMasked) {
       Pred = getNarrowMaskForInterleavedOps(DAG, DL, Mask, NumParts);
@@ -28022,8 +28032,18 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Pred = DAG.getConstant(1, DL, PredVT);
     }
 
-    const Intrinsic::ID IID =
-        NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_st2;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_st3;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_st4;
+      break;
+    }
     SmallVector<SDValue, 8> Ops;
     Ops.append({Chain, DAG.getConstant(IID, DL, MVT::i32)});
     Ops.append(ValueInterleaveOps);
@@ -31123,8 +31143,6 @@ static SDValue performVectorDeinterleaveCombine(
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
@@ -31158,8 +31176,18 @@ static SDValue performVectorDeinterleaveCombine(
       BasePtr = Load->getBasePtr();
     }
 
-    const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
-                                            : Intrinsic::aarch64_sve_ld4_sret;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_ld2_sret;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_ld3_sret;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_ld4_sret;
+      break;
+    }
     SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
                           BasePtr};
     Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
@@ -34644,6 +34672,30 @@ AArch64TargetLowering::LowerFixedLengthIntToFPToSVE(SDValue Op,
   }
 }
 
+static SDValue lowerPredicateInterleaveWithPackedVectors(SDValue Op,
+                                                         SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT OpVT = Op.getValueType();
+  assert(OpVT.isScalableVector() && OpVT.getVectorElementType() == MVT::i1 &&
+         Op->getNumOperands() == 3 && "Unexpected predicate interleave");
+
+  EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
+  SmallVector<SDValue, 3> PackedOps;
+  for (SDValue V : Op->ops())
+    PackedOps.push_back(DAG.getNode(ISD::ZERO_EXTEND, DL, PackedVT, V));
+
+  SmallVector<EVT, 3> PackedVTs(3, PackedVT);
+  SDValue PackedOp =
+      DAG.getNode(Op.getOpcode(), DL, DAG.getVTList(PackedVTs), PackedOps);
+
+  SDValue Zero = DAG.getConstant(0, DL, PackedVT);
+  SmallVector<SDValue, 3> Results;
+  for (unsigned I = 0; I != 3; ++I)
+    Results.push_back(
+        DAG.getSetCC(DL, OpVT, PackedOp.getValue(I), Zero, ISD::SETNE));
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -34682,6 +34734,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_ld3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
@@ -34792,6 +34847,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_st3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     SmallVector<SDValue, 3> InVecs;

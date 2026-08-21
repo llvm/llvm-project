@@ -55,8 +55,8 @@ public:
 
 class DivergenceLoweringHelper : public AMDGPU::PhiLoweringHelper {
 public:
-  DivergenceLoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
-                           MachinePostDominatorTree *PDT,
+  DivergenceLoweringHelper(MachineFunction &MF, MachineDominatorTree &DT,
+                           MachinePostDominatorTree &PDT,
                            MachineUniformityInfo *MUI);
 
 private:
@@ -84,9 +84,9 @@ public:
 };
 
 DivergenceLoweringHelper::DivergenceLoweringHelper(
-    MachineFunction *MF, MachineDominatorTree *DT,
-    MachinePostDominatorTree *PDT, MachineUniformityInfo *MUI)
-    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI), B(*MF) {}
+    MachineFunction &MF, MachineDominatorTree &DT,
+    MachinePostDominatorTree &PDT, MachineUniformityInfo *MUI)
+    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI), B(MF) {}
 
 // _(s1) -> SReg_32/64(s1)
 void DivergenceLoweringHelper::markAsLaneMask(Register DstReg) const {
@@ -108,7 +108,7 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
   // Add divergent i1 G_PHIs to the list. Only consider G_PHI instructions,
   // not PHI instructions that may have been created by earlier lowering stages
   // (e.g., lowerTemporalDivergenceI1).
-  for (MachineBasicBlock &MBB : *MF) {
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB.phis()) {
       if (MI.getOpcode() != TargetOpcode::G_PHI)
         continue;
@@ -205,7 +205,7 @@ void replaceUsesOfRegInInstWith(Register Reg, MachineInstr *Inst,
 }
 
 bool DivergenceLoweringHelper::lowerTemporalDivergence() {
-  AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(*MF);
+  AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(MF);
   DenseMap<Register, Register> TDCache;
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
@@ -236,7 +236,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
 bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   MachineRegisterInfo::VRegAttrs BoolS1 = {ST->getBoolRC(), LLT::scalar(1)};
   initializeLaneMaskRegisterAttributes(BoolS1);
-  MachineSSAUpdater SSAUpdater(*MF);
+  MachineSSAUpdater SSAUpdater(MF);
 
   const auto &CInfo = MUI->getCycleInfo();
 
@@ -295,7 +295,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
 static bool runDivergenceLowering(MachineFunction &MF, MachineDominatorTree &DT,
                                   MachinePostDominatorTree &PDT,
                                   MachineUniformityInfo &MUI) {
-  DivergenceLoweringHelper Helper(&MF, &DT, &PDT, &MUI);
+  DivergenceLoweringHelper Helper(MF, DT, PDT, &MUI);
 
   bool Changed = false;
   // Temporal divergence lowering needs to inspect list of instructions used
