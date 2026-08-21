@@ -18883,27 +18883,40 @@ static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
   if (A.getValueType() != SrcVT || B.getValueType() != SrcVT)
     return SDValue();
 
-  unsigned Opc;
+  unsigned RV32Opc, RV64Opc;
+  bool IsSignedUnsigned = false;
   if (N0IsSExt && N1IsSExt) {
-    Opc = RISCVISD::PWMUL;
+    RV32Opc = RISCVISD::PWMUL;
+    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMUL_H_B01 : RISCVISD::PMUL_W_H01;
   } else if (N0IsZExt && N1IsZExt) {
-    Opc = RISCVISD::PWMULU;
+    RV32Opc = RISCVISD::PWMULU;
+    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMULU_H_B01 : RISCVISD::PMULU_W_H01;
   } else {
-    Opc = RISCVISD::PWMULSU;
+    IsSignedUnsigned = true;
+    RV32Opc = RISCVISD::PWMULSU;
+    RV64Opc =
+        VT == MVT::v4i16 ? RISCVISD::PMULSU_H_B00 : RISCVISD::PMULSU_W_H00;
     if (N0IsZExt && N1IsSExt)
       std::swap(A, B);
   }
 
-  if (Subtarget.is64Bit()) {
-    MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
-    SDLoc DL(N);
-    A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A,
-                    DAG.getUNDEF(SrcVT));
-    B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B,
-                    DAG.getUNDEF(SrcVT));
+  SDLoc DL(N);
+  if (!Subtarget.is64Bit())
+    return DAG.getNode(RV32Opc, DL, VT, A, B);
+
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  if (IsSignedUnsigned) {
+    SDValue Zero = DAG.getConstant(0, DL, LegalSrcVT);
+    A = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, Zero);
+    B = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, B, Zero);
+    return DAG.getNode(RV64Opc, DL, VT, A, B);
   }
 
-  return DAG.getNode(Opc, SDLoc(N), VT, A, B);
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  return DAG.getNode(RV64Opc, DL, VT, Zip, Zip);
 }
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
