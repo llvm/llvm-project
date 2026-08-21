@@ -1634,7 +1634,7 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
   assert(NewFn->arg_size() == FullArgCount &&
          "total number of default args does not match intrinsic signature");
   return true;
