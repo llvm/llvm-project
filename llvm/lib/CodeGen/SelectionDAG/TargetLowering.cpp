@@ -115,38 +115,96 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
   return true;
 }
 
+static bool paramHasAttr(const CallBase &Call, unsigned ArgIdx,
+                         Attribute::AttrKind Kind) {
+  return Call.paramHasAttr(ArgIdx, Kind);
+}
+
+static bool paramHasAttr(const AttributeList &Attrs, unsigned ArgIdx,
+                         Attribute::AttrKind Kind) {
+  return Attrs.hasParamAttr(ArgIdx, Kind);
+}
+
+static MaybeAlign getParamStackAlign(const CallBase &Call, unsigned ArgIdx) {
+  return Call.getParamStackAlign(ArgIdx);
+}
+
+static MaybeAlign getParamStackAlign(const AttributeList &Attrs,
+                                     unsigned ArgIdx) {
+  return Attrs.getParamStackAlignment(ArgIdx);
+}
+
+static MaybeAlign getParamAlign(const CallBase &Call, unsigned ArgIdx) {
+  return Call.getParamAlign(ArgIdx);
+}
+
+static MaybeAlign getParamAlign(const AttributeList &Attrs, unsigned ArgIdx) {
+  return Attrs.getParamAlignment(ArgIdx);
+}
+
 /// Set CallLoweringInfo attribute flags based on a call instruction
 /// and called function attributes.
+template <typename SourceT>
+static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
+                                      const SourceT &Src, unsigned ArgIdx) {
+  Entry.IsSExt = paramHasAttr(Src, ArgIdx, Attribute::SExt);
+  Entry.IsZExt = paramHasAttr(Src, ArgIdx, Attribute::ZExt);
+  Entry.IsNoExt = paramHasAttr(Src, ArgIdx, Attribute::NoExt);
+  Entry.IsInReg = paramHasAttr(Src, ArgIdx, Attribute::InReg);
+  Entry.IsSRet = paramHasAttr(Src, ArgIdx, Attribute::StructRet);
+  Entry.IsNest = paramHasAttr(Src, ArgIdx, Attribute::Nest);
+  Entry.IsByVal = paramHasAttr(Src, ArgIdx, Attribute::ByVal);
+  Entry.IsPreallocated = paramHasAttr(Src, ArgIdx, Attribute::Preallocated);
+  Entry.IsInAlloca = paramHasAttr(Src, ArgIdx, Attribute::InAlloca);
+  Entry.IsReturned = paramHasAttr(Src, ArgIdx, Attribute::Returned);
+  Entry.IsSwiftSelf = paramHasAttr(Src, ArgIdx, Attribute::SwiftSelf);
+  Entry.IsSwiftAsync = paramHasAttr(Src, ArgIdx, Attribute::SwiftAsync);
+  Entry.IsSwiftError = paramHasAttr(Src, ArgIdx, Attribute::SwiftError);
+  Entry.Alignment = getParamStackAlign(Src, ArgIdx);
+  Entry.IndirectType = nullptr;
+  assert(Entry.IsByVal + Entry.IsPreallocated + Entry.IsInAlloca +
+                 Entry.IsSRet <=
+             1 &&
+         "multiple ABI attributes?");
+  if (Entry.IsByVal) {
+    Entry.IndirectType = Src.getParamByValType(ArgIdx);
+    if (!Entry.Alignment)
+      Entry.Alignment = getParamAlign(Src, ArgIdx);
+  }
+  if (Entry.IsPreallocated)
+    Entry.IndirectType = Src.getParamPreallocatedType(ArgIdx);
+  if (Entry.IsInAlloca)
+    Entry.IndirectType = Src.getParamInAllocaType(ArgIdx);
+  if (Entry.IsSRet)
+    Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
+}
+
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
-  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
-  IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
-  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment = Call->getParamStackAlign(ArgIdx);
-  IndirectType = nullptr;
-  assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
-         "multiple ABI attributes?");
-  if (IsByVal) {
-    IndirectType = Call->getParamByValType(ArgIdx);
-    if (!Alignment)
-      Alignment = Call->getParamAlign(ArgIdx);
+  setArgListEntryAttributes(*this, *Call, ArgIdx);
+}
+
+void TargetLoweringBase::ArgListEntry::setAttributes(const AttributeList &Attrs,
+                                                     unsigned ArgIdx) {
+  setArgListEntryAttributes(*this, Attrs, ArgIdx);
+}
+
+TargetLowering::ArgListTy
+TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
+                                          const AttributeList &FuncAttrs,
+                                          ArrayRef<SDValue> Ops) {
+  // TODO: This assumes each parameter maps to exactly one operand node, which
+  // does not hold when an argument requires type splitting.
+  assert(Ops.size() == FuncTy->getNumParams() &&
+         "argument count does not match the function type");
+  ArgListTy Args;
+  Args.reserve(Ops.size());
+  for (unsigned I = 0, E = FuncTy->getNumParams(); I != E; ++I) {
+    ArgListEntry Entry(Ops[I], FuncTy->getParamType(I));
+    Entry.setAttributes(FuncAttrs, I);
+    Args.push_back(Entry);
   }
-  if (IsPreallocated)
-    IndirectType = Call->getParamPreallocatedType(ArgIdx);
-  if (IsInAlloca)
-    IndirectType = Call->getParamInAllocaType(ArgIdx);
-  if (IsSRet)
-    IndirectType = Call->getParamStructRetType(ArgIdx);
+  return Args;
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a
