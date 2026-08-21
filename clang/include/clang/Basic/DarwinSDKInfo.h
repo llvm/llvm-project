@@ -205,8 +205,6 @@ public:
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
-  /// Returns the value of the "DefaultDeploymentTarget" key from
-  /// SDKSettings.json.
   const llvm::VersionTuple &getDefaultDeploymentTarget() const {
     return DefaultDeploymentTarget;
   }
