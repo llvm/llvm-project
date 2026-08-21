@@ -102,7 +102,6 @@ def run(argv, stdin, stdout, stderr, cwd):
             if isinstance(contents, str):
                 contents = contents.encode()
         stdout.write(contents)
-
     return 0
 
 
