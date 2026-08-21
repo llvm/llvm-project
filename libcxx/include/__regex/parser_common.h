@@ -11,8 +11,21 @@
 
 #include <__algorithm/search.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__iterator/next.h>
+#include <__locale_dir/ctype_base.h>
 #include <__regex/interpreter.h>
 #include <__regex/regex_error.h>
+#include <__utility/move.h>
+#include <limits>
+#include <string>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -549,5 +562,7 @@ bool __parse_dupl_symbol(
 } // namespace __regex
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___REGEX_BASIC_PARSER_H

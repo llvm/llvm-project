@@ -9,12 +9,21 @@
 #ifndef _LIBCPP___REGEX_EXTENDED_PARSER_H
 #define _LIBCPP___REGEX_EXTENDED_PARSER_H
 
+#include <__algorithm/find.h>
 #include <__config>
 #include <__iterator/next.h>
 #include <__regex/interpreter.h>
 #include <__regex/parser_common.h>
 #include <__regex/regex_error.h>
+#include <cstdint>
 #include <string>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -212,5 +221,7 @@ public:
 } // namespace __regex::__extended
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___REGEX_EXTENDED_PARSER_H

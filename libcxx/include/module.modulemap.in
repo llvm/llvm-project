@@ -1701,7 +1701,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
-    module pstl                               { header "__memory/pstl.h" }    
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -2055,6 +2055,14 @@ module std {
 
   module regex {
     header "regex"
+
+    module basic_parser    { header "__regex/basic_parser.h" }
+    module ecma_parser     { header "__regex/ecma_parser.h" }
+    module extended_parser { header "__regex/extended_parser.h" }
+    module interpreter     { header "__regex/interpreter.h" }
+    module parser_common   { header "__regex/parser_common.h" }
+    module regex_error     { header "__regex/regex_error.h" }
+
     export *
     export std.iterator.reverse_iterator
   }

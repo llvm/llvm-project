@@ -12,6 +12,10 @@
 #include <__config>
 #include <stdexcept>
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #define _LIBCPP_REGEX_COMPLEXITY_FACTOR 4096

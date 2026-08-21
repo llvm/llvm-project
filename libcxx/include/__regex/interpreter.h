@@ -10,18 +10,28 @@
 #define _LIBCPP___REGEX_INTERPRETER_H
 
 #include <__algorithm/equal.h>
+#include <__algorithm/max.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__locale_dir/ctype_base.h>
+#include <__memory/construct_at.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__regex/regex_error.h>
 #include <__type_traits/make_signed.h>
+#include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__utility/unreachable.h>
 #include <__vector/vector.h>
 #include <string_view>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1205,5 +1215,7 @@ public:
 } // namespace __regex
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___REGEX_INTERPRETER_H
