@@ -473,7 +473,7 @@ bool Scalar::ShiftRightLogical(const Scalar &rhs) {
 
 Scalar &Scalar::operator>>=(const Scalar &rhs) {
   if (m_type == e_int && rhs.m_type == e_int) {
-    // Shifting past the width is a sign or zero fill; APSInt asserts on it.
+    // Avoid APSInt assertion when exceeding the width is a sign or zero fill.
     m_integer >>= rhs.m_integer.getLimitedValue(m_integer.getBitWidth());
   } else {
     m_type = e_void;
