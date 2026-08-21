@@ -154,7 +154,7 @@ bool M68kPassConfig::addLegalizeMachineIR() {
 }
 
 bool M68kPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

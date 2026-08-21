@@ -5441,10 +5441,10 @@ private:
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
       if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
-          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
-                                                            assign.rhs)) {
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(
+              getFoldingContext(), assign.lhs, assign.rhs)) {
         rewritten =
-            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+            Fortran::evaluate::TryBuildSplitSumExpressionTrees(assign.rhs);
         if (rewritten)
           rhsExpr = &*rewritten;
       }
@@ -6901,6 +6901,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
+  // Under -gpu=mem:unified|managed, host heap allocations use the matching
+  // indirect runtime allocators (malloc_unified / malloc_managed).
+  if (languageFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaUnified))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Unified);
+  else if (languageFeatures.IsEnabled(
+               Fortran::common::LanguageFeature::CudaManaged))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

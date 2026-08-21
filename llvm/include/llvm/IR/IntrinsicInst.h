@@ -583,13 +583,6 @@ public:
   LLVM_ABI static std::optional<unsigned>
   getVectorLengthParamPos(Intrinsic::ID IntrinsicID);
 
-  /// The llvm.vp.* intrinsics for this instruction Opcode
-  LLVM_ABI static Intrinsic::ID getForOpcode(unsigned OC);
-
-  /// The llvm.vp.* intrinsics for this intrinsic ID \p Id. Return \p Id if it
-  /// is already a VP intrinsic.
-  LLVM_ABI static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id);
-
   // Whether \p ID is a VP intrinsic ID.
   LLVM_ABI static bool isVPIntrinsic(Intrinsic::ID);
 

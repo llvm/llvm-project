@@ -185,15 +185,22 @@ TEST(FoldingSetTest, ClearOnNonEmpty) {
 
 TEST(FoldingSetTest, CapacityLargerThanReserve) {
   FoldingSet<TrivialPair> Trivial;
-  auto OldCapacity = Trivial.capacity();
+  unsigned OldCapacity = Trivial.capacity();
   Trivial.reserve(OldCapacity + 1);
   EXPECT_GE(Trivial.capacity(), OldCapacity + 1);
 }
 
 TEST(FoldingSetTest, SmallReserveChangesNothing) {
   FoldingSet<TrivialPair> Trivial;
-  auto OldCapacity = Trivial.capacity();
+  unsigned OldCapacity = Trivial.capacity();
   Trivial.reserve(OldCapacity - 1);
+  EXPECT_EQ(Trivial.capacity(), OldCapacity);
+}
+
+TEST(FoldingSetTest, ReserveExactCapacity) {
+  FoldingSet<TrivialPair> Trivial;
+  unsigned OldCapacity = Trivial.capacity();
+  Trivial.reserve(OldCapacity);
   EXPECT_EQ(Trivial.capacity(), OldCapacity);
 }
 
