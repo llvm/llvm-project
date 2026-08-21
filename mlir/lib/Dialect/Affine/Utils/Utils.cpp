@@ -1357,7 +1357,8 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     // Check if the memref was used in a non-dereferencing context. It is fine
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening. Note: memref.load/store are
-    // dereferencing ops even though they don't implement AffineMapAccessInterface.
+    // dereferencing ops even though they don't implement
+    // AffineMapAccessInterface.
     if (!isDereferencingOp(user)) {
       if (!allowNonDereferencingOps) {
         LLVM_DEBUG(
