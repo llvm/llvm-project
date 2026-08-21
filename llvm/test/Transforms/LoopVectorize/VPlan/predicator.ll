@@ -1189,3 +1189,82 @@ bb4:
 exit:
   ret i32 %phi4
 }
+
+define void @diamond_phi2_look_thru_phi(ptr %a, i1 %c1, i1 %c2) {
+; CHECK-LABEL: VPlan for loop in 'diamond_phi2_look_thru_phi'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
+; CHECK-NEXT:    Successor(s): bb2
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb2:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:    Successor(s): bb1
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb1:
+; CHECK-NEXT:    Successor(s): bb4
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb4:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<1>/vp<[[VP5]]> ir<0>/vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): bb5
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb5:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP10]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<3>/vp<[[VP11]]> ir<2>/vp<[[VP9]]> ir<1>/vp<[[VP7]]> ir<0>/vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+;          bb0
+;         /  \
+;       bb1  bb2
+;       | \  / |
+;       |  bb4 |
+;        \  | /
+;          bb5
+entry:
+  br label %bb0
+
+bb0:
+  %iv = phi i64 [0, %entry], [%iv.next, %bb5]
+  %c0 = icmp sle i64 %iv, 0
+  br i1 %c0, label %bb1, label %bb2
+
+bb1:
+  %add1 = add i64 %iv, 1
+  br i1 %c1, label %bb4, label %bb5
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br i1 %c2, label %bb4, label %bb5
+
+bb4:
+  %phi4 = phi i64 [0, %bb1], [1, %bb2]
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [2, %bb1], [3, %bb2], [%phi4, %bb4]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  store i64 %phi5, ptr %gep
+  %iv.next = add nsw nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
