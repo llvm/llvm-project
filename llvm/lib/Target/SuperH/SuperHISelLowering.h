@@ -15,13 +15,33 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHISELLOWERING_H
 
 #include "SuperH.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 
 namespace llvm {
 class SuperHSubtarget;
+class MachineConstantPool;
 
 class SuperHTargetLowering : public TargetLowering  {
   const SuperHSubtarget *Subtarget;
+
+public:
+  SuperHTargetLowering(const TargetMachine &TM, const SuperHSubtarget &STI);
+
+  // LowerToConstantPool - SuperH's compressed instruction set means that 
+  // immediates and displacements can not be larger than 8 bits. 
+  // As such we need to store said immediates and displacements within 
+  // constants that are within range of the program counter.
+  //
+  // As such this function is a helper that:
+  //  1. Allocates a constant pool slot for the address
+  //  2. Inserts the target address into said slot.
+  //  3. Returns the neccesary, but non-legalized instruction sequence to fetch
+  //     the address from that constant pool slot.
+  template<class NodeTy>
+  SDValue LowerToConstantPool(NodeTy* N, SelectionDAG &DAG) const;
 
   SDValue LowerFormalArguments(SDValue Chain,
                          CallingConv::ID CallConv, bool IsVarArg,
@@ -40,15 +60,27 @@ class SuperHTargetLowering : public TargetLowering  {
               SmallVectorImpl<SDValue> &/*InVals*/) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  // Custom Lowerings
+  
+  // Lowerings
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDiv(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &OutCC,
+                   SelectionDAG &DAG, SDLoc DL) const;
+private:
+
+  SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG) const override;
+
+  // Lowerings
   SDValue LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const;
-public:
-  SuperHTargetLowering(const TargetMachine &TM, const SuperHSubtarget &STI);
 };
 
 } // namespace llvm

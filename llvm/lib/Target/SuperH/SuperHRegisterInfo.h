@@ -43,6 +43,7 @@ public:
   // Helpers
   Register getFrameRegister() const;
   Register getStackRegister() const;
+  Register getGOTRegister() const;
 };
 
 } // end namespace llvm

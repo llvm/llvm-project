@@ -218,6 +218,8 @@ def m_hexagon_Features_Group : OptionGroup<"<hexagon features group>">,
                                Group<m_Group>, DocName<"Hexagon">;
 def m_sparc_Features_Group : OptionGroup<"<sparc features group>">,
                                Group<m_Group>, DocName<"SPARC">;
+def m_superh_Features_Group : OptionGroup<"<superh features group>">,
+                               Group<m_Group>, DocName<"SuperH">;
 // The features added by this group will not be added to target features.
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
@@ -7045,6 +7047,23 @@ foreach i = 0 ... 7 in
 foreach i = 0 ... 5 in
   def ffixed_i#i : Flag<["-"], "ffixed-i"#i>, Group<m_sparc_Features_Group>,
     HelpText<"Reserve the I"#i#" register (SPARC only)">;
+} // let Flags = [TargetSpecific]
+
+// SuperH feature flags
+let Flags = [TargetSpecific] in {
+  def maccumulate_outgoing_args : Flag<["-"], "maccumulate-outgoing-args">, 
+    Group<m_superh_Features_Group>,
+    HelpText<"Reserve space for outgoing arguments in the function prologue. (SuperH only)">;
+  def mcbranch_force_delay_slot : Flag<["-"], "mcbranch-force-delay-slot">, 
+    Group<m_superh_Features_Group>,
+    HelpText<"Force the usage of delay slots for conditional branches. (SuperH only)">;
+  def mfsca : Flag<["-"], "mfsca">, Group<m_superh_Features_Group>,
+    HelpText<"Enable the use of the fsca instruction. (SuperH only)">;
+  def mfsrra : Flag<["-"], "mfsrra">, Group<m_superh_Features_Group>,
+    HelpText<"Enable the use of the fsrra instruction. (SuperH only)">;
+  def mzdcbranch : Flag<["-"], "mzdcbranch">, 
+    Group<m_superh_Features_Group>,
+    HelpText<"Assume that zero displacement conditional branches are fast. (SuperH only)">;
 } // let Flags = [TargetSpecific]
 
 // M68k features flags

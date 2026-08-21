@@ -25,9 +25,9 @@ using namespace llvm;
 // The generated AsmMatcher SparcGenAsmWriter uses "SuperH" as the target
 // namespace. But SuperH backend uses "SH" as its namespace.
 namespace llvm {
-	namespace SuperH {
-	  using namespace SH;
-	}
+  namespace SuperH {
+    using namespace SH;
+  }
 }
 
 #define GET_INSTRUCTION_NAME
@@ -38,33 +38,42 @@ SuperHInstPrinter::SuperHInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MI
                     const MCRegisterInfo &MRI) : MCInstPrinter(MAI, MII, MRI) {}
 
 void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-	OS << StringRef(getRegisterName(Reg)).lower();
+  OS << StringRef(getRegisterName(Reg)).lower();
+}
+
+void SuperHInstPrinter::printPCRelImm(const MCInst *MI, uint64_t Address, 
+        unsigned OpNo, raw_ostream &O) {
+  printOperand(MI, OpNo, O);
+}
+
+void SuperHInstPrinter::printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+  printOperand(MI, OpNo, O);
 }
 
 void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-	const MCOperand &Op = MI->getOperand(OpNo);
-	
-    // Print Register
-	if (Op.isReg()) {
-		printRegName(O, Op.getReg());
-		return;
-	}
+  const MCOperand &Op = MI->getOperand(OpNo);
+  
 
-	// Print immediates
-	if (Op.isImm()) {
-		O << Op.getImm();
-		return;
-	}
+  // Print Register
+  if (Op.isReg()) {
+    printRegName(O, Op.getReg());
+    return;
+  }
 
-	// Print symbol references
-	if (Op.isBareSymbolRef()) {
-		const MCSymbolRefExpr *SymOp = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-		O << SymOp->getSymbol().getName();
-		return;
-	}
+  // Print immediates
+  if (Op.isImm()) {
+    O << Op.getImm();
+    return;
+  }
+
+  // Print symbol references
+  if (const MCSymbolRefExpr *SymOp = dyn_cast_or_null<MCSymbolRefExpr>(Op.getExpr())) {
+    O << SymOp->getSymbol().getName();
+    return;
+  }
 }
 
 void SuperHInstPrinter::printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) {
-	printInstruction(MI, Address, OS);
+  printInstruction(MI, Address, OS);
 }

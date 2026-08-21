@@ -18,9 +18,11 @@
 #include "SuperHISelLowering.h"
 #include "SuperHInstrInfo.h"
 #include "SuperHSelectionDAGInfo.h"
+#include "SuperHTargetMachine.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -28,6 +30,8 @@
 
 namespace llvm {
 class StringRef;
+
+typedef unsigned char SHRefClass;
 
 class SuperHSubtarget : public SuperHGenSubtargetInfo {
   enum SuperHArchEnum { 
@@ -40,6 +44,7 @@ class SuperHSubtarget : public SuperHGenSubtargetInfo {
   
   SuperHArchEnum SHArchVersion;
 
+  const TargetMachine &TM;
   SuperHInstrInfo InstrInfo;
   SuperHTargetLowering TLInfo;
   SuperHSelectionDAGInfo TSInfo;
@@ -50,24 +55,42 @@ class SuperHSubtarget : public SuperHGenSubtargetInfo {
 #include "SuperHGenSubtargetInfo.inc"
 
 public:
-  SuperHSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                 const StringRef &FS, const TargetMachine &TM);
+  SuperHSubtarget(const StringRef &CPU, const StringRef &TuneCPU, 
+                  const StringRef &FS,  const TargetMachine &TM);
 
   ~SuperHSubtarget() override;
 
+  const Triple &getTargetTriple() const { return TM.getTargetTriple(); }
   const SuperHInstrInfo *getInstrInfo() const override { return &InstrInfo; }
-  const TargetFrameLowering *getFrameLowering() const override {
-    return &FrameLowering;
-  }
-  const SuperHRegisterInfo *getRegisterInfo() const override {
-    return &InstrInfo.getRegisterInfo();
-  }
-  const SuperHSelectionDAGInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
-  const SuperHTargetLowering *getTargetLowering() const override {
-    return &TLInfo;
-  }
+  const TargetFrameLowering *getFrameLowering() const override { return &FrameLowering; }
+  const SuperHRegisterInfo *getRegisterInfo() const override { return &InstrInfo.getRegisterInfo(); }
+  const SuperHSelectionDAGInfo *getSelectionDAGInfo() const override { return &TSInfo; }
+  const SuperHTargetLowering *getTargetLowering() const override { return &TLInfo; }
+
+  bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
+  bool isPositionIndependent() const { return TM.isPositionIndependent(); }
+
+  // Classification functions
+  SHRefClass classifyLocalReference(const GlobalValue *GV) const;
+
+  /// Classify a global variable reference for the current subtarget according
+  /// to how we should reference it in a non-pcrel context.
+  SHRefClass classifyGlobalReference(const GlobalValue *GV,
+                                     const Module &M) const;
+  SHRefClass classifyGlobalReference(const GlobalValue *GV) const;
+
+  /// Classify a external variable reference for the current subtarget according
+  /// to how we should reference it in a non-pcrel context.
+  SHRefClass classifyExternalReference(const Module &M) const;
+
+  /// Classify a global function reference for the current subtarget.
+  SHRefClass classifyGlobalFunctionReference(const GlobalValue *GV,
+                                             const Module &M) const;
+  SHRefClass classifyGlobalFunctionReference(const GlobalValue *GV) const override;
+
+  /// Classify a blockaddress reference for the current subtarget according to
+  /// how we should reference it in a non-pcrel context.
+  SHRefClass classifyBlockAddressReference() const;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }

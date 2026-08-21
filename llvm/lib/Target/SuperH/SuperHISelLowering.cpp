@@ -12,22 +12,30 @@
 //===-----------------------------------------------------------------------===//
 
 #include "SuperHISelLowering.h"
+#include "SuperHConstantPoolValue.h"
+#include "SuperHMachineFunctionInfo.h"
 #include "SuperHSelectionDAGInfo.h"
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
+#include "MCTargetDesc/SuperHBaseInfo.h"
 #include "SuperHRegisterInfo.h"
+#include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "sh-lower"
+
+#define DEBUG_FN_PRINT() LDBG() << __PRETTY_FUNCTION__;
 
 static bool RetCC_SuperH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                CCValAssign::LocInfo &LocInfo,
@@ -47,12 +55,15 @@ static bool RetCC_SuperH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
                                            const SuperHSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
+  auto *RegInfo = Subtarget->getRegisterInfo();
 
   // GPR Registers are always 32 bit on SuperH.
   addRegisterClass(MVT::i32, &SH::GPRRegClass);
+  computeRegisterProperties(Subtarget->getRegisterInfo());
+
   setSchedulingPreference(Sched::RegPressure);
   setSupportsUnalignedAtomics(false);
-  computeRegisterProperties(Subtarget->getRegisterInfo());
+  setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
 
   // Loads and stores are legal
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -72,13 +83,153 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, VT, Custom);
   }
 
+  setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
+  setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
+  setOperationAction(ISD::BlockAddress, MVT::i32, Custom);
+
+
+  setOperationAction(ISD::BR_CC, MVT::i8, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i16, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i64, Custom);
+  setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+
+  setOperationAction(ISD::SELECT_CC, MVT::i8, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+  setOperationAction(ISD::SETCC, MVT::i8, Custom);
+  setOperationAction(ISD::SETCC, MVT::i16, Custom);
+  setOperationAction(ISD::SETCC, MVT::i32, Custom);
+  setOperationAction(ISD::SETCC, MVT::i64, Custom);
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent);
-  setStackPointerRegisterToSaveRestore(SH::GBR);
-  setJumpIsExpensive(true);
+  setJumpIsExpensive(false);
   setMinFunctionAlignment(Align(4));
 }
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                        CONDITIONAL BRANCH LOWERING
+//===----------------------------------------------------------------------===//
+SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                       SDValue &OutCC, SelectionDAG &DAG, SDLoc DL) const {
+  OutCC = DAG.getCondCode(CC);
+  return DAG.getNode(SHISD::CMP, DL, MVT::Glue, LHS, RHS, OutCC);
+}
+
+SDValue SuperHTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TrueV = Op.getOperand(2);
+  SDValue FalseV = Op.getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  SDLoc DL(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
+
+  SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
+  return DAG.getNode(SHISD::SELECT_CC, DL, Op.getValueType(), Ops);
+  
+}
+
+SDValue SuperHTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  SDLoc DL(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
+
+  SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
+  SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
+  SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
+  return DAG.getNode(SHISD::SELECT_CC, DL, Op.getValueType(), Ops);
+}
+
+SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  SDLoc DL(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
+  return DAG.getNode(SHISD::BRCOND, DL, MVT::Other, Chain, Dest, TargetCC, Cmp);
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                             ADDRESS LOWERING
+//===----------------------------------------------------------------------===//
+
+SDValue SuperHTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  // Get the address of the target into a register
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Op)) {
+    auto PtrVT = getPointerTy(DAG.getDataLayout());
+    auto DL = SDLoc(G);
+
+    SHRefClass OpFlags = Subtarget->classifyGlobalReference(G->getGlobal());
+    SDValue Addr = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, OpFlags);
+    return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+  }
+  return SDValue();
+}
+
+SDValue SuperHTargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  // Get the address of the target into a register
+  if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Op)) {
+    auto PtrVT = getPointerTy(DAG.getDataLayout());
+    auto DL = SDLoc(S);
+
+    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+    SHRefClass OpFlags = Subtarget->classifyGlobalFunctionReference(nullptr, *Mod);
+
+    SDValue Addr = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, OpFlags);
+    return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+  }
+  return SDValue();
+}
+
+SDValue SuperHTargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  // Get the address of the target into a register
+  if (BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op)) {
+    auto PtrVT = getPointerTy(DAG.getDataLayout());
+    auto DL = SDLoc(BA);
+
+    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+    SHRefClass OpFlags = Subtarget->classifyGlobalFunctionReference(nullptr, *Mod);
+
+    SDValue Addr = DAG.getTargetBlockAddress(BA->getBlockAddress(), PtrVT, OpFlags);
+    return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+  }
+  return SDValue();
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                             ARGUMENT LOWERING
+//===----------------------------------------------------------------------===//
 
 SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
                        CallingConv::ID CallConv, bool IsVarArg,
@@ -158,6 +309,7 @@ SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
 
 
 
+
 //===----------------------------------------------------------------------===//
 //                              RETURN LOWERING
 //===----------------------------------------------------------------------===//
@@ -209,6 +361,12 @@ SDValue SuperHTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(SHISD::RET_GLUE, dl, MVT::Other, RetOps);
 }
 
+SDValue SuperHTargetLowering::getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG) const {
+  return DAG.getRegister(Subtarget->getRegisterInfo()->getGOTRegister(),
+                         getPointerTy(DAG.getDataLayout()));
+}
+
+
 
 
 
@@ -217,6 +375,7 @@ SDValue SuperHTargetLowering::LowerReturn(SDValue Chain,
 //===----------------------------------------------------------------------===//
 
 SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
+  const SuperHRegisterInfo &RI = *Subtarget->getRegisterInfo();
   SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   SDLoc &DL = CLI.DL;
@@ -225,40 +384,24 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &isTailCall = CLI.IsTailCall;
+  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool isVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.IsVarArg;
 
   // TODO: This was all yoinked from AVR, it likely needs to be modified to fit the calling
   // convention of SuperH.
 
   // Tail Call Optimisation not supported yet.
-  isTailCall = false;
-  isVarArg = false;
+  IsTailCall = false;
+  IsVarArg = false;
 
-  // If the callee is a GlobalAddress/ExternalSymbol node (quite common, every
-  // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
-  // node so that legalize doesn't hack it.
-  const Function *F = nullptr;
-  if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    const GlobalValue *GV = G->getGlobal();
-    if (isa<Function>(GV))
-      F = cast<Function>(GV);
-    Callee =
-        DAG.getTargetGlobalAddress(GV, DL, getPointerTy(DAG.getDataLayout()));
-  } else if (const ExternalSymbolSDNode *ES =
-                 dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(ES->getSymbol(),
-                                         getPointerTy(DAG.getDataLayout()));
-  }
-
-  if (isVarArg) {
+  if (IsVarArg) {
     return Chain;
   }
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -324,8 +467,15 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     InGlue = Chain.getValue(1);
   }
 
+  // Resolve the global value to jump to.
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    Callee = LowerGlobalAddress(SDValue(G, 0), DAG);
+  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = LowerExternalSymbol(SDValue(S, 0), DAG);
+  }
+  InGlue = Chain.getValue(1);
+
   // Returns a chain & a flag for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -335,10 +485,6 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
   for (auto Reg : RegsToPass) {
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
   }
-
-  // The zero register (usually R1) must be passed as an implicit register so
-  // that this register is correctly zeroed in interrupts.
-  Ops.push_back(DAG.getRegister(SH::R0, MVT::i32));
 
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -351,7 +497,7 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     Ops.push_back(InGlue);
   }
 
-  Chain = DAG.getNode(SHISD::CALL, DL, NodeTys, Ops);
+  Chain = DAG.getNode(SHISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -361,17 +507,17 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     InGlue = Chain.getValue(1);
   }
 
-  return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, DL, DAG, InVals);
+  return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG, InVals);
 }
 
 SDValue SuperHTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
   // Handle runtime calling convs.
@@ -465,6 +611,18 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) cons
   case ISD::UDIV:
   case ISD::SDIV:
     return LowerDiv(Op, DAG);
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  case ISD::ExternalSymbol:
+    return LowerExternalSymbol(Op, DAG);
+  case ISD::BlockAddress:
+    return LowerBlockAddress(Op, DAG);
+  case ISD::SETCC:
+    return LowerBR_CC(Op, DAG);
+  case ISD::SELECT_CC:
+    return LowerBR_CC(Op, DAG);
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG);
   }
   return SDValue();
 }
