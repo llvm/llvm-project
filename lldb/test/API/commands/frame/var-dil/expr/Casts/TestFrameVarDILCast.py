@@ -322,17 +322,3 @@ class TestFrameVarDILCast(TestBase):
             error=True,
             substrs=["Cast from 'InnerFoo' to 'UnscopedEnum' is not allowed"],
         )
-
-        # Check that failed casts output errors with diagnostics
-        self.expect(
-            "script lldb.frame.GetValueForVariablePath('+(int) finf')",
-            substrs=["<user expression>:1:2: invalid cast from float to integer"],
-        )
-        self.expect(
-            "script lldb.frame.GetValueForVariablePath('+(float) *((int *) 0)')",
-            substrs=["<user expression>:1:2: cannot get value as APSInt"],
-        )
-        self.expect(
-            "script lldb.frame.GetValueForVariablePath('+(UnscopedEnum) *((float *) 0)')",
-            substrs=["<user expression>:1:2: cannot get value as APFloat"],
-        )

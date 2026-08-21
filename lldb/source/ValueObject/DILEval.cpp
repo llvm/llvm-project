@@ -88,20 +88,10 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       if (!uint_bit_size)
         return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
-          (in_type.IsSigned() && bitfield_size == *int_bit_size)) {
-        auto value_or_err = valobj->CastToBasicType(int_type);
-        if (!value_or_err)
-          return llvm::make_error<DILDiagnosticError>(
-              m_expr, llvm::toString(value_or_err.takeError()), location);
-        return *value_or_err;
-      }
-      if (bitfield_size <= *uint_bit_size) {
-        auto value_or_err = valobj->CastToBasicType(uint_type);
-        if (!value_or_err)
-          return llvm::make_error<DILDiagnosticError>(
-              m_expr, llvm::toString(value_or_err.takeError()), location);
-        return *value_or_err;
-      }
+          (in_type.IsSigned() && bitfield_size == *int_bit_size))
+        return valobj->CastToBasicType(int_type);
+      if (bitfield_size <= *uint_bit_size)
+        return valobj->CastToBasicType(uint_type);
       // Re-create as a const value with the same underlying type
       Scalar scalar;
       bool resolved = valobj->ResolveValue(scalar);
@@ -117,13 +107,8 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
 
   CompilerType promoted_type =
       valobj->GetCompilerType().GetPromotedIntegerType();
-  if (promoted_type) {
-    auto value_or_err = valobj->CastToBasicType(promoted_type);
-    if (!value_or_err)
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, llvm::toString(value_or_err.takeError()), location);
-    return *value_or_err;
-  }
+  if (promoted_type)
+    return valobj->CastToBasicType(promoted_type);
 
   return valobj;
 }
@@ -1948,26 +1933,14 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
   case CastKind::eEnumeration: {
     // FIXME: is this correct for float vector types?
     if (op_type.GetTypeInfo() & lldb::eTypeIsFloat || op_type.IsInteger() ||
-        op_type.IsEnumerationType()) {
-      auto value_or_err = operand->CastToEnumType(target_type);
-      if (!value_or_err)
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, llvm::toString(value_or_err.takeError()),
-            node.GetLocation());
-      return *value_or_err;
-    }
+        op_type.IsEnumerationType())
+      return operand->CastToEnumType(target_type);
     break;
   }
   case CastKind::eArithmetic: {
     if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
-        op_type.IsScalarType() || op_type.IsEnumerationType()) {
-      auto value_or_err = operand->CastToBasicType(target_type);
-      if (!value_or_err)
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, llvm::toString(value_or_err.takeError()),
-            node.GetLocation());
-      return *value_or_err;
-    }
+        op_type.IsScalarType() || op_type.IsEnumerationType())
+      return operand->CastToBasicType(target_type);
     break;
   }
   case CastKind::ePointer: {

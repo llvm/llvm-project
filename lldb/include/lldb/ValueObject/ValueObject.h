@@ -667,11 +667,11 @@ public:
 
   // Take a ValueObject that contains a scalar, enum or pointer type, and
   // cast it to a "basic" type (integer, float or boolean).
-  llvm::Expected<lldb::ValueObjectSP> CastToBasicType(CompilerType type);
+  lldb::ValueObjectSP CastToBasicType(CompilerType type);
 
   // Take a ValueObject that contain an integer, float or enum, and cast it
   // to an enum.
-  llvm::Expected<lldb::ValueObjectSP> CastToEnumType(CompilerType type);
+  lldb::ValueObjectSP CastToEnumType(CompilerType type);
 
   /// If this object represents a C++ class with a vtable, return an object
   /// that represents the virtual function table. If the object isn't a class
