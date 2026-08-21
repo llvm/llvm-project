@@ -109,10 +109,10 @@ define amdgpu_kernel void @fadd_v2_ss(ptr addrspace(1) %a, <2 x double> %x, <2 x
 define amdgpu_kernel void @fadd_v4_vs(ptr addrspace(1) %a, <4 x double> %x) {
 ; GFX1251-LABEL: fadd_v4_vs:
 ; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
@@ -1011,10 +1011,10 @@ define amdgpu_kernel void @fmul_v2_ss(ptr addrspace(1) %a, <2 x double> %x, <2 x
 define amdgpu_kernel void @fmul_v4_vs(ptr addrspace(1) %a, <4 x double> %x) {
 ; GFX1251-LABEL: fmul_v4_vs:
 ; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44 nv
