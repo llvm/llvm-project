@@ -251,6 +251,17 @@ public:
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);
 
+  /// Return true if any type registered with this context implements
+  /// `interfaceID`; false guarantees no type in this context's IR does.
+  bool hasTypeImplementingInterface(TypeID interfaceID);
+
+  /// Return true if any type registered with this context implements
+  /// `InterfaceT`.
+  template <typename InterfaceT>
+  bool hasTypeImplementingInterface() {
+    return hasTypeImplementingInterface(InterfaceT::getInterfaceID());
+  }
+
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
   MLIRContextImpl &getImpl() { return *impl; }

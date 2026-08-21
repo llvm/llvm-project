@@ -558,6 +558,8 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   // most once across the whole scope.
   SetVector<Attribute> verifiedAttrs;
   SetVector<Type> verifiedTypes;
+  const bool anyTypeImplementsSymbolUserTypeInterface =
+      op->getContext()->hasTypeImplementingInterface<SymbolUserTypeInterface>();
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       if (failed(user.verifySymbolUses(symbolTable)))
@@ -570,7 +572,8 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
           return WalkResult::interrupt();
       }
     }
-    if (failed(verifyOpTypeSymbolUses(op, symbolTable, verifiedTypes)))
+    if (anyTypeImplementsSymbolUserTypeInterface &&
+        failed(verifyOpTypeSymbolUses(op, symbolTable, verifiedTypes)))
       return WalkResult::interrupt();
     return WalkResult::advance();
   };
