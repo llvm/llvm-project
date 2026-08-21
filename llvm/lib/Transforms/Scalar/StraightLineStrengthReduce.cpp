@@ -121,15 +121,13 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-<<<<<<< HEAD
-STATISTIC(NumSCEVCandidateBasisDifferences,
-          "Number of candidate-basis SCEV differences computed by SLSR");
-=======
 static cl::opt<int> SLSRBasisDistanceThreshold(
     "slsr-basis-distance-threshold", cl::init(96), cl::Hidden,
     cl::desc("SLSR: skip rewrite if in-block distance from Basis's last "
              "same-block use to the candidate Inst exceeds this"));
->>>>>>> a5630b19d18c ([SLSR] Adding a cost model to avoid high regpressure)
+
+STATISTIC(NumSCEVCandidateBasisDifferences,
+          "Number of candidate-basis SCEV differences computed by SLSR");
 
 namespace {
 
