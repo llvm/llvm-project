@@ -90,6 +90,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
+    static llvm::StringRef getConstPointeeAttrName() { return "cir.const_pointee"; }
 
     void registerAttributes();
     void registerTypes();
