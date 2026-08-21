@@ -8,12 +8,13 @@
 
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "CodeGenTestBase.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/Targets.h"
-#include "llvm/MC/MCRegister.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -23,6 +24,7 @@ namespace {
 
 class RegisterClassInfoTest : public CodeGenTestBase {
 public:
+  /// Register the AMDGPU target components needed by this test suite.
   static void SetUpTestCase() {
 #if LLVM_HAS_AMDGPU_TARGET
     LLVMInitializeAMDGPUTargetInfo();
@@ -33,9 +35,13 @@ public:
 #endif
   }
 
+  /// Use a GCN triple so VGPR registers are available to the test.
   void SetUp() override { setUpImpl("amdgpu9.00-amd-amdhsa", "", /*FS=*/""); }
 };
 
+/// Force every RegisterClassInfo cache entry to be populated so
+/// updateReservedRegs exercises incremental compaction instead of lazy
+/// recomputation on the next query.
 static void materializeAll(RegisterClassInfo &RCI,
                            const TargetRegisterInfo &TRI) {
   for (const TargetRegisterClass &RC : TRI.regclasses()) {
@@ -50,6 +56,7 @@ static void materializeAll(RegisterClassInfo &RCI,
     (void)RCI.getRegPressureSetLimit(I);
 }
 
+/// Compare every cached RegisterClassInfo field against a freshly built object.
 static void expectEqual(RegisterClassInfo &Incremental,
                         RegisterClassInfo &Recomputed,
                         const TargetRegisterInfo &TRI) {
@@ -72,16 +79,8 @@ static void expectEqual(RegisterClassInfo &Incremental,
   }
 }
 
-static MCRegister findRegisterByName(const TargetRegisterInfo &TRI,
-                                     StringRef Name) {
-  for (unsigned I = MCRegister::FirstPhysicalReg; I != TRI.getNumRegs(); ++I) {
-    MCRegister Reg = MCRegister::from(I);
-    if (Name == TRI.getName(Reg))
-      return Reg;
-  }
-  return MCRegister();
-}
-
+/// Verify that updateReservedRegs matches rebuilding RegisterClassInfo from
+/// scratch.
 TEST_F(RegisterClassInfoTest, IncrementalUpdateMatchesRecompute) {
   ASSERT_TRUE(parseMIR(R"MIR(
 ---
@@ -102,12 +101,9 @@ body:             |
 
   RegisterClassInfo Incremental;
   Incremental.runOnMachineFunction(MF);
-  // Populate every cache entry so the update exercises incremental compaction
-  // for every register class instead of lazy recomputation.
   materializeAll(Incremental, TRI);
 
-  MCRegister VGPR0 = findRegisterByName(TRI, "VGPR0");
-  ASSERT_TRUE(VGPR0.isValid());
+  MCRegister VGPR0 = AMDGPU::VGPR0;
   ASSERT_FALSE(MRI.isReserved(VGPR0));
   ASSERT_TRUE(
       llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass &RC) {
@@ -116,6 +112,10 @@ body:             |
       }));
 
   MRI.reserveReg(VGPR0, &TRI);
+  for (MCRegAliasIterator Alias(VGPR0, &TRI, /*IncludeSubRegs=*/true);
+       Alias.isValid(); ++Alias)
+    EXPECT_TRUE(MRI.isReserved(*Alias)) << TRI.getName(*Alias);
+
   Incremental.updateReservedRegs(MRI.getReservedRegs());
 
   // Construct an independent baseline from the updated reserved-register set.
