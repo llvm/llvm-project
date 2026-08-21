@@ -69,6 +69,9 @@ BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // R0 is always reserved as some instructions can only write to it.
   Reserved.set(SH::R0);
 
+  // Reserve GOT pointer
+  Reserved.set(SH::R12);
+  
   // Also reserve the stack frame and stack pointer.
   Reserved.set(SH::R14);
   Reserved.set(SH::R15);
@@ -94,11 +97,10 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.getOpcode() == SH::SHFrmIdx) {
 
     // TODO: Lower frames that can't be expressed in 4 bits.
-
     Register DstReg = MI.getOperand(0).getReg();
     MachineInstr *New = BuildMI(MBB, MI, dl, TII.get(SH::MOVLD4RmiRn), DstReg)
                         .addReg(SH::R14)
-                        .addImm(Offset / 4);
+                        .addImm(Offset);
 
     MI.eraseFromParent();
     return false;
@@ -116,4 +118,8 @@ Register SuperHRegisterInfo::getFrameRegister() const {
 
 Register SuperHRegisterInfo::getStackRegister() const {
   return SH::R15;
+}
+
+Register SuperHRegisterInfo::getGOTRegister() const {
+  return SH::R12;
 }

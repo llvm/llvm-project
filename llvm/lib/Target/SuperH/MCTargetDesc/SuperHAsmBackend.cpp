@@ -41,14 +41,14 @@ SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI) : 
 
 bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const {
-  const uint16_t SH_NopEnc = 0b0000000000001001;
+  const uint16_t SHNopEnc = 0b0000000000001001;
 
   // If the count is not 4-byte aligned, we must be writing data into the
   // text section (otherwise we have unaligned instructions, and thus have
   // far bigger problems), so just write NOP instructions.
   uint64_t NumNops = Count / 2;
   for (uint64_t i = 0; i != NumNops; ++i)
-    support::endian::write(OS, SH_NopEnc, Endian);
+    support::endian::write(OS, SHNopEnc, Endian);
 
   // Write any straggling zeros needed.
   OS.write_zeros(Count & 1);
@@ -70,7 +70,7 @@ std::optional<MCFixupKind> SuperHAsmBackend::getFixupKind(StringRef Name) const 
 
 MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // clang-format off
-  const static MCFixupKindInfo Infos[SuperH::NumTargetFixupKinds] = {
+  const static MCFixupKindInfo Infos[SH::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // SuperHFixupKinds.h.
       //
@@ -123,7 +123,7 @@ MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < SuperH::NumTargetFixupKinds &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < SH::NumTargetFixupKinds &&
          "Invalid kind!");
 
   return Infos[Kind - FirstTargetFixupKind];
@@ -171,8 +171,10 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
   default: 
     return {};
 
+  case FK_Data_1:
   case FK_Data_2:
-  case FK_Data_4: {
+  case FK_Data_4:
+  case FK_Data_8: {
     const auto *EValue = Fixup.getValue();
     if (!EValue->evaluateAsRelocatable(PCITarget, Asm))
       return true;

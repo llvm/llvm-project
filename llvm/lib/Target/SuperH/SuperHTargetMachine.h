@@ -33,6 +33,10 @@ public:
                      bool JIT);
   ~SuperHTargetMachine() override;
 
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetLoweringObjectFile *getObjFileLowering() const override {

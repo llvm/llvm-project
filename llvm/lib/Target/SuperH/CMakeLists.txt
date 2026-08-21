@@ -19,15 +19,19 @@ add_public_tablegen_target(SuperHCommonTableGen)
 add_llvm_target(SuperHCodeGen
   SuperHTargetMachine.cpp
   SuperHFrameLowering.cpp
+  SuperHConstantPoolValue.cpp
+  SuperHBasicBlockInfo.cpp
+  SuperHMachineFunctionInfo.cpp
   SuperHRegisterInfo.cpp
-  SuperHMCInstLower.cpp
-  SuperHSelectionDAGInfo.cpp
-  SuperHISelDAGToDAG.cpp
-  SuperHISelLowering.cpp
-  SuperHAsmPrinter.cpp
   SuperHInstrInfo.cpp
+  SuperHSelectionDAGInfo.cpp
+  SuperHISelLowering.cpp
+  SuperHISelDAGToDAG.cpp
+  SuperHMCInstLower.cpp
+  SuperHAsmPrinter.cpp
   SuperHSubtarget.cpp
   SuperHFillDelaySlots.cpp
+  SuperHConstantIslandPass.cpp
 
   LINK_COMPONENTS
   Analysis

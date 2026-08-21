@@ -28,7 +28,6 @@ SuperHTargetELFStreamer::SuperHTargetELFStreamer(MCStreamer &S,
     : SuperHTargetStreamer(S) {
   ELFObjectWriter &W = getStreamer().getWriter();
   unsigned EFlags = W.getELFHeaderEFlags();
-
   W.setELFHeaderEFlags(EFlags);
 }
 

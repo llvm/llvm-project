@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHMCInstLower.h"
+#include "MCTargetDesc/SuperHMCAsmInfo.h"
+#include "MCTargetDesc/SuperHBaseInfo.h"
 #include "SuperHSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCExpr.h"
@@ -18,7 +20,32 @@ namespace llvm {
 MCOperand
 SuperHMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                       const SuperHSubtarget &Subtarget) const {
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr = nullptr;
+  switch (MO.getTargetFlags()) {
+    case SHII::MO_NO_FLAG:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_None, Ctx);
+      break;
+
+    case SHII::MO_GOT:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT, Ctx);
+      break;
+
+    case SHII::MO_GOTPC:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_PCREL, Ctx);
+      break;
+
+    case SHII::MO_GOTOFF:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_OFF, Ctx);
+      break;
+
+    case SHII::MO_DIR:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
+      break;
+
+    case SHII::MO_PCREL:
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_PCREL, Ctx);
+      break;
+  }
   return MCOperand::createExpr(Expr);
 }
 
@@ -52,6 +79,11 @@ void SuperHMCInstLower::lowerInstruction(const MachineInstr &MI,
           MO, Printer.GetExternalSymbolSymbol(MO.getSymbolName()), Subtarget);
       break;
     case MachineOperand::MO_MachineBasicBlock:
+
+      // NOTE:  Branch instructions will generally jump to labels.
+      //        so ensure we emit them if they're referenced in an
+      //        operand during lowering.
+      MO.getMBB()->setLabelMustBeEmitted();
       MCOp = MCOperand::createExpr(
           MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
       break;

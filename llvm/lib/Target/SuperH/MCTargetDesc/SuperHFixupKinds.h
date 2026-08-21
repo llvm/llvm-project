@@ -12,7 +12,7 @@
 #include "llvm/MC/MCFixup.h"
 
 namespace llvm {
-namespace SuperH {
+namespace SH {
 
 // clang-format off
 

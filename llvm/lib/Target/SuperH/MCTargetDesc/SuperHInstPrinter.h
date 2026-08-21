@@ -47,6 +47,8 @@ public:
 
 private:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printPCRelImm(const MCInst *MI, uint64_t Address, unsigned OpNo, raw_ostream &O);
 };
 
 } // end namespace llvm

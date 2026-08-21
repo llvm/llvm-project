@@ -51,39 +51,91 @@ private:
   bool expandMI(Block &MBB, BlockIt MBBI);
 
   // Expansion functions
+  MachineInstr *findSlotCandidate(Block &MBB, BlockIt MBBI);
   bool fillDelaySlot(Block &MBB, BlockIt MBBI);
 };
 
 } // end namespace
 
 
-bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
-  if (auto *Prev = MBBI->getPrevNode()) {
 
-    // If the prior instruction is capable of filling the delay slot
-    // swap the 2 instructions.
-    if (TII->canFillDelaySlot(Prev->getOpcode())) {
-      LDBG() << "Swapping " << TII->getName(MI.getOpcode()) 
-             << " and " << TII->getName(Prev->getOpcode()) 
-             << " @ " << MBB.getParent()->getName();
-      MBB.insertAfter(MBBI, Prev->removeFromParent());
-      return true;
+
+//===----------------------------------------------------------------------===//
+//                                Expansions
+//===----------------------------------------------------------------------===//
+
+// Walks backwards through the basic block to find a candidate that is eligible
+// for filling delay slots.
+MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+
+
+  // TODO:  Make this a while loop that keeps a list of "used" registers
+  //        by instructions.
+  if (auto *Prev = MBBI->getPrevNode()) {
+    unsigned Opcode = Prev->getOpcode();
+
+    // If we encounter a branch instruction, then it's no longer safe to
+    // move the instruction down.
+    if (Prev->isBranch() || Prev->isCall() || Prev->isReturn()) 
+      return nullptr;
+
+    // NOTE:  RTS has an extra constraint that it cannot have
+    //        lds @r15+,PR or equivalent in its delay slot.
+    if (MI.isReturn()) {
+      
+      // Skip the LDS instruction.
+      if (Opcode == SH::LDSLRminciPR || Opcode == SH::LDSRmPR)
+        return nullptr;
+    }
+
+    // NOTE:  Conditional branches can't have their condition code set
+    //        in the delay slot. As such, if the previous instruction
+    //        implicitly defines the status register, assume that the 
+    //        T bit was set.
+    if (MI.isConditionalBranch()) {
+      if (Prev->definesRegister(SH::SR, TRI))
+        return nullptr;
+    }
+
+    // Otherwise, select this instruction if can fill a delay slot,
+    // has no prior node, or the prior node is not a delay slot.
+    if (TII->canFillDelaySlot(Opcode)) {
+      if (!Prev->getPrevNode() || !Prev->getPrevNode()->hasDelaySlot())
+        return Prev;
     }
   }
 
-  LDBG() << "Inserting NOP after " << TII->getName(MI.getOpcode())
-         << " @ " << MBB.getParent()->getName();
+  return nullptr;
+}
+
+// Finds and fills delay slots of instructions in a basic block.
+bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr &MI = *MBBI;
+
+  if (auto *Candidate = SuperHFillDelaySlots::findSlotCandidate(MBB, MBBI)) {
+      LLVM_DEBUG(dbgs() << "Swapping " << TII->getName(MI.getOpcode()) 
+                        << " and " << TII->getName(Candidate->getOpcode()) 
+                        << " @ " << MBB.getParent()->getName() << "\n");
+
+      MBB.insertAfter(MBBI, Candidate->removeFromParent());
+      return true;
+  }
+
+  LLVM_DEBUG(dbgs() << "Inserting NOP after " << TII->getName(MI.getOpcode())
+                    << " @ " << MBB.getParent()->getName() << "\n");
 
   // Otherwise just insert a NOP.
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(SH::NOP));
+  MBB.insertAfter(MBBI, MF.CreateMachineInstr(TII->get(SH::NOP), MI.getDebugLoc())); 
   return true;
 }
 
 
 
+
 //===----------------------------------------------------------------------===//
-//                                HELPERS
+//                                Helpers
 //===----------------------------------------------------------------------===//
 
 bool SuperHFillDelaySlots::expandMI(Block &MBB, BlockIt MBBI) {
@@ -109,6 +161,8 @@ bool SuperHFillDelaySlots::expandMBB(Block &MBB) {
 }
 
 bool SuperHFillDelaySlots::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "\n********** SuperHFillDelaySlots **********\n");
+
   bool Modified = false;
 
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();

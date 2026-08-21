@@ -11,11 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 
+#include "SuperHFixupKinds.h"
+#include "SuperHMCAsmInfo.h"
 #include "SuperHMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -67,9 +70,17 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  unsigned getBranchTargetOpValue(const MCInst &MI, const MCExpr *Expr,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
+
   unsigned getExprOpValue(const MCInst &MI, const MCExpr *Expr,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+
+  unsigned getOpBits(const MCInst &MI,
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     const MCSubtargetInfo &STI) const;
 };
 
 } // end namespace
@@ -94,12 +105,25 @@ static bool isOpcode32(uint32_t Opcode) {
   return Opcode > 0xFFFF; 
 }
 
+// Helper that gets the bits for the given instruction.
+unsigned SuperHMCCodeEmitter::getOpBits(const MCInst &MI,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  MCInst Inst = MCInst();
+  Inst.setOpcode(MI.getOpcode());
+  for(unsigned i = 0; i < MI.getNumOperands(); i++) {
+    Inst.addOperand(MCOperand::createImm(0));
+  }
+
+  return getBinaryCodeForInstr(Inst, Fixups, STI);
+}
+
 void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
 
-  uint32_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
+  uint64_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
 
   // NOTE:  All base instructions are 16-bit in SH ASM
   //        But some instructions may be 32-bit for eg. SH2A or the DSP extensions.
@@ -117,9 +141,19 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
   ++MCNumEmitted;
 }
 
+unsigned SuperHMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, 
+                                                     const MCExpr *Expr,
+                                                     SmallVectorImpl<MCFixup> &Fixups,
+                                                     const MCSubtargetInfo &STI) const {
+  return getExprOpValue(MI, Expr, Fixups, STI);
+}
+
 unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
+  if (!Expr)
+    return 0;
+
   MCExpr::ExprKind Kind = Expr->getKind();
 
   // Binary Op
@@ -128,12 +162,11 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
     Kind = Expr->getKind();
   }
 
-  // Symbol Reference
   if (Kind == MCExpr::SymbolRef) {
 
     // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
     //        We handle those quite crudely.
-    uint32_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
+    uint32_t OpCode = getOpBits(MI, Fixups, STI);
     Fixups.push_back(MCFixup::create(0, Expr, isOpcode32(OpCode) ? FK_Data_4 : FK_Data_2, true));
     return 0;
   }
@@ -146,7 +179,8 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
   return 0;
 }
 
-unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI, 
+                             const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const {
   if (MO.isReg())
