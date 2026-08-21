@@ -28334,13 +28334,16 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   // of the chain being costed. Enumerate every simple load in the store's loop
   // that shares the store base.
   Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
-  SmallPtrSet<LoadInst *, 8> CandidateLoads;
-  for (BasicBlock *BB : StoreL->blocks())
-    for (Instruction &I : *BB)
-      if (auto *LoadI = dyn_cast<LoadInst>(&I))
-        if (LoadI->isSimple() &&
-            getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
-          CandidateLoads.insert(LoadI);
+  const auto CandidateLoads = [&] {
+    SmallPtrSet<LoadInst *, 8> Loads;
+    for (BasicBlock *BB : StoreL->blocks())
+      for (Instruction &I : *BB)
+        if (auto *LoadI = dyn_cast<LoadInst>(&I))
+          if (LoadI->isSimple() &&
+              getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
+            Loads.insert(LoadI);
+    return Loads;
+  }();
 
   if (CandidateLoads.empty())
     return false;

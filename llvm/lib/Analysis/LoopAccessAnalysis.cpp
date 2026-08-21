@@ -1934,7 +1934,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // shared with SLP via MemoryDepChecker::isStoreLoadForwardingConflict.
   for (uint64_t VF = 2 * TypeByteSize;
        VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
-    if (isStoreLoadForwardingConflict(Distance, VF, TypeByteSize)) {
+    if (isStoreLoadForwardingConflict(Distance, VF, TypeByteSize, VF)) {
       MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }

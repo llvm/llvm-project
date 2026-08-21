@@ -12,17 +12,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ;
 ; Store-to-load forwarding hazard at a non-power-of-2 vector factor.
 ;
-;   for (int i = 7; i < n; i += 7) {
-;     int t = A[i-5];        ; load 20 bytes (5*4) before the store base
-;     A[i]   = t + 1;
+;   for (int i = 12; i < n; i += 7) {
+;     int t0 = A[i-12]; ... int t6 = A[i-6];   ; 7 consecutive backward loads
+;     A[i]   = t0 + 1;
 ;     ...
-;     A[i+6] = t + 7;
+;     A[i+6] = t6 + 7;
 ;   }
 ;
-; With -slp-vectorize-non-power-of-2, SLP first probes VF=7. The backward load
-; A[i-5] is 20 bytes behind the store base:
-;   20 % (7*4=28) = 20 -> misaligned, load straddles two pending vector stores
-;   20 / 28       = 0  -> store still hot in the store buffer
+; With -slp-vectorize-non-power-of-2, SLP probes VF=7. The seven consecutive
+; backward loads A[i-12..i-6] widen to a 28-byte <7 x i32> load; the stores
+; A[i..i+6] widen to a 28-byte <7 x i32> store. The load base is 48 bytes behind:
+;   48 % 28 = 20 -> misaligned, and the 28-byte load overruns the 20 bytes left
+;                   before the window boundary, straddling two widened stores;
+;   48 / 28      = 1 -> store still hot in the store buffer.
 ; so the STLF penalty prices the VF=7 (and the VF=4 base) widening out. With the
 ; check disabled the whole chain widens to a single <7 x i32> store. This
 ; exercises the hazard check at a non-power-of-2 VF and the divisor-based cache
@@ -34,25 +36,34 @@ define void @stlf_non_power_of_2(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:  [[ENTRY:.*]]:
 ; STLF-ON-NEXT:    br label %[[FOR_BODY:.*]]
 ; STLF-ON:       [[FOR_BODY]]:
-; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; STLF-ON-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
-; STLF-ON-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; STLF-ON-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[T]], 3
-; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
-; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
+; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 12, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-ON-NEXT:    [[B0:%.*]] = add i64 [[I]], -12
+; STLF-ON-NEXT:    [[B2:%.*]] = add i64 [[I]], -10
+; STLF-ON-NEXT:    [[B4:%.*]] = add i64 [[I]], -8
+; STLF-ON-NEXT:    [[B6:%.*]] = add i64 [[I]], -6
+; STLF-ON-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
+; STLF-ON-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B2]]
+; STLF-ON-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B4]]
+; STLF-ON-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B6]]
+; STLF-ON-NEXT:    [[L6:%.*]] = load i32, ptr [[P6]], align 4
+; STLF-ON-NEXT:    [[T7:%.*]] = add nsw i32 [[L6]], 7
+; STLF-ON-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
+; STLF-ON-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
+; STLF-ON-NEXT:    [[I6:%.*]] = add nuw nsw i64 [[I]], 6
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
-; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; STLF-ON-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i64 0
-; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 2>
-; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP0]], align 4
-; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP1]], align 4
-; STLF-ON-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; STLF-ON-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
-; STLF-ON-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 4, i32 5, i32 6, i32 7>
-; STLF-ON-NEXT:    store <4 x i32> [[TMP5]], ptr [[GEP3]], align 4
+; STLF-ON-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
+; STLF-ON-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
+; STLF-ON-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I6]]
+; STLF-ON-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P0]], align 4
+; STLF-ON-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 1, i32 2>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP1]], ptr [[GEP0]], align 4
+; STLF-ON-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P2]], align 4
+; STLF-ON-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 3, i32 4>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP3]], ptr [[GEP2]], align 4
+; STLF-ON-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[P4]], align 4
+; STLF-ON-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], <i32 5, i32 6>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP5]], ptr [[GEP4]], align 4
+; STLF-ON-NEXT:    store i32 [[T7]], ptr [[GEP6]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 7
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; STLF-ON-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -64,15 +75,13 @@ define void @stlf_non_power_of_2(ptr noalias %A, i64 %n) {
 ; STLF-OFF-NEXT:  [[ENTRY:.*]]:
 ; STLF-OFF-NEXT:    br label %[[FOR_BODY:.*]]
 ; STLF-OFF:       [[FOR_BODY]]:
-; STLF-OFF-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; STLF-OFF-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
-; STLF-OFF-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; STLF-OFF-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
+; STLF-OFF-NEXT:    [[I:%.*]] = phi i64 [ 12, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-OFF-NEXT:    [[B0:%.*]] = add i64 [[I]], -12
+; STLF-OFF-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
 ; STLF-OFF-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; STLF-OFF-NEXT:    [[TMP0:%.*]] = insertelement <7 x i32> poison, i32 [[T]], i64 0
-; STLF-OFF-NEXT:    [[TMP1:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <7 x i32> zeroinitializer
-; STLF-OFF-NEXT:    [[TMP2:%.*]] = add nsw <7 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; STLF-OFF-NEXT:    store <7 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; STLF-OFF-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr [[P0]], align 4
+; STLF-OFF-NEXT:    [[TMP1:%.*]] = add nsw <7 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; STLF-OFF-NEXT:    store <7 x i32> [[TMP1]], ptr [[GEP0]], align 4
 ; STLF-OFF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 7
 ; STLF-OFF-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; STLF-OFF-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -83,17 +92,35 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 7, %entry ], [ %i.next, %for.body ]
-  %back.idx = sub i64 %i, 5
-  %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
-  %t = load i32, ptr %back.gep, align 4
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
-  %t5 = add nsw i32 %t, 5
-  %t6 = add nsw i32 %t, 6
-  %t7 = add nsw i32 %t, 7
+  %i = phi i64 [ 12, %entry ], [ %i.next, %for.body ]
+  %b0 = add i64 %i, -12
+  %b1 = add i64 %i, -11
+  %b2 = add i64 %i, -10
+  %b3 = add i64 %i, -9
+  %b4 = add i64 %i, -8
+  %b5 = add i64 %i, -7
+  %b6 = add i64 %i, -6
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %b0
+  %p1 = getelementptr inbounds i32, ptr %A, i64 %b1
+  %p2 = getelementptr inbounds i32, ptr %A, i64 %b2
+  %p3 = getelementptr inbounds i32, ptr %A, i64 %b3
+  %p4 = getelementptr inbounds i32, ptr %A, i64 %b4
+  %p5 = getelementptr inbounds i32, ptr %A, i64 %b5
+  %p6 = getelementptr inbounds i32, ptr %A, i64 %b6
+  %l0 = load i32, ptr %p0, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
+  %l4 = load i32, ptr %p4, align 4
+  %l5 = load i32, ptr %p5, align 4
+  %l6 = load i32, ptr %p6, align 4
+  %t1 = add nsw i32 %l0, 1
+  %t2 = add nsw i32 %l1, 2
+  %t3 = add nsw i32 %l2, 3
+  %t4 = add nsw i32 %l3, 4
+  %t5 = add nsw i32 %l4, 5
+  %t6 = add nsw i32 %l5, 6
+  %t7 = add nsw i32 %l6, 7
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3

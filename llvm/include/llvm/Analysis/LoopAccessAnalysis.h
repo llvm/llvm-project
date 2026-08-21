@@ -238,19 +238,21 @@ public:
   /// Returns true if a memory dependence at byte distance \p Distance between
   /// a store and load would prevent store-to-load forwarding when the store is
   /// widened to \p VectorStoreSize bytes. \p TypeByteSize is the store element
-  /// size; \p LoadElementSize, when non-zero, is the load's access width.
+  /// size and \p LoadElementSize is the load's access width.
   ///
   /// The conflicting store must still be likely to be in the store buffer
   /// (\c Distance / VectorStoreSize is below 8 * TypeByteSize iterations), and
-  /// the load must overlap two widened stores, which happens when either:
-  ///   (a) the load is misaligned w.r.t. the widened store window
-  ///       (\c Distance is not a multiple of \p VectorStoreSize), or
-  ///   (b) the load starts aligned but is itself wider than the widened store
-  ///       window (\p LoadElementSize > \p VectorStoreSize), so it overruns
-  ///       into the next widened store.
+  /// the load must overlap two widened stores. A backward load begins
+  /// \c R = \c Distance % \p VectorStoreSize bytes below a widened-store
+  /// boundary and overruns into the next widened store when either:
+  ///   (a) it starts misaligned (\c R != 0) and is wider than the \c R bytes
+  ///       left before that boundary (\p LoadElementSize > \c R), or
+  ///   (b) it starts aligned (\c R == 0) but is itself wider than the widened
+  ///       store window (\p LoadElementSize > \p VectorStoreSize).
+  /// A \p LoadElementSize of 0 (unknown width) disables both terms.
   /// Both couldPreventStoreLoadForward and SLPVectorizer use this as their core
-  /// STLF cost-model gate. LAA omits \p LoadElementSize (the load and store
-  /// share the element size there, so (b) can never add anything).
+  /// STLF cost-model gate; LAA passes the widened store width as the load width,
+  /// so (a) reduces to "any misalignment conflicts" and (b) never fires.
   static bool isStoreLoadForwardingConflict(uint64_t Distance,
                                             uint64_t VectorStoreSize,
                                             uint64_t TypeByteSize,
@@ -260,9 +262,10 @@ public:
     const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
     if (Distance / VectorStoreSize >= NumItersForStoreLoadThroughMemory)
       return false;
-    // (a) Misaligned load: it straddles two widened stores.
-    if (Distance % VectorStoreSize != 0)
-      return true;
+    // (a) Misaligned load: it begins R bytes below a widened-store boundary and
+    // straddles two widened stores only if it is wider than those R bytes.
+    if (uint64_t R = Distance % VectorStoreSize)
+      return LoadElementSize > R;
     // (b) Aligned load that is wider than the widened store still overruns
     // into the next widened store (LoadElementSize == 0 disables this term).
     return LoadElementSize > VectorStoreSize;

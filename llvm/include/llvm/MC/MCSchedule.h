@@ -335,7 +335,7 @@ struct MCSchedModel {
   // the default uses a conservative 10 cycles for targets that do not override
   // it; individual targets may set a more precise value (e.g. Zen4 uses 13).
   unsigned StoreLoadForwardingPenalty;
-  static const unsigned DefaultStoreLoadForwardingPenalty = 10;
+  static constexpr unsigned DefaultStoreLoadForwardingPenalty = 10;
 
   bool PostRAScheduler; // default value is false
 

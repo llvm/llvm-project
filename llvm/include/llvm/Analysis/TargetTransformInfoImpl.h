@@ -681,19 +681,13 @@ public:
 
   virtual unsigned getCacheLineSize() const { return 0; }
 
-  /// Default store-to-load forwarding stall penalty (in cycles) charged when no
-  /// subtarget scheduling model is available. Kept intentionally in sync with
-  /// MCSchedModel::DefaultStoreLoadForwardingPenalty (the scheduling-model
-  /// field default); the cost layer keeps its own copy so it does not depend on
-  /// MC.
-  static constexpr unsigned DefaultStoreLoadForwardingPenalty = 10;
-
+  /// The store-to-load forwarding penalty is a microarchitectural cycle count.
+  /// Like getBranchMispredictPenalty, the target-independent base returns a
+  /// neutral 0; targets with a scheduling model supply the real value through
+  /// BasicTTIImpl (defaulting to MCSchedModel::DefaultStoreLoadForwardingPenalty).
   virtual InstructionCost getStoreLoadForwardingConflictCost(
       Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
-    // No subtarget scheduling model is available here, so fall back to the
-    // default penalty. Targets with a real scheduling model go through
-    // BasicTTIImpl and use their own StoreLoadForwardingPenalty instead.
-    return InstructionCost(DefaultStoreLoadForwardingPenalty);
+    return 0;
   }
   virtual std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
