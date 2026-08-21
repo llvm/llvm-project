@@ -50,19 +50,9 @@ private:
   unsigned ElementIndex;
 };
 
-/// Iterates through Elements that belong to the signature described by
-/// ShaderStage and IOTy and packs each element into 32 registers with 4
-/// components by updating its StartRow and StartCol in place. An element is
-/// left unallocated if it is not part of the signature.
+/// Packs eligible signature elements into consecutive rows.
 ///
-/// Elements are visited in declaration order. Each element starts at column
-/// zero of the first row after the preceding element, and a multi-row element
-/// occupies consecutive rows. Elements are never co-packed into the same row;
-/// interpolation mode, component type, and semantic kind do not otherwise
-/// affect placement.
-///
-/// Returns a SignaturePackingError that denotes the first element that cannot
-/// be placed, or success if all eligible elements were placed.
+/// See llvm/docs/DirectX/SemanticSignatures.md#stacked-packing for details.
 LLVM_ABI Error
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
