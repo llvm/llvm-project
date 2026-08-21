@@ -19,6 +19,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "clang/Analysis/AnyCall.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -233,9 +234,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  auto [FD, Args] = getFunctionCallInfo(CCE);
-  handleFunctionCall(CCE, FD, Args,
-                     /*IsGslConstruction=*/false);
+  handleFunctionCall(CCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
@@ -256,13 +255,10 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    auto [FD, Args] = getFunctionCallInfo(MCE);
-    handleFunctionCall(MCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(MCE, /*IsGslConstruction=*/true);
     return;
   }
-  auto [FD, Args] = getFunctionCallInfo(MCE);
-  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
+  handleFunctionCall(MCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -282,8 +278,7 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  auto [FD, Args] = getFunctionCallInfo(CE);
-  handleFunctionCall(CE, FD, Args);
+  handleFunctionCall(CE);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -630,8 +625,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  auto [FD, Args] = getFunctionCallInfo(OCE);
-  handleFunctionCall(OCE, FD, Args);
+  handleFunctionCall(OCE);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -904,9 +898,7 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    auto [FD, Args] = getFunctionCallInfo(CCE);
-    handleFunctionCall(CCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(CCE, /*IsGslConstruction=*/true);
   }
 }
 
@@ -1090,9 +1082,14 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 }
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,
-                                        const FunctionDecl *FD,
-                                        ArrayRef<const Expr *> Args,
                                         bool IsGslConstruction) {
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  if (!AC)
+    return;
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+  if (!FD)
+    return;
+  llvm::SmallVector<const Expr *, 4> Args = AC->arguments();
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);

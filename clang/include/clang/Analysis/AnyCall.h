@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace clang {
@@ -162,42 +163,53 @@ public:
   size_t param_size() const { return parameters().size(); }
   bool param_empty() const { return parameters().empty(); }
 
-  /// \returns actual arguments for expression-backed calls, or an empty range
+  /// \returns actual arguments for expression-backed calls, or an empty list
   /// for declaration-backed calls and call kinds with implicit or synthesized
-  /// argument lists, such as allocators and destructors.
-  ArrayRef<const Expr *> arguments() const {
+  /// argument lists, such as allocators and destructors. For instance member
+  /// calls, the implicit object argument is included as argument 0.
+  llvm::SmallVector<const Expr *, 4> arguments() const {
+    llvm::SmallVector<const Expr *, 4> Args;
     if (!E)
-      return {};
+      return Args;
 
     switch (K) {
-    case Function:
+    case Function: {
+      const auto *CE = cast<CallExpr>(E);
+      if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
+        Args.push_back(MCE->getImplicitObjectArgument());
+      Args.append(CE->arg_begin(), CE->arg_end());
+
+      if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE))
+        // For `static operator()`, the first argument is the object argument,
+        // remove it from the argument list to avoid off-by-one errors.
+        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+            FD && FD->isStatic() && OCE->getOperator() == OO_Call)
+          Args.erase(Args.begin());
+      return Args;
+    }
     case Block: {
       const auto *CE = cast<CallExpr>(E);
-      return {CE->getArgs(), CE->getNumArgs()};
+      Args.append(CE->arg_begin(), CE->arg_end());
+      return Args;
     }
     case ObjCMethod: {
       const auto *ME = cast<ObjCMessageExpr>(E);
-      return {ME->getArgs(), ME->getNumArgs()};
+      Args.append(ME->arg_begin(), ME->arg_end());
+      return Args;
     }
     case Constructor: {
       const auto *CE = cast<CXXConstructExpr>(E);
-      return {CE->getArgs(), CE->getNumArgs()};
+      Args.append(CE->arg_begin(), CE->arg_end());
+      return Args;
     }
     case Destructor:
     case InheritedConstructor:
     case Allocator:
     case Deallocator:
-      return {};
+      return Args;
     }
     llvm_unreachable("Unknown AnyCall::Kind");
   }
-
-  using arg_const_iterator = ArrayRef<const Expr *>::const_iterator;
-  arg_const_iterator arg_begin() const { return arguments().begin(); }
-  arg_const_iterator arg_end() const { return arguments().end(); }
-  size_t arg_size() const { return arguments().size(); }
-  bool arg_empty() const { return arguments().empty(); }
-  const Expr *getArg(unsigned I) const { return arguments()[I]; }
 
   QualType getReturnType(ASTContext &Ctx) const {
     switch (K) {

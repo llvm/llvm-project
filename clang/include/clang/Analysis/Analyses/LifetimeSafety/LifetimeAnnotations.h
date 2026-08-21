@@ -14,7 +14,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace clang ::lifetimes {
@@ -62,15 +61,6 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-
-struct FunctionCallInfo {
-  const FunctionDecl *FD = nullptr;
-  llvm::SmallVector<const Expr *, 4> Args;
-};
-
-/// Returns the callee and arguments corresponding to Call. For instance member
-/// calls, Args includes the implicit object argument as argument 0.
-FunctionCallInfo getFunctionCallInfo(const Expr *Call);
 
 /// Returns the parameter corresponding to argument I when the argument should
 /// be tracked for lifetime safety.
