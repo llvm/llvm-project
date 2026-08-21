@@ -61,3 +61,9 @@ Error llvm::hlsl::packSignatureStacked(
 
   return Error::success();
 }
+
+Error llvm::hlsl::packSignatureIndexed(
+    MutableArrayRef<SemanticSignatureElement>, Triple::EnvironmentType,
+    IOType) {
+  return Error::success();
+}
