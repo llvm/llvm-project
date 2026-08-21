@@ -2214,6 +2214,22 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
           << (DKind == OMPD_declare_simd ? 0 : 1);
       return DeclGroupPtrTy();
     }
+
+    DeclGroupRef DG = Ptr.get();
+    bool HasNewDecl = false;
+    SourceManager &SM = PP.getSourceManager();
+    for (const Decl *D : DG) {
+      if (SM.isBeforeInTranslationUnit(Loc, D->getBeginLoc())) {
+        HasNewDecl = true;
+        break;
+      }
+    }
+    if (!HasNewDecl) {
+      Diag(Loc, diag::err_omp_decl_in_declare_simd_variant)
+          << (DKind == OMPD_declare_simd ? 0 : 1);
+      return DeclGroupPtrTy();
+    }
+
     if (DKind == OMPD_declare_simd)
       return ParseOMPDeclareSimdClauses(Ptr, Toks, Loc);
     assert(DKind == OMPD_declare_variant &&
