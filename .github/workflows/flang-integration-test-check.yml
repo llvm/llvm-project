@@ -1,0 +1,104 @@
+name: Flang integration test check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "flang/test/**"
+
+# This workflow only inspects file patches through the GitHub API. In
+# particular, it must not check out or execute code from the pull request.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-for-full-pipeline-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check for new full-pipeline test invocations
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const marker = "<!-- flang-integration-test-check -->";
+            const pr = context.payload.pull_request;
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              },
+            );
+
+            const findings = [];
+            for (const file of files) {
+              if (!file.filename.startsWith("flang/test/") || !file.patch)
+                continue;
+
+              // Only report newly added uses. Existing full-pipeline tests do
+              // not need to be justified again when an unrelated line changes.
+              const addsEmitLLVM = file.patch.split("\n").some(
+                line => /^\+(?!\+\+)/.test(line) && /\bRUN:/.test(line) &&
+                  /(^|\s)-emit-llvm(?=\s|=|$)/.test(line),
+              );
+              if (addsEmitLLVM)
+                findings.push(`- \`${file.filename}\``);
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                per_page: 100,
+              },
+            );
+            const previous = comments.find(
+              comment => comment.user.type === "Bot" && comment.body.includes(marker),
+            );
+
+            if (findings.length === 0) {
+              if (previous) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: previous.id,
+                });
+              }
+              return;
+            }
+
+            const body = [
+              marker,
+              "This pull request adds a Flang test invocation that exercises the compiler " +
+                "pipeline through LLVM IR generation:",
+              "",
+              findings.join("\n"),
+              "",
+              "Please consider whether the same behavior can be covered by a focused test " +
+                "that stops at the relevant compiler stage. If LLVM IR generation is " +
+                "necessary, add a nearby, test-specific comment explaining why. See the " +
+                "[Flang integration test guidance](https://github.com/llvm/llvm-project/blob/main/flang/test/Integration/README.md).",
+              "",
+              "_This is an informational reminder; it does not fail the workflow._",
+            ].join("\n");
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body,
+              });
+            }
