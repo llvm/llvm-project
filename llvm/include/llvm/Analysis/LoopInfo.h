@@ -329,10 +329,11 @@ public:
   bool isSafeToClone() const;
 
   /// Like `isSafeToClone`, but for transformations where the cloned loop
-  /// bodies may run conditionally. This additionally rejects convergent
-  /// calls (which must not gain new control dependencies) and token values
-  /// that are used outside their defining block.
-  bool isSafeToCloneConditionally() const;
+  /// bodies may run conditionally. This additionally checks that we may form
+  /// phis for all values that are live-out from the loop (in particular that
+  /// no token-like values are live-out) and that there are no convergent calls
+  /// (which must not gain new control dependencies).
+  bool isSafeToCloneConditionally(const DominatorTree &DT) const;
 
   /// Returns true if the loop is annotated parallel.
   ///

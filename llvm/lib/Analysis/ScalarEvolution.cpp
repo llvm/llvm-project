@@ -1972,7 +1972,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
     if (AR->hasNoSignedWrap()) {
       Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getSignExtendExpr(Step, Ty, Depth + 1);
-      return getAddRecExpr(Start, Step, L, SCEV::FlagNSW);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
     }
   }
 

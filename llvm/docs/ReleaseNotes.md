@@ -125,6 +125,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the WebAssembly Backend
 
+* Added support for emitting common symbols (.comm) using the WASM_SYMBOL_BINDING_COMMON
+  flag (see https://github.com/WebAssembly/tool-conventions/pull/267)
+
 ### Changes to the Windows Target
 
 ### Changes to the X86 Backend

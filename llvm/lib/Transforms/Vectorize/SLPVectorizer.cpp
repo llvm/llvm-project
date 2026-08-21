@@ -29974,6 +29974,12 @@ class HorizontalReduction {
   SmallVector<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
       VectorValuesAndScales;
 
+  /// Narrow reduced values mapped to the shift and the mask applied after
+  /// widening.
+  SmallDenseMap<Value *, NarrowedLeafInfo> NarrowedLeafShifts;
+  /// zext/shl/and/packed-binop chain dropped with the reduction.
+  SmallVector<Instruction *> NarrowedChainInsts;
+
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
@@ -30384,6 +30390,8 @@ public:
     ReducedValsToOps.clear();
     ReductionOps.clear();
     RoundedLinks.clear();
+    NarrowedLeafShifts.clear();
+    NarrowedChainInsts.clear();
     RdxKind = getRdxKind(Root);
     // Currently, only ordered fadd reductions are supported.
     if (RdxKind != RecurKind::FAdd)
@@ -30656,6 +30664,66 @@ public:
         PossibleOrderedReductionOps.clear();
       }
     }
+    // InstCombine may pack same-kind binops under a zext, hiding the leaves.
+    // Analyze them in the narrow type; the vectorized result is widened back,
+    // shifted and masked per lane before the reduction.
+    if (Instruction::isBitwiseLogicOp(
+            RecurrenceDescriptor::getOpcode(RdxKind)) &&
+        RK == ReductionOrdering::Unordered && !IsCmpSelMinMax &&
+        Ty->isIntegerTy() && !Ty->isIntegerTy(1) &&
+        any_of(ReducedValsCandidates, [](Value *V) {
+          return isa<ZExtInst>(V) ||
+                 match(V, m_Shl(m_ZExt(m_Value()), m_ConstantInt()));
+        })) {
+      unsigned WideBW = Ty->getIntegerBitWidth();
+      SmallVector<SmallVector<NarrowedLeafInfo>> AllLeaves;
+      SmallVector<Instruction *> ChainInsts;
+      Type *NarrowTy = nullptr;
+      bool Bail = false;
+      unsigned NumLeaves = 0;
+      SmallPtrSet<Value *, 8> UniqueLeaves;
+      for (Value *Cand : ReducedValsCandidates) {
+        SmallVector<NarrowedLeafInfo> &Leaves = AllLeaves.emplace_back();
+        collectNarrowedLeaves(Cand, RecurrenceDescriptor::getOpcode(RdxKind),
+                              WideBW, RecursionMaxDepth, Leaves, ChainInsts);
+        for (const NarrowedLeafInfo &L : Leaves) {
+          if (isa<Constant>(L.V) || !L.V->getType()->isIntegerTy() ||
+              (NarrowTy && L.V->getType() != NarrowTy) ||
+              !UniqueLeaves.insert(L.V).second) {
+            Bail = true;
+            break;
+          }
+          if (!NarrowTy)
+            NarrowTy = L.V->getType();
+        }
+        if (Bail)
+          break;
+        NumLeaves += Leaves.size();
+      }
+      if (!Bail && NumLeaves > ReducedValsCandidates.size() && NarrowTy != Ty) {
+        // Collected user-first; dies with the reduction iff all users die.
+        SmallPtrSet<Value *, 8> Ignorable;
+        for (ArrayRef<Value *> RdxOps : ReductionOps)
+          Ignorable.insert_range(RdxOps);
+        for (Instruction *I : ChainInsts)
+          if (all_of(I->users(),
+                     [&](User *U) { return Ignorable.contains(U); })) {
+            Ignorable.insert(I);
+            NarrowedChainInsts.push_back(I);
+          }
+        SmallVector<Value *> NewCandidates;
+        for (const auto &[Cand, Leaves] :
+             zip(ReducedValsCandidates, AllLeaves)) {
+          SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
+          for (const NarrowedLeafInfo &L : Leaves) {
+            NarrowedLeafShifts.try_emplace(L.V, L);
+            NewCandidates.push_back(L.V);
+            ReducedValsToOps[L.V].append(RdxOps);
+          }
+        }
+        ReducedValsCandidates = std::move(NewCandidates);
+      }
+    }
     // Too many integer reduced values candidates for the ordered reductions
     // after adjustements - try to switch to unordered reductions instead.
     constexpr unsigned ReducedValsLimit = 1024;
@@ -30820,6 +30888,8 @@ public:
           continue;
         IgnoreList.insert(RdxOp);
       }
+    // Dropped with the reduction; do not treat as external uses.
+    IgnoreList.insert_range(NarrowedChainInsts);
     // Intersect the fast-math-flags from all reduction operations.
     FastMathFlags RdxFMF;
     RdxFMF.set();
@@ -31337,6 +31407,40 @@ public:
                                          SameValuesCounter, RootTrackedToOrig);
         }
 
+        // Mask in the narrow type, then widen and shift per lane. Map back
+        // from extractelements to the original reduced values for the shift
+        // amounts. The absorbed narrow and-masks and the bits truncated by
+        // the absorbed narrow shls are masked off before the widening.
+        if (!NarrowedLeafShifts.empty()) {
+          Type *WideTy = ReductionRoot->getType();
+          Type *NarrowTy = VectorizedRoot->getType()->getScalarType();
+          unsigned VF = getNumElements(VectorizedRoot->getType());
+          SmallVector<Constant *> ShiftConsts(VF, ConstantInt::get(WideTy, 0));
+          SmallVector<Constant *> MaskConsts(
+              VF, Constant::getAllOnesValue(NarrowTy));
+          bool AnyShift = false;
+          bool AnyMask = false;
+          for (auto [Idx, Val] : enumerate(VL)) {
+            const NarrowedLeafInfo &L =
+                NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]);
+            unsigned Lane = V.findRootLaneForValue(Val);
+            ShiftConsts[Lane] = ConstantInt::get(WideTy, L.Shift);
+            AnyShift |= L.Shift != 0;
+            if (!L.Mask.isAllOnes()) {
+              MaskConsts[Lane] = ConstantInt::get(NarrowTy, L.Mask);
+              AnyMask = true;
+            }
+          }
+          if (AnyMask)
+            VectorizedRoot = Builder.CreateAnd(VectorizedRoot,
+                                               ConstantVector::get(MaskConsts));
+          VectorizedRoot =
+              Builder.CreateZExt(VectorizedRoot, getWidenedType(WideTy, VF));
+          if (AnyShift)
+            VectorizedRoot = Builder.CreateShl(
+                VectorizedRoot, ConstantVector::get(ShiftConsts));
+        }
+
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
@@ -31346,7 +31450,7 @@ public:
                 ? SameValuesCounter.front().second
                 : 1,
             RedScalarTy != ScalarTy->getScalarType()
-                ? V.isSignedMinBitwidthRootNode()
+                ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
                 : true,
             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot());
 
@@ -31447,6 +31551,18 @@ public:
           if (NeedFreeze)
             LHS = Builder.CreateFreeze(LHS);
         };
+    // Leftover narrow values need the same mask/zext/shift as the vectorized
+    // ones.
+    auto WidenNarrowedVal = [&](Value *OrigV, Value *&V) {
+      auto It = NarrowedLeafShifts.find(OrigV);
+      if (It == NarrowedLeafShifts.end())
+        return;
+      if (!It->second.Mask.isAllOnes())
+        V = Builder.CreateAnd(V, It->second.Mask);
+      V = Builder.CreateZExt(V, ReductionRoot->getType());
+      if (It->second.Shift != 0)
+        V = Builder.CreateShl(V, It->second.Shift);
+    };
     // Finish the reduction.
     // Need to add extra arguments and not vectorized possible reduction values.
     // Try to avoid dependencies between the scalar remainders after reductions.
@@ -31467,6 +31583,8 @@ public:
         auto It2 = TrackedVals.find(RdxVal2);
         if (It2 != TrackedVals.end())
           StableRdxVal2 = It2->second;
+        WidenNarrowedVal(RdxVal1, StableRdxVal1);
+        WidenNarrowedVal(RdxVal2, StableRdxVal2);
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
@@ -31975,7 +32093,33 @@ private:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
-        if (DoesRequireReductionOp) {
+        if (!NarrowedLeafShifts.empty()) {
+          Type *WideTy = ReductionRoot->getType();
+          auto *NarrowVecTy =
+              cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
+          auto *WideVecTy =
+              cast<VectorType>(getWidenedType(WideTy, ReduxWidth));
+          if (DoesRequireReductionOp) {
+            VectorCost = TTI->getExtendedReductionCost(
+                RdxOpcode, /*IsUnsigned=*/true, WideTy, NarrowVecTy, FMF,
+                CostKind);
+          } else {
+            VectorCost =
+                TTI->getCastInstrCost(Instruction::ZExt, WideVecTy, NarrowVecTy,
+                                      TTI::CastContextHint::None, CostKind) +
+                TTI->getArithmeticInstrCost(RdxOpcode, WideVecTy, CostKind);
+          }
+          for (Instruction *I : NarrowedChainInsts)
+            VectorCost -= TTI->getInstructionCost(I, CostKind);
+          if (any_of(NarrowedLeafShifts,
+                     [](const auto &P) { return P.second.Shift != 0; }))
+            VectorCost += TTI->getArithmeticInstrCost(Instruction::Shl,
+                                                      WideVecTy, CostKind);
+          if (any_of(NarrowedLeafShifts,
+                     [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
+            VectorCost += TTI->getArithmeticInstrCost(Instruction::And,
+                                                      NarrowVecTy, CostKind);
+        } else if (DoesRequireReductionOp) {
           if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
@@ -32062,9 +32206,11 @@ private:
           }
         }
       }
+      Type *ScalarCostTy =
+          !NarrowedLeafShifts.empty() ? ReductionRoot->getType() : ScalarTy;
       ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
         return TTI->getArithmeticInstrCost(
-            RdxOpcode, ScalarTy, CostKind,
+            RdxOpcode, ScalarCostTy, CostKind,
             TTI::getOperandInfo(RdxOp->getOperand(0)),
             TTI::getOperandInfo(RdxOp->getOperand(1)), {}, RdxOp);
       });

@@ -8,6 +8,7 @@
 
 #include "SLPUtils.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -768,6 +769,121 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
                           Wide->hasNoInfs() && Narrow->hasAllowContract()))
     return nullptr;
   return Narrow;
+}
+
+namespace {
+
+/// Shifts and the mask accumulated from the narrow ops on the current path:
+/// the shifts above and at the narrow level, the bitwidth of the narrow ops
+/// (0 if none) and the mask from the absorbed narrow ands.
+struct NarrowedChainState {
+  unsigned Shift = 0;
+  unsigned NarrowShift = 0;
+  unsigned NarrowBW = 0;
+  APInt NarrowMask = APInt(1, 0);
+
+  /// The mask for the absorbed narrow ops in the leaf type, applied before
+  /// widening and shifting; all-ones if nothing was absorbed.
+  APInt getMask(unsigned LeafBW) const {
+    if (NarrowBW == 0)
+      return APInt::getAllOnes(LeafBW);
+    return (NarrowMask & (APInt::getAllOnes(NarrowBW) << NarrowShift))
+        .lshr(NarrowShift)
+        .trunc(LeafBW);
+  }
+};
+
+} // namespace
+
+static void
+collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                          NarrowedChainState S, unsigned Depth,
+                          unsigned MaxDepth,
+                          SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                          SmallVectorImpl<Instruction *> &ChainInsts) {
+  if (Depth < MaxDepth) {
+    if (auto *Z = dyn_cast<ZExtInst>(V);
+        Z && Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1)) {
+      ChainInsts.push_back(Z);
+      return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW, S,
+                                       Depth + 1, MaxDepth, Leaves, ChainInsts);
+    }
+    if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+      if (BO->getOpcode() == RdxOpcode) {
+        ChainInsts.push_back(BO);
+        collectNarrowedLeavesImpl(BO->getOperand(0), RdxOpcode, WideBW, S,
+                                  Depth + 1, MaxDepth, Leaves, ChainInsts);
+        collectNarrowedLeavesImpl(BO->getOperand(1), RdxOpcode, WideBW, S,
+                                  Depth + 1, MaxDepth, Leaves, ChainInsts);
+        return;
+      }
+      const APInt *Amt;
+      unsigned BW = V->getType()->getScalarSizeInBits();
+      auto *Z = dyn_cast<ZExtInst>(BO->getOperand(0));
+      if (BO->getOpcode() == Instruction::Shl && Z && S.NarrowBW == 0 &&
+          match(BO->getOperand(1), m_APInt(Amt)) && Amt->ult(BW) &&
+          Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1) &&
+          (BW == WideBW ||
+           Z->getSrcTy()->getIntegerBitWidth() + Amt->getZExtValue() <= BW) &&
+          S.Shift + Amt->getZExtValue() < WideBW) {
+        ChainInsts.push_back(BO);
+        ChainInsts.push_back(Z);
+        S.Shift += Amt->getZExtValue();
+        return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW, S,
+                                         Depth + 1, MaxDepth, Leaves,
+                                         ChainInsts);
+      }
+      // Narrow shls fold into the shift and narrow ands into the mask; the
+      // mask clears the bits the shls shift out. Only same-width ops compose
+      // on one path, and the combined shift must stay a valid shift amount in
+      // both types.
+      if (BW < WideBW && (S.NarrowBW == 0 || BW == S.NarrowBW)) {
+        if (BO->getOpcode() == Instruction::Shl &&
+            match(BO->getOperand(1), m_APInt(Amt)) && Amt->ult(BW) &&
+            S.NarrowShift + Amt->getZExtValue() < BW &&
+            S.Shift + S.NarrowShift + Amt->getZExtValue() < WideBW) {
+          ChainInsts.push_back(BO);
+          if (BO->hasNoUnsignedWrap() && S.NarrowBW == 0) {
+            S.Shift += Amt->getZExtValue();
+            // Lossless shls shift out only known-zero bits; record them as
+            // the mask so matching lanes can form a splat.
+            S.NarrowBW = BW;
+            S.NarrowMask = APInt::getLowBitsSet(BW, BW - Amt->getZExtValue());
+          } else {
+            if (S.NarrowBW == 0) {
+              S.NarrowBW = BW;
+              S.NarrowMask = APInt::getAllOnes(BW);
+            }
+            S.NarrowShift += Amt->getZExtValue();
+          }
+          return collectNarrowedLeavesImpl(BO->getOperand(0), RdxOpcode, WideBW,
+                                           S, Depth + 1, MaxDepth, Leaves,
+                                           ChainInsts);
+        }
+        Value *X;
+        if (match(BO, m_c_And(m_Value(X), m_APInt(Amt)))) {
+          ChainInsts.push_back(BO);
+          if (S.NarrowBW == 0) {
+            S.NarrowBW = BW;
+            S.NarrowMask = APInt::getAllOnes(BW);
+          }
+          S.NarrowMask &= *Amt << S.NarrowShift;
+          return collectNarrowedLeavesImpl(X, RdxOpcode, WideBW, S, Depth + 1,
+                                           MaxDepth, Leaves, ChainInsts);
+        }
+      }
+    }
+  }
+  Leaves.emplace_back(V, S.Shift + S.NarrowShift,
+                      S.getMask(V->getType()->getScalarSizeInBits()));
+}
+
+void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                           unsigned MaxDepth,
+                           SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                           SmallVectorImpl<Instruction *> &ChainInsts) {
+  collectNarrowedLeavesImpl(V, RdxOpcode, WideBW, NarrowedChainState(),
+                            /*Depth=*/0, MaxDepth, Leaves, ChainInsts);
 }
 
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
