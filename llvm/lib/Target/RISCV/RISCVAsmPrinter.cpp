@@ -1330,6 +1330,9 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
 MaybeAlign
 RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
+  if (!GV.getType()->isSized())
+    return std::nullopt;
+
   uint64_t Size = GV.getGlobalSize(getDataLayout());
   if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
     return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
