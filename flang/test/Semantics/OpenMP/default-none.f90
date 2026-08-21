@@ -85,3 +85,30 @@ subroutine parallel_critical()
   !$omp end critical
   !$omp end parallel
 end subroutine
+
+subroutine implicit_predetermined()
+  !$omp parallel default(none)
+  !$omp parallel
+  !$omp do
+    do i = 0, 10
+    end do
+  !$omp end parallel
+  !$omp end parallel
+end subroutine
+
+subroutine implicit_explicit()
+  !$omp task default(none)
+  !$omp task
+  !$omp parallel private(i)
+  i = 1
+  !$omp end parallel
+  !$omp end task
+  !$omp end task
+end subroutine
+
+! TODO Treat implied-DO variables in I/O lists as private.
+subroutine implicit_do_in_io_list()
+  !$omp parallel !default(none)
+    write(6,*) (i,i=1,10)
+  !$omp end parallel
+end subroutine

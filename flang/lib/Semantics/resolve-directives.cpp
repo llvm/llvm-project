@@ -2744,12 +2744,29 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         }
         hasDefaultNoneError = true;
       };
+      Symbol *curSymbol{nullptr};
+      if (auto it{scope.find(symbol->name())}; it != scope.end()) {
+        curSymbol = &*it->second;
+      }
+      // Setting the DSA of a symbol with OmpNone DSA in the enclosing construct
+      // is allowed when:
+      // - The DSA is private (no read or write to the original variable).
+      // - The DSA is predetermined (should only private be allowed?).
+      // - The DSA is implicit. The standard seems to allow this only for
+      //   variables that are not referenced in the construct
+      //   (OpenMP 6.0 - 7.5.1 default Clause), but current implementation
+      //   allows the DSA to be implicitly set by a non-leaf directive.
+      // TODO Treat implied-DO variables in I/O lists as private.
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
-      } else if (dsa.any() || crayPtrDSA.any()) {
+      } else if ((dsa.any() && curSymbol &&
+                     curSymbol->test(Symbol::Flag::OmpExplicit)) ||
+          (crayPtrDSA.any() && crayPtr &&
+              crayPtr->test(Symbol::Flag::OmpExplicit))) {
         defaultNoneError(dirContext.directiveSource, symbol);
-      } else if (dirDepth == (int)dirContext_.size() - 1) {
+      } else if (dsa.none() && crayPtrDSA.none() &&
+          dirDepth == (int)dirContext_.size() - 1) {
         defaultNoneError(name.source, symbol);
       }
     }
