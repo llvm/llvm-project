@@ -961,6 +961,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(
     return false;
 
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
   ++NumCmps;
 
   // The eliminated compare may have been the extra use preventing a
@@ -1843,7 +1844,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }
