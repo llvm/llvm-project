@@ -185,8 +185,8 @@ def FeatureStdExtZicfilp
                                  [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<1, 0, "Shadow stack",
-                                 [FeatureStdExtZicsr, FeatureStdExtZimop]>,
+    : RISCVExtension<1, 0, "Shadow stack",
+                     [FeatureStdExtZicsr, FeatureStdExtZimop]>,
       RISCVExtensionBitmask<1, 27>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
