@@ -832,7 +832,6 @@ public:
           [&]() { fir::FreeMemOp::create(*builder, loc, destBase); });
     }
 
-    // Image number computation
     auto cosubscripts = Fortran::lower::getCosubscripts(*this, loc, coarrayRef);
 
     // handle STAT from the CoarrayRef

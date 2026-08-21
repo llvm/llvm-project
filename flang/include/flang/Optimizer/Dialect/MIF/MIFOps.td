@@ -597,7 +597,7 @@ def mif_DeallocCoarrayOp
 //===----------------------------------------------------------------------===//
 
 def mif_GetCoarrayOp : mif_Op<"get_coarray", [AttrSizedOperandSegments]> {
-  let summary = "Fetch data in a coarray from an image number";
+  let summary = "Fetch data from a coarray, possibly using a coindexed reference";
   
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$coarray,
                        Variadic<AnyIntegerType>:$cosubscripts,
@@ -613,7 +613,7 @@ def mif_GetCoarrayOp : mif_Op<"get_coarray", [AttrSizedOperandSegments]> {
 }
 
 def mif_PutCoarrayOp : mif_Op<"put_coarray", [AttrSizedOperandSegments]> {
-  let summary = "Assign data to a coarray to an image number";
+  let summary = "Assign data to a coarray, possibly using a coindexed assignment";
   
   let arguments = (ins Arg<AnyType, "", [MemWrite]>:$coarray,
                        Variadic<AnyIntegerType>:$cosubscripts,
