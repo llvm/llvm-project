@@ -161,7 +161,7 @@ public:
         append_range(Stack, MBB->successors());
     }
 
-    for (auto &[MBB, Reachable] : ReachableMap) {
+    for (auto &[MBB, IsSource] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
         if (ReachableMap.count(Pred)) {
@@ -171,7 +171,7 @@ public:
         }
       }
       if (!HaveReachablePred)
-        Reachable = true;
+        IsSource = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
           if (!llvm::is_contained(Predecessors, UnreachablePred))
