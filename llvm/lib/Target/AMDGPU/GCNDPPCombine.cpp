@@ -670,6 +670,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
+  bool AnyCombined = false;
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
   SmallVector<MachineOperand *, 16> Uses(
       llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
@@ -684,8 +686,13 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     assert((TII->get(OrigOp).getSize() != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
            "There should not be e32 True16 instructions pre-RA");
     if (OrigOp == AMDGPU::REG_SEQUENCE) {
+      // A different reg is a forwarded lane of a nested REG_SEQUENCE.
+      if (Use->getReg() != DPPMovReg) {
+        LLVM_DEBUG(dbgs() << "  failed: nested REG_SEQUENCE\n");
+        break;
+      }
+
       Register FwdReg = OrigMI.getOperand(0).getReg();
-      unsigned FwdSubReg = 0;
 
       if (execMayBeModifiedBeforeAnyUse(*MRI, FwdReg, OrigMI)) {
         LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
@@ -693,21 +700,37 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         break;
       }
 
-      unsigned OpNo, E = OrigMI.getNumOperands();
-      for (OpNo = 1; OpNo < E; OpNo += 2) {
-        if (OrigMI.getOperand(OpNo).getReg() == DPPMovReg) {
-          FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
-          break;
-        }
+      // The DPP mov reg can appear in several operands.
+      unsigned OpNo = OrigMI.getOperandNo(Use);
+      unsigned FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
+      auto It = RegSeqWithOpNos.find(&OrigMI);
+
+      // Duplicate subreg indices pass the verifier. Lane already queued.
+      if (It != RegSeqWithOpNos.end() &&
+          llvm::any_of(It->second, [&](unsigned N) {
+            return OrigMI.getOperand(N + 1).getImm() == FwdSubReg;
+          })) {
+        It->second.push_back(OpNo);
+        Rollback = false;
+        continue;
       }
 
-      if (!FwdSubReg)
+      // Marking the operand undef is unsound if another read consumes the lane.
+      LaneBitmask FwdLanes = TRI->getSubRegIndexLaneMask(FwdSubReg);
+      if (llvm::any_of(
+              MRI->use_nodbg_operands(FwdReg), [&](const MachineOperand &Op) {
+                return Op.getSubReg() != FwdSubReg &&
+                       (TRI->getSubRegIndexLaneMask(Op.getSubReg()) & FwdLanes)
+                           .any();
+              })) {
+        LLVM_DEBUG(dbgs() << "  failed: REG_SEQUENCE lane has other reads\n");
         break;
+      }
 
-      for (auto &Op : MRI->use_nodbg_operands(FwdReg)) {
+      for (MachineOperand &Op : MRI->use_nodbg_operands(FwdReg))
         if (Op.getSubReg() == FwdSubReg)
           Uses.push_back(&Op);
-      }
+
       RegSeqWithOpNos[&OrigMI].push_back(OpNo);
       continue;
     }
@@ -766,6 +789,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
                                         OldOpndValue, CombBCZ, IsShrinkable)) {
         DPPMIs.push_back(DPPInst);
         Rollback = false;
+        AnyCombined = true;
       }
     } else {
       assert(Use == Src1 && OrigMI.isCommutable()); // by check [1]
@@ -779,6 +803,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
                               IsShrinkable)) {
           DPPMIs.push_back(DPPInst);
           Rollback = false;
+          AnyCombined = true;
         }
       } else
         LLVM_DEBUG(dbgs() << "  failed: cannot be commuted\n");
@@ -789,7 +814,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     OrigMIs.push_back(&OrigMI);
   }
 
-  Rollback |= !Uses.empty();
+  // A REG_SEQUENCE lane with no readers must not commit the erase of MovMI.
+  Rollback |= !Uses.empty() || !AnyCombined;
 
   for (auto *MI : *(Rollback? &DPPMIs : &OrigMIs))
     MI->eraseFromParent();
