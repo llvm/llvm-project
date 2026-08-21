@@ -167,7 +167,7 @@ bool BPFPassConfig::addLegalizeMachineIR() {
 }
 
 bool BPFPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

@@ -7492,12 +7492,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
       AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-    const bool FTZ =
-        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
-        DenormalMode::PreserveSign;
+    const Function *F = AI->getFunction();
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+                       DenormalMode::PreserveSign;
       bool UseNative = AllowFTZAtomics;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
@@ -7512,9 +7512,15 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
-        STI.hasFeature(NVPTX::SM70) && STI.hasFeature(NVPTX::PTX63))
-      return AtomicExpansionKind::None;
+    if (Ty->isHalfTy()) {
+      // atom.add.f16 never flushes denormals, so it only agrees with a
+      // function that is not in FTZ mode for f16.
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+                       DenormalMode::PreserveSign;
+      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+          STI.hasFeature(NVPTX::PTX63))
+        return AtomicExpansionKind::None;
+    }
 
     if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
       return AtomicExpansionKind::None;
