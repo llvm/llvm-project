@@ -1725,8 +1725,13 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
-  if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
+  if (isa<ConstantPointerNull>(CI->getArgOperand(0))) {
+    Value *Malloc = emitMalloc(CI->getArgOperand(1), B, DL, TLI);
+    if (auto *MallocCI = dyn_cast_or_null<CallInst>(Malloc))
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alloc_token))
+        MallocCI->setMetadata(LLVMContext::MD_alloc_token, MD);
+    return copyFlags(*CI, Malloc);
+  }
 
   return nullptr;
 }
@@ -1740,8 +1745,8 @@ Value *LibCallSimplifier::maybeOptimizeNoBuiltinOperatorNew(CallInst *CI,
   Function *Callee = CI->getCalledFunction();
   if (!Callee)
     return nullptr;
-  LibFunc Func;
-  if (!TLI->getLibFunc(*Callee, Func))
+  LibFunc Func = TLI->getLibFunc(*Callee);
+  if (Func == NotLibFunc)
     return nullptr;
   switch (Func) {
   case LibFunc_Znwm:
@@ -2047,6 +2052,47 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
   return optimizeDoubleFP(CI, B, true, TLI, isPrecise);
 }
 
+/// Shrink double -> float for llvm.sincos.
+static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
+  auto *RetTy = dyn_cast<StructType>(CI->getType());
+  if (!RetTy || RetTy->getNumElements() != 2 ||
+      !RetTy->getElementType(0)->getScalarType()->isDoubleTy())
+    return nullptr;
+
+  Value *X = valueHasFloatPrecision(CI->getArgOperand(0));
+  if (!X)
+    if (auto *Ext = dyn_cast<FPExtInst>(CI->getArgOperand(0)))
+      if (Ext->getOperand(0)->getType()->getScalarType()->isFloatTy())
+        X = Ext->getOperand(0);
+  if (!X)
+    return nullptr;
+
+  for (User *U : CI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV)
+      return nullptr;
+    for (User *EVU : EV->users()) {
+      auto *Cast = dyn_cast<FPTruncInst>(EVU);
+      if (!Cast || !Cast->getType()->getScalarType()->isFloatTy())
+        return nullptr;
+    }
+  }
+
+  IRBuilderBase::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+
+  Value *NewCall = B.CreateIntrinsic(Intrinsic::sincos, X->getType(), X);
+  cast<Instruction>(NewCall)->setMetadata(
+      LLVMContext::MD_fpmath, CI->getMetadata(LLVMContext::MD_fpmath));
+  Value *Res = PoisonValue::get(RetTy);
+  for (unsigned I = 0; I != 2; ++I) {
+    Value *Ext = B.CreateFPExt(B.CreateExtractValue(NewCall, I),
+                               RetTy->getElementType(I));
+    Res = B.CreateInsertValue(Res, Ext, I);
+  }
+  return Res;
+}
+
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
 Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
   Value *Real, *Imag;
@@ -2140,11 +2186,10 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   // TODO: Handle exp10() when more targets have it available.
   CallInst *BaseFn = dyn_cast<CallInst>(Base);
   if (BaseFn && BaseFn->hasOneUse() && BaseFn->isFast() && Pow->isFast()) {
-    LibFunc LibFn;
-
     Function *CalleeFn = BaseFn->getCalledFunction();
-    if (CalleeFn && TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
-        isLibFuncEmittable(M, TLI, LibFn)) {
+    LibFunc LibFn =
+        CalleeFn ? TLI->getLibFunc(CalleeFn->getName()) : NotLibFunc;
+    if (isLibFuncEmittable(M, TLI, LibFn)) {
       StringRef ExpName;
       Intrinsic::ID ID;
       Value *ExpFn;
@@ -2465,7 +2510,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // powf(x, itofp(y)) -> powi(x, y)
-  if (AllowApprox && (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
+  // The powi exponent must be a scalar integer, so a vector y is not usable.
+  if (AllowApprox && !Expo->getType()->isVectorTy() &&
+      (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
     if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return copyFlags(*Pow, createPowWithIntegerExponent(Base, ExpoI, M, B));
   }
@@ -2557,7 +2604,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   LibFunc LogLb, ExpLb, Exp2Lb, Exp10Lb, PowLb;
 
   // This is only applicable to log(), log2(), log10().
-  if (TLI->getLibFunc(LogNm, LogLb)) {
+  LogLb = TLI->getLibFunc(LogNm);
+  if (LogLb != NotLibFunc) {
     switch (LogLb) {
     case LibFunc_logf:
       LogID = Intrinsic::log;
@@ -2673,8 +2721,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   B.setFastMathFlags(FastMathFlags::getFast());
 
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb = TLI->getLibFunc(*Arg);
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
@@ -2729,12 +2776,12 @@ Value *LibCallSimplifier::mergeSqrtToExp(CallInst *CI, IRBuilderBase &B) {
   if (!Arg || !Arg->hasAllowReassoc() || !Arg->hasOneUse())
     return nullptr;
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb = TLI->getLibFunc(*Arg);
 
   LibFunc SqrtLb, ExpLb, Exp2Lb, Exp10Lb;
 
-  if (TLI->getLibFunc(SqrtFn->getName(), SqrtLb))
+  SqrtLb = TLI->getLibFunc(SqrtFn->getName());
+  if (SqrtLb != NotLibFunc)
     switch (SqrtLb) {
     case LibFunc_sqrtf:
       ExpLb = LibFunc_expf;
@@ -2903,10 +2950,9 @@ Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
   // sinh(asinh(x)) -> x
   // asinh(sinh(x)) -> x
   // cosh(acosh(x)) -> x
-  LibFunc Func;
   Function *F = OpC->getCalledFunction();
-  if (F && TLI->getLibFunc(F->getName(), Func) &&
-      isLibFuncEmittable(M, TLI, Func)) {
+  LibFunc Func = F ? TLI->getLibFunc(F->getName()) : NotLibFunc;
+  if (isLibFuncEmittable(M, TLI, Func)) {
     LibFunc inverseFunc = llvm::StringSwitch<LibFunc>(Callee->getName())
                               .Case("tan", LibFunc_atan)
                               .Case("atanh", LibFunc_tanh)
@@ -2962,8 +3008,7 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
 
   if (!isLibFuncEmittable(M, TLI, Name))
     return false;
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
+  LibFunc TheLibFunc = TLI->getLibFunc(Name);
   FunctionCallee Callee = getOrInsertLibFunc(
       M, *TLI, TheLibFunc, OrigCallee->getAttributes(), ResTy, ArgTy);
 
@@ -2984,10 +3029,8 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     Sin = B.CreateExtractValue(SinCos, 0, "sinpi");
     Cos = B.CreateExtractValue(SinCos, 1, "cospi");
   } else {
-    Sin = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 0),
-                                 "sinpi");
-    Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
-                                 "cospi");
+    Sin = B.CreateExtractElement(SinCos, uint64_t{0}, "sinpi");
+    Cos = B.CreateExtractElement(SinCos, uint64_t{1}, "cospi");
   }
 
   return true;
@@ -3117,10 +3160,8 @@ void LibCallSimplifier::classifyArgUse(
 
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
-  LibFunc Func;
-  if (!Callee || !TLI->getLibFunc(*Callee, Func) ||
-      !isLibFuncEmittable(M, TLI, Func) ||
-      !isTrigLibCall(CI))
+  LibFunc Func = Callee ? TLI->getLibFunc(*Callee) : NotLibFunc;
+  if (!isLibFuncEmittable(M, TLI, Func) || !isTrigLibCall(CI))
     return;
 
   if (IsFloat) {
@@ -3897,11 +3938,11 @@ bool LibCallSimplifier::hasFloatVersion(const Module *M, StringRef FuncName) {
 Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
                                                       IRBuilderBase &Builder) {
   Module *M = CI->getModule();
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
 
   // Check for string/memory library functions.
-  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
+  if (isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
     assert(
         (ignoreCallingConv(Func) ||
@@ -4039,6 +4080,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospif:
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    return nullptr;
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    return nullptr;
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4105,6 +4156,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
   case LibFunc_trunc:
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+  case LibFunc_sin:
+  case LibFunc_cos:
+    if (UnsafeFPShrink &&
+        hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
+        return V;
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(
+          CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
+    return nullptr;
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
@@ -4113,8 +4174,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp:
   case LibFunc_exp10:
   case LibFunc_expm1:
-  case LibFunc_cos:
-  case LibFunc_sin:
   case LibFunc_tanh:
     if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
@@ -4172,8 +4231,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return maybeOptimizeNoBuiltinOperatorNew(CI, Builder);
   }
 
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -4218,6 +4277,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       if (UnsafeFPShrink)
         return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
       return nullptr;
+    case Intrinsic::sincos:
+      if (UnsafeFPShrink)
+        return optimizeSinCosDoubleFP(CI, Builder);
+      return nullptr;
     default:
       return nullptr;
     }
@@ -4229,7 +4292,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return SimplifiedFortifiedCI;
 
   // Then check for known library functions.
-  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
+  if (isLibFuncEmittable(M, TLI, Func)) {
     // We never change the calling convention.
     if (!ignoreCallingConv(Func) && !IsCallingConvC)
       return nullptr;
@@ -4616,7 +4679,6 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
   //
   // PR23093.
 
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
@@ -4628,7 +4690,8 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
 
   // First, check that this is a known library functions and that the prototype
   // is correct.
-  if (!TLI->getLibFunc(*Callee, Func))
+  LibFunc Func = TLI->getLibFunc(*Callee);
+  if (Func == NotLibFunc)
     return nullptr;
 
   // We never change the calling convention.

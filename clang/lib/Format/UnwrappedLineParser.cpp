@@ -2663,7 +2663,8 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 /// Parses a pair of parentheses (and everything between them).
 /// \param StarAndAmpTokenType If different than TT_Unknown sets this type for
 /// all (double) ampersands and stars. This applies for all nested scopes as
-/// well.
+/// well, this is disabled within a (potential) template argument <>, and thus
+/// also if we find only a <.
 ///
 /// Returns whether there is a `=` token between the parentheses.
 bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
@@ -2674,6 +2675,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
+  auto ExcessLess = 0;
   nextToken();
   const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
   if (!InMacroCall && Prev && Prev->is(TT_FunctionLikeMacro))
@@ -2681,8 +2683,10 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
-      if (parseParens(StarAndAmpTokenType, InMacroCall))
+      if (parseParens(ExcessLess == 0 ? StarAndAmpTokenType : TT_Unknown,
+                      InMacroCall)) {
         SeenEqual = true;
+      }
       if (Style.isJava() && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
@@ -2799,10 +2803,21 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
     case tok::kw_requires:
       parseRequiresExpression();
       break;
+    case tok::less:
+      // We have here no clue wether this is a less, or a template opener, opt
+      // out of the predefined StarAndAmpTokenType.
+      ++ExcessLess;
+      nextToken();
+      break;
+    case tok::greater:
+      if (ExcessLess > 0)
+        --ExcessLess;
+      nextToken();
+      break;
     case tok::star:
     case tok::amp:
     case tok::ampamp:
-      if (StarAndAmpTokenType != TT_Unknown)
+      if (StarAndAmpTokenType != TT_Unknown && ExcessLess == 0)
         FormatTok->setFinalizedType(StarAndAmpTokenType);
       [[fallthrough]];
     default:
@@ -3858,6 +3873,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       case tok::exclaim:     // The same as above, but unary.
       case tok::kw_requires: // Initial identifier of a requires clause.
       case tok::equal:       // Initial identifier of a concept declaration.
+      case tok::kw_template: // A dependent template.
         break;
       default:
         return;

@@ -35,7 +35,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
@@ -43,7 +43,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -161,6 +160,8 @@ namespace {
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
 
+    void VisitBinComma(BinaryOperator *Node);
+
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
     void Visit##CLASS(CLASS *Node);
@@ -263,7 +264,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+      !isa<CXXExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
+          Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -445,6 +447,37 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintExpr(Node->getRangeInit());
   OS << ")";
   PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node) {
+  OS << "template for (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 14);
+  PrintingPolicy SubPolicy(Policy);
+  SubPolicy.SuppressInitializers = true;
+  Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
+  OS << " : ";
+
+  if (Node->isIterating())
+    PrintExpr(Node->getRangeVar()->getInit());
+  else if (Node->isDependent())
+    PrintExpr(Node->getExpansionInitializer());
+  else if (Node->isDestructuring())
+    PrintExpr(Node->getDecompositionDecl()->getInit());
+  else
+    PrintExpr(Node->getExpansionVariable()->getInit());
+
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *) {
+  llvm_unreachable("should never be printed");
+}
+
+void StmtPrinter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *Node) {
+  PrintExpr(Node->getRangeExpr());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {
@@ -934,9 +967,16 @@ void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
-void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
+void StmtPrinter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *Node) {
   Indent() << "#pragma omp ordered";
-  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
+  PrintOMPExecutableDirective(Node, true);
+}
+
+void StmtPrinter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *Node) {
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
@@ -1850,6 +1890,24 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
+  if (QualType T = Node->getType(); Policy.PrettyEnums && T->isEnumeralType()) {
+    // special case enums to avoid producing cast expressions when naming
+    // an enumerator would suffice
+
+    const auto *IL = dyn_cast<IntegerLiteral>(Node->getSubExpr());
+    const auto *ED = T->getAsEnumDecl();
+    if (IL && ED) {
+      llvm::APInt Val = IL->getValue();
+      const auto ECD =
+          llvm::find_if(ED->enumerators(), [&](const EnumConstantDecl *ECD) {
+            return llvm::APInt::isSameValue(ECD->getInitVal(), Val);
+          });
+      if (ECD != ED->enumerator_end()) {
+        ECD->printQualifiedName(OS, Policy);
+        return;
+      }
+    }
+  }
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
   OS << ')';
@@ -1866,6 +1924,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
+}
+
+void StmtPrinter::VisitBinComma(BinaryOperator *Node) {
+  PrintExpr(Node->getLHS());
+  OS << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
+  PrintExpr(Node->getRHS());
 }
 
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {
@@ -2605,6 +2669,12 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   // TODO(Reflection): Implement this.
   assert(false && "not implemented yet");
+}
+
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  OS << Node->getNameInfo();
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(

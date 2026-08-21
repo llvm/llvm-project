@@ -1579,6 +1579,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "  requires(is_convertible_v<const T&, Foo>)"
+                    "void foo(T) {}");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T>\n"
+                    "  requires(is_convertible_v<(const T&), Foo>)"
+                    "void foo(T) {}");
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -1711,6 +1723,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "struct S {\n"
+                    "  template <typename Foo>\n"
+                    "    requires T::template Has<Foo>\n"
+                    "  void func(Foo);\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[20], tok::greater, TT_TemplateCloser);
+  EXPECT_TRUE(Tokens[20]->ClosesRequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {
@@ -4557,6 +4579,25 @@ TEST_F(TokenAnnotatorTest, AttributeSquares) {
   EXPECT_TOKEN(Tokens[14], tok::r_square, TT_Unknown);
   EXPECT_TOKEN(Tokens[15], tok::r_square, TT_AttributeRSquare);
   EXPECT_TRUE(Tokens[15]->EndsCppAttributeGroup);
+}
+
+TEST_F(TokenAnnotatorTest, CSharpUtf8StringLiterals) {
+  const auto Style = getLLVMStyle(FormatStyle::LK_CSharp);
+  auto Tokens = annotate("var text = \"text/plain\"u8;", Style);
+
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::utf8_string_literal, TT_CSharpStringLiteral);
+
+  Tokens = annotate("var text = @\"text/plain\"u8;", Style);
+
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::utf8_string_literal, TT_CSharpStringLiteral);
+
+  Tokens = annotate("var text = \"text/plain\" u8;", Style);
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
 }
 
 } // namespace

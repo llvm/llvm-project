@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // Delay cuf.alloc of descriptor (box) types from function entry to just before
-// their first use. This defers cudaMallocManaged calls so that users can call
-// cudaSetDevice before any CUDA context is created.
+// their first use, possibly in a later block that dominates every use. This
+// defers cudaMallocManaged calls so that users can call cudaSetDevice before
+// any CUDA context is created.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +18,10 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir {
@@ -28,69 +31,90 @@ namespace fir {
 
 namespace {
 
-/// Find the earliest use of any of the declare results, returning the
-/// operation before which the cuf.alloc group should be placed.
+/// Return the coordinate_of producing the host association tuple slot that
+/// \p storeOp writes \p descriptor into, or null if this is not such a capture.
+static fir::CoordinateOp getHostAssocTupleSlot(fir::StoreOp storeOp,
+                                               mlir::Value descriptor) {
+  if (storeOp.getValue() != descriptor ||
+      !mlir::isa<fir::LLVMPointerType>(storeOp.getMemref().getType()))
+    return nullptr;
+  auto coord = storeOp.getMemref().getDefiningOp<fir::CoordinateOp>();
+  if (!coord ||
+      !mlir::isa<mlir::TupleType>(fir::unwrapRefType(coord.getRef().getType())))
+    return nullptr;
+  return coord;
+}
+
+/// Return true if \p coord's result is only stored into, so it writes the tuple
+/// rather than reading it.
+static bool onlyPopulatesSlot(fir::CoordinateOp coord) {
+  return llvm::all_of(coord->getUsers(), [&](mlir::Operation *user) {
+    auto storeOp = mlir::dyn_cast<fir::StoreOp>(user);
+    return storeOp && storeOp.getMemref() == coord.getResult();
+  });
+}
+
+/// Find the point before which the cuf.alloc group should be placed: the
+/// earliest use in the block that dominates all uses, or that block's
+/// terminator if it holds no use itself. Uses in nested regions resolve to
+/// their enclosing top-level op.
 ///
-/// Uses inside nested regions (fir.if, fir.do_loop, etc.) are resolved to
-/// the parent op in the entry block.  When all real uses reside in a single
-/// successor block of the entry block, the target is placed in that block
-/// (just before the earliest use there) so the alloc is deferred past any
-/// setup code that precedes the branch.
-///
-/// Stores to fir.llvm_ptr destinations (host-association tuple slots) are
-/// skipped as "uses" and collected in \p hostAssocStores so the caller can
-/// move them along with the sunk group.
+/// Host association stores go to \p hostAssocStores and sink with the group
+/// instead of constraining it; the tuple's readers constrain it instead.
 static mlir::Operation *
 findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
+                mlir::DominanceInfo &domInfo,
                 llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
-  mlir::Operation *earliest = nullptr;
   mlir::Region *funcRegion = entryBlock->getParent();
 
-  // Track successor-block uses: which blocks, and the earliest op in each.
-  llvm::SmallDenseMap<mlir::Block *, mlir::Operation *> successorEarliest;
+  // Uses resolved to an op that sits directly in a block of the function.
+  llvm::SmallVector<mlir::Operation *> uses;
 
-  auto updateEarliest = [&](mlir::Operation *user) {
-    if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
-      if (mlir::isa<fir::LLVMPointerType>(store.getMemref().getType())) {
-        hostAssocStores.push_back(store);
-        return;
-      }
-    }
-    mlir::Operation *target = user;
-    while (target->getBlock() != entryBlock) {
-      // User in another block of the same function.
-      if (target->getBlock() && target->getBlock()->getParent() == funcRegion) {
-        mlir::Block *blk = target->getBlock();
-        auto it = successorEarliest.find(blk);
-        if (it == successorEarliest.end() ||
-            target->isBeforeInBlock(it->second))
-          successorEarliest[blk] = target;
-        return;
-      }
-      target = target->getParentOp();
-      if (!target)
-        return;
-    }
-    if (!earliest || target->isBeforeInBlock(earliest))
-      earliest = target;
+  auto recordRealUse = [&](mlir::Operation *user) {
+    mlir::Operation *op = user;
+    while (op && op->getBlock() && op->getBlock()->getParent() != funcRegion)
+      op = op->getParentOp();
+    if (op && op->getBlock())
+      uses.push_back(op);
   };
 
   for (mlir::Value result : declareOp->getResults()) {
-    for (mlir::Operation *user : result.getUsers())
-      updateEarliest(user);
+    for (mlir::Operation *user : result.getUsers()) {
+      auto storeOp = mlir::dyn_cast<fir::StoreOp>(user);
+      fir::CoordinateOp slot =
+          storeOp ? getHostAssocTupleSlot(storeOp, result) : nullptr;
+      if (!slot) {
+        recordRealUse(user);
+        continue;
+      }
+      // Whoever reads the tuple must still see a populated slot.
+      hostAssocStores.push_back(storeOp);
+      for (mlir::Operation *tupleUser : slot.getRef().getUsers()) {
+        auto coord = mlir::dyn_cast<fir::CoordinateOp>(tupleUser);
+        if (coord && onlyPopulatesSlot(coord))
+          continue;
+        recordRealUse(tupleUser);
+      }
+    }
   }
 
-  if (earliest)
-    return earliest;
+  if (uses.empty())
+    return nullptr;
 
-  // No entry-block uses.  If all successor uses are in a single block,
-  // delay directly into that block (before the earliest use there).
-  // Otherwise fall back to the entry block's terminator.
-  if (successorEarliest.size() == 1)
-    return successorEarliest.begin()->second;
-  if (!successorEarliest.empty())
-    return entryBlock->getTerminator();
-  return nullptr;
+  mlir::Block *common = uses.front()->getBlock();
+  for (mlir::Operation *use : uses) {
+    common = domInfo.findNearestCommonDominator(common, use->getBlock());
+    if (!common)
+      return nullptr;
+  }
+
+  mlir::Operation *earliest = nullptr;
+  for (mlir::Operation *use : uses)
+    if (use->getBlock() == common &&
+        (!earliest || use->isBeforeInBlock(earliest)))
+      earliest = use;
+
+  return earliest ? earliest : common->getTerminator();
 }
 
 struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
@@ -101,6 +125,7 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
       return;
 
     mlir::Block &entryBlock = func.front();
+    mlir::DominanceInfo domInfo(func);
 
     // Collect box-type cuf.alloc ops in the entry block.
     llvm::SmallVector<cuf::AllocOp> boxAllocOps;
@@ -110,9 +135,8 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
           boxAllocOps.push_back(allocOp);
 
     for (cuf::AllocOp allocOp : boxAllocOps) {
-      // Find the fir.declare and fir.store that use this cuf.alloc.
-      // Bail out if the alloc has any unexpected users to avoid breaking
-      // dominance for patterns we don't track.
+      // Find the fir.declare and fir.store using this cuf.alloc; bail on any
+      // unexpected user.
       fir::DeclareOp declareOp = nullptr;
       fir::StoreOp storeOp = nullptr;
       bool hasUnknownUser = false;
@@ -129,34 +153,46 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
 
       llvm::SmallVector<fir::StoreOp> hostAssocStores;
       mlir::Operation *delayTarget =
-          findDelayTarget(declareOp, &entryBlock, hostAssocStores);
+          findDelayTarget(declareOp, &entryBlock, domInfo, hostAssocStores);
       if (!delayTarget)
         continue;
 
-      // Don't move if target is in the same block and at or before current pos.
+      // Skip if the target is at or before the alloc, or is the declare.
       if (delayTarget->getBlock() == allocOp->getBlock() &&
           (delayTarget->isBeforeInBlock(allocOp) || delayTarget == allocOp))
         continue;
-      // Don't move to the declare itself.
       if (delayTarget == declareOp)
         continue;
 
-      // Move {cuf.alloc, fir.store, fir.declare} before the delay target.
-      // The embox/zero_bits/shape/constants stay at their original positions
-      // since they still dominate the new locations.
-      allocOp->moveBefore(delayTarget);
+      // Ops that move together, keeping their relative order.
+      llvm::SmallVector<mlir::Operation *> group;
+      group.push_back(allocOp);
       if (storeOp)
-        storeOp->moveAfter(allocOp);
-      if (storeOp)
-        declareOp->moveAfter(storeOp);
-      else
-        declareOp->moveAfter(allocOp);
+        group.push_back(storeOp);
+      group.push_back(declareOp);
+      for (fir::StoreOp hostAssocStore : hostAssocStores)
+        group.push_back(hostAssocStore);
 
-      // Move host-association tuple stores after the declare.
-      mlir::Operation *insertAfter = declareOp;
-      for (fir::StoreOp hostStore : hostAssocStores) {
-        hostStore->moveAfter(insertAfter);
-        insertAfter = hostStore;
+      // Whatever the group reads from outside itself stays put, so it must
+      // already dominate the new position.
+      llvm::SmallPtrSet<mlir::Operation *, 8> groupSet(group.begin(),
+                                                       group.end());
+      auto readsDominateTarget = [&](mlir::Operation *op) {
+        return llvm::all_of(op->getOperands(), [&](mlir::Value operand) {
+          mlir::Operation *def = operand.getDefiningOp();
+          return (def && groupSet.contains(def)) ||
+                 domInfo.properlyDominates(operand, delayTarget);
+        });
+      };
+      if (!llvm::all_of(group, readsDominateTarget))
+        continue;
+
+      // Sink the group before the target, preserving its relative order.
+      group.front()->moveBefore(delayTarget);
+      mlir::Operation *last = group.front();
+      for (mlir::Operation *op : llvm::drop_begin(group)) {
+        op->moveAfter(last);
+        last = op;
       }
     }
   }

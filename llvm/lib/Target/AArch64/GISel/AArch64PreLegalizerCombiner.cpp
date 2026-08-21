@@ -656,16 +656,12 @@ bool matchSimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT WideTy1 = MRI.getType(Op1Wide);
   Register ResVal = MI.getOperand(0).getReg();
   LLT OpTy = MRI.getType(ResVal);
-  MachineInstr *Op0WideDef = MRI.getVRegDef(Op0Wide);
-  MachineInstr *Op1WideDef = MRI.getVRegDef(Op1Wide);
-
   unsigned OpTySize = OpTy.getScalarSizeInBits();
   // First check that the G_TRUNC feeding the G_UADDO are no-ops, because the
   // inputs have been zero-extended.
-  if (Op0WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      Op1WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      OpTySize != Op0WideDef->getOperand(2).getImm() ||
-      OpTySize != Op1WideDef->getOperand(2).getImm())
+  if (!mi_match(Op0Wide, MRI,
+                m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))) ||
+      !mi_match(Op1Wide, MRI, m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))))
     return false;
 
   // Only scalar UADDO with either 8 or 16 bit operands are handled.
@@ -845,7 +841,6 @@ void AArch64PreLegalizerCombinerLegacy::getAnalysisUsage(
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<LibcallLoweringInfoWrapper>();
@@ -918,13 +913,13 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)
     reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
-  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+  const LibcallLoweringInfo &Libcalls = getLibcallLowering(*LibcallResult, ST);
 
   bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 
@@ -934,7 +929,6 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelValueTrackingAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<GISelCSEAnalysis>();
   return PA;
 }

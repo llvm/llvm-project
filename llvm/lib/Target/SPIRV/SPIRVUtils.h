@@ -37,6 +37,7 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class Register;
 class StringRef;
+class Triple;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
@@ -99,6 +100,10 @@ public:
 
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
+
+  // Returns the dominator tree computed for the function this visitor
+  // operates on.
+  const DomTreeBuilder::BBDomTree &getDominatorTree() const { return DT; }
 
   // Returns true is |LHS| comes before |RHS| in the partial ordering.
   // If |LHS| and |RHS| have the same rank, the traversal order determines the
@@ -281,7 +286,11 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem);
+
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id);
 
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def

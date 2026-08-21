@@ -533,235 +533,10 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
   return UNKNOWN_LIBCALL;
 }
 
-RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
-  return getFPLibCall(RetVT, POWI_F32, POWI_F64, POWI_F80, POWI_F128,
-                      POWI_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::POW_V4F32;
-    case MVT::v2f64:
-      return RTLIB::POW_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::POW_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::POW_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
-  return getFPLibCall(RetVT, LDEXP_F32, LDEXP_F64, LDEXP_F80, LDEXP_F128,
-                      LDEXP_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
-  return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
-                      FREXP_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSIN(EVT RetVT) {
-  return getFPLibCall(RetVT, SIN_F32, SIN_F64, SIN_F80, SIN_F128, SIN_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
-  return getFPLibCall(RetVT, COS_F32, COS_F64, COS_F80, COS_F128, COS_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::SINCOS_V4F32;
-    case MVT::v8f32:
-      return RTLIB::SINCOS_V8F32;
-    case MVT::v16f32:
-      return RTLIB::SINCOS_V16F32;
-    case MVT::v2f64:
-      return RTLIB::SINCOS_V2F64;
-    case MVT::v4f64:
-      return RTLIB::SINCOS_V4F64;
-    case MVT::v8f64:
-      return RTLIB::SINCOS_V8F64;
-    case MVT::nxv4f32:
-      return RTLIB::SINCOS_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::SINCOS_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
-                      SINCOS_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::SINCOSPI_V4F32;
-    case MVT::v2f64:
-      return RTLIB::SINCOSPI_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::SINCOSPI_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::SINCOSPI_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, SINCOSPI_F32, SINCOSPI_F64, SINCOSPI_F80,
-                      SINCOSPI_F128, SINCOSPI_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
-  return getFPLibCall(RetVT, SINCOS_STRET_F32, SINCOS_STRET_F64,
-                      UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
-}
-
-RTLIB::Libcall RTLIB::getREM(EVT VT) {
-  // TODO: Tablegen should generate this function
-  if (VT.isVector()) {
-    if (!VT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::REM_V4F32;
-    case MVT::v2f64:
-      return RTLIB::REM_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::REM_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::REM_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(VT, REM_F32, REM_F64, REM_F80, REM_F128, REM_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getCBRT(EVT VT) {
-  // TODO: Tablegen should generate this function
-  if (VT.isVector()) {
-    if (!VT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::CBRT_V4F32;
-    case MVT::v2f64:
-      return RTLIB::CBRT_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::CBRT_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::CBRT_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(VT, CBRT_F32, CBRT_F64, CBRT_F80, CBRT_F128,
-                      CBRT_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::MODF_V4F32;
-    case MVT::v2f64:
-      return RTLIB::MODF_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::MODF_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::MODF_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
-                      MODF_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getLROUND(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LROUND_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LROUND_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LROUND_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LROUND_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LROUND_PPCF128;
-
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLLROUND(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LLROUND_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LLROUND_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LLROUND_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LLROUND_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LLROUND_PPCF128;
-
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLRINT(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LRINT_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LRINT_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LRINT_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LRINT_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LRINT_PPCF128;
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLLRINT(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LLRINT_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LLRINT_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LLRINT_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LLRINT_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LLRINT_PPCF128;
-  return RTLIB::UNKNOWN_LIBCALL;
-}
+// The floating-point RTLIB::getXXX(EVT) selectors are generated from the
+// RuntimeLibcallFamily table in RuntimeLibcalls.td.
+#define GET_RUNTIME_LIBCALL_FP_SELECTORS
+#include "llvm/IR/RuntimeLibcalls.inc"
 
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
@@ -939,89 +714,17 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
-    RTLIB::LibcallImpl Impl) const {
-  switch (Impl) {
-  case RTLIB::impl___aeabi_dcmpeq__une:
-  case RTLIB::impl___aeabi_fcmpeq__une:
-    // Usage in the eq case, so we have to invert the comparison.
-    return ISD::SETEQ;
-  case RTLIB::impl___aeabi_dcmpeq__oeq:
-  case RTLIB::impl___aeabi_fcmpeq__oeq:
-    // Normal comparison to boolean value.
-    return ISD::SETNE;
-  case RTLIB::impl___aeabi_dcmplt:
-  case RTLIB::impl___aeabi_dcmple:
-  case RTLIB::impl___aeabi_dcmpge:
-  case RTLIB::impl___aeabi_dcmpgt:
-  case RTLIB::impl___aeabi_dcmpun:
-  case RTLIB::impl___aeabi_fcmplt:
-  case RTLIB::impl___aeabi_fcmple:
-  case RTLIB::impl___aeabi_fcmpge:
-  case RTLIB::impl___aeabi_fcmpgt:
-    /// The AEABI versions return a typical boolean value, so we can compare
-    /// against the integer result as simply != 0.
-    return ISD::SETNE;
-  default:
-    break;
-  }
-
-  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
-  // each other, and return a 3-way comparison style result of -1, 0, or 1
-  // depending on lt/eq/gt.
-  //
-  // FIXME: It would be cleaner to directly express this as a 3-way comparison
-  // soft FP libcall instead of individual compares.
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-  switch (LC) {
-  case RTLIB::OEQ_F32:
-  case RTLIB::OEQ_F64:
-  case RTLIB::OEQ_F128:
-  case RTLIB::OEQ_PPCF128:
-    return ISD::SETEQ;
-  case RTLIB::UNE_F32:
-  case RTLIB::UNE_F64:
-  case RTLIB::UNE_F128:
-  case RTLIB::UNE_PPCF128:
-    return ISD::SETNE;
-  case RTLIB::OGE_F32:
-  case RTLIB::OGE_F64:
-  case RTLIB::OGE_F128:
-  case RTLIB::OGE_PPCF128:
-    return ISD::SETGE;
-  case RTLIB::OLT_F32:
-  case RTLIB::OLT_F64:
-  case RTLIB::OLT_F128:
-  case RTLIB::OLT_PPCF128:
-    return ISD::SETLT;
-  case RTLIB::OLE_F32:
-  case RTLIB::OLE_F64:
-  case RTLIB::OLE_F128:
-  case RTLIB::OLE_PPCF128:
-    return ISD::SETLE;
-  case RTLIB::OGT_F32:
-  case RTLIB::OGT_F64:
-  case RTLIB::OGT_F128:
-  case RTLIB::OGT_PPCF128:
-    return ISD::SETGT;
-  case RTLIB::UO_F32:
-  case RTLIB::UO_F64:
-  case RTLIB::UO_F128:
-  case RTLIB::UO_PPCF128:
-    return ISD::SETNE;
-  default:
-    llvm_unreachable("not a compare libcall");
-  }
-}
-
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
-                         TM.Options.FloatABIType, TM.Options.EABIVersion,
+                         TM.getTargetTriple().getDefaultFloatABI(),
+                         TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
-      Libcalls(RuntimeLibcallInfo, STI) {
+      Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
+        STI.initLibcallLoweringInfo(Info);
+      }) {
   initActions();
 
   // Perform these initializations only once.
@@ -1248,8 +951,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
                        Expand);
 
-    // Only some target support this vector operation. Most need to expand it.
-    setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
+    // Only some target support these vector operations. Default them to Expand.
+    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
 
     // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
@@ -1535,10 +1238,8 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   return LegalizeKind(TypeSplitVector, NVT);
 }
 
-static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
-                                          unsigned &NumIntermediates,
-                                          MVT &RegisterVT,
-                                          TargetLoweringBase *TLI) {
+unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
+    MVT VT, MVT &IntermediateVT, unsigned &NumIntermediates, MVT &RegisterVT) {
   // Figure out the right, legal destination reg to copy into.
   ElementCount EC = VT.getVectorElementCount();
   MVT EltTy = VT.getVectorElementType();
@@ -1563,7 +1264,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // always end up with an EC that represent a scalar or a scalable
   // scalar.
   while (EC.getKnownMinValue() > 1 &&
-         !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
+         !isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
     EC = EC.divideCoefficientBy(2);
     NumVectorRegs <<= 1;
   }
@@ -1571,7 +1272,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   NumIntermediates = NumVectorRegs;
 
   MVT NewVT = MVT::getVectorVT(EltTy, EC);
-  if (!TLI->isTypeLegal(NewVT))
+  if (!isTypeLegal(NewVT))
     NewVT = EltTy;
   IntermediateVT = NewVT;
 
@@ -1580,7 +1281,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // Convert sizes such as i33 to i64.
   LaneSizeInBits = llvm::bit_ceil(LaneSizeInBits);
 
-  MVT DestVT = TLI->getRegisterType(NewVT);
+  MVT DestVT = getCachedRegisterType(NewVT);
   RegisterVT = DestVT;
   if (EVT(DestVT).bitsLT(NewVT))    // Value is expanded, e.g. i64 -> i16.
     return NumVectorRegs * (LaneSizeInBits / DestVT.getScalarSizeInBits());
@@ -1920,8 +1621,8 @@ void TargetLoweringBase::computeRegisterProperties(
       MVT IntermediateVT;
       MVT RegisterVT;
       unsigned NumIntermediates;
-      unsigned NumRegisters = getVectorTypeBreakdownMVT(VT, IntermediateVT,
-          NumIntermediates, RegisterVT, this);
+      unsigned NumRegisters = getVectorTypeBreakdownMVT(
+          VT, IntermediateVT, NumIntermediates, RegisterVT);
       NumRegistersForVT[i] = NumRegisters;
       assert(NumRegistersForVT[i] == NumRegisters &&
              "NumRegistersForVT size cannot represent NumRegisters!");
@@ -1987,10 +1688,9 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
-                                                    EVT VT, EVT &IntermediateVT,
-                                                    unsigned &NumIntermediates,
-                                                    MVT &RegisterVT) const {
+unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
+    LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT, bool ForCallingConv) const {
   ElementCount EltCnt = VT.getVectorElementCount();
 
   // If there is a wider vector type with the same element type as this one,
@@ -2015,9 +1715,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
 
   unsigned NumVectorRegs = 1;
 
-  // Scalable vectors cannot be scalarized, so handle the legalisation of the
-  // types like done elsewhere in SelectionDAG.
-  if (EltCnt.isScalable()) {
+  auto GetLegalVectorBreakdown = [&]() -> std::optional<unsigned> {
     LegalizeKind LK;
     EVT PartVT = VT;
     do {
@@ -2026,23 +1724,39 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
       PartVT = LK.second;
     } while (LK.first != TypeLegal);
 
-    if (!PartVT.isVector()) {
-      report_fatal_error(
-          "Don't know how to legalize this scalable vector type");
-    }
+    if (!PartVT.isVector())
+      return std::nullopt;
 
+    assert(PartVT.isScalableVector() == VT.isScalableVector() &&
+           "Vector legalization changed scalability");
     NumIntermediates =
         divideCeil(VT.getVectorElementCount().getKnownMinValue(),
                    PartVT.getVectorElementCount().getKnownMinValue());
     IntermediateVT = PartVT;
     RegisterVT = getRegisterType(Context, IntermediateVT);
     return NumIntermediates;
+  };
+
+  // Scalable vectors cannot be scalarized, so handle the legalisation of the
+  // types like done elsewhere in SelectionDAG.
+  if (EltCnt.isScalable()) {
+    if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+      return *NumRegs;
+    report_fatal_error("Don't know how to legalize this scalable vector type");
   }
 
-  // FIXME: We don't support non-power-of-2-sized vectors for now.  Ideally
-  // we could break down into LHS/RHS like LegalizeDAG does.
+  // FIXME: We don't generically support non-power-of-2-sized vectors for now.
+  // Ideally we could break down into LHS/RHS like LegalizeDAG does.
   if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
-    NumVectorRegs = EltCnt.getKnownMinValue();
+    assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
+    unsigned NumElts = EltCnt.getKnownMinValue();
+
+    if (!ForCallingConv && preferVectorizedNonPowerOfTwoTypeBreakdown())
+      if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+        return *NumRegs;
+
+    // Fall back to scalars if there is no legal vector decomposition.
+    NumVectorRegs = NumElts;
     EltCnt = ElementCount::getFixed(1);
   }
 

@@ -59,7 +59,7 @@ getDeleterForUniquePtr(const MatchFinder::MatchResult &Result, StringRef ID) {
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>(ID);
   if (!Class)
     return nullptr;
-  auto DeleterArgument = Class->getTemplateArgs()[1];
+  const auto DeleterArgument = Class->getTemplateArgs()[1];
   if (DeleterArgument.getKind() != TemplateArgument::Type)
     return nullptr;
   return DeleterArgument.getAsType().getTypePtr();
@@ -126,8 +126,9 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
     NeedsUtilityInclude = true;
   }
 
-  auto D = diag(ResetMember->getExprLoc(),
-                "prefer 'unique_ptr<>' assignment over 'release' and 'reset'");
+  const auto D =
+      diag(ResetMember->getExprLoc(),
+           "prefer 'unique_ptr<>' assignment over 'release' and 'reset'");
   if (ResetMember->isArrow())
     D << FixItHint::CreateInsertion(ResetMember->getBeginLoc(), "*");
   D << FixItHint::CreateReplacement(

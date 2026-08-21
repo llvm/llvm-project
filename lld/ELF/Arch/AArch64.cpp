@@ -80,12 +80,13 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override {
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF64BEKind)
-      elf::scanSection1<AArch64, ELF64BE>(*this, sec);
+      elf::scanSection1<AArch64, ELF64BE>(*this, sec, shard);
     else
-      elf::scanSection1<AArch64, ELF64LE>(*this, sec);
+      elf::scanSection1<AArch64, ELF64LE>(*this, sec, shard);
   }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
@@ -192,8 +193,9 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -299,20 +301,20 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_GOT_PC;
       break;
 
-    // AUTH GOT relocations. Set NEEDS_GOT_AUTH to detect incompatibility with
-    // NEEDS_GOT_NONAUTH. rs.process does not set the flag.
+    // AUTH GOT relocations. Handle flags here, as rs.process assumes R_GOT is a
+    // normal non-AUTH GOT entry.
     case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
     case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      sym.setFlags(NEEDS_GOT_AUTH);
       rs.processAux(R_GOT, type, offset, sym, addend);
       continue;
     case R_AARCH64_AUTH_GOT_LD_PREL19:
     case R_AARCH64_AUTH_GOT_ADR_PREL_LO21:
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      sym.setFlags(NEEDS_GOT_AUTH);
       rs.processAux(R_GOT_PC, type, offset, sym, addend);
       continue;
     case R_AARCH64_AUTH_ADR_GOT_PAGE:
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      sym.setFlags(NEEDS_GOT_AUTH);
       rs.processAux(RE_AARCH64_GOT_PAGE_PC, type, offset, sym, addend);
       continue;
 
@@ -352,7 +354,6 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.handleTlsDesc(R_TLSDESC, R_GOT, type, offset, addend, sym);
       continue;
     case R_AARCH64_TLSDESC_CALL:
-      sym.setFlags(NEEDS_TLSDESC_NONAUTH);
       if (!ctx.arg.shared)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
@@ -361,12 +362,12 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     // only supports the descriptor based TLS (TLSDESC).
     // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
     case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
-      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+      sym.setFlags(NEEDS_TLSDESC_AUTH);
       sec.addReloc({RE_AARCH64_TLSDESC_PAGE, type, offset, addend, &sym});
       continue;
     case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
     case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
-      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+      sym.setFlags(NEEDS_TLSDESC_AUTH);
       sec.addReloc({R_TLSDESC, type, offset, addend, &sym});
       continue;
 

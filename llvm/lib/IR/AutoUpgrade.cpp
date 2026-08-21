@@ -43,9 +43,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -1191,6 +1193,42 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F,
   return Intrinsic::not_intrinsic;
 }
 
+// The legacy TMA reduction intrinsics encode the reduction operator in their
+// name, while the current ones take it as an immediate argument. Map the
+// operator part of a legacy name to the corresponding immediate value.
+static std::optional<unsigned> getNVPTXTMAReductionOp(StringRef Name) {
+  return StringSwitch<std::optional<unsigned>>(Name)
+      .Case("add", static_cast<unsigned>(nvvm::TMAReductionOp::ADD))
+      .Case("min", static_cast<unsigned>(nvvm::TMAReductionOp::MIN))
+      .Case("max", static_cast<unsigned>(nvvm::TMAReductionOp::MAX))
+      .Case("inc", static_cast<unsigned>(nvvm::TMAReductionOp::INC))
+      .Case("dec", static_cast<unsigned>(nvvm::TMAReductionOp::DEC))
+      .Case("and", static_cast<unsigned>(nvvm::TMAReductionOp::AND))
+      .Case("or", static_cast<unsigned>(nvvm::TMAReductionOp::OR))
+      .Case("xor", static_cast<unsigned>(nvvm::TMAReductionOp::XOR))
+      .Default(std::nullopt);
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
+  if (!Name.consume_front("cp.async.bulk.tensor.reduce."))
+    return Intrinsic::not_intrinsic;
+
+  auto [RedOpName, ShapeName] = Name.split('.');
+  if (!getNVPTXTMAReductionOp(RedOpName))
+    return Intrinsic::not_intrinsic;
+
+  return StringSwitch<Intrinsic::ID>(ShapeName)
+      .Case("tile.1d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d)
+      .Case("tile.2d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d)
+      .Case("tile.3d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d)
+      .Case("tile.4d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_4d)
+      .Case("tile.5d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_5d)
+      .Case("im2col.3d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_3d)
+      .Case("im2col.4d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_4d)
+      .Case("im2col.5d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_5d)
+      .Default(Intrinsic::not_intrinsic);
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -1212,6 +1250,52 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
           NVPTXAS::ADDRESS_SPACE_SHARED)
         return ID;
   }
+
+  return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("tcgen05.commit."))
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("shared."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("mc.shared.")) {
+    // Only upgrade older i16 mc variants.
+    if (!F->getArg(1)->getType()->isIntegerTy(16))
+      return Intrinsic::not_intrinsic;
+
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_mc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_mc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+  if (F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("tcgen05.alloc.shared.") ||
+      Name.consume_front("tcgen05.alloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("tcgen05.dealloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
 
   return Intrinsic::not_intrinsic;
 }
@@ -1282,10 +1366,106 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("tcgen05.mma."))
+    return Intrinsic::not_intrinsic;
+
+  // tcgen05.mma.ws.* variants do not need collector-b appended.
+  if (Name.starts_with("ws"))
+    return Intrinsic::not_intrinsic;
+
+  return F->getIntrinsicID();
+}
+
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
          Name.consume_front("param");
+}
+
+static unsigned getFunctionalOpcodeForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<unsigned>(Name)
+      .StartsWith("select", Instruction::Select)
+      .StartsWith("add", Instruction::Add)
+      .StartsWith("sub", Instruction::Sub)
+      .StartsWith("mul", Instruction::Mul)
+      .StartsWith("ashr", Instruction::AShr)
+      .StartsWith("lshr", Instruction::LShr)
+      .StartsWith("shl", Instruction::Shl)
+      .StartsWith("or", Instruction::Or)
+      .StartsWith("and", Instruction::And)
+      .StartsWith("xor", Instruction::Xor)
+      .StartsWith("fadd", Instruction::FAdd)
+      .StartsWith("fsub", Instruction::FSub)
+      .StartsWith("fmuladd", 0)
+      .StartsWith("fmul", Instruction::FMul)
+      .StartsWith("fdiv", Instruction::FDiv)
+      .StartsWith("frem", Instruction::FRem)
+      .StartsWith("fneg", Instruction::FNeg)
+      .StartsWith("trunc", Instruction::Trunc)
+      .StartsWith("zext", Instruction::ZExt)
+      .StartsWith("sext", Instruction::SExt)
+      .StartsWith("fptrunc", Instruction::FPTrunc)
+      .StartsWith("fpext", Instruction::FPExt)
+      .StartsWith("fptoui", Instruction::FPToUI)
+      .StartsWith("fptosi", Instruction::FPToSI)
+      .StartsWith("uitofp", Instruction::UIToFP)
+      .StartsWith("sitofp", Instruction::SIToFP)
+      .StartsWith("ptrtoint", Instruction::PtrToInt)
+      .StartsWith("inttoptr", Instruction::IntToPtr)
+      .StartsWith("icmp", Instruction::ICmp)
+      .StartsWith("fcmp", Instruction::FCmp)
+      .Default(0);
+}
+
+static Intrinsic::ID getFunctionalIntrinsicIDForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<Intrinsic::ID>(Name)
+      .StartsWith("abs", Intrinsic::abs)
+      .StartsWith("smax", Intrinsic::smax)
+      .StartsWith("smin", Intrinsic::smin)
+      .StartsWith("umax", Intrinsic::umax)
+      .StartsWith("umin", Intrinsic::umin)
+      .StartsWith("copysign", Intrinsic::copysign)
+      .StartsWith("minnum", Intrinsic::minnum)
+      .StartsWith("maxnum", Intrinsic::maxnum)
+      .StartsWith("minimum", Intrinsic::minimum)
+      .StartsWith("maximum", Intrinsic::maximum)
+      .StartsWith("fabs", Intrinsic::fabs)
+      .StartsWith("sqrt", Intrinsic::sqrt)
+      .StartsWith("fma", Intrinsic::fma)
+      .StartsWith("fmuladd", Intrinsic::fmuladd)
+      .StartsWith("ceil", Intrinsic::ceil)
+      .StartsWith("floor", Intrinsic::floor)
+      .StartsWith("rint", Intrinsic::rint)
+      .StartsWith("nearbyint", Intrinsic::nearbyint)
+      .StartsWith("roundeven", Intrinsic::roundeven)
+      .StartsWith("roundtozero", Intrinsic::trunc)
+      .StartsWith("round", Intrinsic::round)
+      .StartsWith("lrint", Intrinsic::lrint)
+      .StartsWith("llrint", Intrinsic::llrint)
+      .StartsWith("bitreverse", Intrinsic::bitreverse)
+      .StartsWith("bswap", Intrinsic::bswap)
+      .StartsWith("ctpop", Intrinsic::ctpop)
+      .StartsWith("ctlz", Intrinsic::ctlz)
+      .StartsWith("cttz.elts", 0)
+      .StartsWith("cttz", Intrinsic::cttz)
+      .StartsWith("sadd.sat", Intrinsic::sadd_sat)
+      .StartsWith("uadd.sat", Intrinsic::uadd_sat)
+      .StartsWith("ssub.sat", Intrinsic::ssub_sat)
+      .StartsWith("usub.sat", Intrinsic::usub_sat)
+      .StartsWith("fshl", Intrinsic::fshl)
+      .StartsWith("fshr", Intrinsic::fshr)
+      .StartsWith("is.fpclass", Intrinsic::is_fpclass)
+      .Default(0);
+}
+
+static bool shouldUpgradeVPIntrinsic(StringRef Name) {
+  return getFunctionalOpcodeForVP(Name) || getFunctionalIntrinsicIDForVP(Name);
 }
 
 static bool convertIntrinsicValidType(StringRef Name,
@@ -1452,10 +1632,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name == "coro.end") {
+    Intrinsic::ID CoroEndID = Intrinsic::not_intrinsic;
+    if (Name == "coro.end" &&
+        (F->arg_size() == 2 || F->getReturnType()->isIntegerTy(1)))
+      CoroEndID = Intrinsic::coro_end;
+    else if (Name == "coro.end.async" && F->getReturnType()->isIntegerTy(1))
+      CoroEndID = Intrinsic::coro_end_async;
+
+    if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                Intrinsic::coro_end);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 
@@ -1716,12 +1902,51 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      // Upgrade TMA reduction intrinsics
+      // llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>* =>
+      // llvm.nvvm.cp.async.bulk.tensor.reduce.<shape>*
+      IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), IID, F->getReturnType(),
+            F->getFunctionType()->params());
+        return true;
+      }
+
+      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
+      // tcgen05.alloc shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        if (Intrinsic::isOverloaded(IID))
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getArg(0)->getType()});
+        else
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       // Upgrade TMA copy G2S Intrinsics
       IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
+      }
+
+      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
+      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return NewFn != F;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -1917,6 +2142,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break;
       return true;
     }
+    if (shouldUpgradeVPIntrinsic(Name))
+      return true;
     break;
   }
 
@@ -5141,6 +5368,77 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static ICmpInst::Predicate getVPIntPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return ICmpInst::BAD_ICMP_PREDICATE;
+  return StringSwitch<ICmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("eq", ICmpInst::ICMP_EQ)
+      .Case("ne", ICmpInst::ICMP_NE)
+      .Case("ugt", ICmpInst::ICMP_UGT)
+      .Case("uge", ICmpInst::ICMP_UGE)
+      .Case("ult", ICmpInst::ICMP_ULT)
+      .Case("ule", ICmpInst::ICMP_ULE)
+      .Case("sgt", ICmpInst::ICMP_SGT)
+      .Case("sge", ICmpInst::ICMP_SGE)
+      .Case("slt", ICmpInst::ICMP_SLT)
+      .Case("sle", ICmpInst::ICMP_SLE)
+      .Default(ICmpInst::BAD_ICMP_PREDICATE);
+}
+
+static FCmpInst::Predicate getVPFPPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return FCmpInst::BAD_FCMP_PREDICATE;
+  return StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("oeq", FCmpInst::FCMP_OEQ)
+      .Case("ogt", FCmpInst::FCMP_OGT)
+      .Case("oge", FCmpInst::FCMP_OGE)
+      .Case("olt", FCmpInst::FCMP_OLT)
+      .Case("ole", FCmpInst::FCMP_OLE)
+      .Case("one", FCmpInst::FCMP_ONE)
+      .Case("ord", FCmpInst::FCMP_ORD)
+      .Case("uno", FCmpInst::FCMP_UNO)
+      .Case("ueq", FCmpInst::FCMP_UEQ)
+      .Case("ugt", FCmpInst::FCMP_UGT)
+      .Case("uge", FCmpInst::FCMP_UGE)
+      .Case("ult", FCmpInst::FCMP_ULT)
+      .Case("ule", FCmpInst::FCMP_ULE)
+      .Case("une", FCmpInst::FCMP_UNE)
+      .Default(FCmpInst::BAD_FCMP_PREDICATE);
+}
+
+static Value *upgradeVPIntrinsicCall(StringRef Name, CallBase *CI,
+                                     IRBuilder<> &Builder) {
+  Value *Rep;
+  unsigned Opcode = getFunctionalOpcodeForVP(Name);
+  if (Opcode && Instruction::isUnaryOp(Opcode))
+    Rep =
+        Builder.CreateUnOp((Instruction::UnaryOps)Opcode, CI->getArgOperand(0));
+  else if (Opcode && Instruction::isBinaryOp(Opcode))
+    Rep = Builder.CreateBinOp((Instruction::BinaryOps)Opcode,
+                              CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode && Instruction::isCast(Opcode))
+    Rep = Builder.CreateCast((Instruction::CastOps)Opcode, CI->getArgOperand(0),
+                             CI->getType());
+  else if (Opcode == Instruction::ICmp)
+    Rep = Builder.CreateICmp(getVPIntPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::FCmp)
+    Rep = Builder.CreateFCmp(getVPFPPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::Select)
+    Rep = Builder.CreateSelect(CI->getArgOperand(0), CI->getArgOperand(1),
+                               CI->getArgOperand(2));
+  else if (auto IntrinsicID = getFunctionalIntrinsicIDForVP(Name)) {
+    SmallVector<Value *, 2> Args(drop_end(CI->args(), 2));
+    Rep = Builder.CreateIntrinsic(CI->getType(), IntrinsicID, Args, {});
+  } else
+    llvm_unreachable("Unexpected vp intrinsic");
+  Rep->takeName(CI);
+  return Rep;
+}
+
 static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
                                                 IRBuilder<> &Builder) {
   Intrinsic::ID IID = NewFn->getIntrinsicID();
@@ -5249,6 +5547,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
       // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
       Rep = nullptr;
+    } else if (shouldUpgradeVPIntrinsic(Name)) {
+      Rep = upgradeVPIntrinsicCall(Name, CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5360,10 +5660,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end_async:
   case Intrinsic::coro_end: {
     SmallVector<Value *, 3> Args(CI->args());
-    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
+      Args.push_back(ConstantTokenNone::get(CI->getContext()));
     NewCall = Builder.CreateCall(NewFn, Args);
+
+    if (!CI->getType()->isVoidTy()) {
+      if (!CI->use_empty()) {
+        Function *IsInRamp = Intrinsic::getOrInsertDeclaration(
+            CI->getModule(), Intrinsic::coro_is_in_ramp);
+        Value *InRamp = Builder.CreateCall(IsInRamp);
+        CI->replaceAllUsesWith(Builder.CreateNot(InRamp));
+      }
+      CI->eraseFromParent();
+      return;
+    }
+
     break;
   }
 
@@ -5618,6 +5932,100 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_5d: {
+    StringRef Name = F->getName();
+    Name.consume_front("llvm.nvvm.cp.async.bulk.tensor.reduce.");
+    auto RedOp = getNVPTXTMAReductionOp(Name.split('.').first);
+
+    SmallVector<Value *, 16> Args(CI->args());
+    Args.insert(Args.end() - 1, Builder.getInt32(*RedOp));
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+  case Intrinsic::nvvm_tcgen05_mma_shared:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
+    SmallVector<Value *, 12> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   Builder.getFalse()});
+    break;
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
@@ -6061,6 +6469,14 @@ Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   return nullptr;
 }
 
+static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
+  if (Flag.getNumOperands() < 3)
+    return std::nullopt;
+  if (MDString *Name = dyn_cast_or_null<MDString>(Flag.getOperand(1)))
+    return Name->getString();
+  return std::nullopt;
+}
+
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
@@ -6074,10 +6490,8 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   unsigned Version = 0;
   if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
     auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
-      if (Flag->getNumOperands() < 3)
-        return false;
-      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
-        return K->getString() == "Debug Info Version";
+      if (auto Name = getModuleFlagNameSafely(*Flag))
+        return *Name == "Debug Info Version";
       return false;
     });
     if (OpIt != ModFlags->op_end()) {
@@ -6394,12 +6808,123 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// Upgrade the way signing of pointers to init/fini functions is described.
+//
+// Originally, the `@llvm.global_(ctors|dtors)` arrays contained `ptrauth`
+// constants, if signing was requested. After the upgrade, these arrays contain
+// plain function pointers and the desired signing schema is described via a
+// pair of module flags.
+//
+// Note that the upgrade is only performed if all elements of *both* arrays
+// agree on a common signing schema.
+static bool upgradePtrauthInitFiniArrays(Module &M) {
+  // As we cannot always decide whether the particular module should have
+  // ptrauth-init-fini flags, we have to treat absent flags as having zero
+  // values for compatibility reasons. Thus, upgradePtrauthInitFiniArrays
+  // returns as soon as it spots any non-signed init/fini pointer: either we
+  // should request non-signed pointers (safe to omit both flags) or there is
+  // no common schema (and thus we do not modify anything).
+  //
+  // UseAddressDisc's value either represents "not decided yet" state (nullopt)
+  // or whether we should request address diversity in addition to the basic
+  // constant diversity. There is no value representing "decided not to sign"
+  // for the reasons explained above.
+  std::optional<bool> UseAddressDisc;
+
+  // Do not attempt upgrading if the new module flags already exist.
+  if (const NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    for (const MDNode *Flag : ModFlags->operands()) {
+      std::optional<StringRef> Name = getModuleFlagNameSafely(*Flag);
+      if (Name && (*Name == "ptrauth-init-fini" ||
+                   *Name == "ptrauth-init-fini-address-discrimination"))
+        return false;
+    }
+  }
+
+  auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
+    constexpr unsigned ExpectedConstDisc = 0xD9D4;
+    constexpr unsigned ExpectedAddressMarker = 1;
+
+    auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
+    if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
+      return nullptr; // Nothing to upgrade or unknown pattern found.
+
+    bool HasAddressDisc;
+    if (!CPA->hasAddressDiscriminator())
+      HasAddressDisc = false;
+    else if (CPA->hasSpecialAddressDiscriminator(ExpectedAddressMarker))
+      HasAddressDisc = true;
+    else
+      return nullptr; // Unknown pattern.
+
+    if (UseAddressDisc && *UseAddressDisc != HasAddressDisc)
+      return nullptr; // Disagreement with the decided mode.
+
+    UseAddressDisc = HasAddressDisc;
+    return CPA->getPointer();
+  };
+
+  // Do not apply any changes until we know the upgrade is non-ambiguous.
+  using PendingUpgrade = std::pair<GlobalVariable *, Constant *>;
+  SmallVector<PendingUpgrade, 2> GlobalArraysToUpgrade;
+
+  for (const char *Name : {"llvm.global_ctors", "llvm.global_dtors"}) {
+    auto *GV = dyn_cast_if_present<GlobalVariable>(M.getNamedValue(Name));
+    if (!GV || !GV->hasInitializer())
+      continue; // Skip, but it is okay to upgrade the other variable.
+
+    auto *OldStructorsArray = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (!OldStructorsArray || OldStructorsArray->getNumOperands() == 0)
+      return false;
+
+    std::vector<Constant *> NewStructors;
+    NewStructors.reserve(OldStructorsArray->getNumOperands());
+
+    for (Use &U : OldStructorsArray->operands()) {
+      ConstantStruct *Structor = dyn_cast<ConstantStruct>(U.get());
+      if (!Structor || Structor->getNumOperands() != 3)
+        return false;
+
+      Constant *Prio = Structor->getOperand(0);
+      Constant *Func = Structor->getOperand(1);
+      Constant *Arg = Structor->getOperand(2);
+
+      Func = UpgradeSinglePointer(Func);
+      if (!Func)
+        return false;
+
+      NewStructors.push_back(
+          ConstantStruct::get(Structor->getType(), {Prio, Func, Arg}));
+    }
+
+    Constant *NewInit =
+        ConstantArray::get(OldStructorsArray->getType(), NewStructors);
+    GlobalArraysToUpgrade.emplace_back(GV, NewInit);
+  }
+
+  if (GlobalArraysToUpgrade.empty())
+    return false;
+  assert(UseAddressDisc.has_value());
+
+  for (auto [GV, NewInit] : GlobalArraysToUpgrade)
+    GV->setInitializer(NewInit);
+
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
+                  *UseAddressDisc);
+
+  return true;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
+  bool Changed = false;
+  Changed |= upgradePtrauthInitFiniArrays(M);
+
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return Changed;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -6510,6 +7035,32 @@ bool llvm::UpgradeModuleFlags(Module &M) {
           Op->getOperand(2)};
       ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
       Changed = true;
+    }
+
+    // clang/PowerPC used to use "float-abi" to describe the long double format;
+    // it has been renamed to "long-double-type", with its values changed to the
+    // corresponding IR floating-point type names.
+    if (M.getTargetTriple().isPPC() && ID->getString() == "float-abi") {
+      StringRef Format;
+      if (auto *S = dyn_cast_or_null<MDString>(Op->getOperand(2)))
+        Format = S->getString();
+
+      // The "float-abi" key is now reserved for the target-independent
+      // soft/hard ABI flag, so leave a valid value alone. Map any other value
+      // (including unrecognized ones, which were never valid) to the default.
+      if (!FloatABI::parseABIType(Format)) {
+        LongDoubleFormat NewFormat =
+            StringSwitch<LongDoubleFormat>(Format)
+                .Case("ieeequad", LongDoubleFormat::IEEEquad)
+                .Case("ieeedouble", LongDoubleFormat::IEEEdouble)
+                .Default(LongDoubleFormat::PPCDoubleDouble);
+        Metadata *Ops[3] = {
+            Op->getOperand(0),
+            MDString::get(M.getContext(), "long-double-type"),
+            MDString::get(M.getContext(), getLongDoubleFormatName(NewFormat))};
+        ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+        Changed = true;
+      }
     }
   }
 
@@ -6869,6 +7420,24 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 }
 
+/// Return the replacement tags if \p T still uses a removed two-operand form.
+static const BooleanLoopTags *getOldBooleanLoopTags(const MDTuple *T) {
+  if (T->getNumOperands() != 2 || !mdconst::hasa<ConstantInt>(T->getOperand(1)))
+    return nullptr;
+  auto *Tag = dyn_cast_or_null<MDString>(T->getOperand(0));
+  return Tag ? findBooleanLoopTags(Tag->getString()) : nullptr;
+}
+
+/// Build the single-operand node that replaces a boolean operand: nonzero
+/// selects the enable tag, zero the disable tag.
+static Metadata *makeBooleanLoopNode(LLVMContext &C,
+                                     const BooleanLoopTags &Tags,
+                                     const MDOperand &Op) {
+  bool Enable = !mdconst::extract<ConstantInt>(Op)->isZero();
+  return MDTuple::get(C,
+                      {MDString::get(C, Enable ? Tags.Enable : Tags.Disable)});
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
@@ -6878,7 +7447,9 @@ static bool isOldLoopArgument(Metadata *MD) {
   auto *S = dyn_cast_or_null<MDString>(T->getOperand(0));
   if (!S)
     return false;
-  return S->getString().starts_with("llvm.vectorizer.");
+  if (S->getString().starts_with("llvm.vectorizer."))
+    return true;
+  return getOldBooleanLoopTags(T) != nullptr;
 }
 
 static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
@@ -6902,17 +7473,32 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
   auto *OldTag = dyn_cast_or_null<MDString>(T->getOperand(0));
   if (!OldTag)
     return MD;
+
+  LLVMContext &C = T->getContext();
+
+  /// Rewrite a removed two-operand boolean form to the single-operand pair.
+  if (const BooleanLoopTags *Tags = getOldBooleanLoopTags(T))
+    return makeBooleanLoopNode(C, *Tags, T->getOperand(1));
+
   if (!OldTag->getString().starts_with("llvm.vectorizer."))
     return MD;
 
   // This has an old tag.  Upgrade it.
+  MDString *NewTag = upgradeLoopTag(C, OldTag->getString());
+
+  // The legacy !{!"llvm.vectorizer.enable", i1 X} maps onto the single-operand
+  // vectorize.enable/disable pair, not a two-operand enable node.
+  if (T->getNumOperands() == 2 && mdconst::hasa<ConstantInt>(T->getOperand(1)))
+    if (const BooleanLoopTags *Tags = findBooleanLoopTags(NewTag->getString()))
+      return makeBooleanLoopNode(C, *Tags, T->getOperand(1));
+
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
-  Ops.push_back(upgradeLoopTag(T->getContext(), OldTag->getString()));
+  Ops.push_back(NewTag);
   for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I)
     Ops.push_back(T->getOperand(I));
 
-  return MDTuple::get(T->getContext(), Ops);
+  return MDTuple::get(C, Ops);
 }
 
 MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
@@ -6923,6 +7509,22 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   if (none_of(T->operands(), isOldLoopArgument))
     return &N;
 
+  // Fix the removed two-operand boolean nodes in place: the Verifier rejects
+  // any MDNode carrying those tags with more than one operand, so a leftover
+  // reference (from the distinct loop-ID) would still trigger a diagnostic.
+  // In-place mutation is safe on distinct MDNodes.
+  if (T->isDistinct()) {
+    for (unsigned I = 0, E = T->getNumOperands(); I < E; ++I) {
+      auto *OpT = dyn_cast_or_null<MDTuple>(T->getOperand(I));
+      if (OpT && getOldBooleanLoopTags(OpT))
+        T->replaceOperandWith(I, upgradeLoopArgument(OpT));
+    }
+    if (none_of(T->operands(), isOldLoopArgument))
+      return &N;
+  }
+
+  // Remaining old arguments (e.g. llvm.vectorizer.*) are handled via a wrapper
+  // attachment; the original distinct loop-ID is kept as the first operand.
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
   for (Metadata *MD : T->operands())

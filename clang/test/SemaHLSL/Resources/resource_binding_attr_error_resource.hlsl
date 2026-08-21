@@ -6,23 +6,23 @@
 
 template<typename T>
 struct MyTemplatedSRV {
-  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("SRV")]] x;
 };
 
 struct MySRV {
-  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("SRV")]] x;
 };
 
 struct MySampler {
-  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("Sampler")]] x;
 };
 
 struct MyUAV {
-  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("UAV")]] x;
 };
 
 struct MyCBuffer {
-  __hlsl_resource_t [[hlsl::resource_class(CBuffer)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("CBuffer")]] x;
 };
 
 

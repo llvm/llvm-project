@@ -9,8 +9,11 @@
 
 common --enable_bzlmod --noenable_workspace
 
-# TODO: Remove lit test reliance on this
-common --legacy_external_runfiles
+# Force the runfiles layout without the legacy `external/<repo>/...` mirror,
+# to match the Bazel 9+ default once --legacy_external_runfiles is removed.
+# All lit_expand_template callers use `File.short_path` (`../<repo>/...`
+# form) so no target relies on the legacy layout.
+common --nolegacy_external_runfiles
 
 # Prevent automatic __init__.py generation from confusing some lit tests.
 common --incompatible_default_to_explicit_init_py
@@ -217,6 +220,19 @@ build:hermetic-toolchain --@llvm-project//llvm:pfm=disable
 
 # TODO: Remove once @llvm is updated >0.7.1
 build:hermetic-toolchain --copt=-Wno-modules-import-nested-redundant --host_copt=-Wno-modules-import-nested-redundant
+
+###############################################################################
+# Options for Emscripten WebAssembly builds.
+###############################################################################
+
+build:wasm --platforms=@emsdk//:platform_wasm
+# Match LLVM's single-threaded config and shut the runtime down when main returns.
+build:wasm --features=-use_pthreads,exit_runtime
+# Make the default CLI artifact use Node's host filesystem; browser builds override this to 0.
+build:wasm --linkopt=-sNODERAWFS=1
+
+# TODO: zstd unconditionally enables pthreads on non-Windows targets.
+build:wasm --@llvm-project//third-party:llvm_enable_zstd=false
 
 ###############################################################################
 # Options for continuous integration.

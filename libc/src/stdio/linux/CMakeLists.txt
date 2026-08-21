@@ -5,10 +5,10 @@ add_entrypoint_object(
   HDRS
     ../remove.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlinkat
     libc.src.errno.errno
 )
 
@@ -65,4 +65,20 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  tmpfile
+  SRCS
+    tmpfile.cpp
+  HDRS
+    ../tmpfile.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.FILE
+    libc.src.__support.common
+    libc.src.__support.File.platform_file
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
 )

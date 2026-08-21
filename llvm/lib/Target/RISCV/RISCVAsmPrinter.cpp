@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RISCVAsmPrinter.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVELFStreamer.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
@@ -26,7 +27,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -39,6 +42,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -132,6 +136,9 @@ private:
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+
+  MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) override;
 };
 } // namespace
 
@@ -1320,7 +1327,57 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+MaybeAlign
+RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
+  if (!GV.getType()->isSized())
+    return std::nullopt;
+
+  uint64_t Size = GV.getGlobalSize(getDataLayout());
+  if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
+
+  if (MCSTI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (MCSTI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredAlignment(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredAlignment(Size);
+  }
+
+  return std::nullopt;
+}
+
 char RISCVAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
                 false, false)
+
+PreservedAnalyses RISCVAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+RISCVAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses RISCVAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
+}

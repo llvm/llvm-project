@@ -45,7 +45,7 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl>(DC) || isa<ObjCMethodDecl>(DC) || isa<BlockDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -1871,6 +1871,8 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
+  else if (DC->isExpansionStmt())
+    GD = getParentOfLocalEntity(DC->getEnclosingNonExpansionStatementContext());
   else
     GD = GlobalDecl(cast<FunctionDecl>(DC));
   return GD;
@@ -2217,6 +2219,9 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   if (NoFunction && isLocalContainerContext(DC))
     return;
 
+  if (DC->isExpansionStmt())
+    return;
+
   const NamedDecl *ND = cast<NamedDecl>(DC);
   if (mangleSubstitution(ND))
     return;
@@ -2478,6 +2483,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::CountAttributed:
+  case Type::LateParsedAttr:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstBuiltinTemplatePack:
@@ -3519,6 +3525,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 
@@ -3535,7 +3546,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_IntelOclBicc:
-  case CC_SpirFunction:
   case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -4575,7 +4585,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     BuiltinName = "__" #Trait;                                                 \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     }
     mangleVendorType(BuiltinName);
   }
@@ -4685,6 +4695,8 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Counter";
   if (Attrs.IsArray)
     Str += "_Array";
+  if (Attrs.isMultiSampled())
+    Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
   mangleVendorQualifier(Str);
@@ -5002,6 +5014,7 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:
@@ -5301,6 +5314,15 @@ recurse:
     mangleUnresolvedName(ULE->getQualifier(), ULE->getName(),
                          ULE->getTemplateArgs(), ULE->getNumTemplateArgs(),
                          Arity);
+    break;
+  }
+
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
     break;
   }
 
@@ -7357,7 +7379,8 @@ static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
   const CXXRecordDecl *PtrauthClassRD =
       Context.baseForVTableAuthentication(ThisRD);
   unsigned TypedDiscriminator =
-      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD,
+                                                       /*IsVTTEntry=*/false);
   Mangler.mangleVendorQualifier("__vtptrauth");
   auto &ManglerStream = Mangler.getStream();
   ManglerStream << "I";

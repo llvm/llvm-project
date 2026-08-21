@@ -2,13 +2,13 @@
 Test exception behavior in DAP with obj-c throw.
 """
 
-from lldbsuite.test.decorators import skipUnlessDarwin
-from lldbsuite.test.tools.lldb_dap.dap_types import ExceptionFilterOptions, LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.decorators import *
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
 
 
 class TestDAP_exception_objc(DAPTestCaseBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stopped_description(self):
         """
         Test that exception description is shown correctly in stopped event.
@@ -34,7 +34,7 @@ class TestDAP_exception_objc(DAPTestCaseBase):
         stack_trace = self.expect_not_none(exception_details.stackTrace)
         self.assertRegex(stack_trace, "main.m")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_break_on_throw_and_catch(self):
         """
         Test that breakpoints on exceptions work as expected.

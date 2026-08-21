@@ -15,12 +15,25 @@
 
 using namespace lldb_private;
 
+// Declared out-of-line so every shared library resolves to the same
+// instance: a function-local static in an inline function is not
+// shared across shared library boundaries under hidden visibility.
+PolicyStack &PolicyStack::Get() {
+  static thread_local PolicyStack s_stack;
+  return s_stack;
+}
+
 Policy PolicyStack::Current() const {
   Policy p = m_stack.back();
+  // `Current()` is called on every read of the current policy (e.g. every
+  // `Process::GetState()`, itself called on every prompt redraw), so log
+  // only when verbose is set to avoid drowning out the process log.
   if (Log *log = GetLog(LLDBLog::Process)) {
-    StreamString s;
-    p.Dump(s);
-    LLDB_LOG(log, "{0}", s.GetData());
+    if (log->GetVerbose()) {
+      StreamString s;
+      p.Dump(s);
+      LLDB_LOG(log, "{0}", s.GetData());
+    }
   }
   return p;
 }
@@ -48,6 +61,12 @@ Policy Policy::CreatePrivateState(PrivateStatePurpose purpose) {
 Policy Policy::CreatePublicStateRunningExpression() {
   Policy p = PolicyStack::Get().Current();
   p.capabilities.can_run_breakpoint_actions = false;
+  return p;
+}
+
+Policy Policy::CreateScriptedExtensionCall() {
+  Policy p = PolicyStack::Get().Current();
+  p.capabilities.can_bypass_target_api_mutex = true;
   return p;
 }
 
@@ -95,6 +114,7 @@ void Policy::Dump(Stream &s) const {
   s << " bp_actions=" << capabilities.can_run_breakpoint_actions;
   s << " frame_providers=" << capabilities.can_load_frame_providers;
   s << " frame_recognizers=" << capabilities.can_run_frame_recognizers;
+  s << " bypass_api_mutex=" << capabilities.can_bypass_target_api_mutex;
   s << '}';
 }
 

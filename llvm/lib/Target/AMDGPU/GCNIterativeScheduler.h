@@ -99,6 +99,11 @@ protected:
                        const GCNRegPressure &MaxRP = GCNRegPressure());
 
   void scheduleBest(Region &R);
+  // Restore the instruction's dead and read-undef liveness flags.
+  void restoreLivenessFlags(MachineInstr &MI);
+  // Restore dead and read-undef liveness flags for all instructions in the
+  // region.
+  void restoreRegionLivenessFlags(const Region &R);
 
   std::vector<MachineInstr*> detachSchedule(ScheduleRef Schedule) const;
 

@@ -9,7 +9,7 @@ define void @byte_type_vector(ptr noalias %dst, ptr readonly %src, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -69,7 +69,7 @@ define void @byte_type_uniform(ptr noalias %dst, ptr readonly %src, b64 %uniform
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -80,8 +80,8 @@ define void @byte_type_uniform(ptr noalias %dst, ptr readonly %src, b64 %uniform
 ; CHECK-NEXT:    [[TMP3:%.*]] = call b64 @bar(b64 [[TMP1]], b64 [[UNIFORM]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x b64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call b64 @bar(b64 [[TMP2]], b64 [[UNIFORM]]) #[[ATTR1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b64> poison, b64 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x b64> [[TMP5]], b64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b64> poison, b64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x b64> [[TMP5]], b64 [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds b64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x b64> [[TMP6]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -134,7 +134,7 @@ define void @byte_type_linear(ptr noalias %dst, ptr readonly %src, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -149,8 +149,8 @@ define void @byte_type_linear(ptr noalias %dst, ptr readonly %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x b64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x b64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = call b64 @baz(b64 [[TMP12]], b64 [[TMP5]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x b64> poison, b64 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x b64> [[TMP8]], b64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x b64> poison, b64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x b64> [[TMP8]], b64 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds b64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x b64> [[TMP9]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

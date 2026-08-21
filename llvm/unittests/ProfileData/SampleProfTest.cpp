@@ -20,7 +20,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -199,11 +198,19 @@ struct SampleProfTest : ::testing::Test {
     return Reader->getFormatVersion();
   }
 
-  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
+  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
+                     bool UseMD5ProfSymList = false,
+                     bool UseMD5IndexedTables = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
-    if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
-      static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      if (UseMD5)
+        Writer->setUseMD5();
+      if (UseMD5ProfSymList)
+        Writer->setUseMD5ProfileSymbolList();
+      if (UseMD5IndexedTables)
+        Writer->setUseMD5IndexedTables();
+    }
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -456,6 +463,17 @@ struct SampleProfTest : ::testing::Test {
       if (Samples != nullptr)
         Esamples = Samples->getTotalSamples();
       ASSERT_EQ(I->getValue(), Esamples);
+
+      if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+        ASSERT_TRUE(Reader->contains(I->getKey()));
+        ASSERT_TRUE(Reader->contains(FunctionId(I->getKey()).getHashCode()));
+      }
+    }
+
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      StringRef FakeSymbol = "non_existent_symbol_for_test";
+      ASSERT_FALSE(Reader->contains(FakeSymbol));
+      ASSERT_FALSE(Reader->contains(FunctionId(FakeSymbol).getHashCode()));
     }
   }
 };
@@ -474,6 +492,16 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
 
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/true);
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false, /*UseMD5IndexedTables=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
@@ -552,49 +580,6 @@ TEST_F(SampleProfTest, none_suffix_elision_text) {
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "none", Expected);
 }
 
-TEST_F(SampleProfTest, FuncOffsetHashTable) {
-  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
-      {0x1111111122222222ULL, 100},
-      {0x3333333344444444ULL, 250},
-      {0x5555555566666666ULL, 1000},
-  };
-
-  SmallVector<char, 128> Buffer;
-  raw_svector_ostream OS(Buffer);
-
-  FuncOffsetHashTableWriterInfo WriterInfo;
-  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
-
-  for (const auto &[Name, Offset] : TestData)
-    Generator.insert(Name, Offset);
-
-  // Add padding to avoid bucket offset 0.
-  OS.write("PAD ", 4);
-  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
-
-  const unsigned char *Start =
-      reinterpret_cast<const unsigned char *>(Buffer.data());
-
-  const unsigned char *Buckets = Start + BucketTableOffset;
-  const unsigned char *Payload = Start + 4;
-
-  auto Table =
-      std::unique_ptr<OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>>(
-          OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>::Create(
-              Buckets, Payload, Start));
-
-  ASSERT_TRUE(Table);
-
-  for (const auto &[Name, Offset] : TestData) {
-    auto Iter = Table->find(Name);
-    ASSERT_TRUE(Iter != Table->end());
-    ASSERT_EQ(*Iter, Offset);
-  }
-
-  auto Iter = Table->find(0x9999999999999999ULL);
-  ASSERT_TRUE(Iter == Table->end());
-}
-
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   SampleProfileFuncOffsetTable Table(InMemoryMode, 2);
 
@@ -608,54 +593,17 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x11112222ULL), 100);
   EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x11112222ULL), std::nullopt);
 }
 
-TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
-  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
-      {0x1111111122222222ULL, 100},
-      {0x3333333344444444ULL, 250},
-      {0x5555555566666666ULL, 1000},
-  };
-
-  SmallVector<char, 128> Buffer;
-  raw_svector_ostream OS(Buffer);
-
-  FuncOffsetHashTableWriterInfo WriterInfo;
-  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
-
-  for (const auto &[Name, Offset] : TestData)
-    Generator.insert(Name, Offset);
-
-  // Add padding to avoid bucket offset 0.
-  OS.write("PAD ", 4);
-  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
-
-  const unsigned char *Start =
-      reinterpret_cast<const unsigned char *>(Buffer.data());
-
-  const unsigned char *Buckets = Start + BucketTableOffset;
-  const unsigned char *Payload = Start + 4;
-
-  SampleProfileFuncOffsetTable Table(OnDiskMode, Buckets, Payload, Start);
-
-  // Test lookup
-  for (const auto &[Name, Offset] : TestData) {
-    auto LookupResult = Table.lookup(Name);
-    ASSERT_TRUE(LookupResult.has_value());
-    EXPECT_EQ(*LookupResult, Offset);
-  }
-
-  // Test non-existent key
-  EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x1111111122222222ULL), std::nullopt);
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+// Verify that function-offset flags are rejected for unrelated section types.
+TEST(SampleProfSectionFlagTest, RejectsMismatchedSectionSpecificFlag) {
+  SecHdrTableEntry Entry{SecLBRProfile, 0, 0, 0, 0};
+  EXPECT_DEATH(
+      static_cast<void>(hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)),
+      "Misuse of a flag in an incompatible section");
 }
+#endif
 
 // Verify that requesting format version 103 results in a version 103 profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion103) {
@@ -693,6 +641,22 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
   auto Buffer = writeRawHeaderToBuffer(105);
   auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
+}
+
+TEST_F(SampleProfTest, ProfileSymbolListMD5) {
+  std::vector<uint64_t> Keys = {FunctionId("foo").getHashCode(),
+                                FunctionId("bar").getHashCode()};
+  auto Table =
+      llvm::EytzingerTable<support::ulittle64_t>::create(std::move(Keys));
+
+  ProfileSymbolList List;
+  List.setColdGUIDTable(
+      EytzingerTableSpan<support::ulittle64_t>(Table.data(), Table.size()));
+
+  EXPECT_TRUE(List.contains("foo"));
+  EXPECT_TRUE(List.contains("bar"));
+  EXPECT_FALSE(List.contains("baz"));
+  EXPECT_EQ(2u, List.size());
 }
 
 } // end anonymous namespace

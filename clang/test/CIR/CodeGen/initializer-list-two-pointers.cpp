@@ -38,8 +38,8 @@ void initalizer_list_with_two_pointers_layout() {
 // CIR: %[[ARR_END_PTR:.*]] = cir.cast bitcast %[[END_PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
 // CIR: cir.store {{.*}} %[[ARR_END]], %[[ARR_END_PTR]] : !cir.ptr<!cir.array<!s32i x 3>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>
 
-// LLVM: %[[ARR_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
-// LLVM: %[[A_ADDR:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
+// LLVM: %[[ARR_ADDR:.*]] = alloca [3 x i32], align 4
+// LLVM: %[[A_ADDR:.*]] = alloca %"class.std::initializer_list<int>", align 8
 // LLVM: %[[ARR_ELEM_0_PTR:.*]] = getelementptr i32, ptr %[[ARR_ADDR]], i32 0
 // LLVM: store i32 10, ptr %[[ARR_ELEM_0_PTR]], align 4
 // LLVM: %[[ARR_ELEM_1_PTR:.*]] = getelementptr i32, ptr %[[ARR_ELEM_0_PTR]], i64 1

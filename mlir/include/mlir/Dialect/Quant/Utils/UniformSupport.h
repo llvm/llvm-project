@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_QUANT_UTILS_UNIFORMSUPPORT_H_
 #define MLIR_DIALECT_QUANT_UTILS_UNIFORMSUPPORT_H_
 
+#include <cmath>
 #include <utility>
 
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"

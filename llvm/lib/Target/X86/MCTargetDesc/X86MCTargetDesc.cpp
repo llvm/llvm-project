@@ -536,7 +536,12 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // The default is ELF.
     MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
-  populateReservedIdentifiers(*MAI, MRI);
+
+  // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
+  // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
+  // keywords.
+  if (MAI->getOutputAssemblerDialect() != 0)
+    populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
@@ -735,10 +740,9 @@ std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
 
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
@@ -762,10 +766,9 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   if (Inst.getOpcode() != X86::LEA64r)
     return std::nullopt;
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
   const MCOperand &IndexReg = Inst.getOperand(MemOpStart + X86::AddrIndexReg);

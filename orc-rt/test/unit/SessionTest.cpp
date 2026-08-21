@@ -14,6 +14,8 @@
 #include "orc-rt/QueueingRunner.h"
 #include "orc-rt/SPSWrapperFunction.h"
 
+#include "orc-rt-c/Session.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -80,6 +82,42 @@ public:
 };
 
 class MockControllerAccess : public Session::ControllerAccess {
+
+private:
+  class ConnectGuard {
+  public:
+    ConnectGuard() = default;
+    ConnectGuard(MockControllerAccess *MCA) : MCA(MCA) {
+      // Note: Assumes already locked.
+      ++MCA->Outstanding;
+    }
+    ConnectGuard(const ConnectGuard &) = delete;
+    ConnectGuard &operator=(const ConnectGuard &) = delete;
+    ConnectGuard(ConnectGuard &&Other) : MCA(Other.MCA) { Other.MCA = nullptr; }
+    ConnectGuard &operator=(ConnectGuard &&Other) {
+      reset();
+      MCA = Other.MCA;
+      Other.MCA = nullptr;
+      return *this;
+    };
+    ~ConnectGuard() { reset(); }
+
+  private:
+    void reset() {
+      if (MCA) {
+        bool Notify;
+        {
+          std::scoped_lock Lock(MCA->M);
+          --MCA->Outstanding;
+          Notify = MCA->Shutdown && MCA->Outstanding == 0;
+        }
+        if (Notify)
+          MCA->ShutdownCV.notify_all();
+      }
+    }
+    MockControllerAccess *MCA = nullptr;
+  };
+
 public:
   using OnConnectFn = move_only_function<Error(BootstrapInfo &BI)>;
 
@@ -115,130 +153,121 @@ public:
   }
 
   void connect(BootstrapInfo BI) override {
-    if (OnConnect) {
-      if (auto Err = OnConnect(BI)) {
-        reportError(std::move(Err));
-        notifyDisconnected();
-      }
-    }
+    if (OnConnect)
+      if (auto Err = OnConnect(BI))
+        notifyDisconnected(std::move(Err));
   }
 
   void disconnect() override {
-    std::unique_lock<std::mutex> Lock(M);
-    Shutdown = true;
-    ShutdownCV.wait(Lock, [this]() { return Shutdown && Outstanding == 0; });
-    notifyDisconnected();
+    // Drain any still-pending controller calls before notifying, so their
+    // handlers are failed rather than silently dropped -- see the
+    // ControllerAccess::disconnect contract. Shutdown gates callController
+    // (which bails via failControllerCallInline once it is set), so no new call
+    // can be registered after the snapshot below.
+    std::unordered_map<size_t, OnControllerCallReturn> ToDrain;
+    {
+      std::unique_lock<std::mutex> Lock(M);
+      Shutdown = true;
+      ShutdownCV.wait(Lock, [this]() { return Shutdown && Outstanding == 0; });
+      ToDrain = std::move(PendingOut);
+    }
+    for (auto &[_, OnComplete] : ToDrain)
+      failPendingControllerCall(std::move(OnComplete));
+    // A locally requested disconnect is orderly, so the mode is success.
+    notifyDisconnected(Error::success());
   }
 
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
-    size_t CId;
+    ConnectGuard CG;
+    size_t CId = 0;
+    bool BailOut = false;
     {
       std::scoped_lock<std::mutex> Lock(M);
-      if (Shutdown)
-        return;
-      CId = CallId++;
-      Pending[CId] = std::move(OnComplete);
-      ++Outstanding;
+      if (!Shutdown) {
+        CG = ConnectGuard(this);
+        CId = CallId++;
+        assert(!PendingOut.count(CId));
+        PendingOut[CId] = std::move(OnComplete);
+      } else
+        BailOut = true;
     }
+
+    if (BailOut)
+      return failControllerCallInline(std::move(OnComplete));
 
     runOrPost([this, CId, T, ArgBytes = std::move(ArgBytes)]() mutable {
       auto Fn = reinterpret_cast<orc_rt_WrapperFunction>(T);
-      Fn(reinterpret_cast<orc_rt_SessionRef>(this), CId, wfReturn,
-         ArgBytes.release());
+      Fn(reinterpret_cast<orc_rt_SessionRef>(this), ArgBytes.release(),
+         ccReturn, CId);
     });
-
-    bool Notify = false;
-    {
-      std::scoped_lock<std::mutex> Lock(M);
-      if (--Outstanding == 0 && Shutdown)
-        Notify = true;
-    }
-    if (Notify)
-      ShutdownCV.notify_all();
   }
 
-  void sendWrapperResult(uint64_t CallId,
-                         WrapperFunctionBuffer ResultBytes) override {
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                         uint64_t CallId) override {
     // Respond to a simulated call by the controller.
-    OnCallHandlerCompleteFn OnComplete;
+    ConnectGuard CG;
+    Session::OnControllerCallReturnFn OnComplete;
     {
       std::scoped_lock<std::mutex> Lock(M);
       if (Shutdown) {
-        assert(Pending.empty() && "Shut down but results still pending?");
+        assert(PendingIn.empty() && "Shut down but results still pending?");
         return;
       }
-      auto I = Pending.find(CallId);
-      assert(I != Pending.end());
+      CG = ConnectGuard(this);
+      auto I = PendingIn.find(CallId);
+      assert(I != PendingIn.end());
       OnComplete = std::move(I->second);
-      Pending.erase(I);
-      ++Outstanding;
+      PendingIn.erase(I);
     }
 
     runOrPost([OnComplete = std::move(OnComplete),
                ResultBytes = std::move(ResultBytes)]() mutable {
       OnComplete(std::move(ResultBytes));
     });
-
-    bool Notify = false;
-    {
-      std::scoped_lock<std::mutex> Lock(M);
-      if (--Outstanding == 0 && Shutdown)
-        Notify = true;
-    }
-    if (Notify)
-      ShutdownCV.notify_all();
   }
 
-  void callFromController(OnCallHandlerCompleteFn OnComplete,
+  void returnFromController(uint64_t CallId,
+                            WrapperFunctionBuffer ResultBytes) {
+    ConnectGuard CG;
+    OnControllerCallReturn OnComplete;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      CG = ConnectGuard(this);
+      auto I = PendingOut.find(CallId);
+      assert(I != PendingOut.end());
+      OnComplete = std::move(I->second);
+      PendingOut.erase(I);
+    }
+
+    handleControllerCallResult(std::move(OnComplete), std::move(ResultBytes));
+  }
+
+  void callFromController(Session::OnControllerCallReturnFn OnComplete,
                           orc_rt_WrapperFunction Fn,
                           WrapperFunctionBuffer ArgBytes) {
+    ConnectGuard CG;
     size_t CId = 0;
     bool BailOut = false;
     {
       std::scoped_lock<std::mutex> Lock(M);
       if (!Shutdown) {
+        CG = ConnectGuard(this);
         CId = CallId++;
-        Pending[CId] = std::move(OnComplete);
-        ++Outstanding;
+        PendingIn[CId] = std::move(OnComplete);
       } else
         BailOut = true;
     }
     if (BailOut)
-      return OnComplete(WrapperFunctionBuffer::createOutOfBandError(
-          "Controller disconnected"));
+      return runOrPost([OnComplete = std::move(OnComplete)]() mutable {
+        OnComplete(WrapperFunctionBuffer::createOutOfBandError(
+            "Controller disconnected"));
+      });
 
-    handleWrapperCall(CId, Fn, std::move(ArgBytes));
-
-    bool Notify = false;
-    {
-      std::scoped_lock<std::mutex> Lock(M);
-      if (--Outstanding == 0 && Shutdown)
-        Notify = true;
-    }
-
-    if (Notify)
-      ShutdownCV.notify_all();
-  }
-
-  /// Simulate start of outstanding operation.
-  void incOutstanding() {
-    std::scoped_lock<std::mutex> Lock(M);
-    ++Outstanding;
-  }
-
-  /// Simulate end of outstanding operation.
-  void decOutstanding() {
-    bool Notify = false;
-    {
-      std::scoped_lock<std::mutex> Lock(M);
-      if (--Outstanding == 0 && Shutdown)
-        Notify = true;
-    }
-    if (Notify)
-      ShutdownCV.notify_all();
+    handleWrapperCall(Fn, std::move(ArgBytes), CId);
   }
 
 private:
@@ -249,11 +278,12 @@ private:
       Work();
   }
 
-  static void wfReturn(orc_rt_SessionRef S, uint64_t CallId,
-                       orc_rt_WrapperFunctionBuffer ResultBytes) {
+  static void ccReturn(orc_rt_SessionRef S,
+                       orc_rt_WrapperFunctionBuffer ResultBytes,
+                       uint64_t CallId) {
     // Abuse "session" to refer to the ControllerAccess object.
     // We can just re-use sendFunctionResult for this.
-    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(
+    reinterpret_cast<MockControllerAccess *>(S)->returnFromController(
         CallId, WrapperFunctionBuffer(ResultBytes));
   }
 
@@ -261,19 +291,19 @@ private:
 
   std::mutex M;
   bool Shutdown = false;
-  size_t Outstanding = 0;
   size_t CallId = 0;
-  std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
+  size_t Outstanding = 0;
+  std::unordered_map<size_t, OnControllerCallReturn> PendingOut;
+  std::unordered_map<size_t, Session::OnControllerCallReturnFn> PendingIn;
   std::condition_variable ShutdownCV;
   OnConnectFn OnConnect;
 };
 
-class CallViaMockControllerAccess {
+class CallFromController {
 public:
-  CallViaMockControllerAccess(MockControllerAccess &CA,
-                              orc_rt_WrapperFunction Fn)
+  CallFromController(MockControllerAccess &CA, orc_rt_WrapperFunction Fn)
       : CA(CA), Fn(Fn) {}
-  void operator()(Session::OnCallHandlerCompleteFn OnComplete,
+  void operator()(Session::OnControllerCallReturnFn OnComplete,
                   WrapperFunctionBuffer ArgBytes) {
     CA.callFromController(std::move(OnComplete), Fn, std::move(ArgBytes));
   }
@@ -309,6 +339,21 @@ TEST(SessionTest, ReportError) {
   Session S(mockExecutorProcessInfo(), noDispatch,
             [&](Error Err) { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
+
+  if (E)
+    EXPECT_EQ(toString(std::move(E)), "foo");
+  else
+    ADD_FAILURE() << "Missing error value";
+}
+
+TEST(SessionTest, ReportErrorsViaSession) {
+  Error E = Error::success();
+  cantFail(std::move(E)); // Force error into checked state.
+
+  // Check that the ReportErrorsViaSession utility works as advertised.
+  Session S(mockExecutorProcessInfo(), noDispatch,
+            [&](Error Err) { E = std::move(Err); });
+  (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
 
   if (E)
     EXPECT_EQ(toString(std::move(E)), "foo");
@@ -390,7 +435,7 @@ TEST(SessionTest, RedundantAsyncShutdown) {
   EXPECT_TRUE(RedundantCallbackRan);
 }
 
-TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
+TEST(SessionTest, ExpectedShutdownSequenceWithNoOutstandingKeepalives) {
   // Check that Session shutdown results in...
   // 1. Services being shut down.
   // 2. A call to OnShutdownComplete.
@@ -416,7 +461,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   EXPECT_TRUE(SessionShutdownComplete);
 }
 
-TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
+TEST(SessionTest, OutstandingKeepalivesDelayShutdown) {
   QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
@@ -428,11 +473,11 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(DetachOpIdx);
   ASSERT_FALSE(ShutdownOpIdx);
 
-  // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  // Take a keepalive. This should succeed.
+  auto Tok = TaskGroup::Token(S.keepaliveTokenSource());
   ASSERT_TRUE(Tok);
 
-  // We expect shutdown to wait for any active managed calls to complete.
+  // We expect shutdown to wait for any outstanding keepalives to be released.
   bool ShutdownComplete = false;
   S.shutdown([&]() { ShutdownComplete = true; });
 
@@ -441,9 +486,9 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   EXPECT_FALSE(ShutdownOpIdx);
   EXPECT_FALSE(ShutdownComplete);
 
-  // The managed calls code group should have been closed. Assert that we
+  // The keepalive group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+  ASSERT_FALSE(TaskGroup::Token(S.keepaliveTokenSource()));
 
   Tok = TaskGroup::Token(); // Reset token.
 
@@ -452,18 +497,17 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   EXPECT_TRUE(ShutdownComplete);
 }
 
-static void managedSyncVoidFunction(int *P) { *P = 42; }
+static void managedVoidFunction(int *P) { *P = 42; }
 
-TEST(SessionTest, SyncCallManagedCodeVoidFn) {
-  // Test synchronous calls to a void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallWithKeepaliveVoidFn) {
+  // Test calls to a void function while holding a KeepaliveTaskGroup token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed and the function to
     // run.
     int X = 0;
-    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+    bool CallSucceeded = S.callWithKeepalive(managedVoidFunction, &X);
 
     EXPECT_TRUE(CallSucceeded);
     EXPECT_EQ(X, 42U);
@@ -473,25 +517,25 @@ TEST(SessionTest, SyncCallManagedCodeVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCodeSync to return false.
+    // callWithKeepalive to return false.
     int X = 0;
-    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+    bool CallSucceeded = S.callWithKeepalive(managedVoidFunction, &X);
 
     EXPECT_FALSE(CallSucceeded);
   }
 }
 
-static int managedSyncNonVoidFunction(int N) { return N + 1; }
+static int managedNonVoidFunction(int N) { return N + 1; }
 
-TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
-  // Test synchronous calls to a non-void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallWithKeepaliveNonVoidFn) {
+  // Test calls to a non-void function while holding a KeepaliveTaskGroup
+  // token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed, the function to be
     // run, and the result to be returned.
-    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+    auto Result = S.callWithKeepalive(managedNonVoidFunction, 41);
 
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
@@ -501,57 +545,19 @@ TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCodeSync to return std::nullopt.
-    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+    // callWithKeepalive to return std::nullopt.
+    auto Result = S.callWithKeepalive(managedNonVoidFunction, 41);
 
     EXPECT_EQ(Result, std::nullopt);
   }
 }
 
-static void managedAsyncVoidFunction(move_only_function<void()> Return,
-                                     int *P) {
-  *P = 42;
-  Return();
-}
-
-TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
-  // Test asynchronous calls to a void function while holding a
-  // ManagedCodeTaskGroup token.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-
-  {
-    // Pre-shutdown we expect token acquisition to succeed, and the function
-    // and Return callback to be run.
-    int X = 0;
-    bool ReturnSucceeded = false;
-    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
-                           managedAsyncVoidFunction, &X);
-    EXPECT_TRUE(ReturnSucceeded);
-    EXPECT_EQ(X, 42U);
-  }
-
-  waitForShutdown(S);
-
-  {
-    // Post-shutdown we expect token acquisition to fail. Return should be
-    // with `false` and the function should not be called.
-    int X = 0;
-    bool ReturnSucceeded = false;
-    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
-                           managedAsyncVoidFunction, &X);
-    EXPECT_FALSE(ReturnSucceeded);
-    EXPECT_EQ(X, 0U);
-  }
-}
-
-static void managedAsyncNonVoidFunction(move_only_function<void(int)> Return,
-                                        int *P) {
+static void managedAsyncFunction(move_only_function<void(int)> Return, int *P) {
   Return(++*P);
 }
 
-TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
-  // Test asynchronous calls to a non-void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallWithKeepaliveAsyncFn) {
+  // Test that calls to managed async functions via callWithKeepalive work.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
@@ -559,8 +565,7 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
     // and Return callback to be run.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
-                           managedAsyncNonVoidFunction, &N);
+    S.callWithKeepalive(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
     EXPECT_EQ(N, 42U);
@@ -573,58 +578,10 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
     // with `std::nullopt` and the function should not be called.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
-                           managedAsyncNonVoidFunction, &N);
+    S.callWithKeepalive(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_EQ(Result, std::nullopt);
     EXPECT_EQ(N, 41U);
   }
-}
-
-TEST(SessionTest, AsyncCallManagedCodeHoldsTokenAcrossAsyncGap) {
-  // Verify that the ManagedCodeTaskGroup token is held until the async
-  // continuation runs, not just until callManagedCodeAsync returns. This
-  // ensures shutdown blocks for the duration of the actual async work.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-
-  size_t OpIdx = 0;
-  std::optional<size_t> DetachOpIdx;
-  std::optional<size_t> ShutdownOpIdx;
-  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
-
-  // The managed code function stashes its continuation instead of calling it.
-  std::optional<int> Result;
-  move_only_function<void(int)> StashedContinuation;
-  S.callManagedCodeAsync([&](std::optional<int> N) { Result = std::move(N); },
-                         [&](move_only_function<void(int)> Return, int N) {
-                           // Stash the continuation and return without calling
-                           // it.
-                           StashedContinuation = std::move(Return);
-                         },
-                         41);
-
-  // callManagedCodeAsync has returned, but the continuation hasn't been
-  // called yet. The token should still be held inside StashedContinuation.
-  ASSERT_TRUE(StashedContinuation);
-
-  // Request shutdown. It should detach but block on the outstanding token.
-  bool ShutdownComplete = false;
-  S.shutdown([&]() { ShutdownComplete = true; });
-
-  EXPECT_EQ(DetachOpIdx, 0U);
-  EXPECT_FALSE(ShutdownOpIdx);
-  EXPECT_FALSE(ShutdownComplete);
-
-  // Now invoke the stashed continuation and then destroy it, releasing the
-  // token.
-  StashedContinuation(42);
-  StashedContinuation = {};
-
-  // Check result.
-  EXPECT_EQ(Result, 42);
-
-  // Shutdown should now have completed.
-  EXPECT_EQ(ShutdownOpIdx, 1U);
-  EXPECT_TRUE(ShutdownComplete);
 }
 
 TEST(SessionTest, AddServiceAndUseRef) {
@@ -667,14 +624,105 @@ TEST(ControllerAccessTest, Basics) {
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 }
 
-static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+// A ControllerAccess that is attached but whose controller connection is
+// already gone, so every callController fails synchronously. Used to exercise
+// the failControllerCallInline path in isolation.
+class DeadControllerAccess : public Session::ControllerAccess {
+public:
+  DeadControllerAccess(Session &S) : ControllerAccess(S) {}
+  void connect(BootstrapInfo) override {}
+  void disconnect() override { notifyDisconnected(Error::success()); }
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag,
+                      WrapperFunctionBuffer) override {
+    failControllerCallInline(std::move(OnComplete));
+  }
+  void sendWrapperResult(WrapperFunctionBuffer, uint64_t) override {}
+};
+
+TEST(ControllerAccessTest, SynchronousCallControllerFailureRunsInline) {
+  // A controller call that fails synchronously (connection already gone) must
+  // complete its handler inline -- on the calling thread, before callController
+  // returns, and WITHOUT going through Dispatch -- with the canonical
+  // "disconnected" out-of-band error. noDispatch ADD_FAILUREs if anything is
+  // dispatched, so it doubles as the "ran inline, not via the task queue"
+  // check.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.attach<DeadControllerAccess>(BootstrapInfo(S));
+
+  bool HandlerRan = false;
+  std::string ErrMsg;
+  S.callController(
+      [&](WrapperFunctionBuffer Result) {
+        HandlerRan = true;
+        if (const char *E = Result.getOutOfBandError())
+          ErrMsg = E;
+      },
+      /*T=*/nullptr, WrapperFunctionBuffer());
+
+  // Set synchronously, during the call above -> the handler ran inline.
+  EXPECT_TRUE(HandlerRan);
+  EXPECT_EQ(ErrMsg, "disconnected");
+}
+
+static void add_sps_wrapper(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ArgBytes,
                             orc_rt_WrapperFunctionReturn Return,
-                            orc_rt_WrapperFunctionBuffer ArgBytes) {
+                            uint64_t CallId) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
         Return(X + Y);
       });
+}
+
+// Wrapper handler that echoes its argument bytes straight back as the result.
+// Used to exercise the C callController entry point without pulling in SPS
+// (de)serialization -- the payload is opaque to the code under test.
+static void echo_wrapper(orc_rt_SessionRef S,
+                         orc_rt_WrapperFunctionBuffer ArgBytes,
+                         orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
+  Return(S, ArgBytes, CallId);
+}
+
+// Captures what orc_rt_Session_callController threads back to its C return
+// function, so the test can inspect it after the call completes.
+struct CAPICallControllerResult {
+  bool Ran = false;
+  orc_rt_SessionRef S = nullptr;
+  std::string Result;
+};
+
+static void capiCallControllerReturn(orc_rt_SessionRef S,
+                                     orc_rt_WrapperFunctionBuffer ResultBytes,
+                                     void *Ctx) {
+  auto &R = *static_cast<CAPICallControllerResult *>(Ctx);
+  R.Ran = true;
+  R.S = S;
+  WrapperFunctionBuffer Result(ResultBytes);
+  R.Result.assign(Result.data(), Result.size());
+}
+
+TEST(ControllerAccessTest, CAPICallControllerRoundTrip) {
+  // Drive a controller call through the C API entry point
+  // (orc_rt_Session_callController) and confirm that the result bytes, the
+  // session handle, and the caller-supplied context are all threaded back to
+  // the C return function.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach<MockControllerAccess>(BootstrapInfo(S), postOnto(Tasks));
+
+  CAPICallControllerResult R;
+  orc_rt_Session_callController(
+      wrap(&S), reinterpret_cast<orc_rt_ControllerHandlerTag>(&echo_wrapper),
+      WrapperFunctionBuffer::copyFrom("hello", 5).release(),
+      &capiCallControllerReturn, &R);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  EXPECT_TRUE(R.Ran) << "C return function never fired";
+  EXPECT_EQ(R.S, wrap(&S)) << "Session handle not threaded through";
+  EXPECT_EQ(R.Result, "hello") << "Result bytes not round-tripped";
 }
 
 TEST(ControllerAccessTest, ValidCallToController) {
@@ -685,7 +733,8 @@ TEST(ControllerAccessTest, ValidCallToController) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -700,7 +749,8 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -720,7 +770,8 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -740,12 +791,66 @@ TEST(ControllerAccessTest, CallFromController) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaMockControllerAccess(*CA, add_sps_wrapper),
+      CallFromController(*CA, add_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   EXPECT_EQ(Result, 42);
+}
+
+// Stashes Return, via the address passed as the wrapper call's argument,
+// instead of calling it -- simulating a wrapper function that defers
+// completion past its own return.
+static void deferred_wrapper(orc_rt_SessionRef S,
+                             orc_rt_WrapperFunctionBuffer ArgBytes,
+                             orc_rt_WrapperFunctionReturn Return,
+                             uint64_t CallId) {
+  SPSWrapperFunction<void(SPSExecutorAddr)>::handle(
+      S, ArgBytes, Return, CallId,
+      [](move_only_function<void()> Return, ExecutorAddr P) {
+        *P.toPtr<move_only_function<void()> *>() = std::move(Return);
+      });
+}
+
+TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
+  // A keepalive acquired for an incoming wrapper call must bracket
+  // only the (synchronous) span of Fn's execution -- not the whole
+  // call/response chain -- per the "Keepalives and shutdown"
+  // policy in docs/Design.md. Check this by having Fn defer its Return call
+  // past its own return, then confirming that Session shutdown's drain phase
+  // does not wait on that deferred call.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  MockControllerAccess *CA = nullptr;
+  S.attach<MockControllerAccess>(BootstrapInfo(S), postOnto(Tasks),
+                                 MockControllerAccess::OnConnectFn{}, &CA);
+
+  move_only_function<void()> DeferredReturn;
+
+  bool GotResult = false;
+  SPSWrapperFunction<void(SPSExecutorAddr)>::call(
+      CallFromController(*CA, deferred_wrapper),
+      [&](Error Err) {
+        cantFail(std::move(Err));
+        GotResult = true;
+      },
+      &DeferredReturn);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  // Fn ran and deferred its Return call, so no result should have been sent
+  // back yet.
+  ASSERT_TRUE(DeferredReturn);
+  EXPECT_FALSE(GotResult);
+
+  // Fn has already returned, so its keepalive should have been
+  // released even though the call is still logically outstanding. Shutdown's
+  // drain phase should therefore complete without waiting on the deferred
+  // Return call.
+  bool ShutdownComplete = false;
+  S.shutdown([&] { ShutdownComplete = true; });
+  EXPECT_TRUE(ShutdownComplete);
 }
 
 TEST(ControllerAccessTest, FailConnect) {
@@ -801,7 +906,8 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -820,7 +926,8 @@ TEST(ControllerAccessTest, TryAttachFailure) {
   // would before any attach.
   Error CallErr = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(CallErr);
         CallErr = R.takeError();
@@ -828,4 +935,260 @@ TEST(ControllerAccessTest, TryAttachFailure) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(CallErr)), "no controller attached");
+}
+
+// A ControllerAccess that reports a caller-supplied disconnection mode, used to
+// exercise the Error that notifyDisconnected passes to the Session (see
+// Session::setOnDisconnect). An empty ErrMsg reports an orderly disconnection,
+// any other value an abnormal one.
+class DisconnectingControllerAccess : public Session::ControllerAccess {
+public:
+  DisconnectingControllerAccess(Session &S, std::string ErrMsg = "",
+                                DisconnectingControllerAccess **Self = nullptr)
+      : ControllerAccess(S), ErrMsg(std::move(ErrMsg)) {
+    // Publish this instance so tests that need to drive a controller-initiated
+    // disconnection can reach it after attach constructs it.
+    if (Self)
+      *Self = this;
+  }
+
+  /// Simulate the controller going away without the Session asking it to.
+  void disconnectFromController() { doDisconnect(); }
+
+  void connect(BootstrapInfo) override {}
+  void disconnect() override { doDisconnect(); }
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag,
+                      WrapperFunctionBuffer) override {
+    failControllerCallInline(std::move(OnComplete));
+  }
+  void sendWrapperResult(WrapperFunctionBuffer, uint64_t) override {}
+
+private:
+  void doDisconnect() {
+    // notifyDisconnected is exactly-once, so a redundant disconnect -- e.g. a
+    // Session-initiated disconnect racing a controller-initiated one -- must be
+    // a no-op. These tests are single-threaded, so a plain bool suffices.
+    if (Disconnected)
+      return;
+    Disconnected = true;
+    notifyDisconnected(ErrMsg.empty() ? Error::success()
+                                      : make_error<StringError>(ErrMsg));
+  }
+
+  std::string ErrMsg;
+  bool Disconnected = false;
+};
+
+/// Consume Err, returning its message, or "" if Err is a success value.
+static std::string errMsgOrEmpty(Error Err) {
+  if (Err)
+    return toString(std::move(Err));
+  return "";
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsOrderlyDisconnect) {
+  // An orderly disconnection reports a success Error, exactly once.
+  size_t HandlerRuns = 0;
+  std::string ErrMsg = "<not run>";
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) {
+    ++HandlerRuns;
+    ErrMsg = errMsgOrEmpty(std::move(Err));
+  });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+  S.detach();
+
+  EXPECT_EQ(HandlerRuns, 1U);
+  EXPECT_EQ(ErrMsg, "");
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsAbnormalDisconnect) {
+  // An abnormal disconnection reports the ControllerAccess's Error unchanged.
+  std::optional<std::string> ErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  EXPECT_THAT(ErrMsg,
+              Optional(Eq(std::string("connection closed without hangup"))));
+}
+
+TEST(ControllerAccessTest, DisconnectErrorRoutedToErrorReporterWithNoHandler) {
+  // With no on-disconnect handler installed, an abnormal disconnection is
+  // reported via the Session's error reporter -- once, not once per route.
+  std::vector<std::string> ErrMsgs;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  ASSERT_EQ(ErrMsgs.size(), 1U);
+  EXPECT_EQ(ErrMsgs[0], "connection closed without hangup");
+}
+
+TEST(ControllerAccessTest, OrderlyDisconnectNotRoutedToErrorReporter) {
+  // An orderly disconnection is not an error, so nothing is reported.
+  std::vector<std::string> ErrMsgs;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+  S.detach();
+
+  EXPECT_TRUE(ErrMsgs.empty());
+}
+
+TEST(ControllerAccessTest, OnDisconnectSuppressesErrorReporterRouting) {
+  // Installing a handler takes over routing entirely: the error reporter must
+  // not also see the disconnection error.
+  std::vector<std::string> ErrMsgs;
+  std::optional<std::string> HandlerErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.setOnDisconnect(
+      [&](Error Err) { HandlerErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  EXPECT_THAT(HandlerErrMsg,
+              Optional(Eq(std::string("connection closed without hangup"))));
+  EXPECT_TRUE(ErrMsgs.empty());
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsConnectFailure) {
+  // A ControllerAccess that fails to connect disconnects during attach, so the
+  // handler sees the connect error.
+  //
+  // This is the boundary between "attempted an attach and failed" and "never
+  // attempted one": both reach proceedToDetach with the Session still in the
+  // Start state, differing only in the Error the caller supplies, so nothing
+  // but this test distinguishes them -- OnDisconnectReportsSuccessWithoutAttach
+  // would still pass if a failed connect were reported as success.
+  std::optional<std::string> ErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+
+  S.attach<MockControllerAccess>(
+      BootstrapInfo(S), MockControllerAccess::PostFn{},
+      [](BootstrapInfo &) { return make_error<StringError>("no route"); });
+
+  EXPECT_THAT(ErrMsg, Optional(Eq(std::string("no route"))));
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsSuccessWithoutAttach) {
+  // A Session that never attached a controller still reports a disconnection,
+  // with success: there was no connection to lose, so it trivially succeeded.
+  // This is what makes the handler total -- a client using it to record the
+  // Session's result never has to account for it not running.
+  //
+  // Note that success here is specific to never having attempted an attach:
+  // an attach whose connect fails reports the connect error instead, which
+  // OnDisconnectReportsConnectFailure covers.
+  size_t HandlerRuns = 0;
+  std::string ErrMsg = "<not run>";
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.setOnDisconnect([&](Error Err) {
+      ++HandlerRuns;
+      ErrMsg = errMsgOrEmpty(std::move(Err));
+    });
+  }
+  EXPECT_EQ(HandlerRuns, 1U);
+  EXPECT_EQ(ErrMsg, "");
+}
+
+TEST(ControllerAccessTest, OnDisconnectRunsBeforeDetachAndShutdown) {
+  // The on-disconnect handler reports the loss of the controller connection
+  // specifically, so it runs before Services are notified via onDetach, and
+  // well before shutdown.
+  size_t OpIdx = 0;
+  std::optional<size_t> DisconnectOpIdx;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.setOnDisconnect([&](Error Err) {
+      DisconnectOpIdx = OpIdx++;
+      cantFail(std::move(Err));
+    });
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+  }
+
+  EXPECT_EQ(OpIdx, 3U);
+  EXPECT_EQ(DisconnectOpIdx, 0U);
+  EXPECT_EQ(DetachOpIdx, 1U);
+  EXPECT_EQ(ShutdownOpIdx, 2U);
+}
+
+TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandler) {
+  // Calling shutdown from the on-disconnect handler is supported, and is the
+  // expected way to turn the loss of the controller into "finish outstanding
+  // work and exit" (see Session::setOnDisconnect). Check that it neither
+  // deadlocks nor detaches twice, and that the scheduled shutdown runs.
+  //
+  // Here the disconnect was requested locally, via detach.
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  bool OnShutdownRan = false;
+
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.setOnDisconnect([&](Error Err) {
+      cantFail(std::move(Err));
+      S.shutdown([&]() { OnShutdownRan = true; });
+    });
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+    S.detach();
+
+    EXPECT_TRUE(OnShutdownRan);
+  }
+
+  // Exactly one onDetach and one onShutdown: no double detach.
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+}
+
+TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandlerAfterRemoteHangup) {
+  // As above, but for a controller-initiated disconnection, where the Session
+  // did not ask for the detach. The re-entrant shutdown still has to be
+  // absorbed, and Services still detached and shut down exactly once.
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  bool OnShutdownRan = false;
+
+  {
+    DisconnectingControllerAccess *CA = nullptr;
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.setOnDisconnect([&](Error Err) {
+      cantFail(std::move(Err));
+      S.shutdown([&]() { OnShutdownRan = true; });
+    });
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S), "", &CA);
+    ASSERT_TRUE(CA);
+
+    CA->disconnectFromController();
+
+    EXPECT_TRUE(OnShutdownRan);
+  }
+
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
 }

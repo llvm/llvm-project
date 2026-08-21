@@ -35,8 +35,13 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -155,14 +160,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
-  // Default to triple-appropriate float ABI
-  if (Options.FloatABIType == FloatABI::Default) {
-    if (isTargetHardFloat())
-      this->Options.FloatABIType = FloatABI::Hard;
-    else
-      this->Options.FloatABIType = FloatABI::Soft;
-  }
-
   // Default to triple-appropriate EABI
   if (Options.EABIVersion == EABI::Default ||
       Options.EABIVersion == EABI::Unknown) {
@@ -200,8 +197,61 @@ ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return ARMFunctionInfo::create<ARMFunctionInfo>(
-      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+  const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
+  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
+  if (FPRegsUnavailable) {
+    const StringRef FPRegsUnavailableMsg =
+        ", but floating-point registers are unavailable";
+    const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
+
+    if (TLI->getEffectiveCallingConv(F.getCallingConv(), F.isVarArg()) ==
+        CallingConv::ARM_AAPCS_VFP) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, Twine("calling convention is hard-float") + FPRegsUnavailableMsg,
+          DiagnosticLocation(F.getSubprogram())));
+    } else {
+      for (const Instruction &I : instructions(F)) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || CB->isInlineAsm() ||
+            (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic()))
+          continue;
+        if (TLI->getEffectiveCallingConv(CB->getCallingConv(),
+                                         CB->getFunctionType()->isVarArg()) ==
+            CallingConv::ARM_AAPCS_VFP) {
+          const Function *Callee = CB->getCalledFunction();
+          F.getContext().diagnose(DiagnosticInfoUnsupported(
+              F,
+              (Callee ? Twine("call to '") + Callee->getName() + "'"
+                      : Twine("indirect call")) +
+                  " expects a hard-float calling convention" +
+                  FPRegsUnavailableMsg,
+              CB->getDebugLoc()));
+        }
+      }
+    }
+  }
+  return ARMFunctionInfo::create<ARMFunctionInfo>(Allocator, F, ARMSTI);
+}
+
+FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
+  // An explicit "float-abi" module flag always wins, even for AAPCS16.
+  if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+
+  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
+  // even on triples whose default float ABI is soft (the triple default only
+  // detects AAPCS16 when it is the triple's own default ABI).
+  if (TargetABI == ARM::ARM_ABI_AAPCS16)
+    return FloatABI::Hard;
+  // Otherwise fall back to the ABI implied by the target triple.
+  return M.getTargetTriple().getDefaultFloatABI();
+}
+
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return TargetABI;
 }
 
 const ARMSubtarget *
@@ -235,10 +285,18 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
+  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
+  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
+  // registers, but no floating-point hardware (mve+nofp)
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       F.hasMinSize(), DM);
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -441,17 +499,17 @@ bool ARMPassConfig::addInstSelector() {
 }
 
 bool ARMPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
 bool ARMPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

@@ -35,12 +35,12 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -54,7 +54,6 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -137,6 +136,7 @@ struct DeductionFailureInfo;
 class DependentDiagnostic;
 class Designation;
 class IdentifierInfo;
+struct ImplicitAllocationArguments;
 class ImplicitConversionSequence;
 typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
 class InitializationKind;
@@ -157,6 +157,8 @@ enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
 class Preprocessor;
+struct APINotesSelectorDiagnosticState;
+struct ResolvedAllocation;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -223,6 +225,10 @@ enum class AssignmentAction {
   Casting,
   Passing_CFAudited
 };
+
+// Inline capacity for type-aware, aligned, and unaligned allocation argument
+// list candidates.
+using AllocationArgumentSet = SmallVector<ImplicitAllocationArguments, 3>;
 
 namespace threadSafety {
 class BeforeSet;
@@ -421,17 +427,6 @@ enum class TemplateDeductionResult {
   CUDATargetMismatch,
   /// Some error which was already diagnosed.
   AlreadyDiagnosed
-};
-
-/// Kinds of C++ special members.
-enum class CXXSpecialMemberKind {
-  DefaultConstructor,
-  CopyConstructor,
-  MoveConstructor,
-  CopyAssignment,
-  MoveAssignment,
-  Destructor,
-  Invalid
 };
 
 /// The kind of conversion being performed.
@@ -908,6 +903,7 @@ class Sema final : public SemaBase {
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
+  // 36. C++ Expansion Statements (SemaExpand.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1312,6 +1308,8 @@ public:
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
 
+  std::unique_ptr<APINotesSelectorDiagnosticState> APINotesSelectorDiagnostics;
+
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
@@ -1663,6 +1661,10 @@ public:
   void ApplyNullability(Decl *D, NullabilityKind Nullability);
   /// Apply the 'Type:' annotation to the specified declaration
   void ApplyAPINotesType(Decl *D, StringRef TypeString);
+
+  /// Diagnose exact API notes selectors that were not matched by any
+  /// declaration processed in this translation unit.
+  void DiagnoseUnusedAPINotesSelectors();
 
   /// Whether APINotes should be gathered for all applicable Swift language
   /// versions, without being applied. Leaving clients of the current module
@@ -3579,7 +3581,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -3608,8 +3610,13 @@ public:
       ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallSetVector<const TypedefNameDecl *, 4>
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
+
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
@@ -4054,6 +4061,10 @@ public:
                                      MultiTemplateParamsArg TemplateParamLists,
                                      bool &AddToScope);
 
+  /// Attach the ABI tag a standard calling convention variant requires, as an
+  /// implicit abi_tag attribute.  Call this once the function type is final.
+  void addImplicitCallingConvAbiTag(FunctionDecl *FD);
+
   /// AddOverriddenMethods - See if a method overrides any in the base classes,
   /// and if so, check that it's a valid override and remember it.
   bool AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD);
@@ -4170,7 +4181,7 @@ public:
   /// complete.
   void ActOnInitializerError(Decl *Dcl);
 
-  void ActOnCXXForRangeDecl(Decl *D);
+  void ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt);
   StmtResult ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                         IdentifierInfo *Ident,
                                         ParsedAttributes &Attrs);
@@ -5328,6 +5339,8 @@ public:
     /// typically only applies to 'std::strong_ordering', due to the implicit
     /// fallback return value.
     DefaultedOperator,
+    /// A builtin needed 'std::strong_ordering' (eg. '__builtin_type_order').
+    Builtin,
   };
 
   /// Lookup the specified comparison category types in the standard
@@ -6160,24 +6173,6 @@ public:
                                              SourceLocation DefaultLoc);
   void CheckDelayedMemberExceptionSpecs();
 
-  /// Kinds of defaulted comparison operator functions.
-  enum class DefaultedComparisonKind : unsigned char {
-    /// This is not a defaultable comparison operator.
-    None,
-    /// This is an operator== that should be implemented as a series of
-    /// subobject comparisons.
-    Equal,
-    /// This is an operator<=> that should be implemented as a series of
-    /// subobject comparisons.
-    ThreeWay,
-    /// This is an operator!= that should be implemented as a rewrite in terms
-    /// of a == comparison.
-    NotEqual,
-    /// This is an <, <=, >, or >= that should be implemented as a rewrite in
-    /// terms of a <=> comparison.
-    Relational,
-  };
-
   bool CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *MD,
                                           DefaultedComparisonKind DCK);
   void DeclareImplicitEqualityComparison(CXXRecordDecl *RD,
@@ -6391,10 +6386,6 @@ public:
   /// that is not a function declaration or definition.
   void CheckExtraCXXDefaultArguments(Declarator &D);
 
-  CXXSpecialMemberKind getSpecialMember(const CXXMethodDecl *MD) {
-    return getDefaultedFunctionKind(MD).asSpecialMember();
-  }
-
   /// Perform semantic analysis for the variable declaration that
   /// occurs within a C++ catch clause, returning the newly-created
   /// variable.
@@ -6417,7 +6408,15 @@ public:
                                      SourceLocation NameLoc,
                                      SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
-                                     MultiTemplateParamsArg TempParamLists);
+                                     MultiTemplateParamsArg TempParamLists,
+                                     TemplateIdAnnotation *TemplateId);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
+                            ArrayRef<TemplateParameterList *> TPLs,
+                            bool IsInstantiation);
+
+  bool DiagnosePackIndexingInFriendNNS(SourceLocation Loc,
+                                       NestedNameSpecifierLoc NNSLoc);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
@@ -6438,63 +6437,6 @@ public:
       CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
       TrivialABIHandling TAH = TrivialABIHandling::IgnoreTrivialABI,
       bool Diagnose = false);
-
-  /// For a defaulted function, the kind of defaulted function that it is.
-  class DefaultedFunctionKind {
-    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
-    unsigned SpecialMember : 8;
-    unsigned Comparison : 8;
-
-  public:
-    DefaultedFunctionKind()
-        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
-        : SpecialMember(llvm::to_underlying(CSM)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(Comp)) {}
-
-    bool isSpecialMember() const {
-      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
-             CXXSpecialMemberKind::Invalid;
-    }
-    bool isComparison() const {
-      return static_cast<DefaultedComparisonKind>(Comparison) !=
-             DefaultedComparisonKind::None;
-    }
-
-    explicit operator bool() const {
-      return isSpecialMember() || isComparison();
-    }
-
-    CXXSpecialMemberKind asSpecialMember() const {
-      return static_cast<CXXSpecialMemberKind>(SpecialMember);
-    }
-    DefaultedComparisonKind asComparison() const {
-      return static_cast<DefaultedComparisonKind>(Comparison);
-    }
-
-    /// Get the index of this function kind for use in diagnostics.
-    unsigned getDiagnosticIndex() const {
-      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
-                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
-                    "invalid should have highest index");
-      static_assert((unsigned)DefaultedComparisonKind::None == 0,
-                    "none should be equal to zero");
-      return SpecialMember + Comparison;
-    }
-  };
-
-  /// Determine the kind of defaulting that would be done for a given function.
-  ///
-  /// If the function is both a default constructor and a copy / move
-  /// constructor (due to having a default argument for the first parameter),
-  /// this picks CXXSpecialMemberKind::DefaultConstructor.
-  ///
-  /// FIXME: Check that case is properly handled by all callers.
-  DefaultedFunctionKind getDefaultedFunctionKind(const FunctionDecl *FD);
 
   /// Handle a C++11 empty-declaration and attribute-declaration.
   Decl *ActOnEmptyDeclaration(Scope *S, const ParsedAttributesView &AttrList,
@@ -7958,6 +7900,9 @@ public:
   QualType CheckSizelessVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
+  QualType CheckMatrixCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
@@ -8310,10 +8255,6 @@ public:
     return Res;
   }
 
-  DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {
-    return getDefaultedFunctionKind(FD).asComparison();
-  }
-
   /// Returns a field in a CXXRecordDecl that has the same name as the decl \p
   /// SelfAssigned when inside a CXXMethodDecl.
   const FieldDecl *
@@ -8647,12 +8588,11 @@ public:
 
   /// Finds the overloads of operator new and delete that are appropriate
   /// for the allocation.
-  bool FindAllocationFunctions(
+  std::optional<ResolvedAllocation> FindAllocationFunctions(
       SourceLocation StartLoc, SourceRange Range,
       AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
-      QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
-      MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
-      FunctionDecl *&OperatorDelete, bool Diagnose = true);
+      QualType AllocType, bool IsArray, const ImplicitAllocationParameters &IAP,
+      MultiExprArg PlaceArgs, bool Diagnose = true);
 
   /// DeclareGlobalNewDelete - Declare the global forms of operator new and
   /// delete. These are:
@@ -8955,6 +8895,19 @@ private:
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
                                  bool DeleteWasArrayForm);
+
+  std::optional<AllocationArgumentSet>
+  resolveAllocationArguments(LookupResult &R,
+                             const ImplicitAllocationParameters &,
+                             ArrayRef<Expr *> PlacementArguments);
+
+  // Attempts to construct the type identity argument for the call to a
+  // type aware operator new. Returns null on failure.
+  Expr *tryGetTypeIdentityArgument(QualType Type, SourceLocation);
+
+  Expr *AllocationSizeExpr = nullptr;
+  Expr *AllocationAlignmentExpr = nullptr;
+  llvm::DenseMap<QualType, Expr *> AllocationTypeIdentityArguments;
 
   ///@}
 
@@ -9618,9 +9571,11 @@ public:
   /// LookupOrCreateLabel - Do a name lookup of a label with the specified name.
   /// If GnuLabelLoc is a valid source location, then this is a definition
   /// of an __label__ label name, otherwise it is a normal label definition
-  /// or use.
+  /// or use. If IsLabelStmt is true, then this is the label of a
+  /// labeled-statement.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
-                                 SourceLocation GnuLabelLoc = SourceLocation());
+                                 SourceLocation GnuLabelLoc = SourceLocation(),
+                                 bool IsLabelStmt = false);
 
   /// Perform a name lookup for a label with the specified name; this does not
   /// create a new label if the lookup fails.
@@ -10916,6 +10871,12 @@ public:
                                         const UnresolvedSetImpl &Fns,
                                         bool PerformADL = true);
 
+  /// Perform lookup for an overloaded unary operator.
+  void LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                               OverloadedOperatorKind Op,
+                               const UnresolvedSetImpl &Fns,
+                               ArrayRef<Expr *> Args, bool RequiresADL = true);
+
   /// Create a unary operation that may resolve to an overloaded
   /// operator.
   ///
@@ -11186,6 +11147,43 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
+  /// Holds the 'begin' and 'end' variables of a range-based for loop or
+  /// expansion statement; begin-expr and end-expr are also provided; the
+  /// latter are used in some diagnostics.
+  struct ForRangeBeginEndInfo {
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
+    bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
+  };
+
+  /// Determine begin-expr and end-expr and build variable declarations for
+  /// them as per [stmt.ranged].
+  ForRangeBeginEndInfo BuildCXXForRangeBeginEndVars(
+      Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+      SourceLocation CoawaitLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+      BuildForRangeKind Kind, bool IsConstexpr,
+      StmtResult *RebuildResult = nullptr,
+      llvm::function_ref<StmtResult()> RebuildWithDereference = {},
+      IdentifierInfo *BeginName = nullptr, IdentifierInfo *EndName = nullptr);
+
+  /// Helper used by the expansion statements and for-range code to build
+  /// a variable declaration for e.g. 'begin' and 'end'.
+  VarDecl *BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
+                                IdentifierInfo *Name, bool IsConstexpr);
+
+  /// Build the range variable of a range-based for loop or iterating
+  /// expansion statement and return its DeclStmt.
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                      bool IsConstexpr = false);
+
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
   /// body cannot be performed until after the type of the range variable is
@@ -11330,6 +11328,9 @@ public:
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
                                            SourceLocation Loc,
                                            unsigned NumParams);
+
+  void ApplyForRangeOrExpansionStatementLifetimeExtension(
+      VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries);
 
 private:
   /// Check whether the given statement can have musttail applied to it,
@@ -11827,8 +11828,7 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult CheckVarOrConceptTemplateTemplateId(
-      const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-      TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
+      const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
       const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
@@ -12751,6 +12751,18 @@ public:
             return false;
           });
 
+  /// Perform [temp.friend] p5 template argument deduction for a dependent
+  /// friend declaration and a candidate class template specialization.
+  bool DeduceTemplateArguments(FriendTemplateDecl *FTD,
+                               ClassTemplateDecl *PatternCTD,
+                               ClassTemplateDecl *CandidateCTD,
+                               ArrayRef<TemplateParameterList *> TPLs,
+                               ArrayRef<TemplateArgument> PatternArgs,
+                               ArrayRef<TemplateArgument> CandidateArgs,
+                               SourceLocation Loc,
+                               TemplateSpecCandidateSet *FailedTSC,
+                               MultiLevelTemplateArgumentList &DeducedArgs);
+
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
   ///
@@ -12977,7 +12989,8 @@ public:
                                   llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                  unsigned Depth, llvm::SmallBitVector &Used);
+                                  bool OnlyDeduced, unsigned Depth,
+                                  llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgumentLoc> TemplateArgs,
                                   unsigned Depth, llvm::SmallBitVector &Used);
@@ -13310,6 +13323,9 @@ public:
       /// We are performing overload resolution for a call to a function
       /// template or variable template named 'sycl_kernel_launch'.
       SYCLKernelLaunchOverloadResolution,
+
+      /// We are instantiating an expansion statement.
+      ExpansionStmtInstantiation,
     } Kind;
 
     /// Whether we're substituting into constraints.
@@ -13498,6 +13514,12 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           concepts::Requirement *Req,
                           SourceRange InstantiationRange = SourceRange());
+
+    /// \brief Note that we are substituting the body of an expansion statement.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          CXXExpansionStmtPattern *ExpansionStmt,
+                          ArrayRef<TemplateArgument> TArgs,
+                          SourceRange InstantiationRange);
 
     /// \brief Note that we are checking the satisfaction of the constraint
     /// expression inside of a nested requirement.
@@ -13721,14 +13743,6 @@ public:
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
 
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
-
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
   ///
@@ -13831,6 +13845,11 @@ public:
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             SourceLocation Loc, DeclarationName Entity);
 
+  TypeSourceInfo *
+  SubstFriendType(TypeSourceInfo *TSI,
+                  const MultiLevelTemplateArgumentList &TemplateArgs,
+                  SourceLocation Loc, DeclarationName Entity);
+
   /// A form of SubstType intended specifically for instantiating the
   /// type of a FunctionDecl.  Its purpose is solely to force the
   /// instantiation of default-argument expressions and to avoid
@@ -13871,21 +13890,6 @@ public:
   /// act like a CXXIdExpression rather than an attempt to call.
   ExprResult SubstCXXIdExpr(Expr *E,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
-  // to disable constraint evaluation, then restore the state.
-  template <typename InstTy> struct ConstraintEvalRAII {
-    InstTy &TI;
-    bool OldValue;
-
-    ConstraintEvalRAII(InstTy &TI)
-        : TI(TI), OldValue(TI.getEvaluateConstraints()) {
-      TI.setEvaluateConstraints(false);
-    }
-    ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
-    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
-    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
-  };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
@@ -15802,6 +15806,53 @@ public:
 
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Expansion Statements
+  /// Implementations are in SemaExpand.cpp
+  ///@{
+public:
+  CXXExpansionStmtDecl *ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
+                                                  SourceLocation TemplateKWLoc);
+
+  CXXExpansionStmtDecl *
+  BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
+                            NonTypeTemplateParmDecl *NTTP);
+
+  ExprResult ActOnCXXExpansionInitList(MultiExprArg SubExprs,
+                                       SourceLocation LBraceLoc,
+                                       SourceLocation RBraceLoc);
+
+  StmtResult ActOnCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
+
+  StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
+
+  StmtResult BuildCXXEnumeratingExpansionStmtPattern(Decl *ESD, Stmt *Init,
+                                                     Stmt *ExpansionVar,
+                                                     SourceLocation LParenLoc,
+                                                     SourceLocation ColonLoc,
+                                                     SourceLocation RParenLoc);
+
+  StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+
+  ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
+
+  std::optional<uint64_t>
+  ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
   ///@}
 };
 

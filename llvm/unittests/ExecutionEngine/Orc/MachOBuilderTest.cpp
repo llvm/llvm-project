@@ -41,3 +41,31 @@ TEST(MachOBuilderTest, AddLCUUID) {
   ASSERT_EQ(ParsedUUID.size(), 16u);
   EXPECT_EQ(ArrayRef<uint8_t>(UUID), ParsedUUID);
 }
+
+TEST(MachOBuilderTest, AddLCTargetTriple) {
+  std::string TestTriple = "x86_64-apple-darwin";
+  MachOBuilder<MachO64LE> B(4096);
+  B.Header.filetype = MachO::MH_OBJECT;
+
+  B.addLoadCommand<MachO::LC_TARGET_TRIPLE>(TestTriple);
+
+  size_t Size = B.layout();
+  std::vector<char> Buffer(Size, 0);
+  B.write({Buffer.data(), Buffer.size()});
+
+  auto Obj = parseMachO(Buffer);
+  ASSERT_THAT_EXPECTED(Obj, Succeeded());
+
+  bool Found = false;
+  for (auto &LC : (*Obj)->load_commands()) {
+    if (LC.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      Found = true;
+      MachO::target_triple_command TTC = (*Obj)->getTargetTripleLoadCommand(LC);
+      ASSERT_LT(TTC.triple, TTC.cmdsize);
+      EXPECT_EQ(LC.Ptr + TTC.triple, TestTriple);
+      break;
+    }
+  }
+
+  EXPECT_TRUE(Found);
+}

@@ -1217,7 +1217,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
   // environment so they can be treated as readnone.
   def int_sqrt : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_powi : DefaultAttrsIntrinsic<
-                   [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
+                   [llvm_anyfloat_ty],
+                   [LLVMMatchType<0>, llvm_any_scalar_int_ty]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_pow  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
@@ -1363,7 +1364,9 @@ def int_is_fpclass
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyfloat_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
-                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
+                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>,
+                             ArgInfo<ArgIndex<1>,
+                                     [ImmArgPrinter<"printFPClassMask">]>]>;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //

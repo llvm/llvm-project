@@ -991,14 +991,6 @@ ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
       Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
       SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
 
-  // If the template decl is incomplete, copy the external lexical storage from
-  // the base template. This allows instantiations of incomplete types to
-  // complete using the external AST if the template's declaration came from an
-  // external AST.
-  if (!SpecializedTemplate->getTemplatedDecl()->isCompleteDefinition())
-    Result->setHasExternalLexicalStorage(
-      SpecializedTemplate->getTemplatedDecl()->hasExternalLexicalStorage());
-
   return Result;
 }
 
@@ -1236,21 +1228,52 @@ void FriendTemplateDecl::anchor() {}
 
 FriendTemplateDecl *
 FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
-                           SourceLocation L,
-                           MutableArrayRef<TemplateParameterList *> Params,
-                           FriendUnion Friend, SourceLocation FLoc) {
-  TemplateParameterList **TPL = nullptr;
-  if (!Params.empty()) {
-    TPL = new (Context) TemplateParameterList *[Params.size()];
-    llvm::copy(Params, TPL);
-  }
-  return new (Context, DC)
-      FriendTemplateDecl(DC, L, TPL, Params.size(), Friend, FLoc);
+                           SourceLocation Loc, FriendUnion Friend,
+                           SourceLocation FriendLoc,
+                           ArrayRef<TemplateParameterList *> FriendTPLists,
+                           SourceLocation EllipsisLoc, TemplateName Template) {
+  std::size_t Extra =
+      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
+          FriendTPLists.size());
+  auto *FTD = new (Context, DC, Extra) FriendTemplateDecl(
+      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTPLists, Template);
+  cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
+  return FTD;
 }
 
-FriendTemplateDecl *FriendTemplateDecl::CreateDeserialized(ASTContext &C,
-                                                           GlobalDeclID ID) {
-  return new (C, ID) FriendTemplateDecl(EmptyShell());
+FriendTemplateDecl *
+FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
+                           SourceLocation Loc, TemplateName Template,
+                           SourceLocation FriendLoc,
+                           ArrayRef<TemplateParameterList *> FriendTPLists,
+                           SourceLocation EllipsisLoc) {
+  auto *Friend = Template.getAsTemplateDecl();
+  assert(Friend && "friend template name must be resolved");
+  std::size_t Extra =
+      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
+          FriendTPLists.size());
+  auto *FTD = new (Context, DC, Extra) FriendTemplateDecl(
+      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTPLists, Template);
+  cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
+  return FTD;
+}
+
+FriendTemplateDecl *
+FriendTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                       unsigned NumFriendTPLists) {
+  std::size_t Extra =
+      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
+          NumFriendTPLists);
+  return new (C, ID, Extra) FriendTemplateDecl(EmptyShell(), NumFriendTPLists);
+}
+
+SourceRange FriendTemplateDecl::getSourceRange() const {
+  SourceLocation Begin = getTemplateParameterLists().front()->getTemplateLoc();
+  SourceLocation End =
+      !Template.isNull() && !getFriendType()
+          ? (isPackExpansion() ? getEllipsisLoc() : getLocation())
+          : FriendDecl::getSourceRange().getEnd();
+  return SourceRange(Begin, End);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1721,6 +1744,9 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     return {Info->getTemplate()->getTemplateParameters()->getParam(Index),
             Info->TemplateArguments->asArray()[Index]};
   }
+  case Decl::Kind::CXXExpansionStmt:
+    assert(Index == 0 && "expansion stmts only have a single template param");
+    return {cast<CXXExpansionStmtDecl>(D)->getIndexTemplateParm(), {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
@@ -1921,4 +1947,24 @@ SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
 SourceRange ExplicitInstantiationDecl::getSourceRange() const {
   SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
   return SourceRange(Begin, getEndLoc());
+}
+
+CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                                           NonTypeTemplateParmDecl *NTTP)
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
+      IndexNTTP(NTTP) {}
+
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
+                             NonTypeTemplateParmDecl *NTTP) {
+  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, NTTP);
+}
+CXXExpansionStmtDecl *
+CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID)
+      CXXExpansionStmtDecl(/*DC=*/nullptr, SourceLocation(), /*NTTP=*/nullptr);
+}
+
+SourceRange CXXExpansionStmtDecl::getSourceRange() const {
+  return Pattern ? Pattern->getSourceRange() : SourceRange();
 }

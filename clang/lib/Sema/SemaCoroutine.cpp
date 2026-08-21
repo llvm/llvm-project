@@ -23,6 +23,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/DynamicAllocationArgumentsCXX.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
@@ -1478,13 +1479,18 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     IAP = ImplicitAllocationParameters(
         alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
 
-    FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(
+    auto FoundAllocations = S.FindAllocationFunctions(
         Loc, SourceRange(), NewScope,
         /*DeleteScope=*/AllocationFunctionScope::Both, PromiseType,
         /*isArray=*/false, IAP,
-        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
-        UnusedResult, /*Diagnose=*/false);
+        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs,
+        /*Diagnose=*/false);
+    if (FoundAllocations) {
+      IAP = FoundAllocations->IAP;
+      OperatorNew = FoundAllocations->OperatorNew;
+    } else {
+      OperatorNew = nullptr;
+    }
     assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 

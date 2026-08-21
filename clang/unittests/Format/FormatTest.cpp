@@ -15368,6 +15368,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   // All functions should be on a single line if they fit
   verifyFormat("int f() { return 42; }", CustomAll);
   verifyFormat("int g() { return f() + h(); }", CustomAll);
+  verifyFormat("pair<int, int> g() { return {1, {}}; }", CustomAll);
   verifyFormat("class C {\n"
                "  int f() { return 42; }\n"
                "};",
@@ -22557,8 +22558,12 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash("[[[a]]");
+  verifyNoCrash("[[[a]]]");
+  verifyNoCrash("[[ [a] ]]");
   verifyNoCrash(
       "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  verifyNoCrash("a &alias & =");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {

@@ -16,11 +16,12 @@
 #include <random>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 constexpr std::size_t MAX_BUFFER_LEN = 256;
 constexpr std::size_t MAX_SEED_LEN   = 16;
 
-static void BM_SeedSeq_Generate(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_SeedSeq_Generate(benchmark::State& state) {
   std::array<std::uint32_t, MAX_BUFFER_LEN> buffer;
   std::array<std::uint32_t, MAX_SEED_LEN> seeds;
   {
@@ -35,7 +36,7 @@ static void BM_SeedSeq_Generate(benchmark::State& state) {
 BENCHMARK(BM_SeedSeq_Generate)->Ranges({{1, MAX_SEED_LEN}, {1, MAX_BUFFER_LEN}});
 
 template <class Engine>
-static void BM_engine(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_engine(benchmark::State& state) {
   Engine engine;
 
   for (auto _ : state) {
@@ -46,7 +47,7 @@ BENCHMARK(BM_engine<std::mt19937_64>)->Name("std::mt19937_64::operator()");
 BENCHMARK(BM_engine<std::mt19937>)->Name("std::mt19937::operator()");
 
 template <class Engine>
-static void BM_engine_array(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_engine_array(benchmark::State& state) {
   Engine engine;
 
   typename Engine::result_type buffer[128];
