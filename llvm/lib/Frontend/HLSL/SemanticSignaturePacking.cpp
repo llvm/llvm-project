@@ -63,7 +63,34 @@ Error llvm::hlsl::packSignatureStacked(
 }
 
 Error llvm::hlsl::packSignatureIndexed(
-    MutableArrayRef<SemanticSignatureElement>, Triple::EnvironmentType,
-    IOType) {
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  for (const auto &[Index, Element] : enumerate(Elements)) {
+    assert(Element.StartRow == UnallocatedRow &&
+           Element.StartCol == UnallocatedCol && "already allocated?");
+    assert(Element.Rows > 0 && "signature element must have at least one row");
+    assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
+           "signature element must have between 1 and 4 columns");
+
+    SemanticInterpretation Interpretation =
+        getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
+    if (Interpretation == SemanticInterpretation::NotAllocated)
+      continue;
+
+    assert(Interpretation == SemanticInterpretation::Target &&
+           "unexpected semantic interpretation for indexed packing");
+    assert(Element.Rows == 1 && Element.SemanticIndices.size() == 1 &&
+           "target elements must occupy one semantic row");
+
+    const uint32_t Row = Element.SemanticIndices.front();
+    if (Row >= MaxSignatureRows)
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::SignatureOverflow,
+          static_cast<unsigned>(Index));
+
+    Element.StartRow = Row;
+    Element.StartCol = 0;
+  }
+
   return Error::success();
 }
