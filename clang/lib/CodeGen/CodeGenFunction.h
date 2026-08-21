@@ -3370,6 +3370,10 @@ public:
   /// calls to EmitTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
 
+  /// Emit the checks \p TCK calls for on \p LV, the lvalue \p E designates,
+  /// skipping cases that cannot or need not be checked.
+  void EmitTypeCheck(TypeCheckKind TCK, const Expr *E, LValue LV);
+
   void EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc, LValue LV,
                      QualType Type, SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr) {
@@ -3397,15 +3401,23 @@ public:
                      SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr);
 
-  /// Emit a check that \p Base points into an array object, which
-  /// we can access at index \p Index. \p Accessed should be \c false if we
-  /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
+  /// Whether the context an lvalue appears in requires the object it designates
+  /// to exist. Threaded down through the lvalue emitters so that a subscript can
+  /// tell `x = a[i]` (which requires the element) from `p = &a[i]` (which does
+  /// not, per C99 6.5.6p8 and 6.5.3.2p3).
+  enum ObjectRequirement_t { ObjectNotRequired, ObjectRequired };
+
+  /// Emit a check that \p Base points into an array object, which we can access
+  /// at index \p Index. \p Req selects the comparison: strict when the
+  /// designated element must exist, otherwise an index equal to the bound is
+  /// accepted.
   void EmitBoundsCheck(const Expr *ArrayExpr, const Expr *ArrayExprBase,
-                       llvm::Value *Index, QualType IndexType, bool Accessed);
+                       llvm::Value *Index, QualType IndexType,
+                       ObjectRequirement_t Req);
   void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
                            llvm::Value *IndexVal, QualType IndexType,
                            llvm::Value *BoundsVal, QualType BoundsType,
-                           bool Accessed);
+                           ObjectRequirement_t Req);
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
@@ -3436,7 +3448,7 @@ public:
   // counted_by attribute.
   void EmitCountedByBoundsChecking(const Expr *ArrayExpr, QualType ArrayType,
                                    Address ArrayInst, QualType IndexType,
-                                   llvm::Value *IndexVal, bool Accessed,
+                                   llvm::Value *IndexVal, ObjectRequirement_t Req,
                                    bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -4332,10 +4344,12 @@ public:
   /// variable length type, this is not possible.
   ///
   LValue EmitLValue(const Expr *E,
-                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
+                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull,
+                    ObjectRequirement_t Req = ObjectNotRequired);
 
 private:
-  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull);
+  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull,
+                          ObjectRequirement_t Req);
 
 public:
   /// Same as EmitLValue but additionally we generate checking code to
@@ -4484,7 +4498,8 @@ public:
                                              llvm::Value *&Result);
 
   // Note: only available for agg return types
-  LValue EmitBinaryOperatorLValue(const BinaryOperator *E);
+  LValue EmitBinaryOperatorLValue(const BinaryOperator *E,
+                                  ObjectRequirement_t Req);
   LValue EmitCompoundAssignmentLValue(const CompoundAssignOperator *E);
   // Note: only available for agg return types
   LValue EmitCallExprLValue(const CallExpr *E,
@@ -4495,9 +4510,9 @@ public:
   LValue EmitStringLiteralLValue(const StringLiteral *E);
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
-  LValue EmitUnaryOpLValue(const UnaryOperator *E);
+  LValue EmitUnaryOpLValue(const UnaryOperator *E, ObjectRequirement_t Req);
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
-                                bool Accessed = false);
+                                ObjectRequirement_t Req);
   llvm::Value *EmitMatrixIndexExpr(const Expr *E);
   LValue EmitMatrixSingleSubscriptExpr(const MatrixSingleSubscriptExpr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
@@ -4510,8 +4525,9 @@ public:
   LValue EmitCompoundLiteralLValue(const CompoundLiteralExpr *E);
   LValue EmitInitListLValue(const InitListExpr *E);
   void EmitIgnoredConditionalOperator(const AbstractConditionalOperator *E);
-  LValue EmitConditionalOperatorLValue(const AbstractConditionalOperator *E);
-  LValue EmitCastLValue(const CastExpr *E);
+  LValue EmitConditionalOperatorLValue(const AbstractConditionalOperator *E,
+                                       ObjectRequirement_t Req);
+  LValue EmitCastLValue(const CastExpr *E, ObjectRequirement_t Req);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
   LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
@@ -5615,7 +5631,8 @@ public:
   Address
   EmitPointerWithAlignment(const Expr *Addr, LValueBaseInfo *BaseInfo = nullptr,
                            TBAAAccessInfo *TBAAInfo = nullptr,
-                           KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
+                           KnownNonNull_t IsKnownNonNull = NotKnownNonNull,
+                           ObjectRequirement_t Req = ObjectNotRequired);
 
   /// If \p E references a parameter with pass_object_size info or a constant
   /// array size modifier, emit the object size divided by the size of \p EltTy.

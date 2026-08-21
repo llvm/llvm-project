@@ -1285,7 +1285,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
 void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
                                       const Expr *ArrayExprBase,
                                       llvm::Value *IndexVal, QualType IndexType,
-                                      bool Accessed) {
+                                      ObjectRequirement_t Req) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
@@ -1295,7 +1295,7 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
       *this, ArrayExprBase, ArrayExprBaseType, StrictFlexArraysLevel);
 
   EmitBoundsCheckImpl(ArrayExpr, ArrayExprBaseType, IndexVal, IndexType,
-                      BoundsVal, getContext().getSizeType(), Accessed);
+                      BoundsVal, getContext().getSizeType(), Req);
 }
 
 void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
@@ -1303,7 +1303,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
                                           llvm::Value *IndexVal,
                                           QualType IndexType,
                                           llvm::Value *BoundsVal,
-                                          QualType BoundsType, bool Accessed) {
+                                          QualType BoundsType, ObjectRequirement_t Req) {
   if (!BoundsVal)
     return;
 
@@ -1329,8 +1329,9 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
       EmitCheckTypeDescriptor(IndexType),
   };
 
-  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexInst, BoundsInst)
-                                : Builder.CreateICmpULE(IndexInst, BoundsInst);
+  llvm::Value *Check = Req == ObjectRequired
+                           ? Builder.CreateICmpULT(IndexInst, BoundsInst)
+                           : Builder.CreateICmpULE(IndexInst, BoundsInst);
 
   if (BoundsSigned) {
     // Don't allow a negative bounds.
@@ -1479,10 +1480,11 @@ static Address emitPointerArithmetic(CodeGenFunction &CGF,
                  /*Offset=*/nullptr, IsKnownNonNull);
 }
 
-static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
-                                        TBAAAccessInfo *TBAAInfo,
-                                        KnownNonNull_t IsKnownNonNull,
-                                        CodeGenFunction &CGF) {
+static Address
+EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
+                         TBAAAccessInfo *TBAAInfo,
+                         KnownNonNull_t IsKnownNonNull, CodeGenFunction &CGF,
+                         CodeGenFunction::ObjectRequirement_t Req) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(E->getType()->isPointerType() ||
          E->getType()->isObjCObjectPointerType());
@@ -1504,8 +1506,9 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
 
         LValueBaseInfo InnerBaseInfo;
         TBAAAccessInfo InnerTBAAInfo;
-        Address Addr = CGF.EmitPointerWithAlignment(
-            CE->getSubExpr(), &InnerBaseInfo, &InnerTBAAInfo, IsKnownNonNull);
+        Address Addr =
+            CGF.EmitPointerWithAlignment(CE->getSubExpr(), &InnerBaseInfo,
+                                         &InnerTBAAInfo, IsKnownNonNull, Req);
         if (BaseInfo) *BaseInfo = InnerBaseInfo;
         if (TBAAInfo) *TBAAInfo = InnerTBAAInfo;
 
@@ -1579,7 +1582,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
   // Unary &.
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     if (UO->getOpcode() == UO_AddrOf) {
-      LValue LV = CGF.EmitLValue(UO->getSubExpr(), IsKnownNonNull);
+      LValue LV = CGF.EmitLValue(UO->getSubExpr(), IsKnownNonNull, Req);
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
       if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
       return LV.getAddress();
@@ -1594,7 +1597,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
     case Builtin::BIaddressof:
     case Builtin::BI__addressof:
     case Builtin::BI__builtin_addressof: {
-      LValue LV = CGF.EmitLValue(Call->getArg(0), IsKnownNonNull);
+      LValue LV = CGF.EmitLValue(Call->getArg(0), IsKnownNonNull, Req);
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
       if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
       return LV.getAddress();
@@ -1618,11 +1621,13 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
 
 /// EmitPointerWithAlignment - Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-Address CodeGenFunction::EmitPointerWithAlignment(
-    const Expr *E, LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo,
-    KnownNonNull_t IsKnownNonNull) {
-  Address Addr =
-      ::EmitPointerWithAlignment(E, BaseInfo, TBAAInfo, IsKnownNonNull, *this);
+Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
+                                                  LValueBaseInfo *BaseInfo,
+                                                  TBAAAccessInfo *TBAAInfo,
+                                                  KnownNonNull_t IsKnownNonNull,
+                                                  ObjectRequirement_t Req) {
+  Address Addr = ::EmitPointerWithAlignment(E, BaseInfo, TBAAInfo,
+                                            IsKnownNonNull, *this, Req);
   if (IsKnownNonNull && !Addr.isKnownNonNull())
     Addr.setKnownNonNull();
   return Addr;
@@ -1702,21 +1707,26 @@ bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
 LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
   LValue LV;
   if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
-    LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
+    LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), ObjectRequired);
   else
     LV = EmitLValue(E);
-  if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
-    SanitizerSet SkippedChecks;
-    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-      bool IsBaseCXXThis = IsWrappedCXXThis(ME->getBase());
-      if (IsBaseCXXThis)
-        SkippedChecks.set(SanitizerKind::Alignment, true);
-      if (IsBaseCXXThis || isa<DeclRefExpr>(ME->getBase()))
-        SkippedChecks.set(SanitizerKind::Null, true);
-    }
-    EmitTypeCheck(TCK, E->getExprLoc(), LV, E->getType(), SkippedChecks);
-  }
+  EmitTypeCheck(TCK, E, LV);
   return LV;
+}
+
+void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, const Expr *E,
+                                    LValue LV) {
+  if (isa<DeclRefExpr>(E) || LV.isBitField() || !LV.isSimple())
+    return;
+  SanitizerSet SkippedChecks;
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    bool IsBaseCXXThis = IsWrappedCXXThis(ME->getBase());
+    if (IsBaseCXXThis)
+      SkippedChecks.set(SanitizerKind::Alignment, true);
+    if (IsBaseCXXThis || isa<DeclRefExpr>(ME->getBase()))
+      SkippedChecks.set(SanitizerKind::Null, true);
+  }
+  EmitTypeCheck(TCK, E->getExprLoc(), LV, E->getType(), SkippedChecks);
 }
 
 /// EmitLValue - Emit code to compute a designator that specifies the location
@@ -1735,12 +1745,13 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 /// length type, this is not possible.
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
-                                   KnownNonNull_t IsKnownNonNull) {
+                                   KnownNonNull_t IsKnownNonNull,
+                                   ObjectRequirement_t Req) {
   // Running with sufficient stack space to avoid deeply nested expressions
   // cause a stack overflow.
   LValue LV;
   CGM.runWithSufficientStackSpace(
-      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull, Req); });
 
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
@@ -1748,7 +1759,8 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
 }
 
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
-                                         KnownNonNull_t IsKnownNonNull) {
+                                         KnownNonNull_t IsKnownNonNull,
+                                         ObjectRequirement_t Req) {
   ApplyDebugLocation DL(*this, E);
   switch (E->getStmtClass()) {
   default: return EmitUnsupportedLValue(E, "l-value expression");
@@ -1761,7 +1773,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::ObjCIsaExprClass:
     return EmitObjCIsaExpr(cast<ObjCIsaExpr>(E));
   case Expr::BinaryOperatorClass:
-    return EmitBinaryOperatorLValue(cast<BinaryOperator>(E));
+    return EmitBinaryOperatorLValue(cast<BinaryOperator>(E), Req);
   case Expr::CompoundAssignOperatorClass: {
     QualType Ty = E->getType();
     if (const AtomicType *AT = Ty->getAs<AtomicType>())
@@ -1777,7 +1789,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCallExprLValue(cast<CallExpr>(E));
   case Expr::CXXRewrittenBinaryOperatorClass:
     return EmitLValue(cast<CXXRewrittenBinaryOperator>(E)->getSemanticForm(),
-                      IsKnownNonNull);
+                      IsKnownNonNull, Req);
   case Expr::VAArgExprClass:
     return EmitVAArgExprLValue(cast<VAArgExpr>(E));
   case Expr::DeclRefExprClass:
@@ -1786,13 +1798,13 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     const ConstantExpr *CE = cast<ConstantExpr>(E);
     if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE))
       return MakeNaturalAlignPointeeAddrLValue(Result, CE->getType());
-    return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
+    return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull, Req);
   }
   case Expr::ParenExprClass:
-    return EmitLValue(cast<ParenExpr>(E)->getSubExpr(), IsKnownNonNull);
+    return EmitLValue(cast<ParenExpr>(E)->getSubExpr(), IsKnownNonNull, Req);
   case Expr::GenericSelectionExprClass:
     return EmitLValue(cast<GenericSelectionExpr>(E)->getResultExpr(),
-                      IsKnownNonNull);
+                      IsKnownNonNull, Req);
   case Expr::PredefinedExprClass:
     return EmitPredefinedLValue(cast<PredefinedExpr>(E));
   case Expr::StringLiteralClass:
@@ -1816,7 +1828,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(E);
     RunCleanupsScope Scope(*this);
-    LValue LV = EmitLValue(cleanups->getSubExpr(), IsKnownNonNull);
+    LValue LV = EmitLValue(cleanups->getSubExpr(), IsKnownNonNull, Req);
     if (LV.isSimple()) {
       // Defend against branches out of gnu statement expressions surrounded by
       // cleanups.
@@ -1835,12 +1847,12 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::CXXDefaultArgExprClass: {
     auto *DAE = cast<CXXDefaultArgExpr>(E);
     CXXDefaultArgExprScope Scope(*this, DAE);
-    return EmitLValue(DAE->getExpr(), IsKnownNonNull);
+    return EmitLValue(DAE->getExpr(), IsKnownNonNull, Req);
   }
   case Expr::CXXDefaultInitExprClass: {
     auto *DIE = cast<CXXDefaultInitExpr>(E);
     CXXDefaultInitExprScope Scope(*this, DIE);
-    return EmitLValue(DIE->getExpr(), IsKnownNonNull);
+    return EmitLValue(DIE->getExpr(), IsKnownNonNull, Req);
   }
   case Expr::CXXTypeidExprClass:
     return EmitCXXTypeidLValue(cast<CXXTypeidExpr>(E));
@@ -1852,9 +1864,9 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::StmtExprClass:
     return EmitStmtExprLValue(cast<StmtExpr>(E));
   case Expr::UnaryOperatorClass:
-    return EmitUnaryOpLValue(cast<UnaryOperator>(E));
+    return EmitUnaryOpLValue(cast<UnaryOperator>(E), Req);
   case Expr::ArraySubscriptExprClass:
-    return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
+    return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), Req);
   case Expr::MatrixSingleSubscriptExprClass:
     return EmitMatrixSingleSubscriptExpr(cast<MatrixSingleSubscriptExpr>(E));
   case Expr::MatrixSubscriptExprClass:
@@ -1872,16 +1884,18 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::CompoundLiteralExprClass:
     return EmitCompoundLiteralLValue(cast<CompoundLiteralExpr>(E));
   case Expr::ConditionalOperatorClass:
-    return EmitConditionalOperatorLValue(cast<ConditionalOperator>(E));
+    return EmitConditionalOperatorLValue(cast<ConditionalOperator>(E), Req);
   case Expr::BinaryConditionalOperatorClass:
-    return EmitConditionalOperatorLValue(cast<BinaryConditionalOperator>(E));
+    return EmitConditionalOperatorLValue(cast<BinaryConditionalOperator>(E),
+                                         Req);
   case Expr::ChooseExprClass:
-    return EmitLValue(cast<ChooseExpr>(E)->getChosenSubExpr(), IsKnownNonNull);
+    return EmitLValue(cast<ChooseExpr>(E)->getChosenSubExpr(), IsKnownNonNull,
+                      Req);
   case Expr::OpaqueValueExprClass:
     return EmitOpaqueValueLValue(cast<OpaqueValueExpr>(E));
   case Expr::SubstNonTypeTemplateParmExprClass:
     return EmitLValue(cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement(),
-                      IsKnownNonNull);
+                      IsKnownNonNull, Req);
   case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
@@ -1891,7 +1905,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::CXXConstCastExprClass:
   case Expr::CXXAddrspaceCastExprClass:
   case Expr::ObjCBridgedCastExprClass:
-    return EmitCastLValue(cast<CastExpr>(E));
+    return EmitCastLValue(cast<CastExpr>(E), Req);
 
   case Expr::MaterializeTemporaryExprClass:
     return EmitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(E));
@@ -1901,7 +1915,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::CoyieldExprClass:
     return EmitCoyieldLValue(cast<CoyieldExpr>(E));
   case Expr::PackIndexingExprClass:
-    return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
+    return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr(),
+                      IsKnownNonNull, Req);
   case Expr::HLSLOutArgExprClass:
     llvm_unreachable("cannot emit a HLSL out argument directly");
   }
@@ -3836,10 +3851,11 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   llvm_unreachable("Unhandled DeclRefExpr");
 }
 
-LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
+LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E,
+                                          ObjectRequirement_t Req) {
   // __extension__ doesn't affect lvalue-ness.
   if (E->getOpcode() == UO_Extension)
-    return EmitLValue(E->getSubExpr());
+    return EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
 
   QualType ExprTy = getContext().getCanonicalType(E->getSubExpr()->getType());
   switch (E->getOpcode()) {
@@ -3851,7 +3867,7 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo,
-                                            &TBAAInfo);
+                                            &TBAAInfo, NotKnownNonNull, Req);
     LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
@@ -4957,7 +4973,7 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
 /// similar to emit the correct GEP.
 void CodeGenFunction::EmitCountedByBoundsChecking(
     const Expr *ArrayExpr, QualType ArrayType, Address ArrayInst,
-    QualType IndexType, llvm::Value *IndexVal, bool Accessed,
+    QualType IndexType, llvm::Value *IndexVal, ObjectRequirement_t Req,
     bool FlexibleArray) {
   const auto *ME = dyn_cast<MemberExpr>(ArrayExpr->IgnoreImpCasts());
   if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
@@ -5001,12 +5017,12 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
-                        CountFD->getType(), Accessed);
+                        CountFD->getType(), Req);
   }
 }
 
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
-                                               bool Accessed) {
+                                               ObjectRequirement_t Req) {
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
   llvm::Value *IdxPre =
@@ -5024,7 +5040,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     SignedIndices |= IdxSigned;
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
-      EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, Accessed);
+      EmitBoundsCheck(E, E->getBase(), Idx, IdxTy,
+                      Req);
 
     // Extend or truncate the index type to 32 or 64-bits.
     if (Promote && Idx->getType() != IntPtrTy)
@@ -5141,14 +5158,15 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // For simple multidimensional array indexing, set the 'accessed' flag for
     // better bounds-checking of the base expression.
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
+      ArrayLV = EmitArraySubscriptExpr(ASE, ObjectRequired);
     else
       ArrayLV = EmitLValue(Array);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
       EmitCountedByBoundsChecking(Array, Array->getType(), ArrayLV.getAddress(),
-                                  E->getIdx()->getType(), Idx, Accessed,
+                                  E->getIdx()->getType(), Idx,
+                                  Req,
                                   /*FlexibleArray=*/true);
 
     // Propagate the alignment from the array itself to the result.
@@ -5202,7 +5220,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
           CE && CE->getCastKind() == CK_LValueToRValue)
         EmitCountedByBoundsChecking(CE, ptrType, Address::invalid(),
-                                    E->getIdx()->getType(), Idx, Accessed,
+                                    E->getIdx()->getType(), Idx,
+                                    Req,
                                     /*FlexibleArray=*/false);
     }
   }
@@ -5442,7 +5461,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // For simple multidimensional array indexing, set the 'accessed' flag for
     // better bounds-checking of the base expression.
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
+      ArrayLV = EmitArraySubscriptExpr(ASE, ObjectRequired);
     else
       ArrayLV = EmitLValue(Array);
 
@@ -6032,21 +6051,23 @@ LValue CodeGenFunction::EmitInitListLValue(const InitListExpr *E) {
 /// Emit the operand of a glvalue conditional operator. This is either a glvalue
 /// or a (possibly-parenthesized) throw-expression. If this is a throw, no
 /// LValue is returned and the current block has been terminated.
-static std::optional<LValue> EmitLValueOrThrowExpression(CodeGenFunction &CGF,
-                                                         const Expr *Operand) {
+static std::optional<LValue>
+EmitLValueOrThrowExpression(CodeGenFunction &CGF, const Expr *Operand,
+                            CodeGenFunction::ObjectRequirement_t Req) {
   if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Operand->IgnoreParens())) {
     CGF.EmitCXXThrowExpr(ThrowExpr, /*KeepInsertionPoint*/false);
     return std::nullopt;
   }
 
-  return CGF.EmitLValue(Operand);
+  return CGF.EmitLValue(Operand, NotKnownNonNull, Req);
 }
 
 namespace {
 // Handle the case where the condition is a constant evaluatable simple integer,
 // which means we don't have to separately handle the true/false blocks.
 std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
-    CodeGenFunction &CGF, const AbstractConditionalOperator *E) {
+    CodeGenFunction &CGF, const AbstractConditionalOperator *E,
+    CodeGenFunction::ObjectRequirement_t Req) {
   const Expr *condExpr = E->getCond();
   bool CondExprBool;
   if (CGF.ConstantFoldsToSimpleInteger(condExpr, CondExprBool)) {
@@ -6070,7 +6091,7 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
             Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
             Dead->getType());
       }
-      return CGF.EmitLValue(Live);
+      return CGF.EmitLValue(Live, NotKnownNonNull, Req);
     }
   }
   return std::nullopt;
@@ -6129,7 +6150,7 @@ void CodeGenFunction::EmitIgnoredConditionalOperator(
   }
 
   OpaqueValueMapping binding(*this, E);
-  if (HandleConditionalOperatorLValueSimpleCase(*this, E))
+  if (HandleConditionalOperatorLValueSimpleCase(*this, E, ObjectNotRequired))
     return;
 
   EmitConditionalBlocks(*this, E, [](CodeGenFunction &CGF, const Expr *E) {
@@ -6138,7 +6159,7 @@ void CodeGenFunction::EmitIgnoredConditionalOperator(
   });
 }
 LValue CodeGenFunction::EmitConditionalOperatorLValue(
-    const AbstractConditionalOperator *expr) {
+    const AbstractConditionalOperator *expr, ObjectRequirement_t Req) {
   if (!expr->isGLValue()) {
     // ?: here should be an aggregate.
     assert(hasAggregateEvaluationKind(expr->getType()) &&
@@ -6148,12 +6169,12 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 
   OpaqueValueMapping binding(*this, expr);
   if (std::optional<LValue> Res =
-          HandleConditionalOperatorLValueSimpleCase(*this, expr))
+          HandleConditionalOperatorLValueSimpleCase(*this, expr, Req))
     return *Res;
 
   ConditionalInfo Info = EmitConditionalBlocks(
-      *this, expr, [](CodeGenFunction &CGF, const Expr *E) {
-        return EmitLValueOrThrowExpression(CGF, E);
+      *this, expr, [Req](CodeGenFunction &CGF, const Expr *E) {
+        return EmitLValueOrThrowExpression(CGF, E, Req);
       });
 
   if ((Info.LHS && !Info.LHS->isSimple()) ||
@@ -6187,7 +6208,8 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// access one of its members.  This can happen for all the reasons that casts
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
-LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
+LValue CodeGenFunction::EmitCastLValue(const CastExpr *E,
+                                       ObjectRequirement_t Req) {
   llvm::scope_exit RestoreCurCast([this, Prev = CurCast] { CurCast = Prev; });
   CurCast = E;
   switch (E->getCastKind()) {
@@ -6266,13 +6288,13 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
   case CK_LValueToRValue:
-    return EmitLValue(E->getSubExpr());
+    return EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
 
   case CK_NoOp: {
     // CK_NoOp can model a qualification conversion, which can remove an array
     // bound and change the IR type.
     // FIXME: Once pointee types are removed from IR, remove this.
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
     // Propagate the volatile qualifer to LValue, if exist in E.
     if (E->changesVolatileQualification())
       LV.getQuals() = E->getType().getQualifiers();
@@ -6334,7 +6356,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     const auto *CE = cast<ExplicitCastExpr>(E);
 
     CGM.EmitExplicitCastExprType(CE, this);
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
     Address V = LV.getAddress().withElementType(
         ConvertTypeForMem(CE->getTypeAsWritten()->getPointeeType()));
 
@@ -6347,7 +6369,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
                           CGM.getTBAAInfoForSubobject(LV, E->getType()));
   }
   case CK_AddressSpaceConversion: {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
     QualType DestTy = getContext().getPointerType(E->getType());
     llvm::Value *V =
         performAddrSpaceCast(LV.getPointer(*this), ConvertType(DestTy));
@@ -6356,7 +6378,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
   }
   case CK_ObjCObjectLValueCast: {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, Req);
     Address V = LV.getAddress().withElementType(ConvertType(E->getType()));
     return MakeAddrLValue(V, E->getType(), LV.getBaseInfo(),
                           CGM.getTBAAInfoForSubobject(LV, E->getType()));
@@ -6696,12 +6718,13 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   return callee;
 }
 
-LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
+LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E,
+                                                 ObjectRequirement_t Req) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (E->getOpcode() == BO_Comma) {
     EmitIgnoredExpr(E->getLHS());
     EnsureInsertPoint();
-    return EmitLValue(E->getRHS());
+    return EmitLValue(E->getRHS(), NotKnownNonNull, Req);
   }
 
   if (E->getOpcode() == BO_PtrMemD ||
