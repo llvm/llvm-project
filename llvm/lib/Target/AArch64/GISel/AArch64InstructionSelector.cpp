@@ -492,18 +492,10 @@ private:
   void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
                                    const MachineInstr &MI, int OpIdx) const;
   unsigned getFixedPointWidthFromOperand(const MachineOperand &Root) const;
-  template <unsigned Width>
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
-  void renderFixedPointXForm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                               int OpIdx = -1) const;
-  void renderFixedPointXForm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                               int OpIdx = -1) const;
-  void renderFixedPointXFormVec(MachineInstrBuilder &MIB,
-                                const MachineInstr &MI, int OpIdx = -1) const;
-  void renderFixedPointRecipXFormVec(MachineInstrBuilder &MIB,
-                                     const MachineInstr &MI,
-                                     int OpIdx = -1) const;
+  void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx = -1) const;
   void renderFixedPointImm(MachineInstrBuilder &MIB, const MachineOperand &Root,
                            unsigned Width, bool isReciprocal) const;
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -7931,7 +7923,7 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
-                                                    unsigned DstElementWidth,
+                                                    unsigned DstElemWidth,
                                                     bool isReciprocal) const {
   if (!Root.isReg())
     return std::nullopt;
@@ -7950,9 +7942,9 @@ AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
   if (!CstVal)
     return std::nullopt;
 
-  unsigned SrcElementWidth = MRI.getType(Reg).getScalarSizeInBits();
+  unsigned CstElemWidth = MRI.getType(Reg).getScalarSizeInBits();
   APFloat FVal(0.0);
-  switch (SrcElementWidth) {
+  switch (CstElemWidth) {
   case 16:
     FVal = APFloat(APFloat::IEEEhalf(), CstVal->Value);
     break;
@@ -7966,7 +7958,7 @@ AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
     return std::nullopt;
   };
   if (unsigned FBits =
-          CheckFixedPointOperandConstant(FVal, DstElementWidth, isReciprocal))
+          CheckFixedPointOperandConstant(FVal, DstElemWidth, isReciprocal))
     return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
 
   return std::nullopt;
@@ -8021,40 +8013,19 @@ void AArch64InstructionSelector::renderFixedPointImm(MachineInstrBuilder &MIB,
   (Renderer->front())(MIB);
 }
 
-template <unsigned Width>
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
                                                        const MachineInstr &MI,
                                                        int OpIdx) const {
-  renderFixedPointImm(MIB, MI.getOperand(OpIdx), Width,
+  const MachineOperand &Root = MI.getOperand(OpIdx);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
                       /*isReciprocal*/ false);
 }
 
-void AArch64InstructionSelector::renderFixedPointXForm32(
-    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  // GIsel Renderers cannot use templates in .td so function name used to pass
-  // the width
-  renderFixedPointXForm<32>(MIB, MI, OpIdx);
-}
-
-void AArch64InstructionSelector::renderFixedPointXForm64(
-    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  renderFixedPointXForm<64>(MIB, MI, OpIdx);
-}
-
-void AArch64InstructionSelector::renderFixedPointXFormVec(
+void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   const MachineOperand &Root = MI.getOperand(OpIdx);
-  unsigned Width = getFixedPointWidthFromOperand(Root);
-
-  renderFixedPointImm(MIB, Root, Width, /*isReciprocal*/ false);
-}
-
-void AArch64InstructionSelector::renderFixedPointRecipXFormVec(
-    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  const MachineOperand &Root = MI.getOperand(OpIdx);
-  unsigned Width = getFixedPointWidthFromOperand(Root);
-
-  renderFixedPointImm(MIB, Root, Width, /*isReciprocal*/ true);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
+                      /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,

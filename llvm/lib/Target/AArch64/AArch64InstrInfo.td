@@ -6858,24 +6858,17 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
 defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
 defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
-// These are split by fixed-point width so GlobalISel can route each
-// transformed operand to a renderer that checks the correct #fbits range.
-def fixedpoint_xform32 : SDNodeXForm<timm, [{
+// This thing just allows us to change the type of the node produced. The imm
+// value we want is already in V from SelectCVTFixedPointVec.
+def fixedpoint_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
-def gi_fixedpoint_xform32 : GICustomOperandRenderer<"renderFixedPointXForm32">,
-  GISDNodeXFormEquiv<fixedpoint_xform32>;
-
-def fixedpoint_xform64 : SDNodeXForm<timm, [{
-  (void)N;
-  return V;
-}]>;
-def gi_fixedpoint_xform64 : GICustomOperandRenderer<"renderFixedPointXForm64">,
-  GISDNodeXFormEquiv<fixedpoint_xform64>;
+def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+                              GISDNodeXFormEquiv<fixedpoint_xform>;
 
 def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
-                            GIComplexPatternEquiv<fixedpoint_f16_i32>;                            
+                            GIComplexPatternEquiv<fixedpoint_f16_i32>;
 def gi_fixedpoint_f16_i64 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<64>">,
                             GIComplexPatternEquiv<fixedpoint_f16_i64>;
 def gi_fixedpoint_f32_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
@@ -6904,9 +6897,9 @@ multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> {
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 
   def : Pat<(f32 (bitconvert (i32 (round (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
-      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform32 fixedpoint_f32_i32:$scale))>;
+      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
   def : Pat<(f64 (bitconvert (i64 (round (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
-      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform64 fixedpoint_f64_i64:$scale))>;
+      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
 }
 
 defm : FPToIntegerFmulPats<any_fp_to_sint, "FCVTZS">;
@@ -6985,9 +6978,9 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
             (!cast<Instruction>(INST # SXDri) $Rn, fixedpoint_f64_i64:$scale)>;
   
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale), i32)))),
-            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform32 fixedpoint_f32_i32:$scale))>;
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale), i64)))),
-            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform64 fixedpoint_f64_i64:$scale))>;
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
 }
 
 defm : FPToIntegerSatPats<fp_to_sint_sat, "FCVTZS">;
@@ -9344,14 +9337,6 @@ class fixedpoint_vec_f32<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<32>">;
 class fixedpoint_vec_f16<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
-// This thing just allows us to change the type of the node produced. The imm
-// value we want is already in V from SelectCVTFixedPointVec.
-def fixedpoint_vec_xform : SDNodeXForm<timm, [{
-  (void)N;
-  return V;
-}]>;
-def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXFormVec">,
-                              GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
@@ -9401,15 +9386,15 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
 
   // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
   def : Pat<(IVT (fp_to_sint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 }
 
 let Predicates = [HasNEON] in {
@@ -9434,7 +9419,7 @@ def fixedpoint_recip_vec_xform : SDNodeXForm<timm, [{
   return V;
 }]>;
 def gi_fixedpoint_recip_vec_xform
-    : GICustomOperandRenderer<"renderFixedPointRecipXFormVec">,
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
       GISDNodeXFormEquiv<fixedpoint_recip_vec_xform>;
 
 def fixedpoint_recip_v2f64 : fixedpoint_recip_vec_f64<v2f64>;
