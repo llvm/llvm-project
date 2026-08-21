@@ -1821,25 +1821,12 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
-            ICA.getID() == Intrinsic::vp_fneg) {
+        if (ICA.getID() == Intrinsic::vp_udiv ||
+            ICA.getID() == Intrinsic::vp_sdiv ||
+            ICA.getID() == Intrinsic::vp_urem ||
+            ICA.getID() == Intrinsic::vp_srem) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
-        }
-        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
-          return thisT()->getCastInstrCost(
-              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-              TTI::CastContextHint::None, CostKind);
-        }
-        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
-          // We can only handle vp_cmp intrinsics with underlying instructions.
-          if (ICA.getInst()) {
-            assert(FOp);
-            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
-                                               ICA.getReturnType(),
-                                               UI->getPredicate(), CostKind);
-          }
         }
       }
       if (ICA.getID() == Intrinsic::vp_load_ff) {
@@ -1889,8 +1876,7 @@ public:
             CostKind);
       }
 
-      if (ICA.getID() == Intrinsic::vp_select ||
-          ICA.getID() == Intrinsic::vp_merge) {
+      if (ICA.getID() == Intrinsic::vp_merge) {
         TTI::OperandValueInfo OpInfoX, OpInfoY;
         if (!ICA.isTypeBasedOnly()) {
           OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
