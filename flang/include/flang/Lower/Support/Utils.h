@@ -66,7 +66,7 @@ static Fortran::lower::SomeExpr
 ignoreEvConvert(const Fortran::evaluate::Convert<
                 Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>,
                 FROM> &x) {
-  CHECK(x.kind() == 8);
+  CHECK(x.kind() == Fortran::common::KindsEnum::Kind8);
   return toEvExpr(x.left());
 }
 template <typename A>
@@ -80,7 +80,7 @@ static Fortran::lower::SomeExpr ignoreEvConvert(const A &x) {
 inline Fortran::lower::SomeExpr ignoreEvConvert(
     const Fortran::evaluate::Expr<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
-  CHECK(x.kind() == 8);
+  CHECK(x.kind() == Fortran::common::KindsEnum::Kind8);
   return Fortran::common::visit(
       [](const auto &v) { return ignoreEvConvert(v); }, x.u);
 }

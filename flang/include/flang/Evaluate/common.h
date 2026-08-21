@@ -15,6 +15,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/target-rounding.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Support/FPMaxminBehavior.h"
@@ -25,6 +26,16 @@
 #include <map>
 #include <set>
 #include <string>
+
+namespace llvm {
+class raw_ostream;
+}
+
+namespace Fortran::common {
+/// Declared here (rather than in flang/Common/type-kinds.h) because
+/// Fortran::common must not depend on LLVM; defined in lib/Evaluate/type.cpp.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, KindsEnum);
+} // namespace Fortran::common
 
 namespace Fortran::semantics {
 class DerivedTypeSpec;

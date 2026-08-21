@@ -49,8 +49,19 @@ bool IsPassedViaDescriptor(const Symbol &);
 
 namespace Fortran::evaluate {
 
+using common::KindsEnum;
 using common::TypeCategory;
 class TargetCharacteristics;
+
+inline constexpr KindsEnum InvalidKind{KindsEnum::InvalidKind};
+inline constexpr KindsEnum NoKind{KindsEnum::NoKind};
+inline constexpr KindsEnum Kind1{KindsEnum::Kind1};
+inline constexpr KindsEnum Kind2{KindsEnum::Kind2};
+inline constexpr KindsEnum Kind3{KindsEnum::Kind3};
+inline constexpr KindsEnum Kind4{KindsEnum::Kind4};
+inline constexpr KindsEnum Kind8{KindsEnum::Kind8};
+inline constexpr KindsEnum Kind10{KindsEnum::Kind10};
+inline constexpr KindsEnum Kind16{KindsEnum::Kind16};
 
 // Specific intrinsic types are represented by specializations of
 // this class template Type<CATEGORY>.
@@ -60,22 +71,22 @@ class TargetCharacteristics;
 template <TypeCategory CATEGORY> class Type;
 
 using SubscriptInteger = Type<TypeCategory::Integer>;
-inline constexpr int SubscriptIntegerKind{8};
+inline constexpr KindsEnum SubscriptIntegerKind{Kind8};
 
 using CInteger = Type<TypeCategory::Integer>;
-inline constexpr int CIntegerKind{4};
+inline constexpr KindsEnum CIntegerKind{Kind4};
 
 using LargestInt = Type<TypeCategory::Integer>;
-inline constexpr int LargestIntKind{16};
+inline constexpr KindsEnum LargestIntKind{Kind16};
 
 using LogicalResult = Type<TypeCategory::Logical>;
-inline constexpr int LogicalResultKind{4};
+inline constexpr KindsEnum LogicalResultKind{Kind4};
 
 using LargestReal = Type<TypeCategory::Real>;
-inline constexpr int LargestRealKind{16};
+inline constexpr KindsEnum LargestRealKind{Kind16};
 
 using Ascii = Type<TypeCategory::Character>;
-inline constexpr int AsciiKind{1};
+inline constexpr KindsEnum AsciiKind{Kind1};
 
 // DynamicType is meant to be suitable for use as the result type for
 // GetType() functions and member functions; consequently, it must be
@@ -87,15 +98,16 @@ inline constexpr int AsciiKind{1};
 // if one is supplied, or a known integer value.
 class DynamicType {
 public:
-  constexpr DynamicType(TypeCategory cat, int k) : category_{cat}, kind_{k} {
+  constexpr DynamicType(TypeCategory cat, KindsEnum k)
+      : category_{cat}, kind_{k} {
     CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
-  DynamicType(int charKind, const semantics::ParamValue &len);
+  DynamicType(KindsEnum charKind, const semantics::ParamValue &len);
   // When a known length is presented, resolve it to its effective
   // length of zero if it is negative.
-  constexpr DynamicType(int k, std::int64_t len)
-      : category_{TypeCategory::Character}, kind_{k}, knownLength_{
-                                                          len >= 0 ? len : 0} {
+  constexpr DynamicType(KindsEnum k, std::int64_t len)
+      : category_{TypeCategory::Character}, kind_{k},
+        knownLength_{len >= 0 ? len : 0} {
     CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
@@ -139,8 +151,8 @@ public:
   bool operator!=(const DynamicType &that) const { return !(*this == that); }
 
   constexpr TypeCategory category() const { return category_; }
-  constexpr int kind() const {
-    CHECK(kind_ > 0);
+  constexpr KindsEnum kind() const {
+    CHECK(kind_ > NoKind);
     return kind_;
   }
   constexpr const semantics::ParamValue *charLengthParamValue() const {
@@ -239,17 +251,23 @@ public:
 
 private:
   // Special kind codes are used to distinguish the following Fortran types.
-  enum SpecialKind {
-    TypelessKind = -1, // BOZ actual argument to intrinsic function or pointer
-                       // argument to ASSOCIATED
-    ClassKind = -2, // CLASS(T) or CLASS(*)
-    AssumedTypeKind = -3, // TYPE(*)
-  };
+  using SpecialKind = KindsEnum;
+
+  // BOZ actual argument to intrinsic function or pointer
+  // argument to ASSOCIATED
+  static inline constexpr SpecialKind TypelessKind{KindsEnum::TypelessKind};
+
+  // CLASS(T) or CLASS(*)
+  static inline constexpr SpecialKind ClassKind{KindsEnum::ClassKind};
+
+  // TYPE(*)
+  static inline constexpr SpecialKind AssumedTypeKind{
+      KindsEnum::AssumedTypeKind};
 
   constexpr DynamicType() {}
 
   TypeCategory category_{TypeCategory::Derived}; // overridable default
-  int kind_{0};
+  KindsEnum kind_{NoKind};
   const semantics::ParamValue *charLengthParamValue_{nullptr};
 #if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE == 7
   // GCC 7's optional<> lacks a constexpr operator=
@@ -268,10 +286,10 @@ const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
 template <TypeCategory CATEGORY> struct TypeBase {
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   static constexpr TypeCategory category{CATEGORY};
-  explicit constexpr TypeBase(int kind) : kind_{kind} {}
+  explicit constexpr TypeBase(KindsEnum kind) : kind_{kind} {}
   constexpr bool operator==(const TypeBase &that) const {
     return kind_ == that.kind_;
   }
@@ -279,7 +297,7 @@ template <TypeCategory CATEGORY> struct TypeBase {
   std::string AsFortran() const { return GetType().AsFortran(); }
 
 private:
-  int kind_;
+  KindsEnum kind_;
 };
 
 template <>
@@ -417,8 +435,10 @@ public:
   using Scalar = StructureConstructor;
 
   // Argument provided for having the same signature as Types. Derived types
-  // don't have a kind, it is expected to be zero.
-  constexpr explicit SomeKind(int kind = 0) { CHECK(kind == 0); }
+  // don't have a kind, it is expected to be NoKind.
+  constexpr explicit SomeKind(KindsEnum kind = NoKind) {
+    CHECK(kind == NoKind);
+  }
   constexpr explicit SomeKind(const semantics::DerivedTypeSpec &dts)
       : derivedTypeSpec_{&dts} {}
   constexpr explicit SomeKind(const DynamicType &dt)
@@ -477,7 +497,7 @@ template <typename CONST> struct TypeOfHelper {
 
 template <typename CONST> using TypeOf = typename TypeOfHelper<CONST>::type;
 
-int SelectedCharKind(const std::string &, int defaultKind);
+int SelectedCharKind(const std::string &, KindsEnum defaultKind);
 // SelectedIntKind and SelectedRealKind are now member functions of
 // TargetCharactertics.
 
@@ -514,14 +534,14 @@ bool AreSameDerivedTypeIgnoringSequence(
     if constexpr (std::is_same_v<TY, SomeDerived> || \
         std::is_same_v<TY, SomeKind<TypeCategory::Derived>> || \
         std::is_same_v<TY, SomeType>) { \
-      CHECK((KIND) == 0 && "Type does not have a kind"); \
+      CHECK((KIND) == NoKind && "Type does not have a kind"); \
     } else if constexpr (std::is_same_v<TY, Type<TypeCategory::Integer>> || \
         std::is_same_v<TY, Type<TypeCategory::Unsigned>> || \
         std::is_same_v<TY, Type<TypeCategory::Real>> || \
         std::is_same_v<TY, Type<TypeCategory::Complex>> || \
         std::is_same_v<TY, Type<TypeCategory::Logical>> || \
         std::is_same_v<TY, Type<TypeCategory::Character>>) { \
-      CHECK((KIND) != 0 && "Type must come with a kind"); \
+      CHECK((KIND) != NoKind && "Type must come with a kind"); \
     } else { \
       static_assert(false, "Don't know whether TY should have a kind"); \
     } \
@@ -568,30 +588,6 @@ bool AreSameDerivedTypeIgnoringSequence(
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX)
 
-/// Iterable lists of valid kinds for each TypeCategory for use by SearchTypes.
-template <TypeCategory CAT> struct KindsByType;
-template <> struct KindsByType<TypeCategory::Integer> {
-  static constexpr int kinds[] = FORTRAN_INTEGER_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Unsigned> {
-  static constexpr int kinds[] = FORTRAN_UNSIGNED_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Real> {
-  static constexpr int kinds[] = FORTRAN_REAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Complex> {
-  static constexpr int kinds[] = FORTRAN_REAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Logical> {
-  static constexpr int kinds[] = FORTRAN_LOGICAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Character> {
-  static constexpr int kinds[] = FORTRAN_CHARACTER_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Derived> {
-  static constexpr int kinds[] = {0};
-};
-
 // Given a VISITOR class of the general form
 //   struct VISITOR {
 //     using Result = ...;
@@ -609,7 +605,7 @@ common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
   using Tuple = typename VISITOR::Types;
   if constexpr (J < std::tuple_size_v<Tuple>) {
     using TYPE = std::tuple_element_t<J, Tuple>;
-    for (int kind : evaluate::KindsByType<TYPE::category>::kinds) {
+    for (KindsEnum kind : common::KindsByType<TYPE::category>::kinds) {
       if (auto result{visitor.template Test<TYPE>(kind)}) {
         return result;
       }

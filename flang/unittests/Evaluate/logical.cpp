@@ -2,13 +2,13 @@
 #include "flang/Testing/testing.h"
 #include <cstdio>
 
-static void testKind(int kind) {
+static void testKind(Fortran::common::KindsEnum kind) {
   using Type = Fortran::evaluate::Type<Fortran::common::TypeCategory::Logical>;
   TEST(Fortran::evaluate::IsSpecificIntrinsicType<Type>);
   TEST(Type::category == Fortran::common::TypeCategory::Logical);
   TEST(Type{kind}.kind() == kind);
   using Value = Fortran::evaluate::Scalar<Type>;
-  MATCH(8 * kind, Value::Zero(kind).bits());
+  MATCH(8 * static_cast<int>(kind), Value::Zero(kind).bits());
   TEST(!Value{}.IsTrue());
   TEST(!Value(kind, false).IsTrue());
   TEST(Value(kind, true).IsTrue());
@@ -33,9 +33,10 @@ static void testKind(int kind) {
 }
 
 int main() {
-  testKind(1);
-  testKind(2);
-  testKind(4);
-  testKind(8);
+  using Fortran::common::KindsEnum;
+  testKind(KindsEnum::Kind1);
+  testKind(KindsEnum::Kind2);
+  testKind(KindsEnum::Kind4);
+  testKind(KindsEnum::Kind8);
   return testing::Complete();
 }

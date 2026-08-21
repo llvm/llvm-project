@@ -54,7 +54,7 @@ static mlir::Attribute convertToAttribute(
     fir::FirOpBuilder &builder,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>> &value,
     mlir::Type type) {
-  const int kind{value.kind()};
+  const int kind{static_cast<int>(value.kind())};
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
     if (kind <= 8)
       return builder.getIntegerAttr(type, value.ToInt64());
@@ -154,7 +154,7 @@ private:
 
     static_assert(TC != Fortran::common::TypeCategory::Character,
                   "must be numerical or logical");
-    const int kind = constant.kind();
+    const int kind = static_cast<int>(constant.kind());
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
@@ -253,7 +253,7 @@ template <Fortran::common::TypeCategory TC>
 static mlir::Value genScalarLit(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC>> &value) {
-  int kind = value.kind();
+  int kind = static_cast<int>(value.kind());
   if constexpr (TC == Fortran::common::TypeCategory::Integer ||
                 TC == Fortran::common::TypeCategory::Unsigned) {
     // MLIR requires constants to be signless
@@ -325,15 +325,15 @@ createStringLitOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Character>> &value,
                   [[maybe_unused]] int64_t len) {
-  int kind = value.kind();
-  if (kind == 1) {
+  Fortran::common::KindsEnum kind = value.kind();
+  if (kind == Fortran::common::KindsEnum::Kind1) {
     assert(value.size() == static_cast<std::uint64_t>(len));
     return builder.createStringLitOp(loc, *value.AsStringRef());
   } else {
     return value.withStdString([&](const auto &value) -> fir::StringLitOp {
       using ET = typename std::decay_t<decltype(value)>::value_type;
-      fir::CharacterType type =
-          fir::CharacterType::get(builder.getContext(), kind, len);
+      fir::CharacterType type = fir::CharacterType::get(
+          builder.getContext(), static_cast<int>(kind), len);
       mlir::MLIRContext *context = builder.getContext();
       std::int64_t size = static_cast<std::int64_t>(value.size());
       mlir::ShapedType shape = mlir::RankedTensorType::get(
@@ -359,7 +359,7 @@ genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
              const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
                  Fortran::common::TypeCategory::Character>> &value,
              int64_t len, bool outlineInReadOnlyMemory) {
-  int kind = value.kind();
+  int kind = static_cast<int>(value.kind());
   // When in an initializer context, construct the literal op itself and do
   // not construct another constant object in rodata.
   if (!outlineInReadOnlyMemory)
@@ -751,7 +751,7 @@ static fir::ExtendedValue
 genArrayLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             const Fortran::evaluate::Constant<T> &con,
             bool outlineInReadOnlyMemory) {
-  const int kind{con.kind()};
+  const int kind{static_cast<int>(con.kind())};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ConstantSubscript size =
       Fortran::evaluate::GetSize(con.shape());

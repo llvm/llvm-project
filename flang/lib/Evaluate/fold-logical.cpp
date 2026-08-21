@@ -28,7 +28,7 @@ static std::optional<Expr<SomeType>> ZeroExtend(const Constant<T> &c) {
 
 // for ALL, ANY & PARITY
 template <typename T>
-static Expr<T> FoldAllAnyParity(int kind, FoldingContext &context,
+static Expr<T> FoldAllAnyParity(KindsEnum kind, FoldingContext &context,
     FunctionRef<T> &&ref,
     Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
     Scalar<T> identity) {
@@ -50,7 +50,7 @@ static Expr<T> FoldAllAnyParity(int kind, FoldingContext &context,
 // TODO: unsigned
 
 static Expr<SomeReal> RealToIntBound(
-    int xRKind, int moldIKind, bool round, bool negate) {
+    KindsEnum xRKind, KindsEnum moldIKind, bool round, bool negate) {
   using RealType = Scalar<Type<TypeCategory::Real>>;
   using IntType = Scalar<Type<TypeCategory::Integer>>;
   RealType result{RealType::Zero(xRKind)}; // 0.
@@ -96,9 +96,9 @@ public:
   RealToIntLimitHelper(
       FoldingContext &context, Expr<SomeReal> &&hi, Expr<SomeReal> &lo)
       : context_{context}, hi_{std::move(hi)}, lo_{lo} {}
-  template <typename T> Result Test(int kind) {
+  template <typename T> Result Test(KindsEnum kind) {
     if (UnwrapExpr<Expr<T>>(kind, hi_)) {
-      bool promote{kind < 16};
+      bool promote{kind < Kind16};
       Result constResult;
       if (auto hiV{GetScalarConstantValue<T>(hi_)}) {
         auto loV{GetScalarConstantValue<T>(lo_)};
@@ -110,7 +110,9 @@ public:
         constResult = AsCategoryExpr(Constant<T>{kind, std::move(diff.value)});
       }
       if (promote) {
-        int nextKind{kind < 4 ? 4 : kind == 4 ? 8 : 16};
+        KindsEnum nextKind{kind < Kind4 ? Kind4
+                : kind == Kind4         ? Kind8
+                                        : Kind16};
         using T2 = Type<TypeCategory::Real>;
         hi_ = Expr<SomeReal>{
             Fold(context_, ConvertToType<T2>(nextKind, std::move(hi_)))};
@@ -145,7 +147,7 @@ static std::optional<Expr<SomeReal>> RealToIntLimit(
 // RealToRealBounds() returns a pair (HUGE(x),REAL(HUGE(mold),KIND(x)))
 // when REAL(HUGE(x),KIND(mold)) overflows, and std::nullopt otherwise.
 static std::optional<std::pair<Expr<SomeReal>, Expr<SomeReal>>>
-RealToRealBounds(int xRKind, int moldRKind) {
+RealToRealBounds(KindsEnum xRKind, KindsEnum moldRKind) {
   using RType = Type<TypeCategory::Real>;
   using RealType = Scalar<Type<TypeCategory::Real>>;
   using MoldRealType = Scalar<Type<TypeCategory::Real>>;
@@ -161,7 +163,7 @@ RealToRealBounds(int xRKind, int moldRKind) {
 }
 
 static std::optional<Expr<SomeInteger>> IntToRealBoundHelper(
-    int xIKind, int moldRKind, bool negate) {
+    KindsEnum xIKind, KindsEnum moldRKind, bool negate) {
   using IType = Type<TypeCategory::Integer>;
   using IntType = Scalar<Type<TypeCategory::Integer>>;
   using RealType = Scalar<Type<TypeCategory::Real>>;
@@ -200,12 +202,12 @@ static std::optional<Expr<SomeInteger>> IntToRealBoundHelper(
 }
 
 static std::optional<Expr<SomeInteger>> IntToRealBound(
-    int xIKind, int moldRKind, bool negate) {
+    KindsEnum xIKind, KindsEnum moldRKind, bool negate) {
   return IntToRealBoundHelper(xIKind, moldRKind, negate);
 }
 
 static std::optional<Expr<SomeInteger>> IntToIntBoundHelper(
-    int xIKind, int moldIKind) {
+    KindsEnum xIKind, KindsEnum moldIKind) {
   if (xIKind <= moldIKind) {
     return std::nullopt;
   } else {
@@ -221,7 +223,7 @@ static std::optional<Expr<SomeInteger>> IntToIntBoundHelper(
 }
 
 static std::optional<Expr<SomeInteger>> IntToIntBound(
-    int xIKind, int moldIKind) {
+    KindsEnum xIKind, KindsEnum moldIKind) {
   return IntToIntBoundHelper(xIKind, moldIKind);
 }
 
@@ -237,10 +239,10 @@ public:
   }
   using Result = std::optional<Expr<SomeType>>;
   using Types = LengthlessIntrinsicTypes;
-  template <typename T> Result Test(int kind) {
+  template <typename T> Result Test(KindsEnum kind) {
     if (T::category == typeAndShape_->type().category() &&
         kind == typeAndShape_->type().kind()) {
-      return AsGenericExpr(FunctionRef<T>{typeAndShape_->type().kind(),
+      return AsGenericExpr(FunctionRef<T>{kind,
           ProcedureDesignator{std::move(call_.specificIntrinsic)},
           std::move(call_.arguments)});
     } else {
@@ -277,8 +279,8 @@ static Expr<LogicalResult> CompareUnsigned(FoldingContext &context,
 static Expr<SomeType> IntTransferMold(
     const TargetCharacteristics &target, DynamicType realType, bool asVector) {
   CHECK(realType.category() == TypeCategory::Real);
-  int rKind{realType.kind()};
-  int iKind{std::max<int>(target.GetAlignment(TypeCategory::Real, rKind),
+  KindsEnum rKind{realType.kind()};
+  KindsEnum iKind{std::max<int>(target.GetAlignment(TypeCategory::Real, rKind),
       target.GetByteSize(TypeCategory::Real, rKind))};
   CHECK(target.CanSupportType(TypeCategory::Integer, iKind));
   DynamicType iType{TypeCategory::Integer, iKind};
@@ -309,7 +311,7 @@ static Expr<Type<TypeCategory::Logical>> RewriteOutOfRange(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Logical>> &&funcRef) {
   using ResultType = Type<TypeCategory::Logical>;
-  const int resultKind{funcRef.kind()};
+  const KindsEnum resultKind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   // Fold x= and round= unconditionally
   if (auto *x{UnwrapExpr<Expr<SomeType>>(args[0])}) {
@@ -328,10 +330,11 @@ static Expr<Type<TypeCategory::Logical>> RewriteOutOfRange(
       std::optional<Expr<LogicalResult>> result;
       bool alwaysFalse{false};
       if (auto *iXExpr{UnwrapExpr<Expr<SomeInteger>>(*x)}) {
-        int iXKind{iXExpr->GetType().value().kind()};
+        auto iXKind{static_cast<KindsEnum>(iXExpr->GetType().value().kind())};
         if (auto *iMoldExpr{UnwrapExpr<Expr<SomeInteger>>(*mold)}) {
           // INTEGER -> INTEGER
-          int iMoldKind{iMoldExpr->GetType().value().kind()};
+          auto iMoldKind{
+              static_cast<KindsEnum>(iMoldExpr->GetType().value().kind())};
           if (auto hi{IntToIntBound(iXKind, iMoldKind)}) {
             // 'hi' is INT(HUGE(mold), KIND(x))
             // OUT_OF_RANGE(x,mold) = (x + (hi + 1)) .UGT. (2*hi + 1)
@@ -349,7 +352,8 @@ static Expr<Type<TypeCategory::Logical>> RewriteOutOfRange(
           }
         } else if (auto *rMoldExpr{UnwrapExpr<Expr<SomeReal>>(*mold)}) {
           // INTEGER -> REAL
-          int rMoldKind{rMoldExpr->GetType().value().kind()};
+          auto rMoldKind{
+              static_cast<KindsEnum>(rMoldExpr->GetType().value().kind())};
           if (auto hi{IntToRealBound(iXKind, rMoldKind, /*negate=*/false)}) {
             // OUT_OF_RANGE(x,mold) = (x - lo) .UGT. (hi - lo)
             auto lo{IntToRealBound(iXKind, rMoldKind, /*negate=*/true)};
@@ -363,10 +367,11 @@ static Expr<Type<TypeCategory::Logical>> RewriteOutOfRange(
           }
         }
       } else if (auto *rXExpr{UnwrapExpr<Expr<SomeReal>>(*x)}) {
-        int rXKind{rXExpr->GetType().value().kind()};
+        auto rXKind{static_cast<KindsEnum>(rXExpr->GetType().value().kind())};
         if (auto *iMoldExpr{UnwrapExpr<Expr<SomeInteger>>(*mold)}) {
           // REAL -> INTEGER
-          int iMoldKind{iMoldExpr->GetType().value().kind()};
+          auto iMoldKind{
+              static_cast<KindsEnum>(iMoldExpr->GetType().value().kind())};
           auto hi{RealToIntBound(rXKind, iMoldKind, false, false)};
           auto lo{RealToIntBound(rXKind, iMoldKind, false, true)};
           if (args.size() >= 3) {
@@ -416,7 +421,8 @@ static Expr<Type<TypeCategory::Logical>> RewriteOutOfRange(
           //   TRANSFER(HUGE(mold), int)
           // Note that OUT_OF_RANGE(+/-Inf or NaN,mold) =
           //   TRANSFER(+Inf or Nan, int) - 1 .ULT. TRANSFER(HUGE(mold), int)
-          int rMoldKind{rMoldExpr->GetType().value().kind()};
+          auto rMoldKind{
+              static_cast<KindsEnum>(rMoldExpr->GetType().value().kind())};
           if (auto bounds{RealToRealBounds(rXKind, rMoldKind)}) {
             auto &[moldHuge, xHuge]{*bounds};
             Expr<SomeType> abs{ApplyIntrinsic(context, "abs",
@@ -481,7 +487,7 @@ static std::optional<common::RoundingMode> GetRoundingMode(
 Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Logical>> &&funcRef) {
   using T = Type<TypeCategory::Logical>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -613,7 +619,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
       auto restorer{context.messages().DiscardMessages()};
       using DefaultReal = Type<TypeCategory::Real>;
-      constexpr int DefaultRealKind{4};
+      constexpr KindsEnum DefaultRealKind{Kind4};
       return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
           context, std::move(funcRef),
           ScalarFunc<T, DefaultReal>([kind](const Scalar<DefaultReal> &x) {
@@ -623,7 +629,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "__builtin_ieee_is_negative") {
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real>;
-    constexpr int DefaultRealKind{4};
+    constexpr KindsEnum DefaultRealKind{Kind4};
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
       return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
@@ -635,7 +641,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "__builtin_ieee_is_normal") {
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real>;
-    constexpr int DefaultRealKind = 4;
+    constexpr KindsEnum DefaultRealKind{Kind4};
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
       return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
@@ -669,7 +675,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
       // Int64 used to be Type<Integer,8>; force the argument to that kind as
       // before.
       using Int64 = Type<TypeCategory::Integer>;
-      constexpr int Int64Kind{8};
+      constexpr KindsEnum Int64Kind{Kind8};
       return FoldElementalIntrinsic<T, Int64>(kind, {Int64Kind}, context,
           std::move(funcRef),
           ScalarFunc<T, Int64>([kind](const Scalar<Int64> &x) {
@@ -680,7 +686,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
       using Int64 = Type<TypeCategory::Integer>;
-      constexpr int Int64Kind{8};
+      constexpr KindsEnum Int64Kind{Kind8};
       return FoldElementalIntrinsic<T, Int64>(kind, {Int64Kind}, context,
           std::move(funcRef),
           ScalarFunc<T, Int64>([kind](const Scalar<Int64> &x) {
@@ -872,7 +878,7 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
     return *array;
   }
   using Ty = Type<TypeCategory::Logical>;
-  const int kind{x.kind()};
+  const KindsEnum kind{x.kind()};
   auto &operand{x.left()};
   if (auto value{GetScalarConstantValue<Ty>(operand)}) {
     return MakeConstantExpr<Ty>(kind, !value->IsTrue());
@@ -883,7 +889,7 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
 Expr<Type<TypeCategory::Logical>> FoldOperation(
     FoldingContext &context, LogicalOperation &&operation) {
   using LOGICAL = Type<TypeCategory::Logical>;
-  const int kind{operation.kind()};
+  const KindsEnum kind{operation.kind()};
   if (auto array{ApplyElementwise(context, operation,
           std::function<Expr<LOGICAL>(Expr<LOGICAL> &&, Expr<LOGICAL> &&)>{
               [=](Expr<LOGICAL> &&x, Expr<LOGICAL> &&y) {

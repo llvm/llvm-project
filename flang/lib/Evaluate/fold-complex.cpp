@@ -14,7 +14,7 @@ namespace Fortran::evaluate {
 
 Expr<Type<TypeCategory::Complex>> FoldIntrinsicFunction(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Complex>> &&funcRef) {
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   using T = Type<TypeCategory::Complex>;
   using Part = typename T::Part;
   ActualArguments &args{funcRef.arguments()};
@@ -31,7 +31,7 @@ Expr<Type<TypeCategory::Complex>> FoldIntrinsicFunction(FoldingContext &context,
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
           "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
-          kind);
+          static_cast<int>(kind));
     }
   } else if (name == "conjg") {
     return FoldElementalIntrinsic<T, T>(
@@ -67,7 +67,8 @@ Expr<Type<TypeCategory::Complex>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "matmul") {
     return FoldMatmul(context, std::move(funcRef));
   } else if (name == "product") {
-    auto one{Scalar<Part>::FromInteger(kind, value::IntegerValue{1, 1}).value};
+    auto one{
+        Scalar<Part>::FromInteger(kind, value::IntegerValue{Kind1, 1}).value};
     return FoldProduct<T>(context, std::move(funcRef), Scalar<T>{one});
   } else if (name == "sum") {
     return FoldSum<T>(context, std::move(funcRef));
@@ -77,7 +78,7 @@ Expr<Type<TypeCategory::Complex>> FoldIntrinsicFunction(FoldingContext &context,
 
 Expr<Type<TypeCategory::Complex>> FoldOperation(
     FoldingContext &context, ComplexConstructor &&x) {
-  const int kind{x.kind()};
+  const KindsEnum kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }

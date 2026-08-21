@@ -18,17 +18,18 @@ using namespace Fortran::evaluate::value;
 
 namespace {
 
-class ComplexValueKind : public testing::TestWithParam<int> {};
+class ComplexValueKind : public testing::TestWithParam<KindsEnum> {};
 INSTANTIATE_TEST_SUITE_P(ComplexValueKind, ComplexValueKind,
-    testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
-      return "COMPLEX(" + std::to_string(info.param) + ")";
+    testing::ValuesIn(RealKinds),
+    [](const testing::TestParamInfo<KindsEnum> &info) {
+      return "COMPLEX(" + std::to_string(static_cast<int>(info.param)) + ")";
     });
 
-RealValue Real(int kind, std::int64_t n) {
-  return RealValue::FromInteger(kind, IntegerValue{8, n}).value;
+RealValue Real(KindsEnum kind, std::int64_t n) {
+  return RealValue::FromInteger(kind, IntegerValue{KindsEnum::Kind8, n}).value;
 }
 
-ComplexValue Complex(int kind, std::int64_t re, std::int64_t im) {
+ComplexValue Complex(KindsEnum kind, std::int64_t re, std::int64_t im) {
   return ComplexValue{Real(kind, re), Real(kind, im)};
 }
 
@@ -45,14 +46,14 @@ testing::AssertionResult ComplexValuesEqual(const char *lhsExpr,
 #define EXPECT_COMPLEX_EQ(lhs, rhs) \
   EXPECT_PRED_FORMAT2(ComplexValuesEqual, lhs, rhs)
 
-std::string AsFortranString(const ComplexValue &z, int kind) {
+std::string AsFortranString(const ComplexValue &z, KindsEnum kind) {
   std::string s;
   llvm::raw_string_ostream os{s};
-  z.AsFortran(os, kind);
+  z.AsFortran(os, static_cast<int>(kind));
   return s;
 }
 
-constexpr int KindPos(int kind) {
+constexpr int KindPos(KindsEnum kind) {
   for (std::size_t i{0}; i < std::size(RealKinds); ++i) {
     if (RealKinds[i] == kind) {
       return static_cast<int>(i);
@@ -75,7 +76,7 @@ TEST(ComplexValue, DefaultConstructionIsMonostate) {
 }
 
 TEST_P(ComplexValueKind, ConstructFromParts) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue z{Real(kind, 1), Real(kind, 2)};
   EXPECT_FALSE(z.IsMonostate());
   EXPECT_EQ(kind, z.kind());
@@ -84,7 +85,7 @@ TEST_P(ComplexValueKind, ConstructFromParts) {
 }
 
 TEST_P(ComplexValueKind, ConstructFromRealPartOnly) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue z{Real(kind, 3)};
   EXPECT_EQ(kind, z.kind());
   EXPECT_TRUE(z.REAL() == Real(kind, 3));
@@ -94,15 +95,15 @@ TEST_P(ComplexValueKind, ConstructFromRealPartOnly) {
 }
 
 TEST_P(ComplexValueKind, ImaginaryPartIsConvertedToTheRealPartsKind) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // The imaginary operand is converted to the kind of the real operand.
-  ComplexValue z{Real(kind, 1), Real(8, 2)};
+  ComplexValue z{Real(kind, 1), Real(KindsEnum::Kind8, 2)};
   EXPECT_EQ(kind, z.kind());
   EXPECT_TRUE(z.AIMAG() == Real(kind, 2));
 }
 
 TEST(ComplexValue, CopyAndMove) {
-  ComplexValue z{Complex(4, 1, 2)};
+  ComplexValue z{Complex(KindsEnum::Kind4, 1, 2)};
   ComplexValue copyConstructed{z};
   EXPECT_COMPLEX_EQ(z, copyConstructed);
   ComplexValue copyAssigned;
@@ -116,16 +117,16 @@ TEST(ComplexValue, CopyAndMove) {
 }
 
 TEST(ComplexValue, KindCheckingConstructors) {
-  ComplexValue z{Complex(4, 1, 2)};
-  EXPECT_EQ(4, ComplexValue(4, z).kind());
-  EXPECT_COMPLEX_EQ(z, ComplexValue(4, z));
-  ComplexValue y{Complex(8, 1, 2)};
-  ComplexValue moved{8, std::move(y)};
-  EXPECT_EQ(8, moved.kind());
+  ComplexValue z{Complex(KindsEnum::Kind4, 1, 2)};
+  EXPECT_EQ(KindsEnum::Kind4, ComplexValue(KindsEnum::Kind4, z).kind());
+  EXPECT_COMPLEX_EQ(z, ComplexValue(KindsEnum::Kind4, z));
+  ComplexValue y{Complex(KindsEnum::Kind8, 1, 2)};
+  ComplexValue moved{KindsEnum::Kind8, std::move(y)};
+  EXPECT_EQ(KindsEnum::Kind8, moved.kind());
 }
 
 TEST_P(ComplexValueKind, Zero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue zero{ComplexValue::Zero(kind)};
   EXPECT_FALSE(zero.IsMonostate());
   EXPECT_EQ(kind, zero.kind());
@@ -135,13 +136,13 @@ TEST_P(ComplexValueKind, Zero) {
 }
 
 TEST(ComplexValue, BytesStored) {
-  EXPECT_EQ(4u, ComplexValue::bytesStored(2));
-  EXPECT_EQ(4u, ComplexValue::bytesStored(3));
-  EXPECT_EQ(8u, ComplexValue::bytesStored(4));
-  EXPECT_EQ(16u, ComplexValue::bytesStored(8));
-  EXPECT_EQ(32u, ComplexValue::bytesStored(10));
-  EXPECT_EQ(32u, ComplexValue::bytesStored(16));
-  EXPECT_EQ(8u, Complex(4, 1, 2).bytesStored());
+  EXPECT_EQ(4u, ComplexValue::bytesStored(KindsEnum::Kind2));
+  EXPECT_EQ(4u, ComplexValue::bytesStored(KindsEnum::Kind3));
+  EXPECT_EQ(8u, ComplexValue::bytesStored(KindsEnum::Kind4));
+  EXPECT_EQ(16u, ComplexValue::bytesStored(KindsEnum::Kind8));
+  EXPECT_EQ(32u, ComplexValue::bytesStored(KindsEnum::Kind10));
+  EXPECT_EQ(32u, ComplexValue::bytesStored(KindsEnum::Kind16));
+  EXPECT_EQ(8u, Complex(KindsEnum::Kind4, 1, 2).bytesStored());
 }
 
 //===----------------------------------------------------------------------===//
@@ -149,25 +150,25 @@ TEST(ComplexValue, BytesStored) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(ComplexValueKind, REAL) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(Complex(kind, 1, 2).REAL() == Real(kind, 1));
   EXPECT_EQ(kind, Complex(kind, 1, 2).REAL().kind());
 }
 
 TEST_P(ComplexValueKind, AIMAG) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(Complex(kind, 1, 2).AIMAG() == Real(kind, 2));
   EXPECT_EQ(kind, Complex(kind, 1, 2).AIMAG().kind());
 }
 
 TEST_P(ComplexValueKind, CONJG) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_COMPLEX_EQ(Complex(kind, 1, -2), Complex(kind, 1, 2).CONJG());
   EXPECT_COMPLEX_EQ(Complex(kind, 1, 2), Complex(kind, 1, 2).CONJG().CONJG());
 }
 
 TEST_P(ComplexValueKind, Negate) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_COMPLEX_EQ(Complex(kind, -1, -2), Complex(kind, 1, 2).Negate());
   // Negating a zero flips both sign bits.
   ComplexValue negZero{ComplexValue::Zero(kind).Negate()};
@@ -181,7 +182,7 @@ TEST_P(ComplexValueKind, Negate) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(ComplexValueKind, Equals) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // Equals() compares numerically, so +0.0 and -0.0 are equal ...
   EXPECT_TRUE(
       ComplexValue::Zero(kind).Equals(ComplexValue::Zero(kind).Negate()));
@@ -193,7 +194,7 @@ TEST_P(ComplexValueKind, Equals) {
 }
 
 TEST_P(ComplexValueKind, EqualityOperators) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // The operators compare bit patterns, so -0.0 differs from +0.0 ...
   EXPECT_FALSE(ComplexValue::Zero(kind) == ComplexValue::Zero(kind).Negate());
   EXPECT_TRUE(ComplexValue::Zero(kind) != ComplexValue::Zero(kind).Negate());
@@ -204,14 +205,14 @@ TEST_P(ComplexValueKind, EqualityOperators) {
 }
 
 TEST_P(ComplexValueKind, IsZero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(ComplexValue::Zero(kind).IsZero());
   EXPECT_FALSE(Complex(kind, 1, 0).IsZero());
   EXPECT_FALSE(Complex(kind, 0, 1).IsZero());
 }
 
 TEST_P(ComplexValueKind, IsInfinite) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue inf{Real(kind, 1).Divide(RealValue::Zero(kind)).value};
   ASSERT_TRUE(inf.IsInfinite());
   EXPECT_FALSE(ComplexValue::Zero(kind).IsInfinite());
@@ -221,7 +222,7 @@ TEST_P(ComplexValueKind, IsInfinite) {
 }
 
 TEST_P(ComplexValueKind, IsNotANumber) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue nan{RealValue::NotANumber(kind)};
   EXPECT_FALSE(ComplexValue::Zero(kind).IsNotANumber());
   EXPECT_TRUE(ComplexValue::NotANumber(kind).IsNotANumber());
@@ -231,14 +232,14 @@ TEST_P(ComplexValueKind, IsNotANumber) {
 }
 
 TEST_P(ComplexValueKind, IsSignalingNaN) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_FALSE(ComplexValue::Zero(kind).IsSignalingNaN());
   // NotANumber() produces quiet NaNs.
   EXPECT_FALSE(ComplexValue::NotANumber(kind).IsSignalingNaN());
 }
 
 TEST_P(ComplexValueKind, NotANumber) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue nan{ComplexValue::NotANumber(kind)};
   EXPECT_EQ(kind, nan.kind());
   EXPECT_TRUE(nan.REAL().IsNotANumber());
@@ -250,22 +251,23 @@ TEST_P(ComplexValueKind, NotANumber) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(ComplexValueKind, FromInteger) {
-  const int kind{GetParam()};
-  auto z{ComplexValue::FromInteger(kind, IntegerValue{8, 3})};
+  const KindsEnum kind{GetParam()};
+  auto z{ComplexValue::FromInteger(kind, IntegerValue{KindsEnum::Kind8, 3})};
   EXPECT_TRUE(z.flags.empty());
   EXPECT_EQ(kind, z.value.kind());
   EXPECT_COMPLEX_EQ(Complex(kind, 3, 0), z.value);
-  auto negative{ComplexValue::FromInteger(kind, IntegerValue{8, -3})};
+  auto negative{
+      ComplexValue::FromInteger(kind, IntegerValue{KindsEnum::Kind8, -3})};
   EXPECT_COMPLEX_EQ(Complex(kind, -3, 0), negative.value);
   // Reading the same bits as unsigned gives a large positive real part.
   auto asUnsigned{ComplexValue::FromInteger(
-      kind, IntegerValue{8, -1}, /*isUnsigned=*/true)};
+      kind, IntegerValue{KindsEnum::Kind8, -1}, /*isUnsigned=*/true)};
   EXPECT_FALSE(asUnsigned.value.REAL().IsNegative());
   EXPECT_TRUE(asUnsigned.value.AIMAG().IsZero());
 }
 
 TEST_P(ComplexValueKind, Add) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto sum{Complex(kind, 1, 2).Add(Complex(kind, 3, 4))};
   EXPECT_TRUE(sum.flags.empty());
   EXPECT_COMPLEX_EQ(Complex(kind, 4, 6), sum.value);
@@ -277,14 +279,14 @@ TEST_P(ComplexValueKind, Add) {
 }
 
 TEST_P(ComplexValueKind, Subtract) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto diff{Complex(kind, 1, 2).Subtract(Complex(kind, 3, 4))};
   EXPECT_TRUE(diff.flags.empty());
   EXPECT_COMPLEX_EQ(Complex(kind, -2, -2), diff.value);
 }
 
 TEST_P(ComplexValueKind, Multiply) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // (1+2i)*(3+4i) = (3-8) + (4+6)i
   auto product{Complex(kind, 1, 2).Multiply(Complex(kind, 3, 4))};
   EXPECT_TRUE(product.flags.empty());
@@ -295,7 +297,7 @@ TEST_P(ComplexValueKind, Multiply) {
 }
 
 TEST_P(ComplexValueKind, Divide) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // (-5+10i)/(3+4i) = 1+2i
   auto quotient{Complex(kind, -5, 10).Divide(Complex(kind, 3, 4))};
   EXPECT_COMPLEX_EQ(Complex(kind, 1, 2), quotient.value);
@@ -313,7 +315,7 @@ TEST_P(ComplexValueKind, Divide) {
 }
 
 TEST_P(ComplexValueKind, ABS) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto abs{Complex(kind, 3, 4).ABS()};
   EXPECT_TRUE(abs.value == Real(kind, 5));
   EXPECT_EQ(kind, abs.value.kind());
@@ -322,7 +324,7 @@ TEST_P(ComplexValueKind, ABS) {
 }
 
 TEST_P(ComplexValueKind, KahanSummation) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue correction{ComplexValue::Zero(kind)};
   auto sum{Complex(kind, 1, 2).KahanSummation(Complex(kind, 3, 4), correction)};
   EXPECT_COMPLEX_EQ(Complex(kind, 4, 6), sum.value);
@@ -337,7 +339,7 @@ TEST_P(ComplexValueKind, KahanSummation) {
 }
 
 TEST_P(ComplexValueKind, FlushSubnormalToZero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue subnormal{RealValue{kind, IntegerValue{kind, 1}}};
   ASSERT_FALSE(subnormal.IsZero());
   ComplexValue z{subnormal, subnormal};
@@ -353,12 +355,14 @@ TEST_P(ComplexValueKind, FlushSubnormalToZero) {
 //===----------------------------------------------------------------------===//
 
 TEST(ComplexValue, DumpHexadecimal) {
-  EXPECT_EQ("(0.0,0.0)", ComplexValue::Zero(4).DumpHexadecimal());
-  EXPECT_EQ("(0x1.0p0,-0x1.0p1)", Complex(4, 1, -2).DumpHexadecimal());
+  EXPECT_EQ(
+      "(0.0,0.0)", ComplexValue::Zero(KindsEnum::Kind4).DumpHexadecimal());
+  EXPECT_EQ(
+      "(0x1.0p0,-0x1.0p1)", Complex(KindsEnum::Kind4, 1, -2).DumpHexadecimal());
 }
 
 TEST_P(ComplexValueKind, AsFortran) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   std::string s{AsFortranString(Complex(kind, 1, 2), kind)};
   // The components are emitted as a parenthesized, comma-separated pair.
   EXPECT_EQ('(', s.front());
@@ -367,7 +371,7 @@ TEST_P(ComplexValueKind, AsFortran) {
 }
 
 TEST_P(ComplexValueKind, RawBytesRoundTrip) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   ComplexValue original{Complex(kind, 1, -2)};
   char buffer[32]{};
   ASSERT_EQ(ComplexValue::bytesStored(kind), original.bytesStored());
@@ -384,7 +388,7 @@ TEST_P(ComplexValueKind, RawBytesRoundTrip) {
 }
 
 TEST_P(ComplexValueKind, Print) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const int pos{KindPos(kind)};
 
   llvm::SmallString<128> buf;

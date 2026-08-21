@@ -137,15 +137,15 @@ public:
     return Say(parser::FindSourceLocation(parsed), std::forward<A>(args)...);
   }
 
-  int GetDefaultKind(common::TypeCategory);
+  KindsEnum GetDefaultKind(common::TypeCategory);
   DynamicType GetDefaultKindOfType(common::TypeCategory);
 
   // Return false and emit error if these checks fail:
-  bool CheckIntrinsicKind(TypeCategory, std::int64_t kind);
+  bool CheckIntrinsicKind(TypeCategory, KindsEnum kind);
   bool CheckIntrinsicSize(TypeCategory, std::int64_t size);
 
   // Manage a set of active implied DO loops.
-  bool AddImpliedDo(parser::CharBlock, int kind);
+  bool AddImpliedDo(parser::CharBlock, KindsEnum kind);
   void RemoveImpliedDo(parser::CharBlock);
 
   // When the argument is the name of an active implied DO index, returns
@@ -272,7 +272,7 @@ public:
   }
 
 protected:
-  int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
+  KindsEnum IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
   // Allows an Expr to be a null pointer.
@@ -329,13 +329,13 @@ private:
   }
 
   // Analysis subroutines
-  int AnalyzeKindParam(
-      const std::optional<parser::KindParam> &, int defaultKind);
+  KindsEnum AnalyzeKindParam(
+      const std::optional<parser::KindParam> &, KindsEnum defaultKind);
   template <typename PARSED>
   MaybeExpr ExprOrVariable(const PARSED &, parser::CharBlock source);
   template <typename TYPES, TypeCategory CAT, typename PARSED>
   MaybeExpr IntLiteralConstant(const PARSED &, bool isNegated = false);
-  MaybeExpr AnalyzeString(std::string &&, int kind);
+  MaybeExpr AnalyzeString(std::string &&, KindsEnum kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
   std::optional<Expr<SubscriptInteger>> TripletPart(
       const std::optional<parser::Subscript> &);

@@ -207,7 +207,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
     auto foldedUpper{evaluate::Fold(context, SomeExpr{*upperExpr})};
     auto upper{ToInt64(foldedUpper)};
     if (lower && upper) {
-      int kind{evaluate::ResultKind<evaluate::ImpliedDoIndex>};
+      KindsEnum kind{evaluate::ResultKind<evaluate::ImpliedDoIndex>};
       if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
         if (dynamicType->category() == TypeCategory::Integer) {
           kind = dynamicType->kind();
@@ -824,12 +824,12 @@ static bool CombineEquivalencedInitialization(
     std::size_t minElementBytes{
         ComputeMinElementBytes(associated, foldingContext)};
     if (!exprAnalyzer.GetFoldingContext().targetCharacteristics().IsTypeEnabled(
-            TypeCategory::Integer, minElementBytes) ||
+            TypeCategory::Integer, static_cast<KindsEnum>(minElementBytes)) ||
         (bytes % minElementBytes) != 0) {
       minElementBytes = 1;
     }
-    const DeclTypeSpec &typeSpec{scope.MakeNumericType(
-        TypeCategory::Integer, MakeKindExpr(minElementBytes))};
+    const DeclTypeSpec &typeSpec{scope.MakeNumericType(TypeCategory::Integer,
+        MakeKindExpr(static_cast<KindsEnum>(minElementBytes)))};
     details.set_type(typeSpec);
     ArraySpec arraySpec;
     arraySpec.emplace_back(ShapeSpec::MakeExplicit(Bound{

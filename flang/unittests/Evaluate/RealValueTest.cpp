@@ -44,17 +44,18 @@ using RealHostTypedKinds = testing::Types<TypeKind<TypeCategory::Real, 4>,
 template <typename T> class RealValueHostTypedKind : public testing::Test {};
 TYPED_TEST_SUITE(RealValueHostTypedKind, RealHostTypedKinds, KindName);
 
-class RealValueKind : public testing::TestWithParam<int> {};
+class RealValueKind : public testing::TestWithParam<KindsEnum> {};
 INSTANTIATE_TEST_SUITE_P(RealValueKind, RealValueKind,
-    testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
-      return "REAL(" + std::to_string(info.param) + ")";
+    testing::ValuesIn(RealKinds),
+    [](const testing::TestParamInfo<KindsEnum> &info) {
+      return "REAL(" + std::to_string(static_cast<int>(info.param)) + ")";
     });
 
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
 
-constexpr int KindPos(int kind) {
+constexpr int KindPos(KindsEnum kind) {
   for (std::size_t i{0}; i < std::size(RealKinds); ++i) {
     if (RealKinds[i] == kind) {
       return static_cast<int>(i);
@@ -75,10 +76,10 @@ testing::AssertionResult RealValuesEqual(const char *lhsExpr,
 
 #define EXPECT_REAL_EQ(lhs, rhs) EXPECT_PRED_FORMAT2(RealValuesEqual, lhs, rhs)
 
-std::string AsFortranString(const RealValue &x, int kind, bool minimal) {
+std::string AsFortranString(const RealValue &x, KindsEnum kind, bool minimal) {
   std::string s;
   llvm::raw_string_ostream os{s};
-  x.AsFortran(os, kind, minimal);
+  x.AsFortran(os, static_cast<int>(kind), minimal);
   return s;
 }
 
@@ -145,7 +146,7 @@ TEST(RealValue, DefaultConstructionIsMonostate) {
 }
 
 TEST_P(RealValueKind, ConstructFromWord) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // The word is the raw bit pattern, not a numeric value.
   RealValue zero{kind, IntegerValue::Zero(kind)};
   EXPECT_EQ(kind, zero.kind());
@@ -157,7 +158,7 @@ TEST_P(RealValueKind, ConstructFromWord) {
 }
 
 TEST(RealValue, CopyAndMove) {
-  RealValue x{4, 3.0};
+  RealValue x{KindsEnum::Kind4, 3.0};
   RealValue copyConstructed{x};
   EXPECT_REAL_EQ(x, copyConstructed);
   RealValue copyAssigned;
@@ -171,16 +172,16 @@ TEST(RealValue, CopyAndMove) {
 }
 
 TEST(RealValue, KindCheckingConstructors) {
-  RealValue x{4, 3.0};
-  EXPECT_EQ(4, RealValue(4, x).kind());
-  EXPECT_REAL_EQ(x, RealValue(4, x));
-  RealValue y{8, 3.0};
-  RealValue moved{8, std::move(y)};
-  EXPECT_EQ(8, moved.kind());
+  RealValue x{KindsEnum::Kind4, 3.0};
+  EXPECT_EQ(KindsEnum::Kind4, RealValue(KindsEnum::Kind4, x).kind());
+  EXPECT_REAL_EQ(x, RealValue(KindsEnum::Kind4, x));
+  RealValue y{KindsEnum::Kind8, 3.0};
+  RealValue moved{KindsEnum::Kind8, std::move(y)};
+  EXPECT_EQ(KindsEnum::Kind8, moved.kind());
 }
 
 TEST_P(RealValueKind, Zero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue zero{RealValue::Zero(kind)};
   EXPECT_FALSE(zero.IsMonostate());
   EXPECT_EQ(kind, zero.kind());
@@ -192,38 +193,40 @@ TEST_P(RealValueKind, Zero) {
 }
 
 TEST(RealValue, Bits) {
-  EXPECT_EQ(16, RealValue::bits(2));
-  EXPECT_EQ(16, RealValue::bits(3));
-  EXPECT_EQ(32, RealValue::bits(4));
-  EXPECT_EQ(64, RealValue::bits(8));
-  EXPECT_EQ(128, RealValue::bits(10)); // 80 significant bits, 128 stored
-  EXPECT_EQ(128, RealValue::bits(16));
-  EXPECT_EQ(32, (RealValue{4, 1.0}.bits()));
+  EXPECT_EQ(16, RealValue::bits(KindsEnum::Kind2));
+  EXPECT_EQ(16, RealValue::bits(KindsEnum::Kind3));
+  EXPECT_EQ(32, RealValue::bits(KindsEnum::Kind4));
+  EXPECT_EQ(64, RealValue::bits(KindsEnum::Kind8));
+  EXPECT_EQ(128,
+      RealValue::bits(KindsEnum::Kind10)); // 80 significant bits, 128 stored
+  EXPECT_EQ(128, RealValue::bits(KindsEnum::Kind16));
+  EXPECT_EQ(32, (RealValue{KindsEnum::Kind4, 1.0}.bits()));
 }
 
 TEST(RealValue, BytesStored) {
-  EXPECT_EQ(2u, RealValue::bytesStored(2));
-  EXPECT_EQ(2u, RealValue::bytesStored(3));
-  EXPECT_EQ(4u, RealValue::bytesStored(4));
-  EXPECT_EQ(8u, RealValue::bytesStored(8));
-  EXPECT_EQ(16u, RealValue::bytesStored(10));
-  EXPECT_EQ(16u, RealValue::bytesStored(16));
-  EXPECT_EQ(4u, (RealValue{4, 1.0}.bytesStored()));
+  EXPECT_EQ(2u, RealValue::bytesStored(KindsEnum::Kind2));
+  EXPECT_EQ(2u, RealValue::bytesStored(KindsEnum::Kind3));
+  EXPECT_EQ(4u, RealValue::bytesStored(KindsEnum::Kind4));
+  EXPECT_EQ(8u, RealValue::bytesStored(KindsEnum::Kind8));
+  EXPECT_EQ(16u, RealValue::bytesStored(KindsEnum::Kind10));
+  EXPECT_EQ(16u, RealValue::bytesStored(KindsEnum::Kind16));
+  EXPECT_EQ(4u, (RealValue{KindsEnum::Kind4, 1.0}.bytesStored()));
 }
 
 TEST(RealValue, KindProperties) {
   struct {
-    int kind, digits, precision, range, maxExponent, minExponent;
+    KindsEnum kind;
+    int digits, precision, range, maxExponent, minExponent;
   } expected[]{
-      {2, 11, 3, 4, 16, -13},
-      {3, 8, 2, 37, 128, -125},
-      {4, 24, 6, 37, 128, -125},
-      {8, 53, 15, 307, 1024, -1021},
-      {10, 64, 18, 4931, 16384, -16381},
-      {16, 113, 33, 4931, 16384, -16381},
+      {KindsEnum::Kind2, 11, 3, 4, 16, -13},
+      {KindsEnum::Kind3, 8, 2, 37, 128, -125},
+      {KindsEnum::Kind4, 24, 6, 37, 128, -125},
+      {KindsEnum::Kind8, 53, 15, 307, 1024, -1021},
+      {KindsEnum::Kind10, 64, 18, 4931, 16384, -16381},
+      {KindsEnum::Kind16, 113, 33, 4931, 16384, -16381},
   };
   for (auto &e : expected) {
-    SCOPED_TRACE(testing::Message() << "kind=" << e.kind);
+    SCOPED_TRACE(testing::Message() << "kind=" << static_cast<int>(e.kind));
     EXPECT_EQ(e.digits, RealValue::DIGITS(e.kind));
     EXPECT_EQ(e.precision, RealValue::PRECISION(e.kind));
     EXPECT_EQ(e.range, RealValue::RANGE(e.kind));
@@ -237,7 +240,7 @@ TEST(RealValue, KindProperties) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, IsZero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(RealValue::Zero(kind).IsZero());
   EXPECT_TRUE(RealValue::NegativeZero(kind).IsZero());
   EXPECT_FALSE((RealValue{kind, 1.0}.IsZero()));
@@ -246,7 +249,7 @@ TEST_P(RealValueKind, IsZero) {
 }
 
 TEST_P(RealValueKind, IsNegative) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_FALSE(RealValue::Zero(kind).IsNegative());
   EXPECT_TRUE(RealValue::NegativeZero(kind).IsNegative());
   EXPECT_FALSE((RealValue{kind, 1.0}.IsNegative()));
@@ -257,7 +260,7 @@ TEST_P(RealValueKind, IsNegative) {
 }
 
 TEST_P(RealValueKind, IsNotANumber) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_FALSE(RealValue::Zero(kind).IsNotANumber());
   EXPECT_FALSE(RealValue::Infinity(kind).IsNotANumber());
   EXPECT_FALSE(RealValue::Infinity(kind, /*negative=*/true).IsNotANumber());
@@ -266,7 +269,7 @@ TEST_P(RealValueKind, IsNotANumber) {
 }
 
 TEST_P(RealValueKind, IsSignalingNaN) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_FALSE(RealValue::Zero(kind).IsSignalingNaN());
   EXPECT_FALSE(RealValue::Infinity(kind).IsSignalingNaN());
   EXPECT_TRUE(RealValue::SignalingNaN(kind).IsSignalingNaN());
@@ -275,7 +278,7 @@ TEST_P(RealValueKind, IsSignalingNaN) {
 }
 
 TEST_P(RealValueKind, IsInfinite) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_FALSE(RealValue::Zero(kind).IsInfinite());
   EXPECT_FALSE(RealValue::HUGE(kind).IsInfinite());
   EXPECT_TRUE(RealValue::Infinity(kind).IsInfinite());
@@ -284,7 +287,7 @@ TEST_P(RealValueKind, IsInfinite) {
 }
 
 TEST_P(RealValueKind, IsFinite) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(RealValue::Zero(kind).IsFinite());
   EXPECT_TRUE(RealValue::HUGE(kind).IsFinite());
   EXPECT_TRUE(RealValue::TINY(kind).IsFinite());
@@ -294,7 +297,7 @@ TEST_P(RealValueKind, IsFinite) {
 }
 
 TEST_P(RealValueKind, IsNormal) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_TRUE(RealValue::Zero(kind).IsNormal()); // zero counts as normal here
   EXPECT_TRUE(RealValue::TINY(kind).IsNormal());
   EXPECT_TRUE(RealValue::HUGE(kind).IsNormal());
@@ -310,7 +313,7 @@ TEST_P(RealValueKind, IsNormal) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, ABS) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), (RealValue{kind, -3.0}.ABS()));
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), (RealValue{kind, 3.0}.ABS()));
   EXPECT_TRUE(RealValue::NegativeZero(kind).ABS().RawBits().IsZero());
@@ -319,7 +322,7 @@ TEST_P(RealValueKind, ABS) {
 }
 
 TEST_P(RealValueKind, SetSign) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_REAL_EQ((RealValue{kind, -3.0}), (RealValue{kind, 3.0}.SetSign(true)));
   EXPECT_REAL_EQ(
       (RealValue{kind, 3.0}), (RealValue{kind, -3.0}.SetSign(false)));
@@ -329,7 +332,7 @@ TEST_P(RealValueKind, SetSign) {
 }
 
 TEST_P(RealValueKind, SIGN) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_REAL_EQ((RealValue{kind, -3.0}),
       (RealValue{kind, 3.0}.SIGN(RealValue{kind, -1.0})));
   EXPECT_REAL_EQ((RealValue{kind, 3.0}),
@@ -340,7 +343,7 @@ TEST_P(RealValueKind, SIGN) {
 }
 
 TEST_P(RealValueKind, Negate) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   EXPECT_REAL_EQ((RealValue{kind, -3.0}), (RealValue{kind, 3.0}.Negate()));
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), (RealValue{kind, -3.0}.Negate()));
   EXPECT_REAL_EQ(RealValue::NegativeZero(kind), RealValue::Zero(kind).Negate());
@@ -354,7 +357,7 @@ TEST_P(RealValueKind, Negate) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, Compare) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue zero{RealValue::Zero(kind)};
   RealValue minusZero{RealValue::NegativeZero(kind)};
   RealValue one{kind, 1.0};
@@ -385,7 +388,7 @@ TEST_P(RealValueKind, Compare) {
 }
 
 TEST_P(RealValueKind, EqualityOperators) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   // operator== compares bit patterns, unlike Compare().
   EXPECT_TRUE((RealValue{kind, 1.0} == RealValue{kind, 1.0}));
   EXPECT_FALSE((RealValue{kind, 1.0} == RealValue{kind, 2.0}));
@@ -399,7 +402,7 @@ TEST_P(RealValueKind, EqualityOperators) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, Add) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto sum{RealValue{kind, 1.0}.Add(RealValue{kind, 2.0})};
   EXPECT_TRUE(sum.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), sum.value);
@@ -418,7 +421,7 @@ TEST_P(RealValueKind, Add) {
 }
 
 TEST_P(RealValueKind, Subtract) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto diff{RealValue{kind, 3.0}.Subtract(RealValue{kind, 5.0})};
   EXPECT_TRUE(diff.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, -2.0}), diff.value);
@@ -428,7 +431,7 @@ TEST_P(RealValueKind, Subtract) {
 }
 
 TEST_P(RealValueKind, Multiply) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto product{RealValue{kind, 3.0}.Multiply(RealValue{kind, 5.0})};
   EXPECT_TRUE(product.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, 15.0}), product.value);
@@ -448,7 +451,7 @@ TEST_P(RealValueKind, Multiply) {
 }
 
 TEST_P(RealValueKind, Divide) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto quotient{RealValue{kind, 15.0}.Divide(RealValue{kind, 5.0})};
   EXPECT_TRUE(quotient.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), quotient.value);
@@ -470,7 +473,7 @@ TEST_P(RealValueKind, Divide) {
 }
 
 TEST_P(RealValueKind, SQRT) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   auto four{RealValue{kind, 4.0}.SQRT()};
   EXPECT_TRUE(four.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, 2.0}), four.value);
@@ -483,7 +486,7 @@ TEST_P(RealValueKind, SQRT) {
 }
 
 TEST_P(RealValueKind, NEAREST) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue one{kind, 1.0};
 
   // The next value above 1.0 is 1.0+EPSILON.
@@ -502,7 +505,7 @@ TEST_P(RealValueKind, NEAREST) {
 }
 
 TEST_P(RealValueKind, HYPOT) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   auto hypot{RealValue{kind, 3.0}.HYPOT(RealValue{kind, 4.0})};
   EXPECT_REAL_EQ((RealValue{kind, 5.0}), hypot.value);
@@ -513,7 +516,7 @@ TEST_P(RealValueKind, HYPOT) {
 }
 
 TEST_P(RealValueKind, DIM) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   auto positive{RealValue{kind, 7.0}.DIM(RealValue{kind, 5.0})};
   EXPECT_REAL_EQ((RealValue{kind, 2.0}), positive.value);
@@ -527,7 +530,7 @@ TEST_P(RealValueKind, DIM) {
 }
 
 TEST_P(RealValueKind, MOD) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // The result has the sign of the dividend.
   RealValue m1{RealValue{kind, 8.0}.MOD(RealValue{kind, 5.0}).value};
@@ -545,7 +548,7 @@ TEST_P(RealValueKind, MOD) {
 }
 
 TEST_P(RealValueKind, MODULO) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // The result has the sign of the divisor.
   RealValue m1{RealValue{kind, 8.0}.MODULO(RealValue{kind, 5.0}).value};
@@ -559,7 +562,7 @@ TEST_P(RealValueKind, MODULO) {
 }
 
 TEST_P(RealValueKind, KahanSummation) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue correction{RealValue::Zero(kind)};
   auto sum{
@@ -581,7 +584,7 @@ TEST_P(RealValueKind, KahanSummation) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, EPSILON) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue eps{RealValue::EPSILON(kind)};
   EXPECT_EQ(kind, eps.kind());
@@ -596,7 +599,7 @@ TEST_P(RealValueKind, EPSILON) {
 }
 
 TEST_P(RealValueKind, HUGE) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue huge{RealValue::HUGE(kind)};
   EXPECT_EQ(kind, huge.kind());
@@ -610,7 +613,7 @@ TEST_P(RealValueKind, HUGE) {
 }
 
 TEST_P(RealValueKind, TINY) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue tiny{RealValue::TINY(kind)};
   EXPECT_EQ(kind, tiny.kind());
@@ -622,7 +625,7 @@ TEST_P(RealValueKind, TINY) {
 }
 
 TEST_P(RealValueKind, NotANumber) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue nan{RealValue::NotANumber(kind)};
   EXPECT_EQ(kind, nan.kind());
@@ -632,7 +635,7 @@ TEST_P(RealValueKind, NotANumber) {
 }
 
 TEST_P(RealValueKind, Exponent) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // Exponent() is the raw, biased exponent field.  The bias is recovered
   // from the (unbiased) Fortran MAXEXPONENT and the raw exponent of
@@ -647,22 +650,23 @@ TEST_P(RealValueKind, Exponent) {
 }
 
 TEST_P(RealValueKind, EXPONENT) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // The Fortran EXPONENT() intrinsic returns the unbiased exponent, plus one.
   EXPECT_EQ(1, (RealValue{kind, 1.0}.EXPONENT().ToInt64()));
   EXPECT_EQ(2, (RealValue{kind, 2.0}.EXPONENT().ToInt64()));
   EXPECT_EQ(3, (RealValue{kind, 4.0}.EXPONENT().ToInt64()));
   EXPECT_EQ(0, RealValue::Zero(kind).EXPONENT().ToInt64());
-  EXPECT_EQ(4, (RealValue{kind, 1.0}.EXPONENT().kind())); // INTEGER(4) result
+  EXPECT_EQ(KindsEnum::Kind4,
+      (RealValue{kind, 1.0}.EXPONENT().kind())); // INTEGER(4) result
 }
 
 TEST_P(RealValueKind, RRSPACING) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // RRSPACING(1.0) is 2**(DIGITS-1).
   RealValue scaled{RealValue{kind, 1.0}
-          .SCALE(IntegerValue{4, RealValue::DIGITS(kind) - 1})
+          .SCALE(IntegerValue{KindsEnum::Kind4, RealValue::DIGITS(kind) - 1})
           .value};
   EXPECT_REAL_EQ(scaled, (RealValue{kind, 1.0}.RRSPACING()));
   EXPECT_FALSE((RealValue{kind, -1.0}.RRSPACING().IsNegative()));
@@ -670,7 +674,7 @@ TEST_P(RealValueKind, RRSPACING) {
 }
 
 TEST_P(RealValueKind, SPACING) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   EXPECT_REAL_EQ(RealValue::EPSILON(kind), (RealValue{kind, 1.0}.SPACING()));
   // The spacing of a zero or subnormal value is defined to be TINY.
@@ -679,7 +683,7 @@ TEST_P(RealValueKind, SPACING) {
 }
 
 TEST_P(RealValueKind, SET_EXPONENT) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // SET_EXPONENT(X,I) is FRACTION(X)*2**I.
   EXPECT_REAL_EQ(
@@ -691,7 +695,7 @@ TEST_P(RealValueKind, SET_EXPONENT) {
 }
 
 TEST_P(RealValueKind, FRACTION) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // FRACTION() normalizes into [0.5, 1.0).
   EXPECT_REAL_EQ((RealValue{kind, 0.5}), (RealValue{kind, 1.0}.FRACTION()));
@@ -700,20 +704,22 @@ TEST_P(RealValueKind, FRACTION) {
 }
 
 TEST_P(RealValueKind, SCALE) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
-  auto scaled{RealValue{kind, 3.0}.SCALE(IntegerValue{4, 4})};
+  auto scaled{RealValue{kind, 3.0}.SCALE(IntegerValue{KindsEnum::Kind4, 4})};
   EXPECT_TRUE(scaled.flags.empty());
   EXPECT_REAL_EQ((RealValue{kind, 48.0}), scaled.value);
-  RealValue rescaled{RealValue{kind, 48.0}.SCALE(IntegerValue{4, -4}).value};
+  RealValue rescaled{
+      RealValue{kind, 48.0}.SCALE(IntegerValue{KindsEnum::Kind4, -4}).value};
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), rescaled);
   // Scaling a zero ignores the factor.
-  EXPECT_TRUE(
-      RealValue::Zero(kind).SCALE(IntegerValue{4, 1000}).value.IsZero());
+  EXPECT_TRUE(RealValue::Zero(kind)
+          .SCALE(IntegerValue{KindsEnum::Kind4, 1000})
+          .value.IsZero());
 }
 
 TEST_P(RealValueKind, FlushSubnormalToZero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   RealValue subnormal{kind, IntegerValue{kind, 1}};
   ASSERT_FALSE(subnormal.IsZero());
@@ -730,27 +736,28 @@ TEST_P(RealValueKind, FlushSubnormalToZero) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, FromInteger) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
-  auto exact{RealValue::FromInteger(kind, IntegerValue{8, 3})};
+  auto exact{RealValue::FromInteger(kind, IntegerValue{KindsEnum::Kind8, 3})};
   EXPECT_TRUE(exact.flags.empty());
   EXPECT_EQ(kind, exact.value.kind());
   EXPECT_EQ(Relation::Equal, exact.value.Compare(RealValue{kind, 3.0}));
-  EXPECT_TRUE(
-      RealValue::FromInteger(kind, IntegerValue::Zero(8)).value.IsZero());
+  EXPECT_TRUE(RealValue::FromInteger(kind, IntegerValue::Zero(KindsEnum::Kind8))
+          .value.IsZero());
 
-  auto negative{RealValue::FromInteger(kind, IntegerValue{8, -3})};
+  auto negative{
+      RealValue::FromInteger(kind, IntegerValue{KindsEnum::Kind8, -3})};
   EXPECT_TRUE(negative.value.IsNegative());
 
   // The same bit pattern read as unsigned is a large positive number.
-  auto asUnsigned{
-      RealValue::FromInteger(kind, IntegerValue{8, -1}, /*isUnsigned=*/true)};
+  auto asUnsigned{RealValue::FromInteger(
+      kind, IntegerValue{KindsEnum::Kind8, -1}, /*isUnsigned=*/true)};
   EXPECT_FALSE(asUnsigned.value.IsNegative());
   EXPECT_FALSE(asUnsigned.value.IsZero());
 }
 
 TEST_P(RealValueKind, ToWholeNumber) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // 3.5 is representable in every supported format.
   RealValue x{kind, 3.5};
@@ -778,13 +785,13 @@ TEST_P(RealValueKind, ToWholeNumber) {
 }
 
 TEST_P(RealValueKind, ToInteger) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   auto exact{RealValue{kind, 42.0}.ToInteger()};
   EXPECT_TRUE(exact.flags.empty());
   EXPECT_EQ(42, exact.value.ToInt64());
-  EXPECT_EQ(8, exact.value.kind()); // an INTEGER(8) by default
-  EXPECT_EQ(4,
+  EXPECT_EQ(KindsEnum::Kind8, exact.value.kind()); // an INTEGER(8) by default
+  EXPECT_EQ(KindsEnum::Kind4,
       (RealValue{kind, 42.0}.ToInteger(RoundingMode::ToZero, 32).value.kind()));
   EXPECT_EQ(-42, (RealValue{kind, -42.0}.ToInteger().value.ToInt64()));
 
@@ -798,7 +805,7 @@ TEST_P(RealValueKind, ToInteger) {
   // A NaN is invalid and yields HUGE.
   auto nan{RealValue::NotANumber(kind).ToInteger()};
   EXPECT_TRUE(nan.flags.test(RealFlag::InvalidArgument));
-  EXPECT_TRUE(nan.value == IntegerValue::HUGE(8));
+  EXPECT_TRUE(nan.value == IntegerValue::HUGE(KindsEnum::Kind8));
   // An infinity overflows.
   EXPECT_TRUE(
       RealValue::Infinity(kind).ToInteger().flags.test(RealFlag::Overflow));
@@ -809,11 +816,11 @@ TEST_P(RealValueKind, ToInteger) {
 }
 
 TEST_P(RealValueKind, Convert) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // Widening to REAL(16) and narrowing back is lossless.
-  auto widened{RealValue::Convert(16, RealValue{kind, 3.0})};
-  EXPECT_EQ(16, widened.value.kind());
+  auto widened{RealValue::Convert(KindsEnum::Kind16, RealValue{kind, 3.0})};
+  EXPECT_EQ(KindsEnum::Kind16, widened.value.kind());
   auto restored{RealValue::Convert(kind, widened.value)};
   EXPECT_REAL_EQ((RealValue{kind, 3.0}), restored.value);
   // Converting to the same kind is the identity.
@@ -821,12 +828,13 @@ TEST_P(RealValueKind, Convert) {
       (RealValue::Convert(kind, RealValue{kind, 3.0}).value));
 
   // A NaN is invalid but stays a NaN.
-  auto nan{RealValue::Convert(kind, RealValue::NotANumber(16))};
+  auto nan{RealValue::Convert(kind, RealValue::NotANumber(KindsEnum::Kind16))};
   EXPECT_TRUE(nan.flags.test(RealFlag::InvalidArgument));
   EXPECT_TRUE(nan.value.IsNotANumber());
   // Overflow when the source magnitude exceeds the destination's range.
-  if (kind != 16) {
-    auto overflowed{RealValue::Convert(kind, RealValue::HUGE(16))};
+  if (kind != KindsEnum::Kind16) {
+    auto overflowed{
+        RealValue::Convert(kind, RealValue::HUGE(KindsEnum::Kind16))};
     EXPECT_TRUE(overflowed.flags.test(RealFlag::Overflow));
     EXPECT_TRUE(overflowed.value.IsInfinite());
   }
@@ -837,12 +845,13 @@ TEST_P(RealValueKind, Convert) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(RealValueKind, RawBits) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   EXPECT_TRUE(RealValue::Zero(kind).RawBits().IsZero());
 
   // REAL(10) stores 128 bits, but only 80 of them are significant.
-  const int significantBits{kind == 10 ? 80 : RealValue::bits(kind)};
+  const int significantBits{
+      kind == KindsEnum::Kind10 ? 80 : RealValue::bits(kind)};
   RealValue allOnes{kind, IntegerValue::MASKR(kind, significantBits)};
   EXPECT_EQ(significantBits, allOnes.RawBits().POPCNT());
   EXPECT_EQ(1, RealValue::NegativeZero(kind).RawBits().POPCNT());
@@ -854,7 +863,7 @@ TEST_P(RealValueKind, RawBits) {
 }
 
 TEST_P(RealValueKind, RawBytesRoundTrip) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   RealValue original{kind, -3.0};
   char buffer[16]{};
   ASSERT_EQ(RealValue::bytesStored(kind), original.bytesStored());
@@ -894,24 +903,25 @@ TEST(RealValue, DumpHexadecimal) {
       {0x00000001, "0x0.000002p-126"},
   };
   for (auto &e : table) {
-    EXPECT_EQ(
-        e.expected, (RealValue{4, IntegerValue{4, e.raw}}.DumpHexadecimal()))
+    EXPECT_EQ(e.expected,
+        (RealValue{KindsEnum::Kind4, IntegerValue{KindsEnum::Kind4, e.raw}}
+                .DumpHexadecimal()))
         << "raw=" << e.raw;
   }
 }
 
 TEST_P(RealValueKind, AsFortran) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // NaNs and infinities are emitted as parenthesized expressions.
   std::string nan{AsFortranString(RealValue::NotANumber(kind), kind, false)};
-  EXPECT_EQ("(0._" + std::to_string(kind) + "/0.)", nan);
+  EXPECT_EQ("(0._" + std::to_string(static_cast<int>(kind)) + "/0.)", nan);
   std::string inf{AsFortranString(RealValue::Infinity(kind), kind, false)};
-  EXPECT_EQ("(1._" + std::to_string(kind) + "/0.)", inf);
+  EXPECT_EQ("(1._" + std::to_string(static_cast<int>(kind)) + "/0.)", inf);
 
   std::string negInf{
       AsFortranString(RealValue::Infinity(kind, true), kind, false)};
-  EXPECT_EQ("(-1._" + std::to_string(kind) + "/0.)", negInf);
+  EXPECT_EQ("(-1._" + std::to_string(static_cast<int>(kind)) + "/0.)", negInf);
 
   // A finite value reads back as itself.
   RealValue x{kind, 0.375};
@@ -934,7 +944,7 @@ TEST_P(RealValueKind, AsFortran) {
 }
 
 TEST_P(RealValueKind, Read) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const char *text{"1.0rest"};
   const char *p{text};
   auto one{RealValue::Read(kind, p)};
@@ -954,7 +964,7 @@ TEST_P(RealValueKind, Read) {
 }
 
 TEST_P(RealValueKind, RoundingModes) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // 1 + EPSILON/2 is exactly halfway between 1 and the next value up, so each
   // rounding mode picks a different result.
@@ -971,7 +981,7 @@ TEST_P(RealValueKind, RoundingModes) {
 }
 
 TEST_P(RealValueKind, Print) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const int pos{KindPos(kind)};
 
   llvm::SmallString<128> buf;
@@ -991,13 +1001,13 @@ TEST_P(RealValueKind, Print) {
 // Mirrors basicTests() from the legacy test: converts every power of two that
 // fits in an INTEGER(8) and converts it back.
 TEST_P(RealValueKind, FromIntegerPowersOfTwo) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const int bias{
       RealValue::Infinity(kind).Exponent() - RealValue::MAXEXPONENT(kind)};
   for (int j{0}; j < 63; ++j) {
     SCOPED_TRACE(testing::Message() << "kind=" << kind << " 2**" << j);
     const std::uint64_t x{std::uint64_t{1} << j};
-    IntegerValue ix{8, x};
+    IntegerValue ix{KindsEnum::Kind8, x};
     ASSERT_FALSE(ix.IsNegative());
     ASSERT_EQ(x, ix.ToUInt64());
 
@@ -1055,7 +1065,7 @@ TEST_P(RealValueKind, FromIntegerPowersOfTwo) {
 TYPED_TEST(RealValueHostTypedKind, CompareUnaryWithHost) {
   using HostT = typename TypeParam::HostT;
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   union {
     UnsignedT ui;
@@ -1087,7 +1097,7 @@ TYPED_TEST(RealValueHostTypedKind, CompareUnaryWithHost) {
     }
 
     // Every value is emitted as a Fortran constant that reads back exactly.
-    const std::string kindSuffix{std::to_string(kind)};
+    const std::string kindSuffix{std::to_string(static_cast<int>(kind))};
     std::string text{AsFortranString(x, kind, false)};
     if (std::isnan(f)) {
       EXPECT_EQ("(0._" + kindSuffix + "/0.)", text);
@@ -1110,7 +1120,7 @@ TYPED_TEST(RealValueHostTypedKind, CompareUnaryWithHost) {
 TYPED_TEST(RealValueHostTypedKind, CompareDyadicWithHost) {
   using HostT = typename TypeParam::HostT;
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   union {
     UnsignedT ui;

@@ -38,13 +38,15 @@ IntegerValue &IntegerValue::operator=(IntegerValue &&x) {
   return *this;
 }
 
-IntegerValue IntegerValue::Zero(int kind) {
-  return FromImpl(IntegerValueImpl::Zero(kind));
+IntegerValue IntegerValue::Zero(KindsEnum kind) {
+  return FromImpl(IntegerValueImpl::Zero(static_cast<int>(kind)));
 }
 
 bool IntegerValue::IsMonostate() const { return impl().IsMonostate(); }
 
-int IntegerValue::kind() const { return impl().kind(); }
+KindsEnum IntegerValue::kind() const {
+  return static_cast<KindsEnum>(impl().kind());
+}
 
 void IntegerValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 
@@ -56,17 +58,17 @@ bool IntegerValue::operator==(const IntegerValue &y) const {
   return impl() == y.impl();
 }
 
-IntegerValue IntegerValue::MASKL(int kind, int places) {
-  return FromImpl(IntegerValueImpl::MASKL(kind, places));
+IntegerValue IntegerValue::MASKL(KindsEnum kind, int places) {
+  return FromImpl(IntegerValueImpl::MASKL(static_cast<int>(kind), places));
 }
 
-IntegerValue IntegerValue::MASKR(int kind, int places) {
-  return FromImpl(IntegerValueImpl::MASKR(kind, places));
+IntegerValue IntegerValue::MASKR(KindsEnum kind, int places) {
+  return FromImpl(IntegerValueImpl::MASKR(static_cast<int>(kind), places));
 }
 
 IntegerValue::ValueWithOverflow IntegerValue::Read(
-    int kind, const char *&pp, int base, bool isSigned) {
-  auto r{IntegerValueImpl::Read(kind, pp, base, isSigned)};
+    KindsEnum kind, const char *&pp, int base, bool isSigned) {
+  auto r{IntegerValueImpl::Read(static_cast<int>(kind), pp, base, isSigned)};
   return {FromImpl(std::move(r.value)), r.overflow};
 }
 
@@ -92,17 +94,21 @@ std::string IntegerValue::SignedDecimal() const {
 
 std::string IntegerValue::Hexadecimal() const { return impl().Hexadecimal(); }
 
-IntegerValue IntegerValue::HUGE(int kind) {
-  return FromImpl(IntegerValueImpl::HUGE(kind));
+IntegerValue IntegerValue::HUGE(KindsEnum kind) {
+  return FromImpl(IntegerValueImpl::HUGE(static_cast<int>(kind)));
 }
 
-IntegerValue IntegerValue::Least(int kind) {
-  return FromImpl(IntegerValueImpl::Least(kind));
+IntegerValue IntegerValue::Least(KindsEnum kind) {
+  return FromImpl(IntegerValueImpl::Least(static_cast<int>(kind)));
 }
 
-int IntegerValue::RANGE(int kind) { return DecimalRange(kind * 8 - 1); }
+int IntegerValue::RANGE(KindsEnum kind) {
+  return DecimalRange(static_cast<int>(kind) * 8 - 1);
+}
 
-int IntegerValue::UnsignedRANGE(int kind) { return DecimalRange(kind * 8); }
+int IntegerValue::UnsignedRANGE(KindsEnum kind) {
+  return DecimalRange(static_cast<int>(kind) * 8);
+}
 
 bool IntegerValue::IsZero() const { return impl().IsZero(); }
 
@@ -282,8 +288,9 @@ typename IntegerValue::PowerWithErrors IntegerValue::Power(
 }
 
 IntegerValue IntegerValue::FromRawBytes(
-    int kind, const void *raw, std::size_t expectedSize) {
-  return FromImpl(IntegerValueImpl::FromRawBytes(kind, raw, expectedSize));
+    KindsEnum kind, const void *raw, std::size_t expectedSize) {
+  return FromImpl(IntegerValueImpl::FromRawBytes(
+      static_cast<int>(kind), raw, expectedSize));
 }
 
 void IntegerValue::StoreRawBytes(void *dst, size_t size, bool *changed) const {
@@ -291,13 +298,13 @@ void IntegerValue::StoreRawBytes(void *dst, size_t size, bool *changed) const {
 }
 
 void IntegerValue::ConstructFromIntegral(
-    int kind, std::uint64_t v, bool isSigned) {
-  new (this) IntegerValueImpl(kind, v, isSigned);
+    KindsEnum kind, std::uint64_t v, bool isSigned) {
+  new (this) IntegerValueImpl(static_cast<int>(kind), v, isSigned);
 }
 
 void IntegerValue::ConstructFromIntegral(
-    int kind, Fortran::common::uint128_t v) {
-  new (this) IntegerValueImpl(kind, v);
+    KindsEnum kind, Fortran::common::uint128_t v) {
+  new (this) IntegerValueImpl(static_cast<int>(kind), v);
 }
 
 IntegerValue IntegerValue::FromImpl(const IntegerValueImpl &x) {

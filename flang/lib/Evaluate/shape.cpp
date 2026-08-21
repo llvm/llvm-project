@@ -1087,8 +1087,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             }
           } else {
             // Non-scalar MASK= -> [COUNT(mask, KIND=extent_kind)]
-            ActualArgument kindArg{
-                AsGenericExpr(MakeExtentConstant(ExtentIntKind))};
+            ActualArgument kindArg{AsGenericExpr(
+                MakeExtentConstant(static_cast<int64_t>(ExtentIntKind)))};
             kindArg.set_keyword(context_->SaveTempName("kind"));
             ActualArguments toCount{
                 ActualArgument{common::Clone(

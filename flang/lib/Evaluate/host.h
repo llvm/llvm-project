@@ -73,16 +73,16 @@ template <typename... T> constexpr inline bool HostTypeExists() {
 template <typename FTN_T>
 inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
+  constexpr KindsEnum kind{static_cast<KindsEnum>(FTN_T::kind)};
   if constexpr (FTN_T::category == TypeCategory::Complex &&
-      Scalar<FTN_T>::bytesStored(FTN_T::kind) != sizeof(HostType<FTN_T>)) {
+      Scalar<FTN_T>::bytesStored(kind) != sizeof(HostType<FTN_T>)) {
     // X87 is usually padded to 12 or 16bytes. Need to cast piecewise for
     // complex
     return Scalar<FTN_T>{CastHostToFortran<typename FTN_T::Part>(std::real(x)),
         CastHostToFortran<typename FTN_T::Part>(std::imag(x))};
   } else {
-    static_assert(
-        Scalar<FTN_T>::bytesStored(FTN_T::kind) == sizeof(HostType<FTN_T>));
-    return Scalar<FTN_T>::FromRawBytes(FTN_T::kind, &x, sizeof(x));
+    static_assert(Scalar<FTN_T>::bytesStored(kind) == sizeof(HostType<FTN_T>));
+    return Scalar<FTN_T>::FromRawBytes(kind, &x, sizeof(x));
   }
 }
 
@@ -90,14 +90,14 @@ inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
 template <typename FTN_T>
 inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
+  constexpr KindsEnum kind{static_cast<KindsEnum>(FTN_T::kind)};
   if constexpr (FTN_T::category == TypeCategory::Complex &&
-      Scalar<FTN_T>::bytesStored(FTN_T::kind) != sizeof(HostType<FTN_T>)) {
+      Scalar<FTN_T>::bytesStored(kind) != sizeof(HostType<FTN_T>)) {
     using FortranPartType = typename FTN_T::Part;
     return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
         CastFortranToHost<FortranPartType>(x.AIMAG())};
   } else {
-    static_assert(
-        Scalar<FTN_T>::bytesStored(FTN_T::kind) == sizeof(HostType<FTN_T>));
+    static_assert(Scalar<FTN_T>::bytesStored(kind) == sizeof(HostType<FTN_T>));
     HostType<FTN_T> result;
     x.StoreRawBytes(&result, sizeof(result));
     return result;

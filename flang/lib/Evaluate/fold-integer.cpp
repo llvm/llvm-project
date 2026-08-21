@@ -18,7 +18,7 @@ namespace Fortran::evaluate {
 // Return scalar value if asScalar == true and shape-dim array otherwise.
 template <typename T>
 Expr<T> PackageConstantBounds(
-    int kind, const ConstantSubscripts &&bounds, bool asScalar = false) {
+    KindsEnum kind, const ConstantSubscripts &&bounds, bool asScalar = false) {
   if (asScalar) {
     return MakeConstantExpr<T>(kind, bounds.at(0));
   } else {
@@ -101,7 +101,7 @@ class GetConstantArrayBoundHelper {
 public:
   template <typename T>
   static Expr<T> GetLbound(
-      int kind, const Expr<SomeType> &array, std::optional<int> dim) {
+      KindsEnum kind, const Expr<SomeType> &array, std::optional<int> dim) {
     return PackageConstantBounds<T>(kind,
         GetConstantArrayBoundHelper(dim, /*getLbound=*/true).Get(array),
         dim.has_value());
@@ -109,7 +109,7 @@ public:
 
   template <typename T>
   static Expr<T> GetUbound(
-      int kind, const Expr<SomeType> &array, std::optional<int> dim) {
+      KindsEnum kind, const Expr<SomeType> &array, std::optional<int> dim) {
     return PackageConstantBounds<T>(kind,
         GetConstantArrayBoundHelper(dim, /*getLbound=*/false).Get(array),
         dim.has_value());
@@ -178,7 +178,7 @@ private:
 Expr<Type<TypeCategory::Integer>> LBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
     std::optional<int> dim;
@@ -229,7 +229,7 @@ Expr<Type<TypeCategory::Integer>> LBOUND(FoldingContext &context,
 Expr<Type<TypeCategory::Integer>> UBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   if (auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
     std::optional<int> dim;
@@ -294,7 +294,7 @@ Expr<Type<TypeCategory::Integer>> UBOUND(FoldingContext &context,
 Expr<Type<TypeCategory::Integer>> COBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef, bool isUCOBOUND) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   if (const Symbol * coarray{UnwrapWholeSymbolOrComponentDataRef(args[0])}) {
     std::optional<int> dim;
@@ -327,9 +327,9 @@ template <typename T> class CountAccumulator {
   using MaskT = Type<TypeCategory::Logical>;
 
 public:
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
-  CountAccumulator(int kind, const Constant<MaskT> &mask)
+  CountAccumulator(KindsEnum kind, const Constant<MaskT> &mask)
       : kind_{kind}, mask_{mask} {}
   void operator()(
       Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
@@ -344,7 +344,7 @@ public:
   void Done(Scalar<T> &) const {}
 
 private:
-  int kind_;
+  KindsEnum kind_;
   const Constant<MaskT> &mask_;
   bool overflow_{false};
 };
@@ -353,7 +353,7 @@ template <typename T>
 static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
   using KindLogical = Type<TypeCategory::Logical>;
   static_assert(T::category == TypeCategory::Integer);
-  const int kind{ref.kind()};
+  const auto kind{ref.kind()};
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<KindLogical>> arrayAndMask{
           ProcessReductionArgs<KindLogical>(LogicalResultKind, context,
@@ -381,7 +381,7 @@ public:
   using Types = std::conditional_t<WHICH == WhichLocation::Findloc,
       AllIntrinsicTypes, RelationalTypes>;
 
-  template <typename T> Result Test(int kind) const {
+  template <typename T> Result Test(KindsEnum kind) const {
     if (T::category != type_.category() || kind != type_.kind()) {
       return std::nullopt;
     }
@@ -408,8 +408,8 @@ public:
     }
     bool back{false};
     if (arg_[backArg]) {
-      const auto *backConst{Folder<LogicalResult>{
-          LogicalResultKind, context_, /*forOptionalArgument=*/true}
+      const auto *backConst{Folder<LogicalResult>{LogicalResultKind, context_,
+          /*forOptionalArgument=*/true}
               .Folding(arg_[backArg])};
       if (backConst) {
         back = backConst->GetScalarValue().value().IsTrue();
@@ -510,7 +510,7 @@ private:
       std::optional<Constant<T>> &value,
       [[maybe_unused]] RelationalOperator relation,
       [[maybe_unused]] bool back) const {
-    const int kind{element.kind()};
+    const KindsEnum kind{element.kind()};
     std::optional<Expr<LogicalResult>> cmp;
     bool result{true};
     if (value) {
@@ -584,7 +584,7 @@ static std::optional<Constant<SubscriptInteger>> FoldLocationCall(
 template <WhichLocation which, typename T>
 static Expr<T> FoldLocation(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer);
-  const int kind{ref.kind()};
+  const KindsEnum kind{ref.kind()};
   if (std::optional<Constant<SubscriptInteger>> found{
           FoldLocationCall<which>(ref.arguments(), context)}) {
     return Expr<T>{Fold(context,
@@ -599,7 +599,7 @@ template <typename T>
 static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
     Scalar<T> identity) {
-  const int kind{ref.kind()};
+  const auto kind{ref.kind()};
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned);
   std::optional<int> dim;
@@ -617,7 +617,7 @@ static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
 template <typename T>
 std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     FoldingContext &context, FunctionRef<T> &funcRef) {
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -665,9 +665,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     // than BIT_SIZE. It can be converted to Int4 to simplify.
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (const auto *shiftCon{Folder<Int4>(
-                   /*kind=*/4, context)
-                       .Folding(args[2])}) {
+    } else if (const auto *shiftCon{
+                   Folder<Int4>(Kind4, context).Folding(args[2])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {
@@ -682,8 +681,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, T, Int4>(kind, {kind, kind, 4}, context,
-        std::move(funcRef),
+    return FoldElementalIntrinsic<T, T, T, Int4>(kind, {kind, kind, Kind4},
+        context, std::move(funcRef),
         ScalarFunc<T, T, T, Int4>(
             [&fptr](const Scalar<T> &i, const Scalar<T> &j,
                 const Scalar<Int4> &shift) -> Scalar<T> {
@@ -719,7 +718,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     }
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (const auto *posCon{Folder<Int4>(4, context).Folding(args[1])}) {
+    } else if (const auto *posCon{
+                   Folder<Int4>(Kind4, context).Folding(args[1])}) {
       for (const auto &scalar : posCon->values()) {
         std::int64_t posVal{scalar.ToInt64()};
         if (posVal < 0) {
@@ -735,15 +735,15 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, Kind4}, context,
         std::move(funcRef),
         ScalarFunc<T, T, Int4>(
             [&](const Scalar<T> &i, const Scalar<Int4> &pos) -> Scalar<T> {
               return std::invoke(fptr, i, static_cast<int>(pos.ToInt64()));
             }));
   } else if (name == "ibits") {
-    const auto *posCon{Folder<Int4>(4, context).Folding(args[1])};
-    const auto *lenCon{Folder<Int4>(4, context).Folding(args[2])};
+    const auto *posCon{Folder<Int4>(Kind4, context).Folding(args[1])};
+    const auto *lenCon{Folder<Int4>(Kind4, context).Folding(args[2])};
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else {
@@ -775,8 +775,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4, Int4>(kind, {kind, 4, 4}, context,
-        std::move(funcRef),
+    return FoldElementalIntrinsic<T, T, Int4, Int4>(kind, {kind, Kind4, Kind4},
+        context, std::move(funcRef),
         ScalarFunc<T, T, Int4, Int4>(
             [&](const Scalar<T> &i, const Scalar<Int4> &pos,
                 const Scalar<Int4> &len) -> Scalar<T> {
@@ -818,12 +818,12 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{kind, 0});
   } else if (name == "ishft" || name == "ishftc") {
     const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
-    const auto *shiftCon{Folder<Int4>(4, context).Folding(args[1])};
+    const auto *shiftCon{Folder<Int4>(Kind4, context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
-    const auto *sizeCon{args.size() == 3
-            ? Folder<Int4>{4, context, /*forOptionalArgument=*/true}.Folding(
-                  args[2])
-            : nullptr};
+    const auto *sizeCon{args.size() == 3 ? Folder<Int4>{Kind4, context,
+                                               /*forOptionalArgument=*/true}
+                                               .Folding(args[2])
+                                         : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
     if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
         (sizeVals && sizeVals->empty())) {
@@ -877,22 +877,22 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
       }
     }
     if (name == "ishft") {
-      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, Kind4}, context,
           std::move(funcRef),
           ScalarFunc<T, T, Int4>(
               [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
                 return i.ISHFT(static_cast<int>(shift.ToInt64()));
               }));
     } else if (!args.at(2)) { // ISHFTC(no SIZE=)
-      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+      return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, Kind4}, context,
           std::move(funcRef),
           ScalarFunc<T, T, Int4>(
               [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
                 return i.ISHFTC(static_cast<int>(shift.ToInt64()));
               }));
     } else { // ISHFTC(with SIZE=)
-      return FoldElementalIntrinsic<T, T, Int4, Int4>(kind, {kind, 4, 4},
-          context, std::move(funcRef),
+      return FoldElementalIntrinsic<T, T, Int4, Int4>(kind,
+          {kind, Kind4, Kind4}, context, std::move(funcRef),
           ScalarFunc<T, T, Int4, Int4>(
               [&](const Scalar<T> &i, const Scalar<Int4> &shift,
                   const Scalar<Int4> &size) -> Scalar<T> {
@@ -920,7 +920,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     // It can be safely converted to Int4 to simplify.
     const auto fptr{name == "maskl" || name == "umaskl" ? &Scalar<T>::MASKL
                                                         : &Scalar<T>::MASKR};
-    return FoldElementalIntrinsic<T, Int4>(kind, {4}, context,
+    return FoldElementalIntrinsic<T, Int4>(kind, {Kind4}, context,
         std::move(funcRef),
         ScalarFunc<T, Int4>(
             [&fptr, kind](const Scalar<Int4> &places) -> Scalar<T> {
@@ -967,7 +967,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else if (const auto *shiftCon{
-                   Folder<Int4>(4, context).Folding(args[1])}) {
+                   Folder<Int4>(Kind4, context).Folding(args[1])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {
@@ -982,7 +982,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         }
       }
     }
-    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, 4}, context,
+    return FoldElementalIntrinsic<T, T, Int4>(kind, {kind, Kind4}, context,
         std::move(funcRef),
         ScalarFunc<T, T, Int4>(
             [&](const Scalar<T> &i, const Scalar<Int4> &shift) -> Scalar<T> {
@@ -997,7 +997,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
 Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   if (auto foldedCommon{FoldIntrinsicFunctionCommon(context, funcRef)}) {
     return std::move(*foldedCommon);
   }
@@ -1024,7 +1024,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
           if (j.overflow) {
             context.Warn(common::UsageWarning::FoldingException,
-                "abs(integer(kind=%d)) folding overflowed"_warn_en_US, kind);
+                "abs(integer(kind=%d)) folding overflowed"_warn_en_US,
+                static_cast<int>(kind));
           }
           return j.value;
         }));
@@ -1068,8 +1069,9 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&funcRef, &context, kind](const auto &x) -> Expr<T> {
             using TR = typename std::decay_t<decltype(x)>::Result;
-            return FoldElementalIntrinsic<T, TR>(kind, {x.kind()}, context,
-                std::move(funcRef), &Scalar<TR>::EXPONENT);
+            return FoldElementalIntrinsic<T, TR>(kind,
+                {static_cast<KindsEnum>(x.kind())}, context, std::move(funcRef),
+                &Scalar<TR>::EXPONENT);
           },
           sx->u);
     } else {
@@ -1097,8 +1099,9 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
         return common::visit(
             [&funcRef, &context, &FromInt64, kind](const auto &str) -> Expr<T> {
               using Char = typename std::decay_t<decltype(str)>::Result;
-              return FoldElementalIntrinsic<T, Char>(kind, {str.kind()},
-                  context, std::move(funcRef),
+              return FoldElementalIntrinsic<T, Char>(kind,
+                  {static_cast<KindsEnum>(str.kind())}, context,
+                  std::move(funcRef),
                   ScalarFunc<T, Char>(
 #ifndef _MSC_VER
                       [&FromInt64](const Scalar<Char> &c) {
@@ -1127,7 +1130,7 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &kch) -> Expr<T> {
             using TC = typename std::decay_t<decltype(kch)>::Result;
-            const int kchKind{kch.kind()};
+            const KindsEnum kchKind{static_cast<KindsEnum>(kch.kind())};
             if (UnwrapExpr<Expr<SomeLogical>>(args[2])) { // BACK=
               return FoldElementalIntrinsic<T, TC, TC, LogicalResult>(kind,
                   {kchKind, kchKind, LogicalResultKind}, context,
@@ -1179,7 +1182,7 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
           }
         }
       } else if (auto dyType{expr->GetType()}) {
-        return MakeConstantExpr<T>(kind, dyType->kind());
+        return MakeConstantExpr<T>(kind, static_cast<int>(dyType->kind()));
       }
     }
   } else if (name == "lbound") {
@@ -1192,8 +1195,9 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&funcRef, &context, &name, kind](const auto &n) -> Expr<T> {
             using TI = typename std::decay_t<decltype(n)>::Result;
+            const KindsEnum nKind{static_cast<KindsEnum>(n.kind())};
             if (name == "poppar") {
-              return FoldElementalIntrinsic<T, TI>(kind, {n.kind()}, context,
+              return FoldElementalIntrinsic<T, TI>(kind, {nKind}, context,
                   std::move(funcRef),
                   ScalarFunc<T, TI>([kind](const Scalar<TI> &i) -> Scalar<T> {
                     return Scalar<T>{kind, i.POPPAR() ? 1 : 0};
@@ -1209,7 +1213,7 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
               common::die(
                   "missing case to fold intrinsic function %s", name.c_str());
             }
-            return FoldElementalIntrinsic<T, TI>(kind, {n.kind()}, context,
+            return FoldElementalIntrinsic<T, TI>(kind, {nKind}, context,
                 std::move(funcRef),
                 // `i` should be declared as `const Scalar<TI>&`.
                 // We declare it as `auto` to workaround an msvc bug:
@@ -1245,7 +1249,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &kch) -> Expr<T> {
             using TC = typename std::decay_t<decltype(kch)>::Result;
-            return FoldElementalIntrinsic<T, TC>(kind, {kch.kind()}, context,
+            return FoldElementalIntrinsic<T, TC>(kind,
+                {static_cast<KindsEnum>(kch.kind())}, context,
                 std::move(funcRef),
                 ScalarFunc<T, TC>{[&FromInt64](const Scalar<TC> &str) {
                   return FromInt64(CharacterUtils::LEN_TRIM(str));
@@ -1262,7 +1267,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &x) {
             using TR = typename std::decay_t<decltype(x)>::Result;
-            return MakeConstantExpr<T>(kind, Scalar<TR>::MAXEXPONENT(x.kind()));
+            return MakeConstantExpr<T>(kind,
+                Scalar<TR>::MAXEXPONENT(static_cast<KindsEnum>(x.kind())));
           },
           sx->u);
     }
@@ -1275,7 +1281,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &x) {
             using TR = typename std::decay_t<decltype(x)>::Result;
-            return MakeConstantExpr<T>(kind, Scalar<TR>::MINEXPONENT(x.kind()));
+            return MakeConstantExpr<T>(kind,
+                Scalar<TR>::MINEXPONENT(static_cast<KindsEnum>(x.kind())));
           },
           sx->u);
     }
@@ -1402,7 +1409,7 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
             UnwrapExpr<Constant<Type<TypeCategory::Character>>>(args[0])}) {
       if (std::optional<value::CharacterValue> charVal{
               chCon->GetScalarValue()}) {
-        int defaultKind{
+        KindsEnum defaultKind{
             context.defaults().GetDefaultKind(TypeCategory::Character)};
         return MakeConstantExpr<T>(
             kind, SelectedCharKind(*charVal->AsStdString(), defaultKind));
@@ -1442,7 +1449,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
           typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
           if (result.overflow) {
             context.Warn(common::UsageWarning::FoldingException,
-                "sign(integer(kind=%d)) folding overflowed"_warn_en_US, kind);
+                "sign(integer(kind=%d)) folding overflowed"_warn_en_US,
+                static_cast<int>(kind));
           }
           return result.value;
         }));
@@ -1518,7 +1526,7 @@ Expr<Type<TypeCategory::Unsigned>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Unsigned>> &&funcRef) {
   using T = Type<TypeCategory::Unsigned>;
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   if (auto foldedCommon{FoldIntrinsicFunctionCommon(context, funcRef)}) {
     return std::move(*foldedCommon);
   }
@@ -1628,7 +1636,7 @@ Expr<RankOneBoundElement::Result> FoldOperation(
     ConstantSubscripts at{c->lbounds()};
     at[0] = c->lbounds()[0] + x.dimension();
     return MakeConstantExpr<ResultType>(
-        RankOneBoundElement::ResultKind, c->At(at));
+        static_cast<KindsEnum>(RankOneBoundElement::ResultKind), c->At(at));
   }
   return Expr<ResultType>{
       RankOneBoundElement{std::move(folded), x.dimension()}};

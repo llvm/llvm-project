@@ -230,11 +230,23 @@ extern const std::int32_t FORTRAN_NAMED_CONST(real80){real80};
 extern const std::int32_t FORTRAN_NAMED_CONST(real64x2){real64x2};
 extern const std::int32_t FORTRAN_NAMED_CONST(real128){real128};
 
-extern const std::int32_t FORTRAN_NAMED_CONST(
-    __builtin_integer_kinds)[] = FORTRAN_INTEGER_KINDS;
+// FORTRAN_INTEGER_KINDS/FORTRAN_LOGICAL_KINDS expand to lists of
+// Fortran::common::KindsEnum values; cast each to std::int32_t for this
+// externally-visible ABI array.
+extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_integer_kinds)[]{
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind1),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind2),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind4),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind8),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind16),
+};
 
-extern const std::int32_t FORTRAN_NAMED_CONST(
-    __builtin_logical_kinds)[] = FORTRAN_LOGICAL_KINDS;
+extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_logical_kinds)[]{
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind1),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind2),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind4),
+    static_cast<std::int32_t>(Fortran::common::KindsEnum::Kind8),
+};
 
 // Target-filtered subset of FORTRAN_REAL_KINDS from type-kinds.h.
 extern const std::int32_t FORTRAN_NAMED_CONST(__builtin_real_kinds)[]{

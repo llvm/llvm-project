@@ -152,7 +152,7 @@ template <typename FuncType, typename TR, typename... TA, size_t... I>
 static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     FoldingContext &context, std::vector<Expr<SomeType>> &&args,
     std::index_sequence<I...>) {
-  const int kind{TR::kind};
+  const KindsEnum kind{static_cast<KindsEnum>(TR::kind)};
   host::HostFloatingPointEnvironment hostFPE;
   hostFPE.SetUpHostFloatingPointEnvironment(context);
   host::HostType<TR> hostResult{};
@@ -787,13 +787,18 @@ static DynamicType BiggerType(DynamicType type) {
   if (type.category() == TypeCategory::Real ||
       type.category() == TypeCategory::Complex) {
     // 16 bits floats to IEEE 32 bits float
-    if (type.kind() == common::RealKindForPrecision(11) ||
-        type.kind() == common::RealKindForPrecision(8)) {
-      return {type.category(), common::RealKindForPrecision(24)};
+    if (type.kind() ==
+            static_cast<KindsEnum>(common::RealKindForPrecision(11)) ||
+        type.kind() ==
+            static_cast<KindsEnum>(common::RealKindForPrecision(8))) {
+      return {type.category(),
+          static_cast<KindsEnum>(common::RealKindForPrecision(24))};
     }
     // x87 float to IEEE 128 bits float
-    if (type.kind() == common::RealKindForPrecision(64)) {
-      return {type.category(), common::RealKindForPrecision(113)};
+    if (type.kind() ==
+        static_cast<KindsEnum>(common::RealKindForPrecision(64))) {
+      return {type.category(),
+          static_cast<KindsEnum>(common::RealKindForPrecision(113))};
     }
   }
   return type;
@@ -825,12 +830,12 @@ static const Expr<SomeType> &GetArg(
 
 template <typename T>
 static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
-  const int kind{expr.kind()};
+  const auto kind{static_cast<KindsEnum>(expr.kind())};
   if (auto scalar{GetScalarConstantValue<T>(expr)}) {
     auto lbValue{
-        Scalar<T>::FromInteger(kind, value::IntegerValue{1, lb}).value};
+        Scalar<T>::FromInteger(kind, value::IntegerValue{Kind1, lb}).value};
     auto ubValue{
-        Scalar<T>::FromInteger(kind, value::IntegerValue{1, ub}).value};
+        Scalar<T>::FromInteger(kind, value::IntegerValue{Kind1, ub}).value};
     return Satisfies(RelationalOperator::LE, lbValue.Compare(*scalar)) &&
         Satisfies(RelationalOperator::LE, scalar->Compare(ubValue));
   }
@@ -864,7 +869,7 @@ static bool VerifyStrictlyPositiveIfReal(
     const bool isStrictlyPositive{std::visit(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
-          const int kind{x.kind()};
+          const auto kind{static_cast<KindsEnum>(x.kind())};
           auto scalar{GetScalarConstantValue<T>(x)};
           return Satisfies(
               RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar));

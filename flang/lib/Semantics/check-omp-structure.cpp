@@ -6518,7 +6518,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     // The interop-var must be a scalar integer of omp_interop_kind
     // (c_intptr_t): the runtime uses its storage as a pointer-sized handle.
     std::optional<evaluate::DynamicType> type{expr->GetType()};
-    int interopKind{static_cast<int>(
+    KindsEnum interopKind{static_cast<KindsEnum>(
         context_.targetCharacteristics().integerKindForPointer())};
     if (!type || type->category() != evaluate::TypeCategory::Integer ||
         type->kind() != interopKind) {

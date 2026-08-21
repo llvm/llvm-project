@@ -76,7 +76,7 @@ TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
   LEN_ = Fold(context, std::move(LEN_));
   if (LEN_) {
     if (auto n{ToInt64(*LEN_)}) {
-      type_ = DynamicType{type_.kind(), *n};
+      type_ = DynamicType{static_cast<KindsEnum>(type_.kind()), *n};
     }
   }
   shape_ = Fold(context, std::move(shape_));
@@ -940,7 +940,7 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
                     type->type().GetDerivedTypeSpec(), /*poly=*/false});
               }
               if (type->type().category() == TypeCategory::Character &&
-                  type->type().kind() == 1) {
+                  type->type().kind() == Kind1) {
                 type->set_isPossibleSequenceAssociation(true);
               } else if (const Symbol * array{IsArrayElement(expr)}) {
                 type->set_isPossibleSequenceAssociation(

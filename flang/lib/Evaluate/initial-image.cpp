@@ -96,7 +96,7 @@ public:
         extents_{extents}, padWithZero_{padWithZero}, offset_{offset} {
     CHECK(!type.IsPolymorphic());
   }
-  template <typename T> Result Test(int kind) {
+  template <typename T> Result Test(KindsEnum kind) {
     if (T::category != type_.category()) {
       return std::nullopt;
     }
@@ -160,12 +160,13 @@ public:
       return AsGenericExpr(
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
-      auto length{static_cast<ConstantSubscript>(stride) / kind};
+      auto length{
+          static_cast<ConstantSubscript>(stride) / static_cast<int>(kind)};
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
       for (std::size_t j{0}; j < elements; ++j) {
         typedValue[j] = value::CharacterValue::FromRawBytes(
-            kind, data + j * stride, length * kind);
+            kind, data + j * stride, length * static_cast<int>(kind));
       }
       return AsGenericExpr(
           Const{kind, length, std::move(typedValue), std::move(extents_)});

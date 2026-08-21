@@ -15,7 +15,7 @@ namespace Fortran::evaluate {
 
 template <typename T>
 static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
-  const int kind{funcRef.kind()};
+  const auto kind{static_cast<KindsEnum>(funcRef.kind())};
   using Element = typename Constant<T>::Element;
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);

@@ -143,8 +143,8 @@ bool HasNegativeExtent(const ConstantSubscripts &shape) {
 }
 
 template <typename RESULT, typename ELEMENT>
-ConstantBase<RESULT, ELEMENT>::ConstantBase(
-    int kind, std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
+ConstantBase<RESULT, ELEMENT>::ConstantBase(KindsEnum kind,
+    std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
     : ConstantBounds(std::move(sh)), kind_{kind}, result_{res},
       values_(std::move(x)) {
   CHECK_KIND(kind, RESULT);
@@ -201,7 +201,7 @@ auto Constant<T>::At(const ConstantSubscripts &index) const -> Element {
 
 template <typename T>
 auto Constant<T>::Reshape(ConstantSubscripts &&dims) const -> Constant {
-  const int kind{Base::kind()};
+  const KindsEnum kind{Base::kind_};
   return {kind, Base::Reshape(dims), std::move(dims)};
 }
 
@@ -213,20 +213,20 @@ std::size_t Constant<T>::CopyFrom(const Constant<T> &source, std::size_t count,
 
 // Constant<Type<TypeCategory::Character>> specialization
 Constant<Type<TypeCategory::Character>>::Constant(
-    int kind, const Scalar<Result> &str)
+    KindsEnum kind, const Scalar<Result> &str)
     : kind_{kind}, values_{str},
       length_{static_cast<ConstantSubscript>(values_.size())} {
   CHECK(str.kind() == kind);
 }
 
 Constant<Type<TypeCategory::Character>>::Constant(
-    int kind, Scalar<Result> &&str)
+    KindsEnum kind, Scalar<Result> &&str)
     : kind_{kind}, values_{std::move(str)},
       length_{static_cast<ConstantSubscript>(values_.size())} {
   CHECK(str.kind() == kind);
 }
 
-Constant<Type<TypeCategory::Character>>::Constant(int kind,
+Constant<Type<TypeCategory::Character>>::Constant(KindsEnum kind,
     ConstantSubscript len, std::vector<Scalar<Result>> &&strings,
     ConstantSubscripts &&sh)
     : ConstantBounds(std::move(sh)), kind_{kind}, length_{len} {
@@ -319,7 +319,8 @@ std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
     return count;
   } else {
     std::size_t copied{0};
-    std::size_t elementBytes{static_cast<std::size_t>(length_) * kind()};
+    std::size_t elementBytes{
+        static_cast<std::size_t>(length_) * static_cast<std::size_t>(kind())};
     ConstantSubscripts sourceSubscripts{source.lbounds()};
     while (copied < count) {
       auto *dest{values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
@@ -336,14 +337,14 @@ std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
 
 // Constant<SomeDerived> specialization
 Constant<SomeDerived>::Constant(const StructureConstructor &x)
-    : Base{/*kind=*/0, x.values(), Result{x.derivedTypeSpec()}} {}
+    : Base{NoKind, x.values(), Result{x.derivedTypeSpec()}} {}
 
 Constant<SomeDerived>::Constant(StructureConstructor &&x)
-    : Base{/*kind=*/0, std::move(x.values()), Result{x.derivedTypeSpec()}} {}
+    : Base{NoKind, std::move(x.values()), Result{x.derivedTypeSpec()}} {}
 
 Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructorValues> &&x, ConstantSubscripts &&s)
-    : Base{/*kind=*/0, std::move(x), std::move(s), Result{spec}} {}
+    : Base{NoKind, std::move(x), std::move(s), Result{spec}} {}
 
 static std::vector<StructureConstructorValues> AcquireValues(
     std::vector<StructureConstructor> &&x) {
@@ -356,7 +357,7 @@ static std::vector<StructureConstructorValues> AcquireValues(
 
 Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructor> &&x, ConstantSubscripts &&shape)
-    : Base{/*kind=*/0, AcquireValues(std::move(x)), std::move(shape),
+    : Base{NoKind, AcquireValues(std::move(x)), std::move(shape),
           Result{spec}} {}
 
 std::optional<StructureConstructor>

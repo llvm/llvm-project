@@ -18,7 +18,7 @@ template <typename T>
 static Expr<T> FoldDotProduct(
     FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
-  const int kind{funcRef.kind()};
+  const auto kind{static_cast<KindsEnum>(funcRef.kind())};
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
   Folder<T> folder{kind, context};
@@ -133,7 +133,7 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-static std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
+static std::optional<ArrayAndMask<T>> ProcessReductionArgs(KindsEnum kind,
     FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
     int arrayIndex, std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
@@ -176,7 +176,7 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
 // operator()(Scalar<T> &, const ConstantSubscripts &, bool first)
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
-static Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
+static Constant<T> DoReduction(KindsEnum kind, const Constant<ARRAY> &array,
     const Constant<LogicalResult> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -232,9 +232,9 @@ static Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
 // MAXVAL & MINVAL
 template <typename T, bool ABS = false> class MaxvalMinvalAccumulator {
 public:
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
-  MaxvalMinvalAccumulator(int kind, RelationalOperator opr,
+  MaxvalMinvalAccumulator(KindsEnum kind, RelationalOperator opr,
       FoldingContext &context, const Constant<T> &array)
       : kind_{kind}, opr_{opr}, context_{context}, array_{array} {};
   void operator()(Scalar<T> &element, const ConstantSubscripts &at,
@@ -264,14 +264,14 @@ public:
   void Done(Scalar<T> &) const {}
 
 private:
-  int kind_;
+  KindsEnum kind_;
   RelationalOperator opr_;
   FoldingContext &context_;
   const Constant<T> &array_;
 };
 
 template <typename T>
-static Expr<T> FoldMaxvalMinval(int kind, FoldingContext &context,
+static Expr<T> FoldMaxvalMinval(KindsEnum kind, FoldingContext &context,
     FunctionRef<T> &&ref, RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
@@ -322,7 +322,7 @@ static Expr<T> FoldProduct(
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
-  const int kind{ref.kind()};
+  const auto kind{static_cast<KindsEnum>(ref.kind())};
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
           ProcessReductionArgs<T>(kind, context, ref.arguments(), dim,
@@ -373,7 +373,7 @@ public:
   }
 
 private:
-  int kind_;
+  KindsEnum kind_;
   const Constant<T> &array_;
   Rounding rounding_;
   bool overflow_{false};
@@ -387,7 +387,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
-  const int kind{ref.kind()};
+  const auto kind{static_cast<KindsEnum>(ref.kind())};
   std::optional<int> dim;
   Element identity{Element::Zero(kind)};
   if (std::optional<ArrayAndMask<T>> arrayAndMask{

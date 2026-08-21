@@ -136,8 +136,8 @@ private:
 class TypeParamInquiry {
 public:
   using Result = SubscriptInteger;
-  static constexpr int ResultKind{SubscriptIntegerKind};
-  constexpr int kind() const { return SubscriptIntegerKind; }
+  static constexpr KindsEnum ResultKind{SubscriptIntegerKind};
+  constexpr KindsEnum kind() const { return ResultKind; }
   static constexpr DynamicType GetType() {
     return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};
   }
@@ -398,38 +398,38 @@ public:
   static_assert(
       IsSpecificIntrinsicType<Result> || std::is_same_v<Result, SomeDerived>);
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   CLASS_BOILERPLATE(Designator)
   template <typename _A>
-  explicit Designator(int kind, const _A &x) : u{x}, kind_{kind} {
+  explicit Designator(KindsEnum kind, const _A &x) : u{x}, kind_{kind} {
     CHECK_KIND(kind, T);
   }
   template <typename _A, typename = common::NoLvalue<_A>>
-  explicit Designator(int kind, _A &&x) : u(std::move(x)), kind_{kind} {
+  explicit Designator(KindsEnum kind, _A &&x) : u(std::move(x)), kind_{kind} {
     CHECK_KIND(kind, T);
   }
   template <typename _A, typename U = T,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  explicit Designator(const _A &x) : Designator(0, x) {}
+  explicit Designator(const _A &x) : Designator(NoKind, x) {}
   template <typename _A, typename U = T, typename = common::NoLvalue<_A>,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  explicit Designator(_A &&x) : Designator(0, std::move(x)) {}
+  explicit Designator(_A &&x) : Designator(NoKind, std::move(x)) {}
   bool operator==(const Designator &) const;
-  Designator(int kind, const DataRef &that)
+  Designator(KindsEnum kind, const DataRef &that)
       : u{common::CopyVariant<Variant>(that.u)}, kind_{kind} {
     CHECK_KIND(kind, T);
   }
-  Designator(int kind, DataRef &&that)
+  Designator(KindsEnum kind, DataRef &&that)
       : u{common::MoveVariant<Variant>(std::move(that.u))}, kind_{kind} {
     CHECK_KIND(kind, T);
   }
   template <typename U = T,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  Designator(const DataRef &that) : Designator(0, that) {}
+  Designator(const DataRef &that) : Designator(NoKind, that) {}
   template <typename U = T,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  Designator(DataRef &&that) : Designator(0, std::move(that)) {}
+  Designator(DataRef &&that) : Designator(NoKind, std::move(that)) {}
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
@@ -442,7 +442,7 @@ public:
   Variant u;
 
 private:
-  int kind_;
+  KindsEnum kind_;
 };
 
 FOR_EACH_CHARACTER_KIND(extern template class Designator, )
@@ -450,7 +450,7 @@ FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 class DescriptorInquiry {
 public:
   using Result = SubscriptInteger;
-  static constexpr int kind() { return SubscriptIntegerKind; }
+  static constexpr KindsEnum kind() { return SubscriptIntegerKind; }
   static constexpr DynamicType GetType() {
     return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};
   }
@@ -483,7 +483,7 @@ private:
 class RankOneBoundElement {
 public:
   using Result = SubscriptInteger;
-  static constexpr int ResultKind{SubscriptIntegerKind};
+  static constexpr KindsEnum ResultKind{SubscriptIntegerKind};
   CLASS_BOILERPLATE(RankOneBoundElement)
   RankOneBoundElement(
       common::CopyableIndirection<Expr<SubscriptInteger>> &&e, int dim)
@@ -495,7 +495,7 @@ public:
   Expr<SubscriptInteger> &base() { return base_.value(); }
   int dimension() const { return dimension_; }
 
-  static constexpr int kind() { return ResultKind; }
+  static constexpr KindsEnum kind() { return ResultKind; }
 
   static constexpr int Rank() { return 0; } // always scalar
   static constexpr int Corank() { return 0; }

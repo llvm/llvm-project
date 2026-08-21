@@ -1066,8 +1066,8 @@ private:
     } else {
       // All result other than characters/derived are simply returned by value
       // in implicit interfaces
-      mlir::Type mlirType =
-          getConverter().genType(dynamicType.category(), dynamicType.kind());
+      mlir::Type mlirType = getConverter().genType(
+          dynamicType.category(), static_cast<int>(dynamicType.kind()));
       addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                    Property::Value);
     }
@@ -1081,9 +1081,10 @@ private:
     std::optional<std::int64_t> constantLen = type.knownLength();
     fir::CharacterType::LenType len =
         constantLen ? *constantLen : fir::CharacterType::unknownLen();
-    mlir::Type charRefTy = fir::ReferenceType::get(
-        fir::CharacterType::get(&mlirContext, type.kind(), len));
-    mlir::Type boxCharTy = fir::BoxCharType::get(&mlirContext, type.kind());
+    mlir::Type charRefTy = fir::ReferenceType::get(fir::CharacterType::get(
+        &mlirContext, static_cast<int>(type.kind()), len));
+    mlir::Type boxCharTy =
+        fir::BoxCharType::get(&mlirContext, static_cast<int>(type.kind()));
     addFirOperand(charRefTy, resultPosition, Property::CharAddress);
     addFirOperand(lenTy, resultPosition, Property::CharLength);
     /// For now, also return it by boxchar
@@ -1145,8 +1146,8 @@ private:
       }
     }
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      mlir::Type boxCharTy =
-          fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+      mlir::Type boxCharTy = fir::BoxCharType::get(
+          &mlirContext, static_cast<int>(dynamicType.kind()));
       addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
                     dummyNameAttr(entity));
       addPassedArg(PassEntityBy::BoxChar, entity, characteristics);
@@ -1179,9 +1180,10 @@ private:
     if (cat == Fortran::common::TypeCategory::Character)
       if (std::optional<std::int64_t> constantLen =
               toInt64(dynamicType.GetCharLength()))
-        return getConverter().genType(cat, dynamicType.kind(), {*constantLen});
+        return getConverter().genType(cat, static_cast<int>(dynamicType.kind()),
+                                      {*constantLen});
     // INTEGER, REAL, LOGICAL, COMPLEX, and CHARACTER with dynamic length.
-    return getConverter().genType(cat, dynamicType.kind());
+    return getConverter().genType(cat, static_cast<int>(dynamicType.kind()));
   }
 
   void handleExplicitDummy(
@@ -1259,14 +1261,14 @@ private:
                Fortran::common::TypeCategory::Character) {
       if (isValueAttr && isBindC) {
         // Pass as fir.char<1>
-        mlir::Type charTy =
-            fir::CharacterType::getSingleton(&mlirContext, dynamicType.kind());
+        mlir::Type charTy = fir::CharacterType::getSingleton(
+            &mlirContext, static_cast<int>(dynamicType.kind()));
         addFirOperand(charTy, nextPassedArgPosition(), Property::Value, attrs);
         addPassedArg(PassEntityBy::Value, entity, characteristics);
       } else {
         // Pass as fir.box_char
-        mlir::Type boxCharTy =
-            fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+        mlir::Type boxCharTy = fir::BoxCharType::get(
+            &mlirContext, static_cast<int>(dynamicType.kind()));
         addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
                       attrs);
         addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute

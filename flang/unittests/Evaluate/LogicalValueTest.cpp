@@ -19,14 +19,14 @@ using namespace Fortran::evaluate::value;
 
 namespace {
 
-class LogicalValueKind : public testing::TestWithParam<int> {};
+class LogicalValueKind : public testing::TestWithParam<KindsEnum> {};
 INSTANTIATE_TEST_SUITE_P(LogicalValueKind, LogicalValueKind,
     testing::ValuesIn(LogicalKinds),
-    [](const testing::TestParamInfo<int> &info) {
-      return "LOGICAL(" + std::to_string(info.param) + ")";
+    [](const testing::TestParamInfo<KindsEnum> &info) {
+      return "LOGICAL(" + std::to_string(static_cast<int>(info.param)) + ")";
     });
 
-constexpr int KindPos(int kind) {
+constexpr int KindPos(KindsEnum kind) {
   for (std::size_t i{0}; i < std::size(LogicalKinds); ++i) {
     if (LogicalKinds[i] == kind) {
       return static_cast<int>(i);
@@ -46,7 +46,7 @@ TEST(LogicalValue, DefaultConstructionIsMonostate) {
 }
 
 TEST_P(LogicalValueKind, ConstructFromBool) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue truth{kind, true};
   EXPECT_FALSE(truth.IsMonostate());
@@ -59,7 +59,7 @@ TEST_P(LogicalValueKind, ConstructFromBool) {
 }
 
 TEST_P(LogicalValueKind, ConstructFromWord) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue zero{kind, IntegerValue{kind, 0}};
   EXPECT_FALSE(zero.IsTrue());
@@ -75,7 +75,7 @@ TEST_P(LogicalValueKind, ConstructFromWord) {
 }
 
 TEST_P(LogicalValueKind, CopyAndMove) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue x{kind, true};
   LogicalValue copyConstructed{x};
@@ -95,7 +95,7 @@ TEST_P(LogicalValueKind, CopyAndMove) {
 }
 
 TEST_P(LogicalValueKind, KindCheckingConstructors) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue x{kind, true};
   EXPECT_EQ(kind, LogicalValue(kind, x).kind());
@@ -108,7 +108,7 @@ TEST_P(LogicalValueKind, KindCheckingConstructors) {
 }
 
 TEST_P(LogicalValueKind, Zero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue zero{LogicalValue::Zero(kind)};
   EXPECT_FALSE(zero.IsMonostate());
@@ -118,23 +118,23 @@ TEST_P(LogicalValueKind, Zero) {
 }
 
 TEST(LogicalValue, Bits) {
-  EXPECT_EQ(8, LogicalValue::bits(1));
-  EXPECT_EQ(16, LogicalValue::bits(2));
-  EXPECT_EQ(32, LogicalValue::bits(4));
-  EXPECT_EQ(64, LogicalValue::bits(8));
-  EXPECT_EQ(32, LogicalValue(4, true).bits());
+  EXPECT_EQ(8, LogicalValue::bits(KindsEnum::Kind1));
+  EXPECT_EQ(16, LogicalValue::bits(KindsEnum::Kind2));
+  EXPECT_EQ(32, LogicalValue::bits(KindsEnum::Kind4));
+  EXPECT_EQ(64, LogicalValue::bits(KindsEnum::Kind8));
+  EXPECT_EQ(32, LogicalValue(KindsEnum::Kind4, true).bits());
 }
 
 TEST(LogicalValue, BytesStored) {
-  EXPECT_EQ(1u, LogicalValue::bytesStored(1));
-  EXPECT_EQ(2u, LogicalValue::bytesStored(2));
-  EXPECT_EQ(4u, LogicalValue::bytesStored(4));
-  EXPECT_EQ(8u, LogicalValue::bytesStored(8));
-  EXPECT_EQ(4u, LogicalValue(4, true).bytesStored());
+  EXPECT_EQ(1u, LogicalValue::bytesStored(KindsEnum::Kind1));
+  EXPECT_EQ(2u, LogicalValue::bytesStored(KindsEnum::Kind2));
+  EXPECT_EQ(4u, LogicalValue::bytesStored(KindsEnum::Kind4));
+  EXPECT_EQ(8u, LogicalValue::bytesStored(KindsEnum::Kind8));
+  EXPECT_EQ(4u, LogicalValue(KindsEnum::Kind4, true).bytesStored());
 }
 
 TEST_P(LogicalValueKind, Word_) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // .TRUE. is represented canonically as 1 and .FALSE. as 0.
   EXPECT_EQ(1, LogicalValue(kind, true).word().ToInt64());
@@ -145,7 +145,7 @@ TEST_P(LogicalValueKind, Word_) {
 }
 
 TEST_P(LogicalValueKind, IsCanonical) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   EXPECT_TRUE(LogicalValue(kind, true).IsCanonical());
   EXPECT_TRUE(LogicalValue(kind, false).IsCanonical());
@@ -156,7 +156,7 @@ TEST_P(LogicalValueKind, IsCanonical) {
 }
 
 TEST_P(LogicalValueKind, IsTrue) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   EXPECT_FALSE(LogicalValue{}.IsTrue());
   EXPECT_FALSE(LogicalValue(kind, false).IsTrue());
@@ -165,7 +165,7 @@ TEST_P(LogicalValueKind, IsTrue) {
 }
 
 TEST_P(LogicalValueKind, RelationalOperators) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   LogicalValue f{kind, false}, t{kind, true};
 
   EXPECT_TRUE(f < t);
@@ -198,7 +198,7 @@ TEST_P(LogicalValueKind, RelationalOperators) {
 }
 
 TEST_P(LogicalValueKind, NOT) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   EXPECT_TRUE(LogicalValue(kind, false).NOT().IsTrue());
   EXPECT_FALSE(LogicalValue(kind, true).NOT().IsTrue());
@@ -206,7 +206,7 @@ TEST_P(LogicalValueKind, NOT) {
 }
 
 TEST_P(LogicalValueKind, AND) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue f{kind, false}, t{kind, true};
   EXPECT_FALSE(f.AND(f).IsTrue());
@@ -217,7 +217,7 @@ TEST_P(LogicalValueKind, AND) {
 }
 
 TEST_P(LogicalValueKind, OR) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue f{kind, false}, t{kind, true};
   EXPECT_FALSE(f.OR(f).IsTrue());
@@ -228,7 +228,7 @@ TEST_P(LogicalValueKind, OR) {
 }
 
 TEST_P(LogicalValueKind, EQV) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue f{kind, false}, t{kind, true};
   EXPECT_TRUE(f.EQV(f).IsTrue());
@@ -239,7 +239,7 @@ TEST_P(LogicalValueKind, EQV) {
 }
 
 TEST_P(LogicalValueKind, NEQV) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   LogicalValue f{kind, false}, t{kind, true};
   EXPECT_FALSE(f.NEQV(f).IsTrue());
@@ -250,7 +250,7 @@ TEST_P(LogicalValueKind, NEQV) {
 }
 
 TEST_P(LogicalValueKind, RawBytesRoundTrip) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   for (bool truth : {false, true}) {
     SCOPED_TRACE(testing::Message() << "truth=" << truth);
@@ -271,7 +271,7 @@ TEST_P(LogicalValueKind, RawBytesRoundTrip) {
 }
 
 TEST_P(LogicalValueKind, Print) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const int pos{KindPos(kind)};
 
   struct Case {
@@ -299,9 +299,9 @@ TEST_P(LogicalValueKind, Print) {
 // Replicates the coverage of the legacy non-GTest test
 // flang/unittests/Evaluate/logical.cpp.
 TEST_P(LogicalValueKind, TruthTables) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
-  EXPECT_EQ(8 * kind, LogicalValue::bits(kind));
+  EXPECT_EQ(8 * static_cast<int>(kind), LogicalValue::bits(kind));
   EXPECT_FALSE(LogicalValue{}.IsTrue());
   EXPECT_FALSE(LogicalValue(kind, false).IsTrue());
   EXPECT_TRUE(LogicalValue(kind, true).IsTrue());

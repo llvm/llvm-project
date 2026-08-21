@@ -933,7 +933,9 @@ bool EquivalenceSets::IsCharacterSequenceType(const DeclTypeSpec *type) {
   return IsSequenceType(type, [&](const IntrinsicTypeSpec &type) {
     auto kind{evaluate::ToInt64(type.kind())};
     return type.category() == TypeCategory::Character && kind &&
-        kind.value() == context_.GetDefaultKind(TypeCategory::Character);
+        kind.value() ==
+        static_cast<std::int64_t>(
+            context_.GetDefaultKind(TypeCategory::Character));
   });
 }
 
@@ -943,11 +945,15 @@ bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
     switch (type.category()) {
     case TypeCategory::Integer:
     case TypeCategory::Logical:
-      return *kind == context_.GetDefaultKind(TypeCategory::Integer);
+      return *kind ==
+          static_cast<std::int64_t>(
+              context_.GetDefaultKind(TypeCategory::Integer));
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return *kind == context_.GetDefaultKind(TypeCategory::Real) ||
-          *kind == context_.doublePrecisionKind();
+      return *kind ==
+          static_cast<std::int64_t>(
+              context_.GetDefaultKind(TypeCategory::Real)) ||
+          *kind == static_cast<std::int64_t>(context_.doublePrecisionKind());
     default:
       return false;
     }

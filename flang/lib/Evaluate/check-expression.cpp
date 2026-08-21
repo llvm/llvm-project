@@ -476,26 +476,24 @@ class SuspiciousRealLiteralFinder
     : public AnyTraverse<SuspiciousRealLiteralFinder> {
 public:
   using Base = AnyTraverse<SuspiciousRealLiteralFinder>;
-  SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
+  SuspiciousRealLiteralFinder(KindsEnum kind, FoldingContext &c)
       : Base{*this}, kind_{kind}, context_{c} {}
   using Base::operator();
   bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
-    const int kind{x.kind()};
-    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
+    if (kind_ > x.kind() && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
-          kind_, x.AsFortran());
+          static_cast<int>(kind_), x.AsFortran());
       return true;
     } else {
       return false;
     }
   }
   bool operator()(const Constant<Type<TypeCategory::Complex>> &x) const {
-    const int kind{x.kind()};
-    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
+    if (kind_ > x.kind() && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
-          kind_, x.AsFortran());
+          static_cast<int>(kind_), x.AsFortran());
       return true;
     } else {
       return false;
@@ -503,7 +501,7 @@ public:
   }
   template <TypeCategory TOCAT, TypeCategory FROMCAT>
   bool operator()(const Convert<Type<TOCAT>, FROMCAT> &x) const {
-    const int toKind{x.kind()};
+    const KindsEnum toKind{x.kind()};
     if constexpr ((TOCAT == TypeCategory::Real ||
                       TOCAT == TypeCategory::Complex) &&
         (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
@@ -516,7 +514,7 @@ public:
   }
 
 private:
-  int kind_;
+  KindsEnum kind_;
   FoldingContext &context_;
 };
 
@@ -528,7 +526,8 @@ void CheckRealWidening(const Expr<SomeType> &expr, const DynamicType &toType,
       if ((fromType->category() == TypeCategory::Real ||
               fromType->category() == TypeCategory::Complex) &&
           toType.kind() > fromType->kind()) {
-        SuspiciousRealLiteralFinder{toType.kind(), context}(expr);
+        SuspiciousRealLiteralFinder{
+            static_cast<KindsEnum>(toType.kind()), context}(expr);
       }
     }
   }

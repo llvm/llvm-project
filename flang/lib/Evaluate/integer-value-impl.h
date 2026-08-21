@@ -22,6 +22,7 @@
 #undef HUGE
 
 namespace Fortran::evaluate::value {
+using common::KindsEnum;
 
 class IntegerValueImpl {
 public:

@@ -15,14 +15,15 @@
 
 namespace Fortran::evaluate::value {
 
-CharacterValueImpl::CharacterValueImpl(int kind, std::size_t n, char32_t c) {
+CharacterValueImpl::CharacterValueImpl(
+    KindsEnum kind, std::size_t n, char32_t c) {
   withCharProto(kind, [this, n, c](auto ct) {
     using CharT = std::decay_t<decltype(ct)>;
     storage_ = std::basic_string<CharT>(n, static_cast<CharT>(c));
   });
 }
 
-CharacterValueImpl CharacterValueImpl::Zero(int kind) {
+CharacterValueImpl CharacterValueImpl::Zero(KindsEnum kind) {
   return withCharProto(kind, [kind](auto c) {
     using Char = std::decay_t<decltype(c)>;
     return CharacterValueImpl{kind, std::basic_string<Char>{}};
@@ -30,7 +31,7 @@ CharacterValueImpl CharacterValueImpl::Zero(int kind) {
 }
 
 CharacterValueImpl CharacterValueImpl::FromRawBytes(
-    int kind, const void *raw, size_t size) {
+    KindsEnum kind, const void *raw, size_t size) {
   return withCharProto(kind, [kind, raw, size](auto charProto) {
     using CharT = decltype(charProto);
     CHECK(size % sizeof(CharT) == 0);
@@ -43,7 +44,7 @@ CharacterValueImpl CharacterValueImpl::FromRawBytes(
 }
 
 void CharacterValueImpl::print(llvm::raw_ostream &os) const {
-  os << kind() << '_';
+  os << static_cast<int>(kind()) << '_';
   withStdString(
       [&](const auto &s) { os << parser::QuoteCharacterLiteral(s, true); });
 }
@@ -178,7 +179,7 @@ bool CharacterValueImpl::operator==(const CharacterValueImpl &y) const {
       this->storage_, y.storage_);
 }
 
-void CharacterValueImpl::assign(int kind, std::size_t n, char32_t c) {
+void CharacterValueImpl::assign(KindsEnum kind, std::size_t n, char32_t c) {
   return withCharProto(kind, [this, n, c](auto ct) {
     using CharT = decltype(ct);
     storage_ = std::basic_string<CharT>(n, static_cast<CharT>(c));
@@ -239,7 +240,8 @@ CharacterValueImpl CharacterValueImpl::substr(std::size_t pos) const {
           llvm_unreachable("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
-              sizeof(typename StringT::value_type), s.substr(pos)};
+              static_cast<KindsEnum>(sizeof(typename StringT::value_type)),
+              s.substr(pos)};
         }
       },
       storage_);
@@ -255,7 +257,8 @@ CharacterValueImpl CharacterValueImpl::substr(
           llvm_unreachable("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
-              sizeof(typename StringT::value_type), s.substr(pos, len)};
+              static_cast<KindsEnum>(sizeof(typename StringT::value_type)),
+              s.substr(pos, len)};
         }
       },
       storage_);
@@ -327,7 +330,7 @@ std::string CharacterValueImpl::ToStdString() const {
       storage_);
 }
 
-CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
+CharacterValueImpl CharacterValueImpl::ToAscii(KindsEnum kind) const {
   if (IsMonostate()) {
     return Zero(kind);
   }
@@ -341,11 +344,11 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
       StringT str;
       for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
         if (static_cast<std::uint64_t>(*iter) > 127) {
-          return Zero(sizeof(ct));
+          return Zero(static_cast<KindsEnum>(sizeof(ct)));
         }
         str.push_back(static_cast<CharT>(*iter));
       }
-      return CharacterValueImpl{sizeof(CharT), str};
+      return CharacterValueImpl{static_cast<KindsEnum>(sizeof(CharT)), str};
     });
   });
 }
@@ -384,7 +387,8 @@ CharacterValueImpl CharacterValueImpl::operator+(
             !std::is_same_v<std::decay_t<decltype(a)>, std::monostate>) {
           using StringT = std::decay_t<decltype(a)>;
           return CharacterValueImpl{
-              sizeof(typename StringT::value_type), a + b};
+              static_cast<KindsEnum>(sizeof(typename StringT::value_type)),
+              a + b};
         } else {
           llvm_unreachable("operation not supported on uninitialized value or "
                            "values of different kinds");

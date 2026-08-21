@@ -312,15 +312,15 @@ static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
   auto dyType{evaluate::DynamicType::From(symbol)};
   CHECK((dyType && dyType->category() == TypeCategory::Integer) ||
       symbol.owner().context().HasError(symbol) || canBeUninstantiated);
-  return dyType && dyType->category() == TypeCategory::Integer
-      ? dyType->kind()
-      : symbol.owner().context().GetDefaultKind(TypeCategory::Integer);
+  return static_cast<int>(dyType && dyType->category() == TypeCategory::Integer
+          ? dyType->kind()
+          : symbol.owner().context().GetDefaultKind(TypeCategory::Integer));
 }
 
 // Save a rank-1 array constant of some numeric type as an
 // initialized data object in a scope.
 template <typename T>
-static SomeExpr SaveNumericPointerTarget(int kind, Scope &scope,
+static SomeExpr SaveNumericPointerTarget(KindsEnum kind, Scope &scope,
     SourceName name, std::vector<typename T::Scalar> &&x) {
   if (x.empty()) {
     return SomeExpr{evaluate::NullPointer{}};
@@ -357,10 +357,10 @@ static SomeExpr SaveObjectInit(
   CHECK(symbol.get<ObjectEntityDetails>().init().has_value());
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      evaluate::Designator<evaluate::SomeDerived>{0, symbol});
+      evaluate::Designator<evaluate::SomeDerived>{KindsEnum::NoKind, symbol});
 }
 
-static SomeExpr IntExpr(int kind, std::int64_t n) {
+static SomeExpr IntExpr(KindsEnum kind, std::int64_t n) {
   return evaluate::AsGenericExpr(
       evaluate::MakeConstant<evaluate::Type<TypeCategory::Integer>>(kind, n));
 }
@@ -514,20 +514,20 @@ const Symbol *RuntimeTableBuilder::DescribeType(
               }
             }
           }
-          kinds.emplace_back(8, value);
+          kinds.emplace_back(KindsEnum::Kind8, value);
         } else { // LEN= parameter
-          lenKinds.emplace_back(
-              1, GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
+          lenKinds.emplace_back(KindsEnum::Kind1,
+              GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
         }
       }
     }
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
-      SaveNumericPointerTarget<Int8>(8, scope,
+      SaveNumericPointerTarget<Int8>(KindsEnum::Kind8, scope,
           SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
           std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
-      SaveNumericPointerTarget<Int1>(1, scope,
+      SaveNumericPointerTarget<Int1>(KindsEnum::Kind1, scope,
           SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
           std::move(lenKinds)));
   // Traverse the components of the derived type
@@ -645,28 +645,29 @@ const Symbol *RuntimeTableBuilder::DescribeType(
                   static_cast<evaluate::ConstantSubscript>(specials.size())}));
     }
     AddValue(dtValues, derivedTypeSchema_, "specialbitset"s,
-        IntExpr(4, specialBitSet));
+        IntExpr(KindsEnum::Kind4, specialBitSet));
     // Note the presence/absence of a parent component
     AddValue(dtValues, derivedTypeSchema_, "hasparent"s,
-        IntExpr(1, dtScope.GetDerivedTypeParent() != nullptr));
+        IntExpr(KindsEnum::Kind1, dtScope.GetDerivedTypeParent() != nullptr));
     // To avoid wasting run time attempting to initialize derived type
     // instances without any initialized components, analyze the type
     // and set a flag if there's nothing to do for it at run time.
     AddValue(dtValues, derivedTypeSchema_, "noinitializationneeded"s,
-        IntExpr(1,
+        IntExpr(KindsEnum::Kind1,
             derivedTypeSpec &&
                 !derivedTypeSpec->HasDefaultInitialization(false, false)));
     // Similarly, a flag to short-circuit destruction when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nodestructionneeded"s,
-        IntExpr(1, derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
+        IntExpr(KindsEnum::Kind1,
+            derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
     // Similarly, a flag to short-circuit finalization when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
-        IntExpr(
-            1, derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
+        IntExpr(KindsEnum::Kind1,
+            derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
     // Similarly, a flag to enable optimized runtime assignment.
     AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
-        IntExpr(
-            1, derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
+        IntExpr(KindsEnum::Kind1,
+            derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
@@ -716,7 +717,7 @@ SomeExpr RuntimeTableBuilder::GetEnumValue(const char *name) const {
   const Symbol &symbol{GetSchemaSymbol(name)};
   auto value{evaluate::ToInt64(symbol.get<ObjectEntityDetails>().init())};
   CHECK(value.has_value());
-  return IntExpr(1, *value);
+  return IntExpr(KindsEnum::Kind1, *value);
 }
 
 Symbol &RuntimeTableBuilder::CreateObject(
@@ -741,12 +742,14 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   CHECK(name.front() != '.' || context_.IsTempName(name));
   ObjectEntityDetails object;
   auto len{static_cast<common::ConstantSubscript>(name.size())};
-  if (const auto *spec{scope.FindType(DeclTypeSpec{CharacterTypeSpec{
-          ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)}})}) {
+  if (const auto *spec{scope.FindType(DeclTypeSpec{
+          CharacterTypeSpec{ParamValue{len, common::TypeParamAttr::Len},
+              MakeKindExpr(KindsEnum::Kind1)}})}) {
     object.set_type(*spec);
   } else {
-    object.set_type(scope.MakeCharacterType(
-        ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)));
+    object.set_type(
+        scope.MakeCharacterType(ParamValue{len, common::TypeParamAttr::Len},
+            MakeKindExpr(KindsEnum::Kind1)));
   }
   using evaluate::Ascii, evaluate::AsciiKind, evaluate::MakeConstantExpr;
   using AsciiExpr = evaluate::Expr<Ascii>;
@@ -783,14 +786,16 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   AddValue(values, componentSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
   AddValue(values, componentSchema_, "category"s,
-      IntExpr(1, static_cast<int>(dyType.category())));
+      IntExpr(KindsEnum::Kind1, static_cast<int>(dyType.category())));
   if (dyType.IsUnlimitedPolymorphic() ||
       dyType.category() == TypeCategory::Derived) {
-    AddValue(values, componentSchema_, "kind"s, IntExpr(1, 0));
+    AddValue(values, componentSchema_, "kind"s, IntExpr(KindsEnum::Kind1, 0));
   } else {
-    AddValue(values, componentSchema_, "kind"s, IntExpr(1, dyType.kind()));
+    AddValue(values, componentSchema_, "kind"s,
+        IntExpr(KindsEnum::Kind1, static_cast<std::int64_t>(dyType.kind())));
   }
-  AddValue(values, componentSchema_, "offset"s, IntExpr(8, symbol.offset()));
+  AddValue(values, componentSchema_, "offset"s,
+      IntExpr(KindsEnum::Kind8, symbol.offset()));
   // CHARACTER length
   auto len{typeAndShape->LEN()};
   if (const semantics::DerivedTypeSpec *
@@ -864,7 +869,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SomeExpr{evaluate::NullPointer{}});
   }
   // Shape information
-  AddValue(values, componentSchema_, "rank"s, IntExpr(1, rank));
+  AddValue(values, componentSchema_, "rank"s, IntExpr(KindsEnum::Kind1, rank));
   if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
     evaluate::NamedEntity entity{symbol};
@@ -929,7 +934,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   evaluate::StructureConstructorValues values;
   AddValue(values, procPtrSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
-  AddValue(values, procPtrSchema_, "offset"s, IntExpr(8, symbol.offset()));
+  AddValue(values, procPtrSchema_, "offset"s,
+      IntExpr(KindsEnum::Kind8, symbol.offset()));
   if (auto init{proc.init()}; init && *init) {
     AddValue(values, procPtrSchema_, "initialization"s,
         SomeExpr{evaluate::ProcedureDesignator{**init}});
@@ -1204,7 +1210,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         } else {
           which = scalarFinalEnum_;
           if (int rank{typeAndShape.Rank()}; rank > 0) {
-            which = IntExpr(1, ToInt64(which).value() + rank);
+            which = IntExpr(KindsEnum::Kind1, ToInt64(which).value() + rank);
             if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;
             }
@@ -1247,7 +1253,8 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         which = writeUnformattedEnum_;
         break;
       }
-      if (context_.defaultKinds().GetDefaultKind(TypeCategory::Integer) == 8) {
+      if (context_.defaultKinds().GetDefaultKind(TypeCategory::Integer) ==
+          KindsEnum::Kind8) {
         specialCaseFlag = true; // UNIT= & IOSTAT= INTEGER(8)
       }
     }
@@ -1266,7 +1273,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     AddValue(
         values, specialSchema_, "which"s, SomeExpr{std::move(which.value())});
     AddValue(values, specialSchema_, "isargdescriptorset"s,
-        IntExpr(1, isArgDescriptorSet));
+        IntExpr(KindsEnum::Kind1, isArgDescriptorSet));
     int bindingIndex{0};
     if (bindings) {
       int j{0};
@@ -1279,9 +1286,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     }
     CHECK(bindingIndex <= 255);
-    AddValue(values, specialSchema_, "istypebound"s, IntExpr(1, bindingIndex));
+    AddValue(values, specialSchema_, "istypebound"s,
+        IntExpr(KindsEnum::Kind1, bindingIndex));
     AddValue(values, specialSchema_, "specialcaseflag"s,
-        IntExpr(1, specialCaseFlag));
+        IntExpr(KindsEnum::Kind1, specialCaseFlag));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
@@ -1431,7 +1439,7 @@ CollectNonTbpDefinedIoGenericInterfaces(
                   flags |= IsDtvArgPolymorphic;
                 }
                 if (scope.context().GetDefaultKind(TypeCategory::Integer) ==
-                    8) {
+                    KindsEnum::Kind8) {
                   flags |= DefinedIoInteger8;
                 }
                 for (auto [iter, end]{result.equal_range(dtDesc)}; iter != end;

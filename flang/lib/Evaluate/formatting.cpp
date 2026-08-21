@@ -78,7 +78,7 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
       o << value.UnsignedDecimal() << "U_" << kind_;
     } else if constexpr (Result::category == TypeCategory::Real ||
         Result::category == TypeCategory::Complex) {
-      value.AsFortran(o, kind_);
+      value.AsFortran(o, static_cast<int>(kind_));
     } else if constexpr (Result::category == TypeCategory::Character) {
       o << value.kind() << '_';
       value.withStdString(
@@ -126,7 +126,7 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character>>::AsFortran(
     if (j > 0) {
       o << ',';
     }
-    if (kind_ != 1) {
+    if (kind_ != Kind1) {
       o << kind_ << '_';
     }
     value.withStdString(
@@ -718,7 +718,8 @@ std::string DynamicType::AsFortran() const {
     }
     return result;
   } else if (charLengthParamValue_ || knownLength()) {
-    std::string result{"CHARACTER(KIND="s + std::to_string(kind_) + ",LEN="};
+    std::string result{
+        "CHARACTER(KIND="s + std::to_string(static_cast<int>(kind_)) + ",LEN="};
     if (knownLength()) {
       result += std::to_string(*knownLength()) + "_8";
     } else if (charLengthParamValue_->isAssumed()) {
@@ -737,13 +738,13 @@ std::string DynamicType::AsFortran() const {
     return "(typeless intrinsic function argument)";
   } else {
     return parser::ToUpperCaseLetters(EnumToString(category_)) + '(' +
-        std::to_string(kind_) + ')';
+        std::to_string(static_cast<int>(kind_)) + ')';
   }
 }
 
 std::string DynamicType::AsFortran(std::string &&charLenExpr) const {
   if (!charLenExpr.empty() && category_ == TypeCategory::Character) {
-    return "CHARACTER(KIND=" + std::to_string(kind_) +
+    return "CHARACTER(KIND=" + std::to_string(static_cast<int>(kind_)) +
         ",LEN=" + std::move(charLenExpr) + ')';
   } else {
     return AsFortran();

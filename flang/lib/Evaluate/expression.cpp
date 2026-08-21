@@ -91,10 +91,10 @@ const typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() const {
 }
 #endif
 
-template <typename A> int ExpressionBase<A>::kind() const {
+template <typename A> KindsEnum ExpressionBase<A>::kind() const {
   // Storing/deriving the kind handled by the subclasses
   return common::visit(
-      [&](const auto &x) -> int { return x.kind(); }, derived().u);
+      [&](const auto &x) -> KindsEnum { return x.kind(); }, derived().u);
 }
 
 template <typename A>
@@ -367,45 +367,47 @@ std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
 }
 
 Parentheses<SomeDerived>::Parentheses(const Expr<SomeDerived> &x)
-    : Base{x.kind(), x} {}
+    : Base{static_cast<KindsEnum>(x.kind()), x} {}
 Parentheses<SomeDerived>::Parentheses(Expr<SomeDerived> &&x)
-    : Base{x.kind(), std::move(x)} {}
+    : Base{static_cast<KindsEnum>(x.kind()), std::move(x)} {}
 
 ComplexComponent::ComplexComponent(bool isImaginary, const Expr<Operand> &x)
-    : Base{x.kind(), x}, isImaginaryPart{isImaginary} {}
+    : Base{static_cast<KindsEnum>(x.kind()), x}, isImaginaryPart{isImaginary} {}
 ComplexComponent::ComplexComponent(bool isImaginary, Expr<Operand> &&x)
-    : Base{x.kind(), std::move(x)}, isImaginaryPart{isImaginary} {}
+    : Base{static_cast<KindsEnum>(x.kind()), std::move(x)},
+      isImaginaryPart{isImaginary} {}
 
 ComplexConstructor::ComplexConstructor(const Expr<Type<TypeCategory::Real>> &re,
     const Expr<Type<TypeCategory::Real>> &im)
-    : Base{re.kind(), re, im} {
+    : Base{static_cast<KindsEnum>(re.kind()), re, im} {
   CHECK(re.kind() == im.kind());
 }
 ComplexConstructor::ComplexConstructor(
     Expr<Type<TypeCategory::Real>> &&re, Expr<Type<TypeCategory::Real>> &&im)
-    : Base{re.kind(), std::move(re), std::move(im)} {
+    : Base{static_cast<KindsEnum>(re.kind()), std::move(re), std::move(im)} {
   CHECK(left().kind() == right().kind());
 }
 
 LogicalOperation::LogicalOperation(
     LogicalOperator opr, const Expr<Operand> &x, const Expr<Operand> &y)
-    : Base{x.kind(), x, y}, logicalOperator{opr} {
+    : Base{static_cast<KindsEnum>(x.kind()), x, y}, logicalOperator{opr} {
   CHECK(x.kind() == y.kind());
 }
 LogicalOperation::LogicalOperation(
     LogicalOperator opr, Expr<Operand> &&x, Expr<Operand> &&y)
-    : Base{x.kind(), std::move(x), std::move(y)}, logicalOperator{opr} {
+    : Base{static_cast<KindsEnum>(x.kind()), std::move(x), std::move(y)},
+      logicalOperator{opr} {
   CHECK(x.kind() == y.kind());
 }
 
 Concat::Concat(const Expr<Type<TypeCategory::Character>> &x,
     const Expr<Type<TypeCategory::Character>> &y)
-    : Base{x.kind(), x, y} {
+    : Base{static_cast<KindsEnum>(x.kind()), x, y} {
   CHECK(x.kind() == y.kind());
 }
 Concat::Concat(Expr<Type<TypeCategory::Character>> &&x,
     Expr<Type<TypeCategory::Character>> &&y)
-    : Base{x.kind(), std::move(x), std::move(y)} {
+    : Base{static_cast<KindsEnum>(x.kind()), std::move(x), std::move(y)} {
   CHECK(left().kind() == right().kind());
 }
 

@@ -15,17 +15,17 @@ namespace Fortran::evaluate {
 template <typename T>
 static Expr<T> FoldTransformationalBessel(
     FunctionRef<T> &&funcRef, FoldingContext &context) {
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   CHECK(funcRef.arguments().size() == 3);
   /// Bessel runtime functions use `int` integer arguments. Convert integer
   /// arguments to Int4, any overflow error will be reported during the
   /// conversion folding.
   using Int4 = Type<TypeCategory::Integer>;
-  if (auto args{GetConstantArguments<Int4, Int4, T>({4, 4, kind}, context,
-          funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
+  if (auto args{GetConstantArguments<Int4, Int4, T>({Kind4, Kind4, kind},
+          context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
     const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
     if (auto elementalBessel{
-            GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
+            GetHostRuntimeWrapper<T, Int4, T>(kind, {Kind4, kind}, name)}) {
       std::vector<Scalar<T>> results;
       int n1{static_cast<int>(
           std::get<0>(*args)->GetScalarValue().value().ToInt64())};
@@ -34,14 +34,14 @@ static Expr<T> FoldTransformationalBessel(
       Scalar<T> x{std::get<2>(*args)->GetScalarValue().value()};
       for (int i{n1}; i <= n2; ++i) {
         results.emplace_back(
-            (*elementalBessel)(context, value::IntegerValue{4, i}, x));
+            (*elementalBessel)(context, value::IntegerValue{Kind4, i}, x));
       }
       return Expr<T>{Constant<T>{kind, std::move(results),
           ConstantSubscripts{std::max(n2 - n1 + 1, 0)}}};
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
           "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
-          name, kind);
+          name, static_cast<int>(kind));
     }
   }
   return Expr<T>{std::move(funcRef)};
@@ -111,7 +111,7 @@ private:
   ConstantSubscripts maxAbsAt_{maxAbs_.lbounds()};
 };
 
-static Expr<Type<TypeCategory::Real>> FoldNorm2(int kind,
+static Expr<Type<TypeCategory::Real>> FoldNorm2(KindsEnum kind,
     FoldingContext &context, FunctionRef<Type<TypeCategory::Real>> &&funcRef) {
   using T = Type<TypeCategory::Real>;
   using Element = typename Constant<T>::Element;
@@ -130,7 +130,8 @@ static Expr<Type<TypeCategory::Real>> FoldNorm2(int kind,
         arrayAndMask->mask, dim, identity, norm2Accumulator)};
     if (norm2Accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "NORM2() of REAL(%d) data overflowed"_warn_en_US, kind);
+          "NORM2() of REAL(%d) data overflowed"_warn_en_US,
+          static_cast<int>(kind));
     }
     return Expr<T>{std::move(result)};
   }
@@ -139,7 +140,7 @@ static Expr<Type<TypeCategory::Real>> FoldNorm2(int kind,
 
 Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Real>> &&funcRef) {
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   using T = Type<TypeCategory::Real>;
   using ComplexT = Type<TypeCategory::Complex>;
   using Int4 = Type<TypeCategory::Integer>;
@@ -161,7 +162,8 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
           kind, {kind}, context, std::move(funcRef), *callable);
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
-          "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name, kind);
+          "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name,
+          static_cast<int>(kind));
     }
   } else if (name == "amax0" || name == "amin0" || name == "amin1" ||
       name == "amax1" || name == "dmin1" || name == "dmax1") {
@@ -176,19 +178,19 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
           "%s(real(kind=%d), real(kind%d)) cannot be folded on host"_warn_en_US,
-          name, kind, kind);
+          name, static_cast<int>(kind), static_cast<int>(kind));
     }
   } else if (name == "bessel_jn" || name == "bessel_yn") {
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
       if (auto callable{
-              GetHostRuntimeWrapper<T, Int4, T>(kind, {4, kind}, name)}) {
+              GetHostRuntimeWrapper<T, Int4, T>(kind, {Kind4, kind}, name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
-            kind, {4, kind}, context, std::move(funcRef), *callable);
+            kind, {Kind4, kind}, context, std::move(funcRef), *callable);
       } else {
         context.Warn(common::UsageWarning::FoldingFailure,
             "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
-            name, kind);
+            name, static_cast<int>(kind));
       }
     } else {
       return FoldTransformationalBessel<T>(std::move(funcRef), context);
@@ -352,8 +354,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
                   sConst->IsZero() ? "zero" : "NaN");
               badSConst = true;
             }
-            return FoldElementalIntrinsic<T, T, TS>(kind, {kind, sVal.kind()},
-                context, std::move(funcRef),
+            return FoldElementalIntrinsic<T, T, TS>(kind,
+                {kind, static_cast<KindsEnum>(sVal.kind())}, context,
+                std::move(funcRef),
                 ScalarFunc<T, T, TS>([&](const Scalar<T> &x,
                                          const Scalar<TS> &s) -> Scalar<T> {
                   if (!badSConst && (s.IsZero() || s.IsNotANumber())) {
@@ -374,7 +377,7 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   } else if (name == "norm2") {
     return FoldNorm2(kind, context, std::move(funcRef));
   } else if (name == "product") {
-    auto one{Scalar<T>::FromInteger(kind, value::IntegerValue{1, 1}).value};
+    auto one{Scalar<T>::FromInteger(kind, value::IntegerValue{Kind1, 1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
   } else if (name == "real" || name == "dble") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
@@ -390,8 +393,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
       return common::visit(
           [&](const auto &byVal) {
             using TBY = ResultType<decltype(byVal)>;
-            return FoldElementalIntrinsic<T, T, TBY>(kind, {kind, byVal.kind()},
-                context, std::move(funcRef),
+            return FoldElementalIntrinsic<T, T, TBY>(kind,
+                {kind, static_cast<KindsEnum>(byVal.kind())}, context,
+                std::move(funcRef),
                 ScalarFunc<T, T, TBY>(
                     [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
                       ValueWithRealFlags<Scalar<T>> result{x.SCALE(y)};
@@ -409,8 +413,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
       return common::visit(
           [&](const auto &iVal) {
             using TY = ResultType<decltype(iVal)>;
-            return FoldElementalIntrinsic<T, T, TY>(kind, {kind, iVal.kind()},
-                context, std::move(funcRef),
+            return FoldElementalIntrinsic<T, T, TY>(kind,
+                {kind, static_cast<KindsEnum>(iVal.kind())}, context,
+                std::move(funcRef),
                 ScalarFunc<T, T, TY>(
                     [&](const Scalar<T> &x, const Scalar<TY> &i) -> Scalar<T> {
                       return x.SET_EXPONENT(i.ToInt64());
@@ -448,8 +453,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
       return common::visit(
           [&](const auto &yVal) {
             using TY = ResultType<decltype(yVal)>;
-            return FoldElementalIntrinsic<T, T, TY>(kind, {kind, yVal.kind()},
-                context, std::move(funcRef),
+            return FoldElementalIntrinsic<T, T, TY>(kind,
+                {kind, static_cast<KindsEnum>(yVal.kind())}, context,
+                std::move(funcRef),
                 ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
                                          const Scalar<TY> &y) -> Scalar<T> {
                   auto xBig{
