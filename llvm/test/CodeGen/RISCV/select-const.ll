@@ -169,10 +169,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV32ZICOND-LABEL: select_const_fp:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    lui a1, 1024
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV32ZICOND-NEXT:    lui a1, 263168
-; RV32ZICOND-NEXT:    add a0, a0, a1
+; RV32ZICOND-NEXT:    lui a1, 264192
+; RV32ZICOND-NEXT:    slli a0, a0, 22
+; RV32ZICOND-NEXT:    sub a0, a1, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_const_fp:
@@ -210,10 +209,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV64ZICOND-LABEL: select_const_fp:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    lui a1, 1024
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV64ZICOND-NEXT:    lui a1, 263168
-; RV64ZICOND-NEXT:    add a0, a0, a1
+; RV64ZICOND-NEXT:    lui a1, 264192
+; RV64ZICOND-NEXT:    slli a0, a0, 22
+; RV64ZICOND-NEXT:    sub a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1
@@ -1455,11 +1453,10 @@ define i32 @diff_pow2_4392_4388(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: diff_pow2_4392_4388:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    li a1, -4
+; RV32ZICOND-NEXT:    lui a1, 1
 ; RV32ZICOND-NEXT:    slti a0, a0, 3
-; RV32ZICOND-NEXT:    lui a2, 1
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV32ZICOND-NEXT:    addi a1, a2, 296
+; RV32ZICOND-NEXT:    slli a0, a0, 2
+; RV32ZICOND-NEXT:    addi a1, a1, 292
 ; RV32ZICOND-NEXT:    add a0, a0, a1
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -1498,11 +1495,10 @@ define i32 @diff_pow2_4392_4388(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: diff_pow2_4392_4388:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    li a1, -4
+; RV64ZICOND-NEXT:    lui a1, 1
 ; RV64ZICOND-NEXT:    slti a0, a0, 3
-; RV64ZICOND-NEXT:    lui a2, 1
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV64ZICOND-NEXT:    addi a1, a2, 296
+; RV64ZICOND-NEXT:    slli a0, a0, 2
+; RV64ZICOND-NEXT:    addi a1, a1, 292
 ; RV64ZICOND-NEXT:    add a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp slt i32 %x, 3
@@ -1537,12 +1533,9 @@ define i32 @diff_pow2_4000_4016(i32 signext %x) {
 ;
 ; RV32ZICOND-LABEL: diff_pow2_4000_4016:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    li a1, 16
 ; RV32ZICOND-NEXT:    slti a0, a0, 5
-; RV32ZICOND-NEXT:    lui a2, 1
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV32ZICOND-NEXT:    addi a1, a2, -96
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    xori a0, a0, 251
+; RV32ZICOND-NEXT:    slli a0, a0, 4
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: diff_pow2_4000_4016:
@@ -1580,12 +1573,9 @@ define i32 @diff_pow2_4000_4016(i32 signext %x) {
 ;
 ; RV64ZICOND-LABEL: diff_pow2_4000_4016:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    li a1, 16
 ; RV64ZICOND-NEXT:    slti a0, a0, 5
-; RV64ZICOND-NEXT:    lui a2, 1
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV64ZICOND-NEXT:    addi a1, a2, -96
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    xori a0, a0, 251
+; RV64ZICOND-NEXT:    slli a0, a0, 4
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp slt i32 %x, 5
   %cond = select i1 %cmp, i32 4000, i32 4016
