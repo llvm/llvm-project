@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include <optional>
@@ -30,7 +31,6 @@ class Constant;
 class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
@@ -335,6 +335,8 @@ bool isOnceUsedSeed(const Instruction *I);
 /// removed: both casts must allow contraction and the widening cast cannot
 /// produce nan/inf.
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
 
 } // namespace llvm::slpvectorizer
 

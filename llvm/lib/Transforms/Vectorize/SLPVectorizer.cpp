@@ -254,10 +254,6 @@ static cl::opt<bool> ForcePostProcessStoresOperands(
     "slp-postprocess-stores-operands", cl::init(false), cl::Hidden,
     cl::desc("Force vectorization of non-vectorizable stores operands."));
 
-static TTI::TargetCostKind getSLPCostKind(const Function *F) {
-  return F && F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-}
-
 static cl::opt<bool> NonVectReductions(
     "slp-non-vectorizables-as-reductions", cl::init(false), cl::Hidden,
     cl::desc(

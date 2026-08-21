@@ -770,4 +770,10 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
   return Narrow;
 }
 
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
+  assert(F && "Expected function.");
+  return F->hasOptSize() ? TargetTransformInfo::TCK_CodeSize
+                         : TargetTransformInfo::TCK_RecipThroughput;
+}
+
 } // namespace llvm::slpvectorizer
