@@ -246,7 +246,9 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+  LValue LV =
+      CGF.EmitLValue(E, NotKnownNonNull, CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E, LV);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
@@ -832,8 +834,9 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_Dynamic: {
     // FIXME: Can this actually happen? We have no test coverage for it.
     assert(isa<CXXDynamicCastExpr>(E) && "CK_Dynamic without a dynamic_cast?");
-    LValue LV =
-        CGF.EmitCheckedLValue(E->getSubExpr(), CodeGenFunction::TCK_Load);
+    LValue LV = CGF.EmitLValue(E->getSubExpr(), NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E->getSubExpr(), LV);
     // FIXME: Do we also need to handle property references here?
     if (LV.isSimple())
       CGF.EmitDynamicCast(LV.getAddress(), cast<CXXDynamicCastExpr>(E));

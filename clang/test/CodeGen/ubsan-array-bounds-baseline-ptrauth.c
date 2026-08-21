@@ -20,5 +20,5 @@ int *p_load(int i) { return pa[i]; }
 int *p_load_paren(int i) { return (pa[i]); }
 
 // CHECK-LABEL: define {{.*}}@p_load_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 int *p_load_deref_addr(int i) { return *&pa[i]; }

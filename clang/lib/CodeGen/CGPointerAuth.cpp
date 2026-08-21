@@ -246,7 +246,8 @@ CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
       }
 
       // Otherwise, load and use the pointer
-      LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+      LValue LV = EmitLValue(E, NotKnownNonNull, ObjectRequired);
+      EmitTypeCheck(CodeGenFunction::TCK_Load, E, LV);
       return emitLoadOfOrigPointerRValue(*this, LV, E->getExprLoc());
     }
   }

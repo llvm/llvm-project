@@ -319,9 +319,6 @@ public:
 
   llvm::Type *ConvertType(QualType T) { return CGF.ConvertType(T); }
   LValue EmitLValue(const Expr *E) { return CGF.EmitLValue(E); }
-  LValue EmitCheckedLValue(const Expr *E, CodeGenFunction::TypeCheckKind TCK) {
-    return CGF.EmitCheckedLValue(E, TCK);
-  }
 
   void EmitBinOpCheck(
       ArrayRef<std::pair<Value *, SanitizerKind::SanitizerOrdinal>> Checks,
@@ -369,8 +366,10 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV =
+        CGF.EmitLValue(E, NotKnownNonNull, CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E, LV);
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;

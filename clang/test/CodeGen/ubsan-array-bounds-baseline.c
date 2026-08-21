@@ -53,11 +53,11 @@ void c_store(int i) { a[i] = 1; }
 void c_load(int i) { v = a[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_load_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_load_deref_addr(int i) { v = *&a[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_load_cast(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_load_cast(int i) { v = *(int *)&a[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_compound(
@@ -105,7 +105,7 @@ void c_agg_store_deref_addr(int i) { *&sa[i] = aggl; }
 void c_agg_load(int i) { aggl = sa[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_agg_load_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_agg_load_deref_addr(int i) { aggl = *&sa[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_member_dot(
