@@ -1,6 +1,6 @@
 ;; Entirely zeroed kernel descriptor (for GFX10).
 
-; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -filetype=obj -o %t
+; RUN: llvm-mc %s --triple=amdgpu10.10-amd-amdhsa -filetype=obj -o %t
 ; RUN: llvm-objdump -s -d -j .text %t | FileCheck --check-prefix=OBJDUMP %s
 
 ;; TODO:

@@ -1286,11 +1286,7 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
 
 unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed) {
-  // Without a TargetID mode, only hardwired-on xnack (gfx1250) is knowable from
-  // the subtarget, and it reserves SGPRs.
-  bool XNACKUsed = STI.getFeatureBits().test(AMDGPU::FeatureSupportsXNACK) &&
-                   !STI.getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes);
-  return getNumExtraSGPRs(STI, VCCUsed, FlatScrUsed, XNACKUsed);
+  return getNumExtraSGPRs(STI, VCCUsed, FlatScrUsed, hasXNACK(STI));
 }
 
 static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,

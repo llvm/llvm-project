@@ -708,7 +708,7 @@ TargetID TargetID::createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
   // Apply the +/-xnack and +/-sramecc modifiers from the feature string, only
   // for targets that can toggle the corresponding mode.
   bool XnackToggleable = XnackSetting == TargetIDSetting::Any;
-  bool SramEccToggleable = SramEccSetting != TargetIDSetting::Unsupported;
+  bool SramEccToggleable = SramEccSetting == TargetIDSetting::Any;
   SmallVector<StringRef, 4> Features;
   FeatureString.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (StringRef Feature : Features) {
