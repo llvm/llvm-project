@@ -1,7 +1,7 @@
 ; Verify that inspection reports multiple blocks and that the reader skips an
 ; unknown block before an LBR block without losing the known payload.
 ; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/composite-multiple-blocks.proftext -o %t.single
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.single %t.multiple prepended-unknown
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.single %t.multiple prepended-unknown
 ; RUN: llvm-profdata show --sample --show-composite-info-only %t.multiple | FileCheck %s
 ; RUN: llvm-profdata merge --sample --text %t.multiple -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
 

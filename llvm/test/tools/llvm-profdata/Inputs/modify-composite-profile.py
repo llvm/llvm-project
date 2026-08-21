@@ -1,3 +1,6 @@
+# Transform ExtBinary composite profiles into valid structural variants and
+# intentionally malformed inputs that cannot be produced through writer APIs.
+
 import argparse
 import struct
 

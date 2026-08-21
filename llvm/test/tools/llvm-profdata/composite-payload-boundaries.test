@@ -2,18 +2,18 @@
 ; and that inspection still reports an invalid unknown block size.
 ; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.valid
 
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.valid %t.undersized undersized
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.valid %t.undersized undersized
 ; RUN: not llvm-profdata merge --sample %t.undersized -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED
 
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.valid %t.oversized oversized
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.valid %t.oversized oversized
 ; RUN: not llvm-profdata merge --sample %t.oversized -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNCONSUMED
 
 ; Verify that duplicate type IDs are rejected instead of decoding and merging
 ; the same logical payload twice.
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.valid %t.duplicate duplicate-type
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.valid %t.duplicate duplicate-type
 ; RUN: not llvm-profdata merge --sample %t.duplicate -o /dev/null 2>&1 | FileCheck %s --check-prefix=DUPLICATE
 
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.valid %t.unknown-out-of-bounds unknown-out-of-bounds
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.valid %t.unknown-out-of-bounds unknown-out-of-bounds
 ; RUN: not llvm-profdata merge --sample %t.unknown-out-of-bounds -o /dev/null 2>&1 | FileCheck %s --check-prefix=DECLARED-SIZE
 ; RUN: not llvm-profdata show --sample --show-composite-info-only %t.unknown-out-of-bounds 2>&1 | FileCheck %s --check-prefix=INSPECT
 

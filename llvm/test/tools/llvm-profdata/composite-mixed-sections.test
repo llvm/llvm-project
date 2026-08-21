@@ -1,14 +1,14 @@
 ; Verify that an empty composite section is skipped without preventing a
 ; following legacy profile section from being read.
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.legacy
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.legacy %t.empty-mixed prepend-empty-composite
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.legacy %t.empty-mixed prepend-empty-composite
 ; RUN: llvm-profdata merge --sample --text %t.empty-mixed -o - | FileCheck %s --check-prefix=PROFILE
 
 ; Verify that the temporary decoding mode is also restored after reading a
 ; nonempty composite section. Both sections contain the same profiles, so every
 ; counter is expected to be accumulated exactly twice.
 ; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.composite
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.legacy %t.nonempty-mixed prepend-composite --donor %t.composite
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.legacy %t.nonempty-mixed prepend-composite --donor %t.composite
 ; RUN: llvm-profdata merge --sample --text %t.nonempty-mixed -o - | FileCheck %s --check-prefix=ACCUMULATED
 
 ; Verify that the section table reports both physical profile section formats.

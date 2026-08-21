@@ -15,10 +15,10 @@
 
 ; BOTH: error: -show-sec-info-only and -show-composite-info-only cannot be used together
 
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.composite %t.empty empty-section
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.composite %t.empty empty-section
 ; RUN: llvm-profdata show --sample --show-composite-info-only %t.empty 2>&1 | count 0
 
-; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.composite %t.unknown unknown
+; RUN: %python %S/Inputs/modify-composite-profile.py %t.composite %t.unknown unknown
 ; RUN: llvm-profdata show --sample --show-composite-info-only %t.unknown | FileCheck %s --check-prefix=UNKNOWN
 
 ; UNKNOWN: Function: baz
