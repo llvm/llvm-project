@@ -10170,7 +10170,9 @@ void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
     return;
   }
 
-  const auto *Old = FD->getAttr<AbiTagAttr>();
+  SmallVector<AbiTagAttr *, 2> Existing(FD->specific_attrs<AbiTagAttr>());
+  AbiTagAttr *Old = Existing.empty() ? nullptr : Existing.front();
+
   SmallVector<StringRef, 4> Tags;
   if (Old)
     llvm::append_range(Tags, Old->tags());
@@ -10184,6 +10186,8 @@ void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
                                        FD->getLocation());
   FD->dropAttr<AbiTagAttr>();
   FD->addAttr(Merged);
+  for (size_t I = 1, E = Existing.size(); I < E; ++I)
+    FD->addAttr(Existing[I]);
 }
 
 NamedDecl*
