@@ -1578,4 +1578,108 @@ gpu.func @convert_layout_partial_subgroup() {
   } : (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   gpu.return
 }
+
+// Input layout broadcasts over two groups of eight lanes, each holding one
+// column; the target gives each of the first eight lanes a row. Element 0 is
+// already local, element 1 has to cross lanes.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_to_lane_distributed
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<8xf8E8M0FNU> to vector<8xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
+// CHECK:         %[[ELEM:.*]] = vector.extract %[[BITS]][%[[ROW]]] : i8 from vector<8xi8>
+
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM]], %[[ZERO]] [0] : i8 into vector<2xi8>
+
+// CHECK:         %[[WIDTH:.*]] = arith.constant 16 : i32
+// CHECK:         %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+// CHECK:         %[[C8_I32:.*]] = arith.constant 8 : i32
+// CHECK:         %[[LANE1:.*]] = arith.addi %[[ROW_I32]], %[[C8_I32]] : i32
+// CHECK:         %[[SHUF1:.*]], %{{.*}} = gpu.shuffle idx %[[ELEM]], %[[LANE1]], %[[WIDTH]] : i8
+// CHECK:         %[[INS1:.*]] = vector.insert %[[SHUF1]], %[[INS0]] [1] : i8 into vector<2xi8>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<2xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+gpu.func @convert_layout_broadcast_to_lane_distributed() {
+  %scale_a_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1], order = [0, 2, 1]>, dims = [0]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
+
+// Broadcast to all lanes: every lane already holds its row, so no shuffles.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_all_lanes
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x2xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x2xf8E8M0FNU> to vector<16xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<16xf8E8M0FNU> to vector<16xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
+// CHECK:         %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[IDX0:.*]] = arith.muli %[[ROW]], %[[C2]] : index
+// CHECK:         %[[ELEM0:.*]] = vector.extract %[[BITS]][%[[IDX0]]] : i8 from vector<16xi8>
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM0]], %[[ZERO]] [0] : i8 into vector<2xi8>
+// CHECK:         %[[C2_1:.*]] = arith.constant 2 : index
+// CHECK:         %[[MUL1:.*]] = arith.muli %[[ROW]], %[[C2_1]] : index
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[IDX1:.*]] = arith.addi %[[MUL1]], %[[C1]] : index
+// CHECK:         %[[ELEM1:.*]] = vector.extract %[[BITS]][%[[IDX1]]] : i8 from vector<16xi8>
+// CHECK:         %[[INS1:.*]] = vector.insert %[[ELEM1]], %[[INS0]] [1] : i8 into vector<2xi8>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<2xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+// CHECK:         gpu.return
+// CHECK-NOT:     gpu.shuffle
+gpu.func @convert_layout_broadcast_all_lanes() {
+  %scale_a_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
+
+// Target whose distributed dimension is not the fastest varying one: the parent
+// `order` puts the broadcast dimension first, so lane `i` owns column `i / 8`
+// and the extract divides the lane id rather than taking a remainder.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_to_sliced_target
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x2xbf16>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x2xbf16> to vector<16xbf16>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<16xbf16> to vector<16xi16>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<8xi16>
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[COL:.*]] = arith.divui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ELEM0:.*]] = vector.extract %[[BITS]][%[[COL]]] : i16 from vector<16xi16>
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM0]], %[[ZERO]] [0] : i16 into vector<8xi16>
+// CHECK:         %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[IDX1:.*]] = arith.addi %[[COL]], %[[C2]] : index
+// CHECK:         %[[ELEM1:.*]] = vector.extract %[[BITS]][%[[IDX1]]] : i16 from vector<16xi16>
+// CHECK:         %[[INS1:.*]] = vector.insert %[[ELEM1]], %[[INS0]] [1] : i16 into vector<8xi16>
+// CHECK:         %[[C14:.*]] = arith.constant 14 : index
+// CHECK:         %[[IDX7:.*]] = arith.addi %[[COL]], %[[C14]] : index
+// CHECK:         %[[ELEM7:.*]] = vector.extract %[[BITS]][%[[IDX7]]] : i16 from vector<16xi16>
+// CHECK:         %[[INS7:.*]] = vector.insert %[[ELEM7]], %{{.*}} [7] : i16 into vector<8xi16>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS7]] : vector<8xi16> to vector<8xbf16>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<8xbf16> to vector<8x1xbf16>
+// CHECK:         gpu.return
+// CHECK-NOT:     gpu.shuffle
+gpu.func @convert_layout_broadcast_to_sliced_target() {
+  %a_scale_src = arith.constant dense<1.0> : vector<8x2xbf16>
+  %cvt = xegpu.convert_layout %a_scale_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1], order = [0, 2, 1]>, dims = [0]>
+    }> : vector<8x2xbf16>
+  "some_use"(%cvt) : (vector<8x2xbf16>) -> ()
+  gpu.return
+}
 }

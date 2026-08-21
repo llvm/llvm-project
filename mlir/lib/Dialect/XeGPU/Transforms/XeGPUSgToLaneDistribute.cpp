@@ -1761,6 +1761,274 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
   return result;
 }
 
+/// Number of lanes the subgroup is split into by `layout`. Lanes covered by
+/// sliced dimensions count too: they hold a broadcasted copy, not nothing.
+static int64_t getLaneLayoutSize(xegpu::DistributeLayoutAttr layout) {
+  if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
+    layout = sliceAttr.flatten().getParent();
+  return computeProduct(layout.getEffectiveLaneLayoutAsInt());
+}
+
+/// For every lane, the coordinates of the elements of `shape` it owns under
+/// `layout`. Fails for non-unit lane_data, where a lane's elements are not a
+/// plain enumeration of the distribution unit starts.
+static FailureOr<SmallVector<SmallVector<SmallVector<int64_t>>>>
+computePerLaneElementCoords(xegpu::DistributeLayoutAttr layout,
+                            ArrayRef<int64_t> shape, int64_t numLanes) {
+  SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+  if (!llvm::all_of(laneData, [](int64_t d) { return d == 1; }))
+    return failure();
+  SmallVector<SmallVector<SmallVector<int64_t>>> coords;
+  for (int64_t lane = 0; lane < numLanes; lane++)
+    coords.push_back(layout.computeStaticDistributedCoords(lane, shape));
+  return coords;
+}
+
+/// How one element of the distributed result is obtained. With `t` the lane's
+/// index within the target lane layout, the lane extracts element
+/// `stride * ((t / divisor) % modulus) + offset` of its copy, and `gpu.shuffle
+/// idx` pulls it from lane `t + laneOffset` unless it already owns it.
+///
+/// `divisor` and `modulus` single out the one target lane layout coordinate the
+/// element index varies with: `divisor` lanes share a coordinate value, which
+/// takes `modulus` distinct values.
+struct BroadcastRedistribution {
+  int64_t stride;
+  int64_t offset;
+  int64_t divisor;
+  int64_t modulus;
+  int64_t laneOffset;
+  bool needsShuffle;
+};
+
+/// Derives the redistribution of element `pos` from the per-lane element
+/// coordinates of both layouts. Fails when the movement is not a
+/// lane-invariant extract followed by an optional shuffle.
+static FailureOr<BroadcastRedistribution> deriveBroadcastRedistribution(
+    ArrayRef<SmallVector<SmallVector<int64_t>>> srcCoords,
+    ArrayRef<SmallVector<SmallVector<int64_t>>> resCoords, int64_t pos,
+    int64_t numLanes, int64_t numTargetLanes) {
+  auto findElement = [&](int64_t lane, ArrayRef<int64_t> coord) -> int64_t {
+    for (auto [idx, candidate] : llvm::enumerate(srcCoords[lane]))
+      if (ArrayRef<int64_t>(candidate) == coord)
+        return idx;
+    return -1;
+  };
+
+  // A lane only serves the target lane sharing its position in the target lane
+  // layout, so the shuffled-from lane is a whole number of layouts away.
+  for (int64_t laneOffset = 0; laneOffset < numLanes;
+       laneOffset += numTargetLanes) {
+    SmallVector<int64_t> elements;
+    for (int64_t t = 0; t < numTargetLanes; t++) {
+      int64_t element = findElement(t + laneOffset, resCoords[t][pos]);
+      if (element < 0)
+        break;
+      elements.push_back(element);
+    }
+    if (static_cast<int64_t>(elements.size()) != numTargetLanes)
+      continue;
+
+    // The index is computed from the lane id at runtime, so it has to be
+    // strided in one coordinate. Lanes sharing that coordinate are adjacent.
+    int64_t offset = elements[0];
+    int64_t divisor = 1;
+    while (divisor < numTargetLanes && elements[divisor] == offset)
+      divisor++;
+    int64_t stride = divisor < numTargetLanes ? elements[divisor] - offset : 0;
+    if (stride < 0 || numTargetLanes % divisor != 0)
+      continue;
+
+    int64_t modulus = 1;
+    if (stride == 0) {
+      divisor = 1;
+    } else {
+      bool strided = true;
+      for (int64_t t = 0; t < numTargetLanes && strided; t++) {
+        int64_t diff = elements[t] - offset;
+        strided = diff >= 0 && diff % stride == 0;
+        if (strided)
+          modulus = std::max(modulus, diff / stride + 1);
+      }
+      if (!strided)
+        continue;
+    }
+
+    auto elementIndex = [=](int64_t t) {
+      return stride * ((t / divisor) % modulus) + offset;
+    };
+    if (!llvm::all_of(llvm::seq<int64_t>(0, numTargetLanes), [&](int64_t t) {
+          return elements[t] == elementIndex(t);
+        }))
+      continue;
+
+    // Lanes outside the target lane layout hold a replicated copy nothing
+    // reads, so only the lanes carrying a result need the value they own. That
+    // lets an already-local element skip the shuffle.
+    bool needsShuffle =
+        laneOffset != 0 ||
+        !llvm::all_of(llvm::seq<int64_t>(0, numTargetLanes), [&](int64_t lane) {
+          return srcCoords[lane][elementIndex(lane % numTargetLanes)] ==
+                 resCoords[lane][pos];
+        });
+    return BroadcastRedistribution{stride,  offset,     divisor,
+                                   modulus, laneOffset, needsShuffle};
+  }
+  return failure();
+}
+
+/// Redistributes `src` for a `convert_layout` whose input layout replicates the
+/// value over groups of lanes while the target hands each lane a different part
+/// of it. Scale operands of scaled matrix multiplication need this: they are
+/// produced broadcasted and consumed distributed.
+///
+/// Any lane can read any element of its own copy with a dynamic extract, but a
+/// lane can only contribute one value to a `gpu.shuffle`, so both sides have to
+/// agree on what is exchanged: each lane extracts the element its counterpart
+/// in the target lane layout needs, and one shuffle per result element moves it
+/// to the owner.
+///
+/// Returns failure if the redistribution is not expressible in that form.
+static FailureOr<Value>
+redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
+                             Value src, VectorType resTy,
+                             xegpu::DistributeLayoutAttr inputLayout,
+                             xegpu::DistributeLayoutAttr targetLayout,
+                             ArrayRef<int64_t> shape, int64_t numLanes) {
+  auto srcTy = dyn_cast<VectorType>(src.getType());
+  if (!srcTy)
+    return failure();
+  int64_t srcNumElems = srcTy.getNumElements();
+  int64_t resNumElems = resTy.getNumElements();
+  int64_t numTargetLanes = getLaneLayoutSize(targetLayout);
+  if (numTargetLanes < 1 || numLanes % numTargetLanes != 0)
+    return failure();
+  // gpu.shuffle only moves the integer widths a lane can hold.
+  int64_t elemBitWidth = srcTy.getElementTypeBitWidth();
+  if (!llvm::isPowerOf2_64(elemBitWidth) || elemBitWidth < 8 ||
+      elemBitWidth > 64)
+    return failure();
+
+  auto srcCoords = computePerLaneElementCoords(inputLayout, shape, numLanes);
+  auto resCoords = computePerLaneElementCoords(targetLayout, shape, numLanes);
+  if (failed(srcCoords) || failed(resCoords))
+    return failure();
+  // Require the layouts to distribute what the vector types account for, and
+  // the target to replicate the result over the lanes it leaves out.
+  for (int64_t lane = 0; lane < numLanes; lane++) {
+    if (static_cast<int64_t>((*srcCoords)[lane].size()) != srcNumElems ||
+        static_cast<int64_t>((*resCoords)[lane].size()) != resNumElems ||
+        (*resCoords)[lane] != (*resCoords)[lane % numTargetLanes])
+      return failure();
+  }
+
+  SmallVector<BroadcastRedistribution> redistributions;
+  for (int64_t pos = 0; pos < resNumElems; pos++) {
+    auto redistribution = deriveBroadcastRedistribution(
+        *srcCoords, *resCoords, pos, numLanes, numTargetLanes);
+    if (failed(redistribution))
+      return failure();
+    redistributions.push_back(*redistribution);
+  }
+
+  // Shuffles move same-width integers, which any lane data type bitcasts to.
+  Type elemTy = srcTy.getElementType();
+  Type shuffleTy = rewriter.getIntegerType(elemBitWidth);
+  Value flatSrc = src;
+  auto flatSrcTy = VectorType::get({srcNumElems}, elemTy);
+  if (srcTy != flatSrcTy)
+    flatSrc = vector::ShapeCastOp::create(rewriter, loc, flatSrcTy, flatSrc);
+  if (elemTy != shuffleTy)
+    flatSrc = vector::BitCastOp::create(
+        rewriter, loc, VectorType::get({srcNumElems}, shuffleTy), flatSrc);
+
+  Value laneIdx = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                        /*upperBound=*/mlir::IntegerAttr());
+  if (numTargetLanes != numLanes)
+    laneIdx = arith::RemUIOp::create(
+        rewriter, loc, laneIdx,
+        arith::ConstantIndexOp::create(rewriter, loc, numTargetLanes));
+
+  Type i32Ty = rewriter.getI32Type();
+  auto flatResTy = VectorType::get({resNumElems}, shuffleTy);
+  Value res = arith::ConstantOp::create(rewriter, loc, flatResTy,
+                                        rewriter.getZeroAttr(flatResTy));
+  Value width;
+  Value laneIdxI32;
+
+  // `(laneIdx / divisor) % modulus`, shared by elements reading the same
+  // coordinate. Either step is skipped when it is a no-op over `laneIdx`.
+  llvm::DenseMap<std::pair<int64_t, int64_t>, Value> laneTerms;
+  auto getLaneTerm = [&](int64_t divisor, int64_t modulus) -> Value {
+    Value &term = laneTerms[{divisor, modulus}];
+    if (term)
+      return term;
+    term = laneIdx;
+    if (divisor != 1)
+      term = arith::DivUIOp::create(
+          rewriter, loc, term,
+          arith::ConstantIndexOp::create(rewriter, loc, divisor));
+    if (modulus < numTargetLanes / divisor)
+      term = arith::RemUIOp::create(
+          rewriter, loc, term,
+          arith::ConstantIndexOp::create(rewriter, loc, modulus));
+    return term;
+  };
+
+  llvm::DenseMap<std::tuple<int64_t, int64_t, int64_t, int64_t>, Value>
+      extracted;
+  for (auto [pos, redistribution] : llvm::enumerate(redistributions)) {
+    // Result elements reading the same element of the copy share the extract.
+    Value &value = extracted[{redistribution.stride, redistribution.offset,
+                              redistribution.divisor, redistribution.modulus}];
+    if (!value) {
+      OpFoldResult element;
+      if (redistribution.stride == 0) {
+        element = rewriter.getIndexAttr(redistribution.offset);
+      } else {
+        Value index =
+            getLaneTerm(redistribution.divisor, redistribution.modulus);
+        if (redistribution.stride != 1)
+          index =
+              arith::MulIOp::create(rewriter, loc, index,
+                                    arith::ConstantIndexOp::create(
+                                        rewriter, loc, redistribution.stride));
+        if (redistribution.offset != 0)
+          index =
+              arith::AddIOp::create(rewriter, loc, index,
+                                    arith::ConstantIndexOp::create(
+                                        rewriter, loc, redistribution.offset));
+        element = index;
+      }
+      value = vector::ExtractOp::create(rewriter, loc, flatSrc, element);
+    }
+
+    Value result = value;
+    if (redistribution.needsShuffle) {
+      if (!width) {
+        width = arith::ConstantIntOp::create(rewriter, loc, i32Ty, numLanes);
+        laneIdxI32 = arith::IndexCastOp::create(rewriter, loc, i32Ty, laneIdx);
+      }
+      Value srcLane = laneIdxI32;
+      if (redistribution.laneOffset != 0)
+        srcLane = arith::AddIOp::create(
+            rewriter, loc, srcLane,
+            arith::ConstantIntOp::create(rewriter, loc, i32Ty,
+                                         redistribution.laneOffset));
+      result = gpu::ShuffleOp::create(rewriter, loc, result, srcLane, width,
+                                      gpu::ShuffleMode::IDX)
+                   .getResult(0);
+    }
+    res = vector::InsertOp::create(rewriter, loc, result, res, pos);
+  }
+  if (elemTy != shuffleTy)
+    res = vector::BitCastOp::create(
+        rewriter, loc, VectorType::get({resNumElems}, elemTy), res);
+  if (res.getType() != resTy)
+    res = vector::ShapeCastOp::create(rewriter, loc, resTy, res);
+  return res;
+}
+
 /// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
 struct SgToLaneConvertLayout
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
@@ -1855,6 +2123,26 @@ struct SgToLaneConvertLayout
         FailureOr<Value> res = repackLaneData(
             rewriter, op.getLoc(), adaptor.getSource(), repackDim,
             laneData[repackDim], targetLaneData[repackDim]);
+        if (succeeded(res)) {
+          rewriter.replaceOp(op, *res);
+          return success();
+        }
+      }
+    }
+
+    // Input layout broadcasts over groups of lanes while the target
+    // distributes, so data has to move across lanes.
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    FailureOr<VectorType> resDistTy = xegpu::getDistVecTypeBasedOnLaneLayout(
+        targetLayout, cast<VectorType>(valType));
+    if (uArch && succeeded(resDistTy)) {
+      int64_t numLanes = uArch->getSubgroupSize();
+      // The target may leave the remaining lanes with a replicated value.
+      if (getLaneLayoutSize(inputLayout) == numLanes) {
+        FailureOr<Value> res = redistributeBroadcastedValue(
+            rewriter, op.getLoc(), adaptor.getSource(), *resDistTy, inputLayout,
+            targetLayout, resShapeVec, numLanes);
         if (succeeded(res)) {
           rewriter.replaceOp(op, *res);
           return success();
