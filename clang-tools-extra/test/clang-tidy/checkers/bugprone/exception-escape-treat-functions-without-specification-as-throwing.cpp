@@ -47,6 +47,17 @@ void calls_unknown_caught() noexcept {
   }
 }
 
+struct Error {};
+
+void calls_unknown_typed_catch() noexcept {
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  try {
+    extern_declared();
+  } catch (const Error &) {
+  }
+}
+
 void definitely_nothrow() noexcept {}
 
 void calls_nothrow() noexcept {

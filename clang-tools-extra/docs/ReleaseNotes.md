@@ -118,6 +118,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Fixed crashes in {doc}`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` when analyzing exceptions of
+  unknown type with `TreatFunctionsWithoutSpecificationAsThrowing` enabled.
+
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
@@ -129,7 +133,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
-  
+
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
