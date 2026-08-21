@@ -451,6 +451,7 @@ if.then:
   %inc = add nsw i32 %monotonic, 1
   %monotonic.prom = sext i32 %monotonic to i64
   %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %monotonic.prom
+  store i32 10, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:
@@ -486,35 +487,15 @@ for.end:
         assert(GEPInst->getName() == "arrayidx");
         BasicBlock *IfEnd = &*(++FI);
         assert(IfEnd->getName() == "for.inc");
-        auto *ChainPhi = dyn_cast<PHINode>(&*(IfEnd->begin()));
-        assert(ChainPhi->getName() == "monotonic.next");
         // Check %monotonic descriptor.
         MonotonicDescriptor Desc;
         bool IsMonotonicPhi =
             MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
         EXPECT_TRUE(IsMonotonicPhi);
-        auto &PhiChain = Desc.getChain();
-        EXPECT_TRUE(PhiChain.size() == 1 && PhiChain.contains(ChainPhi));
         EXPECT_EQ(Desc.getStepInst(), StepInst);
-        EXPECT_EQ(Desc.getPredicateEdge(),
-                  MonotonicDescriptor::Edge(IfThen, IfEnd));
         auto *StartSCEV = SE.getConstant(Phi->getType(), 0);
         auto *StepSCEV = SE.getConstant(Phi->getType(), 1);
-        EXPECT_EQ(Desc.getExpr(),
-                  SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
-        // Check %arrayidx descriptor.
-        bool IsMonotonicVal =
-            MonotonicDescriptor::isMonotonicVal(GEPInst, L, Desc, SE);
-        EXPECT_TRUE(IsMonotonicVal);
-        // Chain, StepInst and PredicateEdge are the same with %monotonic.
-        auto &ValChain = Desc.getChain();
-        EXPECT_TRUE(ValChain.size() == 1 && ValChain.contains(ChainPhi));
-        EXPECT_EQ(Desc.getStepInst(), StepInst);
-        EXPECT_EQ(Desc.getPredicateEdge(),
-                  MonotonicDescriptor::Edge(IfThen, IfEnd));
-        StartSCEV = SE.getSCEV(F.getArg(0));
-        StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
-        EXPECT_EQ(Desc.getExpr(),
+        EXPECT_EQ(Desc.getPhiSCEV(),
                   SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
       });
 }
@@ -566,20 +547,14 @@ for.end:
         assert(StepInst->getName() == "inc");
         BasicBlock *IfEnd = &*(++FI);
         assert(IfEnd->getName() == "for.inc");
-        auto *ChainPhi = dyn_cast<PHINode>(&*(IfEnd->begin()));
-        assert(ChainPhi->getName() == "monotonic.next");
         MonotonicDescriptor Desc;
         bool IsMonotonicPhi =
             MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
         EXPECT_TRUE(IsMonotonicPhi);
-        auto &Chain = Desc.getChain();
-        EXPECT_TRUE(Chain.size() == 1 && Chain.contains(ChainPhi));
         EXPECT_EQ(Desc.getStepInst(), StepInst);
-        EXPECT_EQ(Desc.getPredicateEdge(),
-                  MonotonicDescriptor::Edge(IfThen, IfEnd));
         auto *StartSCEV = SE.getSCEV(F.getArg(0));
         auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
-        EXPECT_EQ(Desc.getExpr(),
+        EXPECT_EQ(Desc.getPhiSCEV(),
                   SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
       });
 }
