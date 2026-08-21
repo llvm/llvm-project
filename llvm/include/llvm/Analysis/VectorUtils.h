@@ -166,7 +166,7 @@ isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
 
 /// Returns the argument index of the pointer parameter for the vector memory
-/// intrinsic \p ID, or `std::nullopt` the intrinsic does not have a pointer
+/// intrinsic \p ID, or `std::nullopt` if the intrinsic does not have a pointer
 /// operand.
 LLVM_ABI std::optional<unsigned>
 getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID);

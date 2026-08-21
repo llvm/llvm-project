@@ -260,6 +260,15 @@ struct VPlanTransforms {
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
 
+  /// Handles compressing memory loads/stores. Loads/stores where the pointer
+  /// is derived from a monotonic PHI are replaced with expandloads or
+  /// compressstores respectively. The backedge value of the monotonic PHI is
+  /// updated to increment by the number of active lanes of the block mask.
+  /// Returns false if any memory operation could not be updated (e.g., due to
+  /// having a mask that does not match the PHI).
+  static bool handleCompressingPatterns(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                        VPRecipeBuilder &RecipeBuilder);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
@@ -590,13 +599,6 @@ struct VPlanTransforms {
   /// extracts of the last active lane edge.
   static void adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
                                                     VFRange &Range);
-
-  /// Adjust the backedge value for monotonic PHIs. Changes the update to be
-  /// number of active lanes of the predicated edge between the step increment
-  /// and the loop (multiplied by the step size).
-  static void adjustMonotonicPhiBackedgeUsers(VPlan &Plan,
-                                              VPBasicBlock *HeaderVPBB,
-                                              PredicatedScalarEvolution &PSE);
 
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a

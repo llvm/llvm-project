@@ -2101,6 +2101,9 @@ public:
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
 
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
+
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
                                                  bool IsMasked, Align Alignment,
@@ -2515,6 +2518,11 @@ public:
     VPUser::addOperand(V);
   }
 
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2590,11 +2598,6 @@ public:
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
-
-  /// Returns the underlying PHINode if one exists, or null otherwise.
-  PHINode *getPHINode() const {
-    return cast_if_present<PHINode>(getUnderlyingValue());
-  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2963,27 +2966,26 @@ protected:
 };
 
 /// A recipe for handling monotonic phis. The start value is the first operand
-/// of the recipe and the incoming value from the backedge is the second
-/// operand.
+/// of the recipe, the incoming value from the backedge is the second
+/// operand, and the third operand is the step.
 class VPMonotonicPHIRecipe : public VPHeaderPHIRecipe {
-  MonotonicDescriptor Desc;
-
 public:
-  VPMonotonicPHIRecipe(PHINode *Phi, const MonotonicDescriptor &Desc,
-                       VPValue &Start, VPValue &BackedgeValue)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPMonotonicPHISC, Phi, &Start),
-        Desc(Desc) {
-
+  VPMonotonicPHIRecipe(PHINode &Phi, VPValue &Start, VPValue &BackedgeValue,
+                       VPValue &Step)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPMonotonicPHISC, &Phi, &Start) {
     addOperand(&BackedgeValue);
+    addOperand(&Step);
   }
+
+  VPValue *getStep() const { return getOperand(2); }
+
+  unsigned getNumIncoming() const override { return 2; }
 
   ~VPMonotonicPHIRecipe() override = default;
 
   VPMonotonicPHIRecipe *clone() override {
-    auto *R =
-        new VPMonotonicPHIRecipe(cast<PHINode>(getUnderlyingInstr()), Desc,
-                                 *getStartValue(), *getBackedgeValue());
-    return R;
+    return new VPMonotonicPHIRecipe(*getPHINode(), *getStartValue(),
+                                    *getBackedgeValue(), *getStep());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPMonotonicPHISC)
@@ -2994,16 +2996,11 @@ public:
 
   void execute(VPTransformState &State) override;
 
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
-
-  const MonotonicDescriptor &getDescriptor() const { return Desc; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {

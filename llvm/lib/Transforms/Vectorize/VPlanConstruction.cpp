@@ -944,9 +944,12 @@ bool VPlanTransforms::createHeaderPhiRecipes(
                                         PhiR->getDebugLoc());
 
     auto MonotonicIt = MonotonicPHIs.find(Phi);
-    if (MonotonicIt != MonotonicPHIs.end())
-      return new VPMonotonicPHIRecipe(Phi, MonotonicIt->second, *Start,
-                                      *BackedgeValue);
+    if (MonotonicIt != MonotonicPHIs.end()) {
+      VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(
+          Plan,
+          MonotonicIt->second.getPhiSCEV()->getStepRecurrence(*PSE.getSE()));
+      return new VPMonotonicPHIRecipe(*Phi, *Start, *BackedgeValue, *Step);
+    }
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");
     const RecurrenceDescriptor &RdxDesc = Reductions.lookup(Phi);

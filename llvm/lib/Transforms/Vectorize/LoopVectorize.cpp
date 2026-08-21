@@ -875,7 +875,6 @@ public:
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
-    CM_Compressed,
     CM_Scalarize,
     /// A widening decision that has been invalidated after replacing the
     /// corresponding recipe during VPlan transforms.
@@ -2414,10 +2413,10 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::Store: {
     Type *ScalarTy = getLoadStoreType(I);
     Value *Ptr = getLoadStorePointerOperand(I);
+    bool IsCompressed = Legal->getCompressedPtrInfo(Ptr).has_value();
     bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
-    bool IsCompressed =
-        !IsConsecutive && Legal->isCompressedPtr(ScalarTy, Ptr, I->getParent());
-    return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
+    return !(IsConsecutive && !IsCompressed &&
+             isLegalMaskedLoadOrStore(I, VF)) &&
            !(IsCompressed && isLegalExpandLoadOrCompressStore(I)) &&
            !Config.isLegalGatherOrScatter(I, VF);
   }
@@ -2658,8 +2657,10 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *ScalarTy = getLoadStoreType(I);
 
   // In order to be widened, the pointer should be consecutive or compressed.
-  bool Compressed = Legal->isCompressedPtr(ScalarTy, Ptr, I->getParent());
-  int Stride = Compressed ? 1 : Legal->isConsecutivePtr(ScalarTy, Ptr);
+  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
+  assert((Stride == 1 || !Legal->isCompressedLoadOrStore(I)) &&
+         "Compressed memory ops must be consecutive");
+
   if (!Stride)
     return std::nullopt;
 
@@ -2674,8 +2675,6 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   if (hasIrregularType(ScalarTy, DL))
     return std::nullopt;
 
-  if (Compressed)
-    return CM_Compressed;
   return Stride == 1 ? CM_Widen : CM_Widen_Reverse;
 }
 
@@ -2769,9 +2768,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    return (
-        WideningDecision == CM_Widen || WideningDecision == CM_Widen_Reverse ||
-        WideningDecision == CM_Interleave || WideningDecision == CM_Compressed);
+    return (WideningDecision == CM_Widen ||
+            WideningDecision == CM_Widen_Reverse ||
+            WideningDecision == CM_Interleave);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -2914,38 +2913,6 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // The induction variable and its update instruction will remain uniform.
     AddToWorklistIfAllowed(Ind);
     AddToWorklistIfAllowed(IndUpdate);
-  }
-
-  // Handle monotonic phis (similarly to induction vars).
-  for (const auto &MonotonicPHI : Legal->getMonotonicPHIs()) {
-    auto *Phi = MonotonicPHI.first;
-    auto *PhiUpdate = cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
-    const auto &Desc = MonotonicPHI.second;
-
-    auto UniformPhi = all_of(Phi->users(), [&](User *U) -> bool {
-      auto *I = cast<Instruction>(U);
-      if (I == Desc.getStepInst())
-        return true;
-      if (auto *PN = dyn_cast<PHINode>(I); PN && Desc.getChain().contains(PN))
-        return true;
-      return !TheLoop->contains(I) || Worklist.count(I) ||
-             IsVectorizedMemAccessUse(I, Phi);
-    });
-    if (!UniformPhi)
-      continue;
-
-    auto UniformPhiUpdate = all_of(PhiUpdate->users(), [&](User *U) -> bool {
-      auto *I = cast<Instruction>(U);
-      if (I == Phi)
-        return true;
-      return !TheLoop->contains(I) || Worklist.count(I) ||
-             IsVectorizedMemAccessUse(I, Phi);
-    });
-    if (!UniformPhiUpdate)
-      continue;
-
-    AddToWorklistIfAllowed(Phi);
-    AddToWorklistIfAllowed(PhiUpdate);
   }
 
   Uniforms[VF].insert_range(Worklist);
@@ -4013,7 +3980,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // 4. Compressed loads/stores (which do not support scalarization)
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
-            getWideningDecision(&I, VF) != CM_Compressed &&
+            !Legal->isCompressedLoadOrStore(&I) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
           for (const auto &[I, IC] : ScalarCosts)
             ScalarCostsVF.insert({I, IC});
@@ -4263,9 +4230,8 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
 InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
     Instruction *I, ElementCount VF, InstWidening Kind) {
-  assert(
-      (Kind == CM_Widen || Kind == CM_Widen_Reverse || Kind == CM_Compressed) &&
-      "Expected a consecutive widening decision");
+  assert((Kind == CM_Widen || Kind == CM_Widen_Reverse) &&
+         "Expected a consecutive widening decision");
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -4275,7 +4241,7 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
   if (isMaskRequired(I)) {
     Intrinsic::ID LoadIID = Intrinsic::masked_load;
     Intrinsic::ID StoreIID = Intrinsic::masked_store;
-    if (Kind == CM_Compressed) {
+    if (Legal->isCompressedLoadOrStore(I)) {
       LoadIID = Intrinsic::masked_expandload;
       StoreIID = Intrinsic::masked_compressstore;
     }
@@ -5252,14 +5218,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
+        // TODO: Add 'Compressed' hint (not needed for any targets yet).
+        if (Legal->isCompressedLoadOrStore(I))
+          return TTI::CastContextHint::None;
         return isPredicatedInst(I) ? TTI::CastContextHint::Masked
                                    : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
         llvm_unreachable("Instr did not go through cost modelling?");
-      case LoopVectorizationCostModel::CM_Compressed:
-        // TODO: Add Compressed hint (not needed for any targets yet).
       case LoopVectorizationCostModel::CM_InvalidatedDecision:
         return TTI::CastContextHint::None;
       }
@@ -5618,11 +5585,6 @@ bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
   return CM.isScalarWithPredication(I, VF) ||
          CM.isUniformAfterVectorization(I, VF) || CM.isForcedScalar(I, VF) ||
          (VF.isVector() && CM.isProfitableToScalarize(I, VF));
-}
-
-bool VPCostContext::isUniformAfterVectorization(Instruction *I,
-                                                ElementCount VF) const {
-  return CM.isUniformAfterVectorization(I, VF);
 }
 
 bool VPCostContext::isMaskRequired(Instruction *I) const {
@@ -6236,10 +6198,10 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
-  bool Compressed = Decision == LoopVectorizationCostModel::CM_Compressed;
   bool Consecutive =
-      Reverse || Compressed || Decision == LoopVectorizationCostModel::CM_Widen;
+      Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
@@ -6254,13 +6216,6 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    Type *LoadTy = Load->getType();
-
-    if (Compressed)
-      return Builder.createWidenMemIntrinsic(
-          Intrinsic::masked_expandload, {Ptr, Mask, Plan.getPoison(LoadTy)},
-          LoadTy, Load->getAlign(), *VPI, Load->getDebugLoc());
-
     auto *LoadR = Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, *VPI,
                                           Load->getDebugLoc());
     if (Reverse)
@@ -6271,12 +6226,6 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   StoreInst *Store = cast<StoreInst>(I);
   VPValue *StoredVal = VPI->getOperand(0);
-  if (Compressed)
-    return Builder.createWidenMemIntrinsic(
-        Intrinsic::masked_compressstore, {StoredVal, Ptr, Mask},
-        StoredVal->getScalarType(), Store->getAlign(), *VPI,
-        Store->getDebugLoc());
-
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
@@ -6405,6 +6354,39 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 
   return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
                                VPI->getDebugLoc());
+}
+
+VPWidenMemIntrinsicRecipe *
+VPRecipeBuilder::widenIfCompressedLoadOrStore(VPInstruction *VPI,
+                                              VPMonotonicPHIRecipe *PhiR) {
+  Instruction *I = VPI->getUnderlyingInstr();
+
+  std::optional<CompressedPtrInfo> Info = Legal->isCompressedLoadOrStore(I);
+  if (!Info || Info->MonotonicPHI != PhiR->getPHINode())
+    return nullptr;
+
+  VPBuilder::InsertPointGuard Guard(Builder);
+  Builder.setInsertPoint(VPI);
+
+  VPValue *Mask = VPI->getMask();
+  Type *AccessTy = getLoadStoreType(I);
+  Align Alignment = getLoadStoreAlignment(I);
+
+  VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
+                                                       : VPI->getOperand(1);
+  Ptr = Builder.createConsecutiveVectorPointer(Ptr, AccessTy,
+                                               /*Reverse=*/false,
+                                               VPI->getDebugLoc());
+
+  if (VPI->getOpcode() == Instruction::Load)
+    return new VPWidenMemIntrinsicRecipe(
+        Intrinsic::masked_expandload, {Ptr, Mask, Plan.getPoison(AccessTy)},
+        AccessTy, Alignment, *VPI, I->getDebugLoc());
+
+  VPValue *StoredValue = VPI->getOperand(0);
+  return new VPWidenMemIntrinsicRecipe(Intrinsic::masked_compressstore,
+                                       {StoredValue, Ptr, Mask}, AccessTy,
+                                       Alignment, *VPI, I->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -6790,6 +6772,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleCompressingPatterns, *Plan,
+                      HeaderVPBB, RecipeBuilder))
+    return nullptr;
+
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
                  Range.Start);
 
@@ -6863,9 +6849,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
-
-  RUN_VPLAN_PASS(VPlanTransforms::adjustMonotonicPhiBackedgeUsers, *Plan,
-                 HeaderVPBB, PSE);
 
   addReductionResultComputation(Plan, RecipeBuilder, Range.Start);
 
@@ -7765,7 +7748,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      assert(isa<VPWidenInductionRecipe>(&R) || isa<VPMonotonicPHIRecipe>(&R));
+      PHINode *IndPhi = cast<VPHeaderPHIRecipe>(&R)->getPHINode();
       ResumeV = IRPhiToResumeForEpi.at(IndPhi)->getUnderlyingValue();
     }
     assert(ResumeV && "Must have a resume value");
