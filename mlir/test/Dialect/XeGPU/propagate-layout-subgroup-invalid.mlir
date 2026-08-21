@@ -41,7 +41,35 @@ gpu.module @test {
     %c0 = arith.constant 0 : index
     %cst = arith.constant dense<0.000000e+00> : vector<256x128xf32>
     %tdesc = xegpu.create_nd_tdesc %arg0 : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
-    // expected-error@+1 {{Unable to determine the number of subgroups for the operation. Please check @known_block_size is properly attached as kernel attributes.}}
+    // expected-error@+1 {{Unable to determine the number of subgroups for the operation. Please check @known_block_size is properly attached as kernel attributes}}
+    xegpu.store_nd %cst, %tdesc[%c0, %c0] : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
+    gpu.return
+  }
+}
+
+// -----
+// A @known_block_size covering less than one subgroup leaves no subgroup to
+// distribute over.
+gpu.module @test {
+  gpu.func @store_block_smaller_than_subgroup(%arg0: memref<256x128xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 1>} {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant dense<0.000000e+00> : vector<256x128xf32>
+    %tdesc = xegpu.create_nd_tdesc %arg0 : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
+    // expected-error@+1 {{Unable to determine the number of subgroups for the operation.}}
+    xegpu.store_nd %cst, %tdesc[%c0, %c0] : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
+    gpu.return
+  }
+}
+
+// -----
+// A non-power-of-two @known_block_size dimension yields a subgroup count that
+// cannot be used for distribution.
+gpu.module @test {
+  gpu.func @store_non_power_of_two_block(%arg0: memref<256x128xf32>) kernel attributes {known_block_size = array<i32: 16, 3, 1>} {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant dense<0.000000e+00> : vector<256x128xf32>
+    %tdesc = xegpu.create_nd_tdesc %arg0 : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
+    // expected-error@+1 {{Unable to determine the number of subgroups for the operation.}}
     xegpu.store_nd %cst, %tdesc[%c0, %c0] : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
     gpu.return
   }

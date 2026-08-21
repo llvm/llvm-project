@@ -38,6 +38,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 
@@ -306,12 +307,11 @@ private:
   FailureOr<int64_t> getNumSgOrFail(Operation *op, int sgSize,
                                     xegpu::DistributeLayoutAttr consumerLayout);
 
-  // Cache of the known_block_size-derived subgroup count, keyed by gpu.func.
-  DenseMap<Operation *, FailureOr<int64_t>> funcNumSgCache;
-
   // Channel to surface hard failures out of the void visit callbacks.
   bool propagationFailed = false;
 
+  // Reserved for the anchor ops that are the sources of the propagation
+  // (store/dpas), whose layout must be correct.
   void markFailure(Operation *op, const llvm::Twine &message) {
     op->emitError(message);
     propagationFailed = true;
@@ -478,24 +478,25 @@ FailureOr<int64_t> LayoutInfoPropagation::getNumSgOrFail(
     if (!sgLayout.empty())
       return llvm::product_of(sgLayout);
   }
-  // Otherwise fall back to the kernel's known_block_size, cached per gpu.func.
-  FailureOr<int64_t> numSg = failure();
+  // Otherwise fall back to the kernel's known_block_size.
   if (auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>()) {
-    auto [it, inserted] =
-        funcNumSgCache.try_emplace(gpuFunc, FailureOr<int64_t>(failure()));
-    if (inserted) {
-      if (auto knownBlockSize = gpuFunc.getKnownBlockSize())
-        it->second = llvm::product_of(knownBlockSize.value()) / sgSize;
+    std::optional<ArrayRef<int32_t>> knownBlockSize =
+        gpuFunc.getKnownBlockSize();
+    if (knownBlockSize) {
+      bool isPowerOf2Block = llvm::all_of(*knownBlockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      });
+      int64_t numSg = llvm::product_of(*knownBlockSize) / sgSize;
+      if (isPowerOf2Block && numSg > 0)
+        return numSg;
     }
-    numSg = it->second;
   }
-  if (succeeded(numSg))
-    return numSg;
   // Only subgroup mode needs the count; elsewhere a missing one is benign.
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     markFailure(op, "Unable to determine the number of subgroups for the "
                     "operation. Please check @known_block_size is properly "
-                    "attached as kernel attributes.");
+                    "attached as kernel attributes, with power-of-two "
+                    "dimensions covering at least one subgroup.");
     return failure();
   }
   return int64_t{0};
@@ -523,8 +524,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
           anchorLayout, prefetch.getTensorDescType().getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        markFailure(
-            prefetch,
+        prefetch.emitWarning(
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
@@ -541,8 +541,8 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     auto layoutAttr = xegpu::setupPrefetchNdAnchorLayout(
         layoutKind, tdescTy, numSgOrErr.value_or(0), uArch);
     if (!layoutAttr) {
-      markFailure(prefetch,
-                  "Failed to determine required layout for prefetch_nd.");
+      prefetch.emitWarning(
+          "Failed to determine required layout for prefetch_nd.");
       return;
     }
     prefetchLayout = makeLayoutInfo(layoutAttr);
@@ -667,9 +667,11 @@ void LayoutInfoPropagation::visitShapeCastOp(
 
   xegpu::DistributeLayoutAttr srcLayoutAttr =
       xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  // shape_cast is not an anchor op: another consumer of the source value may
+  // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {
-    markFailure(shapeCast, "Failed to infer source layout for shape_cast; "
-                           "unsupported shape-cast pattern.");
+    shapeCast.emitWarning("Failed to infer source layout for shape_cast; "
+                          "unsupported shape-cast pattern.");
     return;
   }
 
@@ -992,8 +994,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
           anchorLayout, consumerLayoutAttr, load.getType().getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        markFailure(
-            load,
+        load.emitWarning(
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
@@ -1009,7 +1010,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
         layoutKind, load.getType(), consumerLayoutAttr, numSgOrErr.value_or(0),
         uArch);
     if (!layoutAttr) {
-      markFailure(load, "Failed to determine required layout for load_nd.");
+      load.emitWarning("Failed to determine required layout for load_nd.");
       return;
     }
     loadLayout = makeLayoutInfo(layoutAttr);
@@ -1254,8 +1255,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
           anchorLayoutAttr, consumerLayoutAttr, resVecTy.getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        markFailure(
-            load,
+        load.emitWarning(
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
