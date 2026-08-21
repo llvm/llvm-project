@@ -63,8 +63,10 @@ INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect(CodeGenOptLevel OL, char &PassID)
-    : MachineFunctionPass(PassID), OptLevel(OL) {}
+InstructionSelect::InstructionSelect(CodeGenOptLevel OL,
+                                     bool RequireRegBankSelection, char &PassID)
+    : MachineFunctionPass(PassID), OptLevel(OL),
+      RequireRegBankSelection(RequireRegBankSelection) {}
 
 /// This class observes instruction insertions/removals.
 /// InstructionSelect stores an iterator of the instruction prior to the one
