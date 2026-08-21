@@ -1309,6 +1309,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join

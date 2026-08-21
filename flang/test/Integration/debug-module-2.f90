@@ -1,5 +1,6 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-directives-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: {{.*}}debug-module-2.f90{{.*}})
 ! CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: {{.*}}debug-module-2.f90{{.*}})
