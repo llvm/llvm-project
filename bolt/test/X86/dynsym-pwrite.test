@@ -10,7 +10,7 @@
 # RUN: llvm-readelf -SW %t.so.bolt | FileCheck %s --check-prefix=SECTIONS
 
 # CHECK-NOT: We don't support extending the stream
-# CHECK: BOLT-INFO: non-allocatable section .debug_gap
+# CHECK: BOLT-INFO: binary has been compacted
 
 # DYNAMIC: Dynamic section
 # DYNAMIC: (SYMTAB) 0x2100
