@@ -668,7 +668,7 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
   if (isNeg(I0)) {
     Negs |= 2;
     Negs ^= 1;
-    I0 = Op;
+    I0 = getNegOperand(I0);
   } else if (match(I1, m_Neg(m_Value(Op)))) {
     Negs |= 2;
     Negs ^= 1;
@@ -1212,14 +1212,15 @@ ComplexDeinterleavingGraph::identifyNode(ComplexValues &Vals) {
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
                                                  Instruction *Imag) {
-  auto IsOperationSupported = [](unsigned Opcode) -> bool {
-    return Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+  auto IsOperationSupported = [](Instruction *I) -> bool {
+    unsigned Opcode = I->getOpcode();
+    return match(I, m_AnyIntrinsic<Intrinsic::fma, Intrinsic::fmuladd>()) ||
+           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
            Opcode == Instruction::FNeg || Opcode == Instruction::Add ||
            Opcode == Instruction::Sub;
   };
 
-  if (!IsOperationSupported(Real->getOpcode()) ||
-      !IsOperationSupported(Imag->getOpcode()))
+  if (!IsOperationSupported(Real) || !IsOperationSupported(Imag))
     return nullptr;
 
   std::optional<FastMathFlags> Flags;
@@ -1305,6 +1306,30 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       case Instruction::FNeg:
         Worklist.emplace_back(I->getOperand(0), !IsPositive);
         break;
+      case Instruction::Call: {
+        Value *A, *B, *C;
+        if (!match(I, m_Intrinsic<Intrinsic::fma>(m_Value(A), m_Value(B),
+                                                  m_Value(C))) &&
+            !match(I, m_Intrinsic<Intrinsic::fmuladd>(m_Value(A), m_Value(B),
+                                                      m_Value(C)))) {
+          Addends.emplace_back(I, IsPositive);
+          continue;
+        }
+
+        if (isNeg(A)) {
+          A = getNegOperand(A);
+          IsPositive = !IsPositive;
+        }
+
+        if (isNeg(B)) {
+          B = getNegOperand(B);
+          IsPositive = !IsPositive;
+        }
+
+        Muls.push_back(Product{A, B, IsPositive});
+        Worklist.emplace_back(C, IsPositive);
+        break;
+      }
       default:
         Addends.emplace_back(I, IsPositive);
         continue;

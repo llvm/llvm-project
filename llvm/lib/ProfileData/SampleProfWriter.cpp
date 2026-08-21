@@ -62,16 +62,6 @@ static cl::opt<uint64_t> RequestedVersion(
     cl::desc("Format version to write for extensible binary profiles"));
 
 static cl::opt<bool>
-    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
-                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
-                                 "64-bit MD5 hashes in Eytzinger layout"));
-
-static cl::opt<bool> WriteEytzingerNameTables(
-    "sample-profile-write-eytzinger-name-tables", cl::init(false), cl::Hidden,
-    cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
-             "FuncOffsetTable"));
-
-static cl::opt<bool>
     ExtBinaryCompositeProf("extbinary-composite-prof", cl::init(false),
                            cl::Hidden,
                            cl::desc("Use the composite profile format"));
@@ -302,7 +292,7 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
 std::error_code
 SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(SecType Type,
                                                        bool IsNested) {
-  if (WriteEytzingerNameTables) {
+  if (UseMD5IndexedTables) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
     if (!UseMD5 || FunctionSamples::ProfileIsCS)
@@ -489,7 +479,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
-  if (UseMD5 && WriteEytzingerNameTables) {
+  if (UseMD5 && UseMD5IndexedTables) {
     // Eytzinger name tables do not support CSSPGO profiles
     // (FunctionSamples::ProfileIsCS).
     if (FunctionSamples::ProfileIsCS)
@@ -620,7 +610,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
-  if (WriteMD5ProfSymList)
+  if (UseMD5ProfSymList)
     return writeMD5ProfileSymbolListSection();
   return writeStringBasedProfileSymbolListSection();
 }
@@ -676,8 +666,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
   // The setting of SecFlagCompress should happen before markSectionStart.
-  if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
-    setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
   if (Type == SecFuncMetadata &&
@@ -692,9 +680,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
-  if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
+  if (Type == SecProfileSymbolList && UseMD5ProfSymList)
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
-  if (Type == SecNameTable && WriteEytzingerNameTables && UseMD5)
+  if (Type == SecNameTable && UseMD5IndexedTables && UseMD5)
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);

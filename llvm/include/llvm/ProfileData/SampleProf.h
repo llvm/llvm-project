@@ -1745,9 +1745,6 @@ public:
   unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
-  void setToCompress(bool TC) { ToCompress = TC; }
-  bool toCompress() { return ToCompress; }
-
   std::vector<uint64_t> collectGUIDs() const {
     assert(!IsMD5 &&
            "Collecting GUIDs from existing MD5 table not yet implemented");
@@ -1777,10 +1774,6 @@ public:
 
 private:
   bool IsMD5 = false;
-  // Determine whether or not to compress the symbol list when
-  // writing it into profile. The variable is unused when the symbol
-  // list is read from an existing profile.
-  bool ToCompress = false;
   DenseSet<StringRef> Syms;
   EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
   BumpPtrAllocator Allocator;

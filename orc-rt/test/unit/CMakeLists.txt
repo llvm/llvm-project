@@ -37,6 +37,7 @@ add_orc_rt_unittest(CoreTests
   MemoryFlagsTest.cpp
   NativeDylibManagerSPSCITest.cpp
   NativeDylibManagerTest.cpp
+  ProxyTest.cpp
   QueueingRunnerTest.cpp
   RTTITest.cpp
   SPSAllocActionTest.cpp
@@ -50,6 +51,7 @@ add_orc_rt_unittest(CoreTests
   SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
   StringExtrasTest.cpp
+  StringPoolTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp

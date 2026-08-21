@@ -3208,25 +3208,23 @@ def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffe
 //
 
 // Tcgen05 alloc/dealloc related intrinsics
-
 foreach cta_group = ["cg1", "cg2"] in {
   def int_nvvm_tcgen05_alloc_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty,        // dst_ptr
-     llvm_i32_ty] ,      // num_columns
+    [llvm_anyptr_ty,     // dst_ptr
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_alloc_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty, // dst_ptr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
     [llvm_tmem_ptr_ty,   // tmem_addr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
+    [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
     [IntrConvergent, IntrInaccessibleMemOnly]>;
@@ -3429,7 +3427,7 @@ foreach sparse = [0, 1] in {
         defvar intrinsic_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
-          [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 4)>,
+          [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 5)>,
            Range<cta_group_idx,   1, 3>,
            Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
            Range<collector_b_idx, 0, 4>,
@@ -3476,7 +3474,7 @@ foreach sparse = [0, 1] in {
           defvar intrinsic_properties = !listconcat(
                     mma.common_intr_props,
                     !if(!eq(scale_d, 1), scale_d_imm_range, []),
-                    [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 4)>,
+                    [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 5)>,
                      Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
                      Range<collector_b_idx, 0, 4>,
                      ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
@@ -3542,11 +3540,20 @@ foreach sparse = [0, 1] in {
                       llvm_i32_ty,        // collector_buffer_b
                       llvm_i32_ty];       // collector_usage_b_op
       defvar nargs = !size(args);
+      defvar kind_idx = ArgIndex<nargs>;
+      defvar collector_buffer_b_idx = ArgIndex<!add(nargs, 1)>;
+      defvar collector_usage_b_op_idx = ArgIndex<!add(nargs, 2)>;
       defvar intrinsic_properties = !listconcat(
         mma.common_intr_props,
-        [Range<ArgIndex<nargs>, 0, 4>,
-         Range<ArgIndex<!add(nargs, 1)>, 0, 4>,
-         Range<ArgIndex<!add(nargs, 2)>, 0, 4>]
+        [Range<kind_idx, 0, 5>,
+         Range<collector_buffer_b_idx, 0, 4>,
+         Range<collector_usage_b_op_idx, 0, 4>,
+         ArgInfo<kind_idx, [ArgName<"kind">,
+                            ImmArgPrinter<"printTcgen05MMAKind">]>,
+         ArgInfo<collector_buffer_b_idx, [ArgName<"collector_b_buffer">,
+                                          ImmArgPrinter<"printTcgen05MMACollectorBBuffer">]>,
+         ArgInfo<collector_usage_b_op_idx, [ArgName<"collector_b">,
+                                            ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
       );
 
       def mma.record_name:

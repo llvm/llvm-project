@@ -80,6 +80,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Code actions
 
+- clangd now applies clang-tidy fix-it post-processing before exposing fixes.
+
 #### Signature help
 
 #### Cross-references
@@ -151,6 +153,20 @@ infrastructure are described first, followed by tool-specific sections.
   rewrite the return value when the constructed type has a
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
+
+- Improved {doc}`performance-inefficient-algorithm
+  <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
+  produce a fix with the container or the searched-for value missing, such as
+  `.find(43)` or `s.find()`, when either comes from a macro. The value is
+  copied as written rather than with its parentheses stripped, and no fix is
+  offered when an argument covers only part of a macro expansion, as it then
+  has no source text of its own.
+
+- Improved {doc}`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check by adding
+  the {option}`AllowReferencedInitialValues` to support the
+  `INT09-C-EX1` exception, allowing enumerators initialized by referencing
+  another enumerator in the same enum (e.g., `last = first`).
 
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:

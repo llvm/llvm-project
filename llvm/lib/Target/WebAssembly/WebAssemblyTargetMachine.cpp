@@ -516,7 +516,7 @@ bool WebAssemblyPassConfig::addPreISel() {
 }
 
 bool WebAssemblyPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
@@ -526,7 +526,7 @@ void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
   }
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
@@ -537,7 +537,7 @@ void WebAssemblyPassConfig::addPreRegBankSelect() {
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

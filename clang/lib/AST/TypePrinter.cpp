@@ -1181,9 +1181,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
-    case CC_SpirFunction:
-      // Do nothing. These CCs are not available as attributes.
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;
@@ -2213,7 +2210,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();
