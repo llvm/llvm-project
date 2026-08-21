@@ -476,7 +476,7 @@ public:
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
-  /// ISD::VP_ADD, ISD::VP_SUB, etc. It must be a legal scalar integer type,
+  /// ISD::VP_UDIV, ISD::VP_SDIV, etc. It must be a legal scalar integer type,
   /// and must be at least as large as i32. The EVL is implicitly zero-extended
   /// to any larger type.
   virtual MVT getVPExplicitVectorLengthTy() const { return MVT::i32; }
@@ -3673,10 +3673,6 @@ public:
       if (isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, ToVT))
         return ISD::STRICT_FP_TO_SINT;
       break;
-    case ISD::VP_FP_TO_UINT:
-      if (isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, ToVT))
-        return ISD::VP_FP_TO_SINT;
-      break;
     default:
       break;
     }
@@ -5770,20 +5766,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTPOP nodes.
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTPOP(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand CTLZ/CTLZ_ZERO_POISON nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_CTLZ/VP_CTLZ_ZERO_POISON nodes.
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTLS (count leading sign bits) nodes.
   /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
@@ -5802,11 +5789,6 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_CTTZ/VP_CTTZ_ZERO_POISON nodes.
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
@@ -5853,21 +5835,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_BSWAP nodes. Expands VP_BSWAP nodes with
-  /// i16/i32/i64 scalar types. Returns SDValue() if expand fails. \param N Node
-  /// to expand \returns The expansion result or SDValue() if it fails.
-  SDValue expandVPBSWAP(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand BITREVERSE nodes. Expands scalar/vector BITREVERSE nodes.
   /// Returns SDValue() if expand fails.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand VP_BITREVERSE nodes. Expands VP_BITREVERSE nodes with
-  /// i8/i16/i32/i64 scalar types. \param N Node to expand \returns The
-  /// expansion result or SDValue() if it fails.
-  SDValue expandVPBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
@@ -6030,32 +6002,30 @@ public:
       SmallVectorImpl<SDValue> &Results,
       std::optional<unsigned> CallRetResNo = {}) const;
 
-  /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
-  /// on the current target. A VP_SETCC will additionally be given a Mask
-  /// and/or EVL not equal to SDValue().
+  /// Legalize a SETCC with given LHS and RHS and condition code CC
+  /// on the current target.
   ///
   /// If the SETCC has been legalized using AND / OR, then the legalized node
   /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
-  /// will be set to false. This will also hold if the VP_SETCC has been
-  /// legalized using VP_AND / VP_OR.
+  /// will be set to false.
   ///
-  /// If the SETCC / VP_SETCC has been legalized by using
+  /// If the SETCC has been legalized by using
   /// getSetCCSwappedOperands(), then the values of LHS and RHS will be
   /// swapped, CC will be set to the new condition, and NeedInvert will be set
   /// to false.
   ///
-  /// If the SETCC / VP_SETCC has been legalized using the inverse condcode,
+  /// If the SETCC has been legalized using the inverse condcode,
   /// then LHS and RHS will be unchanged, CC will set to the inverted condcode,
   /// and NeedInvert will be set to true. The caller must invert the result of
   /// the SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to
   /// swap the effect of a true/false result.
   ///
-  /// \returns true if the SETCC / VP_SETCC has been legalized, false if it
+  /// \returns true if the SETCC has been legalized, false if it
   /// hasn't.
   bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
-                             SDValue &RHS, SDValue &CC, SDValue Mask,
-                             SDValue EVL, bool &NeedInvert, const SDLoc &dl,
-                             SDValue &Chain, bool IsSignaling = false) const;
+                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
+                             const SDLoc &dl, SDValue &Chain,
+                             bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
