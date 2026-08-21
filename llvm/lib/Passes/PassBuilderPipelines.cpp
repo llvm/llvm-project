@@ -1216,8 +1216,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
   // years, it should be re-analyzed.
-  MPM.addPass(
-      IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/!isLTOPreLink(Phase))));
+  // FuncSpec at O3 non-LTO is deferred to after buildInlinerPipeline
+  // where LoopRotate and SROA expose better specialization opportunities.
+  MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
+      !isLTOPreLink(Phase) &&
+      !(Level == OptimizationLevel::O3 &&
+        Phase == ThinOrFullLTOPhase::None))));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
@@ -1322,11 +1326,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   else
     MPM.addPass(buildInlinerPipeline(Level, Phase));
 
-  // Run a second IPSCCP pass at O3 to resolve function specialization
-  // opportunities exposed by loop rotation reference parameters
-  // (e.g., Fortran pass-by-reference).
+  // Run IPSCCP with FunctionSpecialization after the inliner pipeline
+  // where LoopRotate and SROA expose better specialization opportunities.
   if (Level == OptimizationLevel::O3 && Phase == ThinOrFullLTOPhase::None)
-    MPM.addPass(llvm::IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/true)));
+    MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/true)));
 
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.

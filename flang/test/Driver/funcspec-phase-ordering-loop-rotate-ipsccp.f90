@@ -45,4 +45,4 @@ end module brute_force
 ! PASS-O3-PIPE:      Running pass: DeadArgumentEliminationPass on [module]
 
 ! PASS-O3-IR:        define void @{{.*}}top_level_caller
-! PASS-O3-IR:        label %{{.*}}digits_2{{.*}}.specialized.
+! PASS-O3-IR:        call fastcc void @{{.*}}digits_2{{.*}}.specialized.
