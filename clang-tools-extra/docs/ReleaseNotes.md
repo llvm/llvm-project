@@ -154,6 +154,10 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Fixed a crash in {doc}`modernize-raw-string-literal
+  <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
+  literals created for raw user-defined literal operators, such as `12_w`.
+
 - Improved {doc}`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
   rewrite the return value when the constructed type has a
