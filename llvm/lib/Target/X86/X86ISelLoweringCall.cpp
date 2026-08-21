@@ -2085,6 +2085,29 @@ X86TargetLowering::ByValCopyKind X86TargetLowering::ByValNeedsCopyForTailCall(
     return CopyViaTemp;
 }
 
+static bool MatchingStackOffset(SDValue Arg, unsigned Offset,
+                                ISD::ArgFlagsTy Flags, MachineFrameInfo &MFI,
+                                const MachineRegisterInfo *MRI,
+                                const X86InstrInfo *TII, const CCValAssign &VA);
+
+static bool canReuseIncomingTailCallStackArg(SDValue Arg, int32_t Offset,
+                                             ISD::ArgFlagsTy Flags,
+                                             MachineFunction &MF,
+                                             const X86Subtarget &Subtarget,
+                                             const CCValAssign &VA) {
+  // ByVal tailcall arguments have extra temporary-copy handling above this
+  // point. Keep the first reuse pass limited to direct scalar/vector stack
+  // arguments, matching the common musttail same-signature case.
+  if (Flags.isByVal())
+    return false;
+
+  if (Offset < 0)
+    return false;
+
+  return MatchingStackOffset(Arg, unsigned(Offset), Flags, MF.getFrameInfo(),
+                             &MF.getRegInfo(), Subtarget.getInstrInfo(), VA);
+}
+
 SDValue
 X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
@@ -2533,8 +2556,14 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (Flags.isInAlloca() || Flags.isPreallocated())
         continue;
       // Create frame index.
-      int32_t Offset = VA.getLocMemOffset()+FPDiff;
-      uint32_t OpSize = (VA.getLocVT().getSizeInBits()+7)/8;
+      int32_t Offset = VA.getLocMemOffset() + FPDiff;
+      uint32_t OpSize = (VA.getLocVT().getSizeInBits() + 7) / 8;
+
+      if (Is64Bit && isTailCall &&
+          canReuseIncomingTailCallStackArg(Arg, Offset, Flags, MF, Subtarget,
+                                           VA))
+        continue;
+
       FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
       FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
