@@ -54,6 +54,8 @@
 
 using namespace clang;
 using namespace clang::hlsl;
+using llvm::hlsl::IOType;
+using llvm::hlsl::SemanticStageInfo;
 using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
 static CXXRecordDecl *createHostLayoutStruct(Sema &S,
