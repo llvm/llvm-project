@@ -108,22 +108,6 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
   return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
 }
 
-/// Skip tokens until reaching the matching closing parenthesis.
-/// Handles nested parentheses correctly.
-static void skipToMatchingParen(Parser &P) {
-  int ParenDepth = 0;
-  while ((P.getCurToken().isNot(tok::r_paren) || ParenDepth != 0) &&
-         P.getCurToken().isNot(tok::annot_pragma_openmp_end) &&
-         P.getCurToken().isNot(tok::eof)) {
-    if (P.getCurToken().is(tok::l_paren))
-      ParenDepth++;
-    if (P.getCurToken().is(tok::r_paren) && ParenDepth > 0)
-      ParenDepth--;
-    if (ParenDepth > 0 || P.getCurToken().isNot(tok::r_paren))
-      P.ConsumeAnyToken();
-  }
-}
-
 static DeclarationName parseOpenMPReductionId(Parser &P) {
   Token Tok = P.getCurToken();
   Sema &Actions = P.getActions();
@@ -2740,22 +2724,20 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
     }
 
-    // If we have user conditions that couldn't be resolved at compile time,
-    // parse all variants and the body.
+    // Different directives have different data-sharing attributes, so each
+    // variant needs its own CapturedStmt with proper DSA context.
+    // We manually cache body tokens and inject them for each variant parse.
     if (HasUserCondition) {
-      SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
       SmallVector<OpenMPClauseKind, 4> ClauseKinds;
-
-      // TODO: Phase 2 - Parse directive clauses and store them.
-      // For now in Phase 1, we only extract directive kinds.
-      // Sema will extract conditions from TraitInfos.
+      SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
+      SmallVector<SmallVector<OMPClause *, 5>, 4> DirectiveClauses;
 
       BalancedDelimiterTracker T(*this, tok::l_paren,
                                  tok::annot_pragma_openmp_end);
       while (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        OpenMPClauseKind CKind = Tok.isAnnotation()
-                                     ? OMPC_unknown
-                                     : getOpenMPClauseKind(PP.getSpelling(Tok));
+        OpenMPClauseKind CKind =
+            Tok.isAnnotation() ? OMPC_unknown
+                               : getOpenMPClauseKind(PP.getSpelling(Tok));
         SourceLocation ClauseLoc = ConsumeToken();
 
         // Parse '('.
@@ -2770,33 +2752,170 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             ConsumeAnyToken();
         }
 
-        // Parse directive kind only for now.
+        // Parse the directive kind and clauses manually.
         OpenMPDirectiveKind DKind = OMPD_unknown;
+        SmallVector<OMPClause *, 5> Clauses;
+
         if (!Tok.is(tok::r_paren)) {
+          // Parse directive kind (handles combined directives like
+          // 'parallel for simd').
           DKind = parseOpenMPDirectiveKind(*this);
-          skipToMatchingParen(*this);
+
+          // Consume the last token of the directive name.
+          if (Tok.isNot(tok::annot_pragma_openmp_end) &&
+              Tok.isNot(tok::r_paren))
+            ConsumeAnyToken();
+
+          // Parse clauses for this directive if any exist.
+          // We stop at ')' which ends the metadirective variant.
+          while (Tok.isNot(tok::r_paren) &&
+                 Tok.isNot(tok::annot_pragma_openmp_end)) {
+            // Check if current token is a clause keyword.
+            OpenMPClauseKind ClauseKind =
+                Tok.isAnnotation()
+                    ? OMPC_unknown
+                    : getOpenMPClauseKind(PP.getSpelling(Tok));
+
+            // If not a clause keyword, we've parsed all clauses.
+            if (ClauseKind == OMPC_unknown)
+              break;
+
+            Actions.OpenMP().StartOpenMPClause(ClauseKind);
+            OMPClause *Clause =
+                ParseOpenMPClause(DKind, ClauseKind,
+                                  /* FirstClause */ Clauses.empty());
+            Actions.OpenMP().EndOpenMPClause();
+
+            if (Clause)
+              Clauses.push_back(Clause);
+
+            // Check for comma separator between clauses.
+            if (Tok.is(tok::comma))
+              ConsumeAnyToken();
+            else if (Tok.isNot(tok::r_paren) &&
+                     Tok.isNot(tok::annot_pragma_openmp_end)) {
+              // Unexpected token - not comma, not closing paren.
+              break;
+            }
+          }
         }
 
         // Parse ')'.
         if (Tok.is(tok::r_paren))
           T.consumeClose();
 
-        DirectiveKinds.push_back(DKind);
         ClauseKinds.push_back(CKind);
+        DirectiveKinds.push_back(DKind);
+        DirectiveClauses.push_back(Clauses);
       }
 
       SourceLocation EndLoc = Tok.getLocation();
       ConsumeAnnotationToken();
 
-      // Parse the body statement.
-      StmtResult AssociatedStmt = ParseStatement();
-      if (AssociatedStmt.isInvalid())
-        return StmtError();
+      // Manually cache all body tokens for unlimited replay.
+      SmallVector<Token, 64> BodyTokens;
 
-      // Pass to Sema for Phase 2 processing.
+      // Cache the current token before enabling backtracking.
+      BodyTokens.push_back(Tok);
+
+      // Parse the statement once and cache remaining tokens.
+      PP.EnableBacktrackAtThisPos();
+      {
+        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        StmtResult BodyStmt = ParseStatement();
+        if (BodyStmt.isInvalid()) {
+          PP.Backtrack();
+          return StmtError();
+        }
+      }
+
+      // Get cached tokens and commit (keeps stream advanced).
+      ArrayRef<Token> CachedRange = PP.GetAndCommitBacktrackedTokens();
+      BodyTokens.append(CachedRange.begin(), CachedRange.end());
+
+      if (BodyTokens.empty()) {
+        Diag(Tok, diag::err_expected_statement);
+        return StmtError();
+      }
+
+      // Add an EOF token with marker to end the injected stream.
+      Token EofToken;
+      EofToken.startToken();
+      EofToken.setKind(tok::eof);
+      EofToken.setLocation(Tok.getLocation());
+      EofToken.setEofData(this);
+      BodyTokens.push_back(EofToken);
+
+      // Parse the body separately for each variant to get correct DSA.
+      SmallVector<Stmt *, 4> VariantBodies;
+      for (unsigned i = 0; i < DirectiveKinds.size(); ++i) {
+        if (DirectiveKinds[i] == OMPD_unknown) {
+          VariantBodies.push_back(nullptr);
+          continue;
+        }
+
+        auto TokensCopy = std::make_unique<Token[]>(BodyTokens.size());
+        std::copy(BodyTokens.begin(), BodyTokens.end(), TokensCopy.get());
+        PP.EnterTokenStream(std::move(TokensCopy), BodyTokens.size(),
+                      /*DisableMacroExpansion=*/false,
+                      /*IsReinject=*/false);
+        // Consume first token from the injected stream to update Tok.
+        ConsumeAnyToken();
+
+        // Start DSA block for this directive.
+        Actions.OpenMP().StartOpenMPDSABlock(DirectiveKinds[i],
+                                             DeclarationNameInfo(),
+                                             getCurScope(), Loc);
+
+        // Start captured region for this directive.
+        Actions.OpenMP().ActOnOpenMPRegionStart(DirectiveKinds[i],
+                                                getCurScope());
+
+        // Parse the body.
+        StmtResult Body;
+        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        {
+          Sema::CompoundScopeRAII Scope(Actions);
+          Body = ParseStatement();
+        }
+
+        if (Body.isInvalid())
+          return StmtError();
+
+        // End captured region - wraps body in CapturedStmt.
+        Body = Actions.OpenMP().ActOnOpenMPRegionEnd(Body,
+                                                     DirectiveClauses[i]);
+        if (Body.isInvalid())
+          return StmtError();
+
+        // End DSA block for this variant.
+        Actions.OpenMP().EndOpenMPDSABlock(Body.get());
+
+        VariantBodies.push_back(Body.get());
+
+        // Clean up this variant's injected token stream.
+        // Skip cleanup for the last variant to avoid stream corruption.
+        if (i < DirectiveKinds.size() - 1) {
+          while (Tok.isNot(tok::eof))
+            ConsumeAnyToken();
+
+          // Consume the marked EOF to pop the injected stream.
+          if (Tok.is(tok::eof) && Tok.getEofData() == this)
+            ConsumeAnyToken();
+        }
+      }
+
+      // The last variant's token stream remains active. The variants'
+      // CapturedStmts already include the body.
+
+      // Convert DirectiveClauses to ArrayRef<ArrayRef<OMPClause *>>.
+      SmallVector<ArrayRef<OMPClause *>, 4> ClausesArrayRefs;
+      for (const auto &Clauses : DirectiveClauses)
+        ClausesArrayRefs.push_back(Clauses);
+
       return Actions.OpenMP().ActOnOpenMPMetaDirective(
           Loc, EndLoc, TraitInfos, ClauseKinds, DirectiveKinds,
-          AssociatedStmt.get());
+          ClausesArrayRefs, VariantBodies);
     }
 
     int Idx = 0;
