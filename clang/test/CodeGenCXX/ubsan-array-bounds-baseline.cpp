@@ -146,7 +146,7 @@ void x_member_call_static(int i) { msa[i].stat(); }
 void x_member_dot(int i) { ma[i].f = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z14x_member_arrowi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_member_arrow(int i) { (&ma[i])->f = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z20x_trivial_assign_lhsi(

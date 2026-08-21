@@ -113,15 +113,15 @@ void c_agg_load_deref_addr(int i) { aggl = *&sa[i]; }
 void c_member_dot(int i) { sa[i].x = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_member_dot_deref_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_member_dot_deref_addr(int i) { (*&sa[i]).x = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_member_dot_deref_addr_load(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_member_dot_deref_addr_load(int i) { v = (*&sa[i]).x; }
 
 // CHECK-LABEL: define {{.*}}@c_member_arrow(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_member_arrow(int i) { (&sa[i])->x = 1; }
 
 // Taking the address of a member is not one of the rewrites in C99 6.5.3.2p3,
@@ -131,7 +131,7 @@ void c_member_arrow(int i) { (&sa[i])->x = 1; }
 void c_member_dot_addr(int i) { p = &sa[i].x; }
 
 // CHECK-LABEL: define {{.*}}@c_member_arrow_addr(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_member_arrow_addr(int i) { p = &(&sa[i])->x; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_real(

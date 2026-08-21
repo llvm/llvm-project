@@ -5623,7 +5623,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (E->isArrow()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo,
+                                            NotKnownNonNull, ObjectRequired);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
     bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
@@ -5634,8 +5635,10 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr, PtrTy,
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
     BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
-  } else
-    BaseLV = EmitCheckedLValue(BaseExpr, TCK_MemberAccess);
+  } else {
+    BaseLV = EmitLValue(BaseExpr, NotKnownNonNull, ObjectRequired);
+    EmitTypeCheck(TCK_MemberAccess, BaseExpr, BaseLV);
+  }
 
   NamedDecl *ND = E->getMemberDecl();
   if (auto *Field = dyn_cast<FieldDecl>(ND)) {
