@@ -135,6 +135,15 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   }
 }
 
+SemanticInterpretation
+hlsl::getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                            Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  for (const SemanticStageInfo &Info : getAvailableStages(SemanticKind))
+    if (Info.Stage == ShaderStage && (Info.AllowedIOTypesMask & IOTy))
+      return Info.Interpretation;
+  return SemanticInterpretation::Invalid;
+}
+
 Expected<SemanticSignatureElement>
 SemanticSignatureElement::fromMetadata(const MDNode *Node) {
   // Operand positions within a signature element metadata node.

@@ -135,6 +135,10 @@ LLVM_ABI dxbc::PSV::SemanticKind getSemanticKind(StringRef SemanticName);
 LLVM_ABI ArrayRef<SemanticStageInfo>
 getAvailableStages(dxbc::PSV::SemanticKind SemanticKind);
 
+LLVM_ABI SemanticInterpretation
+getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                      Triple::EnvironmentType ShaderStage, IOType IOTy);
+
 } // namespace hlsl
 } // namespace llvm
 
