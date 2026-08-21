@@ -31,17 +31,13 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
-// Enumerate the GPUs described by the KFD topology rooted at \p NodePath.
-// Exposed so unit tests can run against a synthetic topology; it is not
-// declared in a header.
+// Exposed for testing
 int printGPUsByKFD(StringRef NodePath) {
   SmallVector<std::pair<long, long>> Devices;
   std::error_code EC;
   sys::fs::directory_iterator Begin(NodePath, EC), End;
 
-  // Fail if the sysfs topology does not exist so that the caller can fall
-  // back to the HIP runtime. This can happen when the amdgpu kernel module
-  // is not loaded (e.g., WSL).
+  // Fail if the sysfs topology does not exist (e.g., WSL)
   if (EC)
     return 1;
 
