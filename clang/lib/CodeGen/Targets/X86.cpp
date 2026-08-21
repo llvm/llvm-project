@@ -2204,8 +2204,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitField())
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && i->isZeroLengthBitField())
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2246,7 +2247,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitField());
+        assert(!i->isZeroLengthBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 
@@ -2628,10 +2629,12 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                                   SourceOffset);
   }
 
-  // A 128-bit integer can be passed safely as an i128, but only if it starts at
-  // this offset; otherwise it spans more than the eightbyte we're describing.
-  if (IRType->isIntegerTy(128) && IROffset == 0)
+  // if we have a 128-bit integer, we can pass it safely using an i128
+  // so we return that
+  if (IRType->isIntegerTy(128)) {
+    assert(IROffset == 0);
     return IRType;
+  }
 
   // Okay, we don't have any better idea of what to pass, so we pass this in an
   // integer register that isn't too big to fit the rest of the struct.
@@ -2737,13 +2740,10 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getExtend(RetTy);
     }
 
-    // An i128 covers both eightbytes, so it only describes the value if the
-    // high eightbyte is INTEGER too; otherwise it is bit-field storage whose
-    // high eightbyte holds no data.
     if (ResType->isIntegerTy(128)) {
-      if (Hi == Integer)
-        return ABIArgInfo::getDirect(ResType);
-      ResType = llvm::Type::getInt64Ty(getVMContext());
+      // i128 are passed directly
+      assert(Hi == Integer);
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 
@@ -2890,13 +2890,10 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
-    // See the matching comment in classifyReturnType.
     if (ResType->isIntegerTy(128)) {
-      if (Hi == Integer) {
-        ++neededInt;
-        return ABIArgInfo::getDirect(ResType);
-      }
-      ResType = llvm::Type::getInt64Ty(getVMContext());
+      assert(Hi == Integer);
+      ++neededInt;
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 

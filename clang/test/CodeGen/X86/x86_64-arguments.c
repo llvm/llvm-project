@@ -590,17 +590,17 @@ _BitInt(128) f74(__uint128_t b, __uint128_t c, __uint128_t d, long e, _BitInt(12
   return a;
 }
 
-// check that a run of (u)int128_t bit-fields, which is lowered to an i128
-// access unit, is not passed as an i128 when only one eightbyte is INTEGER
+// check that non-zero-width unnamed bit-fields classify INTEGER like named
+// ones, so a run of (u)int128_t bit-fields is passed and returned as an i128
 struct s75 {
   __uint128_t : 124;
   __uint128_t a : 4;
 };
-// CHECK-LABEL: define{{.*}} i64 @f75()
+// CHECK-LABEL: define{{.*}} i128 @f75()
 struct s75 f75(void) {
   return (struct s75){0};
 }
-// CHECK-LABEL: define{{.*}} void @f76(i64 %a.coerce)
+// CHECK-LABEL: define{{.*}} void @f76(i128 %a.coerce)
 void f76(struct s75 a) {
 }
 
@@ -608,12 +608,38 @@ struct s77 {
   __uint128_t a : 4;
   __uint128_t : 124;
 };
-// CHECK-LABEL: define{{.*}} i64 @f77()
+// CHECK-LABEL: define{{.*}} i128 @f77()
 struct s77 f77(void) {
   return (struct s77){0};
 }
-// CHECK-LABEL: define{{.*}} void @f78(i64 %a.coerce)
+// CHECK-LABEL: define{{.*}} void @f78(i128 %a.coerce)
 void f78(struct s77 a) {
+}
+
+// an unnamed bit-field filling the low eightbyte makes it INTEGER
+struct s79 {
+  long : 64;
+  long a;
+};
+// CHECK-LABEL: define{{.*}} { i64, i64 } @f79()
+struct s79 f79(void) {
+  return (struct s79){0};
+}
+// CHECK-LABEL: define{{.*}} void @f80(i64 %a.coerce0, i64 %a.coerce1)
+void f80(struct s79 a) {
+}
+
+// an unnamed bit-field in the high eightbyte is INTEGER while the low is SSE
+struct s81 {
+  double d;
+  int : 32;
+};
+// CHECK-LABEL: define{{.*}} { double, i32 } @f81()
+struct s81 f81(void) {
+  return (struct s81){0};
+}
+// CHECK-LABEL: define{{.*}} void @f82(double %a.coerce0, i32 %a.coerce1)
+void f82(struct s81 a) {
 }
 
 /// The synthesized __va_list_tag does not have file/line fields.
