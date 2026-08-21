@@ -1444,13 +1444,15 @@ multiclass DS_Real_gfx12<bits<8> op,
 multiclass DS_Real_gfx13<bits<8> op,
                          DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
                          string name = !tolower(NAME)> {
-  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
-    def _gfx13 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
-                                                     SIEncodingFamily.GFX13,
-                                                     name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+  let AssemblerPredicate = isGFX13Only in {
+    let DecoderNamespace = "GFX13" in
+      def _gfx13 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                       SIEncodingFamily.GFX13,
+                                                       name, /*hasGDS=*/false>;
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 // Helper to avoid repeating the pseudo-name if we only need to set
