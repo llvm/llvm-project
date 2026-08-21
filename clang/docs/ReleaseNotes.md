@@ -580,6 +580,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Android Support
 
+- Enabled PAC and BTI by default for AArch64 Android targets.
+
 #### Windows Support
 
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
