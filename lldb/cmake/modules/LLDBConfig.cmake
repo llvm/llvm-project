@@ -64,6 +64,12 @@ endif()
 
 option(LLDB_ENABLE_FORTRAN "Enable Fortran support in LLDB" ${LLDB_DEFAULT_ENABLE_FORTRAN})
 
+if(LLDB_ENABLE_FORTRAN)
+  message(STATUS "Fortran support in LLDB enabled.")
+else()
+  message(STATUS "Fortran support in LLDB disabled.")
+endif()
+
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
