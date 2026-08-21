@@ -125,3 +125,51 @@ The following container fields are derived from the operands above:
 
 A metadata node of one or more semantic indices. Its length must equal the
 `Rows` field of the containing signature element.
+
+## Signature Packing
+
+Before a semantic signature is serialized, each element that participates in
+packing is assigned a location in a fixed register space of 32 rows and 4
+columns. An element occupies a rectangle of `Rows` consecutive registers and
+`Cols` consecutive components. Its allocated location is recorded in
+`StartRow` and `StartCol`.
+
+The packing helper classifies each element from its semantic kind, shader stage,
+and I/O type. Elements with the `NotAllocated` interpretation are accessed by
+other means and retain the unallocated row and column sentinels. The remaining
+interpretations accepted by a packing algorithm are assigned locations
+according to that algorithm's rules. If an eligible element cannot be placed,
+packing returns a `SignaturePackingError` identifying the element that failed.
+
+The packing APIs and their in-memory element representation are declared in
+[SemanticSignaturePacking.h].
+
+[SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
+
+### Stacked Packing
+
+Stacked packing is used for a vertex shader input signature. Eligible elements
+are visited in declaration order. Each starts at column zero of the first row
+after the preceding element, and a multi-row element occupies consecutive rows.
+Elements are never co-packed into the unused columns of another element, and
+interpolation mode, component type, and semantic interpretation do not otherwise
+affect placement.
+
+For example:
+
+```hlsl
+struct VSIn {
+  float A       : A;
+  float3 B[2]   : B;
+  uint VertexID : SV_VertexID;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: A.x        | unused.yzw
+reg1: B[0].xyz   | unused.w
+reg2: B[1].xyz   | unused.w
+reg3: VertexID.x | unused.yzw
+```
