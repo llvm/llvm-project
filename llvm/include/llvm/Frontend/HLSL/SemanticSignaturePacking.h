@@ -21,6 +21,9 @@
 
 namespace llvm::hlsl {
 
+static constexpr unsigned MaxSignatureRows = 32;
+static constexpr unsigned MaxSignatureCols = 4;
+
 /// Denotes the element that could not be packed and why.
 class SignaturePackingError : public ErrorInfo<SignaturePackingError> {
 public:
