@@ -4307,6 +4307,7 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
+      {"cublas", "sgemm", MatchesCublasGemm},
       {"cublas", "dgemm", MatchesCublasGemm},
       {"cublas", "zgemm", MatchesCublasGemm},
   };
