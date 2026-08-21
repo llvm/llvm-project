@@ -5310,6 +5310,34 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return NewICmp;
 
   const CmpInst::Predicate Pred = I.getPredicate();
+
+  // icmp sgt X, (X | C) --> icmp sge X, 0, when C is negative
+  // icmp sle X, (X | C) --> icmp slt X, 0
+  // icmp slt X, (X | C) --> false, icmp sge X, (X | C) --> true
+  if (ICmpInst::isSigned(Pred)) {
+    const APInt *C;
+    Value *X = Op0;
+    CmpInst::Predicate P = Pred;
+    if (!match(Op1, m_Or(m_Specific(Op0), m_APInt(C)))) {
+      X = Op1;
+      P = ICmpInst::getSwappedPredicate(Pred);
+      if (!match(Op0, m_Or(m_Specific(Op1), m_APInt(C))))
+        X = nullptr;
+    }
+    if (X && C->isNegative()) {
+      if (P == ICmpInst::ICMP_SGT)
+        return new ICmpInst(ICmpInst::ICMP_SGE, X,
+                            Constant::getNullValue(X->getType()));
+      if (P == ICmpInst::ICMP_SLE)
+        return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                            Constant::getNullValue(X->getType()));
+      if (P == ICmpInst::ICMP_SLT)
+        return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+      if (P == ICmpInst::ICMP_SGE)
+        return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+    }
+  }
+
   Value *X;
 
   // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.
