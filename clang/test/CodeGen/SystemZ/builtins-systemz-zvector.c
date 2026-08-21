@@ -58,12 +58,14 @@ volatile vector double vd2;
 volatile signed char sc;
 volatile signed short ss;
 volatile signed int si;
-volatile signed long long sl;
+volatile signed long long sl1;
+volatile signed long long sl2;
 volatile signed __int128 slll;
 volatile unsigned char uc;
 volatile unsigned short us;
 volatile unsigned int ui;
-volatile unsigned long long ul;
+volatile unsigned long long ul1;
+volatile unsigned long long ul2;
 volatile unsigned __int128 ulll;
 volatile double d;
 
@@ -769,9 +771,9 @@ void test_core(void) {
   // CHECK: call void @llvm.s390.vstl(<16 x i8> %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
   // CHECK-ASM: vstl
 
-  vsl = vec_load_pair(sl + 1, sl - 1);
+  vsl = vec_load_pair(sl1 + 1, sl2 - 1);
   // CHECK-ASM: vlvgp
-  vul = vec_load_pair(ul + 1, ul - 1);
+  vul = vec_load_pair(ul1 + 1, ul1 - 1);
   // CHECK-ASM: vlvgp
 
   vuc = vec_genmask(0);
