@@ -259,10 +259,9 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
   auto Version = getVersionKey(*Obj, "Version");
   if (!Version)
     return std::nullopt;
-  // "DefaultDeploymentTarget" is usually the same as "Version", but the two
-  // can diverge, so prefer "DefaultDeploymentTarget" when it's present.
-  VersionTuple DefaultDeploymentTarget =
-      getVersionKey(*Obj, "DefaultDeploymentTarget").value_or(*Version);
+  auto DefaultDeploymentTarget = getVersionKey(*Obj, "DefaultDeploymentTarget");
+  if (!DefaultDeploymentTarget)
+    return std::nullopt;
   auto MaximumDeploymentVersion =
       getVersionKey(*Obj, "MaximumDeploymentTarget");
   if (!MaximumDeploymentVersion)
@@ -322,7 +321,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
 
   return DarwinSDKInfo(std::move(FilePath), OSAndEnvironment.first,
                        OSAndEnvironment.second, std::move(*Version),
-                       DisplayName, DefaultDeploymentTarget,
+                       DisplayName, std::move(*DefaultDeploymentTarget),
                        std::move(*MaximumDeploymentVersion),
                        std::move(PlatformInfos), std::move(VersionMappings));
 }
