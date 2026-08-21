@@ -9,8 +9,12 @@
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8mf8
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 5)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 5)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 2
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8mf8(size_t avl) {
   return __riscv_vsetvl_e8mf8(avl);
@@ -19,8 +23,12 @@ size_t test_vsetvl_e8mf8(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8mf4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 6)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 4
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8mf4(size_t avl) {
   return __riscv_vsetvl_e8mf4(avl);
@@ -29,8 +37,12 @@ size_t test_vsetvl_e8mf4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8mf2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 7)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 8
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8mf2(size_t avl) {
   return __riscv_vsetvl_e8mf2(avl);
@@ -39,8 +51,12 @@ size_t test_vsetvl_e8mf2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8m1
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 0)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8m1(size_t avl) {
   return __riscv_vsetvl_e8m1(avl);
@@ -49,8 +65,12 @@ size_t test_vsetvl_e8m1(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8m2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 1)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 32
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8m2(size_t avl) {
   return __riscv_vsetvl_e8m2(avl);
@@ -59,8 +79,12 @@ size_t test_vsetvl_e8m2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8m4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 2)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 64
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8m4(size_t avl) {
   return __riscv_vsetvl_e8m4(avl);
@@ -69,8 +93,12 @@ size_t test_vsetvl_e8m4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e8m8
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 3)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 128
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e8m8(size_t avl) {
   return __riscv_vsetvl_e8m8(avl);
@@ -79,8 +107,12 @@ size_t test_vsetvl_e8m8(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16mf4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 6)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 6)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 2
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16mf4(size_t avl) {
   return __riscv_vsetvl_e16mf4(avl);
@@ -89,8 +121,12 @@ size_t test_vsetvl_e16mf4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16mf2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 7)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 4
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16mf2(size_t avl) {
   return __riscv_vsetvl_e16mf2(avl);
@@ -99,8 +135,12 @@ size_t test_vsetvl_e16mf2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16m1
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 0)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 8
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16m1(size_t avl) {
   return __riscv_vsetvl_e16m1(avl);
@@ -109,8 +149,12 @@ size_t test_vsetvl_e16m1(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16m2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 1)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16m2(size_t avl) {
   return __riscv_vsetvl_e16m2(avl);
@@ -119,8 +163,12 @@ size_t test_vsetvl_e16m2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16m4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 2)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 32
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16m4(size_t avl) {
   return __riscv_vsetvl_e16m4(avl);
@@ -129,8 +177,12 @@ size_t test_vsetvl_e16m4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e16m8
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 3)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 64
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e16m8(size_t avl) {
   return __riscv_vsetvl_e16m8(avl);
@@ -139,8 +191,12 @@ size_t test_vsetvl_e16m8(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e32mf2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 7)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 7)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 2
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e32mf2(size_t avl) {
   return __riscv_vsetvl_e32mf2(avl);
@@ -149,8 +205,12 @@ size_t test_vsetvl_e32mf2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e32m1
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 0)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 4
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e32m1(size_t avl) {
   return __riscv_vsetvl_e32m1(avl);
@@ -159,8 +219,12 @@ size_t test_vsetvl_e32m1(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e32m2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 1)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 8
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e32m2(size_t avl) {
   return __riscv_vsetvl_e32m2(avl);
@@ -169,8 +233,12 @@ size_t test_vsetvl_e32m2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e32m4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 2)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e32m4(size_t avl) {
   return __riscv_vsetvl_e32m4(avl);
@@ -179,8 +247,12 @@ size_t test_vsetvl_e32m4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e32m8
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 3)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 32
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e32m8(size_t avl) {
   return __riscv_vsetvl_e32m8(avl);
@@ -189,8 +261,12 @@ size_t test_vsetvl_e32m8(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e64m1
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 0)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 2
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e64m1(size_t avl) {
   return __riscv_vsetvl_e64m1(avl);
@@ -199,8 +275,12 @@ size_t test_vsetvl_e64m1(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e64m2
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 1)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 1)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 4
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e64m2(size_t avl) {
   return __riscv_vsetvl_e64m2(avl);
@@ -209,8 +289,12 @@ size_t test_vsetvl_e64m2(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e64m4
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 2)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 2)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 8
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e64m4(size_t avl) {
   return __riscv_vsetvl_e64m4(avl);
@@ -219,8 +303,12 @@ size_t test_vsetvl_e64m4(size_t avl) {
 // CHECK-RV64-LABEL: define dso_local i64 @test_vsetvl_e64m8
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 3)
-// CHECK-RV64-NEXT:    ret i64 [[TMP0]]
+// CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i1 true, i1 [[TMP1]]
+// CHECK-RV64-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+// CHECK-RV64-NEXT:    ret i64 [[VL]]
 //
 size_t test_vsetvl_e64m8(size_t avl) {
   return __riscv_vsetvl_e64m8(avl);

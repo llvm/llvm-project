@@ -305,7 +305,55 @@ emitRVVVsetvliBuiltin(CodeGenFunction *CGF, const CallExpr *E,
   auto &Builder = CGF->Builder;
   auto &CGM = CGF->CGM;
   llvm::Function *F = CGM.getIntrinsic(ID, {ResultType});
-  return Builder.CreateCall(F, Ops, "");
+  llvm::Value *VSetVL = Builder.CreateCall(F, Ops, "vl");
+
+  bool HasAVL = ID == llvm::Intrinsic::riscv_vsetvli;
+  assert((HasAVL || ID == llvm::Intrinsic::riscv_vsetvlimax) &&
+         "Unexpected vsetvl intrinsic");
+
+  unsigned SEW = llvm::RISCVVType::decodeVSEW(
+      cast<ConstantInt>(Ops[HasAVL])->getZExtValue());
+  auto VLMUL = static_cast<llvm::RISCVVType::VLMUL>(
+      cast<ConstantInt>(Ops[HasAVL + 1])->getZExtValue());
+  unsigned Ratio = llvm::RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+
+  Attribute VScaleRange =
+      CGF->CurFn->getFnAttribute(llvm::Attribute::VScaleRange);
+  if (!VScaleRange.isValid())
+    return VSetVL;
+
+  uint64_t MinVLMAX = uint64_t(VScaleRange.getVScaleRangeMin()) *
+                      llvm::RISCV::RVVBitsPerBlock / Ratio;
+  std::optional<unsigned> MaxVScale = VScaleRange.getVScaleRangeMax();
+
+  if (!HasAVL) {
+    Value *Assumption;
+    if (MaxVScale && *MaxVScale == VScaleRange.getVScaleRangeMin())
+      Assumption = Builder.CreateICmpEQ(
+          VSetVL, llvm::ConstantInt::get(ResultType, MinVLMAX));
+    else
+      Assumption = Builder.CreateICmpUGE(
+          VSetVL, llvm::ConstantInt::get(ResultType, MinVLMAX));
+    Builder.CreateAssumption(Assumption);
+    return VSetVL;
+  }
+
+  Value *AVLAboveMinVLMAX = Builder.CreateICmpUGT(
+      Ops[0], llvm::ConstantInt::get(ResultType, MinVLMAX));
+  Value *VLEqualsAVL = Builder.CreateICmpEQ(VSetVL, Ops[0]);
+  Builder.CreateAssumption(
+      Builder.CreateSelect(AVLAboveMinVLMAX, Builder.getTrue(), VLEqualsAVL));
+
+  if (MaxVScale && *MaxVScale == VScaleRange.getVScaleRangeMin()) {
+    uint64_t FixedVLMAX = MinVLMAX;
+    Value *AVLBelowTwiceVLMAX = Builder.CreateICmpULT(
+        Ops[0], llvm::ConstantInt::get(ResultType, FixedVLMAX * 2));
+    Value *VLEqualsVLMAX = Builder.CreateICmpEQ(
+        VSetVL, llvm::ConstantInt::get(ResultType, FixedVLMAX));
+    Builder.CreateAssumption(Builder.CreateSelect(
+        AVLBelowTwiceVLMAX, Builder.getTrue(), VLEqualsVLMAX));
+  }
+  return VSetVL;
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *
