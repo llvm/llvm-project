@@ -3208,25 +3208,23 @@ def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffe
 //
 
 // Tcgen05 alloc/dealloc related intrinsics
-
 foreach cta_group = ["cg1", "cg2"] in {
   def int_nvvm_tcgen05_alloc_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty,        // dst_ptr
-     llvm_i32_ty] ,      // num_columns
+    [llvm_anyptr_ty,     // dst_ptr
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_alloc_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty, // dst_ptr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
     [llvm_tmem_ptr_ty,   // tmem_addr
-     llvm_i32_ty],       // num_columns
-    [IntrConvergent, IntrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+     llvm_i32_ty,       // num_columns
+     llvm_i1_ty],       // is_exclusive
+    [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>>,
+     ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
     [IntrConvergent, IntrInaccessibleMemOnly]>;

@@ -247,7 +247,6 @@ struct MissingFeatures {
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
-  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -319,7 +318,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

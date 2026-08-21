@@ -239,6 +239,14 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// While the initializer of a variable with static storage duration is being
+  /// emitted, the region that destructors registered by that initializer belong
+  /// in: the cir.global's own dtor region for a namespace-scope variable, and
+  /// the enclosing cir.local_init's for a function-local static, which has to
+  /// be destroyed in-function under its guard. Null outside such an
+  /// initializer.
+  mlir::Region *curStaticVarDtorRegion = nullptr;
+
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
 

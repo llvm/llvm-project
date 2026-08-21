@@ -8,34 +8,34 @@
 // CHECK:           fir.store %[[ARG1:.*]] to %[[VAL_1]] : !fir.ref<index>
 // CHECK:           %[[VAL_2:.*]] = fir.alloca index {bindc_name = "step"}
 // CHECK:           fir.store %[[ARG2:.*]] to %[[VAL_2]] : !fir.ref<index>
-// CHECK:           %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "lb"}
-// CHECK:           %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "ub"}
-// CHECK:           %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "step"}
-// CHECK:           %[[VAL_6:.*]] = omp.map.info var_ptr(%[[ARG3:.*]] : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) -> !fir.ref<index> {name = "addr"}
-// CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) -> !fir.ref<index> {name = "lb"}
-// CHECK:           %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) -> !fir.ref<index> {name = "ub"}
-// CHECK:           %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) -> !fir.ref<index> {name = "step"}
-// CHECK:           %[[VAL_10:.*]] = omp.map.info var_ptr(%[[ARG3]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) -> !fir.ref<index> {name = "addr"}
+// CHECK:           %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("lb") -> !fir.ref<index>
+// CHECK:           %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("ub") -> !fir.ref<index>
+// CHECK:           %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("step") -> !fir.ref<index>
+// CHECK:           %[[VAL_6:.*]] = omp.map.info var_ptr(%[[ARG3:.*]] : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) name("addr") -> !fir.ref<index>
+// CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) name("lb") -> !fir.ref<index>
+// CHECK:           %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) name("ub") -> !fir.ref<index>
+// CHECK:           %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) name("step") -> !fir.ref<index>
+// CHECK:           %[[VAL_10:.*]] = omp.map.info var_ptr(%[[ARG3]] : !fir.ref<index>, index) map_clauses(storage) capture(ByRef) name("addr") -> !fir.ref<index>
 // CHECK:           omp.target_data map_entries(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %[[VAL_6]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
 // CHECK:             %[[VAL_11:.*]] = fir.alloca index
-// CHECK:             %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_from"}
-// CHECK:             %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_to"}
+// CHECK:             %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) name("__flang_workdistribute_from") -> !fir.ref<index>
+// CHECK:             %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("__flang_workdistribute_to") -> !fir.ref<index>
 // CHECK:             %[[VAL_14:.*]] = fir.alloca index
-// CHECK:             %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_14]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_from"}
-// CHECK:             %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_14]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_to"}
+// CHECK:             %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_14]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) name("__flang_workdistribute_from") -> !fir.ref<index>
+// CHECK:             %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_14]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("__flang_workdistribute_to") -> !fir.ref<index>
 // CHECK:             %[[VAL_17:.*]] = fir.alloca index
-// CHECK:             %[[VAL_18:.*]] = omp.map.info var_ptr(%[[VAL_17]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_from"}
-// CHECK:             %[[VAL_19:.*]] = omp.map.info var_ptr(%[[VAL_17]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "__flang_workdistribute_to"}
+// CHECK:             %[[VAL_18:.*]] = omp.map.info var_ptr(%[[VAL_17]] : !fir.ref<index>, index) map_clauses(from) capture(ByRef) name("__flang_workdistribute_from") -> !fir.ref<index>
+// CHECK:             %[[VAL_19:.*]] = omp.map.info var_ptr(%[[VAL_17]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("__flang_workdistribute_to") -> !fir.ref<index>
 // CHECK:             %[[VAL_20:.*]] = fir.alloca !fir.heap<index>
-// CHECK:             %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_20]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(from) capture(ByRef) -> !fir.ref<!fir.heap<index>> {name = "__flang_workdistribute_from"}
-// CHECK:             %[[VAL_22:.*]] = omp.map.info var_ptr(%[[VAL_20]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.heap<index>> {name = "__flang_workdistribute_to"}
+// CHECK:             %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_20]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(from) capture(ByRef) name("__flang_workdistribute_from") -> !fir.ref<!fir.heap<index>>
+// CHECK:             %[[VAL_22:.*]] = omp.map.info var_ptr(%[[VAL_20]] : !fir.ref<!fir.heap<index>>, !fir.heap<index>) map_clauses(to) capture(ByRef) name("__flang_workdistribute_to") -> !fir.ref<!fir.heap<index>>
 // CHECK:             %[[VAL_23:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_0]] : !fir.ref<index>
 // CHECK:             %[[VAL_25:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
 // CHECK:             %[[VAL_26:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>
 // CHECK:             %[[VAL_27:.*]] = arith.constant 1 : index
 // CHECK:             %[[VAL_28:.*]] = arith.addi %[[VAL_25]], %[[VAL_25]] : index
-// CHECK:             %[[VAL_29:.*]] = omp.target_allocmem %[[VAL_23]] : i32, index, %[[VAL_27]] {uniq_name = "dev_buf"}
+// CHECK:             %[[VAL_29:.*]] = omp.target_allocmem %[[VAL_23]] : i32, index, %[[VAL_27]] uniq_name("dev_buf")
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i64) -> !fir.heap<index>
 // CHECK:             fir.store %[[VAL_24]] to %[[VAL_11]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]] : !fir.ref<index>
@@ -86,10 +86,10 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %step_ref = fir.alloca index {bindc_name = "step"}
   fir.store %step to %step_ref : !fir.ref<index>
 
-  %lb_map = omp.map.info var_ptr(%lb_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "lb"}
-  %ub_map = omp.map.info var_ptr(%ub_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "ub"}
-  %step_map = omp.map.info var_ptr(%step_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "step"}
-  %addr_map = omp.map.info var_ptr(%addr : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) -> !fir.ref<index> {name = "addr"}
+  %lb_map = omp.map.info var_ptr(%lb_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("lb") -> !fir.ref<index>
+  %ub_map = omp.map.info var_ptr(%ub_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("ub") -> !fir.ref<index>
+  %step_map = omp.map.info var_ptr(%step_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("step") -> !fir.ref<index>
+  %addr_map = omp.map.info var_ptr(%addr : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) name("addr") -> !fir.ref<index>
 
   omp.target kernel_type(generic) map_entries(%lb_map -> %ARG0, %ub_map -> %ARG1, %step_map -> %ARG2, %addr_map -> %ARG3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
     %lb_val = fir.load %ARG0 : !fir.ref<index>
