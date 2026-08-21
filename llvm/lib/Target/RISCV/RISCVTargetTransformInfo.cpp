@@ -1363,25 +1363,10 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::bswap, MVT::i16, 3},
     {Intrinsic::bswap, MVT::i32, 12},
     {Intrinsic::bswap, MVT::i64, 31},
-    {Intrinsic::vp_bswap, MVT::i16, 3},
-    {Intrinsic::vp_bswap, MVT::i32, 12},
-    {Intrinsic::vp_bswap, MVT::i64, 31},
-    {Intrinsic::vp_fshl, MVT::i8, 7},
-    {Intrinsic::vp_fshl, MVT::i16, 7},
-    {Intrinsic::vp_fshl, MVT::i32, 7},
-    {Intrinsic::vp_fshl, MVT::i64, 7},
-    {Intrinsic::vp_fshr, MVT::i8, 7},
-    {Intrinsic::vp_fshr, MVT::i16, 7},
-    {Intrinsic::vp_fshr, MVT::i32, 7},
-    {Intrinsic::vp_fshr, MVT::i64, 7},
     {Intrinsic::bitreverse, MVT::i8, 17},
     {Intrinsic::bitreverse, MVT::i16, 24},
     {Intrinsic::bitreverse, MVT::i32, 33},
     {Intrinsic::bitreverse, MVT::i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::i64, 52},
     {Intrinsic::ctpop, MVT::i8, 12},
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
@@ -1394,18 +1379,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::cttz, MVT::i16, 23},
     {Intrinsic::cttz, MVT::i32, 24},
     {Intrinsic::cttz, MVT::i64, 25},
-    {Intrinsic::vp_ctpop, MVT::i8, 12},
-    {Intrinsic::vp_ctpop, MVT::i16, 19},
-    {Intrinsic::vp_ctpop, MVT::i32, 20},
-    {Intrinsic::vp_ctpop, MVT::i64, 21},
-    {Intrinsic::vp_ctlz, MVT::i8, 19},
-    {Intrinsic::vp_ctlz, MVT::i16, 28},
-    {Intrinsic::vp_ctlz, MVT::i32, 31},
-    {Intrinsic::vp_ctlz, MVT::i64, 35},
-    {Intrinsic::vp_cttz, MVT::i8, 16},
-    {Intrinsic::vp_cttz, MVT::i16, 23},
-    {Intrinsic::vp_cttz, MVT::i32, 24},
-    {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
 InstructionCost
@@ -3543,49 +3516,22 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
-  case Intrinsic::vp_fma:
   case Intrinsic::fmuladd:
-  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_ashr:
   case Intrinsic::vp_udiv:
   case Intrinsic::vp_sdiv:
   case Intrinsic::vp_urem:
   case Intrinsic::vp_srem:
   case Intrinsic::ssub_sat:
-  case Intrinsic::vp_ssub_sat:
   case Intrinsic::usub_sat:
-  case Intrinsic::vp_usub_sat:
-  case Intrinsic::vp_select:
     return Operand == 1;
     // These intrinsics are commutative.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_xor:
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp:
   case Intrinsic::smin:
-  case Intrinsic::vp_smin:
   case Intrinsic::umin:
-  case Intrinsic::vp_umin:
   case Intrinsic::smax:
-  case Intrinsic::vp_smax:
   case Intrinsic::umax:
-  case Intrinsic::vp_umax:
   case Intrinsic::sadd_sat:
-  case Intrinsic::vp_sadd_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::vp_uadd_sat:
-    // These intrinsics have 'vr' versions.
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fdiv:
     return Operand == 0 || Operand == 1;
   default:
     return false;

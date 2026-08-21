@@ -288,6 +288,7 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(CodeGenOptLevel::Default, false));
+  addPass(new InstructionSelect(CodeGenOptLevel::Default,
+                                /*RequireRegBankSelection=*/false));
   return false;
 }
