@@ -6855,7 +6855,7 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   DefinitionAndSourceRegister RHS = {Op2Def, Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // If we have two choices trying to fold (fsub (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
   int FirstMulHasFewerUses = true;
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
