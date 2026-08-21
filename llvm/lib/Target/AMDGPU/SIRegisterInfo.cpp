@@ -461,7 +461,7 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::AMDGPU_CS_ChainPreserve:
     // Calls to these functions never return, so we can pretend everything is
     // preserved.
-    return AMDGPU_AllVGPRs_RegMask;
+    return AMDGPU_AllGPRs_RegMask;
   default:
     return nullptr;
   }
