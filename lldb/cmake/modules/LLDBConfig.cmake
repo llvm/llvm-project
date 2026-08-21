@@ -79,6 +79,11 @@ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
 
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
+
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
   # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
@@ -130,8 +135,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+set(LLDB_EXPORT_ALL_SYMBOLS OFF CACHE BOOL
+  "Causes lldb to export all private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
 
 set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
   "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
@@ -190,6 +195,13 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+  set(default_enable_dynamic_scriptinterpreters ON)
+else()
+  set(default_enable_dynamic_scriptinterpreters OFF)
+endif()
+option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -204,6 +216,18 @@ if (LLDB_ENABLE_PYTHON)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
+  if(TARGET Python3::Python AND NOT WIN32)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
+    if(_Python3_LIB_PATH)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH "${_Python3_LIB_PATH}")
+    endif()
   endif()
 
   # Enable targeting the Python Limited C API.
@@ -294,6 +318,7 @@ if( MSVC )
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
     -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
+    -wd4250 # Suppress 'warning C4250: 'class1' : inherits 'class2::member' via dominance
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'

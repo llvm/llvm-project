@@ -18,6 +18,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <queue>
 
 using namespace llvm;
@@ -41,6 +42,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -278,6 +280,7 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MRI.clearKillFlags(MI.getOperand(1).getReg());
       MI.eraseFromParent();
+      MadeChange = true;
     }
   }
 

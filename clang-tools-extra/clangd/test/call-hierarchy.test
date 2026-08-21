@@ -32,6 +32,9 @@
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        18
+# CHECK-NEXT:      ],
 # CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:    }
 ---

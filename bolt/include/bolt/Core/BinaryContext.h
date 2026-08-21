@@ -23,8 +23,10 @@
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -45,9 +47,11 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <atomic>
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -259,15 +263,18 @@ class BinaryContext {
   /// The runtime library.
   std::unique_ptr<RuntimeLibrary> RtLibrary;
 
-  /// DWP Context.
-  std::shared_ptr<DWARFContext> DWPContext;
-
   /// Decoded pseudo probes.
   std::shared_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
 
-  /// A map of DWO Ids to CUs.
+  /// Populated once in preprocessDWODebugInfo() and immutable thereafter; it
+  /// lets getDWOCU() (re-)open a DWO context on demand. The context is then
+  /// owned and cached by the skeleton unit itself (DWARFUnit::hasDWO()).
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
-  DWOIdToCUMapType DWOCUs;
+  DWOIdToCUMapType DWOIdToSkeletonCU;
+
+  /// With a package every split CU shares one DWARFContext, which changes how
+  /// it may be released -- see releaseDWOCU().
+  bool UsesDWP{false};
 
   bool ContainsDwarf5{false};
   bool ContainsDwarfLegacy{false};
@@ -284,11 +291,17 @@ class BinaryContext {
   /// Internal helper for removing section name from a lookup table.
   void deregisterSectionName(const BinarySection &Section);
 
+  /// Mutex used for parallel processing of DWP type units.
+  std::mutex DWPUnitsMutex;
+
 public:
   static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
       Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
       StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
       std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
+
+  /// Returns the mutex guarding concurrent access to DWP units.
+  std::mutex &getUnitsMutex() { return DWPUnitsMutex; }
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -318,14 +331,32 @@ public:
 
   void clearFragmentsToSkip() { FragmentsToSkip.clear(); }
 
-  /// Given DWOId returns CU if it exists in DWOCUs.
+  /// True if split-dwarf files being processed come from a package (as
+  /// opposed to dwo files scattered on disk).
+  bool usesDWP() const { return UsesDWP; }
+
+  /// Given a DWOId, return the corresponding split CU, lazily opening its DWO
+  /// context if needed. Returns std::nullopt if the DWO could not be loaded.
+  ///
+  /// There is no shared mutable state to guard here: DWOIdToSkeletonCU is
+  /// immutable after preprocessing and the context is cached by the skeleton
+  /// unit. Callers must, however, keep a given DWOId to a single thread at a
+  /// time -- during parallel rewriting each DWOId belongs to exactly one
+  /// bucket -- because opening and releasing both mutate the skeleton unit's
+  /// DWO pointer.
   std::optional<DWARFUnit *> getDWOCU(uint64_t DWOId);
 
-  /// Returns DWOContext if it exists.
-  DWARFContext *getDWOContext() const;
+  /// Release the DWO context previously opened for \p DWOId (if any), freeing
+  /// its DWARFContext and parsed unit vector. Same threading contract as
+  /// getDWOCU().
+  void releaseDWOCU(uint64_t DWOId);
 
-  /// Get Number of DWOCUs in a map.
-  uint32_t getNumDWOCUs() { return DWOCUs.size(); }
+  /// Release all currently-open DWO contexts. Used after preprocessing, so that
+  /// contexts are re-opened lazily and during rewriting. Not thread-safe.
+  void releaseAllDWOContexts();
+
+  /// Get the number of split-DWARF CUs in the binary.
+  uint32_t getNumDWOCUs() { return DWOIdToSkeletonCU.size(); }
 
   /// Returns true if DWARF5 is used.
   bool isDWARF5Used() const { return ContainsDwarf5; }
@@ -359,7 +390,14 @@ public:
   std::vector<SegmentInfo> NewSegments;
 
   /// [name] -> [BinaryData*] map used for global symbol resolution.
-  using SymbolMapType = StringMap<BinaryData *>;
+  ///
+  /// The map keys are StringRefs pointing into the names owned by MCContext
+  /// (i.e. MCSymbol::getName()) rather than strings owned by this map. Every
+  /// registered name is already interned in MCContext, so keying on those
+  /// strings avoids duplicating potentially large (mangled) symbol names, which
+  /// is a significant source of memory use on large binaries. The referenced
+  /// names outlive this map, as MCContext is owned by BinaryContext.
+  using SymbolMapType = DenseMap<StringRef, BinaryData *>;
   SymbolMapType GlobalSymbols;
 
   /// [address] -> [BinaryData], ...
@@ -418,6 +456,11 @@ public:
     assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
     PseudoProbeDecoder = Decoder;
   }
+
+  /// Release the pseudo probe decoder once probes have been updated, freeing
+  /// its (potentially large) address-to-probe maps before later, memory-heavy
+  /// phases such as debug info rewriting.
+  void resetPseudoProbeDecoder() { PseudoProbeDecoder.reset(); }
 
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
@@ -556,7 +599,14 @@ public:
   }
 
   /// Return functions meant for the output in a sorted order.
-  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+  const BinaryFunctionListType &getOutputBinaryFunctions() const {
+    return OutputFunctions;
+  }
+
+  /// Update output function list.
+  void updateOutputBinaryFunctions(BinaryFunctionListType &&Functions) {
+    OutputFunctions.swap(Functions);
+  }
 
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
@@ -573,6 +623,9 @@ public:
   createInstructionPatch(uint64_t Address,
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
+
+  /// Create a binary function with a base \p Name.
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
 
   BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
@@ -803,6 +856,45 @@ public:
   /// final addresses functions will have.
   uint64_t LayoutStartAddress{0};
 
+  /// Maximum alignment of objects emitted into the main (hot) and cold code
+  /// sections, populated by the parallel AlignerPass (updateMaxCodeAlignment).
+  std::atomic<uint16_t> MaxMainCodeAlignment{1};
+  std::atomic<uint16_t> MaxColdCodeAlignment{1};
+
+  /// Alignment-related options sourced from CommandLineOpts. Populated by
+  /// RewriteInstance::adjustCommandLineOptions() so passes and the emitter
+  /// can read them via BinaryContext instead of touching opts::* directly.
+  /// Defaults must stay in sync with the cl::init values in
+  /// bolt/lib/Utils/CommandLineOpts.cpp.
+  unsigned AlignText{0};
+  unsigned AlignFunctions{64};
+  unsigned AlignBlocksMinSize{0};
+  unsigned AlignBlocksThreshold{800};
+  unsigned AlignFunctionsMaxBytes{32};
+  unsigned BlockAlignment{16};
+  bool AlignBlocks{false};
+  bool PreserveBlocksAlignment{false};
+  bool UseCompactAligner{true};
+  bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Fold \p Alignment into the running max for the main code section (when
+  /// \p InMainSection) and/or the cold code section (when \p InColdSection),
+  /// reflecting which output section(s) the object is emitted into. Safe to
+  /// call concurrently.
+  void updateMaxCodeAlignment(uint16_t Alignment, bool InMainSection,
+                              bool InColdSection) {
+    auto AtomicMax = [](std::atomic<uint16_t> &Max, uint16_t Value) {
+      uint16_t Cur = Max.load(std::memory_order_relaxed);
+      while (Value > Cur &&
+             !Max.compare_exchange_weak(Cur, Value, std::memory_order_relaxed))
+        ;
+    };
+    if (InMainSection)
+      AtomicMax(MaxMainCodeAlignment, Alignment);
+    if (InColdSection)
+      AtomicMax(MaxColdCodeAlignment, Alignment);
+  }
+
   /// Old .text info.
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
@@ -892,7 +984,7 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
   // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
@@ -1362,7 +1454,8 @@ public:
 
   /// Register dynamic relocation at \p Address.
   void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0);
+                            uint64_t Addend, uint64_t Value = 0,
+                            bool IsRELR = false);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
@@ -1397,6 +1490,11 @@ public:
 
   /// Populate some internal data structures with debug info.
   void preprocessDebugInfo();
+
+  /// Record DWARF lexical-scope range boundaries into the containing functions'
+  /// BinaryFunction::DebugScopeBoundaryOffsets. Relies on preprocessDebugInfo's
+  /// actions: populated ProcessedCUs and pre-extracted DIEs for split dwarf.
+  void collectDebugScopeBoundaries();
 
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
@@ -1464,16 +1562,6 @@ public:
   /// the function is 'hot'. Consider it hot if count is above the average exec
   /// count of profiled functions.
   uint64_t getHotThreshold() const;
-
-  /// Return true if instruction \p Inst requires an offset for further
-  /// processing (e.g. assigning a profile).
-  bool keepOffsetForInstruction(const MCInst &Inst) const {
-    if (MIB->isCall(Inst) || MIB->isBranch(Inst) || MIB->isReturn(Inst) ||
-        MIB->isPrefix(Inst) || MIB->isIndirectBranch(Inst)) {
-      return true;
-    }
-    return false;
-  }
 
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;

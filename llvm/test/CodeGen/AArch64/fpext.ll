@@ -75,9 +75,8 @@ define <3 x double> @fpext_v3f32_v3f64(<3 x float> %a) {
 ; CHECK-SD-NEXT:    fcvtl v3.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtl2 v2.2d, v0.4s
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fmov d0, d3
-; CHECK-SD-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fpext_v3f32_v3f64:
@@ -174,7 +173,7 @@ define <4 x fp128> @fpext_v4f32_v4f128(<4 x float> %a) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp, #48] // 16-byte Spill
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    bl __extendsftf2
@@ -332,26 +331,15 @@ entry:
 }
 
 define <3 x double> @fpext_v3f16_v3f64(<3 x half> %a) {
-; CHECK-SD-LABEL: fpext_v3f16_v3f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-SD-NEXT:    fcvtl v0.2d, v1.2s
-; CHECK-SD-NEXT:    fcvtl2 v2.2d, v1.4s
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v3f16_v3f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-GI-NEXT:    fcvtl v0.2d, v1.2s
-; CHECK-GI-NEXT:    fcvtl2 v2.2d, v1.4s
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v3f16_v3f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-NEXT:    fcvtl2 v2.2d, v1.4s
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <3 x half> %a to <3 x double>
   ret <3 x double> %c

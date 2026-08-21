@@ -13,11 +13,28 @@
 using LlvmLibcAtan2f128Test = LIBC_NAMESPACE::testing::FPTest<float128>;
 
 TEST_F(LlvmLibcAtan2f128Test, SpecialNumbers) {
+  constexpr float128 PI = 0x1.921fb54442d18469898cc51701b8p+1q;
+  constexpr float128 PI_OVER_2 = 0x1.921fb54442d18469898cc51701b8p+0q;
+  constexpr float128 PI_OVER_4 = 0x1.921fb54442d18469898cc51701b8p-1q;
+  constexpr float128 THREE_PI_OVER_4 = 0x1.2d97c7f3321d234f272993d1414ap+1q;
+
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(zero, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f128(neg_zero, inf));
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f128(zero, neg_zero));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f128(neg_zero, neg_zero));
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f128(zero, neg_inf));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f128(neg_zero, neg_inf));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f128(inf, zero));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f128(inf, neg_zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f128(neg_inf, zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f128(neg_inf, neg_zero));
+  EXPECT_FP_EQ(PI_OVER_4, LIBC_NAMESPACE::atan2f128(inf, inf));
+  EXPECT_FP_EQ(-PI_OVER_4, LIBC_NAMESPACE::atan2f128(neg_inf, inf));
+  EXPECT_FP_EQ(THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f128(inf, neg_inf));
+  EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f128(neg_inf, neg_inf));
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f128(aNaN, zero));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f128(1.0, aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(zero, zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero,
-                            LIBC_NAMESPACE::atan2f128(neg_zero, zero));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(1.0, inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f128(-1.0, inf));
 

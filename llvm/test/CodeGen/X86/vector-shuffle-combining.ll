@@ -3621,6 +3621,62 @@ define <2 x i1> @PR179112(<2 x i32> %load) {
   ret <2 x i1> %reverse.2
 }
 
+define <8 x float> @PR213251() {
+; SSE2-LABEL: PR213251:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl $1, (%rax)
+; SSE2-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR213251:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movl $1, (%rax)
+; SSSE3-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR213251:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movl $1, (%rax)
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,mem[0],zero,zero
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: PR213251:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl $1, (%rax)
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: PR213251:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    movl $1, (%rax)
+; AVX2-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX2-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: PR213251:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    movl $1, (%rax)
+; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-FAST-NEXT:    retq
+  store i32 1, ptr poison, align 4
+  %f.promoted = load i32, ptr poison, align 4
+  %tobool.not12 = icmp eq i32 %f.promoted, 0
+  %cond13 = select i1 %tobool.not12, float 1.000000e+00, float +qnan
+  %vecins14 = insertelement <8 x float> zeroinitializer, float %cond13, i64 1
+  ret <8 x float> %vecins14
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
@@ -3722,9 +3778,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB144_1: # %CF242
+; CHECK-NEXT:  .LBB145_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB144_1
+; CHECK-NEXT:    jmp .LBB145_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>
@@ -3742,4 +3798,34 @@ CF242:                                            ; preds = %CF242, %CF259
   %Shuff153 = shufflevector <2 x i1> %Shuff33, <2 x i1> poison, <2 x i32> <i32 3, i32 1>
   %Shuff161 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp83, <2 x i32> <i32 1, i32 3>
   br label %CF242
+}
+
+define <8 x i32> @PR215111(i256 %a0) {
+; SSE-LABEL: PR215111:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rsi, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR215111:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %esi, %xmm0
+; AVX1-NEXT:    shrq $32, %rsi
+; AVX1-NEXT:    vpinsrd $2, %esi, %xmm0, %xmm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR215111:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %esi, %xmm0
+; AVX2-NEXT:    shrq $32, %rsi
+; AVX2-NEXT:    vmovd %esi, %xmm1
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    retq
+  %bc = bitcast i256 %a0 to <8 x i32>
+  %shuf = shufflevector <8 x i32> %bc, <8 x i32> zeroinitializer, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 poison>
+  ret <8 x i32> %shuf
 }

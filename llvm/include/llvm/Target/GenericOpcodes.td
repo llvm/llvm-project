@@ -202,7 +202,7 @@ def G_CTLZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTLZ_ZERO_UNDEF : GenericInstruction {
+def G_CTLZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -214,7 +214,7 @@ def G_CTTZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTTZ_ZERO_UNDEF : GenericInstruction {
+def G_CTTZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -583,6 +583,15 @@ def G_ABS : GenericInstruction {
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
 }
+
+// Generic carry-less multiplication
+def G_CLMUL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 
 //------------------------------------------------------------------------------
 // Overflow ops
@@ -1469,18 +1478,24 @@ def G_ATOMICRMW_MAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_MIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMIN : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_SAT : G_ATOMICRMW_OP;
+
+// FP atomicrmw: match exact FP type, not generic sN, f16 and bf16 are both s16.
+class G_ATOMICRMW_FP_OP : G_ATOMICRMW_OP {
+  let GISelMatchGenericTypes = 0;
+}
+
+def G_ATOMICRMW_FADD : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FSUB : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAX : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMIN : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_FP_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
@@ -1850,6 +1865,13 @@ def G_MEMSET : GenericInstruction {
 def G_BZERO : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$dst_addr, type1:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
+def G_MEMSET_INLINE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, type1:$value, type2:$size);
   let hasSideEffects = false;
   let mayStore = true;
 }

@@ -24,7 +24,7 @@ TEST(FoldingSetTest, UnalignedStringTest) {
 
   FoldingSetNodeID a, b;
   // An aligned string.
-  std::string str1= "a test string";
+  std::string str1 = "a test string";
   a.AddString(str1);
 
   // An unaligned string.
@@ -188,5 +188,4 @@ TEST(FoldingSetTest, SmallReserveChangesNothing) {
   EXPECT_EQ(Trivial.capacity(), OldCapacity);
 }
 
-}
-
+} // namespace

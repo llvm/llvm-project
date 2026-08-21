@@ -16,6 +16,7 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
@@ -280,6 +281,115 @@ MlirSpeculatability mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
 // MemoryEffectOpInterface
 //===---------------------------------------------------------------------===//
 
+MlirMemoryEffect mlirMemoryEffectsAllocateGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Allocate::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsFreeGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Free::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsReadGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Read::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsWriteGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Write::get()));
+}
+
+MlirTypeID mlirMemoryEffectGetEffectID(MlirMemoryEffect effect) {
+  return wrap(unwrap(effect)->getEffectID());
+}
+
+MlirSideEffectResource mlirSideEffectsDefaultResourceGet() {
+  return wrap(static_cast<SideEffects::Resource *>(
+      SideEffects::DefaultResource::get()));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreate(
+    MlirMemoryEffect effect, MlirAttribute parameters, int stage,
+    bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(parameters), stage, effectOnFullRegion,
+      unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpOperand(
+    MlirMemoryEffect effect, MlirOpOperand opOperand, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(opOperand), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpResult(
+    MlirMemoryEffect effect, MlirValue result, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<OpResult>(unwrap(result)), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForBlockArgument(
+    MlirMemoryEffect effect, MlirValue blockArgument, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<BlockArgument>(unwrap(blockArgument)),
+      unwrap(parameters), stage, effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForSymbol(
+    MlirMemoryEffect effect, MlirAttribute symbol, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<SymbolRefAttr>(unwrap(symbol)), unwrap(parameters),
+      stage, effectOnFullRegion, unwrap(resource)));
+}
+
+void mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance) {
+  delete unwrap(instance);
+}
+
+MlirMemoryEffectInstance
+mlirMemoryEffectInstanceClone(MlirMemoryEffectInstance instance) {
+  return wrap(new MemoryEffects::EffectInstance(*unwrap(instance)));
+}
+
+MlirMemoryEffect
+mlirMemoryEffectInstanceGetEffect(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getEffect());
+}
+
+MlirSideEffectResource
+mlirMemoryEffectInstanceGetResource(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getResource());
+}
+
+int mlirMemoryEffectInstanceGetStage(MlirMemoryEffectInstance instance) {
+  return unwrap(instance)->getStage();
+}
+
+bool mlirMemoryEffectInstanceGetEffectOnFullRegion(
+    MlirMemoryEffectInstance instance) {
+  return unwrap(instance)->getEffectOnFullRegion();
+}
+
+MlirAttribute
+mlirMemoryEffectInstanceGetParameters(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getParameters());
+}
+
+MlirValue mlirMemoryEffectInstanceGetValue(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getValue());
+}
+
+MlirAttribute
+mlirMemoryEffectInstanceGetSymbolRef(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getSymbolRef());
+}
+
 MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
   return wrap(MemoryEffectOpInterface::getInterfaceID());
 }
@@ -317,8 +427,18 @@ public:
   getEffects(Operation *op,
              SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
     assert(callbacks.getEffects && "getEffects callback not set");
-    MlirMemoryEffectInstancesList cEffects = wrap(&effects);
-    callbacks.getEffects(wrap(op), cEffects, callbacks.userData);
+    callbacks.getEffects(
+        wrap(op),
+        [](intptr_t numEffects, MlirMemoryEffectInstance *effectInstances,
+           void *userData) {
+          auto *unwrappedEffects =
+              static_cast<SmallVectorImpl<MemoryEffects::EffectInstance> *>(
+                  userData);
+          unwrappedEffects->reserve(unwrappedEffects->size() + numEffects);
+          for (intptr_t i = 0; i < numEffects; ++i)
+            unwrappedEffects->push_back(*unwrap(effectInstances[i]));
+        },
+        &effects, callbacks.userData);
   }
 
 private:
@@ -344,4 +464,19 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
       opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
   assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
   model->setCallbacks(callbacks);
+}
+
+void mlirMemoryEffectsOpInterfaceGetEffects(
+    MlirOperation operation, MlirMemoryEffectInstancesCallback callback,
+    void *userData) {
+  auto iface = dyn_cast<MemoryEffectOpInterface>(unwrap(operation));
+  assert(iface && "operation does not implement MemoryEffectOpInterface");
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
+  wrappedEffects.reserve(effects.size());
+  for (MemoryEffects::EffectInstance &effect : effects)
+    wrappedEffects.push_back(wrap(&effect));
+  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
 }

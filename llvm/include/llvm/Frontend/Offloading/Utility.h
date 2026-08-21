@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -103,10 +104,9 @@ getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
                               Constant *Addr, StringRef Name, uint64_t Size,
                               uint32_t Flags, uint64_t Data, Constant *AuxAddr);
 
-/// Creates a pair of globals used to iterate the array of offloading entries by
-/// accessing the section variables provided by the linker.
-LLVM_ABI std::pair<GlobalVariable *, GlobalVariable *>
-getOffloadEntryArray(Module &M);
+/// Creates a pair of constants used to iterate the array of offloading entries
+/// by accessing the section variables provided by the linker.
+LLVM_ABI std::pair<Constant *, Constant *> getOffloadEntryArray(Module &M);
 
 namespace amdgpu {
 /// Check if an image is compatible with current system's environment. The
@@ -154,6 +154,10 @@ struct AMDGPUKernelMetaData {
   uint32_t WavefrontSize = KInvalidValue;
   /// Maximum flat work-group size supported by the kernel in work-items.
   uint32_t MaxFlatWorkgroupSize = KInvalidValue;
+  /// Per-argument {offset, size} in bytes, read from the ".args" array in code
+  /// object metadata. Explicit user arguments are first, followed by
+  /// hidden arguments.
+  SmallVector<std::pair<uint32_t, uint32_t>, 8> ArgMDs;
 };
 
 /// Reads AMDGPU specific metadata from the ELF file and propagates the

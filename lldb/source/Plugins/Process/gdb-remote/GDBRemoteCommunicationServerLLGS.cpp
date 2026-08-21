@@ -31,6 +31,7 @@
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
@@ -38,10 +39,12 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -54,6 +57,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
@@ -221,6 +225,14 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jMultiBreakpoint,
       &GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
+      &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::
+          eServerPacketType_jAcceleratorPluginBreakpointHit,
+      &GDBRemoteCommunicationServerLLGS::
+          Handle_jAcceleratorPluginBreakpointHit);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -281,10 +293,18 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
-    // Temporarily relax the following for Windows until we can take advantage
-    // of the recently added pty support. This doesn't really affect the use of
-    // lldb-server on Windows.
-#if !defined(_WIN32)
+#if defined(_WIN32)
+    ProcessLaunchInfo::STDIOWindowSize win_size =
+        m_process_launch_info.GetSTDIOWindowSize();
+    if (m_process_launch_info.IsSTDIOWindowSizeExplicit() &&
+        win_size.cols == 0 && win_size.rows == 0) {
+      if (llvm::Error Err = m_process_launch_info.SetUpPipeRedirection())
+        return Status::FromError(std::move(Err));
+    } else {
+      if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
+        return Status::FromError(std::move(Err));
+    }
+#else
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
 #endif
@@ -1054,6 +1074,11 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
                     tid_stop_info.details.fork.child_tid);
   }
 
+  if (process.HasPendingLibraryEvents()) {
+    // 1 is an arbitrary value here. The parameter is ignored.
+    response.PutCString("library:1;");
+  }
+
   return response;
 }
 
@@ -1207,6 +1232,33 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
   m_debugged_processes.emplace(
       child_pid,
       DebuggedProcess{std::move(child_process), DebuggedProcess::Flag{}});
+}
+
+void GDBRemoteCommunicationServerLLGS::NewProcessOutput(NativeProcessProtocol *,
+                                                        llvm::StringRef data) {
+  if (data.empty())
+    return;
+
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    m_pending_output_buffer.append(data.begin(), data.end());
+  }
+  m_mainloop.AddPendingCallback(
+      [this](MainLoopBase &) { FlushPendingProcessOutput(); });
+}
+
+void GDBRemoteCommunicationServerLLGS::FlushPendingProcessOutput() {
+  if (!m_current_process || !StateIsRunningState(m_current_process->GetState()))
+    return;
+
+  std::string out;
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    if (m_pending_output_buffer.empty())
+      return;
+    out.swap(m_pending_output_buffer);
+  }
+  SendONotification(out.data(), out.size());
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
@@ -2016,6 +2068,16 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
 
+  {
+    std::string out;
+    {
+      std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+      out.swap(m_pending_output_buffer);
+    }
+    if (!out.empty())
+      SendONotification(out.data(), out.size());
+  }
+
   if (m_disabling_non_stop) {
     // Check if we are waiting for any more processes to stop.  If we are,
     // do not send the OK response yet.
@@ -2522,12 +2584,21 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // write directly to stdin *this might block if stdin buffer is full*
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
-    ConnectionStatus status;
     Status error;
+
+#if defined(_WIN32)
+    // On Windows the inferior's stdio is owned by NativeProcessWindows (which
+    // holds the ConPTY). Route stdin through NativeProcessProtocol::WriteStdin
+    // rather than m_stdio_communication, which is unconnected on Windows.
+    if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
+      return SendErrorResponse(0x15);
+#else
+    ConnectionStatus status;
     m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
+#endif
   }
 
   return SendOKResponse();
@@ -2902,6 +2973,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     if (std::optional<unsigned> protection_key = region_info.GetProtectionKey())
       response.Printf("protection-key:%" PRIu32 ";", *protection_key);
+
+    LazyBool is_stack = region_info.IsStackMemory();
+    if (is_stack != eLazyBoolDontKnow)
+      response.Printf("type: %s", is_stack ? "stack" : "heap");
   }
 
   return SendPacketNoLock(response.GetString());
@@ -3240,20 +3315,24 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   response.IndentMore();
 
   response.Indent();
-  response.Printf("<architecture>%s</architecture>\n",
-                  m_current_process->GetArchitecture()
-                      .GetTriple()
-                      .getArchName()
-                      .str()
-                      .c_str());
-
+  const llvm::StringRef arch_name =
+      m_current_process->GetArchitecture().GetTriple().getArchName();
+  // Match gdbserver's expected architecture. We do the reverse when
+  // decoding the architecture when receiving the target.xml
+  // in ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess.
+  const llvm::StringRef new_arch_name = StringSwitch<llvm::StringRef>(arch_name)
+                                            .Case("x86_64", "i386:x86-64")
+                                            .Case("riscv64", "riscv:rv64")
+                                            .Case("riscv32", "riscv:rv32")
+                                            .Default(arch_name);
+  response.Format("<architecture>{}</architecture>\n", new_arch_name);
   response.Indent("<feature>\n");
 
   const int registers_count = reg_context.GetUserRegisterCount();
   if (registers_count)
     response.IndentMore();
 
-  llvm::StringSet<> field_enums_seen;
+  std::unordered_set<const RegisterType *> register_types_emitted;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3265,12 +3344,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
-    if (reg_info->flags_type) {
-      response.IndentMore();
-      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
-      reg_info->flags_type->ToXML(response);
-      response.IndentLess();
-    }
+    if (reg_info->register_type)
+      reg_info->register_type->ToXML(response, register_types_emitted);
 
     response.Indent();
     response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
@@ -3291,8 +3366,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     if (!format.empty())
       response << "format=\"" << format << "\" ";
 
-    if (reg_info->flags_type)
-      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
+    if (reg_info->register_type)
+      response << "type=\"" << reg_info->register_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
@@ -3383,6 +3458,24 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
       response.Printf("l_ld=\"0x%" PRIx64 "\" />", library.ld_addr);
     }
     response.Printf("</library-list-svr4>");
+    return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
+  }
+
+  if (object == "libraries") {
+    auto library_list = m_current_process->GetLoadedLibraries();
+    if (!library_list)
+      return library_list.takeError();
+
+    StreamString response;
+    response.Printf("<library-list>");
+    for (auto const &library : *library_list) {
+      response.Printf("<library name=\"%s\">",
+                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+      response.Printf("<section address=\"0x%" PRIx64 "\"/>",
+                      library.base_addr);
+      response.Printf("</library>");
+    }
+    response.Printf("</library-list>");
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
@@ -4401,12 +4494,16 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::libraries))
+    ret.push_back("qXfer:libraries:read+");
   if (bool(plugin_features & Extension::siginfo_read))
     ret.push_back("qXfer:siginfo:read+");
   if (bool(plugin_features & Extension::memory_tagging))
     ret.push_back("memory-tagging+");
   if (bool(plugin_features & Extension::savecore))
     ret.push_back("qSaveCore+");
+  if (!m_accelerator_plugins.empty())
+    ret.push_back("accelerator-plugins+");
 
   // check for client features
   m_extensions_supported = {};
@@ -4416,6 +4513,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("multiprocess+", Extension::multiprocess)
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
+            .Case("qXfer:libraries:read+", Extension::libraries)
+            .Case("qXfer:libraries-svr4:read+", Extension::libraries_svr4)
             .Default({});
 
   // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
@@ -4497,4 +4596,50 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   // If none of the above applied, interpret the argument as UNIX socket path.
   return (reverse_connect ? "unix-connect://" : "unix-accept://") +
          url_arg.str();
+}
+
+void GDBRemoteCommunicationServerLLGS::InstallPlugin(
+    std::unique_ptr<LLDBServerAcceleratorPlugin> plugin_up) {
+  m_accelerator_plugins.emplace_back(std::move(plugin_up));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
+    StringExtractorGDBRemote &) {
+  std::vector<AcceleratorActions> accelerator_actions;
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
+    if (auto actions = plugin_up->GetInitializeActions())
+      accelerator_actions.push_back(std::move(*actions));
+  }
+  StreamGDBRemote response;
+  response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginBreakpointHit(
+    StringExtractorGDBRemote &packet) {
+  packet.ConsumeFront("jAcceleratorPluginBreakpointHit:");
+  llvm::Expected<AcceleratorBreakpointHitArgs> args =
+      llvm::json::parse<AcceleratorBreakpointHitArgs>(
+          packet.Peek(), "AcceleratorBreakpointHitArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
+
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
+    if (plugin_up->GetPluginName() == args->plugin_name) {
+      llvm::Expected<AcceleratorBreakpointHitResponse> bp_response =
+          plugin_up->BreakpointWasHit(*args);
+      if (!bp_response)
+        return SendErrorResponse(bp_response.takeError());
+
+      StreamGDBRemote response;
+      response.PutAsJSON(*bp_response, /*hex_ascii=*/false);
+      return SendPacketNoLock(response.GetString());
+    }
+  }
+  return SendErrorResponse(
+      Status::FromErrorString("unknown accelerator plugin name"));
 }

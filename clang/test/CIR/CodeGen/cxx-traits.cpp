@@ -9,11 +9,11 @@ void expression_trait_expr() {
   bool a = __is_lvalue_expr(0);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca i8, align 1
 // LLVM: store i8 0, ptr %[[A_ADDR]], align 1
 
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
@@ -27,10 +27,10 @@ void type_trait_expr() {
   bool d = __is_array(int);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["c", init]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["d", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false
@@ -40,10 +40,10 @@ void type_trait_expr() {
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[D_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
-// LLVM: %[[C_ADDR:.*]] = alloca i8, i64 1, align 1
-// LLVM: %[[D_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca i8, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, align 1
+// LLVM: %[[C_ADDR:.*]] = alloca i8, align 1
+// LLVM: %[[D_ADDR:.*]] = alloca i8, align 1
 // LLVM: store i8 1, ptr %[[A_ADDR]], align 1
 // LLVM: store i8 0, ptr %[[B_ADDR]], align 1
 // LLVM: store i8 0, ptr %[[C_ADDR]], align 1
@@ -63,15 +63,15 @@ void array_type_trait_expr() {
   unsigned long b = __array_extent(int[10][20], 1);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_2]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_20]], %[[B_ADDR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca i64, align 8
 // LLVM: store i64 2, ptr %[[A_ADDR]], align 8
 // LLVM: store i64 20, ptr %[[B_ADDR]], align 8
 

@@ -8,16 +8,19 @@
 
 #include "lldb/Core/PluginManager.h"
 
+#include "lldb/Core/BugReporter.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -76,15 +79,50 @@ private:
 
 typedef llvm::SmallDenseMap<FileSpec, PluginInfo> DynamicPluginMap;
 
-static std::recursive_mutex &GetPluginMapMutex() {
-  static std::recursive_mutex g_plugin_map_mutex;
-  return g_plugin_map_mutex;
+namespace {
+enum class PluginLifecycle { Uninitialized, Initialized, Terminated };
+
+struct PluginRegistry {
+  std::recursive_mutex mutex;
+  DynamicPluginMap map;
+
+  void Initialize() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Initialized;
+  }
+
+  void Terminate() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Terminated;
+    map.clear();
+  }
+
+  // Only after Terminate() is a leftover PluginInstances registration a bug;
+  // exiting in any other state (e.g. `import lldb`, which never calls
+  // Terminate()) is supported and leaves plugins registered.
+  bool IsTerminated() const { return lifecycle == PluginLifecycle::Terminated; }
+
+private:
+  PluginLifecycle lifecycle = PluginLifecycle::Uninitialized;
+};
+} // namespace
+
+// Never destroyed: at static-destruction time the PluginInstances containers
+// (separate statics, arbitrary teardown order) still call IsTerminated(), and
+// the map's PluginInfo terminate callbacks must not run when the containers
+// they unregister from may already be gone. Terminate() clears the map
+// explicitly while everything is alive. The static pointer keeps it reachable,
+// so this is not a LeakSanitizer leak.
+static PluginRegistry &GetPluginRegistry() {
+  static PluginRegistry *g_registry = new PluginRegistry();
+  return *g_registry;
 }
 
-static DynamicPluginMap &GetPluginMap() {
-  static DynamicPluginMap g_plugin_map;
-  return g_plugin_map;
+static std::recursive_mutex &GetPluginMapMutex() {
+  return GetPluginRegistry().mutex;
 }
+
+static DynamicPluginMap &GetPluginMap() { return GetPluginRegistry().map; }
 
 static bool PluginIsLoaded(const FileSpec &plugin_file_spec) {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
@@ -136,8 +174,7 @@ llvm::Expected<PluginInfo> PluginInfo::Create(const FileSpec &path) {
   // Look for files that follow the convention <g_plugin_prefix><name>.<ext>, in
   // which case we need to call lldb_initialize_<name> and
   // lldb_terminate_<name>.
-  llvm::StringRef file_name =
-      path.GetFileNameStrippingExtension().GetStringRef();
+  llvm::StringRef file_name = path.GetFileNameStrippingExtension();
   if (file_name.starts_with(g_plugin_prefix)) {
     llvm::StringRef plugin_name = file_name.substr(g_plugin_prefix.size());
     std::string init_symbol =
@@ -198,8 +235,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // requested.
     PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
     if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
-        !plugin_file_spec.GetFilename().GetStringRef().starts_with(
-            g_plugin_prefix))
+        !plugin_file_spec.GetFilename().starts_with(g_plugin_prefix))
       return FileSystem::eEnumerateDirectoryResultNext;
 
     // Don't try to load an already loaded plugin again.
@@ -234,6 +270,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 }
 
 void PluginManager::Initialize() {
+  GetPluginRegistry().Initialize();
+
   static const bool find_directories = true;
   static const bool find_files = true;
   static const bool find_other = true;
@@ -256,10 +294,7 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() {
-  std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  GetPluginMap().clear();
-}
+void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -274,6 +309,12 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
           "architecture",
           PluginManager::GetArchitecturePluginInfo,
           PluginManager::SetArchitecturePluginEnabled,
+      },
+
+      {
+          "bug-reporter",
+          PluginManager::GetBugReporterPluginInfo,
+          PluginManager::SetBugReporterPluginEnabled,
       },
 
       {
@@ -494,6 +535,9 @@ template <typename Callback> struct PluginInstance {
 template <typename Instance> class PluginInstances {
 public:
   ~PluginInstances() {
+    // Only meaningful after a real teardown; see PluginRegistry::IsTerminated.
+    if (!GetPluginRegistry().IsTerminated())
+      return;
 #ifndef NDEBUG
     for (const auto &instance : m_instances)
       llvm::errs() << llvm::formatv("Use `image lookup -va {0:x}` to find out "
@@ -709,6 +753,42 @@ std::unique_ptr<Architecture>
 PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
   for (const auto &instances : GetArchitectureInstances().GetSnapshot()) {
     if (auto plugin_up = instances.create_callback(arch))
+      return plugin_up;
+  }
+  return nullptr;
+}
+
+#pragma mark BugReporter
+
+typedef PluginInstance<BugReporterCreateInstance> BugReporterInstance;
+typedef PluginInstances<BugReporterInstance> BugReporterInstances;
+
+static BugReporterInstances &GetBugReporterInstances() {
+  static BugReporterInstances g_instances;
+  return g_instances;
+}
+
+void PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
+                                   BugReporterCreateInstance create_callback) {
+  GetBugReporterInstances().RegisterPlugin(name, description, create_callback);
+}
+
+void PluginManager::UnregisterPlugin(
+    BugReporterCreateInstance create_callback) {
+  GetBugReporterInstances().UnregisterPlugin(create_callback);
+}
+
+std::unique_ptr<BugReporter>
+PluginManager::CreateBugReporterInstance(llvm::StringRef name) {
+  if (!name.empty()) {
+    if (auto create_callback =
+            GetBugReporterInstances().GetCallbackForName(name))
+      return create_callback();
+    return nullptr;
+  }
+  for (const auto &instance : GetBugReporterInstances().GetSnapshot()) {
+    if (auto plugin_up = instance.create_callback())
       return plugin_up;
   }
   return nullptr;
@@ -1980,12 +2060,14 @@ struct ScriptedInterfaceInstance
     : public PluginInstance<ScriptedInterfaceCreateInstance> {
   ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
                             ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptedExtension extension,
                             lldb::ScriptLanguage language,
                             ScriptedInterfaceUsages usages)
       : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
                                                         create_callback),
-        language(language), usages(usages) {}
+        extension(extension), language(language), usages(usages) {}
 
+  lldb::ScriptedExtension extension;
   lldb::ScriptLanguage language;
   ScriptedInterfaceUsages usages;
 };
@@ -2000,9 +2082,10 @@ static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ScriptedInterfaceCreateInstance create_callback,
-    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+    lldb::ScriptedExtension extension, lldb::ScriptLanguage language,
+    ScriptedInterfaceUsages usages) {
   return GetScriptedInterfaceInstances().RegisterPlugin(
-      name, description, create_callback, language, usages);
+      name, description, create_callback, extension, language, usages);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -2023,6 +2106,13 @@ PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
   return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
 }
 
+lldb::ScriptedExtension
+PluginManager::GetScriptedInterfaceExtensionAtIndex(uint32_t index) {
+  if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(index))
+    return instance->extension;
+  return ScriptedExtension::eScriptedExtensionInvalid;
+}
+
 lldb::ScriptLanguage
 PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
@@ -2035,6 +2125,30 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
     return instance->usages;
   return {};
+}
+
+void PluginManager::AutoCompleteScriptedExtension(
+    llvm::StringRef name, CompletionRequest &request,
+    lldb::ScriptLanguage language) {
+  llvm::StringSet<> emitted;
+  for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
+    auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx);
+    if (!instance)
+      continue;
+    // Filter to the requested language when the caller pinned one via
+    // `-l`. `eScriptLanguageUnknown` means "no filter".
+    if (language != lldb::eScriptLanguageUnknown &&
+        instance->language != language)
+      continue;
+    llvm::StringLiteral extension_name =
+        ScriptInterpreter::ExtensionToString(instance->extension);
+    if (!extension_name.starts_with(name))
+      continue;
+    // A single extension can back multiple languages, so dedup entries
+    // we've already surfaced.
+    if (emitted.insert(extension_name).second)
+      request.AddCompletion(extension_name);
+  }
 }
 
 #pragma mark REPL
@@ -2454,6 +2568,15 @@ PluginManager::GetArchitecturePluginInfo() {
 bool PluginManager::SetArchitecturePluginEnabled(llvm::StringRef name,
                                                  bool enable) {
   return GetArchitectureInstances().SetInstanceEnabled(name, enable);
+}
+
+llvm::SmallVector<RegisteredPluginInfo>
+PluginManager::GetBugReporterPluginInfo() {
+  return GetBugReporterInstances().GetPluginInfoForAllInstances();
+}
+bool PluginManager::SetBugReporterPluginEnabled(llvm::StringRef name,
+                                                bool enable) {
+  return GetBugReporterInstances().SetInstanceEnabled(name, enable);
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

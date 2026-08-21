@@ -28,11 +28,11 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(lower-matrix-intrinsics<>,lower-matrix-intrinsics<minimal>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-9
 ; CHECK-9: function(lower-matrix-intrinsics<>,lower-matrix-intrinsics<minimal>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-unroll<>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-10
-; CHECK-10: function(loop-unroll<O2>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-unroll<>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>,loop-unroll<prepare-for-lto>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-10
+; CHECK-10: function(loop-unroll<O2>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>,loop-unroll<prepare-for-lto;O2>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-11
-; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;no-memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;memdep;no-memoryssa>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(gvn<>,gvn<scalar-pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-scalar-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-11
+; CHECK-11: function(gvn<>,gvn<scalar-pre;load-pre;split-backedge-load-pre;no-memdep;memoryssa>,gvn<no-scalar-pre;no-load-pre;no-split-backedge-load-pre;memdep;no-memoryssa>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)
@@ -42,9 +42,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
 ; CHECK-14: hwasan<>,hwasan<kernel;recover>
-
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(loop-extract<>,loop-extract<single>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-16
-; CHECK-16: loop-extract<>,loop-extract<single>
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(print<stack-lifetime><may>,print<stack-lifetime><must>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-17
 ; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
@@ -123,3 +120,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(asan<>,asan<kernel;use-after-scope>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-37
 ; CHECK-37: asan<>,asan<kernel;use-after-scope>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>' < %s | FileCheck %s --check-prefixes=CHECK-38
+; CHECK-38: drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>

@@ -98,11 +98,11 @@ class HARDFLOAT { list<Predicate> HardFloatPredicate = [IsNotSoftFloat]; }
 
 // FP immediate patterns.
 def fpimm0 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fpimm0neg : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(-0.0);
+  return N->isNegZero();
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1019,6 +1019,14 @@ def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
               (MTC1_D64 GPR32Opnd:$src)>, ISA_MIPS1, FGR_64;
+
+def : MipsPat<(setlt (i32 (bitconvert (f32 (fpround AFGR64Opnd:$src)))), 0),
+           (SLTi (MFHC1_D32 AFGR64Opnd:$src), 0)>,
+           ISA_MIPS32R2, FGR_32;
+
+def : MipsPat<(setlt (i32 (bitconvert (f32 (fpround FGR64Opnd:$src)))), 0),
+          (SLTi (MFHC1_D64 FGR64Opnd:$src), 0)>,
+          ISA_MIPS32R2, FGR_64;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;

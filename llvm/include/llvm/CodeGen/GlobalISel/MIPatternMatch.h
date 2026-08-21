@@ -190,6 +190,23 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
   return GFCstOrSplatGFCstMatch(FPValReg);
 }
 
+/// Matches an FP constant whose value satisfies the given predicate.
+template <typename Pred> struct GFCstPredMatch {
+  Pred P;
+  GFCstPredMatch(Pred P) : P(P) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    if (const ConstantFP *FPImm = getConstantFPVRegVal(Reg, MRI))
+      return P(FPImm->getValueAPF());
+    return false;
+  }
+};
+template <typename Pred> GFCstPredMatch(Pred) -> GFCstPredMatch<Pred>;
+
+/// Matches a floating-point positive zero.
+inline auto m_PosZeroFP() {
+  return GFCstPredMatch([](const APFloat &V) { return V.isPosZero(); });
+}
+
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   APInt RequestedVal;
@@ -430,6 +447,23 @@ inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 inline bind_ty<FPClassTest> m_FPClassTest(FPClassTest &T) { return T; }
 
+/// Wraps a MIFlags output for use as an optional trailing operand of an
+/// instruction matcher (e.g. m_GPtrAdd(L, R, m_MIFlags(Flags))). On a
+/// successful match the matched instruction's flags are written to \p Flags.
+struct MIFlagsRef {
+  uint32_t &Flags;
+};
+
+inline MIFlagsRef m_MIFlags(uint32_t &Flags) { return {Flags}; }
+
+/// Optional trailing operand for a load matcher (e.g. m_GLoad(m_Reg(Ptr),
+/// m_MMO(MMO))) that binds the matched instruction's MachineMemOperand.
+struct MMORef {
+  const MachineMemOperand *&MMO;
+};
+
+inline MMORef m_MMO(const MachineMemOperand *&MMO) { return {MMO}; }
+
 template <typename BindTy> struct deferred_helper {
   static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
     return VR == V;
@@ -471,6 +505,159 @@ struct ImplicitDefMatch {
 
 inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
 
+/// Binds the defining instruction of \p Reg if it is a \p Class. Prefer the
+/// named helpers below so the opcode is spelled out at the call site.
+template <typename Class> struct GInstrBind {
+  Class *&Inst;
+
+  GInstrBind(Class *&Inst) : Inst(Inst) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
+      if (auto *Cst = dyn_cast<Class>(TmpMI)) {
+        Inst = Cst;
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+/// Match a literal G_CONSTANT instruction (no look-through of splats or
+/// copies).
+inline GInstrBind<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
+inline GInstrBind<const GConstant> m_GConstant(const GConstant *&Inst) {
+  return Inst;
+}
+
+/// Match a literal G_CONSTANT or G_FCONSTANT, binding its raw bits to \p Bits
+/// (the integer value, or the float reinterpreted as an integer).
+struct GConstantBitsMatch {
+  APInt &Bits;
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *MI = MRI.getVRegDef(Reg);
+    if (MI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      Bits = MI->getOperand(1).getCImm()->getValue();
+      return true;
+    }
+    if (MI->getOpcode() == TargetOpcode::G_FCONSTANT) {
+      Bits = MI->getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+      return true;
+    }
+    return false;
+  }
+};
+
+inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
+  return {Bits};
+}
+
+/// Match a load of type \p Class, binding its pointer operand (like IR's
+/// m_Load), and optionally the instruction and/or its MachineMemOperand.
+template <typename Class, typename PtrP> struct LoadOp_match {
+  PtrP Ptr;
+  Class **InstOut = nullptr;
+  const MachineMemOperand **MMOOut = nullptr;
+
+  LoadOp_match(const PtrP &Ptr) : Ptr(Ptr) {}
+  LoadOp_match(const PtrP &Ptr, MMORef MMO) : Ptr(Ptr), MMOOut(&MMO.MMO) {}
+  LoadOp_match(Class *&Inst, const PtrP &Ptr) : Ptr(Ptr), InstOut(&Inst) {}
+  LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
+      : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *Load = dyn_cast<Class>(TmpMI);
+    if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
+      return false;
+    if (InstOut)
+      *InstOut = Load;
+    if (MMOOut)
+      *MMOOut = &Load->getMMO();
+    return true;
+  }
+};
+
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(const PtrP &Ptr) {
+  return LoadOp_match<GAnyLoad, PtrP>(Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(GAnyLoad *&Inst,
+                                               const PtrP &Ptr) {
+  return LoadOp_match<GAnyLoad, PtrP>(Inst, Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(GAnyLoad *&Inst, const PtrP &Ptr,
+                                               MMORef MMO) {
+  return LoadOp_match<GAnyLoad, PtrP>(Inst, Ptr, MMO);
+}
+template <typename PtrP>
+inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr) {
+  return LoadOp_match<GLoad, PtrP>(Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
+  return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
+}
+
+/// Instruction binders for ops with no operand-form matcher (constant-immediate
+/// or variadic-source ops).
+inline GInstrBind<GUnmerge> m_GUnmerge(GUnmerge *&Inst) { return Inst; }
+inline GInstrBind<GVScale> m_GVScale(GVScale *&Inst) { return Inst; }
+inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
+  return Inst;
+}
+inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
+  return Inst;
+}
+
+/// Matches a G_SHUFFLE_VECTOR, binding its two source operands and its mask.
+template <typename Src1Ty, typename Src2Ty> struct ShuffleVectorMatch {
+  Src1Ty Src1;
+  Src2Ty Src2;
+  ArrayRef<int> &Mask;
+
+  ShuffleVectorMatch(const Src1Ty &Src1, const Src2Ty &Src2,
+                     ArrayRef<int> &Mask)
+      : Src1(Src1), Src2(Src2), Mask(Mask) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *Shuf = dyn_cast<GShuffleVector>(TmpMI);
+    if (!Shuf || !Src1.match(MRI, Shuf->getSrc1Reg()) ||
+        !Src2.match(MRI, Shuf->getSrc2Reg()))
+      return false;
+    Mask = Shuf->getMask();
+    return true;
+  }
+};
+
+template <typename Src1Ty, typename Src2Ty>
+inline ShuffleVectorMatch<Src1Ty, Src2Ty>
+m_GShuffleVector(const Src1Ty &Src1, const Src2Ty &Src2, ArrayRef<int> &Mask) {
+  return ShuffleVectorMatch<Src1Ty, Src2Ty>(Src1, Src2, Mask);
+}
+
+/// Matches a G_FRAME_INDEX, binding its frame index.
+struct GFrameIndexMatch {
+  int &FI;
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+      FI = TmpMI->getOperand(1).getIndex();
+      return true;
+    }
+    return false;
+  }
+};
+
+inline GFrameIndexMatch m_GFrameIndex(int &FI) { return {FI}; }
+
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
@@ -480,8 +667,12 @@ template <typename LHS_P, typename RHS_P, unsigned Opcode,
 struct BinaryOp_match {
   LHS_P L;
   RHS_P R;
+  // Optional output: when set, receives the matched instruction's flags.
+  uint32_t *FlagsOut = nullptr;
 
   BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS) : L(LHS), R(RHS) {}
+  BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS, MIFlagsRef FlagsOut)
+      : L(LHS), R(RHS), FlagsOut(&FlagsOut.Flags) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     const MachineInstr *TmpMI;
@@ -497,7 +688,11 @@ struct BinaryOp_match {
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
           return false;
-        return (TmpMI->getFlags() & Flags) == Flags;
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
+        if (FlagsOut)
+          *FlagsOut = TmpMI->getFlags();
+        return true;
       }
     }
     return false;
@@ -572,9 +767,21 @@ m_GPtrAdd(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
+m_GPtrAdd(const LHS &L, const RHS &R, MIFlagsRef Flags) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R, Flags);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB> m_GSub(const LHS &L,
                                                             const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>
+m_GSub(const LHS &L, const RHS &R, MIFlagsRef Flags) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>(L, R, Flags);
 }
 
 template <typename LHS, typename RHS>
@@ -739,6 +946,27 @@ template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>
 m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);
+}
+
+/// Matches a G_SEXT_INREG, binding its source operand. G_SEXT_INREG has an
+/// extra immediate operand, so it does not fit the plain UnaryOp_match shape.
+template <typename SrcTy> struct SExtInRegMatch {
+  SrcTy L;
+
+  SExtInRegMatch(const SrcTy &LHS) : L(LHS) {}
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (mi_match(Op, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_SEXT_INREG)
+      return L.match(MRI, TmpMI->getOperand(1).getReg());
+    return false;
+  }
+};
+
+template <typename SrcTy>
+inline SExtInRegMatch<SrcTy> m_GSExtInReg(const SrcTy &Src) {
+  return SExtInRegMatch<SrcTy>(Src);
 }
 
 template <typename SrcTy>

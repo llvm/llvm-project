@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512fp16 -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512fp16 -fclangir -emit-llvm -o %t.ll  -Wall -Werror
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512fp16 -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
@@ -73,10 +73,10 @@ _Float16 test_mm512_reduce_add_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_add_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // LLVM-LABEL: test_mm512_reduce_add_ph
-  // LLVM: call half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+  // LLVM: call half @llvm.vector.reduce.fadd.v32f16(half -0.000000e+00, <32 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm512_reduce_add_ph
-  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fadd.v32f16(half -0.000000e+00, <32 x half> %{{.*}})
   return _mm512_reduce_add_ph(__W);
 }
 
@@ -88,10 +88,10 @@ _Float16 test_mm512_reduce_mul_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_mul_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // LLVM-LABEL: test_mm512_reduce_mul_ph
-  // LLVM: call half @llvm.vector.reduce.fmul.v32f16(half 0xH3C00, <32 x half> %{{.*}})
+  // LLVM: call half @llvm.vector.reduce.fmul.v32f16(half 1.000000e+00, <32 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm512_reduce_mul_ph
-  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fmul.v32f16(half 0xH3C00, <32 x half> %{{.*}})
+  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fmul.v32f16(half 1.000000e+00, <32 x half> %{{.*}})
   return _mm512_reduce_mul_ph(__W);
 }
 

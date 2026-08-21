@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -fcuda %s -o - | FileCheck %s
 
 ! Test CUDA Fortran specific type
 

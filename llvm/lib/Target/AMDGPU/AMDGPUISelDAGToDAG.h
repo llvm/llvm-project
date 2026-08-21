@@ -155,7 +155,8 @@ private:
   bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
-                            SDValue &Offset, uint64_t FlatVariant) const;
+                            SDValue &Offset,
+                            AMDGPU::FlatAddrSpace FlatVariant) const;
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                         SDValue &Offset) const;
   bool SelectGlobalOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
@@ -215,8 +216,6 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
-  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
-                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
@@ -231,8 +230,6 @@ private:
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                         SDValue &Clamp, SDValue &Omod) const;
-  bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
-                         SDValue &Clamp, SDValue &Omod) const;
 
   bool SelectVINTERPModsImpl(SDValue In, SDValue &Src, SDValue &SrcMods,
                              bool OpSel) const;
@@ -270,10 +267,18 @@ private:
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixModsExtNeg(SDValue In, SDValue &Src,
+                                   SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
+                                SDValue &SrcMods) const;
   bool SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
                                     SDValue &SrcMods) const;
   bool SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
                                  SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16ModsExtNeg(SDValue In, SDValue &Src,
+                                       SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
+                                    SDValue &SrcMods) const;
 
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
                    SDValue &Tbl) const;
@@ -284,6 +289,7 @@ private:
 
   void SelectADD_SUB_I64(SDNode *N);
   void SelectAddcSubb(SDNode *N);
+  void SelectAddcSubbI64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
   void SelectMAD_64_32(SDNode *N);
@@ -296,7 +302,6 @@ private:
   void SelectS_BFE(SDNode *N);
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
-  void SelectFMAD_FMA(SDNode *N);
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);

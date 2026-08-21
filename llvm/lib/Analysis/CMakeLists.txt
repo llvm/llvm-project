@@ -1,4 +1,15 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+if (LLVM_HAVE_MLIR_LOWERING)
+  include(MLGOLower)
+  mlgo_lower_models(
+    "${LLVM_MLGO_MODELS}"
+    "${LLVM_MLGO_MLIR_OPT}"
+    "${LLVM_MLGO_MLIR_TRANSLATE}"
+    inliner
+    llvm/Analysis
+    InlinerModels
+    MLDeps
+  )
+elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
 
@@ -85,7 +96,6 @@ add_llvm_component_library(LLVMAnalysis
   HashRecognize.cpp
   HeatUtils.cpp
   IR2Vec.cpp
-  IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
   ImportedFunctionsInliningStatistics.cpp

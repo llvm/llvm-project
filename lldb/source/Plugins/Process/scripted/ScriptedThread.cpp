@@ -11,6 +11,7 @@
 
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -57,15 +58,20 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
+  // The legacy thread-spawn path (no script_object) needs to instantiate a
+  // *thread* Python class whose name comes from the process plugin, not the
+  // process's own class name. Build a thread-specific metadata for that case;
+  // when script_object is non-null the class name is unused so we just forward
+  // the process's metadata.
+  ScriptedMetadata thread_metadata =
+      script_object ? process.m_scripted_metadata
+                    : ScriptedMetadata(thread_class_name,
+                                       process.m_scripted_metadata.GetArgsSP());
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
-      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-      script_object);
+      thread_metadata, exe_ctx, script_object);
 
-  if (!obj_or_err) {
-    llvm::consumeError(obj_or_err.takeError());
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to create script object.");
-  }
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
   StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
 
@@ -94,7 +100,7 @@ const char *ScriptedThread::GetName() {
   std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
-  return ConstString(thread_name->c_str()).AsCString(nullptr);
+  return ConstString(*thread_name).AsCString(nullptr);
 }
 
 const char *ScriptedThread::GetQueueName() {
@@ -102,7 +108,7 @@ const char *ScriptedThread::GetQueueName() {
   std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
-  return ConstString(queue_name->c_str()).AsCString(nullptr);
+  return ConstString(*queue_name).AsCString(nullptr);
 }
 
 void ScriptedThread::WillResume(StateType resume_state) {}
@@ -140,9 +146,16 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
         LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
         LLDBLog::Thread);
 
+  DynamicRegisterInfoSP register_info_sp = GetDynamicRegisterInfo();
+  if (!register_info_sp)
+    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+        LLVM_PRETTY_FUNCTION,
+        "Failed to create scripted thread registers info.", error,
+        LLDBLog::Thread);
+
   std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
       std::make_shared<RegisterContextMemory>(
-          *this, 0, *GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
+          *this, 0, std::move(register_info_sp), LLDB_INVALID_ADDRESS);
   if (!reg_ctx_memory)
     return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to create a register context.", error,
@@ -262,14 +275,15 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
 
       if (!frame_from_script_obj_or_err) {
-        return ScriptedInterface::ErrorWithMessage<bool>(
-            LLVM_PRETTY_FUNCTION,
-            llvm::Twine(
-                "Couldn't add artificial frame (" + llvm::Twine(idx) +
-                llvm::Twine(") to ScriptedThread StackFrameList: ") +
-                llvm::toString(frame_from_script_obj_or_err.takeError()))
+        llvm::consumeError(frame_from_dict_or_err.takeError());
+        Debugger::ReportError(
+            llvm::formatv(
+                "couldn't add artificial frame ({0}) to ScriptedThread "
+                "StackFrameList: {1}",
+                idx, llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
-            error, LLDBLog::Thread);
+            GetProcess()->GetTarget().GetDebugger().GetID());
+        return false;
       } else {
         llvm::consumeError(frame_from_dict_or_err.takeError());
         synth_frame_sp = *frame_from_script_obj_or_err;
@@ -428,24 +442,19 @@ lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
   return m_scripted_thread_interface_sp;
 }
 
-std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
+DynamicRegisterInfoSP ScriptedThread::GetDynamicRegisterInfo() {
   CheckInterpreterAndScriptObject();
 
-  if (!m_register_info_sp) {
-    StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
+  StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
 
-    Status error;
-    if (!reg_info)
-      return ScriptedInterface::ErrorWithMessage<
-          std::shared_ptr<DynamicRegisterInfo>>(
-          LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
-          error, LLDBLog::Thread);
+  Status error;
+  if (!reg_info)
+    return ScriptedInterface::ErrorWithMessage<DynamicRegisterInfoSP>(
+        LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
+        error, LLDBLog::Thread);
 
-    m_register_info_sp = DynamicRegisterInfo::Create(
-        *reg_info, m_scripted_process.GetTarget().GetArchitecture());
-  }
-
-  return m_register_info_sp;
+  return DynamicRegisterInfo::Create(
+      *reg_info, m_scripted_process.GetTarget().GetArchitecture());
 }
 
 StructuredData::ObjectSP ScriptedThread::FetchThreadExtendedInfo() {

@@ -1241,7 +1241,7 @@ DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case tok::kw___##Trait:                                                      \
     return DeclSpec::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   default:
     llvm_unreachable("passed in an unhandled type transformation built-in");
   }
@@ -1604,7 +1604,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
           tok::kw___is_abstract,
           tok::kw___is_aggregate,
           tok::kw___is_arithmetic,
@@ -1986,7 +1986,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   bool Owned = false;
   SkipBodyInfo SkipBody;
-  if (TemplateId) {
+  if (TemplateId &&
+      (TUK != TagUseKind::Friend ||
+       TemplateInfo.Kind != ParsedTemplateKind::Template ||
+       TemplateId->isInvalid() || !TemplateId->Template.get().isDependent())) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
@@ -2006,10 +2009,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
           TemplateId->RAngleLoc, attrs);
 
-      // Friend template-ids are treated as references unless
-      // they have template headers, in which case they're ill-formed
-      // (FIXME: "template <class T> friend class A<T>::B<int>;").
-      // We diagnose this error in ActOnClassTemplateSpecialization.
     } else if (TUK == TagUseKind::Reference ||
                (TUK == TagUseKind::Friend &&
                 TemplateInfo.Kind == ParsedTemplateKind::NonTemplate)) {
@@ -2106,11 +2105,17 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SkipUntil(tok::semi, StopBeforeMatch);
     }
 
+    if (TemplateId) {
+      Name = nullptr;
+      NameLoc = TemplateId->TemplateNameLoc;
+    }
+
     TagOrTempResult = Actions.ActOnTemplatedFriendTag(
         getCurScope(), DS.getFriendSpecLoc(), TagType, StartLoc, SS, Name,
         NameLoc, EllipsisLoc, attrs,
         MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0] : nullptr,
-                               TemplateParams ? TemplateParams->size() : 0));
+                               TemplateParams ? TemplateParams->size() : 0),
+        TemplateId);
   } else {
     if (TUK != TagUseKind::Declaration && TUK != TagUseKind::Definition)
       ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
@@ -2534,6 +2539,12 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    // With abbreviated function templates - we need to explicitly add depth to
+    // account for the implicit template parameter list induced by the template.
+    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
+        DeclaratorInfo.getInventedTemplateParameterList())
+      ++CurTemplateDepthTracker;
     ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
@@ -4702,21 +4713,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis) << AttrName;
   }
 
-  // If we hit an error and recovered by parsing up to a semicolon, eat the
-  // semicolon and don't issue further diagnostics about missing brackets.
-  if (Tok.is(tok::semi)) {
-    ConsumeToken();
-    return;
-  }
-
   SourceLocation CloseLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  bool IsTokenNotFound = ExpectAndConsume(tok::r_square);
+  if (IsTokenNotFound)
     SkipUntil(tok::r_square);
   else if (Tok.is(tok::r_square))
     checkCompoundToken(CloseLoc, tok::r_square, CompoundToken::AttrEnd);
   if (EndLoc)
     *EndLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  if (!IsTokenNotFound && ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
 }
 

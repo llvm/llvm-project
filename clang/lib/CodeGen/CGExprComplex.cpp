@@ -782,7 +782,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       4, Op.Ty->castAs<ComplexType>()->getElementType());
   QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
   const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, cast<FunctionType>(FQTy.getTypePtr()), false);
+      Args, cast<FunctionType>(FQTy.getTypePtr()), false,
+      CGF.getCurrentFunctionDecl());
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::FunctionCallee Func = CGF.CGM.CreateRuntimeFunction(

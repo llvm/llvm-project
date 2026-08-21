@@ -80,10 +80,6 @@ public:
   static char ID;
 
 private:
-  /// An input function to decide if the pass should run or not
-  /// on the given MachineFunction.
-  std::function<bool(const MachineFunction &)> DoNotRunPass;
-
   MachineRegisterInfo *MRI = nullptr;
   const TargetLowering *TLI = nullptr;
   MachineFunction *MF = nullptr;
@@ -166,7 +162,6 @@ private:
 
 public:
   LoadStoreOpt();
-  LoadStoreOpt(std::function<bool(const MachineFunction &)>);
 
   StringRef getPassName() const override { return "LoadStoreOpt"; }
 

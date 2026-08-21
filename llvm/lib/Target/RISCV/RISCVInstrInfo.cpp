@@ -522,6 +522,15 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Extracting from X0_Pair may create copies from DUMMY_REG_PAIR_WITH_X0.
+  if (SrcReg == RISCV::DUMMY_REG_PAIR_WITH_X0 &&
+      RISCV::GPRRegClass.contains(DstReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
+        .addReg(RISCV::X0)
+        .addImm(0);
+    return;
+  }
+
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
@@ -548,8 +557,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (STI.hasStdExtP()) {
         // On RV32P, `padd.dw` is a GPR Pair Add
         BuildMI(MBB, MBBI, DL, get(RISCV::PADD_DW), DstReg)
-            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-            .addReg(RISCV::X0_Pair);
+            .addReg(RISCV::X0_Pair)
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
         return;
       }
     }
@@ -1622,7 +1631,12 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
     Imm = 0;
     return true;
   }
-  return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+
+  if (!Reg.isVirtual())
+    return false;
+
+  const MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  return DefMI && isLoadImm(DefMI, Imm);
 }
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
@@ -2007,6 +2021,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (Opcode) {
   case RISCV::PseudoMV_FPR16INX:
   case RISCV::PseudoMV_FPR32INX:
+  case RISCV::PseudoClearGPR:
     // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtZca() ? 2 : 4;
   // Below cases are for short forward branch pseudos
@@ -3024,6 +3039,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
@@ -3042,8 +3058,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
           break;
+        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
+          Ok = Imm == STI.getXLen();
+          break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
+        case RISCVOp::OPERAND_UIMM9_YBNDSWI:
+          Ok = RISCV::isValidYBNDSWImm(Imm);
           break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
@@ -3069,6 +3091,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(8)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
+        CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
@@ -3131,6 +3154,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
+        case RISCVOp::OPERAND_SMTVType:
+          Ok = XSMTVTypeMode::isValidSMTVTypeMode(Imm);
+          break;
+        case RISCVOp::OPERAND_SMTI8:
+          Ok = Imm == XSMTVTypeMode::SMT_I8;
           break;
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
@@ -3601,7 +3630,9 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSDESC_HI, "riscv-tlsdesc-hi"},
       {MO_TLSDESC_LOAD_LO, "riscv-tlsdesc-load-lo"},
       {MO_TLSDESC_ADD_LO, "riscv-tlsdesc-add-lo"},
-      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"}};
+      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"},
+      {MO_QC_ACCESS, "riscv-qc-access"},
+  };
   return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
@@ -3936,6 +3967,30 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
   return It;
 }
 
+void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator Iter,
+                                        DebugLoc &DL,
+                                        bool AllowSideEffects) const {
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearGPR), Reg);
+  } else if (RISCV::FPR32RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR32), Reg);
+  } else if (RISCV::FPR64RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
+  } else if (RISCV::FPR128RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
+  } else if (RISCV::VRRegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
+  } else {
+    llvm::reportFatalInternalError(
+        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
+  }
+}
+
 std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
                                                          Register Reg) const {
   // TODO: Handle cases where Reg is a super- or sub-register of the
@@ -4193,16 +4248,16 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_RVV_OPCODE(VAADD_VV):
   case CASE_RVV_OPCODE(VAADDU_VV):
   case CASE_RVV_OPCODE(VSMUL_VV):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, MF2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M1):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M4):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M8):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, MF2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M1):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M4):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M8):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M8):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M8):
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):
@@ -4953,7 +5008,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
                             Register DestReg, uint32_t Amount,
                             MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (llvm::has_single_bit<uint32_t>(Amount)) {
+  if (llvm::has_single_bit(Amount)) {
     uint32_t ShiftAmount = Log2_32(Amount);
     if (ShiftAmount == 0)
       return;
@@ -4988,7 +5043,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addReg(DestReg)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount - 1)) {
+  } else if (llvm::has_single_bit(Amount - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount - 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -4999,7 +5054,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount + 1)) {
+  } else if (llvm::has_single_bit(Amount + 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount + 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -5490,10 +5545,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }

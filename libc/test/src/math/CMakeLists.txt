@@ -202,6 +202,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanbf16_test.cpp
+  DEPENDS
+    libc.src.math.tanbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE
@@ -241,6 +254,17 @@ add_fp_unittest(
     libc.src.math.tanpif
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lgammaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lgammaf16_test.cpp
+  DEPENDS
+    libc.src.math.lgammaf16
 )
 
 add_fp_unittest(
@@ -400,7 +424,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   ceilf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -410,6 +434,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ceilf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -500,6 +525,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.floorl
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf128_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1181,6 +1222,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expbf16_test.cpp
+  DEPENDS
+    libc.src.math.expbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   exp2_test
   NEED_MPFR
   SUITE
@@ -1314,8 +1367,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysign
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1329,8 +1380,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignf
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1344,8 +1393,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignl
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1527,8 +1574,6 @@ add_fp_unittest(
     libc.src.math.modf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1543,8 +1588,6 @@ add_fp_unittest(
     libc.src.math.modff
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1755,7 +1798,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   sqrtf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -1764,6 +1807,8 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -2262,8 +2307,6 @@ add_fp_unittest(
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -2279,8 +2322,6 @@ add_fp_unittest(
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -2533,7 +2574,7 @@ add_fp_unittest(
   SRCS
     asinf16_test.cpp
   DEPENDS
-    libc.src.math.asinf16  
+    libc.src.math.asinf16
 )
 
 add_fp_unittest(
@@ -2570,6 +2611,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acosbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acosbf16_test.cpp
+  DEPENDS
+    libc.src.math.acosbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
@@ -2601,7 +2655,7 @@ add_fp_unittest(
   SRCS
     acosf16_test.cpp
   DEPENDS
-    libc.src.math.acosf16  
+    libc.src.math.acosf16
 )
 
 add_fp_unittest(
@@ -2623,7 +2677,7 @@ add_fp_unittest(
   SRCS
     acospif16_test.cpp
   DEPENDS
-    libc.src.math.acospif16  
+    libc.src.math.acospif16
 )
 
 add_fp_unittest(
@@ -2721,7 +2775,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   scalbnf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -2831,7 +2885,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   atan2f128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3132,6 +3186,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrtf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   cbrtbf16_test
   NEED_MPFR
   SUITE
@@ -3374,7 +3440,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16addf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3430,7 +3496,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16divf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3492,7 +3558,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16fmaf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3556,7 +3622,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16mulf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3614,7 +3680,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16subf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS

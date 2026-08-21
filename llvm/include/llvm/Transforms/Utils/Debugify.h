@@ -37,8 +37,6 @@ using WeakInstValueMap =
 struct DebugInfoPerPass {
   // This maps a function name to its associated DISubprogram.
   DebugFnMap DIFunctions;
-  // This maps an instruction and the info about whether it has !dbg attached.
-  DebugInstMap DILocations;
   // This tracks value (instruction) deletion. If an instruction gets deleted,
   // WeakVH nulls itself.
   WeakInstValueMap InstToDelete;
@@ -109,7 +107,8 @@ LLVM_ABI llvm::FunctionPass *createDebugifyFunctionPass(
     llvm::StringRef NameOfWrappedPass = "",
     DebugInfoPerPass *DebugInfoBeforePass = nullptr);
 
-class NewPMDebugifyPass : public llvm::PassInfoMixin<NewPMDebugifyPass> {
+class NewPMDebugifyPass
+    : public llvm::OptionalPassInfoMixin<NewPMDebugifyPass> {
   DebugifyApplyToMFCallback ApplyToMF = nullptr;
   llvm::StringRef NameOfWrappedPass;
   DebugInfoPerPass *DebugInfoBeforePass = nullptr;
@@ -172,7 +171,7 @@ LLVM_ABI llvm::FunctionPass *createCheckDebugifyFunctionPass(
     llvm::StringRef OrigDIVerifyBugsReportFilePath = "");
 
 class NewPMCheckDebugifyPass
-    : public llvm::PassInfoMixin<NewPMCheckDebugifyPass> {
+    : public llvm::OptionalPassInfoMixin<NewPMCheckDebugifyPass> {
   llvm::StringRef NameOfWrappedPass;
   llvm::StringRef OrigDIVerifyBugsReportFilePath;
   DebugifyStatsMap *StatsMap;

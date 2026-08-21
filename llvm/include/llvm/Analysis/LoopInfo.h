@@ -311,12 +311,13 @@ public:
   bool isCanonical(ScalarEvolution &SE) const;
 
   /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
-  /// true, token values defined inside loop are allowed to violate LCSSA form.
+  /// true, token-like values defined inside loop are allowed to violate LCSSA
+  /// form.
   bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
-  /// IgnoreTokens is set to true, token values defined inside loop are allowed
-  /// to violate LCSSA form.
+  /// IgnoreTokens is set to true, token-like values defined inside loop are
+  /// allowed to violate LCSSA form.
   bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
                               bool IgnoreTokens = true) const;
 
@@ -416,7 +417,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 
@@ -595,19 +595,17 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.

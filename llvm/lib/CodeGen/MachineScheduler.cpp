@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -302,13 +301,8 @@ void ScheduleDAGMutation::anchor() {}
 // Machine Instruction Scheduling Pass and Registry
 //===----------------------------------------------------------------------===//
 
-MachineSchedContext::MachineSchedContext() {
-  RegClassInfo = new RegisterClassInfo();
-}
-
-MachineSchedContext::~MachineSchedContext() {
-  delete RegClassInfo;
-}
+MachineSchedContext::MachineSchedContext() = default;
+MachineSchedContext::~MachineSchedContext() = default;
 
 namespace llvm {
 namespace impl_detail {
@@ -329,9 +323,9 @@ class MachineSchedulerImpl : public MachineSchedulerBase {
 public:
   struct RequiredAnalyses {
     MachineLoopInfo &MLI;
-    MachineDominatorTree &MDT;
     AAResults &AA;
     LiveIntervals &LIS;
+    RegisterClassInfo &RegClassInfo;
     MachineBlockFrequencyInfo &MBFI;
   };
 
@@ -412,7 +406,6 @@ char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
 INITIALIZE_PASS_BEGIN(MachineSchedulerLegacy, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
@@ -424,14 +417,13 @@ MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {}
 
 void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -442,9 +434,9 @@ char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(PostMachineSchedulerLegacy, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
@@ -453,7 +445,6 @@ PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
 
 void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
@@ -550,10 +541,10 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
                                const RequiredAnalyses &Analyses) {
   MF = &Func;
   MLI = &Analyses.MLI;
-  MDT = &Analyses.MDT;
   this->TM = &TM;
   AA = &Analyses.AA;
   LIS = &Analyses.LIS;
+  RegClassInfo = &Analyses.RegClassInfo;
   MBFI = &Analyses.MBFI;
 
   if (VerifyScheduling) {
@@ -564,7 +555,6 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
     else
       MF->verify(*MFAM, MSchedBanner, &errs());
   }
-  RegClassInfo->runOnMachineFunction(*MF);
 
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
@@ -656,13 +646,15 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
 
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &RegClassInfo =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
+  return Impl.run(MF, TM, {MLI, AA, LIS, RegClassInfo, MBFI});
 }
 
 MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
@@ -689,15 +681,15 @@ MachineSchedulerPass::run(MachineFunction &MF,
 
   LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
   auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
 
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS, MBFI});
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, LIS, RegClassInfo, MBFI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -868,13 +860,20 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         Scheduler.exitRegion();
         continue;
       }
-      LLVM_DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      LLVM_DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB)
-                        << " " << MBB->getName() << "\n  From: " << *I
-                        << "    To: ";
-                 if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
-                 else dbgs() << "End\n";
-                 dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
+      auto DumpRegionHeader = [&] {
+        dbgs() << "Current Schedule Region\n";
+        dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
+               << MBB->getName() << "\n  From: " << *I << "    To: ";
+        if (RegionEnd != MBB->end())
+          dbgs() << *RegionEnd;
+        else
+          dbgs() << "End\n";
+        dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n';
+      };
+      if (PrintDAGs)
+        DumpRegionHeader();
+      else
+        LLVM_DEBUG(DumpRegionHeader());
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
         errs() << ":%bb. " << MBB->getNumber();
@@ -2474,7 +2473,7 @@ void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
 
 static const unsigned InvalidCycle = ~0U;
 
-SchedBoundary::~SchedBoundary() { delete HazardRec; }
+SchedBoundary::~SchedBoundary() = default;
 
 /// Given a Count of resource usage and a Latency value, return true if a
 /// SchedBoundary becomes resource limited.
@@ -2493,10 +2492,8 @@ void SchedBoundary::reset() {
   // A new HazardRec is created for each DAG and owned by SchedBoundary.
   // Destroying and reconstructing it is very expensive though. So keep
   // invalid, placeholder HazardRecs.
-  if (HazardRec && HazardRec->isEnabled()) {
-    delete HazardRec;
-    HazardRec = nullptr;
-  }
+  if (HazardRec && HazardRec->isEnabled())
+    HazardRec.reset();
   Available.clear();
   Pending.clear();
   CheckPending = false;
@@ -3013,7 +3010,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
              PI = SchedModel->getWriteProcResBegin(SC),
              PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
         unsigned PIdx = PI->ProcResourceIdx;
-        if (SchedModel->getProcResource(PIdx)->BufferSize == 0) {
+        if (SchedModel->getResourceBufferSize(PIdx) == 0) {
 
           if (SchedModel && SchedModel->enableIntervals()) {
             unsigned ReservedUntil, InstanceIdx;
@@ -3657,12 +3654,10 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty, or
   // are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
 
@@ -4322,12 +4317,10 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty,
   // or are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
   TopClusterID = InvalidClusterId;
   BotClusterID = InvalidClusterId;
 }

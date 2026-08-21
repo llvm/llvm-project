@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
+from typing import Optional
 from packaging import version
 import contextlib
 import ctypes
@@ -30,6 +31,7 @@ from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.cpu_feature import CPUFeature
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 
 class DecorateMode:
@@ -78,6 +80,21 @@ def _check_expected_version(comparison, expected, actual):
     return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
+def _get_macos_sdk_version() -> str | None:
+    """ Returns the current macOS SDK version or None if this system doesn't
+    use a macOS SDK."""
+    if platform.mac_ver()[0] == "":
+        return None
+    try:
+        return (
+            subprocess.check_output(["xcrun", "--sdk", "macosx", "--show-sdk-version"])
+            .rstrip()
+            .decode("utf-8")
+        )
+    except Exception:
+        return None
+
+
 def _match_decorator_property(expected, actual):
     if expected is None:
         return True
@@ -88,9 +105,7 @@ def _match_decorator_property(expected, actual):
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
 
-    # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-    pattern_type = type(re.compile(""))
-    if isinstance(expected, (pattern_type, str)):
+    if isinstance(expected, (re.Pattern, str)):
         return re.search(expected, actual) is not None
 
     if hasattr(expected, "__iter__"):
@@ -136,6 +151,51 @@ def expectedFailureIf(condition, bugnumber=None):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
+
+
+def requiresSwiftPlugin(min_apple_os_version=None):
+    """Mark a test that can only pass when LLDB has the Swift language plugin.
+
+    More and more of Foundation is implemented in Swift, so its values are
+    increasingly backed by native Swift types that only the Swift language
+    plugin knows how to format. A test exercising such a value passes when LLDB
+    is built with Swift support and is expected to fail otherwise.
+
+    Starting with macOS/iOS/... 26.0 all Apple OS share a common
+    version number, so ``min_apple_os_version`` describes the release
+    in which a value moved to Swift. Older OS versions, non-Apple
+    targets, and any build that has the Swift plugin are expected to
+    pass. When ``min_apple_os_version`` is omitted the plugin is
+    required on every Apple OS.
+    """
+
+    def decorate(func):
+        # An LLDB built with the Swift plugin satisfies the requirement.
+        if _get_bool_config("swift", fail_value=False):
+            return func
+
+        # Otherwise the test is expected to fail, but only on Apple targets
+        # that are new enough to have moved the value to Swift.
+        apple_oslist = lldbplatformutil.getDarwinOSTriples() + ["xros", "xrsimulator"]
+        expected = _match_decorator_property(
+            apple_oslist, lldbplatformutil.getPlatform()
+        )
+        if expected and min_apple_os_version is not None:
+            target = lldb.selected_platform
+            actual = "%d.%d" % (
+                target.GetOSMajorVersion(),
+                target.GetOSMinorVersion(),
+            )
+            expected = _check_expected_version(">=", str(min_apple_os_version), actual)
+
+        return expectedFailureIf(expected)(func)
+
+    # Support bare usage (@requiresSwiftPlugin) in addition to the parenthesized
+    # form (@requiresSwiftPlugin(min_apple_os_version=...)).
+    if callable(min_apple_os_version):
+        func, min_apple_os_version = min_apple_os_version, None
+        return decorate(func)
+    return decorate
 
 
 def skipTestIfFn(expected_fn, bugnumber=None):
@@ -202,6 +262,20 @@ def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
+def FreshTestFunction(src):
+    """Return a private copy of *src* for one generated test class to own.
+
+    Several decorators record their state on the function object they are
+    handed instead of on a wrapper.
+    """
+
+    @wraps(src)
+    def copy(self):
+        return src(self)
+
+    return copy
+
+
 def _skipForVariant(variant_name, expected_fn, bugnumber=None):
     """Mark a test method as skipped for a specific variant dimension.
 
@@ -222,7 +296,18 @@ def _skipForVariant(variant_name, expected_fn, bugnumber=None):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
         skip_dict = getattr(func, "__variant_skip__", {})
-        skip_dict[variant_name] = expected_fn
+        existing_fn = skip_dict.get(variant_name)
+        if existing_fn:
+            # Chain the decorator with the existing one.
+            def chained_fn(**kwargs):
+                reason = expected_fn(**kwargs)
+                if reason:
+                    return reason
+                return existing_fn(**kwargs)
+
+            skip_dict[variant_name] = chained_fn
+        else:
+            skip_dict[variant_name] = expected_fn
         func.__variant_skip__ = skip_dict
         return func
 
@@ -245,6 +330,7 @@ def _decorateTest(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -295,6 +381,12 @@ def _decorateTest(
                 )
             )
         )
+        _sdk_ver = _get_macos_sdk_version()
+        skip_for_macos_sdk_version = macos_sdk_version is None
+        if macos_sdk_version is not None and _sdk_ver is not None:
+            skip_for_macos_sdk_version = _check_expected_version(
+                macos_sdk_version[0], macos_sdk_version[1], _sdk_ver
+            )
         skip_for_dwarf_version = (dwarf_version is None) or (
             _check_expected_version(
                 dwarf_version[0], dwarf_version[1], lldbplatformutil.getDwarfVersion()
@@ -316,6 +408,7 @@ def _decorateTest(
             (swig_version, skip_for_swig_version, "swig version"),
             (py_version, skip_for_py_version, "python version"),
             (macos_version, skip_for_macos_version, "macOS version"),
+            (macos_sdk_version, skip_for_macos_sdk_version, "macOS SDK version"),
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
@@ -375,6 +468,7 @@ def expectedFailureAll(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -393,6 +487,7 @@ def expectedFailureAll(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
@@ -418,6 +513,7 @@ def skipIf(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -436,6 +532,7 @@ def skipIf(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
@@ -552,6 +649,9 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
 
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
+
         # Make sure we recognize the platform.
         mapping = {
             "iphone": "ios",
@@ -659,6 +759,36 @@ def expectedFailureNetBSD(bugnumber=None):
 
 
 def expectedFailureWindows(bugnumber=None):
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def _usingLLDBServerOnWindows():
+    """Return True if Windows tests should drive lldb-server instead of the
+    in-process Win32 ``windows`` process plugin.
+
+    The choice is controlled by the ``LLDB_USE_LLDB_SERVER`` environment
+    variable: unset/off selects the default in-process plugin, on selects
+    the gdb-remote path through ``lldb-server``.
+    """
+    return os.environ.get("LLDB_USE_LLDB_SERVER", "").lower() in (
+        "on",
+        "yes",
+        "1",
+        "true",
+    )
+
+
+def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return lambda func: func
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return lambda func: func
     return expectedFailureOS(["windows"], bugnumber)
 
 
@@ -902,6 +1032,20 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
+def skipIfWindowsAndLLDBServer(func):
+    """Skip tests on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
+
+
+def skipIfWindowsAndNoLLDBServer(func):
+    """Skip tests on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
+
+
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
 
@@ -993,16 +1137,156 @@ def skipUnlessPlatform(oslist):
     )
 
 
-def skipIfTargetDoesNotSupportThreads():
-    """Skip tests that require thread support (e.g. pthreads)."""
-    platform = lldbplatformutil.getPlatform()
-    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
-    # other WASI targets (e.g. wasip1, wasip2) do not.
-    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
-    return unittest.skipIf(
-        no_threads,
-        "threads are not supported on %s" % platform,
+##############################################################################
+# Platform *requirement* decorators.
+#
+# These express "this test can only ever run here", as opposed to the skipIf /
+# skipUnless family which means "this test ought to run here but is broken".
+# Tests turned off by a `require*` decorator are reported as UNSUPPORTED; tests
+# turned off by a `skip*` decorator are reported as SKIPPED. See
+# `lldbsuite.test.skip_reason` for how the distinction is carried.
+#
+# Reach for these when the test is inherently tied to a platform: it debugs a
+# platform-specific file format, drives a platform-specific API, or exercises
+# an OS feature that simply doesn't exist elsewhere. If the test is merely
+# untested or broken somewhere, keep using skipIf / skipUnless so it stays
+# visible as work to be done.
+##############################################################################
+
+
+def requirePlatform(oslist):
+    """Mark the item as runnable only on the listed target platforms.
+
+    Unlike `skipUnlessPlatform`, other platforms are reported as UNSUPPORTED
+    rather than SKIPPED.
+    """
+    return unittest.skipUnless(
+        lldbplatformutil.getPlatform() in oslist,
+        UnsupportedReason("requires one of %s" % (", ".join(oslist))),
     )
+
+
+def requireNotPlatform(oslist: list, reason: Optional[str] = None):
+    """Mark the item as inherently inapplicable to the listed target platforms.
+
+    Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
+    rather than SKIPPED.
+    """
+    assert isinstance(
+        reason, (str, type(None))
+    ), f"expects 'str' or 'None' got {type(reason).__name__!r}"
+
+    skip_reason = f"unsupported on {', '.join(oslist)}"
+    if reason:
+        skip_reason += f": {reason}"
+
+    return unittest.skipIf(
+        lldbplatformutil.getPlatform() in oslist, UnsupportedReason(skip_reason)
+    )
+
+
+def requireDarwin(func):
+    """Mark the item as inherently Darwin-only (Mach-O, debug maps, Darwin
+    kernel/runtime APIs, ...). Non-Darwin targets report UNSUPPORTED."""
+    return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireNotDarwin(reason: str):
+    """Mark the item as inherently inapplicable to Darwin targets."""
+    return requireNotPlatform(
+        lldbplatform.translate(lldbplatform.darwin_all), reason=reason
+    )
+
+
+def requireLinux(func):
+    """Mark the item as inherently Linux-only (procfs, Linux-specific syscalls,
+    ...). Other targets report UNSUPPORTED."""
+    return requirePlatform(["linux"])(func)
+
+
+def requireNotLinux(reason: str):
+    """Mark the item as inherently inapplicable to Linux targets."""
+    return requireNotPlatform(["linux"], reason=reason)
+
+
+def requireWindows(func):
+    """Mark the item as inherently Windows-only (PE/COFF, Win32 APIs, ...).
+    Other targets report UNSUPPORTED."""
+    return requirePlatform(["windows"])(func)
+
+
+def requireNotWindows(reason: str):
+    """Mark the item as inherently inapplicable to Windows targets.
+
+    Use this for tests built on POSIX-only concepts: fork/exec semantics,
+    POSIX signals, ptrace, ELF/Mach-O specifics, shell pipelines, and so on.
+    """
+    return requireNotPlatform(["windows"], reason=reason)
+
+
+def requirePOSIX(func):
+    """Mark the item as requiring a POSIX target.
+
+    A shorthand for `requireNotWindows` that reads better on tests whose
+    dependency is POSIX semantics generally rather than anything about
+    Windows specifically.
+    """
+    return requireNotPlatform(["windows"], reason="uses the posix API.")(func)
+
+
+def requireMacOS(func):
+    """Mark the item as inherently macOS-only, as opposed to other Darwin
+    platforms (iOS, tvOS, watchOS, ...).
+    """
+    return requirePlatform(["macosx"])(func)
+
+
+def requireSignals(func):
+    """Mark the item as requiring POSIX signal support on the target."""
+    return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+
+
+def requireExpressionEvaluation(func):
+    """Mark the item as requiring expression evaluation."""
+    return requireNotWasm(reason="needs expression evaluation support")(func)
+
+
+def requireNotWasm(reason: str):
+    """Mark the item as inherently inapplicable to WebAssembly targets.
+
+    WebAssembly has no processes, no signals, no shared libraries and no
+    ptrace-style debugging, so a large amount of the test suite can never
+    apply to it.
+    """
+    return requireNotPlatform(["wasip1", "wasi"], reason=reason)
+
+
+def requireHostPlatform(oslist):
+    """Mark the item as runnable only on the listed *host* platforms."""
+    return unittest.skipUnless(
+        lldbplatformutil.getHostPlatform() in oslist,
+        UnsupportedReason("requires one of %s as host" % (", ".join(oslist))),
+    )
+
+
+def requireDarwinHost(func):
+    """Mark the item as requiring a Darwin host, regardless of target.
+
+    Use for tests that drive host-side Darwin facilities: `xcrun`, the
+    simulator runtimes, dsymutil, the LLDB.framework layout, and so on.
+    """
+    return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireThreadSupport(func):
+    """Mark the item as requiring thread support (e.g. pthreads) on the target."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+        # other WASI targets (e.g. wasip1, wasip2) do not.
+        platform.startswith("wasi") and not platform.endswith("threads"),
+        UnsupportedReason(f"threads are not supported on {platform}"),
+    )(func)
 
 
 def skipIfTargetDoesNotSupportSharedLibraries():
@@ -1121,11 +1405,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None

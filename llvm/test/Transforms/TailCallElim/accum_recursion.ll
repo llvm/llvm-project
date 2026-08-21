@@ -80,10 +80,10 @@ define i64 @test3_fib(i64 %n) nounwind readnone {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N_TR]], -1
 ; CHECK-NEXT:    [[RECURSE1:%.*]] = tail call i64 @test3_fib(i64 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1]] = add i64 [[N_TR]], -2
-; CHECK-NEXT:    [[ACCUMULATE]] = add nsw i64 [[ACCUMULATOR_TR]], [[RECURSE1]]
+; CHECK-NEXT:    [[ACCUMULATE]] = add i64 [[ACCUMULATOR_TR]], [[RECURSE1]]
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i64 [[ACCUMULATOR_TR]], [[N_TR]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i64 [[ACCUMULATOR_TR]], [[N_TR]]
 ; CHECK-NEXT:    ret i64 [[ACCUMULATOR_RET_TR]]
 ;
 entry:
@@ -117,10 +117,10 @@ define i32 @test4_base_case_call() local_unnamed_addr {
 ; CHECK-NEXT:      i32 7, label [[CLEANUP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    [[ACCUMULATE]] = add nsw i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    [[ACCUMULATE]] = add i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], [[BASE]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i32 [[ACCUMULATOR_TR]], [[BASE]]
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
 ;
 entry:
@@ -255,15 +255,15 @@ define i32 @test7_multiple_accumulators(i32 %a) local_unnamed_addr {
 ; CHECK-NEXT:    [[SUB]] = add nsw i32 [[A_TR]], -1
 ; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_END3:%.*]], label [[IF_THEN2]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[ACCUMULATE1]] = add nsw i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    [[ACCUMULATE1]] = add i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       if.end3:
 ; CHECK-NEXT:    [[RECURSE2:%.*]] = tail call i32 @test7_multiple_accumulators(i32 [[SUB]])
 ; CHECK-NEXT:    [[ACCUMULATE2:%.*]] = mul nsw i32 [[RECURSE2]], 2
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], [[ACCUMULATE2]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i32 [[ACCUMULATOR_TR]], [[ACCUMULATE2]]
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR1:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], 0
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR1:%.*]] = add i32 [[ACCUMULATOR_TR]], 0
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR1]]
 ;
 entry:
@@ -328,3 +328,118 @@ if.end:                                           ; preds = %entry
 }
 
 declare i32 @llvm.sadd.sat.i32(i32, i32)
+
+; Reassociating the accumulator into a loop reorders the operands, so nsw must
+; be dropped from both the loop-body accumulator and the per-return copy.
+define i32 @test_drop_poison_flags(i32 %x) {
+; CHECK-LABEL: define i32 @test_drop_poison_flags(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[ACC:%.*]], [[REC:%.*]] ]
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], [[ENTRY]] ], [ [[XM1:%.*]], [[REC]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X_TR]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[BASE:%.*]], label [[REC]]
+; CHECK:       base:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = mul i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
+; CHECK:       rec:
+; CHECK-NEXT:    [[XM1]] = add i32 [[X_TR]], -1
+; CHECK-NEXT:    [[IS1:%.*]] = icmp eq i32 [[X_TR]], 1
+; CHECK-NEXT:    [[G:%.*]] = select i1 [[IS1]], i32 0, i32 46341
+; CHECK-NEXT:    [[ACC]] = mul i32 [[ACCUMULATOR_TR]], [[G]]
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %c = icmp eq i32 %x, 0
+  br i1 %c, label %base, label %rec
+
+base:
+  ret i32 1
+
+rec:
+  %xm1 = add i32 %x, -1
+  %r = call i32 @test_drop_poison_flags(i32 %xm1)
+  %is1 = icmp eq i32 %x, 1
+  %g = select i1 %is1, i32 0, i32 46341
+  %acc = mul nsw i32 %r, %g
+  ret i32 %acc
+}
+
+%struct.VecListNode = type { <4 x i32>, ptr }
+
+; The identity for a vector add accumulator is the zero vector.
+define <4 x i32> @test_vector_add_accumulator(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: define <4 x i32> @test_vector_add_accumulator(
+; CHECK-SAME: ptr [[A:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[A_TR:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[TMP1:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A_TR]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add <4 x i32> zeroinitializer, [[ACCUMULATOR_TR]]
+; CHECK-NEXT:    ret <4 x i32> [[ACCUMULATOR_RET_TR]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_TR]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A_TR]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[ADD]] = add <4 x i32> [[TMP0]], [[ACCUMULATOR_TR]]
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %add, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @test_vector_add_accumulator(ptr %1)
+  %add = add <4 x i32> %0, %call
+  br label %common.ret
+}
+
+; Like the scalar case above, vector sadd.sat is not associative and must not
+; be turned into an accumulator.
+define <4 x i32> @test_non_associative_sadd_sat_vector(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: define <4 x i32> @test_non_associative_sadd_sat_vector(
+; CHECK-SAME: ptr [[A:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = tail call <4 x i32> @test_non_associative_sadd_sat_vector(ptr [[TMP1]])
+; CHECK-NEXT:    [[SAT:%.*]] = tail call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[CALL]])
+; CHECK-NEXT:    ret <4 x i32> [[SAT]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %sat, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @test_non_associative_sadd_sat_vector(ptr %1)
+  %sat = tail call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %0, <4 x i32> %call)
+  br label %common.ret
+}
+
+declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>)

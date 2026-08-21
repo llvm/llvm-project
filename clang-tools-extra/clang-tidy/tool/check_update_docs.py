@@ -15,7 +15,7 @@ Clang-Tidy Check List Checker
 
 This wrapper script runs `add_new_check.py --update-docs` on
 a temporary copy of clang-tools-extra/{clang-tidy,docs} and
-writes the generated docs/clang-tidy/checks/list.rst to the
+writes the generated docs/clang-tidy/checks/list.md to the
 requested output path.
 """
 
@@ -32,7 +32,7 @@ from typing import Final, Sequence
 EXTRA_DIR: Final = os.path.join(os.path.dirname(__file__), "../..")
 CLANG_TIDY_DIR: Final = os.path.join(EXTRA_DIR, "clang-tidy")
 DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
-LIST_DOC: Final = os.path.join(DOCS_DIR, "clang-tidy", "checks", "list.rst")
+LIST_DOC: Final = os.path.join(DOCS_DIR, "clang-tidy", "checks", "list.md")
 
 
 def read_text(path: str) -> str:
@@ -67,9 +67,7 @@ def generate_updated_list() -> str:
             text=True,
         )
 
-        return read_text(
-            os.path.join(temp_docs_dir, "clang-tidy", "checks", "list.rst")
-        )
+        return read_text(os.path.join(temp_docs_dir, "clang-tidy", "checks", "list.md"))
 
 
 def main(argv: Sequence[str]) -> int:
@@ -82,7 +80,7 @@ def main(argv: Sequence[str]) -> int:
 
     if read_text(LIST_DOC) != generated:
         sys.stderr.write(
-            "\n'clang-tools-extra/docs/clang-tidy/checks/list.rst' is out of date.\n"
+            "\n'clang-tools-extra/docs/clang-tidy/checks/list.md' is out of date.\n"
             "Fix it by running 'clang-tools-extra/clang-tidy/add_new_check.py --update-docs'.\n\n"
         )
 

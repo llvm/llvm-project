@@ -95,11 +95,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
 NativeThreadLinux::NativeThreadLinux(NativeProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(),
       m_reg_context_up(
           NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-              process.GetArchitecture(), *this)),
-      m_stop_description() {}
+              process.GetArchitecture(), *this)) {}
 
 std::string NativeThreadLinux::GetName() {
   NativeProcessLinux &process = GetProcess();
@@ -214,8 +212,7 @@ Status NativeThreadLinux::Resume(uint32_t signo) {
   MaybeLogStateChange(new_state);
   m_state = new_state;
 
-  m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_description.clear();
+  ClearStopInfo();
 
   // If watchpoints have been set, but none on this thread, then this is a new
   // thread. So set all existing watchpoints.
@@ -255,7 +252,7 @@ Status NativeThreadLinux::SingleStep(uint32_t signo) {
   const StateType new_state = StateType::eStateStepping;
   MaybeLogStateChange(new_state);
   m_state = new_state;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 
   if(!m_step_workaround) {
     // If we already hava a workaround inplace, don't reset it. Otherwise, the

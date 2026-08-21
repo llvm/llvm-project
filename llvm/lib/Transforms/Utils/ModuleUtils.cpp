@@ -19,9 +19,9 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Hash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 
 using namespace llvm;
 
@@ -381,8 +381,10 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
-void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
-                               StringRef SectionName, Align Alignment) {
+GlobalVariable *llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
+                                          StringRef SectionName,
+                                          Align Alignment,
+                                          bool SectionExclude) {
   // Embed the memory buffer into the module.
   Constant *ModuleConstant = ConstantDataArray::get(
       M.getContext(), ArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
@@ -396,11 +398,16 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
   NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.embedded.objects");
   Metadata *MDVals[] = {ConstantAsMetadata::get(GV),
                         MDString::get(Ctx, SectionName)};
-
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
-  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+
+  if (SectionExclude)
+    GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+  else
+    GV->setMetadata(LLVMContext::MD_metadata_section_kind,
+                    llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
+  return GV;
 }
 
 bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(

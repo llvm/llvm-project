@@ -429,7 +429,7 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -511,6 +511,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
+      // multiplication of bool operands is equivalent to a logical AND
+      case SPIRV::OpIMulS:
+      case SPIRV::OpIMulV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
         break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
@@ -604,7 +611,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 
@@ -615,13 +621,22 @@ bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
     MachineInstr &I, unsigned int PtrOpIdx, unsigned int OpIdx) const {
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   SPIRVTypeInst PtrType = GR.getResultType(I.getOperand(PtrOpIdx).getReg());
+
+  if (PtrType && PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR)
+    return true;
+
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   SPIRVTypeInst OpType = GR.getResultType(I.getOperand(OpIdx).getReg());
 
   if (PointeeType == OpType)
     return true;
 
-  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
+  // getPointeeType yields nullptr for anything that is not an OpTypePointer.
+  // The early return above does not cover an untyped pointer nested in another
+  // type, such as a vector of pointers built for a scalarized vector GEP.
+  // typesLogicallyMatch dereferences both of its arguments, so bail out before
+  // calling it.
+  if (PointeeType && OpType && typesLogicallyMatch(PointeeType, OpType, GR)) {
     // Apply OpCopyLogical to OpIdx.
     if (I.getOperand(OpIdx).isDef() &&
         insertLogicalCopyOnResult(I, PointeeType)) {
@@ -673,6 +688,7 @@ SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::None;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::Nand:
     return AtomicExpansionKind::CmpXChg;
   default:
     return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
@@ -683,5 +699,20 @@ TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
   // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // TODO: pointer load should return CastToInteger, but
+  // convertAtomicLoadToIntegerType uses BitCast which asserts on pointer types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // TODO: pointer store should return CastToInteger, but
+  // convertAtomicStoreToIntegerType uses BitCast which asserts on pointer
+  // types.
   return AtomicExpansionKind::None;
 }

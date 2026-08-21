@@ -533,235 +533,10 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
   return UNKNOWN_LIBCALL;
 }
 
-RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
-  return getFPLibCall(RetVT, POWI_F32, POWI_F64, POWI_F80, POWI_F128,
-                      POWI_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::POW_V4F32;
-    case MVT::v2f64:
-      return RTLIB::POW_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::POW_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::POW_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
-  return getFPLibCall(RetVT, LDEXP_F32, LDEXP_F64, LDEXP_F80, LDEXP_F128,
-                      LDEXP_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
-  return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
-                      FREXP_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSIN(EVT RetVT) {
-  return getFPLibCall(RetVT, SIN_F32, SIN_F64, SIN_F80, SIN_F128, SIN_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
-  return getFPLibCall(RetVT, COS_F32, COS_F64, COS_F80, COS_F128, COS_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::SINCOS_V4F32;
-    case MVT::v8f32:
-      return RTLIB::SINCOS_V8F32;
-    case MVT::v16f32:
-      return RTLIB::SINCOS_V16F32;
-    case MVT::v2f64:
-      return RTLIB::SINCOS_V2F64;
-    case MVT::v4f64:
-      return RTLIB::SINCOS_V4F64;
-    case MVT::v8f64:
-      return RTLIB::SINCOS_V8F64;
-    case MVT::nxv4f32:
-      return RTLIB::SINCOS_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::SINCOS_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
-                      SINCOS_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::SINCOSPI_V4F32;
-    case MVT::v2f64:
-      return RTLIB::SINCOSPI_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::SINCOSPI_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::SINCOSPI_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, SINCOSPI_F32, SINCOSPI_F64, SINCOSPI_F80,
-                      SINCOSPI_F128, SINCOSPI_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
-  return getFPLibCall(RetVT, SINCOS_STRET_F32, SINCOS_STRET_F64,
-                      UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
-}
-
-RTLIB::Libcall RTLIB::getREM(EVT VT) {
-  // TODO: Tablegen should generate this function
-  if (VT.isVector()) {
-    if (!VT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::REM_V4F32;
-    case MVT::v2f64:
-      return RTLIB::REM_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::REM_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::REM_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(VT, REM_F32, REM_F64, REM_F80, REM_F128, REM_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getCBRT(EVT VT) {
-  // TODO: Tablegen should generate this function
-  if (VT.isVector()) {
-    if (!VT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::CBRT_V4F32;
-    case MVT::v2f64:
-      return RTLIB::CBRT_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::CBRT_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::CBRT_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(VT, CBRT_F32, CBRT_F64, CBRT_F80, CBRT_F128,
-                      CBRT_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
-  // TODO: Tablegen should generate this function
-  if (RetVT.isVector()) {
-    if (!RetVT.isSimple())
-      return RTLIB::UNKNOWN_LIBCALL;
-    switch (RetVT.getSimpleVT().SimpleTy) {
-    case MVT::v4f32:
-      return RTLIB::MODF_V4F32;
-    case MVT::v2f64:
-      return RTLIB::MODF_V2F64;
-    case MVT::nxv4f32:
-      return RTLIB::MODF_NXV4F32;
-    case MVT::nxv2f64:
-      return RTLIB::MODF_NXV2F64;
-    default:
-      return RTLIB::UNKNOWN_LIBCALL;
-    }
-  }
-
-  return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
-                      MODF_PPCF128);
-}
-
-RTLIB::Libcall RTLIB::getLROUND(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LROUND_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LROUND_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LROUND_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LROUND_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LROUND_PPCF128;
-
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLLROUND(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LLROUND_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LLROUND_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LLROUND_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LLROUND_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LLROUND_PPCF128;
-
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLRINT(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LRINT_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LRINT_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LRINT_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LRINT_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LRINT_PPCF128;
-  return RTLIB::UNKNOWN_LIBCALL;
-}
-
-RTLIB::Libcall RTLIB::getLLRINT(EVT VT) {
-  if (VT == MVT::f32)
-    return RTLIB::LLRINT_F32;
-  if (VT == MVT::f64)
-    return RTLIB::LLRINT_F64;
-  if (VT == MVT::f80)
-    return RTLIB::LLRINT_F80;
-  if (VT == MVT::f128)
-    return RTLIB::LLRINT_F128;
-  if (VT == MVT::ppcf128)
-    return RTLIB::LLRINT_PPCF128;
-  return RTLIB::UNKNOWN_LIBCALL;
-}
+// The floating-point RTLIB::getXXX(EVT) selectors are generated from the
+// RuntimeLibcallFamily table in RuntimeLibcalls.td.
+#define GET_RUNTIME_LIBCALL_FP_SELECTORS
+#include "llvm/IR/RuntimeLibcalls.inc"
 
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
@@ -939,87 +714,13 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
-    RTLIB::LibcallImpl Impl) const {
-  switch (Impl) {
-  case RTLIB::impl___aeabi_dcmpeq__une:
-  case RTLIB::impl___aeabi_fcmpeq__une:
-    // Usage in the eq case, so we have to invert the comparison.
-    return ISD::SETEQ;
-  case RTLIB::impl___aeabi_dcmpeq__oeq:
-  case RTLIB::impl___aeabi_fcmpeq__oeq:
-    // Normal comparison to boolean value.
-    return ISD::SETNE;
-  case RTLIB::impl___aeabi_dcmplt:
-  case RTLIB::impl___aeabi_dcmple:
-  case RTLIB::impl___aeabi_dcmpge:
-  case RTLIB::impl___aeabi_dcmpgt:
-  case RTLIB::impl___aeabi_dcmpun:
-  case RTLIB::impl___aeabi_fcmplt:
-  case RTLIB::impl___aeabi_fcmple:
-  case RTLIB::impl___aeabi_fcmpge:
-  case RTLIB::impl___aeabi_fcmpgt:
-    /// The AEABI versions return a typical boolean value, so we can compare
-    /// against the integer result as simply != 0.
-    return ISD::SETNE;
-  default:
-    break;
-  }
-
-  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
-  // each other, and return a 3-way comparison style result of -1, 0, or 1
-  // depending on lt/eq/gt.
-  //
-  // FIXME: It would be cleaner to directly express this as a 3-way comparison
-  // soft FP libcall instead of individual compares.
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-  switch (LC) {
-  case RTLIB::OEQ_F32:
-  case RTLIB::OEQ_F64:
-  case RTLIB::OEQ_F128:
-  case RTLIB::OEQ_PPCF128:
-    return ISD::SETEQ;
-  case RTLIB::UNE_F32:
-  case RTLIB::UNE_F64:
-  case RTLIB::UNE_F128:
-  case RTLIB::UNE_PPCF128:
-    return ISD::SETNE;
-  case RTLIB::OGE_F32:
-  case RTLIB::OGE_F64:
-  case RTLIB::OGE_F128:
-  case RTLIB::OGE_PPCF128:
-    return ISD::SETGE;
-  case RTLIB::OLT_F32:
-  case RTLIB::OLT_F64:
-  case RTLIB::OLT_F128:
-  case RTLIB::OLT_PPCF128:
-    return ISD::SETLT;
-  case RTLIB::OLE_F32:
-  case RTLIB::OLE_F64:
-  case RTLIB::OLE_F128:
-  case RTLIB::OLE_PPCF128:
-    return ISD::SETLE;
-  case RTLIB::OGT_F32:
-  case RTLIB::OGT_F64:
-  case RTLIB::OGT_F128:
-  case RTLIB::OGT_PPCF128:
-    return ISD::SETGT;
-  case RTLIB::UO_F32:
-  case RTLIB::UO_F64:
-  case RTLIB::UO_F128:
-  case RTLIB::UO_PPCF128:
-    return ISD::SETNE;
-  default:
-    llvm_unreachable("not a compare libcall");
-  }
-}
-
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
-                         TM.Options.FloatABIType, TM.Options.EABIVersion,
+                         TM.getTargetTriple().getDefaultFloatABI(),
+                         TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, STI) {
   initActions();
@@ -1128,6 +829,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1157,8 +859,11 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CONVERT_TO_ARBITRARY_FP,
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,
@@ -1188,14 +893,20 @@ void TargetLoweringBase::initActions() {
     // Carry-less multiply
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
 
+    // Bit extract/deposit (compress/expand)
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
-    setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+    setOperationAction({ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
                        Expand);
+
+    // This defaults to Expand so it will be expanded to ABS by default.
+    setOperationAction(ISD::ABS_MIN_POISON, VT, Expand);
     setOperationAction(ISD::CTLS, VT, Expand);
 
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
@@ -1218,6 +929,8 @@ void TargetLoweringBase::initActions() {
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
@@ -1236,8 +949,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
                        Expand);
 
-    // Only some target support this vector operation. Most need to expand it.
-    setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
+    // Only some target support these vector operations. Default them to Expand.
+    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
 
     // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
@@ -2795,9 +2508,9 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
 
   // Dereferenceability analysis is expensive, skip at O0.
   if (OptLevel != CodeGenOptLevel::None &&
-      isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
-                                         LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo)) {
+      isDereferenceableAndAlignedPointer(
+          LI.getPointerOperand(), LI.getType(), LI.getAlign(),
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
     Flags |= MachineMemOperand::MODereferenceable;
   } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
     Flags |= MachineMemOperand::MODereferenceable;

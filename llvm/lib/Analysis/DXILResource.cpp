@@ -14,7 +14,9 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
@@ -686,7 +688,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(Binding.RecordID));
+  MDVals.push_back(getIntMD(Binding.BindingID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
@@ -798,12 +800,13 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
   }
 
   OS << "  Binding:\n"
-     << "    Record ID: " << Binding.RecordID << "\n"
+     << "    Binding ID: " << Binding.BindingID << "\n"
      << "    Space: " << Binding.Space << "\n"
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n";
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
+  OS << "  Has Atomic64 Use: " << HasAtomic64Use << "\n";
   OS << "  Counter Direction: ";
 
   switch (CounterDirection) {
@@ -834,10 +837,6 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 }
 
 //===----------------------------------------------------------------------===//
-static bool isUpdateCounterIntrinsic(Function &F) {
-  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
-}
-
 StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
   Value *Op = nullptr;
   switch (CI->getCalledFunction()->getIntrinsicID()) {
@@ -890,8 +889,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
           StringRef Name = getResourceNameFromBindingCall(CI);
 
           ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space,    LowerBound,
-                           Size,           HandleTy, Name};
+              ResourceInfo{Space, LowerBound, Size, HandleTy, Name};
 
           CIToInfos.emplace_back(CI, RI, RTI);
         }
@@ -918,7 +916,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   }
 
   unsigned Size = Infos.size();
-  // In DXC, Record ID is unique per resource type. Match that.
+  // In DXC, Binding ID is unique per resource type. Match that.
   FirstUAV = FirstCBuffer = FirstSampler = Size;
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
@@ -945,48 +943,76 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   }
 }
 
-void DXILResourceMap::populateCounterDirections(Module &M) {
+static Value *findResourceHandleFromPointer(Value *Ptr) {
+  Ptr = Ptr->stripPointerCasts();
+  while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand()->stripPointerCasts();
+  auto *II = dyn_cast<IntrinsicInst>(Ptr);
+  if (II && II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
+    return II->getArgOperand(0);
+  return nullptr;
+}
+
+void DXILResourceMap::populateAtomicUses(Instruction &I) {
+  auto MarkFromHandle = [this](Value *Handle) {
+    if (!Handle)
+      return;
+    for (ResourceInfo *RI : findByUse(Handle))
+      RI->HasAtomic64Use = true;
+  };
+
+  // Handles both `atomicrmw`/`cmpxchg` (before `DXILResourceAccess`) and the
+  // lowered `llvm.dx.resource.atomic.binop` intrinsic (after it).
+  if (auto *AI = dyn_cast<AtomicRMWInst>(&I)) {
+    if (AI->getValOperand()->getType()->isIntegerTy(64))
+      MarkFromHandle(findResourceHandleFromPointer(AI->getPointerOperand()));
+    return;
+  }
+  if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    if (CX->getNewValOperand()->getType()->isIntegerTy(64))
+      MarkFromHandle(findResourceHandleFromPointer(CX->getPointerOperand()));
+    return;
+  }
+  if (auto *CI = dyn_cast<CallInst>(&I)) {
+    if (CI->getIntrinsicID() == Intrinsic::dx_resource_atomic_binop &&
+        CI->getType()->isIntegerTy(64))
+      MarkFromHandle(CI->getArgOperand(0));
+  }
+}
+
+void DXILResourceMap::populateRecordCounterDirection(Instruction &I) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI || CI->getIntrinsicID() != Intrinsic::dx_resource_updatecounter)
+    return;
+  ConstantInt *CountValue = cast<ConstantInt>(CI->getArgOperand(1));
+  int64_t CountLiteral = CountValue->getSExtValue();
+  if (CountLiteral == 0)
+    return;
+  ResourceCounterDirection Direction =
+      CountLiteral > 0 ? ResourceCounterDirection::Increment
+                       : ResourceCounterDirection::Decrement;
+  for (ResourceInfo *RBInfo : findByUse(CI->getArgOperand(0))) {
+    if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
+      RBInfo->CounterDirection = Direction;
+    else if (RBInfo->CounterDirection != Direction) {
+      RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+      HasInvalidDirection = true;
+    }
+  }
+}
+
+void DXILResourceMap::populateFromInstructions(Module &M) {
   for (Function &F : M.functions()) {
-    if (!isUpdateCounterIntrinsic(F))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Update Counter Function: " << F.getName() << "\n");
-
-    for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
-
-      // Determine if the use is an increment or decrement
-      Value *CountArg = CI->getArgOperand(1);
-      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
-      int64_t CountLiteral = CountValue->getSExtValue();
-
-      // 0 is an unknown direction and shouldn't result in an insert
-      if (CountLiteral == 0)
-        continue;
-
-      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
-      if (CountLiteral > 0)
-        Direction = ResourceCounterDirection::Increment;
-
-      // Collect all potential creation points for the handle arg
-      Value *HandleArg = CI->getArgOperand(0);
-      SmallVector<ResourceInfo *> RBInfos = findByUse(HandleArg);
-      for (ResourceInfo *RBInfo : RBInfos) {
-        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
-          RBInfo->CounterDirection = Direction;
-        else if (RBInfo->CounterDirection != Direction) {
-          RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
-          HasInvalidDirection = true;
-        }
-      }
+    for (Instruction &I : instructions(F)) {
+      populateAtomicUses(I);
+      populateRecordCounterDirection(I);
     }
   }
 }
 
 void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   populateResourceInfos(M, DRTM);
-  populateCounterDirections(M);
+  populateFromInstructions(M);
 }
 
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,

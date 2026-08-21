@@ -123,7 +123,13 @@ def CIR_ArgPassingKind : CIR_I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
-def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
+def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
+    // record_align is consumed as an llvm::Align, whose constructor asserts a
+    // non-zero power of two.
+    PredAttrTrait<"record_align must be a non-zero power of two",
+                  CPred<"$record_align != 0 && "
+                        "::llvm::isPowerOf2_64($record_align)">>
+  ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
     Holds AST-derived ABI metadata for a named record type.  These
@@ -475,6 +481,13 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
     an `mlir::ArrayAttr` instance where each element is a typed attribute
     (`mlir::TypedAttribute`).
 
+    These must be initialized with a set of types that exactly match the type of
+    the attribute, with one exception: flexible array members.  If the last
+    member of the struct type is a zero-length array, the `ConstRecordAttr` is
+    allowed to hold an unbounded number of elements. This is necessary to
+    support global and static storage duration variables that use the flexible
+    array member functionality.
+
     Example:
     ```
     cir.global external @rgb2 = #cir.const_record<{0 : i8,
@@ -538,46 +551,95 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::DataMemberType">:$type,
                         OptionalParameter<
-                            "std::optional<unsigned>">:$member_index);
+                            "mlir::DenseI32ArrayAttr">:$member_path);
   let description = [{
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `member_index` parameter represents the index of the pointed-to member
-    within its containing record. It is an optional parameter; lack of this
-    parameter indicates a null pointer-to-data-member value.
+    The `member_path` parameter is a GEP-like sequence of field indices
+    navigating from `classTy` down to the pointed-to member.  An absent
+    `member_path` represents a null pointer-to-data-member.
 
-    Example:
+    Examples:
     ```
-    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Point::*p = &Point::z  (z is field 2)
+    #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Point>
 
-    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Derived::*p = &Derived::x  (Base subobject at [0], x at [0])
+    #cir.data_member<[0, 0]> : !cir.data_member<!s32i in !rec_Derived>
+
+    // null
+    #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
     ```
   }];
 
   let builders = [
+    // Null pointer-to-data-member.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
-      return $_get(type.getContext(), type, std::nullopt);
+      return $_get(type.getContext(), type, mlir::DenseI32ArrayAttr{});
     }]>,
+    // Non-null pointer-to-data-member with an explicit field-index path.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
-                                        "unsigned":$member_index), [{
-      return $_get(type.getContext(), type, member_index);
+                                       "llvm::ArrayRef<int32_t>":$path), [{
+      return $_get(type.getContext(), type,
+                   mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
   ];
 
-  // This attribute gets lowered during CXXABILowering
+  // This attribute gets lowered during CXXABILowering.
   let hasAttrToValueLowering = 0;
 
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` ($member_index^):(`null`)? `>`
+    `<` custom<DataMemberPath>($member_path) `>`
   }];
 
   let extraClassDeclaration = [{
-    bool isNullPtr() const {
-      return !getMemberIndex().has_value();
+    bool isNullPtr() const { return !getMemberPath(); }
+    llvm::ArrayRef<int32_t> getPath() const {
+      assert(!isNullPtr() && "getPath() called on null data member pointer");
+      return getMemberPath().asArrayRef();
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DataMemberOffsetAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberOffsetAttr
+    : CIR_ValueLikeAttr<"DataMemberOffset", "data_member_offset"> {
+  let summary = "Constant pointer-to-data-member given by a byte offset";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        "uint64_t":$offset);
+  let description = [{
+    Like `#cir.data_member`, this is a literal attribute representing a constant
+    (non-null) pointer-to-data-member value.  It is used for members that are
+    not laid out in the CIR record and therefore have no field-index path -- in
+    particular `[[no_unique_address]]` empty fields.  The concrete byte offset
+    of the member within the class is stored directly.
+
+    Example:
+    ```
+    // Empty S::*p = &S::e  (e is a no_unique_address empty field at byte 1)
+    #cir.data_member_offset<1> : !cir.data_member<!rec_Empty in !rec_S>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "uint64_t":$offset), [{
+      return $_get(type.getContext(), type, offset);
+    }]>,
+  ];
+
+  // This attribute gets lowered during CXXABILowering.
+  let hasAttrToValueLowering = 0;
+
+  let assemblyFormat = [{
+    `<` $offset `>`
   }];
 }
 
@@ -738,6 +800,107 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
   }];
 
   let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// FenvAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FPDynamicRoundingMode : CIR_I32EnumAttr<
+    "FPDynamicRoundingMode", "floating-point dynamic rounding mode", [
+  I32EnumAttrCase<"ToNearest", 0, "tonearest">,
+  I32EnumAttrCase<"Downward", 1, "downward">,
+  I32EnumAttrCase<"Upward", 2, "upward">,
+  I32EnumAttrCase<"UpwardZero", 3, "upwardzero">,
+  I32EnumAttrCase<"ToNearestAway", 4, "tonearestaway">,
+  I32EnumAttrCase<"Unknown", 7, "unknown">
+]> {
+  let description = [{
+    The known dynamic rounding mode at the point the instruction is executed.
+    If the actual dynamic rounding mode differs from this value, the behavior
+    is undefined.
+  }];
+  let genSpecializedAttr = 0;
+}
+
+def CIR_FPExceptionMode : CIR_I32EnumAttr<
+    "FPExceptionMode", "floating-point exception mode", [
+  I32EnumAttrCase<"Unknown", 0, "unknown">,
+  I32EnumAttrCase<"Masked", 1, "masked">,
+  I32EnumAttrCase<"Unmasked", 2, "unmasked">
+]> {
+  let description = [{
+    The known floating-point exception mode at the point the instruction is
+    executed. If the actual exception mode differs from this value, the
+    behavior is undefined.
+  }];
+  let genSpecializedAttr = 0;
+}
+
+def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
+  let summary = "Describes floating-point environment constraints";
+  let description = [{
+    The `#cir.fenv` attribute describes constraints on the floating-point
+    handling of a floating-point operation. It is attached to floating-point
+    operations to capture rounding and exception behavior. All of its
+    parameters are optional.
+
+    - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
+      instruction is executed. Otherwise the behavior is undefined.
+    - `except_mode`: the known exception mode at the point the instruction is
+      executed. Otherwise the behavior is undefined.
+    - `strict_except`: if `false`, any case that would produce an FP exception
+      produces it non-deterministically instead (i.e. it may or may not occur).
+      This means the FP status is written non-deterministically, and, if
+      exceptions are unmasked, the instruction traps non-deterministically.
+
+    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
+    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
+    to `false`.
+
+    Example:
+    ```
+    #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown,
+              strict_except = true>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<
+        "std::optional<cir::FPDynamicRoundingMode>">:$dynamic_rounding_mode,
+    OptionalParameter<"std::optional<cir::FPExceptionMode>">:$except_mode,
+    OptionalParameter<"mlir::BoolAttr">:$strict_except);
+
+  let assemblyFormat = [{
+    `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
+  }];
+
+  let extraClassDeclaration = [{
+    static constexpr cir::FPDynamicRoundingMode
+    getDefaultDynamicRoundingMode() {
+      return cir::FPDynamicRoundingMode::Unknown;
+    }
+
+    static constexpr cir::FPExceptionMode getDefaultExceptionMode() {
+      return cir::FPExceptionMode::Masked;
+    }
+
+    cir::FPDynamicRoundingMode getDynamicRoundingModeOrDefault() const {
+      return getDynamicRoundingMode().value_or(
+          getDefaultDynamicRoundingMode());
+    }
+
+    cir::FPExceptionMode getExceptionModeOrDefault() const {
+      return getExceptMode().value_or(getDefaultExceptionMode());
+    }
+
+    bool getStrictExceptOrDefault() const {
+      mlir::BoolAttr strictExcept = getStrictExcept();
+      return strictExcept && strictExcept.getValue();
+    }
+  }];
+
   let canHaveIllegalCXXABIType = 0;
 }
 
@@ -996,6 +1159,11 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
   }];
 }
 
+// Used by OpenCL kernel argument metadata for the addr_space field.
+def CIR_LangAddressSpaceArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_LangAddressSpaceAttr,
+                             "language address space array attribute">;
+
 //===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
@@ -1023,6 +1191,52 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
 
   let parameters = (ins "unsigned":$value);
   let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// PtrSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
+  let summary = "!cir.ptr data layout spec";
+  let description = [{
+    Pointer data layout for `!cir.ptr`: `size`, `abi` and `preferred` are
+    required bitwidths; `index` is the optional bitwidth for index
+    computations, defaulting to `size`. All present values must be divisible
+    by 8, with `preferred` >= `abi`.
+
+    This is the CIR-native analogue of the ptr dialect's `#ptr.spec`; a
+    native attribute keeps CIR's data-layout queries free of any ptr-dialect
+    dependency.
+
+    Used as the value of the `!cir.ptr<!cir.void>`-keyed data-layout entry:
+
+    ```mlir
+    #dlti.dl_spec<!cir.ptr<!cir.void> =
+        #cir.ptr_spec<size = 64, abi = 64, preferred = 64>>
+    ```
+  }];
+  let parameters = (ins
+    "uint32_t":$size,
+    "uint32_t":$abi,
+    "uint32_t":$preferred,
+    DefaultValuedParameter<"uint32_t", "kOptionalSpecValue">:$index
+  );
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins "uint32_t":$size, "uint32_t":$abi, "uint32_t":$preferred,
+                     CArg<"uint32_t", "kOptionalSpecValue">:$index), [{
+      return $_get($_ctxt, size, abi, preferred, index);
+    }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Sentinel value marking the optional `index` parameter as unset.
+    static constexpr uint32_t kOptionalSpecValue =
+        std::numeric_limits<uint32_t>::max();
+  }];
+  let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }
 
@@ -1270,11 +1484,61 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
   }];
 }
 
-def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
+//===----------------------------------------------------------------------===//
+// FuncInfoAttr
+//===----------------------------------------------------------------------===//
+
+// The standard library entities the identity tag can name. Each entry
+// pairs with one raised operation in CIRStdOps.td.
+def CIR_KnownFuncKind : CIR_I32EnumAttr<"KnownFuncKind",
+    "known standard library entity", [
+  I32EnumAttrCase<"StdFind", 1, "std::find">,
+]> {
+  let genSpecializedAttr = 0;
+  // A name like std::find is not a bare identifier, so print it as a quoted
+  // string. The enum parser already reads a quoted string back.
+  let parameterPrinter =
+      "$_printer.printKeywordOrString(" # symbolToStringFnName # "($_self))";
+}
+
+def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
+  let summary = "Identifies a function as a known standard library entity";
+  let description = [{
+    Names the standard library entity a function represents, so that
+    transformations can recognize calls to well known library functions
+    without decoding mangled symbol names.
+
+    The tag names the whole entity. For `std::find` that is the free
+    function named `find` in the `std` namespace, so a member function, a
+    static member, or an operator can never carry the tag. Inline
+    namespaces, such as the versioning namespace of libc++, count as part
+    of `std`. The tag never encodes signatures, and a function that
+    matches no known entity carries no attribute.
+
+    Example:
+    ```
+    #cir.func_identity<"std::find">
+    ```
+  }];
+
+  let parameters = (ins
+    EnumParameter<CIR_KnownFuncKind>:$kind
+  );
+
+  let assemblyFormat = [{
+    `<` $kind `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+// The attributes accepted in the optional func_info slot on cir.func.
+def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXCtorAttr,
   CIR_CXXDtorAttr,
-  CIR_CXXAssignAttr
-]>;
+  CIR_CXXAssignAttr,
+  CIR_FuncIdentityAttr
+], "function information attribute">;
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
@@ -1299,8 +1563,8 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
 
       The CIR representation of the struct `S` might look like:
       ```
-        !rec_S = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                                                       !cir.array<!u8i x 2>}>
+        !rec_S = !cir.struct<"S" packed {!u64i, !u16i,
+                                         pad !cir.array<!u8i x 2>}>
       ```
       And the bitfield info attribute for member `a` would be:
       ```
@@ -1373,6 +1637,35 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OffsetPairAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OffsetPairAttr : CIR_Attr<"OffsetPair", "offset_pair"> {
+  let summary = "Offset Pair attribute";
+
+  let description = [{
+    An attribute that specifies a pair of positive integral values that
+    represent a bit-offset range in an existing structure.  The range
+    represented by this is [start, end).
+
+    Example:
+    ```
+    cir.clear_padding(align(1) %1,
+                      [#cir.offset_pair<0, 2>, #cir.offset_pair<6, 8>])
+                      : <rec_Type> -> ()
+    ```
+  }];
+
+  let parameters = (ins "uint64_t":$start,
+                        "uint64_t":$end);
+
+  let assemblyFormat = [{
+    `<` $start`,` $end `>`
+  }];
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -1424,14 +1717,23 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
   }];
 }
 //===----------------------------------------------------------------------===//
-// InlineAttr
+// InlineKindAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
   I32EnumAttrCase<"NoInline", 1, "no_inline">,
   I32EnumAttrCase<"AlwaysInline", 2, "always_inline">,
   I32EnumAttrCase<"InlineHint", 3, "inline_hint">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InlineKindAttr: CIR_EnumAttr<CIR_InlineKind, "inline_kind"> {
+  let summary = "Inline kind attribute";
+  let description = [{ Inline Kind attributes.  `no_inline` and `always_inline`
+    spellings correspond to the attributes of the same name, and `inline_hint`
+      is the `inline` keyword in the language.}];
+}
 
 //===----------------------------------------------------------------------===//
 // CatchAllAttr & UnwindAttr
@@ -1454,25 +1756,79 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
-  let summary = "Block Addres attribute";
+def CIR_BlockAddrInfoAttr
+    : CIR_ValueLikeAttr<"BlockAddrInfo", "block_addr_info"> {
+  let summary = "Block address attribute";
   let description = [{
     This attribute is used to represent the address of a basic block
     within a function. It combines the symbol reference to a function
     with the name of a label inside that function.
   }];
-  let parameters = (ins "mlir::FlatSymbolRefAttr":$func,
-                        "mlir::StringAttr":$label);
+  let parameters = (ins
+      AttributeSelfTypeParameter<
+          "", "cir::PointerType",
+          "cir::PointerType::get(cir::VoidType::get($_ctxt))">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$label);
 
   let assemblyFormat = "`<` $func `,` $label `>`";
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$func_name,
-                     "llvm::StringRef":$label_name
-                     ), [{
-      return $_get($_ctxt, mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                     "llvm::StringRef":$label_name), [{
+      return $_get($_ctxt,
+                   cir::PointerType::get(cir::VoidType::get($_ctxt)),
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
                    mlir::StringAttr::get($_ctxt, label_name));
     }]>
   ];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// CIR_BlockAddrDiffAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddrDiffAttr
+    : CIR_ValueLikeAttr<"BlockAddrDiff", "block_addr_diff"> {
+  let summary = "Difference between two block addresses";
+  let description = [{
+    This attribute represents the constant difference between the addresses of
+    two basic blocks within the same function. It is produced for GCC's "labels
+    as values" extension when the difference of two label addresses appears in a
+    constant context, e.g. `&&lhs - &&rhs`.
+
+    Both labels belong to the function referenced by `func`. The value is the
+    address of `lhs_label` minus the address of `rhs_label`, truncated to the
+    attribute's integer type.
+
+    Example:
+    ```
+    cir.global "private" internal @b.ar =
+        #cir.block_addr_diff<@b, "l2", "l1"> : !s32i
+    ```
+  }];
+
+  let parameters = (ins
+      AttributeSelfTypeParameter<"", "cir::IntType">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$lhs_label,
+      "mlir::StringAttr":$rhs_label);
+
+  let assemblyFormat = "`<` $func `,` $lhs_label `,` $rhs_label `>`";
+
+  let builders = [
+    AttrBuilder<(ins "cir::IntType":$type,
+                     "llvm::StringRef":$func_name,
+                     "llvm::StringRef":$lhs_label_name,
+                     "llvm::StringRef":$rhs_label_name), [{
+      return $_get($_ctxt, type,
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                   mlir::StringAttr::get($_ctxt, lhs_label_name),
+                   mlir::StringAttr::get($_ctxt, rhs_label_name));
+    }]>
+  ];
+
   let canHaveIllegalCXXABIType = 0;
 }
 
@@ -1531,6 +1887,65 @@ def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
 }
 
 //===----------------------------------------------------------------------===//
+// ThreadLocalGlobalWrapperInitAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ThreadLocalGlobalWrapperInitAttr : CIR_Attr<
+    "ThreadLocalGlobalWrapperInit", "tls_wrapper_init"> {
+    let summary = "Wrapper and Init function names for thread local variables";
+    let description = [{
+      Contains the mangled name of the wrapper function, init function, and
+      guard variable for a namespace/global scope thread local variable. The
+      guard variable is optional, as it is only required for unordered thread
+      local variables, as ordered thread local variables share a guard.
+
+      Unordered global thread local variables (such as variable template
+      instantiations) are individually initialized when first used on a thread.
+      Ordered global thread local variables are ALL initialized together when
+      any that require initialization are referenced.
+
+      This is accomplished by rewriting all calls to these variables as calls to
+      the wrapper.  If the variable requires initialization, the wrapper calls
+      the init function, then returns the global variable reference.
+
+      Throughout CIR though, these are just represented as normal `get_global`
+      calls to `global`s with `ctor`/`dtor` regions (if necessary).  The
+      lowering-prepare pass manages the generation of the wrapper,x
+      initialization, and call rewrites.
+
+      Example:
+      ```
+      cir.global tls_dyn dyn_tls_refs = <"_ZTW7tls_var", "_ZTH7tls_var"> @_ZZZ7tls_var = ...
+      ...
+      cir.get_global thread_local @ZZZ7tls_var : !cir.ptr<!s32i>
+      ```
+    }];
+    let parameters = (ins
+        "mlir::StringAttr" : $wrapper_name,
+        "mlir::StringAttr" : $init_name,
+        OptionalParameter<"mlir::StringAttr">: $guard_name
+        );
+
+    let builders = [
+      AttrBuilder<(ins "llvm::StringRef"
+                   : $wrapper, "llvm::StringRef"
+                   : $init, "llvm::StringRef"
+                   : $guard),
+                  [{
+                    mlir::StringAttr guardAttr;
+                    if (!guard.empty())
+                      guardAttr = mlir::StringAttr::get($_ctxt, guard);
+                    return $_get($_ctxt, mlir::StringAttr::get($_ctxt, wrapper),
+                                 mlir::StringAttr::get($_ctxt, init),
+                                 guardAttr);
+                  }]>,
+    ];
+    let assemblyFormat =
+        "`<` $wrapper_name `,` $init_name (`,` $guard_name^)? `>`";
+    let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // UsualDeleteParamsAttr
 //===----------------------------------------------------------------------===//
 
@@ -1544,7 +1959,7 @@ def CIR_UsualDeleteParamsAttr
 
   let parameters = (ins
     DefaultValuedParameter<"bool", "false">:$size,
-    DefaultValuedParameter<"bool", "false">:$alignment,
+    OptionalParameter<"std::optional<uint64_t>">:$alignment,
     DefaultValuedParameter<"bool", "false">:$type_aware_delete,
     DefaultValuedParameter<"bool", "false">:$destroying_delete
   );
@@ -1625,9 +2040,10 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
 }
 
 def CIR_AnnotationArrayAttr
-    : TypedArrayAttrBase<CIR_AnnotationAttr,
-                         "array of cir.annotation attributes">;
+    : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
+                             "array of cir.annotation attributes">;
 
+include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

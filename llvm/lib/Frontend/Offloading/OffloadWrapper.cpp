@@ -635,8 +635,9 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 /// SYCLWrapper helper class that creates all LLVM IRs wrapping given images.
 class SYCLWrapper {
 public:
-  SYCLWrapper(Module &M, const SYCLJITOptions &Options)
-      : M(M), C(M.getContext()), Options(Options) {}
+  SYCLWrapper(Module &M, const SYCLJITOptions &Options, bool IsFinalizedImage)
+      : M(M), C(M.getContext()), Options(Options),
+        IsFinalizedImage(IsFinalizedImage) {}
 
   /// Embeds \p Buffer (a raw OffloadBinary) as a global constant and returns
   /// a pair of (Start, Size), where Start points to the beginning of the
@@ -647,7 +648,10 @@ public:
         M, Arr->getType(), /*isConstant=*/true, GlobalValue::InternalLinkage,
         Arr, ".sycl_offloading.binary");
     BinaryGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    BinaryGV->setSection(".llvm.offloading");
+    // The linker wrapper scans ".llvm.offloading" for device code to link, so
+    // an already finalized image must go elsewhere to avoid being linked again.
+    BinaryGV->setSection(IsFinalizedImage ? ".sycl_fatbin"
+                                          : ".llvm.offloading");
 
     IntegerType *Int64Ty = Type::getInt64Ty(C);
     Constant *Zero = ConstantInt::get(Int64Ty, 0);
@@ -657,7 +661,7 @@ public:
     return {Start, Size};
   }
 
-  void createRegisterFatbinFunction(Constant *Start, Constant *Size) {
+  Function *createRegisterFatbinFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -676,10 +680,10 @@ public:
     Builder.CreateCall(RegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
-    appendToGlobalCtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
-  void createUnregisterFunction(Constant *Start, Constant *Size) {
+  Function *createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -698,13 +702,14 @@ public:
     Builder.CreateCall(UnRegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
-    appendToGlobalDtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
 private:
   Module &M;
   LLVMContext &C;
   SYCLJITOptions Options;
+  bool IsFinalizedImage;
 }; // end of SYCLWrapper
 
 } // namespace
@@ -748,11 +753,20 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
   return Error::success();
 }
 
-Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
-                                         SYCLJITOptions Options) {
-  SYCLWrapper W(M, Options);
+Error llvm::offloading::wrapSYCLBinaries(
+    llvm::Module &M, ArrayRef<char> Buffer, SYCLJITOptions Options,
+    bool IsFinalizedImage,
+    std::pair<Function *, Function *> *RegistrationFuncs) {
+  SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
-  W.createRegisterFatbinFunction(Start, Size);
-  W.createUnregisterFunction(Start, Size);
+  Function *RegisterFunc = W.createRegisterFatbinFunction(Start, Size);
+  Function *UnregisterFunc = W.createUnregisterFunction(Start, Size);
+  if (RegistrationFuncs) {
+    *RegistrationFuncs = {RegisterFunc, UnregisterFunc};
+    return Error::success();
+  }
+
+  appendToGlobalCtors(M, RegisterFunc, /*Priority*/ 1);
+  appendToGlobalDtors(M, UnregisterFunc, /*Priority*/ 1);
   return Error::success();
 }

@@ -91,8 +91,8 @@ void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
                << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0;
-  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i)
-    NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
+  for (const auto &[FE, HFI] : FileInfo)
+    NumOnceOnlyFiles += (HFI.isPragmaOnce || HFI.isImport);
   llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n";
 
   llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
@@ -887,19 +887,22 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 }
 
 void HeaderSearch::diagnoseHeaderShadowing(
-    StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
-    SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+    StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+    ConstSearchDirIterator FromDir,
     ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
     bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
 
-  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
-      DiagnosedShadowing)
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc))
     return;
   // Ignore diagnostics from system headers.
   if (MainLoopIt && MainLoopIt->isSystemHeaderDirectory())
     return;
 
-  DiagnosedShadowing = true;
+  // Only consider each file once per spelling it was found under. Note that
+  // this also suppresses the search below for files that turn out not to be
+  // shadowed at all.
+  if (!ShadowCheckedHeaders[Filename].insert(FE).second)
+    return;
 
   // Indicates that file is first found in the includer's directory
   if (!MainLoopIt) {
@@ -907,15 +910,13 @@ void HeaderSearch::diagnoseHeaderShadowing(
       const auto &IncluderAndDir = Includers[i];
       SmallString<1024> TmpDir = IncluderAndDir.second.getName();
       llvm::sys::path::append(TmpDir, Filename);
-      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
-        if (&File->getFileEntry() == *FE)
+      if (auto File = getFileMgr().getOptionalFileRef(TmpDir)) {
+        if (*File == FE)
           continue;
         Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-            << Filename << (*FE).getDir().getName()
+            << Filename << FE.getDir().getName()
             << IncluderAndDir.second.getName();
         return;
-      } else {
-        llvm::errorToErrorCode(File.takeError());
       }
     }
   }
@@ -934,14 +935,12 @@ void HeaderSearch::diagnoseHeaderShadowing(
       continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
-    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
-      if (&File->getFileEntry() == *FE)
+    if (auto File = getFileMgr().getOptionalFileRef(TmpPath)) {
+      if (*File == FE)
         continue;
       Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-          << Filename << (*FE).getDir().getName() << It->getName();
+          << Filename << FE.getDir().getName() << It->getName();
       return;
-    } else {
-      llvm::errorToErrorCode(File.takeError());
     }
   }
 }
@@ -995,7 +994,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
-  bool DiagnosedShadowing = false;
 
   // Check to see if the file is in the #includer's directory. This cannot be
   // based on CurDir, because each includer could be a #include of a
@@ -1029,9 +1027,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
-        diagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
-                                FromDir, Includers, isAngled,
-                                &IncluderAndDir - Includers.begin(), nullptr);
+        diagnoseHeaderShadowing(Filename, *FE, IncludeLoc, FromDir, Includers,
+                                isAngled, &IncluderAndDir - Includers.begin(),
+                                nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1166,8 +1164,13 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    diagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
-                            FromDir, Includers, isAngled, -1, It);
+    // In MSVC compatibility mode we may have already found the file in one of
+    // the includers' directories. That file is the one that ends up being used
+    // (see checkMSVCHeaderSearch() below), so reporting this one as the chosen
+    // candidate would be wrong.
+    if (!MSFE)
+      diagnoseHeaderShadowing(Filename, *File, IncludeLoc, FromDir, Includers,
+                              isAngled, -1, It);
 
     CurDir = It;
 
@@ -1380,10 +1383,7 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
-  if (FE.getUID() >= FileInfo.size())
-    FileInfo.resize(FE.getUID() + 1);
-
-  HeaderFileInfo *HFI = &FileInfo[FE.getUID()];
+  HeaderFileInfo *HFI = &FileInfo[FE];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1404,10 +1404,7 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
 const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size())
-      FileInfo.resize(FE.getUID() + 1);
-
-    HFI = &FileInfo[FE.getUID()];
+    HFI = &FileInfo[FE];
     // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1417,8 +1414,8 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
+  } else if (auto It = FileInfo.find(FE); It != FileInfo.end()) {
+    HFI = &It->second;
   } else {
     HFI = nullptr;
   }
@@ -1426,16 +1423,11 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   return (HFI && HFI->IsValid) ? HFI : nullptr;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
-  HeaderFileInfo *HFI;
-  if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
-  } else {
-    HFI = nullptr;
-  }
-
-  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
+void HeaderSearch::forEachExistingLocalFileInfo(
+    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const {
+  for (const auto &[FE, HFI] : FileInfo)
+    if (HFI.IsValid && !HFI.External)
+      Fn(FE, HFI);
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {

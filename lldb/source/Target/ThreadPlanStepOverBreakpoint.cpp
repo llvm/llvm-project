@@ -122,7 +122,8 @@ bool ThreadPlanStepOverBreakpoint::DoWillResume(StateType resume_state,
         m_process.GetBreakpointSiteList().FindByAddress(m_breakpoint_addr));
     if (bp_site_sp && m_process.IsBreakpointSiteEnabled(*bp_site_sp)) {
       llvm::consumeError(m_process.ExecuteBreakpointSiteAction(
-          *bp_site_sp, Process::BreakpointAction::Disable));
+          *bp_site_sp, Process::BreakpointAction::Disable,
+          /*forbid_delay=*/false));
       m_reenabled_breakpoint_site = false;
     }
   }
@@ -169,7 +170,8 @@ void ThreadPlanStepOverBreakpoint::ReenableBreakpointSite() {
               m_process.GetBreakpointSiteList().FindByAddress(
                   m_breakpoint_addr))
         llvm::consumeError(m_process.ExecuteBreakpointSiteAction(
-            *bp_site_sp, Process::BreakpointAction::Enable));
+            *bp_site_sp, Process::BreakpointAction::Enable,
+            /*forbid_delay=*/false));
     }
   }
 }
