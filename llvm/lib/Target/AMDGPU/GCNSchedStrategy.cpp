@@ -2350,17 +2350,16 @@ static bool useAcceptsAGPR(const MachineOperand *Use, const SIInstrInfo *TII,
 bool RewriteMFMAFormStage::isRecolorSafe(
     Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
     const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet, bool IsDst) {
-  for (MachineOperand &DefMO : DAG.MRI.def_operands(Reg)) {
-    MachineInstr *DefMI = DefMO.getParent();
+  for (MachineInstr &DefMI : DAG.MRI.def_instructions(Reg)) {
     // A candidate MFMA def is rewritten to AGPR form (it produces the AGPR
     // result directly), so it does not constrain the recolor.
-    if (isRewriteCandidateMAI(DefMI, TII, RewriteCandsSet))
+    if (isRewriteCandidateMAI(&DefMI, TII, RewriteCandsSet))
       continue;
-    bool CanWriteAGPR = canWriteAGPR(DefMI, TII, SRI);
+    bool CanWriteAGPR = canWriteAGPR(&DefMI, TII, SRI);
     if (!CanWriteAGPR)
       return false;
     SmallVector<MachineOperand *, 8> DefReachingUses;
-    findReachingUses(DefMI, DAG.LIS, DefReachingUses);
+    findReachingUses(&DefMI, DAG.LIS, DefReachingUses);
     for (MachineOperand *UseMO : DefReachingUses) {
       // Exempt uses that do not constrain the recolor: for a dst, its own
       // reaching uses (bridged to VGPR by case2); for a src2, uses that are
@@ -2466,7 +2465,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         MachineInstr *UserMI = RUOp->getParent();
         bool NeedsAGPRToVGPRCopy = true;
         // Group members read the AGPR result directly.
-        if (TII->isMAI(*UserMI) && RewriteSet.contains(UserMI))
+        if (isRewriteCandidateMAI(UserMI, TII, RewriteSet))
           NeedsAGPRToVGPRCopy = false;
 
         // For any user of the result of the MFMA which is not an MFMA, we
@@ -2484,7 +2483,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         for (SlotIndex RDIndex : DstUsesReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-          if (TII->isMAI(*RD) && RewriteSet.contains(RD))
+          if (isRewriteCandidateMAI(RD, TII, RewriteSet))
             continue;
 
           // Dst cannot be recolored: for any non-MFMA reaching def of this
