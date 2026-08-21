@@ -1697,83 +1697,63 @@ bool InductionDescriptor::isInductionPHI(
   return true;
 }
 
-bool MonotonicDescriptor::setSCEV(const SCEV *NewExpr) {
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(NewExpr);
-  if (!AddRec || !AddRec->isAffine())
-    return false;
-  Expr = AddRec;
-  return true;
-}
-
 // Recognize monotonic phi variable by matching the following pattern:
 // loop_header:
-//   %monotonic_phi = [%start, %preheader], [%chain_phi0, %latch]
+//   %monotonic_phi = phi [ %start, %preheader ], [ %chain_phi0, %latch ]
+//   br i1 %do_step, label %step_bb, label %latch
 //
 // step_bb:
 //   %step = add/gep %monotonic_phi, %step_val
-//
-// bbN:
-//   %chain_phiN = [%monotonic_phi, ], [%step, ]
-//
-// ...
-//
-// bb1:
-//   %chain_phi1 = [%monotonic_phi, ], [%chain_phi2, ]
+//   br label %latch
 //
 // latch:
-//   %chain_phi0 = [%monotonic_phi, %pred], [%chain_phi1, %pred]
+//   %chain_phi0 = phi [ %monotonic_phi, %loop_header ], [ %step, %step_bb ]
+//   br label %loop_header
 //
-// For this pattern, monotonic phi is described by {%start, +, %step} recurrence
-// and predicate is CFG edge %step_bb -> %bbN.
-bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
+// For this pattern, monotonic phi is described by {%start, +, %step}
+// recurrence and predicate is CFG edge %step_bb -> %latch.
+bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
                                          MonotonicDescriptor &Desc,
                                          ScalarEvolution &SE) {
-  if (!PN->getType()->isIntOrPtrTy() || PN->getParent() != L->getHeader())
+  if (!HeaderPHI->getType()->isIntOrPtrTy() ||
+      HeaderPHI->getParent() != L->getHeader())
     return false;
-  auto *BackEdgeInst =
-      dyn_cast<PHINode>(PN->getIncomingValueForBlock(L->getLoopLatch()));
-  if (!BackEdgeInst)
+  auto *BackedgePHI =
+      dyn_cast<PHINode>(HeaderPHI->getIncomingValueForBlock(L->getLoopLatch()));
+  if (!BackedgePHI)
     return false;
-  PHINode *PHIChain = BackEdgeInst;
-  std::optional<std::pair<Edge, Value *>> Inc;
-  while (PHIChain) {
-    Desc.Chain.insert(PHIChain);
-    PHINode *NextPHIChain = nullptr;
-    for (auto [Block, Incoming] :
-         zip_equal(PHIChain->blocks(), PHIChain->incoming_values())) {
-      if (Incoming == PN)
-        continue;
-      if (!Incoming->hasOneUse())
-        return false;
-      if (auto *IncomingPHI = dyn_cast<PHINode>(Incoming)) {
-        if (NextPHIChain)
-          return false;
-        NextPHIChain = IncomingPHI;
-        continue;
-      }
-      if (Inc || NextPHIChain)
-        return false;
-      Inc = std::make_pair(Edge{Block, PHIChain->getParent()}, Incoming.get());
-    }
-    PHIChain = NextPHIChain;
+
+  // Ensure the only users of the backedge PHI are outside the loop or the
+  // header PHI.
+  bool BackedgeValueUsesValid = all_of(BackedgePHI->users(), [&](User *U) {
+    auto *UI = dyn_cast<Instruction>(U);
+    return UI == HeaderPHI || (UI && !L->contains(UI));
+  });
+  if (!BackedgeValueUsesValid)
+    return false;
+
+  // Find the step operation used to increment the value of the monotonic PHI.
+  // TODO: Support chains of PHIs.
+  Value *StepOp = nullptr;
+  for (Use &Incoming : BackedgePHI->incoming_values()) {
+    if (Incoming == HeaderPHI)
+      continue;
+    if (StepOp || !Incoming->hasOneUse())
+      return {};
+    StepOp = Incoming;
   }
-  if (!Inc)
-    return false;
-  auto [PredEdge, StepOp] = *Inc;
-  auto *StepInst = dyn_cast<Instruction>(StepOp);
+
+  auto *StepInst = dyn_cast_if_present<Instruction>(StepOp);
   if (!StepInst)
     return false;
-  Desc.StepInst = StepInst;
-  Desc.PredEdge = PredEdge;
 
-  // Construct SCEVAddRec for this value.
-  Value *Start = PN->getIncomingValueForBlock(L->getLoopPreheader());
+  Value *Start = HeaderPHI->getIncomingValueForBlock(L->getLoopPreheader());
 
   Value *Step = nullptr;
   bool StepMatch =
-      PN->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
-          : match(StepInst, m_Add(m_Specific(PN), m_Value(Step)));
+      HeaderPHI->getType()->isPointerTy()
+          ? match(StepInst, m_PtrAdd(m_Specific(HeaderPHI), m_Value(Step)))
+          : match(StepInst, m_c_Add(m_Specific(HeaderPHI), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
 
@@ -1790,30 +1770,15 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
       WrapFlags = ScalarEvolution::setFlags(WrapFlags, SCEV::FlagNSW);
   }
 
-  return Desc.setSCEV(
-      SE.getAddRecExpr(SE.getSCEV(Start), SE.getSCEV(Step), L, WrapFlags));
-}
-
-bool MonotonicDescriptor::isMonotonicVal(Value *Val, const Loop *L,
-                                         MonotonicDescriptor &Desc,
-                                         ScalarEvolution &SE) {
-  if (!Val->getType()->isIntOrPtrTy() || L->isLoopInvariant(Val))
-    return false;
-  auto *CurInst = cast<Instruction>(Val);
-
-  auto LoopVariantVal = [&](Value *V, bool AllowRepeats) {
-    return L->isLoopInvariant(V) ? nullptr : cast<Instruction>(V);
-  };
-
-  while (!isa<PHINode>(CurInst)) {
-    CurInst = find_singleton<Instruction>(CurInst->operands(), LoopVariantVal);
-    if (!CurInst)
-      return false;
-  };
-
-  if (!isMonotonicPHI(cast<PHINode>(CurInst), L, Desc, SE))
+  const SCEV *PhiSCEV =
+      SE.getAddRecExpr(SE.getSCEV(Start), SE.getSCEV(Step), L, WrapFlags);
+  const SCEVAddRecExpr *PhiAddRec = dyn_cast<SCEVAddRecExpr>(PhiSCEV);
+  if (!PhiAddRec || !PhiAddRec->isAffine())
     return false;
 
-  ValueToSCEVMapTy Map{{CurInst, Desc.getExpr()}};
-  return Desc.setSCEV(SCEVParameterRewriter::rewrite(SE.getSCEV(Val), SE, Map));
+  LLVM_DEBUG(dbgs() << "LV: Found a monotonic phi: HeaderPHI: " << *HeaderPHI
+                    << ", StepInst: " << *StepInst << "\n");
+
+  Desc = MonotonicDescriptor(HeaderPHI, BackedgePHI, StepInst, PhiAddRec);
+  return true;
 }

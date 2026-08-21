@@ -486,39 +486,49 @@ private:
 /// A struct for saving information about monotonic variables.
 /// Monotonic variable can be considered as a "conditional" induction variable:
 /// its update happens only on loop iterations for which a certain predicate is
-/// satisfied. In this implementation the predicate is represented as an edge in
-/// loop CFG: variable is updated if this edge is executed on current loop
-/// iteration.
+/// satisfied.
 class MonotonicDescriptor {
 public:
-  using Edge = std::pair<BasicBlock *, BasicBlock *>;
-
   MonotonicDescriptor() = default;
 
-  const SmallPtrSetImpl<PHINode *> &getChain() const { return Chain; }
-  Instruction *getStepInst() const { return StepInst; }
-  Edge getPredicateEdge() const { return PredEdge; }
-  const SCEVAddRecExpr *getExpr() const { return Expr; }
+  MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
+                      Instruction *StepInst, const SCEVAddRecExpr *PhiSCEV)
+      : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
+        PhiSCEV(PhiSCEV) {}
 
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
   /// is monotonic, the monotonic descriptor \p D will contain the data
-  /// describing this variable.
+  /// describing the PHI.
   static bool isMonotonicPHI(PHINode *PN, const Loop *L,
                              MonotonicDescriptor &Desc, ScalarEvolution &SE);
 
-  /// Returns true if \p Val is a monotonic variable in the loop \p L (in this
-  /// case, the value should transitively contain monotonic phi as part of its
-  /// calculation).
-  static bool isMonotonicVal(Value *Val, const Loop *L,
-                             MonotonicDescriptor &Desc, ScalarEvolution &SE);
+  /// Returns the header PHI described by this descriptor.
+  PHINode *getHeaderPHI() const { return HeaderPHI; }
+
+  /// Returns the backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *getBackedgePHI() const { return BackedgePHI; }
+
+  /// Returns the instruction that updates the value of the monotonic PHI.
+  Instruction *getStepInst() const { return StepInst; }
+
+  /// Returns the expression that represents the monotonic PHI. Note: The
+  /// conditional update is represented with a plain SCEVAddRec. This only holds
+  /// on iterations where the monotonic PHI is updated by StepInst.
+  const SCEVAddRecExpr *getPhiSCEV() const { return PhiSCEV; }
 
 private:
-  SmallPtrSet<PHINode *, 1> Chain;
-  Instruction *StepInst;
-  Edge PredEdge;
-  const SCEVAddRecExpr *Expr;
+  /// The header PHI (this is the PHI described by the descriptor).
+  PHINode *HeaderPHI = nullptr;
 
-  bool setSCEV(const SCEV *NewExpr);
+  /// The backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *BackedgePHI = nullptr;
+
+  /// The instruction that updates the value of the monotonic PHI.
+  Instruction *StepInst = nullptr;
+
+  /// Expression that represents the monotonic PHI. Within the expression, the
+  /// conditional update is represented as an (unconditional) SCEVAddRec.
+  const SCEVAddRecExpr *PhiSCEV = nullptr;
 };
 
 } // end namespace llvm
