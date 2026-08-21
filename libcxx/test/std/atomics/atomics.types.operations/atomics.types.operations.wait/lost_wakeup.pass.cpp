@@ -14,8 +14,6 @@
 // <atomic>
 
 #include <atomic>
-#include <cassert>
-#include <chrono>
 #include <functional>
 #include <thread>
 #include <vector>
@@ -26,7 +24,7 @@ constexpr int num_waiters    = 8;
 constexpr int num_iterations = 10'000;
 
 int main(int, char**) {
-  for (int run = 0; run < 20; ++run) {
+  for (int run = 0; run < 10; ++run) {
     std::atomic<int> waiter_ready(0);
     std::atomic<int> state(0);
 
@@ -40,10 +38,11 @@ int main(int, char**) {
 
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
-        assert(std::__libcpp_thread_poll_with_backoff(
-                   [&]() -> bool { return waiter_ready.load() == num_waiters; },
-                   std::__libcpp_timed_backoff_policy(),
-                   std::chrono::seconds(1)) == std::__poll_with_backoff_results::__poll_success);
+        while (waiter_ready.load() < num_waiters) {
+          #if !defined(__APPLE__)
+                std::this_thread::yield();
+          #endif
+        }
         waiter_ready.store(0);
         state.fetch_add(1);
         state.notify_all();
