@@ -5321,7 +5321,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
         ICE->getSubExpr()->getType().getAddressSpace() !=
             LangAS::hlsl_constant &&
         !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr(), NotKnownNonNull,
+                            ObjectRequired);
       assert(L.isSimple());
       args.addUncopiedAggregate(L, type);
       return;

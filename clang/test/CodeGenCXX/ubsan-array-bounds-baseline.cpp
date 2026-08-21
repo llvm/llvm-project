@@ -218,7 +218,7 @@ void x_deref_addr(int i) { *&a[i] = 1; }
 void x_comma(int i) { (1, a[i]) = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z11x_copy_initi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_copy_init(int i) {
   Agg b = agga[i];
   (void)b;
@@ -227,7 +227,7 @@ void x_copy_init(int i) {
 // The element passed by value, through the same constructor.
 void xsink(Agg);
 // CHECK-LABEL: define {{.*}}@_Z7x_byvali(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_byval(int i) { xsink(agga[i]); }
 
 // With a non-trivial copy constructor there is a real call and the argument binds

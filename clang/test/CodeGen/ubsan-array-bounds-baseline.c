@@ -175,7 +175,7 @@ void c_vec_rvalue(int i) {
 }
 
 // CHECK-LABEL: define {{.*}}@c_byval(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_byval(int i) { sink(sa[i]); }
 
 // Same expression as c_store: C99 6.5.3.2p3 makes `&*E` into `E`.
