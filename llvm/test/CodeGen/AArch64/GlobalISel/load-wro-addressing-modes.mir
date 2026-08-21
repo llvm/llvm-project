@@ -32,8 +32,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 2
     %offset:gpr(i64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -67,8 +67,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 2
     %offset:gpr(i64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -102,8 +102,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 2
     %offset:gpr(i64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -135,8 +135,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 4
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -168,8 +168,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 4
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -201,8 +201,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 4
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s32))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -234,8 +234,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 8
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:fpr(<2 x s32>) = G_LOAD %ptr(p0) :: (load (<2 x s32>))
-    $x0 = COPY %load(<2 x s32>)
+    %load:fpr(<2 x i32>) = G_LOAD %ptr(p0) :: (load (<2 x s32>))
+    $x0 = COPY %load(<2 x i32>)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -267,8 +267,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 8
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:gpr(s64) = G_LOAD %ptr(p0) :: (load (s64))
-    $x0 = COPY %load(s64)
+    %load:gpr(i64) = G_LOAD %ptr(p0) :: (load (s64))
+    $x0 = COPY %load(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -299,8 +299,8 @@ body:             |
     %base:gpr(p0) = COPY $x0
     %ext:gpr(i64) = G_SEXT %val(i32)
     %ptr:gpr(p0) = G_PTR_ADD %base, %ext(i64)
-    %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s8))
-    $w0 = COPY %load(s32)
+    %load:gpr(i32) = G_LOAD %ptr(p0) :: (load (s8))
+    $w0 = COPY %load(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -332,8 +332,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 2
     %offset:gpr(i64) = G_MUL %c, %ext
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
-    %load:fpr(s16) = G_LOAD %ptr(p0) :: (load (s16))
-    $h0 = COPY %load(s16)
+    %load:fpr(f16) = G_LOAD %ptr(p0) :: (load (s16))
+    $h0 = COPY %load(f16)
     RET_ReallyLR implicit $h0
 ...
 ---
@@ -367,8 +367,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 8
     %mul:gpr(i64) = G_MUL %c, %and
     %ptr:gpr(p0) = G_PTR_ADD %base, %mul(i64)
-    %load:gpr(s64) = G_LOAD %ptr(p0) :: (load (s64))
-    $x1 = COPY %load(s64)
+    %load:gpr(i64) = G_LOAD %ptr(p0) :: (load (s64))
+    $x1 = COPY %load(i64)
     RET_ReallyLR implicit $x1
 ...
 ---
@@ -402,8 +402,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 8
     %mul:gpr(i64) = G_MUL %c, %and
     %ptr:gpr(p0) = G_PTR_ADD %base, %mul(i64)
-    %load:gpr(s64) = G_LOAD %ptr(p0) :: (load (s64))
-    $x1 = COPY %load(s64)
+    %load:gpr(i64) = G_LOAD %ptr(p0) :: (load (s64))
+    $x1 = COPY %load(i64)
     RET_ReallyLR implicit $x1
 ...
 ---
@@ -437,8 +437,8 @@ body:             |
     %c:gpr(i64) = G_CONSTANT i64 8
     %mul:gpr(i64) = G_MUL %c, %and
     %ptr:gpr(p0) = G_PTR_ADD %base, %mul(i64)
-    %load:gpr(s64) = G_LOAD %ptr(p0) :: (load (s64))
-    $x1 = COPY %load(s64)
+    %load:gpr(i64) = G_LOAD %ptr(p0) :: (load (s64))
+    $x1 = COPY %load(i64)
     RET_ReallyLR implicit $x1
 ...
 ---
@@ -473,8 +473,8 @@ body:             |
     %12:gpr(i32) = G_SHL %3, %13(i64)
     %6:gpr(i64) = G_ZEXT %12(i32)
     %7:gpr(p0) = G_PTR_ADD %1, %6(i64)
-    %9:gpr(s32) = G_LOAD %7(p0) :: (load (s32))
-    $w0 = COPY %9(s32)
+    %9:gpr(i32) = G_LOAD %7(p0) :: (load (s32))
+    $w0 = COPY %9(i32)
     RET_ReallyLR implicit $w0
 
 ...

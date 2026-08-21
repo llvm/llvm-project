@@ -593,10 +593,16 @@ def MemsetImmReg : MemsetPseudo<imm64, GR32>;
 def MemsetRegImm : MemsetPseudo<ADDR64, imm32zx8trunc>;
 def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
 
-// Move right.
-let Predicates = [FeatureMiscellaneousExtensions3],
-    mayLoad = 1, mayStore = 1, Uses = [R0L] in
-  def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+// Move right to left.
+let Predicates = [FeatureMiscellaneousExtensions3], mayLoad = 1,
+    mayStore = 1 in {
+  let Uses = [R0L] in
+    def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC, R0L] in
+    def MemmoveImm : Pseudo<(outs),
+                        (ins ADDR64:$dest, ADDR64:$src, imm64:$length),
+                        [(z_memmove ADDR64:$dest, ADDR64:$src, imm64:$length)]>;
+}
 
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in
@@ -1323,8 +1329,8 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
-defm : RMWIByte<and, bdaddr12pair, NI>;
-defm : RMWIByte<and, bdaddr20pair, NIY>;
+defm : RMWIByte<and, NI, NIY, imm16ll8c, imm32ll8c,
+                imm16ll8c_i64, imm32ll8c_i64, imm64ll8c>;
 
 //===----------------------------------------------------------------------===//
 // OR
@@ -1380,8 +1386,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
-defm : RMWIByte<or, bdaddr12pair, OI>;
-defm : RMWIByte<or, bdaddr20pair, OIY>;
+defm : RMWIByte<or,  OI, OIY>;
 
 //===----------------------------------------------------------------------===//
 // XOR
@@ -1420,8 +1425,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
-defm : RMWIByte<xor, bdaddr12pair, XI>;
-defm : RMWIByte<xor, bdaddr20pair, XIY>;
+defm : RMWIByte<xor, XI, XIY>;
 
 //===----------------------------------------------------------------------===//
 // Combined logical operations

@@ -359,15 +359,14 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<256x32xui8, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<256x32xui8>
 // CHECK: %[[BC:.*]] = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>} : vector<256x32xui8> to vector<256x64xf4E2M1FN>
 // CHECK: xegpu.convert_layout %[[BC]]
-// CHECK-SAME: <{input_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>, target_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK-SAME: <{target_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
 // CHECK-SAME: : vector<256x64xf4E2M1FN>
 func.func @bitcast_ui8_to_f4(%arg0: memref<256x32xui8>) {
   %0 = xegpu.create_nd_tdesc %arg0 : memref<256x32xui8> -> !xegpu.tensor_desc<256x32xui8>
   %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<256x32xui8> -> vector<256x32xui8>
   %2 = vector.bitcast %1 : vector<256x32xui8> to vector<256x64xf4E2M1FN>
   %3 = xegpu.convert_layout %2
-     <{input_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>,
-      target_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+     <{target_layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
      : vector<256x64xf4E2M1FN>
   return
 }
@@ -382,15 +381,14 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<256x16xui16, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<256x16xui16>
 // CHECK: %[[BC:.*]] = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>} : vector<256x16xui16> to vector<256x64xf4E2M1FN>
 // CHECK: xegpu.convert_layout %[[BC]]
-// CHECK-SAME: <{input_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>, target_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
+// CHECK-SAME: <{target_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
 // CHECK-SAME: : vector<256x64xf4E2M1FN>
 func.func @bitcast_ui16_to_f4(%arg0: memref<256x16xui16>) {
   %0 = xegpu.create_nd_tdesc %arg0 : memref<256x16xui16> -> !xegpu.tensor_desc<256x16xui16>
   %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<256x16xui16> -> vector<256x16xui16>
   %2 = vector.bitcast %1 : vector<256x16xui16> to vector<256x64xf4E2M1FN>
   %3 = xegpu.convert_layout %2
-     <{input_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>,
-      target_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
+     <{target_layout = #xegpu.layout<inst_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
      : vector<256x64xf4E2M1FN>
   return
 }

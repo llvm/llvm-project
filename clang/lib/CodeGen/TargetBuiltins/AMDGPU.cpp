@@ -24,6 +24,7 @@
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -34,17 +35,16 @@ namespace {
 static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
                                            const CallExpr *E) {
   llvm::Type *RetTy = CGF.ConvertType(E->getType());
-  Function *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_s_buffer_load, RetTy);
+  Function *F =
+      CGF.CGM.getIntrinsic(Intrinsic::amdgcn_ptr_s_buffer_load, RetTy);
 
   Value *RsrcPtr = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Type *I128Ty = llvm::IntegerType::get(CGF.getLLVMContext(), 128);
-  llvm::Type *RsrcVecTy =
-      llvm::FixedVectorType::get(CGF.Builder.getInt32Ty(), 4);
-  Value *RsrcInt = CGF.Builder.CreatePtrToInt(RsrcPtr, I128Ty);
-  Value *Rsrc = CGF.Builder.CreateBitCast(RsrcInt, RsrcVecTy);
-
-  return CGF.Builder.CreateCall(F, {Rsrc, CGF.EmitScalarExpr(E->getArg(1)),
-                                    CGF.EmitScalarExpr(E->getArg(2))});
+  CallInst *Call =
+      CGF.Builder.CreateCall(F, {RsrcPtr, CGF.EmitScalarExpr(E->getArg(1)),
+                                 CGF.EmitScalarExpr(E->getArg(2))});
+  Call->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                    llvm::MDNode::get(CGF.Builder.getContext(), {}));
+  return Call;
 }
 
 // Has second type mangled argument.
@@ -275,13 +275,21 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
 
 // Generates the IR for __builtin_read_exec_*.
 // Lowers the builtin to amdgcn_ballot intrinsic.
+//
+// The ballot must be taken at the wavefront width: a ballot narrower than the
+// wave size cannot represent one bit per lane and fails to select. Request the
+// mask at the wave width and narrow it afterwards for the _lo and _hi halves.
 static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
                                       llvm::Type *RegisterType,
                                       llvm::Type *ValueType, bool isExecHi) {
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   CodeGen::CodeGenModule &CGM = CGF.CGM;
 
-  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {RegisterType});
+  unsigned WaveSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+  unsigned BallotSize = std::max(WaveSize, RegisterType->getIntegerBitWidth());
+  llvm::Type *BallotType = Builder.getIntNTy(BallotSize);
+
+  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {BallotType});
   llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
 
   if (isExecHi) {
@@ -290,7 +298,7 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
     return Rt2;
   }
 
-  return Call;
+  return Builder.CreateTrunc(Call, ValueType);
 }
 
 static llvm::Value *loadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
@@ -373,11 +381,17 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
-static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
-  if (AMDGCNScope == "agent")
-    return "device";
-  if (AMDGCNScope == "wavefront")
-    return "subgroup";
+// When the target is SPIR-V (spirv64-amd-amdhsa) re-spell the scope for that
+// target by parsing as AMDGPU and re-emitting it.
+static inline StringRef mapScopeToSPIRV(const llvm::Triple &TargetTriple,
+                                        StringRef AMDGCNScope) {
+  static const llvm::Triple AMDGPU("amdgcn-amd-amdhsa");
+  if (auto Parsed = llvm::parseAtomicScopeIRString(AMDGPU, AMDGCNScope)) {
+    auto [Scope, IsSingleAddressSpace] = *Parsed;
+    if (auto Str = llvm::getAtomicScopeIRString(TargetTriple, Scope,
+                                                IsSingleAddressSpace))
+      return *Str;
+  }
   return AMDGCNScope;
 }
 
@@ -439,10 +453,11 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   AO = mapCABIAtomicOrdering(ord);
 
   // Some of the atomic builtins take the scope as a string name.
+  const llvm::Triple &TargetTriple = getTarget().getTriple();
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
-    if (getTarget().getTriple().isSPIRV())
-      scp = mapScopeToSPIRV(scp);
+    if (TargetTriple.isSPIRV())
+      scp = mapScopeToSPIRV(TargetTriple, scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
@@ -471,6 +486,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   }
 
   MMRAMetadata::appendTags(*Inst, MMRAs);
+}
+
+void CodeGenFunction::AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst) {
+  if (AMDGPUAvailableVisibleMode.empty())
+    return;
+
+  constexpr const char *Tag = "amdgcn-av";
+  MMRAMetadata::appendTags(*Inst, {{Tag, AMDGPUAvailableVisibleMode}});
 }
 
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
@@ -1375,6 +1398,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
   case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
@@ -1905,6 +1929,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
       AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
+    getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -1997,10 +2022,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       //
       // The global/flat cases need to use agent scope to consistently produce
       // the native instruction instead of a cmpxchg expansion.
-      if (getTarget().getTriple().isSPIRV())
-        SSID = getLLVMContext().getOrInsertSyncScopeID("device");
-      else
-        SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      SSID =
+          getLLVMContext().getOrInsertSyncScopeID(*llvm::getAtomicScopeIRString(
+              getTarget().getTriple(), llvm::AtomicScope::Device));
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
@@ -2017,6 +2041,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+    AddAMDGPUAvailableVisibleMMRA(RMW);
 
     unsigned AddrSpace = Ptr.getType()->getAddressSpace();
     if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
@@ -2081,8 +2106,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     llvm::PointerType *RetTy = llvm::PointerType::get(
         Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
-                                   {RetTy, Args[0]->getType()});
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                         {RetTy, Args[0]->getType(), Args[2]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
@@ -2197,6 +2223,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+        *this, E, Intrinsic::amdgcn_s_prefetch_inst);
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf: {
     Value *Src0 = EmitScalarExpr(E->getArg(0));

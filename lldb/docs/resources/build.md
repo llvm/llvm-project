@@ -263,8 +263,29 @@ $ cmake -G Ninja \
     <path to root of llvm source tree>
 ```
 
+:::{note}
+`LLDB_TEST_COMPILER` points to a single compiler. It is expected that this is
+the C compiler and that the C++ compiler's name can be inferred from the name
+of the C compiler.
+:::
+
 It is strongly recommend to use a release build for the compiler to speed up
 test execution.
+
+#### Script Interpreter Plugins
+
+LLDB's script interpreter plugins (for Python and  Lua) can be built as static
+or dynamic libraries. This is controlled by
+`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults to `ON` on masOS and
+FreeBSD, and `OFF` everywhere else.
+
+`LLDB_ENABLE_PYTHON_LIMITED_API` makes LLDB use the Python
+[Limited API](https://docs.python.org/3/c-api/stable.html). It defaults to `ON`
+when using SWIG 4.2 or later.
+
+When both of these options are enabled, LLDB can use, and be used from, a
+different version of Python (3.8 or later) than it was built against. Note that
+on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required.
 
 #### Windows
 

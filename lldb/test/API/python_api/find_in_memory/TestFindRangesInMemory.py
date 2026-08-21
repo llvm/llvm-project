@@ -3,6 +3,7 @@ Test Process::FindRangesInMemory.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from address_ranges_helper import *
@@ -43,6 +44,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertSuccess(error)
         self.assertEqual(matches.GetSize(), 2)
 
+    @skipIfWasm  # Wasm linear memory is one region, which holds more than the stack
     def test_find_ranges_in_memory_one_match(self):
         """Make sure exactly one match exists in the heap memory and the right address ranges are provided"""
         self.assertTrue(self.process, PROCESS_IS_VALID)
@@ -61,6 +63,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertSuccess(error)
         self.assertEqual(matches.GetSize(), 1)
 
+    @skipIfWasm  # Wasm linear memory is one region, which holds more than the stack
     def test_find_ranges_in_memory_one_match_multiple_ranges(self):
         """Make sure exactly one match exists in the heap memory and multiple address ranges are provided"""
         self.assertTrue(self.process, PROCESS_IS_VALID)

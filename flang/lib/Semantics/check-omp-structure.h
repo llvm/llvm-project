@@ -21,21 +21,29 @@
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
-using OmpClauseSet =
-    Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+#include <cstddef>
+#include <functional>
+#include <list>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-namespace llvm {
-namespace omp {
-static OmpClauseSet privateSet{
+namespace llvm::omp {
+static ClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
-static OmpClauseSet privateReductionSet{
-    OmpClauseSet{Clause::OMPC_reduction} | privateSet};
-} // namespace omp
-} // namespace llvm
+static ClauseSet privateReductionSet{
+    ClauseSet{Clause::OMPC_reduction} | privateSet};
+} // namespace llvm::omp
 
 namespace Fortran::semantics {
 struct AnalyzedCondStmt;
@@ -49,10 +57,14 @@ struct LoopSequence;
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
 // Multimap to check the triple <current_dir, enclosing_dir, enclosing_clause>
 using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
-    std::pair<llvm::omp::Directive, const OmpClauseSet>>;
+    std::pair<llvm::omp::Directive, const llvm::omp::ClauseSet>>;
 
 using OmpStructureCheckerBase = DirectiveStructureChecker<llvm::omp::Directive,
-    llvm::omp::Clause, parser::OmpClause, llvm::omp::Clause_enumSize>;
+    llvm::omp::Clause, parser::OmpClause, llvm::omp::ClauseSet>;
+
+template <>
+void IterateOverMembers(const llvm::omp::ClauseSet &set,
+    std::function<void(llvm::omp::Clause)> func);
 
 class OmpStructureChecker : public OmpStructureCheckerBase {
 public:
@@ -145,6 +157,8 @@ public:
   void Enter(const parser::OmpDirectiveSpecification &);
   void Leave(const parser::OmpDirectiveSpecification &);
 
+  void Enter(const parser::OmpErrorDirective &);
+
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
@@ -202,6 +216,7 @@ public:
   void Enter(const parser::OmpClause::Linear &x);
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
+  void Enter(const parser::OmpClause::Message &x);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);
@@ -223,9 +238,10 @@ public:
   void Enter(const parser::OmpClause::To &x);
   void Enter(const parser::OmpClause::UnifiedAddress &x);
   void Enter(const parser::OmpClause::UnifiedSharedMemory &x);
-  void Enter(const parser::OmpClause::Update &x);
+  void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
+  void Enter(const parser::OmpClause::UsesAllocators &x);
   void Enter(const parser::OmpClause::When &x);
 
 private:
@@ -288,6 +304,7 @@ private:
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
@@ -331,12 +348,14 @@ private:
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
+  void CheckDirectiveInPureProcedure(
+      parser::CharBlock source, llvm::omp::Directive id);
   void CheckClauses(parser::OmpDirectiveName dirName,
       llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+  FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
@@ -353,9 +372,9 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+      const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
 
-  bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
+  bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
@@ -394,6 +413,9 @@ private:
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
+  void CheckDefaultNoneInAssociatedLoop(
+      const parser::OmpDirectiveSpecification &, const parser::DoConstruct &,
+      UnorderedSymbolSet &diagnosed);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(
       SymbolSourceMap &, const llvm::omp::Clause);
@@ -405,6 +427,11 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+
+  void CheckUsesAllocatorsSpec(
+      const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
+  void CheckUsesAllocatorsTraits(
+      const parser::OmpTraitsArray &traits, parser::CharBlock source);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
@@ -516,6 +543,7 @@ private:
   struct MetadirectiveLoopVariant {
     const parser::traits::OmpContextSelectorSpecification *selector;
     const parser::OmpDirectiveSpecification *spec;
+    bool checkDefaultNoneInAssociatedLoop;
   };
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;

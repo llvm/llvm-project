@@ -23,6 +23,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -588,8 +589,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
-  if (getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = getFloatABIForCalls();
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
@@ -774,6 +773,25 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
 
 void codegen::setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU) {
+  // Synthesize the "float-abi" module flag from the -float-abi option.
+  FloatABI::ABIType ABI = getFloatABIForCalls();
+  if (ABI != FloatABI::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi"))) {
+      // The module already records a float ABI; -float-abi must not contradict
+      // it.
+      if (Existing->getString() != FloatABI::getABITypeName(ABI))
+        reportFatalUsageError(
+            "-float-abi=" + FloatABI::getABITypeName(ABI) +
+            " conflicts with the \"float-abi\" module flag \"" +
+            Existing->getString() + "\"");
+    } else {
+      M.addModuleFlag(
+          Module::Error, "float-abi",
+          MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+    }
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
@@ -798,12 +816,6 @@ codegen::createTargetMachineForTriple(const Triple &TargetTriple,
                              Twine("could not allocate target machine for ") +
                                  TheTriple.str());
   return std::unique_ptr<TargetMachine>(Target);
-}
-
-Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
-                                      CodeGenOptLevel OptLevel) {
-  return createTargetMachineForTriple(Triple(TargetTriple), OptLevel);
 }
 
 void codegen::MaybeEnableStatistics() {

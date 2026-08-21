@@ -164,8 +164,7 @@ gpu.module @test_distribution {
     %broadcast = vector.broadcast %load
       : vector<256x1xf32> to vector<256x32xf32>
     %anchor = xegpu.convert_layout %broadcast
-      <{input_layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [32, 32], lane_layout = [8, 1], lane_data = [1, 1]>,
-        target_layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [32, 32], lane_layout = [8, 1], lane_data = [1, 1]>}>
+      <{target_layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [32, 32], lane_layout = [8, 1], lane_data = [1, 1]>}>
       : vector<256x32xf32>
     gpu.return
   }
@@ -183,7 +182,6 @@ gpu.module @test_distribution {
       : vector<1x128xf32> to vector<32x128xf32>
     %anchor = xegpu.convert_layout %broadcast
       <{
-        input_layout = #xegpu.layout<sg_layout = [1, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>,
         target_layout = #xegpu.layout<sg_layout = [1, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>
       }> : vector<32x128xf32>
     gpu.return
@@ -270,7 +268,6 @@ gpu.module @test_distribution {
       %exp = math.exp %load : vector<128x64xf32>
       %anchor = xegpu.convert_layout %exp
         <{
-          input_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>,
           target_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>
         }> : vector<128x64xf32>
     }{sg_id_range = #xegpu.range<[2, 18]>}
@@ -304,7 +301,6 @@ gpu.module @test_distribution {
         %exp = math.exp %ld : vector<128x64xf32>
         %anchor = xegpu.convert_layout %exp
           <{
-            input_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>,
             target_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>
           }> : vector<128x64xf32>
     }
@@ -419,8 +415,7 @@ gpu.module @test_distribution {
     %reduce = vector.multi_reduction <add>, %load, %cst [0]
       : vector<4x128xf32> to vector<128xf32>
     %anchor = xegpu.convert_layout %reduce
-      <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 32], sg_data = [4, 4]>, dims = [0]>,
-      target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 32], sg_data = [4, 4]>, dims = [0]>}>
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 32], sg_data = [4, 4]>, dims = [0]>}>
       : vector<128xf32>
     gpu.return
   }
@@ -437,8 +432,7 @@ gpu.module @test_distribution {
     %reduce = vector.multi_reduction <add>, %load, %cst [1]
       : vector<256x64xf32> to vector<256xf32>
     %anchor = xegpu.convert_layout %reduce
-      <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>,
-      target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
       : vector<256xf32>
     gpu.return
   }
@@ -454,7 +448,6 @@ gpu.module @test_distribution {
       : vector<4x2x6x32xf16> to vector<4x2x6xf16>
       %anchor = xegpu.convert_layout %reduce
         <{
-          input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>, dims = [3]>,
           target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>, dims = [3]>
         }> : vector<4x2x6xf16>
       gpu.return
@@ -483,7 +476,6 @@ gpu.module @test_distribution {
       : vector<32x32xf32> to f32
     %anchor = xegpu.convert_layout %reduce
         <{
-          input_layout =  #xegpu.slice<#xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>, dims = [0, 1]>,
           target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>, dims = [0, 1]>
         }> : f32
     gpu.return
@@ -507,7 +499,6 @@ gpu.module @test_distribution {
     %step = vector.step : vector<128xindex>
     %anchor = xegpu.convert_layout %step
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>, dims = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>, dims = [1]>
       }> : vector<128xindex>
     gpu.return
@@ -527,7 +518,6 @@ gpu.module @test_distribution {
     %step = vector.step : vector<128xindex>
     %anchor = xegpu.convert_layout %step
       <{
-        input_layout = #xegpu.layout<sg_layout = [16], sg_data = [8]>,
         target_layout = #xegpu.layout<sg_layout = [16], sg_data = [8]>
       }> : vector<128xindex>
     gpu.return
@@ -539,7 +529,6 @@ gpu.module @test_distribution {
     %cst = arith.constant dense<10> : vector<4xindex>
     %anchor = xegpu.convert_layout %cst
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 1]>, dims = [1, 2, 3]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 1]>, dims = [1, 2, 3]>
       }> : vector<4xindex>
     gpu.return
@@ -554,7 +543,6 @@ gpu.module @test_distribution {
     %shape_cast = vector.shape_cast %muli : vector<128xindex> to vector<1x1x1x128xindex>
     %anchor = xegpu.convert_layout %shape_cast
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 1, 1, 4], sg_data = [1, 1, 1, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 1, 1, 4], sg_data = [1, 1, 1, 32]>
       }> : vector<1x1x1x128xindex>
     gpu.return
@@ -567,7 +555,6 @@ gpu.module @test_distribution {
     %broadcast = vector.broadcast %muli : index to vector<4x2x6x32xindex>
     %anchor = xegpu.convert_layout %broadcast
       <{
-        input_layout = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>,
         target_layout = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>
       }> : vector<4x2x6x32xindex>
     gpu.return
@@ -585,7 +572,6 @@ gpu.module @test_distribution {
       : vector<256x32xf32> to vector<32x256xf32>
     %anchor = xegpu.convert_layout %trans
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], lane_layout = [1, 16], lane_data = [1, 1]>
       }> : vector<32x256xf32>
       gpu.return
@@ -606,7 +592,6 @@ gpu.module @test_distribution {
     %cst = arith.constant dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
     %anchor = xegpu.convert_layout %cst
       <{
-        input_layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>,
         target_layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>
       }> : vector<32x1xindex>
     gpu.return
@@ -641,7 +626,6 @@ gpu.module @test_distribution {
       ]> : vector<8x8xindex>
     %anchor = xegpu.convert_layout %cst_8x8
       <{
-        input_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2]>,
         target_layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2]>
       }> : vector<8x8xindex>
       gpu.return
@@ -660,14 +644,12 @@ gpu.module @test_distribution {
     %cst = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496]> : vector<32xindex>
     %anchor = xegpu.convert_layout %cst
       <{
-        input_layout = #xegpu.layout<sg_layout = [32], sg_data = [1]>,
         target_layout = #xegpu.layout<sg_layout = [32], sg_data = [1]>
       }> : vector<32xindex>
     // CHECK: arith.constant dense<{{\[}}{{\[}}0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15{{\]}}{{\]}}> : vector<1x16xindex>
     %cst_1 = arith.constant dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]> : vector<1x16xindex>
     %anchor_1 = xegpu.convert_layout %cst_1
       <{
-        input_layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 16]>,
         target_layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 16]>
       }> : vector<1x16xindex>
     gpu.return
@@ -679,7 +661,6 @@ gpu.module @test_distribution {
     %broadcast = vector.broadcast %arg0 : index to vector<4x1x1xindex>
     %anchor = xegpu.convert_layout %broadcast
       <{
-        input_layout = #xegpu.layout<sg_layout = [4, 8, 1], sg_data = [1, 1, 1]>,
         target_layout = #xegpu.layout<sg_layout = [4, 8, 1], sg_data = [1, 1, 1]>
       }> : vector<4x1x1xindex>
     gpu.return
@@ -698,7 +679,6 @@ gpu.module @test_distribution {
     %constant_mask = vector.constant_mask [8] : vector<32xi1>
     %anchor = xegpu.convert_layout %constant_mask
       <{
-        input_layout = #xegpu.layout<sg_layout = [2], sg_data = [16]>,
         target_layout = #xegpu.layout<sg_layout = [2], sg_data = [16]>
       }> : vector<32xi1>
     gpu.return
@@ -724,7 +704,6 @@ gpu.module @test_distribution {
     %constant_mask = vector.constant_mask [16, 16] : vector<256x128xi1>
     %anchor = xegpu.convert_layout %constant_mask
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
       }> : vector<256x128xi1>
     gpu.return
@@ -744,7 +723,6 @@ gpu.module @test_distribution {
     %constant_mask = vector.create_mask %cst8 : vector<32xi1>
     %anchor = xegpu.convert_layout %constant_mask
       <{
-        input_layout = #xegpu.layout<sg_layout = [2], sg_data = [16]>,
         target_layout = #xegpu.layout<sg_layout = [2], sg_data = [16]>
       }> : vector<32xi1>
     gpu.return
@@ -771,7 +749,6 @@ gpu.module @test_distribution {
     %constant_mask = vector.create_mask %cst16, %cst16 : vector<256x128xi1>
     %anchor = xegpu.convert_layout %constant_mask
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
       }> : vector<256x128xi1>
     gpu.return
@@ -779,7 +756,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: distribute_load_slice_attr
   gpu.func @distribute_load_slice_attr() {
-    %2 = memref.alloca() {alignment = 1024} : memref<4096xf32>
+    %2 = memref.alloca() alignment = 1024 : memref<4096xf32>
     %offset =  arith.constant dense<0> : vector<256xindex>
     %mask = arith.constant dense<1> : vector<256xi1>
 
@@ -791,7 +768,6 @@ gpu.module @test_distribution {
     %4 = vector.broadcast %3 : vector<256xf32> to vector<256x256xf32>
     %anchor = xegpu.convert_layout %4
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>,
         target_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>
       }> : vector<256x256xf32>
     gpu.return
@@ -824,7 +800,6 @@ gpu.module @test_distribution {
     %15 = vector.multi_reduction <add>, %14, %cst_3 [1] : vector<1x32x32xf32> to vector<1x32xf32>
     %anchor = xegpu.convert_layout %15
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 32, 1], sg_data = [1, 1, 32]>, dims = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 32, 1], sg_data = [1, 1, 32]>, dims = [1]>
       }> : vector<1x32xf32>
     gpu.return
@@ -866,7 +841,6 @@ gpu.module @test_distribution {
       : vector<256x128xf32> to vector<128xf32>
     %anchor = xegpu.convert_layout %reduce
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>, dims = [0]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>, dims = [0]>
       }> : vector<128xf32>
     gpu.return
@@ -899,7 +873,6 @@ gpu.module @test_distribution {
     %reduce = vector.multi_reduction <add>, %load, %cst [2, 3] : vector<2x2x128x128xf32> to vector<2x2xf32>
     %anchor = xegpu.convert_layout %reduce
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [1, 1, 32, 32]>, dims = [2, 3]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [1, 1, 32, 32]>, dims = [2, 3]>
       }> : vector<2x2xf32>
     gpu.return
@@ -932,7 +905,6 @@ gpu.module @test_distribution {
     %reduce = vector.multi_reduction <add>, %load, %cst [2, 3] : vector<32x32x128x128xf32> to vector<32x32xf32>
     %anchor = xegpu.convert_layout %reduce
       <{
-        input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>, dims = [2, 3]>,
         target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>, dims = [2, 3]>
       }> : vector<32x32xf32>
     gpu.return
@@ -1017,7 +989,6 @@ gpu.module @test_distribution {
                                    target_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32], inst_data = [16, 16]>}> : vector<128x256xf32>
     %anchor = xegpu.convert_layout %2
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32], inst_data = [16, 16]>,
         target_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32], inst_data = [16, 16]>
       }> : vector<128x256xf32>
     gpu.return
@@ -1060,7 +1031,6 @@ gpu.module @test_distribution {
                                    target_layout = #xegpu.layout<sg_layout = [8, 8, 8], sg_data = [1, 16, 32], inst_data = [1, 16, 16]>}> : vector<8x128x256xf32>
     %anchor = xegpu.convert_layout %2
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 8, 8], sg_data = [1, 16, 32], inst_data = [1, 16, 16]>,
         target_layout = #xegpu.layout<sg_layout = [8, 8, 8], sg_data = [1, 16, 32], inst_data = [1, 16, 16]>
       }> : vector<8x128x256xf32>
     gpu.return
@@ -1076,7 +1046,7 @@ gpu.module @test_distribution {
     %11 = xegpu.load %10[%offset], %mask <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}> : i64, vector<32x32xindex>, vector<32x32xi1> -> vector<32x32xf32>
     %12 = vector.multi_reduction <add>, %11, %cst_0 [0, 1] : vector<32x32xf32> to f32
     // CHECK-NOT: xegpu.convert_layout
-    %13 = xegpu.convert_layout %12 <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>}> : f32
+    %13 = xegpu.convert_layout %12 <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0, 1]>}> : f32
     gpu.return
   }
 
@@ -1111,7 +1081,6 @@ gpu.module @test_distribution {
     %bcast2 = vector.broadcast %scast2 : vector<256x16x1x256x16x16xf32> to vector<256x16x16x256x16x16xf32>
     %anchor = xegpu.convert_layout %bcast2
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 1, 1, 8, 1, 1], sg_data = [32, 16, 16, 32, 16, 16]>,
         target_layout = #xegpu.layout<sg_layout = [8, 1, 1, 8, 1, 1], sg_data = [32, 16, 16, 32, 16, 16]>
       }> : vector<256x16x16x256x16x16xf32>
     gpu.return
@@ -1296,7 +1265,6 @@ gpu.module @test_distribution {
     %cst = arith.constant dense<1.0> : vector<256x128xf32>
     %anchor = xegpu.convert_layout %cst
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
       }> : vector<256x128xf32>
     gpu.return
@@ -1340,7 +1308,6 @@ gpu.module @test_distribution {
     %bitcast2 = vector.bitcast %add : vector<256x256xi16> to vector<256x128xi32>
     %anchor = xegpu.convert_layout %bitcast2
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
       }> : vector<256x128xi32>
     gpu.return
@@ -1361,7 +1328,6 @@ gpu.module @test_distribution {
       : vector<256x128xf32> -> vector<256x256xf32>
     %anchor = xegpu.convert_layout %interleave
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64]>
       }> : vector<256x256xf32>
     gpu.return
@@ -1375,7 +1341,6 @@ gpu.module @test_distribution {
     %deinterleave:2 = vector.deinterleave %load : vector<256x256xf32> -> vector<256x128xf32>
     %anchor = xegpu.convert_layout %deinterleave#0
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
         target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
       }> : vector<256x128xf32>
     gpu.return
@@ -1404,4 +1369,19 @@ func.func @no_crash_on_dynamic_tensor(%arg0: tensor<?xi32>, %arg1: index) -> ten
     scf.yield %updated : tensor<?xi32>
   }
   return %result : tensor<?xi32>
+}
+
+// -----
+
+// Regression test: a tensor_desc with a SliceAttr layout was not distributed.
+gpu.module @test_slice_layout {
+  // CHECK-LABEL: slice_layout
+  gpu.func @slice_layout(%arg0: memref<1024x1536xf16>) {
+    // CHECK: xegpu.create_nd_tdesc %{{.*}} : memref<1024x1536xf16> -> !xegpu.tensor_desc<8x16xf16>
+    %tdesc = xegpu.create_nd_tdesc %arg0 : memref<1024x1536xf16> -> !xegpu.tensor_desc<32x64xf16>
+    // CHECK: xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>}>
+        : !xegpu.tensor_desc<32x64xf16> -> vector<32x64xf16>
+    gpu.return
+  }
 }
