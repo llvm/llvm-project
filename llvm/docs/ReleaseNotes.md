@@ -120,6 +120,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Added experimental MC support for the `Smijt` and `Ssijt` interrupt jump
   table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
   vectoring extensions.
+* Added experimental MC support for the `Smip` and `Ssip` interrupt handler
+  push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 
