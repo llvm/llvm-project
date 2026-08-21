@@ -77,9 +77,6 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - 0;
 
-  // operator++, operator--, operator== and operator<=> are omitted:
-  // -Wunused-value already warns on discarded comparisons.
-
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
