@@ -2120,6 +2120,33 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setType(DstReg, LLT::scalar(64));
     return true;
   }
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    // Imported patterns require an FPR result. For a GPR, use a temporary FPR
+    // and insert a cross-bank copy.
+    Register DstReg = I.getOperand(0).getReg();
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    if (DstRB.getID() != AArch64::GPRRegBankID)
+      return false;
+
+    LLT DstTy = MRI.getType(DstReg);
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, /*GetAllRegSet=*/true);
+    if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+      return false;
+
+    Register FPRDst = MRI.createGenericVirtualRegister(DstTy);
+    MRI.setRegBank(FPRDst, RBI.getRegBank(AArch64::FPRRegBankID));
+    I.getOperand(0).setReg(FPRDst);
+
+    BuildMI(MBB, std::next(I.getIterator()), MIMetadata(I),
+            TII.get(TargetOpcode::COPY), DstReg)
+        .addReg(FPRDst);
+    return true;
+  }
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -4029,22 +4056,44 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   assert(I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "unexpected opcode");
 
-  // TODO: Handle unmerging into GPRs and from scalars to scalars.
-  if (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID ||
-      RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
-                         "currently unsupported.\n");
-    return false;
-  }
-
   // The last operand is the vector source register, and every other operand is
   // a register to unpack into.
   unsigned NumElts = I.getNumOperands() - 1;
   Register SrcReg = I.getOperand(NumElts).getReg();
-  const LLT NarrowTy = MRI.getType(I.getOperand(0).getReg());
+  Register LoReg = I.getOperand(0).getReg();
+  Register HiReg = I.getOperand(1).getReg();
+  const LLT NarrowTy = MRI.getType(LoReg);
   const LLT WideTy = MRI.getType(SrcReg);
+  const RegisterBank &LoRB = *RBI.getRegBank(LoReg, MRI, TRI);
+  const RegisterBank &HiRB = *RBI.getRegBank(HiReg, MRI, TRI);
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+  // Handle unmerging a 128-bit FPR value into two 64-bit GPR values.
+  if (NarrowTy == LLT::scalar(64) && WideTy == LLT::scalar(128) &&
+      LoRB.getID() == AArch64::GPRRegBankID &&
+      HiRB.getID() == AArch64::GPRRegBankID &&
+      SrcRB.getID() == AArch64::FPRRegBankID) {
+    MachineInstr &Lo = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), LoReg)
+                            .addUse(SrcReg)
+                            .addImm(0);
+    MachineInstr &Hi = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), HiReg)
+                            .addUse(SrcReg)
+                            .addImm(1);
+    constrainSelectedInstRegOperands(Lo, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Hi, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  // TODO: Handle other unmerges into GPRs and from scalars to scalars.
+  if (LoRB.getID() != AArch64::FPRRegBankID ||
+      HiRB.getID() != AArch64::FPRRegBankID) {
+    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
+                         "currently unsupported.\n");
+    return false;
+  }
 
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");

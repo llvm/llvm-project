@@ -1344,3 +1344,284 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @deref_assumption_in_preheader_constant_trip_count_i32_size(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
+; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_i32_size(
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i32 4000) ]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i32 4000) ]
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 4
+  %c.1 = icmp sge i32 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:
+  %gep.a = getelementptr i32, ptr %a, i64 %iv
+  %l.a = load i32, ptr %gep.a, align 4
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop.header ]
+  %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  store i32 %merge, ptr %gep.c, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @deref_assumption_in_preheader_constant_trip_count_i8_size(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
+; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_i8_size(
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i8 -1) ]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <2 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[WIDE_LOAD]], <2 x i8> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i8> [[PREDPHI]], ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 254
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i8 -1) ]
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  %l.b = load i8, ptr %gep.b, align 1
+  %c.1 = icmp sge i8 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %l.a = load i8, ptr %gep.a, align 1
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i8 [ %l.a, %loop.then ], [ %l.b, %loop.header ]
+  %gep.c = getelementptr inbounds i8, ptr %c, i64 %iv
+  store i8 %merge, ptr %gep.c, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 255
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @deref_assumption_too_small_in_preheader_constant_trip_count_i8_size(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c) nofree nosync{
+; CHECK-LABEL: define void @deref_assumption_too_small_in_preheader_constant_trip_count_i8_size(
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i8 -1) ]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i8> @llvm.masked.load.v2i8.p0(ptr align 1 [[TMP3]], <2 x i1> [[TMP1]], <2 x i8> poison)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[TMP12]], <2 x i8> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i8> [[PREDPHI]], ptr [[TMP13]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i8 -1) ]
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  %l.b = load i8, ptr %gep.b, align 1
+  %c.1 = icmp sge i8 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %l.a = load i8, ptr %gep.a, align 1
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i8 [ %l.a, %loop.then ], [ %l.b, %loop.header ]
+  %gep.c = getelementptr inbounds i8, ptr %c, i64 %iv
+  store i8 %merge, ptr %gep.c, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 256
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @deref_assumption_in_preheader_constant_trip_count_i32_size_via_loop_guard(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i32 %n) nofree nosync{
+; CHECK-LABEL: define void @deref_assumption_in_preheader_constant_trip_count_i32_size_via_loop_guard(
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i32 [[N]]) ]
+; CHECK-NEXT:    [[C_N:%.*]] = icmp ugt i32 [[N]], 399
+; CHECK-NEXT:    br i1 [[C_N]], label %[[LOOP_HEADER_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_HEADER_PREHEADER]]:
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i32 %n) ]
+  %c.n = icmp ugt i32 %n, 399
+  br i1 %c.n, label %loop.header, label %exit
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 4
+  %c.1 = icmp sge i32 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:
+  %gep.a = getelementptr i32, ptr %a, i64 %iv
+  %l.a = load i32, ptr %gep.a, align 4
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop.header ]
+  %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  store i32 %merge, ptr %gep.c, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @deref_assumption_too_small_in_preheader_constant_trip_count_i32_size_via_loop_guard(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i32 %n) nofree nosync{
+; CHECK-LABEL: define void @deref_assumption_too_small_in_preheader_constant_trip_count_i32_size_via_loop_guard(
+; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4), "dereferenceable"(ptr [[A]], i32 [[N]]) ]
+; CHECK-NEXT:    [[C_N:%.*]] = icmp ugt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[C_N]], label %[[LOOP_HEADER_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_HEADER_PREHEADER]]:
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP3]], <2 x i1> [[TMP1]], <2 x i32> poison)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP12]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i32 %n) ]
+  %c.n = icmp ugt i32 %n, 0
+  br i1 %c.n, label %loop.header, label %exit
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 4
+  %c.1 = icmp sge i32 %l.b, 0
+  br i1 %c.1, label %loop.latch, label %loop.then
+
+loop.then:
+  %gep.a = getelementptr i32, ptr %a, i64 %iv
+  %l.a = load i32, ptr %gep.a, align 4
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ %l.a, %loop.then ], [ %l.b, %loop.header ]
+  %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
+  store i32 %merge, ptr %gep.c, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

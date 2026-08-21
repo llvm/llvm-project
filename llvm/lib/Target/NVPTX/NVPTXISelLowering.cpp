@@ -2676,6 +2676,18 @@ static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return NVPTXISD::
         TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
   };
   llvm_unreachable("unhandled tcgen05.mma.disable_output_lane intrinsic");
 }
@@ -2888,6 +2900,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
   case Intrinsic::nvvm_tensormap_replace_elemtype:
     return lowerTensormapReplaceElemtype(Op, DAG);
@@ -5497,6 +5517,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
@@ -5522,6 +5546,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:

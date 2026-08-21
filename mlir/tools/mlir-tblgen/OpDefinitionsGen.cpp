@@ -234,9 +234,9 @@ static const char *const opCommentHeader = R"(
 static const char *const inlineCreateBody = R"(
   ::mlir::OperationState __state__({0}, getOperationName());
   build(builder, __state__{1});
-  auto __res__ = ::llvm::dyn_cast<{2}>(builder.create(__state__));
-  assert(__res__ && "builder didn't return the right type");
-  return __res__;
+  auto __res__ = builder.create(__state__);
+  assert((::llvm::isa<{2}>(__res__)) && "builder didn't return the right type");
+  return ::llvm::cast<{2}>(__res__);
 )";
 
 static const char *const inlineCreateBodyImplicitLoc = R"(
