@@ -811,6 +811,19 @@ def warn_const_attr_with_pure_attr : Warning<
 def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
+  
+def warn_pure_function_writes_argument : Warning<
+  "function declared %select{'pure'|'const'}0 stores through "
+  "%select{pointer|reference}1 parameter %2; this violates the attribute's "
+  "contract and can cause miscompilation under optimization">,
+  InGroup<InvalidPureAttribute>;
+def warn_pure_function_writes_global : Warning<
+  "function declared %select{'pure'|'const'}0 stores to "
+  "%select{global|static local}1 variable %2; this violates the attribute's "
+  "contract and can cause miscompilation under optimization">,
+  InGroup<InvalidPureAttribute>;
+def note_pure_function_declared_here : Note<
+  "function declared %select{'pure'|'const'}0 here">;
 
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
