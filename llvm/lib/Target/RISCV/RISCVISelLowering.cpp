@@ -18989,15 +18989,14 @@ static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
   bool IsSignedUnsigned = false;
   if (N0IsSExt && N1IsSExt) {
     RV32Opc = RISCVISD::PWMUL;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMUL_H_B01 : RISCVISD::PMUL_W_H01;
+    RV64Opc = RISCVISD::PMUL_HALVES_01;
   } else if (N0IsZExt && N1IsZExt) {
     RV32Opc = RISCVISD::PWMULU;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMULU_H_B01 : RISCVISD::PMULU_W_H01;
+    RV64Opc = RISCVISD::PMULU_HALVES_01;
   } else {
     IsSignedUnsigned = true;
     RV32Opc = RISCVISD::PWMULSU;
-    RV64Opc =
-        VT == MVT::v4i16 ? RISCVISD::PMULSU_H_B00 : RISCVISD::PMULSU_W_H00;
+    RV64Opc = RISCVISD::PMULSU_HALVES_00;
     if (N0IsZExt && N1IsSExt)
       std::swap(A, B);
   }
