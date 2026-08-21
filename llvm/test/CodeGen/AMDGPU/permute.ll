@@ -432,4 +432,46 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @dword_from_v16i16_combine_loop(ptr addrspace(1) %out) {
+; GCN-LABEL: dword_from_v16i16_combine_loop:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_and_b32_e32 v1, 3, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    flat_store_byte v[1:2], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %ins = insertelement <2 x i32> poison, i32 %tid, i64 0
+  %splat = shufflevector <2 x i32> %ins, <2 x i32> poison, <2 x i32> zeroinitializer
+  %masked = and <2 x i32> %splat, <i32 31, i32 7>
+  %e1 = extractelement <2 x i32> %masked, i64 1
+  %and = and i32 %e1, 3
+  %cond = icmp eq i32 %and, 0
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %wide = shufflevector <2 x i32> %masked, <2 x i32> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %trunc = trunc <16 x i32> %wide to <16 x i16>
+  %s0 = shufflevector <16 x i16> <i16 0, i16 0, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 9, i16 poison, i16 100, i16 poison, i16 poison>, <16 x i16> %trunc, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 17, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 11, i32 poison, i32 13, i32 poison, i32 poison>
+  %s1 = insertelement <16 x i16> %s0, i16 7, i64 5
+  %s2 = shufflevector <16 x i16> %s1, <16 x i16> %trunc, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 11, i32 poison, i32 13, i32 poison, i32 poison>
+  %s3 = shufflevector <16 x i16> %s2, <16 x i16> <i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 0, i16 poison, i16 0, i16 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 26, i32 11, i32 28, i32 13, i32 30, i32 31>
+  %max = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %s3, <16 x i16> zeroinitializer)
+  %bytes = bitcast <16 x i16> %max to <32 x i8>
+  br label %bb2
+
+bb2:
+  %phi = phi <32 x i8> [ %bytes, %bb1 ], [ zeroinitializer, %entry ]
+  %byte16 = extractelement <32 x i8> %phi, i64 16
+  store i8 %byte16, ptr addrspace(1) %out, align 1
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
