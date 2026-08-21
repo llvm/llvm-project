@@ -1033,6 +1033,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     if (!Name)
       continue;
 
+    auto CanonName = FunctionSamples::getCanonicalCoroFnName(Name);
     auto RangesOrError = Die.getAddressRanges();
     if (!RangesOrError)
       continue;
@@ -1043,7 +1044,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
 
     // Different DWARF symbols can have same function name, search or create
     // BinaryFunction indexed by the name.
-    auto Ret = BinaryFunctions.try_emplace(Name);
+    auto Ret = BinaryFunctions.try_emplace(CanonName);
     auto &Func = Ret.first->second;
     if (Ret.second)
       Func.FuncName = Ret.first->first();
@@ -1166,6 +1167,7 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       break;
 
     StringRef FunctionName(CallerFrame.FunctionName);
+    FunctionName = FunctionSamples::getCanonicalCoroFnName(FunctionName);
     if (UseCanonicalFnName)
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
 
