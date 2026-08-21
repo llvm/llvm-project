@@ -112,7 +112,7 @@ public:
   StringEntry *getFileName(unsigned FileIdx, StringPool &GlobalStrings);
 
   /// Returns DWARFFile containing this compile unit.
-  const DWARFFile &getContaingFile() const { return File; }
+  const DWARFFile &getContainingFile() const { return File; }
 
   /// Set deterministic priority for type DIE allocation ordering.
   /// Lower priority values win when multiple CUs race to define the same type.
