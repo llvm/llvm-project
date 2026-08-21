@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of the pthread_getstack_np function.
+/// Implementation of the pthread_getstack_np function (LLVM-libc extension).
 ///
 //===----------------------------------------------------------------------===//
 
