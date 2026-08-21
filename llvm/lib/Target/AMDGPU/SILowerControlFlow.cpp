@@ -657,10 +657,12 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI,
     Def->eraseFromParent();
   }
 
-  if (LV)
-    for (Register R : RecomputeLV)
+  if (LV) {
+    for (Register R : RecomputeLV) {
       if (!MRI->def_empty(R)) // Skip Reg if its def was just erased.
         LV->recomputeForSingleDefVirtReg(R);
+    }
+  }
 }
 
 void SILowerControlFlow::optimizeEndCf() {
