@@ -386,3 +386,57 @@ define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a
   %r = select i1 %c, i32 %s, i32 %a2
   ret i32 %r
 }
+
+define i32 @lshr_var_ret_amt_never_zero(i32 %a0, i32 %a1, ptr %out) {
+; CHECK-LABEL: lshr_var_ret_amt_never_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $1, %cl
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    sete (%rdx)
+; CHECK-NEXT:    retq
+  %a = or i32 %a1, 1
+  %s = lshr i32 %a0, %a
+  %c = icmp eq i32 %s, 0
+  %z = zext i1 %c to i8
+  store i8 %z, ptr %out
+  ret i32 %s
+}
+
+define i32 @shl_var_ret_amt_never_zero(i32 %a0, i32 %a1, ptr %out) {
+; CHECK-LABEL: shl_var_ret_amt_never_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $1, %cl
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    sete (%rdx)
+; CHECK-NEXT:    retq
+  %a = or i32 %a1, 1
+  %s = shl i32 %a0, %a
+  %c = icmp eq i32 %s, 0
+  %z = zext i1 %c to i8
+  store i8 %z, ptr %out
+  ret i32 %s
+}
+
+define i32 @ashr_var_ret_amt_never_zero(i32 %a0, i32 %a1, ptr %out) {
+; CHECK-LABEL: ashr_var_ret_amt_never_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $1, %cl
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    sarl %cl, %eax
+; CHECK-NEXT:    sete (%rdx)
+; CHECK-NEXT:    retq
+  %a = or i32 %a1, 1
+  %s = ashr i32 %a0, %a
+  %c = icmp eq i32 %s, 0
+  %z = zext i1 %c to i8
+  store i8 %z, ptr %out
+  ret i32 %s
+}

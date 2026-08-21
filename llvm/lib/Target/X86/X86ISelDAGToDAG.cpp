@@ -3890,6 +3890,10 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   case X86ISD::XOR:
     IsCommutable = true;
     break;
+  case X86ISD::SHL:
+  case X86ISD::SRL:
+  case X86ISD::SRA:
+    break;
   }
 
   unsigned LoadOpNo = IsNegate ? 1 : 0;
@@ -3963,7 +3967,10 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   case X86ISD::SBB:
   case X86ISD::AND:
   case X86ISD::OR:
-  case X86ISD::XOR: {
+  case X86ISD::XOR:
+  case X86ISD::SHL:
+  case X86ISD::SRL:
+  case X86ISD::SRA: {
     auto SelectRegOpcode = [SelectOpcode](unsigned Opc) {
       switch (Opc) {
       case X86ISD::ADD:
@@ -3986,6 +3993,10 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       case X86ISD::XOR:
         return SelectOpcode(X86::XOR64mr, X86::XOR32mr, X86::XOR16mr,
                             X86::XOR8mr);
+      case X86ISD::SHL:
+      case X86ISD::SRL:
+      case X86ISD::SRA:
+        return 0U; // Only immediate shifts are supported.
       default:
         llvm_unreachable("Invalid opcode!");
       }
@@ -4013,6 +4024,15 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       case X86ISD::XOR:
         return SelectOpcode(X86::XOR64mi32, X86::XOR32mi, X86::XOR16mi,
                             X86::XOR8mi);
+      case X86ISD::SHL:
+        return SelectOpcode(X86::SHL64mi, X86::SHL32mi, X86::SHL16mi,
+                            X86::SHL8mi);
+      case X86ISD::SRL:
+        return SelectOpcode(X86::SHR64mi, X86::SHR32mi, X86::SHR16mi,
+                            X86::SHR8mi);
+      case X86ISD::SRA:
+        return SelectOpcode(X86::SAR64mi, X86::SAR32mi, X86::SAR16mi,
+                            X86::SAR8mi);
       default:
         llvm_unreachable("Invalid opcode!");
       }
@@ -4043,6 +4063,9 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
         NewOpc = SelectImmOpcode(Opc);
       }
     }
+
+    if (NewOpc == 0)
+      return false;
 
     if (Opc == X86ISD::ADC || Opc == X86ISD::SBB) {
       SDValue CopyTo =

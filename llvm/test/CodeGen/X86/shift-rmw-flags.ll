@@ -4,9 +4,7 @@
 define i8 @test_lshr_rmw(ptr %p) {
 ; CHECK-LABEL: test_lshr_rmw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    shrl (%rdi)
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p
@@ -20,9 +18,7 @@ define i8 @test_lshr_rmw(ptr %p) {
 define i8 @test_shl_rmw(ptr %p) {
 ; CHECK-LABEL: test_shl_rmw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    shll (%rdi)
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p
@@ -36,9 +32,7 @@ define i8 @test_shl_rmw(ptr %p) {
 define i8 @test_ashr_rmw(ptr %p) {
 ; CHECK-LABEL: test_ashr_rmw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    sarl %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    sarl (%rdi)
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p
@@ -58,7 +52,6 @@ define i8 @test_lshr_rmw_var(ptr %p, i32 %c) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p
@@ -79,7 +72,6 @@ define i8 @test_shl_rmw_var(ptr %p, i32 %c) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p
@@ -100,7 +92,6 @@ define i8 @test_ashr_rmw_var(ptr %p, i32 %c) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p

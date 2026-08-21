@@ -239,6 +239,54 @@ defm SAR: ShiftRotate_NF<"sar", MRM7r, MRM7m, WriteShiftCL, WriteShift, WriteShi
 defm ROL: ShiftRotate_NF<"rol", MRM0r, MRM0m, WriteRotateCL, WriteRotate, WriteRotateCLLd, WriteRotateLd>;
 defm ROR: ShiftRotate_NF<"ror", MRM1r, MRM1m, WriteRotateCL, WriteRotate, WriteRotateCLLd, WriteRotateLd>;
 
+multiclass ShiftFlag_Pats<SDNode node, string inst, string suffix = ""> {
+  def : Pat<(node GR8:$src, (i8 1)), (!cast<Instruction>(inst#"8r1"#suffix) GR8:$src)>;
+  def : Pat<(node GR8:$src, (i8 imm:$amt)), (!cast<Instruction>(inst#"8ri"#suffix) GR8:$src, imm:$amt)>;
+  def : Pat<(node GR8:$src, CL), (!cast<Instruction>(inst#"8rCL"#suffix) GR8:$src)>;
+  def : Pat<(node GR16:$src, (i8 1)), (!cast<Instruction>(inst#"16r1"#suffix) GR16:$src)>;
+  def : Pat<(node GR16:$src, (i8 imm:$amt)), (!cast<Instruction>(inst#"16ri"#suffix) GR16:$src, imm:$amt)>;
+  def : Pat<(node GR16:$src, CL), (!cast<Instruction>(inst#"16rCL"#suffix) GR16:$src)>;
+  def : Pat<(node GR32:$src, (i8 1)), (!cast<Instruction>(inst#"32r1"#suffix) GR32:$src)>;
+  def : Pat<(node GR32:$src, (i8 imm:$amt)), (!cast<Instruction>(inst#"32ri"#suffix) GR32:$src, imm:$amt)>;
+  def : Pat<(node GR32:$src, CL), (!cast<Instruction>(inst#"32rCL"#suffix) GR32:$src)>;
+  def : Pat<(node GR64:$src, (i8 1)), (!cast<Instruction>(inst#"64r1"#suffix) GR64:$src)>;
+  def : Pat<(node GR64:$src, (i8 imm:$amt)), (!cast<Instruction>(inst#"64ri"#suffix) GR64:$src, imm:$amt)>;
+  def : Pat<(node GR64:$src, CL), (!cast<Instruction>(inst#"64rCL"#suffix) GR64:$src)>;
+}
+
+multiclass ShlFlag_Pats<SDNode node, string suffix = ""> {
+  def : Pat<(node GR8:$src, (i8 1)), (!cast<Instruction>("ADD8rr"#suffix) GR8:$src, GR8:$src)>;
+  def : Pat<(node GR8:$src, (i8 imm:$amt)), (!cast<Instruction>("SHL8ri"#suffix) GR8:$src, imm:$amt)>;
+  def : Pat<(node GR8:$src, CL), (!cast<Instruction>("SHL8rCL"#suffix) GR8:$src)>;
+  def : Pat<(node GR16:$src, (i8 1)), (!cast<Instruction>("ADD16rr"#suffix) GR16:$src, GR16:$src)>;
+  def : Pat<(node GR16:$src, (i8 imm:$amt)), (!cast<Instruction>("SHL16ri"#suffix) GR16:$src, imm:$amt)>;
+  def : Pat<(node GR16:$src, CL), (!cast<Instruction>("SHL16rCL"#suffix) GR16:$src)>;
+  def : Pat<(node GR32:$src, (i8 1)), (!cast<Instruction>("ADD32rr"#suffix) GR32:$src, GR32:$src)>;
+  def : Pat<(node GR32:$src, (i8 imm:$amt)), (!cast<Instruction>("SHL32ri"#suffix) GR32:$src, imm:$amt)>;
+  def : Pat<(node GR32:$src, CL), (!cast<Instruction>("SHL32rCL"#suffix) GR32:$src)>;
+  def : Pat<(node GR64:$src, (i8 1)), (!cast<Instruction>("ADD64rr"#suffix) GR64:$src, GR64:$src)>;
+  def : Pat<(node GR64:$src, (i8 imm:$amt)), (!cast<Instruction>("SHL64ri"#suffix) GR64:$src, imm:$amt)>;
+  def : Pat<(node GR64:$src, CL), (!cast<Instruction>("SHL64rCL"#suffix) GR64:$src)>;
+}
+
+let Predicates = [NoNDD, NoEGPR] in {
+  defm : ShiftFlag_Pats<X86srl_flag, "SHR">;
+  defm : ShiftFlag_Pats<X86sra_flag, "SAR">;
+  defm : ShlFlag_Pats<X86shl_flag>;
+}
+
+let Predicates = [HasEGPR] in {
+  defm : ShiftFlag_Pats<X86srl_flag, "SHR", "_EVEX">;
+  defm : ShiftFlag_Pats<X86sra_flag, "SAR", "_EVEX">;
+  defm : ShlFlag_Pats<X86shl_flag, "_EVEX">;
+}
+
+let Predicates = [HasNDD] in {
+  defm : ShiftFlag_Pats<X86srl_flag, "SHR", "_ND">;
+  defm : ShiftFlag_Pats<X86sra_flag, "SAR", "_ND">;
+  defm : ShlFlag_Pats<X86shl_flag, "_ND">;
+}
+
 // Use the opposite rotate if allows us to use the rotate by 1 instruction.
 let Predicates = [NoNDD] in {
   def : Pat<(rotl GR8:$src1,  (i8 7)),  (ROR8r1  GR8:$src1)>;

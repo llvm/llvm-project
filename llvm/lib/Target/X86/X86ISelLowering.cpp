@@ -23923,9 +23923,17 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
   // non-casted variable when we check for possible users.
   switch (ArithOp.getOpcode()) {
   case ISD::AND:
-    // If the primary 'and' result isn't used, don't bother using X86ISD::AND,
-    // because a TEST instruction will be better.
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    // If the primary result isn't used, don't bother using the X86-specific
+    // instruction, because a TEST instruction will be better.
     if (!hasNonFlagsUse(Op))
+      break;
+
+    // X86 shift instructions only set EFLAGS if the shift count is not 0.
+    if (ArithOp.getOpcode() != ISD::AND &&
+        !DAG.computeKnownBits(Op.getOperand(1)).isNonZero())
       break;
 
     [[fallthrough]];
@@ -23945,7 +23953,10 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
     case ISD::XOR: Opcode = X86ISD::XOR; break;
     case ISD::AND: Opcode = X86ISD::AND; break;
     case ISD::OR:  Opcode = X86ISD::OR;  break;
-    // clang-format on
+    case ISD::SHL: Opcode = X86ISD::SHL; break;
+    case ISD::SRL: Opcode = X86ISD::SRL; break;
+    case ISD::SRA: Opcode = X86ISD::SRA; break;
+      // clang-format on
     }
 
     NumOperands = 2;
