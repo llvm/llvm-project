@@ -532,7 +532,19 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
-                      /*IsSafeToHoist*/ false);
+                       /*IsSafeToHoist*/ false);
+  }
+
+  // -C + umax(C, X) --> usub.sat(X, C)
+  const SCEV *UMaxRHS = nullptr;
+  const SCEVConstant *C1, *C2;
+  if (match(S, m_scev_Add(m_SCEVConstant(C1),
+                          m_scev_UMax(m_SCEVConstant(C2), m_SCEV(UMaxRHS)))) &&
+      C1->getAPInt() == -C2->getAPInt()) {
+    Value *LHS = expand(UMaxRHS);
+    Value *RHS = C2->getValue();
+    return Builder.CreateIntrinsic(Intrinsic::usub_sat, {S->getType()},
+                                   {LHS, RHS});
   }
 
   // Collect all the add operands in a loop, along with their associated loops.

@@ -479,6 +479,9 @@ features cannot lower the translation-unit ABI level;
   template was instantiated after the global module fragment was closed,
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
+
+- Fixed a crash when module directive export module foo not following a 
+  semicolon and there are no rest pp-tokens in current module file. (#GH187771)
   
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
