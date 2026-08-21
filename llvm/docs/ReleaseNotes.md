@@ -280,6 +280,26 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the PowerPC Backend
 
+* Added backend support for partial reductions and cost modeling for length-type
+  VP intrinsic load/store.
+* `vec_rl()` on `v4i32` now generates `xvrlw` when targeting `-mcpu=future`.
+* `v256i1` loads and stores use paired vector instructions (`lxvp`/`stxvp`) on `-mcpu=future`.
+* Added support for the `MSGSNDP` (Message Send Privileged) instruction.
+* Enabled custom lowering for `__builtin_bswap64` on Power8 in 64-bit mode
+  by splitting the 64-bit byte-swap into independent 32-bit high/low swaps
+  for improved instruction-level parallelism. Power9 and later continue to
+  use their existing paths.
+* Added missing `BR_CC` handler in `DAGTypeLegalizer` for soft-promoted half
+  operands, fixing a crash when a half-typed `fcmp` result feeds directly
+  into a conditional branch.
+* Various codegen improvements and bug fixes.
+* AIX: Implemented support for the `ifunc` attribute.
+* AIX: Implemented Function Multi-Versioning using `target_clones`; versioning by cpu only, and diagnosis of invalid feature strings on the `target` attribute.
+* AIX: Added sorting of relocations in the XCOFF object writer.
+* AIX: The default code model for 64-bit targets has been changed from `small`
+  to `large`. This avoids the need for expensive linker fixups (e.g.
+  `-Wl,-bigtoc`) that many applications require with the small code model.
+
 ### Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
@@ -469,10 +489,16 @@ Performance enhancements:
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
 * `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
+* `lit` now supports `--unsupported` and `--unsupported-not` command-line
+  options (and corresponding `LIT_UNSUPPORTED` / `LIT_UNSUPPORTED_NOT`
+  environment variables) to mark tests as `UNSUPPORTED` without modifying
+  the test files, mirroring the existing `--xfail` / `LIT_XFAIL` mechanism.
 * Added support for hybrid ARM64X object files to `llvm-ar` and `llvm-lib`. When these files are added to
   an archive, they are automatically split into separate native and EC members. Because the resulting members
   are no longer hybrid object files, consumers of these archives do not need to support the hybrid format themselves.
 * `llvm-ar` now supports reading and writing z/OS archives.
+* `ObjectFile::createObjectFile` now correctly handles GOFF object files,
+  routing them through `createGOFFObjectFile` instead of returning an error.
 
 ### Changes to LLDB
 
@@ -584,6 +610,13 @@ Performance enhancements:
 ### Changes to Sanitizers
 
 * Add a random delay into ThreadSanitizer to help find rare thread interleavings.
+* `sancov` now supports XCOFF object files (used on AIX). The tool strips
+  the `.` prefix that AIX adds to function entry-point symbols (e.g.
+  `.__sanitizer_cov_trace_pc_guard`) so that coverage symbols are
+  correctly identified.
+* The `mmap`/`munmap` memory-mapping interceptors now fail early when the
+  requested address range is not covered by shadow memory, avoiding
+  hard-to-diagnose failures later in the sanitizer runtime.
 
 ### Other Changes
 
