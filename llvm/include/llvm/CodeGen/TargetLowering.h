@@ -366,6 +366,7 @@ public:
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -4287,6 +4288,14 @@ public:
     return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
                        Chain);
   }
+
+  /// Build a call argument list for \p FuncTy, taking the argument node values
+  /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
+  /// \p FuncAttrs. \p Ops must have one entry per parameter of \p FuncTy.
+  LLVM_ABI static ArgListTy
+  getArgListForFunctionType(FunctionType *FuncTy,
+                            const AttributeList &FuncAttrs,
+                            ArrayRef<SDValue> Ops);
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
