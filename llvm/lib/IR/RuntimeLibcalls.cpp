@@ -275,6 +275,63 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                               false),
             Attrs};
   }
+  case RTLIB::impl___aeabi_idivmod:
+  case RTLIB::impl___aeabi_uidivmod:
+  case RTLIB::impl___aeabi_ldivmod:
+  case RTLIB::impl___aeabi_uldivmod:
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64: {
+    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
+    // return both values modeled as an inreg { iN, iN } struct (quotient,
+    // remainder). The __rt_*div* cases pass the arguments in opposite order.
+    bool IsSigned;
+    unsigned Bits;
+    switch (LibcallImpl) {
+    case RTLIB::impl___aeabi_idivmod:
+    case RTLIB::impl___rt_sdiv:
+      IsSigned = true;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_uidivmod:
+    case RTLIB::impl___rt_udiv:
+      IsSigned = false;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_ldivmod:
+    case RTLIB::impl___rt_sdiv64:
+      IsSigned = true;
+      Bits = 64;
+      break;
+    case RTLIB::impl___aeabi_uldivmod:
+    case RTLIB::impl___rt_udiv64:
+      IsSigned = false;
+      Bits = 64;
+      break;
+    default:
+      llvm_unreachable("unexpected divmod libcall");
+    }
+
+    Type *IntTy = IntegerType::get(Ctx, Bits);
+    StructType *RetTy = StructType::get(IntTy, IntTy);
+    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
+    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
+    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
+    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
+
+    return {FuncTy, Attrs};
+  }
   case RTLIB::impl_sqrtf:
   case RTLIB::impl_sqrt: {
     AttrBuilder FuncAttrBuilder(Ctx);
