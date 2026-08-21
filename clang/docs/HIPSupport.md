@@ -441,7 +441,7 @@ module init functions.
   }
   ```
 
-- Shall not be used in the initializer of a static/thread-local object,
+- Managed variables shall not be used in the initializer of a static/thread-local object,
   because that initialization may run before the HIP runtime has registered the
   managed variable, leaving its address null.
   Clang can diagnose direct uses of a managed variable within an initializer;
