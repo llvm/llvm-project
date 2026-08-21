@@ -1,11 +1,9 @@
 REQUIRES: zlib
 
-; Verify that compressed composite blocks remain inspectable when their payloads
-; exceed the bounded buffer and that overflow does not change the output.
-; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary --compress-all-sections %S/Inputs/sample-profile.proftext -o %t.buffered
-; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary --compress-all-sections --extbinary-profile-type-buffer-limit=1 %S/Inputs/sample-profile.proftext -o %t.overflow
-; RUN: cmp %t.buffered %t.overflow
-; RUN: llvm-profdata show --sample --show-composite-info-only %t.overflow | FileCheck %s
+; Verify that composite payload size counting works while the enclosing section
+; is redirected through the existing compression buffer.
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary --compress-all-sections %S/Inputs/sample-profile.proftext -o %t.prof
+; RUN: llvm-profdata show --sample --show-composite-info-only %t.prof | FileCheck %s
 
 ; CHECK: Function:
 ; CHECK-NEXT:   Profile blocks: 1

@@ -232,14 +232,14 @@ protected:
   std::error_code writeCompositeProfile(const FunctionSamples &S,
                                         bool IsNested);
   /// Write one \p Type and the size-prefixed payload emitted by \p
-  /// WritePayload. The callback may be invoked twice when its payload exceeds
-  /// the dynamic buffer limit, so it must emit identical bytes without external
+  /// WritePayload. The callback is invoked once to count its bytes and again to
+  /// emit them, so both calls must produce identical output without external
   /// side effects.
   std::error_code
   writeProfileType(ProfTypes Type,
                    function_ref<std::error_code()> WritePayload);
-  /// Reusable size-counting stream with bounded dynamic payload storage.
-  std::unique_ptr<raw_ostream> PayloadBufferStream;
+  /// Reusable stream that counts payload bytes without retaining them.
+  std::unique_ptr<raw_ostream> PayloadSizeStream;
   /// Whether a profile payload callback is currently being executed.
   bool WritingProfileType = false;
 

@@ -169,10 +169,11 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
   }
 
-  // Write a minimal profile, optionally requesting a specific format version,
-  // to an in-memory buffer.
+  // Write the supplied profile map, optionally requesting a specific format
+  // version, to an in-memory buffer.
   ErrorOr<SmallVector<char, 128>>
-  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt) {
+  writeProfileToBuffer(const SampleProfileMap &Profiles,
+                       std::optional<uint64_t> Version = std::nullopt) {
     SmallVector<char, 128> Buffer;
     std::unique_ptr<raw_ostream> OS =
         std::make_unique<raw_svector_ostream>(Buffer);
@@ -184,6 +185,17 @@ struct SampleProfTest : ::testing::Test {
     if (Version)
       Writer->setFormatVersion(*Version);
 
+    if (std::error_code EC = Writer->write(Profiles))
+      return EC;
+    Writer->getOutputStream().flush();
+    Writer.reset();
+    return Buffer;
+  }
+
+  // Write a minimal profile, optionally requesting a specific format version,
+  // to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt) {
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
     FooSamples.setFunction(FunctionId(FooName));
@@ -191,12 +203,7 @@ struct SampleProfTest : ::testing::Test {
 
     SampleProfileMap Profiles;
     Profiles[FooName] = std::move(FooSamples);
-
-    if (std::error_code EC = Writer->write(Profiles))
-      return EC;
-    Writer->getOutputStream().flush();
-    Writer.reset();
-    return Buffer;
+    return writeProfileToBuffer(Profiles, Version);
   }
 
   // Replace the single-byte ExtBinary version in a complete profile.
@@ -535,6 +542,61 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
 TEST_F(SampleProfTest, roundtrip_composite_ext_binary_profile) {
   [[maybe_unused]] ScopedCompositeProfile Composite(true);
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+}
+
+// Verify that the writer and reader handle a multi-byte ULEB128 payload size.
+TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
+  constexpr uint32_t BodyRecordCount = 128;
+  StringRef FunctionName("_Z5largev");
+
+  // Build one function whose encoded LBR payload is necessarily larger than the
+  // single-byte ULEB128 range.
+  FunctionSamples LargeSamples;
+  LargeSamples.setFunction(FunctionId(FunctionName));
+  ASSERT_EQ(sampleprof_error::success,
+            LargeSamples.addTotalSamples(BodyRecordCount));
+  ASSERT_EQ(sampleprof_error::success, LargeSamples.addHeadSamples(1));
+  for (uint32_t LineOffset = 1; LineOffset <= BodyRecordCount; ++LineOffset)
+    ASSERT_EQ(sampleprof_error::success,
+              LargeSamples.addBodySamples(LineOffset, 0, 1));
+
+  SampleProfileMap Profiles;
+  Profiles[FunctionName] = std::move(LargeSamples);
+  auto BufferOrErr = writeProfileToBuffer(Profiles);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  // Inspect the decoded block structure to verify that the writer emitted a
+  // payload size outside the single-byte ULEB128 range.
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(BufferOrErr->data(), BufferOrErr->size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  std::string ProfileTypeInfo;
+  raw_string_ostream InfoOS(ProfileTypeInfo);
+  ASSERT_TRUE(NoError(ProfileReader->dumpProfileTypeInfo(InfoOS)));
+
+  StringRef PayloadSizeText =
+      StringRef(ProfileTypeInfo).split("Payload size: ").second;
+  ASSERT_FALSE(PayloadSizeText.empty());
+  PayloadSizeText = PayloadSizeText.split('\n').first;
+  uint64_t PayloadSize = 0;
+  ASSERT_FALSE(PayloadSizeText.getAsInteger(10, PayloadSize));
+  EXPECT_GE(PayloadSize, 128u);
+
+  // Confirm that the same read preserved every body record, including both
+  // ends of the generated range.
+  FunctionSamples *ReadSamples = ProfileReader->getSamplesFor(FunctionName);
+  ASSERT_NE(ReadSamples, nullptr);
+  EXPECT_EQ(ReadSamples->getBodySamples().size(), BodyRecordCount);
+  auto FirstSample = ReadSamples->findSamplesAt(1, 0);
+  ASSERT_TRUE(NoError(FirstSample.getError()));
+  EXPECT_EQ(FirstSample.get(), 1u);
+  auto LastSample = ReadSamples->findSamplesAt(BodyRecordCount, 0);
+  ASSERT_TRUE(NoError(LastSample.getError()));
+  EXPECT_EQ(LastSample.get(), 1u);
 }
 
 // Verify that reusing one ExtBinary writer for a composite profile and then a
