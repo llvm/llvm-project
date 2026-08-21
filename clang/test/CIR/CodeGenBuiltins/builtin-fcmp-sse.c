@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -30,9 +28,9 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnleps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
@@ -81,9 +79,9 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnlepd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
@@ -132,9 +130,9 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnltps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
@@ -183,9 +181,9 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnltpd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16

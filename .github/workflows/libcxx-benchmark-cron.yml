@@ -16,15 +16,15 @@ permissions:
 
 on:
   schedule:
-    # Trigger every hour, off the hour boundary to avoid popular times.
-    - cron: '37 * * * *'
+    # Trigger every 30 minutes, off the hour boundary to avoid popular times.
+    - cron: '7,37 * * * *'
   workflow_dispatch:
     inputs:
       dry-run:
         description: 'Report what would be requested, but request nothing'
         required: false
         type: boolean
-        default: true # TODO: Make this not a dry-run by default after validating a few dry-run crons
+        default: false
       allow-missing-machine:
         description: 'Plan for machines that have no data in LNT yet. Needed to seed a new machine.'
         required: false
@@ -82,19 +82,44 @@ jobs:
       EVERY: ${{ matrix.every }}
       SAMPLES: ${{ matrix.samples }}
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
-      BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
       LNT_URL: ${{ matrix.lnt-url }}
 
       ALLOW_MISSING_MACHINE: ${{ inputs.allow-missing-machine || 'false' }}
       DRY_RUN: ${{ inputs.dry-run || 'false' }}
     steps:
-      - name: Checkout the LLVM monorepo
+      # Anchor commits are stable through time (except for the single new anchor commit every
+      # day/week/month depending on the granularity). Since computing anchor commits requires
+      # cloning the whole monorepo (which is expensive) and this job runs regularly, we cache
+      # anchor commits and avoid recomputing them unless necessary.
+      #
+      # Since we currently use weekly granularity for anchor commits on most LNT machines, we
+      # cache them and re-generate them only daily.
+      - name: Compute the cache key for anchor commits
+        id: anchor-key
+        run: echo "key=libcxx-benchmark-cron-anchors-${MACHINE}-${SINCE}-${EVERY}-$(date -u +%F)" >> "${GITHUB_OUTPUT}"
+
+      - name: Try restoring anchor commits for ${{ matrix.machine }} from cache
+        id: restore-anchors
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/anchors.txt # restore to temp since the checkout below would overwrite it
+          key: ${{ steps.anchor-key.outputs.key }}
+
+      - name: Checkout the full LLVM monorepo
+        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           # Selecting anchor commits requires full Git history, but not the blob content.
           fetch-depth: 0
           filter: blob:none
+
+      - name: Checkout sparse LLVM monorepo
+        if: ${{ steps.restore-anchors.outputs.cache-hit == 'true' }}
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: libcxx/utils # Only checkout what the tools need
 
       - name: Install Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -106,21 +131,29 @@ jobs:
       - name: Install dependencies
         run: pip install -r libcxx/utils/requirements.txt
 
-      - name: Determine which commits should have benchmark data
+      - name: Determine anchor commits
+        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
         run: |
           libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output anchors.txt
           # Anchor commits go from oldest to newest. Reverse them to prioritize newer commits first.
-          tac anchors.txt > tmp.txt
-          mv tmp.txt anchors.txt
+          tac anchors.txt > "${RUNNER_TEMP}/anchors.txt"
 
-      - name: Determine which of them are missing from LNT
+      - name: Cache anchor commits
+        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/anchors.txt
+          key: ${{ steps.anchor-key.outputs.key }}
+
+      - name: Determine which commits are missing from LNT
         run: |
           allow_missing=()
           if [ "${ALLOW_MISSING_MACHINE}" = "true" ]; then
             allow_missing=(--allow-missing-machine)
           fi
 
-          libcxx/utils/ci/lnt/plan-benchmarks --commit-list anchors.txt --lnt-url "${LNT_URL}" --test-suite libcxx  \
+          libcxx/utils/ci/lnt/plan-benchmarks --commit-list "${RUNNER_TEMP}/anchors.txt"                            \
+                                              --lnt-url "${LNT_URL}" --test-suite libcxx                            \
                                               --machine "${MACHINE}" --samples "${SAMPLES}" "${allow_missing[@]}"   \
                                               --output plan.jsonl
 
@@ -133,6 +166,5 @@ jobs:
             dry_run=(--dry-run)
           fi
 
-          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --test-suite-commit "${BENCHMARK_SUITE_VERSION}"  \
-                                                  --max-in-flight "${MAX_IN_FLIGHT}" --lnt-url "${LNT_URL}"                 \
-                                                  --output dispatched.jsonl "${dry_run[@]}"
+          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --lnt-url "${LNT_URL}"  \
+                                                  --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"

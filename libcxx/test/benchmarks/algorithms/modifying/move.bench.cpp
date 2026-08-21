@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::move(normal container)
   {
     auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto move) {
-      benchmark::RegisterBenchmark(name, [move](auto& st) {
+      benchmark::RegisterBenchmark(name, [move](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const size = st.range(0);
         using ValueType        = typename InputContainer::value_type;
         InputContainer in;
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::move(vector<bool>)
   {
     auto bm = []<bool Aligned>(std::string name, auto move) {
-      benchmark::RegisterBenchmark(name, [move](auto& st) {
+      benchmark::RegisterBenchmark(name, [move](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const size = st.range(0);
         std::vector<bool> c1(size, true);
         std::vector<bool> c2(size, false);

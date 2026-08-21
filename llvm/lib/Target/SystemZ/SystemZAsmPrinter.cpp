@@ -1254,8 +1254,8 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
   if (ExtraCode) {
-    if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
-        SystemZ::GR128BitRegClass.contains(MO.getReg()))
+    if ((ExtraCode[0] == 'N' || ExtraCode[0] == 'M') && !ExtraCode[1] &&
+        MO.isReg() && SystemZ::GR128BitRegClass.contains(MO.getReg()))
       MCOp =
           MCOperand::createReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
     else

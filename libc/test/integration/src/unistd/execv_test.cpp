@@ -36,9 +36,9 @@ void fork_and_execv_normal_exit() {
 void fork_and_execv_signal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
-    const char *path = "libc_execv_test_signal_exit";
+    const char *path = "libc_exec_test_signal_exit";
     char *const argv[] = {
-        const_cast<char *>("execv_test_normal_exit"),
+        const_cast<char *>("exec_test_signal_exit"),
         nullptr,
     };
     LIBC_NAMESPACE::execv(path, argv);

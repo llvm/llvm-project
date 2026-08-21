@@ -788,6 +788,14 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  MaybeAlign AlignmentGranule = getRequiredGlobalAlignmentGranule(*GV);
+  emitGlobalVariable(GV, AlignmentGranule);
+  if (AlignmentGranule)
+    OutStreamer->emitValueToAlignment(*AlignmentGranule);
+}
+
+void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
+                                    MaybeAlign AlignmentGranule) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
@@ -853,7 +861,17 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
   // sections and expected to be contiguous (e.g. ObjC metadata).
-  const Align Alignment = getGVAlignment(GV, DL);
+  //
+  // If we get passed in an explicit alignment granule, it is up to the caller
+  // to ensure that is not the case (i.e. that the GV is not in a section).
+  Align Alignment = getGVAlignment(GV, DL);
+
+  if (AlignmentGranule) {
+    assert(!GV->hasSection());
+    Size = alignTo(Size, *AlignmentGranule);
+    if (Alignment < *AlignmentGranule)
+      Alignment = *AlignmentGranule;
+  }
 
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
@@ -3129,13 +3147,14 @@ bool AsmPrinter::doFinalization(Module &M) {
           ".note.GNU-no-split-stack", ELF::SHT_PROGBITS, 0));
   }
 
-  // If we don't have any trampolines, then we don't require stack memory
-  // to be executable. Some targets have a directive to declare this.
-  Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  bool HasTrampolineUses =
-      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
-  MCSection *S = MAI.getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
-  if (S)
+  // Emit the section that tells the linker whether stack memory has to be
+  // executable, e.g. ELF's .note.GNU-stack. It is marked executable only if
+  // the module sets the "executable-stack" flag.
+  bool ExecStack = false;
+  if (auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
+          M.getModuleFlag("executable-stack")))
+    ExecStack = !Val->isZero();
+  if (MCSection *S = MAI.getStackSection(OutContext, ExecStack))
     OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {

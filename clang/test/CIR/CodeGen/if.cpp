@@ -85,8 +85,8 @@ void if1(int a) {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z3if1i(i32 noundef %0)
-// LLVM: %[[A:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A:.*]] = alloca i32, align 4
+// LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: store i32 %0, ptr %[[A]], align 4
 // LLVM: store i32 0, ptr %[[X]], align 4
 // LLVM: br label %[[ENTRY:.*]]
@@ -166,10 +166,10 @@ void if2(int a, bool b, bool c) {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef zeroext %[[B:.*]], i1 noundef zeroext %[[C:.*]])
-// LLVM:   %[[VARA:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[VARB:.*]] = alloca i8, i64 1, align 1
-// LLVM:   %[[VARC:.*]] = alloca i8, i64 1, align 1
-// LLVM:   %[[VARX:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[VARA:.*]] = alloca i32, align 4
+// LLVM:   %[[VARB:.*]] = alloca i8, align 1
+// LLVM:   %[[VARC:.*]] = alloca i8, align 1
+// LLVM:   %[[VARX:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[A]], ptr %[[VARA]], align 4
 // LLVM:   %[[B_EXT:.*]] = zext i1 %[[B]] to i8
 // LLVM:   store i8 %[[B_EXT]], ptr %[[VARB]], align 1
@@ -286,8 +286,8 @@ int if_init() {
 // CIR: }
 
 // LLVM: define{{.*}} i32 @_Z7if_initv()
-// LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[X:.*]] = alloca i32, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, align 4
 // LLVM: store i32 42, ptr %[[X]], align 4
 // LLVM: %[[X_VAL:.*]] = load i32, ptr %[[X]], align 4
 // LLVM: %[[COND:.*]] = icmp ne i32 %[[X_VAL]], 0
