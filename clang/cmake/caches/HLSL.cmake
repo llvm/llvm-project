@@ -5,8 +5,6 @@ set(LLVM_TARGETS_TO_BUILD "Native;SPIRV;DirectX" CACHE STRING "")
 
 set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra" CACHE STRING "")
 
-set(CLANG_ENABLE_HLSL On CACHE BOOL "")
-
 if (HLSL_ENABLE_DISTRIBUTION)
   set(LLVM_DISTRIBUTION_COMPONENTS
       "clang;hlsl-resource-headers;clangd"

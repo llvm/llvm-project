@@ -527,8 +527,6 @@ option(CLANG_INCLUDE_TESTS
        "Generate build targets for the Clang unit tests."
        ${LLVM_INCLUDE_TESTS})
 
-option(CLANG_ENABLE_HLSL "Include HLSL build products" On)
-
 add_subdirectory(utils/TableGen)
 
 # Export CLANG_TABLEGEN_EXE for use by flang docs.

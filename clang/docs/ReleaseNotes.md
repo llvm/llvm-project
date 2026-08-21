@@ -567,9 +567,8 @@ features cannot lower the translation-unit ABI level;
 
 #### DirectX Support
 
-- `clang-dxc` and HLSL support (`CLANG_ENABLE_HLSL`) are now enabled by
-  default, following the promotion of the DirectX backend to an official
-  LLVM target.
+- `clang-dxc` and HLSL support are now enabled by default, following the
+  promotion of the DirectX backend to an official LLVM target.
 
 #### NVPTX Support
 
