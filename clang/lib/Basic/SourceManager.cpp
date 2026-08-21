@@ -16,7 +16,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
-#include "clang/Config/config.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -47,7 +46,6 @@
 #include <vector>
 
 using namespace clang;
-
 using namespace SrcMgr;
 using llvm::MemoryBuffer;
 
@@ -185,48 +183,11 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
 
     std::error_code EC = Converter->convert(OriginalBuf, UTF8Buf);
     if (EC) {
-      // For tagged files, conversion failure is an error and we don't fall back
-      if (isFileTagged()) {
-        Diag.Report(Loc, diag::err_encoding_conversion_failed)
+      Diag.Report(Loc, diag::err_encoding_conversion_failed)
             << ContentsEntry->getName() << EC.message();
-        return std::nullopt;
-      }
-
-      // Only fall back to the default encoding if the file is untagged.
-      // If conversion fails, emit a warning and attempt to fall back to the
-      // default encoding.
-      //
-      // This allows the compiler to accept system or third-party headers that
-      // are encoded in the default encoding even if conversion to the
-      // option-specified input encoding failed.
-      //
-      // TODO: Add input byte offset information.
-      // FIXME: Need to fallback to IBM-1047 if that is the default even if the
-      // file is being read as UTF-8.
-      const char *FallbackEncoding =
-          CLANG_DEFAULT_INPUT_ENCODING_IBM1047 ? "IBM-1047" : "UTF-8";
-      Diag.Report(Loc, diag::warn_encoding_conversion_failed)
-          << ContentsEntry->getName() << EC.message() << FallbackEncoding;
-
-      // If the default fallback encoding is IBM-1047, attempt conversion using
-      // that converter
-      if (CLANG_DEFAULT_INPUT_ENCODING_IBM1047) {
-        // Create fallback converter in place
-        llvm::ErrorOr<llvm::TextEncodingConverter> FallbackConverter =
-            llvm::TextEncodingConverter::create("IBM-1047", "UTF-8");
-        if (!FallbackConverter)
-          llvm::report_fatal_error(
-              llvm::Twine(
-                  "Failed to create IBM-1047 to UTF-8 fallback converter: ") +
-              FallbackConverter.getError().message());
-
-        UTF8Buf.clear();
-        UTF8Buf.reserve(OriginalBuf.size() + 1);
-        std::error_code FallbackEC =
-            FallbackConverter->convert(OriginalBuf, UTF8Buf);
-        assert(!FallbackEC && "Fallback conversion failed");
-      }
+      return std::nullopt;
     }
+
     // TODO: Reclaim memory if the buffer size exceeds the content.
     auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
         std::move(UTF8Buf), Buffer->getBufferIdentifier());
