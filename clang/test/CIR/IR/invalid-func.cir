@@ -48,7 +48,7 @@ module {
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i, i32}>
+!rec_S = !cir.struct<"S" {data !s32i, data i32}>
 
 module {
   cir.func private @l0(!cir.ptr<!rec_S>) // expected-error {{expected all types in the function signature to be CIR types}}
@@ -57,7 +57,7 @@ module {
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_U = !cir.union<"U" {!s32i, i32}>
+!rec_U = !cir.union<"U" {data !s32i, data i32}>
 
 module {
   cir.func private @l0(!rec_U) // expected-error {{expected all types in the function signature to be CIR types}}
