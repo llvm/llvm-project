@@ -759,11 +759,19 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
 bool LoopVectorizationLegality::addMonotonicPHI(PHINode *Phi,
                                                 const MonotonicDescriptor &MD) {
-  MonotonicPHIs[Phi] = MD;
+  for (User *U : Phi->users()) {
+    if (!TheLoop->contains(cast<Instruction>(U))) {
+      reportVectorizationFailure(
+          "Unsupported out-of-loop user of monotonic phi",
+          "UnsupportedMonotonicUse", ORE, TheLoop);
+      return false;
+    }
+  }
 
+  MonotonicPHIs[Phi] = MD;
   DenseMap<Value *, const SCEV *> CompressedPtrsForMD;
   if (!collectCompressedPtrs(CompressedPtrsForMD, *TheLoop, MD, *PSE.getSE())) {
-    reportVectorizationFailure("Unsupported user of monotonic phi",
+    reportVectorizationFailure("Unsupported user of monotonic phi in loop",
                                "UnsupportedMonotonicUse", ORE, TheLoop);
     return false;
   }
