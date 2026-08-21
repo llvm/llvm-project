@@ -69,8 +69,7 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   for (MVT VT : MVT::integer_valuetypes()) {
     for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
       setLoadExtAction(N, VT, MVT::i1, Promote);
-      setLoadExtAction(N, VT, MVT::i8, Promote);
-      setLoadExtAction(N, VT, MVT::i16, Promote);
+      setLoadExtAction(N, VT, MVT::i64, Expand);
     }
   }
 

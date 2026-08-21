@@ -72,16 +72,25 @@ void SuperHInstrInfo::insertNoop(MachineBasicBlock &MBB,
 ISD::CondCode SuperHInstrInfo::getCondFromBranchOp(unsigned Op) const {
   switch (Op) {
   default:
-    return ISD::SETFALSE;
-  case SH::BRA:
+    return ISD::SETCC_INVALID;
   case SH::NOP:
-    return ISD::SETTRUE;
   case SH::BT:
   case SH::BTS:
-    return ISD::SETEQ;
+    return ISD::SETTRUE;
   case SH::BF:
   case SH::BFS:
-    return ISD::SETNE;
+    return ISD::SETFALSE;
+  }
+}
+
+ISD::CondCode SuperHInstrInfo::getOppositeCondCode(ISD::CondCode Op) const {
+  switch (Op) {
+  default:
+    return ISD::SETCC_INVALID;
+  case ISD::SETTRUE:
+    return ISD::SETFALSE;
+  case ISD::SETFALSE:
+    return ISD::SETTRUE;
   }
 }
 
@@ -89,13 +98,9 @@ const MCInstrDesc &SuperHInstrInfo::getBrCond(ISD::CondCode CC) const {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
-  case ISD::SETEQ:
-  case ISD::SETGE:
-  case ISD::SETGT:
+  case ISD::SETTRUE:
     return get(SH::BT);
-  case ISD::SETNE:
-  case ISD::SETLE:
-  case ISD::SETLT:
+  case ISD::SETFALSE:
     return get(SH::BF);
   }
 }
@@ -151,12 +156,16 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
       continue;
     }
 
-    LLVM_DEBUG(dbgs() << "analyzeBranch " << getName(I->getOpcode()) << "\n");
-
     // Working from the bottom, when we see a non-terminator
     // instruction, we're done.
     if (!isUnpredicatedTerminator(*I)) {
       break;
+    }
+
+    // A terminator that isn't a branch can't easily be handled
+    // by this analysis.
+    if (!I->getDesc().isBranch()) {
+      return true;
     }
 
     // Handle unconditional branches.
@@ -186,6 +195,56 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
       TBB = I->getOperand(0).getMBB();
       continue;
     }
+
+    // Handle conditional branches.
+    ISD::CondCode BranchCode = getCondFromBranchOp(I->getOpcode());
+    if (BranchCode == ISD::SETFALSE) {
+      return true; // Can't handle indirect branch.
+    }
+
+    // Working from the bottom, handle the first conditional branch.
+    if (Cond.empty()) {
+      MachineBasicBlock *TargetBB = I->getOperand(0).getMBB();
+      if (AllowModify && UnCondBrIter != MBB.end() &&
+          MBB.isLayoutSuccessor(TargetBB)) {
+
+        BranchCode = getOppositeCondCode(BranchCode);
+        unsigned JNCC = getBrCond(BranchCode).getOpcode();
+        MachineBasicBlock::iterator OldInst = I;
+
+        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(JNCC))
+            .addMBB(UnCondBrIter->getOperand(0).getMBB());
+        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(SH::BRA))
+            .addMBB(TargetBB);
+
+        OldInst->eraseFromParent();
+        UnCondBrIter->eraseFromParent();
+
+        // Restart the analysis.
+        UnCondBrIter = MBB.end();
+        I = MBB.end();
+        continue;
+      }
+
+      // Handle subsequent conditional branches. Only handle the case where all
+      // conditional branches branch to the same destination.
+      assert(Cond.size() == 1);
+      assert(TBB);
+
+      // Only handle the case where all conditional branches branch to
+      // the same destination.
+      if (TBB != I->getOperand(0).getMBB()) {
+        return true;
+      }
+
+      ISD::CondCode OldBranchCode = (ISD::CondCode)Cond[0].getImm();
+      // If the conditions are the same, we can leave them alone.
+      if (OldBranchCode == BranchCode) {
+        continue;
+      }
+
+      return true;
+    }
   }
 
   return false;
@@ -195,17 +254,79 @@ unsigned SuperHInstrInfo::insertBranch(MachineBasicBlock &MBB, MachineBasicBlock
                       MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                       const DebugLoc &DL,
                       int *BytesAdded) const {
-  return 0;
+  if (BytesAdded)
+    *BytesAdded = 0;
+
+  // Shouldn't be a fall through.
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
+  assert((Cond.size() == 1 || Cond.size() == 0) &&
+         "SH branch conditions have one component!");
+
+  if (Cond.empty()) {
+    assert(!FBB && "Unconditional branch with multiple successors!");
+    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA)).addMBB(TBB);
+    if (BytesAdded)
+      *BytesAdded += getInstSizeInBytes(MI);
+    return 1;
+  }
+
+  // Conditional branch.
+  unsigned Count = 0;
+  ISD::CondCode CC = (ISD::CondCode)Cond[0].getImm();
+  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC)).addMBB(TBB);
+
+  if (BytesAdded)
+    *BytesAdded += getInstSizeInBytes(CondMI);
+  ++Count;
+
+  if (FBB) {
+    // Two-way Conditional branch. Insert the second branch.
+    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA)).addMBB(FBB);
+    if (BytesAdded)
+      *BytesAdded += getInstSizeInBytes(MI);
+    ++Count;
+  }
+
+  return Count;
 }
 
 unsigned SuperHInstrInfo::removeBranch(MachineBasicBlock &MBB,
                       int *BytesRemoved) const {
-  return 0;
+  if (BytesRemoved)
+    *BytesRemoved = 0;
+
+  MachineBasicBlock::iterator I = MBB.end();
+  unsigned Count = 0;
+
+  while (I != MBB.begin()) {
+    --I;
+    if (I->isDebugInstr()) {
+      continue;
+    }
+
+    if (I->getOpcode() != SH::BRA &&
+        getCondFromBranchOp(I->getOpcode()) == ISD::SETCC_INVALID) {
+      break;
+    }
+
+    // Remove the branch.
+    if (BytesRemoved)
+      *BytesRemoved += getInstSizeInBytes(*I);
+    I->eraseFromParent();
+    I = MBB.end();
+    ++Count;
+  }
+
+  return Count;
 }
 
 bool
 SuperHInstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 1 && "Invalid SH branch condition!");
 
+  ISD::CondCode CC = static_cast<ISD::CondCode>(Cond[0].getImm());
+  Cond[0].setImm(getOppositeCondCode(CC));
+  return false;
 }
 
 MachineBasicBlock *SuperHInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
