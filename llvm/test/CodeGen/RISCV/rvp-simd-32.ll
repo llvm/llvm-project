@@ -3156,3 +3156,99 @@ define <2 x i16> @test_pnclipup_v2i16(i32 %a, i32 %b) {
   %r = call <2 x i16> @llvm.riscv.pnclipup.v2i16.i32(i32 %a, i32 %b)
   ret <2 x i16> %r
 }
+
+define i32 @test_mqacc_h00_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqacc_h00_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqacc.h00 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqacc_h00_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqacc.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqacc.h00.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
+
+define i32 @test_mqacc_h01_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqacc_h01_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqacc.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqacc_h01_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqacc.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqacc.h01.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
+
+define i32 @test_mqacc_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqacc_h11_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqacc.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqacc_h11_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqacc.w.h11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqacc.h11.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
+
+define i32 @test_mqracc_h00_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqracc_h00_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqracc.h00 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqracc_h00_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqracc.w.h00 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqracc.h00.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
+
+define i32 @test_mqracc_h01_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqracc_h01_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqracc.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqracc_h01_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqracc.w.h01 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqracc.h01.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
+
+define i32 @test_mqracc_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_mqracc_h11_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqracc.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqracc_h11_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pmqracc.w.h11 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mqracc.h11.i32.v2i16(i32 %rd, <2 x i16> %a, <2 x i16> %b)
+  ret i32 %r
+}
