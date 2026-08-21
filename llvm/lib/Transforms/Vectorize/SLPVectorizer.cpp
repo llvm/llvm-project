@@ -14502,6 +14502,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   };
   FastMathFlags FMF;
   FMF.set();
+  const bool IsArithmeticState = S.isAddSubLikeOp() || S.isMulDivLikeOp() ||
+                                 S.isShiftOp() || S.isBitwiseLogicOp();
   for (Value *V : VL) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
@@ -14510,8 +14512,9 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     if (!IsCopyable)
       if (auto *FPCI = dyn_cast<FPMathOperator>(I))
         FMF &= FPCI->getFastMathFlags();
-    if (IsCopyable || (I->getOpcode() != S.getOpcode() &&
-                       I->getOpcode() != S.getAltOpcode())) {
+    if (IsCopyable || !IsArithmeticState ||
+        (I->getOpcode() != S.getOpcode() &&
+         I->getOpcode() != S.getAltOpcode())) {
       FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
       continue;
     }
