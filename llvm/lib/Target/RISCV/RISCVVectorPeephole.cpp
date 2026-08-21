@@ -937,8 +937,7 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     MI.eraseFromParent();
     Cmp.eraseFromParent();
     for (MachineInstr *CmpCopy : CmpCopies)
-      if (MRI->use_nodbg_empty(CmpCopy->getOperand(0).getReg()))
-        CmpCopy->eraseFromParent();
+      CmpCopy->eraseFromParent();
 
     return true;
   }
