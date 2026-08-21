@@ -831,11 +831,11 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     MachineInstr &Cmp = *MRI->getUniqueVRegDef(CmpReg);
     if (Cmp.getParent() != MI.getParent())
       continue;
+    if (!RISCVInstrInfo::isRVVCompare(Cmp))
+      continue;
 
-    // Only fold comparisons: entries in the masked pseudo table whose unmasked
-    // form has neither a passthru nor a policy operand. This excludes ops like
-    // vmsbf.m/viota.m which share that shape but whose active elements depend
-    // on the mask, so masking them would change their result.
+    // Only fold unmasked comparisons whose active elements don't depend on the
+    // mask.
     const RISCV::RISCVMaskedPseudoInfo *Info =
         RISCV::lookupMaskedIntrinsicByUnmasked(Cmp.getOpcode());
     if (!Info)

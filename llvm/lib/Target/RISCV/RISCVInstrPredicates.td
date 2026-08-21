@@ -173,6 +173,17 @@ def isVSlideInstr
                       !instances<Pseudo>("^PseudoVSLIDEUP_VI.*")
                      ])>>>;
 
+// Returns true if this is an integer or floating-point vector comparison.
+def isRVVCompare
+    : TIIPredicate<"isRVVCompare",
+                   MCReturnStatement<
+                     CheckOpcode<!listflatten([
+                      !instances<Pseudo>(
+                          "^PseudoVMS(EQ|NE|LTU?|LEU?|GTU?)_.*"),
+                      !instances<Pseudo>(
+                          "^PseudoVMF(EQ|NE|LT|LE|GT|GE)(_ALT)?_.*")
+                     ])>>>;
+
 def isFaultOnlyFirstLoad
     : TIIPredicate<"isFaultOnlyFirstLoad",
                     MCReturnStatement<
