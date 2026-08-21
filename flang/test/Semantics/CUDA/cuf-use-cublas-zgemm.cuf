@@ -48,12 +48,49 @@ module cublas
   interface zgemm
     procedure :: zgemm, zgemmcu_dpm, zgemmcu_hpm
   end interface
+
+  interface
+    subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1) :: transa, transb
+      integer(4) :: m, n, k, lda, ldb, ldc
+      real(8) :: alpha, beta
+      real(8) :: a(1:lda, *), b(1:ldb, *), c(1:ldc, *)
+!dir$ ignore_tkr(tr) a, b, c
+    end subroutine
+
+    subroutine dgemmcu_dpm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), value :: transa, transb
+      integer(4), value :: m, n, k, lda, ldb, ldc
+      real(8), device :: alpha, beta
+      real(8), device :: a(1:lda, *), b(1:ldb, *), c(1:ldc, *)
+!dir$ ignore_tkr(m) alpha, beta
+!dir$ ignore_tkr(tr) a, b, c
+    end subroutine
+
+    subroutine dgemmcu_hpm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), value :: transa, transb
+      integer(4), value :: m, n, k, lda, ldb, ldc
+      real(8) :: alpha, beta
+      real(8), device :: a(1:lda, *), b(1:ldb, *), c(1:ldc, *)
+!dir$ ignore_tkr(tr) a, b, c
+    end subroutine
+  end interface
+
+  interface dgemm
+    procedure :: dgemm, dgemmcu_dpm, dgemmcu_hpm
+  end interface
 end module
 
 !--- blas.f90
 module blas
   implicit none
   interface
+    subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1) :: transa, transb
+      integer(4) :: m, n, k, lda, ldb, ldc
+      real(8) :: alpha, beta
+      real(8) :: a(1:lda, *), b(1:ldb, *), c(1:ldc, *)
+    end subroutine
     subroutine zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1) :: transa, transb
       integer(4) :: m, n, k, lda, ldb, ldc
@@ -65,12 +102,14 @@ end module
 
 !--- external-first.cuf
 module external_first
-  use blas, only: zgemm
-  use, intrinsic :: cublas, only: zgemm
+  use blas, only: dgemm, zgemm
+  use, intrinsic :: cublas, only: dgemm, zgemm
   procedure(zgemm), pointer :: p
 contains
   subroutine test_cuda_specific()
+    real(8), device :: da(1, 1), db(1, 1), dc(1, 1)
     complex(8), device :: a(1, 1), b(1, 1), c(1, 1)
+    call dgemm('N', 'N', 1, 1, 1, 1.D0, da, 1, db, 1, 0.D0, dc, 1)
     call zgemm('N', 'N', 1, 1, 1, (1.D0, 0.D0), a, 1, b, 1, &
                (0.D0, 0.D0), c, 1)
   end subroutine
@@ -78,19 +117,23 @@ end module
 
 !--- cublas-first.cuf
 module cublas_first
-  use, intrinsic :: cublas, only: zgemm
-  use blas, only: zgemm
+  use, intrinsic :: cublas, only: dgemm, zgemm
+  use blas, only: dgemm, zgemm
   procedure(zgemm), pointer :: p
 contains
   subroutine test_cuda_specific()
+    real(8), device :: da(1, 1), db(1, 1), dc(1, 1)
     complex(8), device :: a(1, 1), b(1, 1), c(1, 1)
+    call dgemm('N', 'N', 1, 1, 1, 1.D0, da, 1, db, 1, 0.D0, dc, 1)
     call zgemm('N', 'N', 1, 1, 1, (1.D0, 0.D0), a, 1, b, 1, &
                (0.D0, 0.D0), c, 1)
   end subroutine
 end module
 
+! EXTERNAL-FIRST: warning: USE association selects intrinsic 'cublas' generic 'dgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
 ! EXTERNAL-FIRST: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
 ! EXTERNAL-FIRST: this extension can be disabled (-fno-prefer-intrinsic-module-use-association)
+! CUBLAS-FIRST: warning: USE association selects intrinsic 'cublas' generic 'dgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
 ! CUBLAS-FIRST: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
 ! CUBLAS-FIRST: this extension can be disabled (-fno-prefer-intrinsic-module-use-association)
 ! PEDANTIC: warning: USE association selects intrinsic 'cublas' generic 'zgemm' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]

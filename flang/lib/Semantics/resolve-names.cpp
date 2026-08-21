@@ -4285,7 +4285,7 @@ struct IntrinsicModuleUseAssociationRule {
   bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
 };
 
-static bool MatchesCublasZgemm(SemanticsContext &context,
+static bool MatchesCublasGemm(SemanticsContext &context,
     const GenericDetails &generic, const Symbol &other) {
   const Symbol *specific{generic.specific()};
   if (!specific ||
@@ -4307,7 +4307,8 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
-      {"cublas", "zgemm", MatchesCublasZgemm},
+      {"cublas", "dgemm", MatchesCublasGemm},
+      {"cublas", "zgemm", MatchesCublasGemm},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
