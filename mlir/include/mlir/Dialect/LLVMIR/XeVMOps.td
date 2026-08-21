@@ -37,6 +37,7 @@ def XeVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
@@ -53,7 +54,7 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
             ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
       Attribute propAttr = getPropertiesAsAttr(ctx, prop);
       if (propAttr)
-        p << "<" << propAttr << ">";
+        p << " <" << propAttr << ">";
     }
 
     static ::mlir::ParseResult parseProperties(::mlir::OpAsmParser &parser,

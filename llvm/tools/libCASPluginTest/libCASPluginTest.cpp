@@ -23,6 +23,7 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/ThreadPool.h"
 #include <mutex>
@@ -589,8 +590,10 @@ void llcas_cas_load_object_async(llcas_cas_t c_cas, llcas_objectid_t c_id,
     OS << "load_object_async downstream begin: " << PrintedDigest << '\n';
   });
   unwrap(c_cas)->Pool.async([=] {
+#if LLVM_ENABLE_THREADS
     // Wait a bit for the caller to proceed.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#endif
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
       Wrap.syncErrs([&](raw_ostream &OS) {
@@ -639,6 +642,42 @@ llcas_data_t llcas_loaded_object_get_data(llcas_cas_t c_cas,
   ondisk::ObjectHandle Obj = ondisk::ObjectHandle(c_obj.opaque);
   auto Data = CAS.getObjectData(Obj);
   return llcas_data_t{Data.data(), Data.size()};
+}
+
+/// The \c MemoryBuffer objects handed out by
+/// \c llcas_loaded_object_get_standalone_data, keyed by the bytes the C API
+/// reports, so \c llcas_standalone_data_dispose can find the owner again. The
+/// C API passes back only the buffer, and these outlive the \c llcas_cas_t, so
+/// they cannot be tracked on it.
+/// Intentionally leaked, since a buffer may be disposed of during static
+/// destruction, after a non-leaked map would already be gone.
+static std::mutex StandaloneBuffersLock;
+static auto *StandaloneBuffers =
+    new DenseMap<const void *, std::unique_ptr<MemoryBuffer>>();
+
+llcas_data_t
+llcas_loaded_object_get_standalone_data(llcas_cas_t c_cas,
+                                        llcas_loaded_object_t c_obj) {
+  auto &CAS = unwrap(c_cas)->DB->getGraphDB();
+  ondisk::ObjectHandle Obj = ondisk::ObjectHandle(c_obj.opaque);
+  // The underlying database already knows how to produce a buffer that does
+  // not reference it, so use that rather than copying the data again. The
+  // plugin API requires a nul terminator, which costs a copy for the objects
+  // whose file has no byte to spare for one.
+  std::unique_ptr<MemoryBuffer> Buffer = CAS.getStandaloneMemoryBuffer(
+      Obj, /*Name=*/"", /*RequiresNullTerminator=*/true);
+  const char *Data = Buffer->getBufferStart();
+  size_t Size = Buffer->getBufferSize();
+  {
+    std::lock_guard<std::mutex> Lock(StandaloneBuffersLock);
+    (*StandaloneBuffers)[Data] = std::move(Buffer);
+  }
+  return llcas_data_t{Data, Size};
+}
+
+void llcas_standalone_data_dispose(llcas_data_t c_data) {
+  std::lock_guard<std::mutex> Lock(StandaloneBuffersLock);
+  StandaloneBuffers->erase(c_data.data);
 }
 
 llcas_object_refs_t llcas_loaded_object_get_refs(llcas_cas_t c_cas,
@@ -702,8 +741,10 @@ void llcas_actioncache_get_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
@@ -760,8 +801,10 @@ void llcas_actioncache_put_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {

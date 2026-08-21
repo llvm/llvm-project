@@ -20,6 +20,7 @@ set(ORC_RT_HEADERS
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
+    orc-rt/Proxy.h
     orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
     orc-rt/SPSAllocAction.h
@@ -32,6 +33,7 @@ set(ORC_RT_HEADERS
     orc-rt/SimplePackedSerialization.h
     orc-rt/SimpleSymbolTable.h
     orc-rt/StandaloneMachOUnwindInfoRegistrar.h
+    orc-rt/StringPool.h
     orc-rt/TaskGroup.h
     orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h

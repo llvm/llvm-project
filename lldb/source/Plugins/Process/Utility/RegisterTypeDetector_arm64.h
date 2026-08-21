@@ -101,12 +101,7 @@ private:
   bool m_has_detected = false;
 
   template <typename T, typename... Args> const T *MakeType(Args &&...args) {
-    static_assert(std::is_base_of_v<RegisterType, T>);
-
-    auto type = std::make_unique<T>(std::forward<Args>(args)...);
-    const T *type_ptr = type.get();
-    m_detected_types.detected_types.push_back(std::move(type));
-    return type_ptr;
+    return m_detected_types.MakeType<T>(std::forward<Args>(args)...);
   }
 
   // This stores all the types created. There may be > 1 type per register,
@@ -118,8 +113,15 @@ private:
   class DetectedTypesHolder {
     std::vector<std::unique_ptr<RegisterType>> detected_types;
 
-    template <typename T, typename... Args>
-    friend const T *Arm64RegisterTypeDetector::MakeType(Args &&...args);
+  public:
+    template <typename T, typename... Args> const T *MakeType(Args &&...args) {
+      static_assert(std::is_base_of_v<RegisterType, T>);
+
+      auto type = std::make_unique<T>(std::forward<Args>(args)...);
+      const T *type_ptr = type.get();
+      detected_types.push_back(std::move(type));
+      return type_ptr;
+    }
   } m_detected_types;
 };
 

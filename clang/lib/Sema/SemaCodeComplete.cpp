@@ -4497,6 +4497,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::StaticAssert:
     return CXCursor_StaticAssert;
   case Decl::Friend:
+  case Decl::FriendTemplate:
     return CXCursor_FriendDecl;
   case Decl::TranslationUnit:
     return CXCursor_TranslationUnit;
@@ -5715,7 +5716,7 @@ private:
       // For simplicity:
       // - we don't attempt to substitute int for A
       // - when T is used in other ways (like CD<T*>) we ignore it
-      ConceptDecl *CD = CSE->getNamedConcept();
+      ConceptDecl *CD = CSE->getConceptDecl();
       TemplateParameterList *Params = CD->getTemplateParameters();
       unsigned Index = 0;
       for (const auto &Arg : CSE->getTemplateArguments()) {
@@ -5948,7 +5949,7 @@ private:
   static QualType deduceType(const TypeConstraint &T) {
     // Assume a same_as<T> return type constraint is std::same_as or equivalent.
     // In this case the return type is T.
-    DeclarationName DN = T.getNamedConcept()->getDeclName();
+    DeclarationName DN = T.getNamedConcept().getAsTemplateDecl()->getDeclName();
     if (DN.isIdentifier() && DN.getAsIdentifierInfo()->isStr("same_as"))
       if (const auto *Args = T.getTemplateArgsAsWritten())
         if (Args->getNumTemplateArgs() == 1) {
