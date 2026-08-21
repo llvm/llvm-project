@@ -3889,7 +3889,7 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E,
   }
   case UO_Real:
   case UO_Imag: {
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, ObjectRequired);
     assert(LV.isSimple() && "real/imag on non-ordinary l-value");
 
     // __real is valid on scalars.  This is a faster way of testing that.

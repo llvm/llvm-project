@@ -135,27 +135,27 @@ void c_member_dot_addr(int i) { p = &sa[i].x; }
 void c_member_arrow_addr(int i) { p = &(&sa[i])->x; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_real(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_real(int i) { __real__ ca[i] = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_imag(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_imag(int i) { __imag__ ca[i] = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_load(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_load(int i) { cv = ca[i]; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_store(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_store(int i) { ca[i] = cv; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_compound(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_compound(int i) { ca[i] += cv; }
 
 // CHECK-LABEL: define {{.*}}@c_complex_incdec(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_complex_incdec(int i) { ca[i]++; }
 
 // CHECK-LABEL: define {{.*}}@c_vec_elem(
