@@ -566,6 +566,7 @@ private:
 
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_NoLibcall(SDNode *N, EVT NVT);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
   bool SoftenFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
@@ -740,6 +741,7 @@ private:
   SDValue ExpandFloatOp_FCOPYSIGN(SDNode *N);
   SDValue ExpandFloatOp_FP_ROUND(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue ExpandFloatOp_XRINT_XROUND(SDNode *N, RTLIB::Libcall LC);
   SDValue ExpandFloatOp_LROUND(SDNode *N);
   SDValue ExpandFloatOp_LLROUND(SDNode *N);
   SDValue ExpandFloatOp_LRINT(SDNode *N);
@@ -806,6 +808,7 @@ private:
 
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
+  SDValue SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N);
   SDValue SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);

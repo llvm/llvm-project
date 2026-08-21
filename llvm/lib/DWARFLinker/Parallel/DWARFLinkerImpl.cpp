@@ -46,19 +46,6 @@ DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
   }
 }
 
-DWARFLinkerImpl::LinkContext::RefModuleUnit::RefModuleUnit(
-    DWARFFile &File, std::unique_ptr<CompileUnit> Unit)
-    : File(File), Unit(std::move(Unit)) {}
-
-DWARFLinkerImpl::LinkContext::RefModuleUnit::RefModuleUnit(
-    LinkContext::RefModuleUnit &&Other)
-    : File(Other.File), Unit(std::move(Other.Unit)) {}
-
-void DWARFLinkerImpl::LinkContext::addModulesCompileUnit(
-    LinkContext::RefModuleUnit &&Unit) {
-  ModulesCompileUnits.emplace_back(std::move(Unit));
-}
-
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
@@ -151,6 +138,19 @@ Error DWARFLinkerImpl::link() {
             Language = static_cast<uint16_t>(*LangVal);
       }
     }
+
+    // Clang module units decide their ODR availability from their own
+    // language, so they have to be part of this scan as well. A module unit
+    // can be the only ODR unit of a link, and any unit which deduplicates
+    // types requires the artificial type unit to exist.
+    for (const std::unique_ptr<CompileUnit> &Module :
+         Context->ModulesCompileUnits) {
+      if (!Language) {
+        if (std::optional<uint16_t> LangVal = Module->getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = *LangVal;
+      }
+    }
   }
 
   if (GlobalFormat.AddrSize == 0) {
@@ -210,9 +210,9 @@ Error DWARFLinkerImpl::link() {
   if (DWARFLinkerBase::SwiftInterfacesMapTy *SwiftInterfaces =
           GlobalData.Options.ParseableSwiftInterfaces) {
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
-      for (LinkContext::RefModuleUnit &ModuleUnit :
+      for (std::unique_ptr<CompileUnit> &ModuleUnit :
            Context->ModulesCompileUnits)
-        ModuleUnit.Unit->mergeSwiftInterfaces(*SwiftInterfaces);
+        ModuleUnit->mergeSwiftInterfaces(*SwiftInterfaces);
       for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
         CU->mergeSwiftInterfaces(*SwiftInterfaces);
     }
@@ -470,9 +470,9 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   }
 
   if (Unit) {
-    ModulesCompileUnits.emplace_back(RefModuleUnit{*ErrOrObj, std::move(Unit)});
+    ModulesCompileUnits.emplace_back(std::move(Unit));
     // Preload line table, as it can't be loaded asynchronously.
-    ModulesCompileUnits.back().Unit->loadLineTable();
+    ModulesCompileUnits.back()->loadLineTable();
   }
 
   return Error::success();
@@ -489,14 +489,18 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Assign deterministic priorities to module CUs for type DIE allocation.
   uint64_t LocalCUIdx = 0;
-  for (auto &Mod : ModulesCompileUnits) {
-    if (Error E = Mod.Unit->setPriority(ObjectFileIdx, LocalCUIdx++))
+  for (std::unique_ptr<CompileUnit> &Mod : ModulesCompileUnits) {
+    if (Error E = Mod->setPriority(ObjectFileIdx, LocalCUIdx++))
       return E;
   }
 
   // Link modules compile units first.
-  parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
-    linkSingleCompileUnit(*RefModule.Unit, ArtificialTypeUnit);
+  parallelForEach(ModulesCompileUnits, [&](std::unique_ptr<CompileUnit> &Mod) {
+    // A module unit describes DIEs which no address reaches, so nothing marks
+    // it inter-connected and the inter-connected loops below, which iterate
+    // CompileUnits alone, would never advance it.
+    assert(!Mod->isInterconnectedCU() && "module unit is inter-connected");
+    linkSingleCompileUnit(*Mod, ArtificialTypeUnit);
   });
 
   // Check for live relocations. If there is no any live relocation then we
@@ -700,7 +704,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           // Clone input compile unit.
           if (CU.isClangModule() ||
               GlobalData.getOptions().UpdateIndexTablesOnly ||
-              CU.getContaingFile().Addresses->hasValidRelocs()) {
+              CU.getContainingFile().Addresses->hasValidRelocs()) {
             if (Error Err = CU.cloneAndEmit(GlobalData.getTargetTriple(),
                                             ArtificialTypeUnit))
               return std::move(Err);
@@ -1165,9 +1169,10 @@ void DWARFLinkerImpl::forEachObjectSectionsSet(
 
   // Then all modules(before regular compilation units).
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
-    for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
-      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
-        SectionsSetHandler(*ModuleUnit.Unit);
+    for (std::unique_ptr<CompileUnit> &ModuleUnit :
+         Context->ModulesCompileUnits)
+      if (ModuleUnit->getStage() != CompileUnit::Stage::Skipped)
+        SectionsSetHandler(*ModuleUnit);
 
   // Finally all compilation units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts) {
@@ -1188,9 +1193,10 @@ void DWARFLinkerImpl::forEachCompileAndTypeUnit(
 
   // Enumerate module units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
-    for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
-      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
-        UnitHandler(ModuleUnit.Unit.get());
+    for (std::unique_ptr<CompileUnit> &ModuleUnit :
+         Context->ModulesCompileUnits)
+      if (ModuleUnit->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(ModuleUnit.get());
 
   // Enumerate compile units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
@@ -1203,9 +1209,10 @@ void DWARFLinkerImpl::forEachCompileUnit(
     function_ref<void(CompileUnit *CU)> UnitHandler) {
   // Enumerate module units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
-    for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
-      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
-        UnitHandler(ModuleUnit.Unit.get());
+    for (std::unique_ptr<CompileUnit> &ModuleUnit :
+         Context->ModulesCompileUnits)
+      if (ModuleUnit->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(ModuleUnit.get());
 
   // Enumerate compile units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)

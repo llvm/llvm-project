@@ -261,7 +261,7 @@ protected:
   /// Create an LLJIT instance with a single compile thread.
   LLJIT(LLJITBuilderState &S, Error &Err);
 
-  Error applyDataLayout(Module &M);
+  Error applyTargetConfig(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;

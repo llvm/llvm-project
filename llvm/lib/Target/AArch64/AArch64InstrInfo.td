@@ -953,6 +953,9 @@ def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 // element must be identical.
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
+// AArch64ISD::CMTST node: result is all-ones per lane where (X & Y) != 0.
+def AArch64cmtst: SDNode<"AArch64ISD::CMTST", SDT_AArch64Zip>;
+
 def AArch64cmeq : PatFrag<(ops node:$lhs, node:$rhs),
                           (setcc node:$lhs, node:$rhs, SETEQ)>;
 def AArch64cmge : PatFrag<(ops node:$lhs, node:$rhs),
@@ -980,9 +983,6 @@ def AArch64cmlez : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGE)>;
 def AArch64cmltz : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGT)>;
-
-def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
-                           (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
 def AArch64fcmeqz : PatFrag<(ops node:$lhs),
                             (AArch64fcmeq node:$lhs, immAllZerosV)>;
@@ -6078,6 +6078,31 @@ defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
 defm XTN    : SIMDMixedTwoVector<0, 0b10010, "xtn", trunc>;
 
+// Patterns for plain partial add reductions, which lower to [SU]ADALP.
+multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag immOneV> {
+  def : Pat<(DstVT (partial_reduce_smla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("SADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("UADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  // A zero accumulator has nothing to add to so it lowers to [SU]ADDLP.
+  def : Pat<(DstVT (partial_reduce_smla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("SADDLP" # SrcVT # "_" # DstVT) $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("UADDLP" # SrcVT # "_" # DstVT) $Input)>;
+}
+
+defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v2i32, v4i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v1i64, v2i32, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v8i16, v16i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v4i32, v8i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v2i64, v4i32, (AArch64movi_shift (i32 1), (i32 0))>;
+
 def : Pat<(v4f16  (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
 def : Pat<(v4f16  (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
 def : Pat<(v4bf16 (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
@@ -6717,6 +6742,8 @@ defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu", int_aarch64_neon_fcvtp
 def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
 defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
+defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
+defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
 defm FRECPE : SIMDFPTwoScalarNonCVT<   0, 1, 0b11101, "frecpe">;
 defm FRECPX : SIMDFPTwoScalarNonCVT<   0, 1, 0b11111, "frecpx">;
 defm FRSQRTE : SIMDFPTwoScalarNonCVT<  1, 1, 0b11101, "frsqrte">;
@@ -6851,7 +6878,21 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # v1i64) $Rn)>;
   }
+}
 
+defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
+defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
+
+// This thing just allows us to change the type of the node produced. The imm
+// value we want is already in V from SelectCVTFixedPointVec.
+def fixedpoint_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
+
+multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
             (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
@@ -6866,10 +6907,17 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
             (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
   def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
+
+  def : Pat<(f32 (bitconvert (i32 (round (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
+      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (bitconvert (i64 (round (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
+      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
 }
 
-defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
-defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
+defm : FPToIntegerFmulPats<any_fp_to_sint, "FCVTZS">;
+defm : FPToIntegerFmulPats<any_fp_to_uint, "FCVTZU">;
+defm : FPToIntegerFmulPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
+defm : FPToIntegerFmulPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
 // AArch64's FCVT instructions saturate when out of range.
 multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
@@ -6940,6 +6988,11 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
             (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
   def : Pat<(i64 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i64:$scale), i64)),
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
+  
+  def : Pat<(f32 (bitconvert (i32 (to_int_sat (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale), i32)))),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (bitconvert (i64 (to_int_sat (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale), i64)))),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
 }
 
 defm : FPToIntegerSatPats<fp_to_sint_sat, "FCVTZS">;
@@ -9159,8 +9212,6 @@ def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
 //----------------------------------------------------------------------------
-defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
-defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
 defm SCVTF  : SIMDFPScalarRShift<0, 0b11100, "scvtf">;
 defm UCVTF  : SIMDFPScalarRShift<1, 0b11100, "ucvtf">;
 
@@ -9298,14 +9349,6 @@ class fixedpoint_vec_f32<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<32>">;
 class fixedpoint_vec_f16<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
-// This thing just allows us to change the type of the node produced. The imm
-// value we want is already in V from SelectCVTFixedPointVec.
-def fixedpoint_vec_xform : SDNodeXForm<timm, [{
-  (void)N;
-  return V;
-}]>;
-def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
-  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
@@ -9571,19 +9614,42 @@ def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
           (SHRNv4i32_shift (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
                            V128:$Rn, vecshiftR32Narrow:$imm)>;
 
-def : Pat<(shl (v8i16 (zext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
-          (USHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
-def : Pat<(shl (v4i32 (zext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
-          (USHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
-def : Pat<(shl (v2i64 (zext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
-          (USHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+multiclass WidenShiftImmPats<string inst, SDPatternOperator ext> {
+  def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (!cast<Instruction>(inst#"v8i8_shift") V64:$Rm, (i32 imm32_0_7:$size))>;
+  def : Pat<(shl (v4i32 (ext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (!cast<Instruction>(inst#"v4i16_shift") V64:$Rm, (i32 imm32_0_15:$size))>;
+  def : Pat<(shl (v2i64 (ext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (!cast<Instruction>(inst#"v2i32_shift") V64:$Rm, (trunc_imm imm0_31:$size))>;
 
-def : Pat<(shl (v8i16 (sext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
-          (SSHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
-def : Pat<(shl (v4i32 (sext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
-          (SSHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
-def : Pat<(shl (v2i64 (sext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
-          (SSHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+  def : Pat<(shl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (!cast<Instruction>(inst#"v16i8_shift") V128:$Rn, (i32 imm32_0_7:$size))>;
+  def : Pat<(shl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (!cast<Instruction>(inst#"v8i16_shift") V128:$Rn, (i32 imm32_0_15:$size))>;
+  def : Pat<(shl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (!cast<Instruction>(inst#"v4i32_shift") V128:$Rn, (trunc_imm imm0_31:$size))>;
+}
+defm : WidenShiftImmPats<"SSHLL", sext>;
+defm : WidenShiftImmPats<"USHLL", zext>;
+defm : WidenShiftImmPats<"USHLL", anyext>;
+
+multiclass WidenShiftFullWidthPats<SDPatternOperator ext> {
+  def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv8i8 V64:$Rm)>;
+  def : Pat<(shl (v4i32 (ext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv4i16 V64:$Rm)>;
+  def : Pat<(shl (v2i64 (ext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv2i32 V64:$Rm)>;
+  def : Pat<(shl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv16i8 V128:$Rn)>;
+  def : Pat<(shl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv8i16 V128:$Rn)>;
+  def : Pat<(shl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv4i32 V128:$Rn)>;
+}
+defm : WidenShiftFullWidthPats<zext>;
+defm : WidenShiftFullWidthPats<sext>;
+defm : WidenShiftFullWidthPats<anyext>;
 
 // Vector sign and zero extensions are implemented with SSHLL and USSHLL.
 // Anyexts are implemented as zexts.

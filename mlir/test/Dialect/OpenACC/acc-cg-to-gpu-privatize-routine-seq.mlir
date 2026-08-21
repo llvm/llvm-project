@@ -22,7 +22,7 @@ module attributes {gpu.container_module} {
     gpu.func @seq_routine()
         attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "seq_routine">} {
       %c1 = arith.constant 1 : index
-      %0 = acc.par_width %c1 {par_dim = #acc.par_dim<sequential>}
+      %0 = acc.par_width %c1 par_dim(#acc.par_dim<sequential>)
       // CHECK: memref.alloca() : memref<10xi32>
       // CHECK-NOT: memref.store {{.*}} #gpu.address_space<workgroup>
       %1 = acc.privatize : () -> !acc.private_type<memref<10xi32>>
