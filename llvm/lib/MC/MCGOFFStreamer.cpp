@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCGOFFStreamer.h"
-#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -73,38 +72,16 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
 }
 
-void MCGOFFStreamer::emitCommonSymbolImpl(MCStreamer *Streamer,
-                                          MCSymbolGOFF *Symbol, uint64_t Size,
-                                          Align ByteAlignment) {
-  MCSectionGOFF *SD = Streamer->getContext().getGOFFSection(
-      SectionKind::getMetadata(), Symbol->getName(),
-      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Unspecified});
-
-  MCSectionGOFF *ED = Streamer->getContext().getGOFFSection(
-      SectionKind::getMetadata(), GOFF::CLASS_WSA,
-      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
-      SD);
-  ED->setAlignment(ByteAlignment);
-
-  MCSectionGOFF *Section = Streamer->getContext().getGOFFSection(
-      SectionKind::getBSS(), Symbol->getName(),
-      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   Symbol->getBindingScope(), 0},
-      ED);
-
-  Streamer->pushSection();
-  Streamer->switchSection(Section);
-  Streamer->emitLabel(Symbol);
-  Streamer->emitZeros(Size);
-  Streamer->popSection();
-}
-
 void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       Align ByteAlignment) {
   auto *Symbol = static_cast<MCSymbolGOFF *>(S);
-  emitCommonSymbolImpl(this, Symbol, Size, ByteAlignment);
+  MCSectionGOFF *Section =
+      Symbol->getSectionForCommonSymbol(getContext(), ByteAlignment);
+  pushSection();
+  switchSection(Section);
+  emitLabel(Symbol);
+  emitZeros(Size);
+  popSection();
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

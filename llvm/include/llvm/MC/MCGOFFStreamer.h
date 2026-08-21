@@ -38,9 +38,6 @@ public:
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
-
-  static void emitCommonSymbolImpl(MCStreamer *Streamer, MCSymbolGOFF *Symbol,
-                                   uint64_t Size, Align ByteAlignment);
 };
 
 } // end namespace llvm
