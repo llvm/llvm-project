@@ -89,7 +89,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">
+             "sections of the specifciation">,
+      Option<"validateFunctionSignature", "validate-function-signature", "bool",
+             /*default=*/"true",
+             "Verify if the function signature is valid for TOSA dialect, i.e. all "
+             "function arguments and return types are tosa-conformant tensor types">,
    ];
 }
 

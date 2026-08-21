@@ -153,6 +153,12 @@ public:
                                    mlir::Operation *global,
                                    CIRGenModule &module) const {}
 
+  /// Get the CIR calling convention to use for a device kernel entry point
+  /// (e.g. an OpenCL/SYCL or CUDA/HIP kernel) on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const {
+    return cir::CallingConv::C;
+  }
+
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
     return false;

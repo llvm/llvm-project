@@ -150,6 +150,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::DebugDirectivesOnly &&
         val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
@@ -609,6 +610,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
 
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);

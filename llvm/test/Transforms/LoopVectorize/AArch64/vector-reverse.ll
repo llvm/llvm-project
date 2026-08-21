@@ -153,8 +153,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP11]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -190,7 +189,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP28]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP29]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

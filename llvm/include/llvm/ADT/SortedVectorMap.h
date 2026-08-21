@@ -54,6 +54,8 @@ public:
 
   using iterator = typename VectorType::iterator;
   using const_iterator = typename VectorType::const_iterator;
+  using reverse_iterator = typename VectorType::reverse_iterator;
+  using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
 private:
   VectorType Vector;
@@ -106,6 +108,15 @@ public:
   iterator end() { return Vector.end(); }
   const_iterator begin() const { return Vector.begin(); }
   const_iterator end() const { return Vector.end(); }
+  const_iterator cbegin() const { return Vector.begin(); }
+  const_iterator cend() const { return Vector.end(); }
+
+  reverse_iterator rbegin() { return Vector.rbegin(); }
+  reverse_iterator rend() { return Vector.rend(); }
+  const_reverse_iterator rbegin() const { return Vector.rbegin(); }
+  const_reverse_iterator rend() const { return Vector.rend(); }
+  const_reverse_iterator crbegin() const { return Vector.rbegin(); }
+  const_reverse_iterator crend() const { return Vector.rend(); }
 
   // Capacity
   [[nodiscard]] bool empty() const { return Vector.empty(); }

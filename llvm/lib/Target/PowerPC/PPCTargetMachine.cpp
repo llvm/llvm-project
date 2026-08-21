@@ -585,17 +585,17 @@ PPCPostRASchedRegistry("ppc-postra",
 
 // Global ISEL
 bool PPCPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool PPCPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool PPCPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
