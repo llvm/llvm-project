@@ -10039,7 +10039,6 @@ static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
   return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
 }
 
-/// Helper to determine if a loop should skip finalization.
 /// Build postupdate expression for the given list of postupdates expressions.
 static Expr *buildPostUpdate(Sema &S, ArrayRef<Expr *> PostUpdates) {
   Expr *PostUpdate = nullptr;
@@ -10741,13 +10740,12 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      // For loop transformation directives with arithmetic counters, use
-      // (NumIters - 1) to get the value from the last iteration, not the loop
-      // exit value. For iterator-based loops (range-based for or explicit
-      // iterator loops), skip finalization entirely.
+      // For iterator-based loops (range-based for or explicit iterator loops)
+      // in loop transformation directives, skip finalization entirely.
       ExprResult Final;
       bool IsIteratorLoop =
-          IS.IsRangeFor || !IS.CounterVar->getType()->isArithmeticType();
+          IS.IsRangeFor || (!IS.CounterVar->getType()->isArithmeticType() &&
+                            !IS.CounterVar->getType()->isPointerType());
       if (IsIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
         // Iterator-based loops in transformation directives don't need
         // explicit finalization - the iterator is already at the end.
@@ -17001,12 +16999,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // 8. Build finalization statements for fused loops.
   // Collect HelperExprs from the fused loops.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
-  SmallVector<Stmt *, 4> FusedLoopStmts;
   for (unsigned I = FirstVal - 1; I < LastVal; ++I) {
     if (SeqAnalysis.Loops[I].isRegularLoop() &&
         isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)) {
       FusedLoopHelpers.push_back(SeqAnalysis.Loops[I].HelperExprs);
-      FusedLoopStmts.push_back(SeqAnalysis.Loops[I].TheForStmt);
     }
   }
 
