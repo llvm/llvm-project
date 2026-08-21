@@ -3018,7 +3018,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this](unsigned MaxVF) {
+  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
