@@ -207,6 +207,7 @@ public:
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  llvm::dxbc::PSV::SemanticKind SemanticKind,
                                   std::optional<unsigned> Index);
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
