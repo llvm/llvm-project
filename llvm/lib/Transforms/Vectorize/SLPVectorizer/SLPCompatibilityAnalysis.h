@@ -214,6 +214,11 @@ public:
   /// Checks if main/alt instructions are add/sub/fadd/fsub operations.
   bool isAddSubLikeOp() const;
 
+  /// Checks for an add/sub-like operation or an fneg, which models a
+  /// flattened fadd reduction chain link: the link is dropped and its
+  /// operand joins a sign-flipped combine, which may form an fma as well.
+  bool isAddSubOrFNegLikeOp() const;
+
   /// Checks if main/alt instructions are cmp operations.
   bool isCmpOp() const {
     return (getOpcode() == Instruction::ICmp ||

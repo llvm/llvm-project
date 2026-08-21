@@ -382,6 +382,10 @@ bool InstructionsState::isAddSubLikeOp() const {
          is_contained(AddSub, getAltOpcode());
 }
 
+bool InstructionsState::isAddSubOrFNegLikeOp() const {
+  return isAddSubLikeOp() || getOpcode() == Instruction::FNeg;
+}
+
 bool InstructionsState::isCopyableElement(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (!HasCopyables)
