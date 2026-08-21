@@ -326,7 +326,7 @@ jobs:
         Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ;
         Set-Location C:\clang\clang-msvc ;
         Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
-        echo "PATH=C:\clang\clang-msvc\bin-full;$env:PATH" >> $env:GITHUB_ENV
+        echo "C:\clang\clang-msvc\bin-full" >> $env:GITHUB_PATH ;
 
 
     - name: Build Windows
@@ -337,7 +337,7 @@ jobs:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '') }}
       run: |
-        Get-ChildItem Env:
+        echo $Env:PATH
         clang-cl.exe --version
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
