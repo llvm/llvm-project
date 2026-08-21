@@ -91,8 +91,8 @@ body: |
     PseudoRET implicit $v0
 ...
 
-# Keep the current behavior when the comparison VL is smaller than the vmand
-# VL.
+# Don't fold when the comparison VL is smaller than the vmand VL. Elements
+# between the two VLs are active in vmand but tail agnostic in the comparison.
 ---
 name: cmp_vl_lt_vmand_vl
 body: |
@@ -102,11 +102,10 @@ body: |
     ; CHECK: liveins: $v8, $v9, $v10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %mask:vr = COPY $v10
-    ; CHECK-NEXT: %b:vrnov0 = COPY $v9
-    ; CHECK-NEXT: %a:vrnov0 = COPY $v8
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY %mask
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY %mask
-    ; CHECK-NEXT: %and:vr = PseudoVMSLT_VV_M1_MASK [[COPY1]], %a, %b, [[COPY]], 2 /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: %b:vr = COPY $v9
+    ; CHECK-NEXT: %a:vr = COPY $v8
+    ; CHECK-NEXT: %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 2 /* vl */, 5 /* e32 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 4 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %mask:vr = COPY $v10

@@ -857,20 +857,15 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     if (Cmp.hasUnmodeledSideEffects() || Cmp.mayRaiseFPException())
       continue;
 
-    // Use the smaller of the two VLs for the result. The comparison's inactive
-    // (and tail) elements will be filled from the mask, so if vmand's VL is the
-    // smaller one we still need the comparison's original VL for the elements
-    // between them to come from the mask rather than the raw comparison.
+    // All active elements of vmand must also be active in the comparison. If
+    // the comparison's VL were smaller, elements in between the two VLs would
+    // become tail elements of the masked comparison and could not be preserved
+    // from the mask because mask results are always tail agnostic.
     const MachineOperand &CmpVL =
         Cmp.getOperand(RISCVII::getVLOpNum(Cmp.getDesc()));
     const MachineOperand &MIVL =
         MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
-    MachineOperand MinVL = MachineOperand::CreateImm(0);
-    if (RISCV::isVLKnownLE(CmpVL, MIVL))
-      MinVL = CmpVL;
-    else if (RISCV::isVLKnownLE(MIVL, CmpVL))
-      MinVL = MIVL;
-    else
+    if (!RISCV::isVLKnownLE(MIVL, CmpVL))
       continue;
 
     const MachineOperand &MaskOp = MI.getOperand(MaskIdx);
@@ -891,7 +886,7 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
       continue;
 
     // Make sure the mask and VL dominate the comparison, sinking it if needed.
-    if (!ensureDominates({&MaskOp, &MinVL}, Cmp))
+    if (!ensureDominates({&MaskOp, &MIVL}, Cmp))
       continue;
 
     // The masked comparison's mask operand lives in the VMV0 (v0) class, and
@@ -921,7 +916,7 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
             .add(Cmp.getOperand(1))
             .add(Cmp.getOperand(2))
             .addReg(MaskV0Reg)
-            .add(MinVL)
+            .add(MIVL)
             .addImm(SEW)
             // The result is a mask register, whose tail is always agnostic, so
             // we only need mask-undisturbed (MASK_AGNOSTIC clear) to preserve
