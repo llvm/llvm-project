@@ -3651,7 +3651,8 @@ DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
   return Class->lookup(Name);
 }
 
-DeclContext::lookup_result Sema::LookupAssignmentOperators(CXXRecordDecl *Class) {
+DeclContext::lookup_result
+Sema::LookupAssignmentOperators(CXXRecordDecl *Class) {
   // If the implicit copy or move assignment operators have not yet been
   // declared, do so now.
   if (CanDeclareSpecialMemberFunction(Class)) {
