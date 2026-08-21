@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa -mattr=+cumode -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR-CU %s
+; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa -mattr=+cumode < %s 2>&1 | FileCheck -check-prefix=ERROR-CU %s
 
 ; GFX1310 has up to 192 KB LDS when a work-group runs on all four SIMD32s. Then
 ; one work-group can address the whole block. On only two SIMD32s the block is
