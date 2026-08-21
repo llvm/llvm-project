@@ -1167,9 +1167,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       break;
 
     StringRef FunctionName(CallerFrame.FunctionName);
-    FunctionName = FunctionSamples::getCanonicalCoroFnName(FunctionName);
-    if (UseCanonicalFnName)
+    if (UseCanonicalFnName) {
+      FunctionName = FunctionSamples::getCanonicalCoroFnName(FunctionName);
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
+    }
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
