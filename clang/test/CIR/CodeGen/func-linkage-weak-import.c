@@ -10,9 +10,9 @@ void user(void) {
   weak_import_fn();
 }
 
-// CIR-DAG: cir.func{{.*}}extern_weak{{.*}}@weak_import_fn
 // CIR-DAG: cir.func{{.*}}@user
 // CIR: cir.call @weak_import_fn
+// CIR-DAG: cir.func{{.*}}extern_weak{{.*}}@weak_import_fn
 
 // LLVM-DAG: declare extern_weak void @weak_import_fn()
 // LLVM-DAG: define{{.*}}@user

@@ -29,7 +29,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBreakFalseDepsLegacyPass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupLegacyPass(Registry);
-  initializeCFIInstrInserterPass(Registry);
+  initializeCFIInstrInserterLegacyPass(Registry);
   initializeCheckDebugMachineModuleLegacyPass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeComplexDeinterleavingLegacyPassPass(Registry);
@@ -49,7 +49,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFEntryInserterLegacyPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
-  initializeFuncletLayoutPass(Registry);
+  initializeFuncletLayoutLegacyPass(Registry);
   initializeGCEmptyBasicBlocksLegacyPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
@@ -88,7 +88,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
   initializeMachineCFGPrinterLegacyPass(Registry);
   initializeMachineCSELegacyPass(Registry);
-  initializeMachineCombinerPass(Registry);
+  initializeMachineCombinerLegacyPass(Registry);
   initializeMachineDominanceFrontierWrapperPassPass(Registry);
   initializeMachineCopyPropagationLegacyPass(Registry);
   initializeMachineCycleInfoPrinterLegacyPass(Registry);

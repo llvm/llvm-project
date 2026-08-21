@@ -38,7 +38,6 @@
 ; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
 ; CHECK-NEXT:   experimental-zibi                - 'Zibi' (Branch with Immediate).
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
-; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   experimental-zilx                - 'Zilx' (Indexed Integer Load Instructions).
 ; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
@@ -335,6 +334,7 @@
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).
+; CHECK-NEXT:   zicfiss                          - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   zicntr                           - 'Zicntr' (Base Counters and Timers).
 ; CHECK-NEXT:   zicond                           - 'Zicond' (Integer Conditional Operations).
 ; CHECK-NEXT:   zicsr                            - 'Zicsr' (CSRs).
