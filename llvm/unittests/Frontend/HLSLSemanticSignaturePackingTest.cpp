@@ -28,6 +28,7 @@ protected:
     dxil::ElementType CompType;
     dxbc::PSV::InterpolationMode InterpMode;
     uint32_t SemanticIndex = 0;
+    uint32_t GSStream = 0;
   };
 
   struct ExpectedLocation {
@@ -41,16 +42,25 @@ protected:
   struct TestConfig {
     Triple::EnvironmentType ShaderStage;
     IOType IOTy;
+    bool UseNative16BitTypes;
     SmallVector<ElementConfig> Elements;
 
     TestConfig(Triple::EnvironmentType ShaderStage, IOType IOTy,
                std::initializer_list<ElementConfig> Elements)
-        : ShaderStage(ShaderStage), IOTy(IOTy), Elements(Elements) {}
+        : ShaderStage(ShaderStage), IOTy(IOTy), UseNative16BitTypes(false),
+          Elements(Elements) {}
+
+    TestConfig(Triple::EnvironmentType ShaderStage, IOType IOTy,
+               bool UseNative16BitTypes,
+               std::initializer_list<ElementConfig> Elements)
+        : ShaderStage(ShaderStage), IOTy(IOTy),
+          UseNative16BitTypes(UseNative16BitTypes), Elements(Elements) {}
   };
 
   enum class PackingMethod {
     Stacked,
     Indexed,
+    PrefixStable,
   };
 
   SmallVector<SemanticSignatureElement>
@@ -69,6 +79,7 @@ protected:
           /*SemanticIndices=*/SemanticIndices,
           /*Cols=*/Element.Cols);
       Elements.back().InterpMode = Element.InterpMode;
+      Elements.back().GSStream = Element.GSStream;
     }
     return Elements;
   }
@@ -81,6 +92,9 @@ protected:
       return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
     case PackingMethod::Indexed:
       return packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy);
+    case PackingMethod::PrefixStable:
+      return packSignaturePrefixStable(Elements, Config.ShaderStage,
+                                       Config.IOTy, Config.UseNative16BitTypes);
     }
     llvm_unreachable("invalid packing method");
   }
