@@ -1086,20 +1086,48 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     Builder.SetInsertPoint(coro::getSpillInsertionPt(Shape, Def, DT));
     createStoreIntoFrame(Builder, Def, ByValTy, Shape, FrameData);
-
-    BasicBlock *CurrentBlock = nullptr;
+    // Before insertSpills():
+    //   before.spill:
+    //     ; use %def
+    //
+    // After insertSpills():
+    //   before.spill:
+    //     (phis)
+    //     %InRamp = call i1 @llvm.coro.is_in_ramp()
+    //     br i1 %InRamp, label %after.spill, label %ssa.spill
+    //
+    //   ssa.spill:
+    //     ; gep and load from frame
+    //     br label %after.spill
+    //
+    //   after.spill:
+    //     %MaybeReload = phi ptr [%def, %before.spill], [%reload, %ssa.spill]
+    //     ; use %MaybeReload
+    BasicBlock *BeforeSpillBB = nullptr;
+    BasicBlock *SpillBB = nullptr;
+    BasicBlock *AfterSpillBB = nullptr;
     Value *CurrentReload = nullptr;
     for (auto *U : E.second) {
       // If we have not seen the use block, create a load instruction to reload
       // the spilled value from the coroutine frame. Populates the Value pointer
       // reference provided with the frame GEP.
-      if (CurrentBlock != U->getParent()) {
-        CurrentBlock = U->getParent();
-        Builder.SetInsertPoint(CurrentBlock,
-                               CurrentBlock->getFirstInsertionPt());
+      if (BeforeSpillBB != U->getParent()) {
+        BeforeSpillBB = U->getParent();
+        AfterSpillBB = BeforeSpillBB->splitBasicBlock(
+            BeforeSpillBB->getFirstInsertionPt(),
+            BeforeSpillBB->getName() + Twine(".after.spill"));
+        SpillBB = BasicBlock::Create(
+            C, BeforeSpillBB->getName() + Twine(".spill"), F, AfterSpillBB);
 
-        auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
-        GEP->setName(E.first->getName() + Twine(".reload.addr"));
+        BeforeSpillBB->getTerminator()->eraseFromParent();
+        Builder.SetInsertPoint(BeforeSpillBB);
+        auto *InRamp = Builder.CreateIntrinsic(Intrinsic::coro_is_in_ramp, {});
+        Builder.CreateCondBr(InRamp, AfterSpillBB, SpillBB);
+        Shape.CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(InRamp));
+
+        Builder.SetInsertPoint(SpillBB);
+        auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, Def);
+        GEP->setName(Def->getName() + Twine(".reload.addr"));
         if (ByValTy) {
           CurrentReload = GEP;
         } else {
@@ -1111,6 +1139,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             LI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
           CurrentReload = LI;
         }
+        Builder.CreateBr(AfterSpillBB);
 
         TinyPtrVector<DbgVariableRecord *> DVRs = findDbgRecordsThroughLoads<
             DbgVariableRecord::LocationType::Declare>(*F, Def);
@@ -1123,8 +1152,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
               DDI->getExpression(), DDI->getDebugLoc(),
               DbgVariableRecord::LocationType::Declare);
-          Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
-              NewDVR, Builder.GetInsertPoint());
+          BeforeSpillBB->insertDbgRecordBefore(
+              NewDVR, BeforeSpillBB->getFirstInsertionPt());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
           coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
@@ -1150,13 +1179,19 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             DDI->getExpression(), DDI->getDebugLoc(),
             Ty->isPointerTy() ? DbgVariableRecord::LocationType::Declare
                               : DbgVariableRecord::LocationType::Value);
-        Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
-            NewDVR, Builder.GetInsertPoint());
+        BeforeSpillBB->insertDbgRecordBefore(
+            NewDVR, BeforeSpillBB->getFirstInsertionPt());
         // This dbg.declare_value is for the main function entry point.  It
         // will be deleted in all coro-split functions.
         coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
       };
       for_each(DVRDeclareValues, SalvageOneCoro);
+
+      Builder.SetInsertPoint(AfterSpillBB->getFirstInsertionPt());
+      // No need to reload if the original SSA value is available
+      auto *MaybeReload = Builder.CreatePHI(Def->getType(), 2);
+      MaybeReload->addIncoming(CurrentReload, SpillBB);
+      MaybeReload->addIncoming(Def, BeforeSpillBB);
 
       // If we have a single edge PHINode, remove it and replace it with a
       // reload from the coroutine frame. (We already took care of multi edge
@@ -1165,14 +1200,14 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         assert(PN->getNumIncomingValues() == 1 &&
                "unexpected number of incoming "
                "values in the PHINode");
-        PN->replaceAllUsesWith(CurrentReload);
+        PN->replaceAllUsesWith(MaybeReload);
         PN->eraseFromParent();
         continue;
       }
 
       // Replace all uses of CurrentValue in the current instruction with
       // reload.
-      U->replaceUsesOfWith(Def, CurrentReload);
+      U->replaceUsesOfWith(Def, MaybeReload);
       // Instructions are added to Def's user list if the attached
       // debug records use Def. Update those now.
       for (DbgVariableRecord &DVR : filterDbgVars(U->getDbgRecordRange()))

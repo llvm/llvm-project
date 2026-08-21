@@ -38,8 +38,7 @@ define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR3]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[RESUME:.*]], label %[[AFTERCOROEND]]
 ; CHECK:       [[RESUME]]:
-; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_SPILL_ADDR]], align 4
-; CHECK-NEXT:    call void @print(i32 [[VAL_RELOAD]])
+; CHECK-NEXT:    call void @print(i32 [[VAL]])
 ; CHECK-NEXT:    br label %[[AFTERCOROEND]]
 ; CHECK:       [[AFTERCOROEND]]:
 ; CHECK-NEXT:    ret void

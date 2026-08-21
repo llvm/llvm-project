@@ -123,7 +123,7 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
-; CHECK:       cleanup.sink.split:
+; CHECK:       cleanup.sink.split.after.spill:
 ; CHECK-NEXT:    [[ARRAY_RELOAD:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
@@ -134,7 +134,7 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.1(
 ; CHECK-NEXT:  entryresume.1:
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
-; CHECK:       cleanup.sink.split:
+; CHECK:       cleanup.sink.split.after.spill:
 ; CHECK-NEXT:    [[ARRAY_RELOAD:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    store i32 10, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
@@ -175,7 +175,7 @@ declare void @print(i32)
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
-; CHECK:       cleanup.sink.split:
+; CHECK:       cleanup.sink.split.after.spill:
 ; CHECK-NEXT:    [[ARRAY_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]
@@ -193,7 +193,7 @@ declare void @print(i32)
 ; CHECK-NEXT:  entryresume.1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
-; CHECK:       cleanup.sink.split:
+; CHECK:       cleanup.sink.split.after.spill:
 ; CHECK-NEXT:    [[ARRAY_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    store i32 10, ptr [[ARRAY_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[COROEND]]

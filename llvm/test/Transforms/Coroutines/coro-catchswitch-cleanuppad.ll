@@ -81,18 +81,18 @@ cleanup2:
 ; CHECK:   %1 = phi i8 [ 0, %handler2 ], [ 1, %catch.dispatch.2 ]
 ; CHECK:   %2 = cleanuppad within %h1 []
 ; CHECK:   %3 = icmp eq i8 %1, 0
-; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2, !prof [[PROF1:![0-9]+]]
+; CHECK:   br i1 %3, label %[[FROM_HANDLER:.+]], label %[[FROM_DISPATCH:.+]], !prof [[PROF1:![0-9]+]]
 
-; CHECK: cleanup2.from.handler2:
-; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
+; CHECK: [[FROM_HANDLER]]:
+; CHECK:   %valueB.reload = load i32, ptr %valueB.reload.addr, align 4
 ; CHECK:   br label %cleanup2
 
-; CHECK: cleanup2.from.catch.dispatch.2:
-; CHECK:   %valueA.reload = load i32, ptr %valueA.spill.addr, align 4
+; CHECK: [[FROM_DISPATCH]]:
+; CHECK:   %valueA.reload = load i32, ptr %valueA.reload.addr, align 4
 ; CHECK:   br label %cleanup2
 
 ; CHECK: cleanup2:
-; CHECK:   %cleanupval2 = phi i32 [ %valueA.reload, %cleanup2.from.catch.dispatch.2 ], [ %valueB.reload, %cleanup2.from.handler2 ]
+; CHECK:   %cleanupval2 = phi i32 [ %valueA.reload, %[[FROM_DISPATCH]] ], [ %valueB.reload, %[[FROM_HANDLER]] ]
 ; CHECK:   call void @print(i32 %cleanupval2)
 ; CHECK:   br label %cleanup
 }

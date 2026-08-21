@@ -151,12 +151,12 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   [[FRAME_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 128
 ; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr {{.*}}, i64 32
 ; CHECK-O0:   load <4 x double>, ptr [[VECTOR_SPILL_ADDR]], align 16
-; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 160
-; CHECK:   [[CALLEE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
-; CHECK:   [[ACTOR_RELOAD_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 152
-; CHECK:   [[ACTOR_RELOAD:%.*]] = load ptr, ptr [[ACTOR_RELOAD_ADDR]]
 ; CHECK:   [[ADDR1:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 144
 ; CHECK:   [[ASYNC_CTXT_RELOAD:%.*]] = load ptr, ptr [[ADDR1]]
+; CHECK:   [[ACTOR_RELOAD_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 152
+; CHECK:   [[ACTOR_RELOAD:%.*]] = load ptr, ptr [[ACTOR_RELOAD_ADDR]]
+; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 160
+; CHECK:   [[CALLEE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
 ; CHECK:   [[ALLOCA_PRJ2:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 136
 ; CHECK:   tail call void @llvm.coro.async.context.dealloc(ptr nonnull [[CALLEE_CTXT_RELOAD]])
 ; CHECK:   [[VAL1:%.*]] = load i64, ptr [[FRAME_PTR]]

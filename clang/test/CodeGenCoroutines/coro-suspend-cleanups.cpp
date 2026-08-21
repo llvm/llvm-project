@@ -59,8 +59,9 @@ coroutine ArrayInitCoro() {
   // CHECK:         br label %cleanup{{.*}}
 
   // CHECK:       await.ready:
-  // CHECK-NEXT:    %arrayinit.element.reload.addr = getelementptr inbounds i8, ptr %0, i64 48
-  // CHECK-NEXT:    %arrayinit.element.reload = load ptr, ptr %arrayinit.element.reload.addr, align 8
+  // CHECK-NEXT:    br label %await.ready.after.spill
+
+  // CHECK:       await.ready.after.spill:
   // CHECK-NEXT:    call void @_ZN7Awaiter12await_resumeEv
   // CHECK-NEXT:    store i1 false, ptr %cleanup.isactive.reload.addr, align 1
   // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.ready

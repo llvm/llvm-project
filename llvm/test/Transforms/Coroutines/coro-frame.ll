@@ -75,10 +75,10 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(40) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[R_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
-; CHECK-NEXT:    [[R_RELOAD:%.*]] = load double, ptr [[R_RELOAD_ADDR]], align 8
 ; CHECK-NEXT:    [[THIS1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    [[THIS1_RELOAD:%.*]] = load i64, ptr [[THIS1_RELOAD_ADDR]], align 4
+; CHECK-NEXT:    [[R_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
+; CHECK-NEXT:    [[R_RELOAD:%.*]] = load double, ptr [[R_RELOAD_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call double @print(double [[R_RELOAD]])
 ; CHECK-NEXT:    call void @print2(i64 [[THIS1_RELOAD]])
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])

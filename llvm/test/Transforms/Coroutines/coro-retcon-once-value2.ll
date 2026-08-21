@@ -99,7 +99,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CONT:%.*]]
-; CHECK:       cont:
+; CHECK:       cont.spill:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[NEWVALUE:%.*]] = load i32, ptr [[TEMP]], align 4
 ; CHECK-NEXT:    store i32 [[NEWVALUE]], ptr [[PTR_RELOAD]], align 4
@@ -128,12 +128,12 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[CLEANUP:%.*]], label [[CONT:%.*]]
-; CHECK:       cont:
+; CHECK:       cont.spill:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[NEWVALUE:%.*]] = load i32, ptr [[TEMP]], align 4
 ; CHECK-NEXT:    store i32 [[NEWVALUE]], ptr [[PTR_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[CLEANUP]]
-; CHECK:       cleanup:
+; CHECK:       cleanup.spill:
 ; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 12
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i8, ptr [[VAL_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call fastcc void @deallocate(ptr [[TMP2]])
@@ -157,7 +157,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CONT:%.*]]
-; CHECK:       cont:
+; CHECK:       cont.spill:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[NEWVALUE:%.*]] = load i32, ptr [[TEMP]], align 4
 ; CHECK-NEXT:    store i32 [[NEWVALUE]], ptr [[PTR_RELOAD]], align 4
