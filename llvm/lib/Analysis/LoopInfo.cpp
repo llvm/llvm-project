@@ -133,7 +133,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+  I->dropUBImplyingAttrsAndUnknownMetadata(ProfileMetadataToPreserve);
 
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
@@ -526,6 +526,24 @@ bool Loop::isSafeToClone() const {
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (CB->cannotDuplicate())
           return false;
+  }
+  return true;
+}
+
+bool Loop::isSafeToCloneConditionally() const {
+  if (!isSafeToClone())
+    return false;
+
+  for (BasicBlock *BB : this->blocks()) {
+    for (Instruction &I : *BB) {
+      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
+        return false;
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
   }
   return true;
 }
@@ -1011,7 +1029,10 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.analyze(&F, [&]() -> const DominatorTree & {
+    return AM.getResult<DominatorTreeAnalysis>(F);
+  });
   return LI;
 }
 
@@ -1268,10 +1289,8 @@ void LoopInfoWrapperPass::verifyAnalysis() const {
   // -verify-loop-info option can enable this. In order to perform some
   // checking by default, LoopPass has been taught to call verifyLoop manually
   // during loop pass sequences.
-  if (VerifyLoopInfo) {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LI.verify(DT);
-  }
+  if (VerifyLoopInfo)
+    LI.verify();
 }
 
 void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1286,8 +1305,7 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
 PreservedAnalyses LoopVerifierPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  LI.verify(DT);
+  LI.verify();
   return PreservedAnalyses::all();
 }
 

@@ -67,16 +67,42 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space");
 }
 
+/// Translates a memref memory space attribute into XeVM's numeric address
+/// space, which follows the OpenCL/SPIR-V convention (0 = private, 1 =
+/// global, 2 = constant, 3 = shared/local, 4 = generic). A null attribute,
+/// meaning the memory space was left unspecified, maps to the default space
+/// 0. Returns failure if `memSpace` is a representation this pass does not
+/// know how to translate (e.g. a SPIR-V storage class or an arbitrary string
+/// attribute), rather than assuming it is an `IntegerAttr` and asserting.
+static FailureOr<unsigned> getNumericMemorySpace(Attribute memSpace) {
+  if (!memSpace)
+    return 0u;
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memSpace))
+    return static_cast<unsigned>(intAttr.getInt());
+  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(memSpace))
+    return static_cast<unsigned>(xevmSpace.getValue());
+  if (auto gpuSpace = llvm::dyn_cast<gpu::AddressSpaceAttr>(memSpace)) {
+    switch (gpuSpace.getValue()) {
+    case gpu::AddressSpace::Global:
+      return static_cast<unsigned>(xevm::AddrSpace::GLOBAL);
+    case gpu::AddressSpace::Workgroup:
+      return static_cast<unsigned>(xevm::AddrSpace::SHARED);
+    case gpu::AddressSpace::Private:
+      return static_cast<unsigned>(xevm::AddrSpace::PRIVATE);
+    case gpu::AddressSpace::Constant:
+      return static_cast<unsigned>(xevm::AddrSpace::CONSTANT);
+    }
+    llvm_unreachable("Unknown GPU address space");
+  }
+  return failure();
+}
+
 /// Checks if the given MemRefType refers to shared memory.
 static bool isSharedMemRef(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (!attr)
-    return false;
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == static_cast<int>(xevm::AddrSpace::SHARED);
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
+  FailureOr<unsigned> addrSpace =
+      getNumericMemorySpace(memrefTy.getMemorySpace());
+  return succeeded(addrSpace) &&
+         *addrSpace == static_cast<unsigned>(xevm::AddrSpace::SHARED);
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -592,16 +618,24 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       basePtrI64 = adaptor.getSource();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     } else {
       basePtrI64 = adaptor.getDest();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getDest().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     }
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
@@ -859,9 +893,13 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-      auto addrSpace = memRefTy.getMemorySpaceAsInt();
-      if (addrSpace != 0)
-        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+      FailureOr<unsigned> addrSpace =
+          getNumericMemorySpace(memRefTy.getMemorySpace());
+      if (failed(addrSpace))
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported memref memory space attribute.");
+      if (*addrSpace != 0)
+        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value ptrLLVM =

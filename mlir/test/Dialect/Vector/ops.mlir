@@ -305,29 +305,29 @@ func.func @outerproduct_scalable(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32
 
 // CHECK-LABEL: @insert_strided_slice
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
-  // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 2, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
-  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2, 2], strides = [1, 1] : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [2, 2, 2], strides = [1, 1] : vector<4x4xf32> into vector<4x8x16xf32>
   return
 }
 
 // CHECK-LABEL: @insert_strided_slice_scalable
 func.func @insert_strided_slice_scalable(%a: vector<4x[16]xf32>, %b: vector<4x8x[16]xf32>) {
-  // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 2, 0], strides = [1, 1]} : vector<4x[16]xf32> into vector<4x8x[16]xf32>
-  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 0], strides = [1, 1]} : vector<4x[16]xf32> into vector<4x8x[16]xf32>
+  // CHECK: vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2, 0], strides = [1, 1] : vector<4x[16]xf32> into vector<4x8x[16]xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [2, 2, 0], strides = [1, 1] : vector<4x[16]xf32> into vector<4x8x[16]xf32>
   return
 }
 
 // CHECK-LABEL: @extract_strided_slice
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
-  // CHECK: vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32>
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  // CHECK: vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8x16xf32> to vector<2x2x16xf32>
   return %1: vector<2x2x16xf32>
 }
 
 // CHECK-LABEL: @extract_strided_slice_scalable
 func.func @extract_strided_slice_scalable(%arg0: vector<4x[8]x16xf32>) -> vector<2x[8]x16xf32> {
-  // CHECK: vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x[8]x16xf32>
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 0], sizes = [2, 8], strides = [1, 1]} : vector<4x[8]x16xf32> to vector<2x[8]x16xf32>
+  // CHECK: vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 8], strides = [1, 1] : vector<4x[8]x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2, 0], sizes = [2, 8], strides = [1, 1] : vector<4x[8]x16xf32> to vector<2x[8]x16xf32>
   return %1: vector<2x[8]x16xf32>
 }
 
@@ -807,13 +807,13 @@ func.func @vector_load_and_store_2d_vector_memref(%memref : memref<200x100xvecto
   return
 }
 
-// CHECK-LABEL: func @load_store_alignment
-func.func @load_store_alignment(%memref: memref<4xi32>) {
+// CHECK-LABEL: func @load_store_clauses
+func.func @load_store_clauses(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
-  // CHECK: vector.load {{.*}} {alignment = 16 : i64}
-  %val = vector.load %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
-  // CHECK: vector.store {{.*}} {alignment = 16 : i64}
-  vector.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.load {{.*}} alignment = 16 nontemporal = true
+  %val = vector.load %memref[%c0] nontemporal = true alignment = 16 : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} alignment = 16 nontemporal = true
+  vector.store %val, %memref[%c0] nontemporal = true alignment = 16 : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -885,6 +885,16 @@ func.func @expand_and_compress(%base: memref<?xf32>, %mask: vector<16xi1>, %pass
   return
 }
 
+// CHECK-LABEL: @expand_and_compress_scalable
+func.func @expand_and_compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[X:.*]] = vector.expandload %{{.*}}[%{{.*}}], %{{.*}}, %{{.*}} : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  // CHECK: vector.compressstore %{{.*}}[%{{.*}}], %{{.*}}, %[[X]] : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  vector.compressstore %base[%c0], %mask, %0 : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  return
+}
+
 // CHECK-LABEL: @expand_and_compress2d
 func.func @expand_and_compress2d(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -892,6 +902,16 @@ func.func @expand_and_compress2d(%base: memref<?x?xf32>, %mask: vector<16xi1>, %
   %0 = vector.expandload %base[%c0, %c0], %mask, %pass_thru : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   // CHECK: vector.compressstore %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %[[X]] : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
   vector.compressstore %base[%c0, %c0], %mask, %0 : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// CHECK-LABEL: @expand_and_compress2d_scalable
+func.func @expand_and_compress2d_scalable(%base: memref<?x?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[X:.*]] = vector.expandload %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  %0 = vector.expandload %base[%c0, %c0], %mask, %pass_thru : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  // CHECK: vector.compressstore %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %[[X]] : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  vector.compressstore %base[%c0, %c0], %mask, %0 : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32>
   return
 }
 
@@ -917,7 +937,7 @@ func.func @get_vector_scale() -> index {
 // CHECK-LABEL: @vector_scan
 func.func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
   %1 = arith.constant dense<0.0> : vector<4x16x32xf32>
-  %2:2 = vector.scan <add>, %0, %1 {reduction_dim = 1 : i64, inclusive = true} :
+  %2:2 = vector.scan <add>, %0, %1 reduction_dim = 1, inclusive = true :
     vector<4x8x16x32xf32>, vector<4x16x32xf32>
   return %2#0 : vector<4x8x16x32xf32>
 }

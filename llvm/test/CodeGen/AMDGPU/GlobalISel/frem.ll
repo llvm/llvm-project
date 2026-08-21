@@ -812,15 +812,12 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    s_cbranch_scc1 .LBB6_3
 ; CI-NEXT:    s_branch .LBB6_6
 ; CI-NEXT:  .LBB6_4: ; %frem.else
-; CI-NEXT:    s_mov_b64 s[6:7], 0
-; CI-NEXT:    s_mov_b32 s8, 0
-; CI-NEXT:    s_brev_b32 s9, 1
-; CI-NEXT:    s_mov_b32 s7, 0
-; CI-NEXT:    s_and_b64 s[8:9], s[2:3], s[8:9]
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
 ; CI-NEXT:    v_mov_b32_e32 v1, s5
-; CI-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; CI-NEXT:    v_cmp_eq_f64_e64 s[8:9], |s[2:3]|, |v[0:1]|
+; CI-NEXT:    s_mov_b32 s6, 0
+; CI-NEXT:    s_brev_b32 s7, 1
+; CI-NEXT:    s_and_b64 s[6:7], s[2:3], s[6:7]
 ; CI-NEXT:    s_or_b64 s[8:9], s[8:9], s[8:9]
 ; CI-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[2:3]
 ; CI-NEXT:    s_branch .LBB6_7
@@ -935,15 +932,12 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    s_cbranch_scc1 .LBB6_3
 ; VI-NEXT:    s_branch .LBB6_6
 ; VI-NEXT:  .LBB6_4: ; %frem.else
-; VI-NEXT:    s_mov_b64 s[6:7], 0
-; VI-NEXT:    s_mov_b32 s8, 0
-; VI-NEXT:    s_brev_b32 s9, 1
-; VI-NEXT:    s_mov_b32 s7, 0
-; VI-NEXT:    s_and_b64 s[8:9], s[2:3], s[8:9]
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; VI-NEXT:    v_cmp_eq_f64_e64 s[8:9], |s[2:3]|, |v[0:1]|
+; VI-NEXT:    s_mov_b32 s6, 0
+; VI-NEXT:    s_brev_b32 s7, 1
+; VI-NEXT:    s_and_b64 s[6:7], s[2:3], s[6:7]
 ; VI-NEXT:    s_cmp_lg_u64 s[8:9], 0
 ; VI-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[2:3]
 ; VI-NEXT:    s_branch .LBB6_7
@@ -3638,15 +3632,12 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    s_cbranch_scc1 .LBB13_3
 ; CI-NEXT:    s_branch .LBB13_6
 ; CI-NEXT:  .LBB13_4: ; %frem.else16
-; CI-NEXT:    s_mov_b64 s[2:3], 0
-; CI-NEXT:    s_mov_b32 s12, 0
-; CI-NEXT:    s_brev_b32 s13, 1
-; CI-NEXT:    s_mov_b32 s3, 0
-; CI-NEXT:    s_and_b64 s[12:13], s[4:5], s[12:13]
 ; CI-NEXT:    v_mov_b32_e32 v0, s8
 ; CI-NEXT:    v_mov_b32_e32 v1, s9
-; CI-NEXT:    s_or_b64 s[2:3], s[2:3], s[12:13]
 ; CI-NEXT:    v_cmp_eq_f64_e64 s[12:13], |s[4:5]|, |v[0:1]|
+; CI-NEXT:    s_mov_b32 s2, 0
+; CI-NEXT:    s_brev_b32 s3, 1
+; CI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
 ; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
 ; CI-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; CI-NEXT:    s_branch .LBB13_7
@@ -3736,15 +3727,12 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    s_cbranch_scc1 .LBB13_10
 ; CI-NEXT:    s_branch .LBB13_13
 ; CI-NEXT:  .LBB13_11: ; %frem.else
-; CI-NEXT:    s_mov_b64 s[12:13], 0
-; CI-NEXT:    s_mov_b32 s14, 0
-; CI-NEXT:    s_brev_b32 s15, 1
-; CI-NEXT:    s_mov_b32 s13, 0
-; CI-NEXT:    s_and_b64 s[14:15], s[6:7], s[14:15]
 ; CI-NEXT:    v_mov_b32_e32 v0, s10
 ; CI-NEXT:    v_mov_b32_e32 v1, s11
-; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[14:15]
 ; CI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[6:7]|, |v[0:1]|
+; CI-NEXT:    s_mov_b32 s12, 0
+; CI-NEXT:    s_brev_b32 s13, 1
+; CI-NEXT:    s_and_b64 s[12:13], s[6:7], s[12:13]
 ; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
 ; CI-NEXT:    s_cselect_b64 s[12:13], s[12:13], s[6:7]
 ; CI-NEXT:    s_branch .LBB13_14
@@ -3867,15 +3855,12 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_cbranch_scc1 .LBB13_3
 ; VI-NEXT:    s_branch .LBB13_6
 ; VI-NEXT:  .LBB13_4: ; %frem.else16
-; VI-NEXT:    s_mov_b64 s[2:3], 0
-; VI-NEXT:    s_mov_b32 s12, 0
-; VI-NEXT:    s_brev_b32 s13, 1
-; VI-NEXT:    s_mov_b32 s3, 0
-; VI-NEXT:    s_and_b64 s[12:13], s[4:5], s[12:13]
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
-; VI-NEXT:    s_or_b64 s[2:3], s[2:3], s[12:13]
 ; VI-NEXT:    v_cmp_eq_f64_e64 s[12:13], |s[4:5]|, |v[0:1]|
+; VI-NEXT:    s_mov_b32 s2, 0
+; VI-NEXT:    s_brev_b32 s3, 1
+; VI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
 ; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; VI-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; VI-NEXT:    s_branch .LBB13_7
@@ -3965,15 +3950,12 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_cbranch_scc1 .LBB13_10
 ; VI-NEXT:    s_branch .LBB13_13
 ; VI-NEXT:  .LBB13_11: ; %frem.else
-; VI-NEXT:    s_mov_b64 s[12:13], 0
-; VI-NEXT:    s_mov_b32 s14, 0
-; VI-NEXT:    s_brev_b32 s15, 1
-; VI-NEXT:    s_mov_b32 s13, 0
-; VI-NEXT:    s_and_b64 s[14:15], s[6:7], s[14:15]
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
 ; VI-NEXT:    v_mov_b32_e32 v1, s11
-; VI-NEXT:    s_or_b64 s[12:13], s[12:13], s[14:15]
 ; VI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[6:7]|, |v[0:1]|
+; VI-NEXT:    s_mov_b32 s12, 0
+; VI-NEXT:    s_brev_b32 s13, 1
+; VI-NEXT:    s_and_b64 s[12:13], s[6:7], s[12:13]
 ; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
 ; VI-NEXT:    s_cselect_b64 s[12:13], s[12:13], s[6:7]
 ; VI-NEXT:    s_branch .LBB13_14

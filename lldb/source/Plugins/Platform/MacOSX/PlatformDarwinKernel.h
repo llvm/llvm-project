@@ -58,7 +58,7 @@ public:
 
   void GetStatus(Stream &strm) override;
 
-  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModule(const ModuleSpec &module_spec, Target &target,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
@@ -139,16 +139,14 @@ protected:
   static std::vector<FileSpec>
   GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle);
 
-  Status GetSharedModuleKext(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModuleKext(const ModuleSpec &module_spec, Target &target,
                              lldb::ModuleSP &module_sp,
                              llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                              bool *did_create_ptr);
 
-  Status
-  GetSharedModuleKernel(const ModuleSpec &module_spec, Process *process,
-                        lldb::ModuleSP &module_sp,
-                        llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                        bool *did_create_ptr);
+  Status GetSharedModuleKernel(
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   Status ExamineKextForMatchingUUID(const FileSpec &kext_bundle_path,
                                     const UUID &uuid, const ArchSpec &arch,

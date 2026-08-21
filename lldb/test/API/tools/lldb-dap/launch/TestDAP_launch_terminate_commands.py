@@ -2,7 +2,7 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipIf, skipIfNetBSD
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 

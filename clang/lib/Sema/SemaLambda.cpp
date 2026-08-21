@@ -516,10 +516,6 @@ void Sema::handleLambdaNumbering(
   // numbering state before final numbering is assigned below.
   if (ContextDecl)
     Class->setLambdaContextDecl(ContextDecl);
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
 
   CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
@@ -535,15 +531,41 @@ void Sema::handleLambdaNumbering(
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
-  if (MCtx) {
+
+  if (!MCtx) {
+    // This lambda doesn't need a mangle numbering.
+    return;
+  }
+
+  if (NumberingOverride) {
+    Numbering = *NumberingOverride;
+  } else {
     Numbering.IndexInContext = MCtx->getNextLambdaIndex();
     Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
     Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
-    Class->setLambdaNumbering(Numbering);
+  }
 
-    if (auto *Source =
-            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
-      Source->AssignedLambdaNumbering(Class);
+  Class->setLambdaNumbering(Numbering);
+
+  // If there is no context declaration (e.g. this lambda is defined at the
+  // top-level in the global namespace), there is no need to register it for
+  // merging.
+  if (!ContextDecl) {
+    return;
+  }
+
+  // This lambda might redeclare a previous lambda if this is not the first
+  // definition of the context declaration. We might have a definition from
+  // another translation unit.
+  auto *&Slot = Context.getLambdaDeclarationSlotForMerging(
+      ContextDecl, Numbering.IndexInContext);
+  if (auto *Previous = Slot) {
+    Class->setPreviousDecl(Previous);
+    makeMergedDefinitionVisible(Previous);
+  } else {
+    // Keep track of this lambda so it can be merged with another lambda that is
+    // parsed or loaded later.
+    Slot = Class;
   }
 }
 
@@ -1098,6 +1120,9 @@ void Sema::CompleteLambdaCallOperator(
   }
 
   buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);
+
+  // Not built by ActOnFunctionDeclarator, so tag it here.
+  addImplicitCallingConvAbiTag(Method);
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
@@ -1444,6 +1469,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
   LSI->CallOperator->setConstexprKind(DS.getConstexprSpecifier());
+  LSI->BeforeCompoundStatement = false;
 
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;
@@ -1490,10 +1516,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
-
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))
@@ -1501,6 +1523,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // This represents the function body for the lambda function, check if we
+  // have to apply optnone due to a pragma.
+  AddRangeBasedOptnone(Method);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgpu12.50--amdpal <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; CHECK: ; TotalNumSgprs: 4
+; CHECK: ; TotalNumSgprs: 66
 ; CHECK: ; NumVgprs: 2
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
@@ -64,7 +64,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x4
+; CHECK-NEXT:        .sgpr_count:     0x42
 ; CHECK-NEXT:        .sgpr_limit:     0x6a
 ; CHECK-NEXT:        .threadgroup_dimensions:
 ; CHECK-NEXT:          - 0x1
@@ -118,7 +118,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x42
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
@@ -130,7 +130,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x42
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
@@ -142,7 +142,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x42
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}

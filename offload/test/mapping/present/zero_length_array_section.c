@@ -20,11 +20,11 @@ int main() {
 
   // arr[0:0] doesn't create an actual mapping in the first directive.
   //
-  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
-  // CHECK: omptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
-  // CHECK: omptarget error: Call to targetDataBegin failed, abort target.
-  // CHECK: omptarget error: Failed to process data before launching the kernel.
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
+  // CHECK: error: Call to getTargetPointer returned null pointer ('present' map type modifier).
+  // CHECK: error: Call to targetDataBegin failed, abort target.
+  // CHECK: error: Failed to process data before launching the kernel.
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc : arr[0 : 0])
 #pragma omp target map(present, alloc : arr[0 : 0])
   ;

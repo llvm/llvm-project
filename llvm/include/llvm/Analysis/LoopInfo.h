@@ -328,6 +328,12 @@ public:
   /// Return true if the loop body is safe to clone in practice.
   bool isSafeToClone() const;
 
+  /// Like `isSafeToClone`, but for transformations where the cloned loop
+  /// bodies may run conditionally. This additionally rejects convergent
+  /// calls (which must not gain new control dependencies) and token values
+  /// that are used outside their defining block.
+  bool isSafeToCloneConditionally() const;
+
   /// Returns true if the loop is annotated parallel.
   ///
   /// A parallel loop can be assumed to not contain any dependencies between
@@ -417,7 +423,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 

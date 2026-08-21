@@ -2178,9 +2178,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   SmallVector<DominatorTree::UpdateType, 4> Updates;
 
   // Update any PHI nodes in our new successors.
+  SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
   for (BasicBlock *Succ : successors(BB1)) {
     addPredecessorToBlock(Succ, TIParent, BB1);
-    if (DTU)
+
+    if (DTU && VisitedSuccs.insert(Succ).second)
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
 
@@ -2301,9 +2303,12 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
+      auto CanReplaceOperand = [OI](const Instruction *I) {
+        return canReplaceOperandWithVariable(I, OI);
+      };
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
-          !canReplaceOperandWithVariable(I0, OI))
-        // We can't create a PHI from this GEP.
+          !all_of(Insts, CanReplaceOperand))
+        // We can't create a PHI from this operand.
         return false;
       auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)
@@ -3543,13 +3548,77 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
   return nullptr;
 }
 
+static bool isUncontrolledConvergentCall(CallBase *CB) {
+  return CB->isConvergent() && !isa<ConvergenceControlInst>(CB) &&
+         !CB->getConvergenceControlToken();
+}
+
+static bool reachesUncontrolledConvergentCallBeforeBlock(BasicBlock *From,
+                                                         BasicBlock *StopBB) {
+  static constexpr unsigned MaxInstructionsToScan = 512;
+
+  // Walk predecessors of StopBB to find blocks that can reach it. Only
+  // convergent calls on a cycle with StopBB matter - a convergent call on a
+  // path to function exit cannot have its dynamic instance changed by
+  // threading.
+  SmallPtrSet<BasicBlock *, 8> CanReachStop;
+  SmallPtrSet<BasicBlock *, 8> BlocksWithUncontrolledConvergentCalls;
+  SmallVector<BasicBlock *, 8> Worklist;
+  for (BasicBlock *Pred : predecessors(StopBB))
+    Worklist.push_back(Pred);
+
+  // Cache blocks with relevant calls while building CanReachStop. This keeps
+  // the instruction scan bounded without a separate block limit.
+  unsigned NumScannedInstructions = 0;
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (BB == StopBB)
+      continue;
+    if (!CanReachStop.insert(BB).second)
+      continue;
+
+    for (Instruction &I : *BB) {
+      if (++NumScannedInstructions > MaxInstructionsToScan)
+        return true;
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && isUncontrolledConvergentCall(CB)) {
+        BlocksWithUncontrolledConvergentCalls.insert(BB);
+        break;
+      }
+    }
+
+    append_range(Worklist, predecessors(BB));
+  }
+
+  if (!CanReachStop.contains(From))
+    return false;
+
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  Worklist.push_back(From);
+
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (BB == StopBB || !CanReachStop.contains(BB))
+      continue;
+
+    if (!Visited.insert(BB).second)
+      continue;
+
+    if (BlocksWithUncontrolledConvergentCalls.contains(BB))
+      return true;
+
+    append_range(Worklist, successors(BB));
+  }
+
+  return false;
+}
+
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static std::optional<bool>
-foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
-                                            const DataLayout &DL,
-                                            AssumptionCache *AC) {
+static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
+    CondBrInst *BI, const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
+    AssumptionCache *AC, const DataLayout &DL) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3617,6 +3686,14 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
 
     // Only revector to RealDest if no values defined in BB are live.
     if (ReachesNonLocalUseBlocks.contains(RealDest))
+      continue;
+
+    // Threading through a branch can bypass a reconvergence point. If the
+    // destination can execute an uncontrolled convergent operation before
+    // returning to this block, this may change the dynamic instance of that
+    // operation.
+    if (TTI.hasBranchDivergence(BB->getParent()) &&
+        reachesUncontrolledConvergentCallBeforeBlock(RealDest, BB))
       continue;
 
     LLVM_DEBUG({
@@ -3740,8 +3817,8 @@ bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(CondBrInst *BI) {
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result =
-        foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
+    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, TTI, DTU,
+                                                         Options.AC, DL);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -6137,19 +6214,22 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       PHI.removeIncomingValue(SI->getParent());
   }
 
-  // Clean up the default block - it may have phis or other instructions before
-  // the unreachable terminator.
-  if (!HasDefault)
-    createUnreachableSwitchDefault(SI, DTU);
-
-  auto *UnreachableDefault = SI->getDefaultDest();
+  // Clean up the default block.
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+  if (!HasDefault) {
+    BasicBlock *OrigDefaultBlock = SI->getDefaultDest();
+    OrigDefaultBlock->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, OrigDefaultBlock});
+  }
 
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (!HasDefault && DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, UnreachableDefault}});
+  if (isa<UncondBrInst>(NewBI))
+    Updates.push_back({DominatorTree::Delete, BB, OtherDest});
 
+  if (DTU)
+    DTU->applyUpdates(Updates);
   return true;
 }
 
@@ -7828,9 +7908,10 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     }
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
-    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
     I = SIW.removeCase(I);
     E = SIW->case_end();
+    if (!is_contained(successors(BB), DeadCaseBB))
+      Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
 
   auto Case = SI->findCaseValue(Constant);
@@ -7886,7 +7967,11 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
     SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
     SIW.setSuccessorWeight(0, 0);
   }
-  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+  // If there is a pre-existing case for the constant, the default branch
+  // will be removed rather than being moved. Thus, we are removing an edge
+  // in the CFG, and need to update any PHIs in the default block.
+  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock=*/CaseIt !=
+                                              SI->case_default());
 
   assert(SI->getNumCases() > 0 && "Switch should have at least one case");
   assert(SI->findCaseValue(CaseVal) != SI->case_default() &&
@@ -8684,6 +8769,10 @@ static bool mergeNestedCondBranch(CondBrInst *BI, DomTreeUpdater *DTU) {
 
   BasicBlock *BB3 = BB1BI->getSuccessor(0);
   BasicBlock *BB4 = BB1BI->getSuccessor(1);
+  // Bail out on trivial cases to avoid bothering to handle the special case in
+  // the code below.
+  if (BB3 == BB4)
+    return false;
   IRBuilder<> Builder(BI);
   BI->setCondition(
       Builder.CreateXor(BI->getCondition(), BB1BI->getCondition()));
@@ -9023,18 +9112,27 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           return true;
         } else if (CondBrInst *BI = dyn_cast<CondBrInst>(T)) {
           BB->removePredecessor(Predecessor);
-          // Preserve guarding condition in assume, because it might not be
-          // inferrable from any dominating condition.
-          Value *Cond = BI->getCondition();
-          CallInst *Assumption;
-          if (BI->getSuccessor(0) == BB)
-            Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
-          else
-            Assumption = Builder.CreateAssumption(Cond);
-          if (AC)
-            AC->registerAssumption(cast<AssumeInst>(Assumption));
-          Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
-                                                     : BI->getSuccessor(0));
+          // Handle degenerate conditional branches.
+          if (BI->getSuccessor(0) == BI->getSuccessor(1)) {
+            // The only difference from the UncondBrInst path above is that it
+            // has two edges in CFG.
+            BB->removePredecessor(Predecessor);
+            // Turn unconditional branches into unreachables.
+            Builder.CreateUnreachable();
+          } else {
+            // Preserve guarding condition in assume, because it might not be
+            // inferrable from any dominating condition.
+            Value *Cond = BI->getCondition();
+            CallInst *Assumption;
+            if (BI->getSuccessor(0) == BB)
+              Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
+            else
+              Assumption = Builder.CreateAssumption(Cond);
+            if (AC)
+              AC->registerAssumption(cast<AssumeInst>(Assumption));
+            Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
+                                                       : BI->getSuccessor(0));
+          }
           BI->eraseFromParent();
           if (DTU)
             DTU->applyUpdates({{DominatorTree::Delete, Predecessor, BB}});

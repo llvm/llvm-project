@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -162,8 +163,6 @@ public:
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -251,7 +250,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
 
         if (MO.readsReg()) {
           LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
-          const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+          const MachineBasicBlock *DefMBB = MRI->getDefBlock(MOReg);
           // Make sure two conditions are met:
           // a.) the value is defined before/in the IF block
           // b.) should be defined in the same loop-level.
@@ -299,7 +298,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
       // Make sure two conditions are met:
       // a.) the value is defined before/in the IF block
       // b.) should be defined in the same loop-level.
-      const MachineBasicBlock *DefMBB = MRI->getVRegDef(Reg)->getParent();
+      const MachineBasicBlock *DefMBB = MRI->getDefBlock(Reg);
       if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
           Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If))
         KillsInElse.insert(Reg);
@@ -376,7 +375,7 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
         continue;
 
       if (MO.readsReg()) {
-        MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+        MachineBasicBlock *DefMBB = MRI->getDefBlock(MOReg);
         // Make sure the value is defined before the LOOP block
         if (!Blocks.contains(DefMBB) && !CandidateRegs.contains(MOReg)) {
           // If the variable is used after the loop, the register coalescer will
@@ -462,8 +461,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
 
     // Mark Reg alive through the block if this is a PHI incoming block
     if (PHIIncoming.contains(MBB))
-      LV->MarkVirtRegAliveInBlock(OldVarInfo, MRI->getVRegDef(Reg)->getParent(),
-                                  MBB);
+      LV->MarkVirtRegAliveInBlock(OldVarInfo, MRI->getDefBlock(Reg), MBB);
   }
 
   // Set the isKilled flag if we get new Kills in the THEN region.
@@ -492,15 +490,12 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
   }
 
   // Transfer the possible Kills in ElseBlocks from Reg to NewReg
-  auto I = OldVarInfo.Kills.begin();
-  while (I != OldVarInfo.Kills.end()) {
-    if (ElseBlocks.contains((*I)->getParent())) {
-      NewVarInfo.Kills.push_back(*I);
-      I = OldVarInfo.Kills.erase(I);
-    } else {
-      ++I;
-    }
-  }
+  llvm::erase_if(OldVarInfo.Kills, [&](MachineInstr *MI) {
+    if (!ElseBlocks.contains(MI->getParent()))
+      return false;
+    NewVarInfo.Kills.push_back(MI);
+    return true;
+  });
 }
 
 void SIOptimizeVGPRLiveRange::optimizeLiveRange(
@@ -662,8 +657,6 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveVariablesAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

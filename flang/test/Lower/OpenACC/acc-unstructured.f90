@@ -1,4 +1,4 @@
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine test_unstructured1(a, b, c)
   integer :: i, j, k
@@ -41,7 +41,7 @@ end subroutine
 
 ! Body looks unstructured (if/stop) but the wrap-in-execute-region pass hides
 ! the unstructured CFG inside scf.execute_region, so the DOs lower as
-! structured acc.loop control(...) = ... (no `unstructured` attribute). GOTO
+! structured acc.loop control(...) = ... (no `unstructured ` attribute). GOTO
 ! exiting a combined OpenACC region is not yet implemented in lowering, so
 ! there's no genuinely-unstructured counterpart for this combined form.
 subroutine test_unstructured2(a, b, c)
@@ -185,7 +185,7 @@ end subroutine
 ! CHECK: arith.cmpf ogt
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
-! CHECK: } attributes {seq = [#acc.device_type<none>], unstructured}
+! CHECK: } seq unstructured
 
 ! Test GOTO exiting acc.loop with intermediate code between loop end and
 ! target. A jump table (exit selector + dispatch) skips the intermediate code.
@@ -210,7 +210,7 @@ end subroutine
 ! CHECK: acc.loop
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
-! CHECK: } attributes {seq = [#acc.device_type<none>], unstructured}
+! CHECK: } seq unstructured
 ! Jump table after inner loop:
 ! CHECK: fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: arith.cmpi eq
@@ -273,8 +273,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_cycle
 ! CHECK: acc.serial combined(loop)
 ! Both induction variables (j and i) are privatized:
-! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
-! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
+! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! No control(...) on acc.loop — bounds are not on the op:
 ! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! Outer loop trip-count test (j) emitted as cf:
@@ -291,7 +291,7 @@ end subroutine
 
 ! `acc serial loop collapse(N)` with STOP in body: wrap-in-execute-region hides
 ! the unstructured if/stop and the three collapsed iterators lower as a single
-! structured acc.loop control(...) (no `unstructured` attribute).
+! structured acc.loop control(...) (no `unstructured ` attribute).
 subroutine test_unstructured_collapse_stop(a)
   integer :: i, j, k
   real :: a(:,:,:)
@@ -307,14 +307,14 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_stop
 ! All three IVs privatized:
-! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
-! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
+! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(serial) private({{.*}}) control({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
 ! CHECK: scf.execute_region
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK-NOT: unstructured
-! CHECK: } attributes {collapse = [3]{{.*}}}
+! CHECK: } {{.*}}collapse([3]){{.*}}
 
 ! Test orphaned `acc loop collapse(N)`
 subroutine test_unstructured_collapse_loop_only(a)
@@ -336,7 +336,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_loop_only
 ! Standalone acc.loop (no `combined(...)`):
 ! CHECK: acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+! CHECK: } collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent unstructured
 
 ! Standalone `acc loop seq` with STOP: wrap-in-execute-region hides the
 ! if/stop and the DO lowers as structured acc.loop control(...) (no
@@ -357,10 +357,10 @@ end subroutine
 ! CHECK: scf.execute_region
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK-NOT: unstructured
-! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>]{{.*}}}
+! CHECK: } {{.*}}seq{{.*}}
 
 ! Same loop but the if-construct has a GOTO exiting all loops, so the
-! if-construct is not wrappable, the DO remains unstructured, and acc.loop
+! if-construct is not wrappable, the DO remains unstructured , and acc.loop
 ! emits the unstructured form with the `unstructured` attribute.
 subroutine test_unstructured_loop_seq_goto(a)
   integer :: i, j
@@ -377,7 +377,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_loop_seq_goto
 ! CHECK: acc.loop private({{.*}}) {
 ! CHECK: cf.br
-! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>], unstructured}
+! CHECK: } {{.*}}seq{{.*}}unstructured
 
 ! Standalone `acc loop auto` with STOP: same wrap-makes-structured behavior.
 subroutine test_unstructured_loop_auto_stop(a)
@@ -396,7 +396,7 @@ end subroutine
 ! CHECK: scf.execute_region
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK-NOT: unstructured
-! CHECK: } attributes {auto_ = [#acc.device_type<none>]{{.*}}}
+! CHECK: } {{.*}}auto_{{.*}}
 
 ! Same loop with GOTO exit: genuinely unstructured, `unstructured` attribute
 ! is emitted on acc.loop.
@@ -415,7 +415,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_loop_auto_goto
 ! CHECK: acc.loop private({{.*}}) {
 ! CHECK: cf.br
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], {{.*}}unstructured}
+! CHECK: } {{.*}}auto_{{.*}}unstructured
 
 ! Standalone `acc loop` inside `acc serial` with STOP: wrap-makes-structured.
 subroutine test_unstructured_loop_in_serial_stop(a)
@@ -472,7 +472,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_orphan_loop_in_seq_routine_goto
 ! CHECK: acc.loop private({{.*}}) {
 ! CHECK: cf.br
-! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>], unstructured}
+! CHECK: } {{.*}}seq{{.*}}unstructured
 
 ! DO loop with STOP inside `!$acc kernels`. Previously flagged as
 ! "unstructured do loop in acc kernels" (TODO); wrap-in-execute-region now

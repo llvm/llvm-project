@@ -2695,7 +2695,7 @@ static void unswitchNontrivialInvariants(
 #ifdef EXPENSIVE_CHECKS
   // Verify the entire loop structure to catch any incorrect updates before we
   // progress in the pass pipeline.
-  LI.verify(DT);
+  LI.verify();
 #endif
 
   // Now that we've unswitched something, make callbacks to report the changes.
@@ -2867,7 +2867,7 @@ static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   }
 
   if (VerifyLoopInfo)
-    LI.verify(DT);
+    LI.verify();
   ++NumGuards;
   return CheckBI;
 }
@@ -3239,7 +3239,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
 
 #ifndef NDEBUG
   DT.verify();
-  LI.verify(DT);
+  LI.verify();
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 #endif
@@ -3359,18 +3359,8 @@ static bool collectUnswitchCandidatesWithInjections(
 }
 
 static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
-  if (!L.isSafeToClone())
+  if (!L.isSafeToCloneConditionally())
     return false;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
-        if (CB->isConvergent())
-          return false;
-      }
-    }
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the

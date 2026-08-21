@@ -929,7 +929,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macros))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacro()) {
+            getContainingFile().Dwarf->getDebugMacro()) {
       emitMacroTableImpl(Table, *MacroAttr, true);
     }
   }
@@ -938,7 +938,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macro_info))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacinfo()) {
+            getContainingFile().Dwarf->getDebugMacinfo()) {
       emitMacroTableImpl(Table, *MacroAttr, false);
     }
   }
@@ -1398,7 +1398,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   if (InputDieEntry->getTag() == dwarf::DW_TAG_subprogram) {
     // Get relocation adjustment value for the current function.
     FuncAddressAdjustment =
-        getContaingFile().Addresses->getSubprogramRelocAdjustment(
+        getContainingFile().Addresses->getSubprogramRelocAdjustment(
             getDIE(InputDieEntry), false);
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_label) {
     // Get relocation adjustment value for the current label.
@@ -1412,7 +1412,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_variable) {
     // Get relocation adjustment value for the current variable.
     std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
-        getContaingFile().Addresses->getVariableRelocAdjustment(
+        getContainingFile().Addresses->getVariableRelocAdjustment(
             getDIE(InputDieEntry), false);
 
     HasLocationExpressionAddress = LocExprAddrAndRelocAdjustment.first;
@@ -1570,7 +1570,7 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
 
 Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   const DWARFDebugLine::LineTable *InputLineTable =
-      getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
+      getContainingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
   if (InputLineTable == nullptr) {
     if (getOrigUnit().getUnitDIE().find(dwarf::DW_AT_stmt_list))
       warn("cann't load line table.");
@@ -2006,7 +2006,8 @@ void CompileUnit::verifyDependencies() {
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {
   static dwarf::Attribute ODRAttributes[] = {
       dwarf::DW_AT_type, dwarf::DW_AT_specification,
-      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import};
+      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import,
+      dwarf::DW_AT_LLVM_alloc_type};
 
   return ODRAttributes;
 }
