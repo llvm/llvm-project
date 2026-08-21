@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
 #include <algorithm>
 #include <array>
@@ -436,14 +437,22 @@ Error llvm::hlsl::packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
-  std::array<SignatureRow, MaxSignatureRows> Rows = {};
-  ClipCullState ClipCull;
+  // Only a geometry shader output signature packs its streams independently.
+  const unsigned StreamCount =
+      ShaderStage == Triple::EnvironmentType::Geometry && IOTy == IOType::Out
+          ? MaxGeometryStreams
+          : 1;
+
+  SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
+  SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
   for (const auto &[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
     assert(Element.Rows > 0 && "signature element must have at least one row");
     assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
            "signature element must have between 1 and 4 columns");
+    assert(Element.GSStream < StreamCount &&
+           "signature element has an unexpected geometry stream");
 
     SemanticInterpretation Interpretation =
         getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
@@ -470,15 +479,19 @@ Error llvm::hlsl::packSignaturePrefixStable(
                                         ComponentWidth, Element.InterpMode,
                                         PackingInterpretation};
 
+    const unsigned StreamIndex = StreamCount == 1 ? 0 : Element.GSStream;
+    MutableArrayRef<SignatureRow> StreamRows = Rows[StreamIndex];
+
     if (Interpretation == SemanticInterpretation::ClipCull) {
       if (std::optional<SignaturePackingError::ErrorKind> Kind =
-              packClipCullElement(Element, Rows, ClipCull, Placement))
+              packClipCullElement(Element, StreamRows,
+                                  ClipCullStates[StreamIndex], Placement))
         return make_error<SignaturePackingError>(*Kind,
                                                  static_cast<unsigned>(Index));
       continue;
     }
 
-    if (!packElement(Element, Rows, Placement))
+    if (!packElement(Element, StreamRows, Placement))
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
           static_cast<unsigned>(Index));
