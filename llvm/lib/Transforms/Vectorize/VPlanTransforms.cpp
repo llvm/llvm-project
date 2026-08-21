@@ -5684,6 +5684,12 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   assert(Pred && "Must be expandable!");
   StridesCheckVPBB->getTerminator()->setOperand(0, Pred);
 
+  // For now we only "speculate" stride but don't multiversion by handling two
+  // different paths of vector execution. As such, rewriting
+  // `VPExpandSCEVRecipe`s in the `Entry` is fine for now - at worst we'd
+  // "incorrectly" reach stride speculation check and jump to scalar loop from
+  // there. These recipes aren't passed to scalar loop if vector loop isn't
+  // entered. This rewrite is necessary to mimic current LAA's behavior.
   for (auto &R : make_early_inc_range(*Entry)) {
     auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandSCEV)
