@@ -163,14 +163,14 @@ void x_trivial_assign_rhs(int i) { agglocal = agga[i]; }
 void x_explicit_assign(int i) { agglocal.operator=(agga[i]); }
 
 // CHECK-LABEL: define {{.*}}@_Z17x_derived_to_basei(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_derived_to_base(int i) {
   Base &r = da[i];
   (void)r;
 }
 
 // CHECK-LABEL: define {{.*}}@_Z18x_static_cast_basei(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_static_cast_base(int i) {
   Base &r = static_cast<Base &>(da[i]);
   (void)r;
@@ -179,7 +179,7 @@ void x_static_cast_base(int i) {
 // The other direction.
 Base ba[4];
 // CHECK-LABEL: define {{.*}}@_Z17x_base_to_derivedi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_base_to_derived(int i) {
   Derived &r = static_cast<Derived &>(ba[i]);
   (void)r;

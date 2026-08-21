@@ -6315,7 +6315,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E,
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
     auto *DerivedClassDecl = E->getSubExpr()->getType()->castAsCXXRecordDecl();
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, ObjectRequired);
     Address This = LV.getAddress();
 
     // Perform the derived-to-base conversion
@@ -6333,7 +6333,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E,
     return EmitAggExprToLValue(E);
   case CK_BaseToDerived: {
     auto *DerivedClassDecl = E->getType()->castAsCXXRecordDecl();
-    LValue LV = EmitLValue(E->getSubExpr());
+    LValue LV = EmitLValue(E->getSubExpr(), NotKnownNonNull, ObjectRequired);
 
     // Perform the base-to-derived conversion
     Address Derived = GetAddressOfDerivedClass(
