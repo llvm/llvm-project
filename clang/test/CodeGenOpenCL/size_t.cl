@@ -117,17 +117,68 @@ ptrdiff_t test_sub_private(private char* x, private char *y) {
 }
 
 //SZ32: define{{.*}} i32 @test_sub_mix(ptr noundef %x, ptr addrspace(4) noundef %y)
-//SZ32: addrspacecast ptr %{{.*}} to ptr addrspace(4)
-//SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
+//SZ32: [[CAST1:%.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ32: ptrtoaddr ptr addrspace(4) [[CAST1]] to i32
 //SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
 //SZ64ONLY: define{{.*}} i64 @test_sub_mix(ptr noundef %x, ptr addrspace(4) noundef %y)
-//SZ64ONLY: addrspacecast ptr %{{.*}} to ptr addrspace(4)
-//SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+//SZ64ONLY: [[CAST2:%.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) [[CAST2]] to i64
 //SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
 //AMDGCN: define{{.*}} i64 @test_sub_mix(ptr addrspace(5) noundef %x, ptr noundef %y)
-//AMDGCN: addrspacecast ptr addrspace(5) %{{.*}} to ptr
-//AMDGCN: ptrtoaddr ptr %{{.*}} to i64
+//AMDGCN: [[CAST3:%.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+//AMDGCN: ptrtoaddr ptr [[CAST3]] to i64
 //AMDGCN: ptrtoaddr ptr %{{.*}} to i64
 ptrdiff_t test_sub_mix(private char* x, generic char *y) {
+  return x - y;
+}
+
+// Test commuted case: generic - private
+//SZ32: define{{.*}} i32 @test_sub_mix_commute(ptr addrspace(4) noundef %x, ptr noundef %y)
+//SZ32: [[CASTC1:%.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
+//SZ32: ptrtoaddr ptr addrspace(4) [[CASTC1]] to i32
+//SZ64ONLY: define{{.*}} i64 @test_sub_mix_commute(ptr addrspace(4) noundef %x, ptr noundef %y)
+//SZ64ONLY: [[CASTC2:%.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) [[CASTC2]] to i64
+//AMDGCN: define{{.*}} i64 @test_sub_mix_commute(ptr noundef %x, ptr addrspace(5) noundef %y)
+//AMDGCN: [[CASTC3:%.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+//AMDGCN: ptrtoaddr ptr %{{.*}} to i64
+//AMDGCN: ptrtoaddr ptr [[CASTC3]] to i64
+ptrdiff_t test_sub_mix_commute(generic char* x, private char *y) {
+  return x - y;
+}
+
+// Test local - generic subtraction
+//SZ32: define{{.*}} i32 @test_sub_local_generic(ptr addrspace(3) noundef %x, ptr addrspace(4) noundef %y)
+//SZ32: [[CASTLG1:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr addrspace(4)
+//SZ32: ptrtoaddr ptr addrspace(4) [[CASTLG1]] to i32
+//SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
+//SZ64ONLY: define{{.*}} i64 @test_sub_local_generic(ptr addrspace(3) noundef %x, ptr addrspace(4) noundef %y)
+//SZ64ONLY: [[CASTLG2:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr addrspace(4)
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) [[CASTLG2]] to i64
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+//AMDGCN: define{{.*}} i64 @test_sub_local_generic(ptr addrspace(3) noundef %x, ptr noundef %y)
+//AMDGCN: [[CASTLG3:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr
+//AMDGCN: ptrtoaddr ptr [[CASTLG3]] to i64
+//AMDGCN: ptrtoaddr ptr %{{.*}} to i64
+ptrdiff_t test_sub_local_generic(local char* x, generic char *y) {
+  return x - y;
+}
+
+// Test generic - local subtraction (commuted)
+//SZ32: define{{.*}} i32 @test_sub_generic_local(ptr addrspace(4) noundef %x, ptr addrspace(3) noundef %y)
+//SZ32: [[CASTGL1:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr addrspace(4)
+//SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
+//SZ32: ptrtoaddr ptr addrspace(4) [[CASTGL1]] to i32
+//SZ64ONLY: define{{.*}} i64 @test_sub_generic_local(ptr addrspace(4) noundef %x, ptr addrspace(3) noundef %y)
+//SZ64ONLY: [[CASTGL2:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr addrspace(4)
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) [[CASTGL2]] to i64
+//AMDGCN: define{{.*}} i64 @test_sub_generic_local(ptr noundef %x, ptr addrspace(3) noundef %y)
+//AMDGCN: [[CASTGL3:%.*]] = addrspacecast ptr addrspace(3) %{{.*}} to ptr
+//AMDGCN: ptrtoaddr ptr %{{.*}} to i64
+//AMDGCN: ptrtoaddr ptr [[CASTGL3]] to i64
+ptrdiff_t test_sub_generic_local(generic char* x, local char *y) {
   return x - y;
 }

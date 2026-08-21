@@ -30,9 +30,9 @@ void test(global int *arg_glob, generic int *arg_gen,
   // CHECK-NOFAKE-NOT: addrspacecast
 
   var_priv = arg_gen - arg_glob; // arithmetic operation
-  // CHECK: %{{.*}} = addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
-  // CHECK: %{{.*}} = ptrtoaddr ptr addrspace(4) %{{.*}} to i64
-  // CHECK: %{{.*}} = ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+  // CHECK: [[SUBCAST:%.*]] = addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
+  // CHECK: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+  // CHECK: ptrtoaddr ptr addrspace(4) [[SUBCAST]] to i64
   // CHECK-NOFAKE: %{{.*}} = ptrtoaddr ptr %{{.*}} to i64
   // CHECK-NOFAKE: %{{.*}} = ptrtoaddr ptr %{{.*}} to i64
 

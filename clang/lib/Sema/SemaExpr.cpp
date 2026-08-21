@@ -11904,32 +11904,30 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
       // For pointer subtraction, if the address spaces differ but overlap,
       // convert both pointers to the composite (superset) address space.
-      // This is needed because pointer subtraction compares addresses, and
-      // addresses in different spaces may have different sizes.
+      // This is needed because address spaces may use different
+      // representations, such as a private offset vs a flat address.
       LangAS LAddrSpace = lpointee.getAddressSpace();
       LangAS RAddrSpace = rpointee.getAddressSpace();
       if (LAddrSpace != RAddrSpace) {
         Qualifiers LQual = lpointee.getQualifiers();
         Qualifiers RQual = rpointee.getQualifiers();
-        LangAS ResultAddrSpace;
-        if (LQual.isAddressSpaceSupersetOf(RQual, Context))
-          ResultAddrSpace = LAddrSpace;
-        else
-          ResultAddrSpace = RAddrSpace;
+        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
+                                     ? LAddrSpace
+                                     : RAddrSpace;
 
         if (LAddrSpace != ResultAddrSpace) {
           QualType NewPteTy = Context.getAddrSpaceQualType(
               lpointee.getUnqualifiedType(), ResultAddrSpace);
           QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          LHS = ImpCastExprToType(LHS.get(), NewPtrTy,
-                                  CK_AddressSpaceConversion);
+          LHS =
+              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
         }
         if (RAddrSpace != ResultAddrSpace) {
           QualType NewPteTy = Context.getAddrSpaceQualType(
               rpointee.getUnqualifiedType(), ResultAddrSpace);
           QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          RHS = ImpCastExprToType(RHS.get(), NewPtrTy,
-                                  CK_AddressSpaceConversion);
+          RHS =
+              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
         }
       }
 
