@@ -111,7 +111,7 @@ static json::Object diffCapabilityBlobs(StorageManager &Storage,
     if (Classification == "unchanged")
       continue;
     Metrics.push_back(json::Object{
-        {"metric", Key.getKey()},
+        {"metric", Key.getKey().str()},
         {"before", Before},
         {"after", After},
         {"delta", Delta.Delta},
@@ -184,18 +184,18 @@ json::Value CompareEngine::compare(StringRef Before, StringRef After) const {
 
         if (BaseIt == BaseCapMap.end() || BaseIt->second.empty()) {
           CapDiffs.push_back(
-              json::Object{{"capability", CID}, {"status", "added"}});
+              json::Object{{"capability", CID.str()}, {"status", "added"}});
           continue;
         }
         if (CandIt == CandCapMap.end() || CandIt->second.empty()) {
           CapDiffs.push_back(
-              json::Object{{"capability", CID}, {"status", "removed"}});
+              json::Object{{"capability", CID.str()}, {"status", "removed"}});
           continue;
         }
 
         json::Object Diff =
             diffCapabilityBlobs(Storage, BaseIt->second, CandIt->second, Cls);
-        Diff["capability"] = CID;
+        Diff["capability"] = CID.str();
         Diff["status"] = "diffed";
         CapDiffs.push_back(std::move(Diff));
       }
@@ -218,8 +218,8 @@ json::Value CompareEngine::compare(StringRef Before, StringRef After) const {
   }
 
   return json::Object{
-      {"base_snapshot_id", Before},
-      {"candidate_snapshot_id", After},
+      {"base_snapshot_id", Before.str()},
+      {"candidate_snapshot_id", After.str()},
       {"match_summary",
        json::Object{{"matched", static_cast<int64_t>(Matched)},
                     {"changed", static_cast<int64_t>(Changed)},
@@ -290,9 +290,9 @@ json::Value CompareEngine::compareCapability(StringRef Before, StringRef After,
   }
 
   return json::Object{
-      {"base_snapshot_id", Before},
-      {"candidate_snapshot_id", After},
-      {"capability", CapID},
+      {"base_snapshot_id", Before.str()},
+      {"candidate_snapshot_id", After.str()},
+      {"capability", CapID.str()},
       {"match_summary",
        json::Object{{"matched", static_cast<int64_t>(Matched)},
                     {"added", static_cast<int64_t>(Added)},
