@@ -326,9 +326,6 @@ public:
   /// stream.  This should really only be used for debugging purposes.
   LLVM_ABI void print(raw_ostream &OS) const;
 
-  /// Return true if \p ID is this node's interned uniquing profile.
-  bool hasProfile(const FoldingSetNodeID &ID) const { return ID == FastID; }
-
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
 
@@ -401,9 +398,6 @@ public:
   LLVM_ABI SCEVPredicate(const FoldingSetNodeIDRef ID, SCEVPredicateKind Kind);
 
   SCEVPredicateKind getKind() const { return Kind; }
-
-  /// Return true if \p ID is this node's interned uniquing profile.
-  bool hasProfile(const FoldingSetNodeID &ID) const { return ID == FastID; }
 
   /// Returns the estimated complexity of this predicate.  This is roughly
   /// measured in the number of run-time checks required.

@@ -230,28 +230,6 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
 
-FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
-    const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
-  unsigned IDHash = ID.ComputeHash();
-  void **Bucket = getBucketFor(IDHash);
-  void *Probe = *Bucket;
-
-  InsertPos = nullptr;
-
-  FoldingSetNodeID TempID;
-  while (Node *NodeInBucket = GetNextPtr(Probe)) {
-    if (Info.NodeEquals(this, NodeInBucket, ID, IDHash, TempID))
-      return NodeInBucket;
-    TempID.clear();
-
-    Probe = NodeInBucket->getNextInBucket();
-  }
-
-  // Didn't find the node, return null with the bucket as the InsertPos.
-  InsertPos = Bucket;
-  return nullptr;
-}
-
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
   assert(!N->getNextInBucket());

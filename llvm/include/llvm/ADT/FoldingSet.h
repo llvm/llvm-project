@@ -412,9 +412,28 @@ protected:
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
-  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
-                                     void *&InsertPos,
-                                     const FoldingSetInfo &Info);
+  ///
+  /// This is defined here rather than out-of-line, so the node comparison,
+  /// which is trivial for some clients, can be inlined into the caller.
+  Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos,
+                            const FoldingSetInfo &Info) {
+    unsigned IDHash = ID.ComputeHash();
+    void **Bucket = getBucketFor(IDHash);
+
+    InsertPos = nullptr;
+
+    FoldingSetNodeID TempID;
+    for (void *Probe = *Bucket; Node *N = GetNextPtr(Probe);
+         Probe = N->getNextInBucket()) {
+      if (Info.NodeEquals(this, N, ID, IDHash, TempID))
+        return N;
+      TempID.clear();
+    }
+
+    // Didn't find the node, return null with the bucket as the InsertPos.
+    InsertPos = Bucket;
+    return nullptr;
+  }
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
@@ -524,31 +543,6 @@ public:
 
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
-
-  /// Look up the node matching \p ID, using \p IsMatch to compare a candidate
-  /// node against it. If there is no such node, return null and set
-  /// \p InsertPos to the insertion token to pass to InsertNode(); the token is
-  /// only valid until the set is modified.
-  ///
-  /// This is an alternative to the FoldingSetInfo-based overload for clients
-  /// whose nodes can be compared against an ID directly.
-  template <typename FnT>
-  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos,
-                         FnT IsMatch) {
-    void **Bucket = getBucketFor(ID.ComputeHash());
-    for (void *Probe = *Bucket; Node *N = GetNextPtr(Probe);
-         Probe = N->getNextInBucket()) {
-      T *TN = static_cast<T *>(N);
-      if (IsMatch(*TN)) {
-        InsertPos = nullptr;
-        return TN;
-      }
-    }
-
-    // Didn't find the node, return null with the bucket as the InsertPos.
-    InsertPos = Bucket;
-    return nullptr;
-  }
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
