@@ -117,8 +117,41 @@ define i32 @inout_scalar_i32(i32 %value) {
 
 ;--- positive.ll
 
-define void @input_scalable(<vscale x 2 x i64> %value) {
-; POS-LABEL: input_scalable:
+define void @input_nxv16i8(<vscale x 16 x i8> %value) {
+; POS-LABEL: input_nxv16i8:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 16 x i8> %value)
+  ret void
+}
+
+define void @input_nxv8i16(<vscale x 8 x i16> %value) {
+; POS-LABEL: input_nxv8i16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 8 x i16> %value)
+  ret void
+}
+
+define void @input_nxv4i32(<vscale x 4 x i32> %value) {
+; POS-LABEL: input_nxv4i32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 4 x i32> %value)
+  ret void
+}
+
+define void @input_nxv2i64(<vscale x 2 x i64> %value) {
+; POS-LABEL: input_nxv2i64:
 ; POS:       // %bb.0:
 ; POS-NEXT:    //APP
 ; POS-NEXT:    mov z0.d, z0.d
@@ -128,8 +161,85 @@ define void @input_scalable(<vscale x 2 x i64> %value) {
   ret void
 }
 
-define <vscale x 2 x i64> @output_scalable() {
-; POS-LABEL: output_scalable:
+define void @input_nxv8f16(<vscale x 8 x half> %value) {
+; POS-LABEL: input_nxv8f16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 8 x half> %value)
+  ret void
+}
+
+define void @input_nxv4f32(<vscale x 4 x float> %value) {
+; POS-LABEL: input_nxv4f32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 4 x float> %value)
+  ret void
+}
+
+define void @input_nxv2f64(<vscale x 2 x double> %value) {
+; POS-LABEL: input_nxv2f64:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 2 x double> %value)
+  ret void
+}
+
+define void @input_nxv8bf16(<vscale x 8 x bfloat> %value) {
+; POS-LABEL: input_nxv8bf16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 8 x bfloat> %value)
+  ret void
+}
+
+define <vscale x 16 x i8> @output_nxv16i8() {
+; POS-LABEL: output_nxv16i8:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.b, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 16 x i8> asm sideeffect "dup $0.b, #0", "={z0}"()
+  ret <vscale x 16 x i8> %value
+}
+
+define <vscale x 8 x i16> @output_nxv8i16() {
+; POS-LABEL: output_nxv8i16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.h, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 8 x i16> asm sideeffect "dup $0.h, #0", "={z0}"()
+  ret <vscale x 8 x i16> %value
+}
+
+define <vscale x 4 x i32> @output_nxv4i32() {
+; POS-LABEL: output_nxv4i32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.s, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 4 x i32> asm sideeffect "dup $0.s, #0", "={z0}"()
+  ret <vscale x 4 x i32> %value
+}
+
+define <vscale x 2 x i64> @output_nxv2i64() {
+; POS-LABEL: output_nxv2i64:
 ; POS:       // %bb.0:
 ; POS-NEXT:    //APP
 ; POS-NEXT:    mov z0.d, #0 // =0x0
@@ -139,8 +249,85 @@ define <vscale x 2 x i64> @output_scalable() {
   ret <vscale x 2 x i64> %value
 }
 
-define <vscale x 2 x i64> @inout_scalable(<vscale x 2 x i64> %value) {
-; POS-LABEL: inout_scalable:
+define <vscale x 8 x half> @output_nxv8f16() {
+; POS-LABEL: output_nxv8f16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.h, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 8 x half> asm sideeffect "dup $0.h, #0", "={z0}"()
+  ret <vscale x 8 x half> %value
+}
+
+define <vscale x 4 x float> @output_nxv4f32() {
+; POS-LABEL: output_nxv4f32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.s, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 4 x float> asm sideeffect "dup $0.s, #0", "={z0}"()
+  ret <vscale x 4 x float> %value
+}
+
+define <vscale x 2 x double> @output_nxv2f64() {
+; POS-LABEL: output_nxv2f64:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 2 x double> asm sideeffect "dup $0.d, #0", "={z0}"()
+  ret <vscale x 2 x double> %value
+}
+
+define <vscale x 8 x bfloat> @output_nxv8bf16() {
+; POS-LABEL: output_nxv8bf16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.h, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %value = call <vscale x 8 x bfloat> asm sideeffect "dup $0.h, #0", "={z0}"()
+  ret <vscale x 8 x bfloat> %value
+}
+
+define <vscale x 16 x i8> @inout_nxv16i8(<vscale x 16 x i8> %value) {
+; POS-LABEL: inout_nxv16i8:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 16 x i8> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 16 x i8> %value)
+  ret <vscale x 16 x i8> %result
+}
+
+define <vscale x 8 x i16> @inout_nxv8i16(<vscale x 8 x i16> %value) {
+; POS-LABEL: inout_nxv8i16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 8 x i16> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 8 x i16> %value)
+  ret <vscale x 8 x i16> %result
+}
+
+define <vscale x 4 x i32> @inout_nxv4i32(<vscale x 4 x i32> %value) {
+; POS-LABEL: inout_nxv4i32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 4 x i32> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 4 x i32> %value)
+  ret <vscale x 4 x i32> %result
+}
+
+define <vscale x 2 x i64> @inout_nxv2i64(<vscale x 2 x i64> %value) {
+; POS-LABEL: inout_nxv2i64:
 ; POS:       // %bb.0:
 ; POS-NEXT:    //APP
 ; POS-NEXT:    mov z0.d, z0.d
@@ -148,4 +335,48 @@ define <vscale x 2 x i64> @inout_scalable(<vscale x 2 x i64> %value) {
 ; POS-NEXT:    ret
   %result = call <vscale x 2 x i64> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 2 x i64> %value)
   ret <vscale x 2 x i64> %result
+}
+
+define <vscale x 8 x half> @inout_nxv8f16(<vscale x 8 x half> %value) {
+; POS-LABEL: inout_nxv8f16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 8 x half> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 8 x half> %value)
+  ret <vscale x 8 x half> %result
+}
+
+define <vscale x 4 x float> @inout_nxv4f32(<vscale x 4 x float> %value) {
+; POS-LABEL: inout_nxv4f32:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 4 x float> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 4 x float> %value)
+  ret <vscale x 4 x float> %result
+}
+
+define <vscale x 2 x double> @inout_nxv2f64(<vscale x 2 x double> %value) {
+; POS-LABEL: inout_nxv2f64:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 2 x double> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 2 x double> %value)
+  ret <vscale x 2 x double> %result
+}
+
+define <vscale x 8 x bfloat> @inout_nxv8bf16(<vscale x 8 x bfloat> %value) {
+; POS-LABEL: inout_nxv8bf16:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
+  %result = call <vscale x 8 x bfloat> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 8 x bfloat> %value)
+  ret <vscale x 8 x bfloat> %result
 }

@@ -14372,9 +14372,22 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         return *P;
       }
 
-      if (Subtarget->isSVEorStreamingSVEAvailable() &&
-          TRI->isTypeLegalForClass(AArch64::ZPRRegClass, getRegisterType(VT)))
-        return *P;
+      if (Subtarget->isSVEorStreamingSVEAvailable()) {
+        // Accept the full-width SVE vector types representable in C
+        switch (VT.SimpleTy) {
+        case MVT::nxv16i8:
+        case MVT::nxv8i16:
+        case MVT::nxv4i32:
+        case MVT::nxv2i64:
+        case MVT::nxv8f16:
+        case MVT::nxv4f32:
+        case MVT::nxv2f64:
+        case MVT::nxv8bf16:
+          return *P;
+        default:
+          break;
+        }
+      }
 
       return std::make_pair(0U, nullptr);
     }
