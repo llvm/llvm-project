@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IsNanTest.h"
-#include "src/__support/FPUtil/float128.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/isnanf128.h"
 
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
