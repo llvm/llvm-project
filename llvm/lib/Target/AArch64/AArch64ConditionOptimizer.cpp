@@ -651,7 +651,7 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
       return false;
     if (!TBB)
       return false;
-  
+
     unsigned CmpOpc = CmpMI->getOpcode();
     // Determine the new TBZ/TBNZ opcode and bit position.
     unsigned TbzOpc;
