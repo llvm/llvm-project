@@ -213,8 +213,8 @@ void test_dtor(int param) {
 // CIR:   %[[GET_DEL_FUNC:.*]] = cir.get_global @_ZN4DtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_Dtor>)>>
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Dtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_TLS_DEL]] : !cir.ptr<!rec_Dtor> -> !cir.ptr<!void>
-// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }
@@ -272,8 +272,8 @@ void test_ctordtor(int param) {
 // CIR:   %[[GET_DEL_FUNC:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_CONST_TLS_DEL]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }
@@ -310,8 +310,8 @@ void test_ctordtor(int param) {
 // CIR:   %[[GET_DEL_FUNC:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_TLS_DEL]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }

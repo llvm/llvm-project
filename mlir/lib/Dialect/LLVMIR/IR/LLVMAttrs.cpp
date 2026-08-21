@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -37,6 +38,17 @@ static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 /// operation. Some operands are printed in their textual form.
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
+
+/// Parses a source language from either the historical inline `DW_LANG_*`
+/// syntax or a nested `DISourceLanguageNameAttr`.
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language);
+
+/// Prints an unversioned source language without a dialect using the
+/// historical inline `DW_LANG_*` syntax. All other source languages are
+/// printed as a nested `DISourceLanguageNameAttr`.
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language);
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
@@ -383,25 +395,93 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language) {
+  DISourceLanguageNameAttr nestedLanguage;
+  OptionalParseResult nestedResult =
+      parser.parseOptionalAttribute(nestedLanguage);
+  if (nestedResult.has_value()) {
+    if (failed(*nestedResult))
+      return failure();
+    language = nestedLanguage;
+    return success();
+  }
+
+  // If we cannot parse the full attr, try to just parse a DWARF language.
+  SMLoc loc = parser.getCurrentLocation();
+  StringRef spelling;
+  if (parser.parseKeyword(&spelling))
+    return failure();
+  if (unsigned value = llvm::dwarf::getLanguage(spelling)) {
+    language = DISourceLanguageNameAttr::get(
+        parser.getContext(), value, /*name=*/0, /*version=*/std::nullopt,
+        /*dialect=*/0);
+    return success();
+  }
+  return parser.emitError(loc)
+         << "invalid debug info source language: " << spelling;
+}
+
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language) {
+  // Print only the DWARF language if the other fields are not set.
+  if (language.getLanguage() && !language.getName() && !language.getVersion() &&
+      !language.getDialect()) {
+    printer << llvm::dwarf::LanguageString(language.getLanguage());
+    return;
+  }
+  printer.printAttribute(language);
+}
+
+LogicalResult DISourceLanguageNameAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned language,
+    unsigned name, std::optional<uint32_t> version, unsigned /*dialect*/) {
+  if (static_cast<bool>(language) == static_cast<bool>(name))
+    return emitError() << "expected exactly one of language or name";
+  if (name && !version)
+    return emitError() << "DW_LNAME requires a version";
+  if (language && version)
+    return emitError() << "DW_LANG cannot have a version";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
 DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
   return DICompileUnitAttr::get(
       getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
-      getSourceLanguageDialect(), getFile(), getProducer(), getIsOptimized(),
-      getEmissionKind(), getIsDebugInfoForProfiling(), getNameTableKind(),
-      getSplitDebugFilename(), getImportedEntities());
+      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
+      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
+      getImportedEntities());
 }
 
 DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
 
   return DICompileUnitAttr::get(
       recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
-      /*sourceLanguage=*/0u, /*sourceLanguageDialect=*/0u, /*file=*/{},
-      /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
+      /*sourceLanguage=*/{},
+      /*file=*/{}, /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
       /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
       /*splitDebugFilename=*/{}, /*importedEntities=*/{});
+}
+
+LogicalResult DICompileUnitAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, DistinctAttr recId,
+    bool isRecSelf, DistinctAttr id, DISourceLanguageNameAttr sourceLanguage,
+    DIFileAttr file, StringAttr producer, bool isOptimized,
+    DIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    DINameTableKind nameTableKind, StringAttr splitDebugFilename,
+    ArrayRef<DINodeAttr> importedEntities) {
+  if (isRecSelf)
+    return success();
+  if (!sourceLanguage)
+    return emitError() << "sourceLanguage must be set";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
