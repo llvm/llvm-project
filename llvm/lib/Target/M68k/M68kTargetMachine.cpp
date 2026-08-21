@@ -144,17 +144,17 @@ bool M68kPassConfig::addInstSelector() {
 }
 
 bool M68kPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool M68kPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool M68kPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

@@ -153,12 +153,9 @@ public:
   }
 
   void connect(BootstrapInfo BI) override {
-    if (OnConnect) {
-      if (auto Err = OnConnect(BI)) {
-        reportError(std::move(Err));
-        notifyDisconnected();
-      }
-    }
+    if (OnConnect)
+      if (auto Err = OnConnect(BI))
+        notifyDisconnected(std::move(Err));
   }
 
   void disconnect() override {
@@ -176,7 +173,8 @@ public:
     }
     for (auto &[_, OnComplete] : ToDrain)
       failPendingControllerCall(std::move(OnComplete));
-    notifyDisconnected();
+    // A locally requested disconnect is orderly, so the mode is success.
+    notifyDisconnected(Error::success());
   }
 
   void callController(OnControllerCallReturn OnComplete,
@@ -633,7 +631,7 @@ class DeadControllerAccess : public Session::ControllerAccess {
 public:
   DeadControllerAccess(Session &S) : ControllerAccess(S) {}
   void connect(BootstrapInfo) override {}
-  void disconnect() override { notifyDisconnected(); }
+  void disconnect() override { notifyDisconnected(Error::success()); }
   void callController(OnControllerCallReturn OnComplete,
                       orc_rt_ControllerHandlerTag,
                       WrapperFunctionBuffer) override {
@@ -937,4 +935,260 @@ TEST(ControllerAccessTest, TryAttachFailure) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(CallErr)), "no controller attached");
+}
+
+// A ControllerAccess that reports a caller-supplied disconnection mode, used to
+// exercise the Error that notifyDisconnected passes to the Session (see
+// Session::setOnDisconnect). An empty ErrMsg reports an orderly disconnection,
+// any other value an abnormal one.
+class DisconnectingControllerAccess : public Session::ControllerAccess {
+public:
+  DisconnectingControllerAccess(Session &S, std::string ErrMsg = "",
+                                DisconnectingControllerAccess **Self = nullptr)
+      : ControllerAccess(S), ErrMsg(std::move(ErrMsg)) {
+    // Publish this instance so tests that need to drive a controller-initiated
+    // disconnection can reach it after attach constructs it.
+    if (Self)
+      *Self = this;
+  }
+
+  /// Simulate the controller going away without the Session asking it to.
+  void disconnectFromController() { doDisconnect(); }
+
+  void connect(BootstrapInfo) override {}
+  void disconnect() override { doDisconnect(); }
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag,
+                      WrapperFunctionBuffer) override {
+    failControllerCallInline(std::move(OnComplete));
+  }
+  void sendWrapperResult(WrapperFunctionBuffer, uint64_t) override {}
+
+private:
+  void doDisconnect() {
+    // notifyDisconnected is exactly-once, so a redundant disconnect -- e.g. a
+    // Session-initiated disconnect racing a controller-initiated one -- must be
+    // a no-op. These tests are single-threaded, so a plain bool suffices.
+    if (Disconnected)
+      return;
+    Disconnected = true;
+    notifyDisconnected(ErrMsg.empty() ? Error::success()
+                                      : make_error<StringError>(ErrMsg));
+  }
+
+  std::string ErrMsg;
+  bool Disconnected = false;
+};
+
+/// Consume Err, returning its message, or "" if Err is a success value.
+static std::string errMsgOrEmpty(Error Err) {
+  if (Err)
+    return toString(std::move(Err));
+  return "";
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsOrderlyDisconnect) {
+  // An orderly disconnection reports a success Error, exactly once.
+  size_t HandlerRuns = 0;
+  std::string ErrMsg = "<not run>";
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) {
+    ++HandlerRuns;
+    ErrMsg = errMsgOrEmpty(std::move(Err));
+  });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+  S.detach();
+
+  EXPECT_EQ(HandlerRuns, 1U);
+  EXPECT_EQ(ErrMsg, "");
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsAbnormalDisconnect) {
+  // An abnormal disconnection reports the ControllerAccess's Error unchanged.
+  std::optional<std::string> ErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  EXPECT_THAT(ErrMsg,
+              Optional(Eq(std::string("connection closed without hangup"))));
+}
+
+TEST(ControllerAccessTest, DisconnectErrorRoutedToErrorReporterWithNoHandler) {
+  // With no on-disconnect handler installed, an abnormal disconnection is
+  // reported via the Session's error reporter -- once, not once per route.
+  std::vector<std::string> ErrMsgs;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  ASSERT_EQ(ErrMsgs.size(), 1U);
+  EXPECT_EQ(ErrMsgs[0], "connection closed without hangup");
+}
+
+TEST(ControllerAccessTest, OrderlyDisconnectNotRoutedToErrorReporter) {
+  // An orderly disconnection is not an error, so nothing is reported.
+  std::vector<std::string> ErrMsgs;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+  S.detach();
+
+  EXPECT_TRUE(ErrMsgs.empty());
+}
+
+TEST(ControllerAccessTest, OnDisconnectSuppressesErrorReporterRouting) {
+  // Installing a handler takes over routing entirely: the error reporter must
+  // not also see the disconnection error.
+  std::vector<std::string> ErrMsgs;
+  std::optional<std::string> HandlerErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
+  S.setOnDisconnect(
+      [&](Error Err) { HandlerErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
+                                          "connection closed without hangup");
+
+  S.detach();
+
+  EXPECT_THAT(HandlerErrMsg,
+              Optional(Eq(std::string("connection closed without hangup"))));
+  EXPECT_TRUE(ErrMsgs.empty());
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsConnectFailure) {
+  // A ControllerAccess that fails to connect disconnects during attach, so the
+  // handler sees the connect error.
+  //
+  // This is the boundary between "attempted an attach and failed" and "never
+  // attempted one": both reach proceedToDetach with the Session still in the
+  // Start state, differing only in the Error the caller supplies, so nothing
+  // but this test distinguishes them -- OnDisconnectReportsSuccessWithoutAttach
+  // would still pass if a failed connect were reported as success.
+  std::optional<std::string> ErrMsg;
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+
+  S.attach<MockControllerAccess>(
+      BootstrapInfo(S), MockControllerAccess::PostFn{},
+      [](BootstrapInfo &) { return make_error<StringError>("no route"); });
+
+  EXPECT_THAT(ErrMsg, Optional(Eq(std::string("no route"))));
+}
+
+TEST(ControllerAccessTest, OnDisconnectReportsSuccessWithoutAttach) {
+  // A Session that never attached a controller still reports a disconnection,
+  // with success: there was no connection to lose, so it trivially succeeded.
+  // This is what makes the handler total -- a client using it to record the
+  // Session's result never has to account for it not running.
+  //
+  // Note that success here is specific to never having attempted an attach:
+  // an attach whose connect fails reports the connect error instead, which
+  // OnDisconnectReportsConnectFailure covers.
+  size_t HandlerRuns = 0;
+  std::string ErrMsg = "<not run>";
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.setOnDisconnect([&](Error Err) {
+      ++HandlerRuns;
+      ErrMsg = errMsgOrEmpty(std::move(Err));
+    });
+  }
+  EXPECT_EQ(HandlerRuns, 1U);
+  EXPECT_EQ(ErrMsg, "");
+}
+
+TEST(ControllerAccessTest, OnDisconnectRunsBeforeDetachAndShutdown) {
+  // The on-disconnect handler reports the loss of the controller connection
+  // specifically, so it runs before Services are notified via onDetach, and
+  // well before shutdown.
+  size_t OpIdx = 0;
+  std::optional<size_t> DisconnectOpIdx;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.setOnDisconnect([&](Error Err) {
+      DisconnectOpIdx = OpIdx++;
+      cantFail(std::move(Err));
+    });
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+  }
+
+  EXPECT_EQ(OpIdx, 3U);
+  EXPECT_EQ(DisconnectOpIdx, 0U);
+  EXPECT_EQ(DetachOpIdx, 1U);
+  EXPECT_EQ(ShutdownOpIdx, 2U);
+}
+
+TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandler) {
+  // Calling shutdown from the on-disconnect handler is supported, and is the
+  // expected way to turn the loss of the controller into "finish outstanding
+  // work and exit" (see Session::setOnDisconnect). Check that it neither
+  // deadlocks nor detaches twice, and that the scheduled shutdown runs.
+  //
+  // Here the disconnect was requested locally, via detach.
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  bool OnShutdownRan = false;
+
+  {
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.setOnDisconnect([&](Error Err) {
+      cantFail(std::move(Err));
+      S.shutdown([&]() { OnShutdownRan = true; });
+    });
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
+
+    S.detach();
+
+    EXPECT_TRUE(OnShutdownRan);
+  }
+
+  // Exactly one onDetach and one onShutdown: no double detach.
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+}
+
+TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandlerAfterRemoteHangup) {
+  // As above, but for a controller-initiated disconnection, where the Session
+  // did not ask for the detach. The re-entrant shutdown still has to be
+  // absorbed, and Services still detached and shut down exactly once.
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  bool OnShutdownRan = false;
+
+  {
+    DisconnectingControllerAccess *CA = nullptr;
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.setOnDisconnect([&](Error Err) {
+      cantFail(std::move(Err));
+      S.shutdown([&]() { OnShutdownRan = true; });
+    });
+    S.attach<DisconnectingControllerAccess>(BootstrapInfo(S), "", &CA);
+    ASSERT_TRUE(CA);
+
+    CA->disconnectFromController();
+
+    EXPECT_TRUE(OnShutdownRan);
+  }
+
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
 }

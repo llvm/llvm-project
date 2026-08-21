@@ -473,12 +473,12 @@ void X86PassConfig::addPreRegBankSelect() {
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool X86PassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
@@ -603,7 +603,7 @@ void X86PassConfig::addPreEmitPass2() {
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
        MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
-    addPass(createCFIInstrInserter());
+    addPass(createCFIInstrInserterLegacy());
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.

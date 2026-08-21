@@ -734,9 +734,8 @@ optMain(int argc, char **argv,
     TLII.disableAllFunctions();
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
-    LibFunc F;
     for (const std::string &FuncName : DisableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setUnavailable(F);
       else {
         errs() << argv[0] << ": cannot disable nonexistent builtin function "
@@ -746,7 +745,7 @@ optMain(int argc, char **argv,
     }
 
     for (const std::string &FuncName : EnableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setAvailable(F);
       else {
         errs() << argv[0] << ": cannot enable nonexistent builtin function "

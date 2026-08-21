@@ -313,7 +313,7 @@ void MipsPassConfig::addPreLegalizeMachineIR() {
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
@@ -323,7 +323,7 @@ void MipsPassConfig::addPreRegBankSelect() {
 }
 
 bool MipsPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
