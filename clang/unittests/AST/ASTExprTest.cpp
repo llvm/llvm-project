@@ -12,13 +12,18 @@
 
 #include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/OpenACCClause.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 using namespace clang;
 
@@ -396,4 +401,66 @@ TEST(ASTExpr, IsKnownToHaveBooleanValue) {
   ExpectKnown("from_bitfield2", false, false);
   ExpectKnown("from_bitint1", false, true);
   ExpectKnown("from_bitint2", false, false);
+}
+
+TEST(ASTExpr, ObjCPropertyRefExprReceiverInterface) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      R"objc(
+    @protocol Proto
+    @property int protoProp;
+    @end
+
+    __attribute__((objc_root_class))
+    @interface Base
+    @property (class) int classProp;
+    @property int instanceProp;
+    @end
+
+    @interface Derived : Base
+    @property int derivedProp;
+    @end
+
+    @implementation Derived
+    - (void)test:(id<Proto>)untyped {
+      // These must stay in order.
+      (void)Base.classProp;
+      (void)self.derivedProp;
+      (void)super.instanceProp;
+      (void)untyped.protoProp;
+    }
+    @end
+  )objc",
+      {"-x", "objective-c"}, "input.m");
+  ASSERT_TRUE(AST);
+
+  struct Visitor : RecursiveASTVisitor<Visitor> {
+    std::vector<const ObjCPropertyRefExpr *> PropRefs;
+    bool VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *E) {
+      PropRefs.push_back(E);
+      return true;
+    }
+  } V;
+  V.TraverseDecl(AST->getASTContext().getTranslationUnitDecl());
+
+  ASSERT_EQ(V.PropRefs.size(), 4u);
+
+  const ObjCPropertyRefExpr *ClassRef = V.PropRefs[0];
+  EXPECT_TRUE(ClassRef->isClassReceiver());
+  ASSERT_NE(ClassRef->getReceiverInterface(), nullptr);
+  EXPECT_EQ(ClassRef->getReceiverInterface()->getNameAsString(), "Base");
+
+  const ObjCPropertyRefExpr *ObjectRef = V.PropRefs[1];
+  EXPECT_TRUE(ObjectRef->isObjectReceiver());
+  ASSERT_NE(ObjectRef->getReceiverInterface(), nullptr);
+  EXPECT_EQ(ObjectRef->getReceiverInterface()->getNameAsString(), "Derived");
+
+  const ObjCPropertyRefExpr *SuperRef = V.PropRefs[2];
+  EXPECT_TRUE(SuperRef->isSuperReceiver());
+  ASSERT_NE(SuperRef->getReceiverInterface(), nullptr);
+  EXPECT_EQ(SuperRef->getReceiverInterface()->getNameAsString(), "Base");
+
+  const ObjCPropertyRefExpr *UntypedRef = V.PropRefs[3];
+  // id<Proto> are considered object receivers.
+  EXPECT_TRUE(UntypedRef->isObjectReceiver());
+  EXPECT_EQ(UntypedRef->getReceiverInterface(), nullptr);
 }

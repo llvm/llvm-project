@@ -113,6 +113,26 @@ QualType ObjCPropertyRefExpr::getReceiverType(const ASTContext &ctx) const {
   return getBase()->getType();
 }
 
+ObjCInterfaceDecl *ObjCPropertyRefExpr::getReceiverInterface() const {
+  if (isClassReceiver())
+    return getClassReceiver();
+
+  if (isSuperReceiver()) {
+    QualType SuperTy = getSuperReceiverType();
+    if (const auto *ObjCPtr = SuperTy->getAs<ObjCObjectPointerType>())
+      return ObjCPtr->getInterfaceDecl();
+    if (const auto *ObjCTy = SuperTy->getAs<ObjCObjectType>())
+      return ObjCTy->getInterface();
+    return nullptr;
+  }
+
+  if (const ObjCObjectPointerType *Ptr =
+          getBase()->getType()->getAs<ObjCObjectPointerType>())
+    return Ptr->getInterfaceDecl();
+
+  return nullptr;
+}
+
 ObjCMessageExpr::ObjCMessageExpr(QualType T, ExprValueKind VK,
                                  SourceLocation LBracLoc,
                                  SourceLocation SuperLoc, bool IsInstanceSuper,

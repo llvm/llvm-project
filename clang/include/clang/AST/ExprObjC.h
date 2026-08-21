@@ -807,6 +807,18 @@ public:
   /// Determine the type of the base, regardless of the kind of receiver.
   QualType getReceiverType(const ASTContext &ctx) const;
 
+  /// Retrieve the Objective-C interface to which the message implied by this
+  /// property reference is being directed, if known.
+  ///
+  /// This routine cross-cuts all of the different kinds of message
+  /// sends to determine what the underlying (statically known) type
+  /// of the receiver will be; use \c isObjectReceiver(), \c isSuperReceiver(),
+  /// and \c isClassReceiver() to determine whether the message is a class or an
+  /// instance method, whether it is a send to super or not, etc.
+  ///
+  /// \returns The Objective-C interface if known, otherwise nullptr.
+  ObjCInterfaceDecl *getReceiverInterface() const;
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return isObjectReceiver() ? getBase()->getBeginLoc()
                               : getReceiverLocation();

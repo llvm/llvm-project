@@ -32,7 +32,9 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ScopeInfo.h"
@@ -550,38 +552,26 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 /// Look up a method in the receiver type of an Objective-C property
 /// reference.
 static ObjCMethodDecl *LookupMethodInReceiverType(Sema &S, Selector sel,
-                                            const ObjCPropertyRefExpr *PRE) {
-  if (PRE->isObjectReceiver()) {
-    const ObjCObjectPointerType *PT =
-      PRE->getBase()->getType()->castAs<ObjCObjectPointerType>();
-
+                                                  ObjCPropertyRefExpr *PRE) {
+  QualType ReceiverType = PRE->getReceiverType(S.Context);
+  if (const auto *PT = ReceiverType->getAs<ObjCObjectPointerType>()) {
     // Special case for 'self' in class method implementations.
-    if (PT->isObjCClassType() &&
-        S.ObjC().isSelfExpr(const_cast<Expr *>(PRE->getBase()))) {
-      // This cast is safe because isSelfExpr is only true within
-      // methods.
-      ObjCMethodDecl *method =
-        cast<ObjCMethodDecl>(S.CurContext->getNonClosureAncestor());
+    if (PT->isObjCClassType() && PRE->isObjectReceiver() &&
+        S.ObjC().isSelfExpr(PRE->getBase())) {
+      // This cast is safe because isSelfExpr is only true within methods.
+      auto *method =
+          cast<ObjCMethodDecl>(S.CurContext->getNonClosureAncestor());
       return S.ObjC().LookupMethodInObjectType(
           sel, S.Context.getObjCInterfaceType(method->getClassInterface()),
-          /*instance*/ false);
+          /*instance=*/false);
     }
 
-    return S.ObjC().LookupMethodInObjectType(sel, PT->getPointeeType(), true);
+    return S.ObjC().LookupMethodInObjectType(sel, PT->getPointeeType(),
+                                             /*instance=*/true);
   }
 
-  if (PRE->isSuperReceiver()) {
-    if (const ObjCObjectPointerType *PT =
-        PRE->getSuperReceiverType()->getAs<ObjCObjectPointerType>())
-      return S.ObjC().LookupMethodInObjectType(sel, PT->getPointeeType(), true);
-
-    return S.ObjC().LookupMethodInObjectType(sel, PRE->getSuperReceiverType(),
-                                             false);
-  }
-
-  assert(PRE->isClassReceiver() && "Invalid expression");
-  QualType IT = S.Context.getObjCInterfaceType(PRE->getClassReceiver());
-  return S.ObjC().LookupMethodInObjectType(sel, IT, false);
+  return S.ObjC().LookupMethodInObjectType(sel, ReceiverType,
+                                           /*instance=*/false);
 }
 
 bool ObjCPropertyOpBuilder::isWeakProperty() const {
