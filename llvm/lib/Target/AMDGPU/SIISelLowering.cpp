@@ -1056,8 +1056,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasOCPFP8ConversionInsts() ||
-      (Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts())) {
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  if (Subtarget->hasOCPFP8ConversionInsts() || HasE5M3ConversionInsts) {
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
@@ -11019,13 +11020,14 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   // with matching HW conversions. Other formats use the generic expansion.
   APFloatBase::Semantics FPSemantic =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
-  const bool IsE5M3 = FPSemantic == APFloatBase::S_Float8E5M3FNU;
-  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
-      FPSemantic != APFloatBase::S_Float8E5M2 &&
-      !(IsE5M3 && Subtarget->hasFP8ConversionInsts() &&
-        Subtarget->hasFP8E5M3Insts()))
-    return SDValue();
+  const bool IsFP8 = FPSemantic == APFloatBase::S_Float8E4M3FN;
   const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
+  const bool IsE5M3 = FPSemantic == APFloatBase::S_Float8E5M3FNU;
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
+    return SDValue();
 
   EVT DstVT = Op.getValueType();
   if (IsE5M3) {
@@ -11114,12 +11116,14 @@ SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
   // on subtargets that support them. Everything else uses generic expansion.
   APFloatBase::Semantics Sem =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  const bool IsFP8 = Sem == APFloatBase::S_Float8E4M3FN;
+  const bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
   const bool IsE5M3 = Sem == APFloatBase::S_Float8E5M3FNU;
-  if (Sem != APFloatBase::S_Float8E4M3FN && Sem != APFloatBase::S_Float8E5M2 &&
-      !(IsE5M3 && Subtarget->hasFP8ConversionInsts() &&
-        Subtarget->hasFP8E5M3Insts()))
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
     return SDValue();
-  bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
 
   // The HW conversions only support nearest-even. The OCP conversions do not
   // saturate. The unsigned E5M3 conversion always clamps out-of-range inputs,
