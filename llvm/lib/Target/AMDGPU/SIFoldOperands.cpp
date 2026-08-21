@@ -1930,12 +1930,10 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   Register Dst = ChildMI.getOperand(0).getReg();
   Register Src = ChildResult->Reg;
 
-  // Replace Dst only if Src is at least as constrained. Every use of Dst
-  // accepts the register class of Dst, so it also accepts a subclass of it.
-  // An S_AND_B32 parent with a V_AND_B32 child defines Src in the scalar bank,
-  // and putting it into a use that requires a VGPR is illegal.
-  if (!Dst.isVirtual() ||
-      !MRI->getRegClass(Dst)->hasSubClassEq(MRI->getRegClass(Src)))
+  // Src must be legal in every use of Dst. An S_AND_B32 parent with a
+  // V_AND_B32 child defines Src in the scalar bank, and a use that requires a
+  // VGPR does not accept it.
+  if (!Dst.isVirtual() || !MRI->constrainRegClass(Src, MRI->getRegClass(Dst)))
     return false;
 
   MRI->replaceRegWith(Dst, Src);
