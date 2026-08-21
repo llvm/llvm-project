@@ -1,0 +1,65 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/load-segment-64k-align.exe
+# RUN: llvm-profgen --binary=%t/load-segment-64k-align.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --format=text \
+# RUN:   --use-offset=0 --output=%t/profile
+# RUN: FileCheck %s --input-file=%t/profile
+
+## Test a runtime mmap using 0x10000 page alignment instead of the 0x1000
+## baseline used by setPreferredTextSegmentAddresses(). The text segment offset
+## is recorded as 0x13000, while perf reports a 0x10000-aligned mmap starting
+## at file offset 0x10000. Verify that llvm-profgen finds the text segment at
+## offset 0x3000 within that mmap and derives its correct runtime address.
+# CHECK:      0
+# CHECK-NEXT: 1
+# CHECK-NEXT: 143de4->143de0:1
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x0000000000143de0
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x0000000000143de0
+    Offset:       0x0000000000013de0
+    AddressAlign: 0x4
+    ## 143de0: nop
+    ## 143de4: ret
+    Content:      1F2003D5C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x0
+    FileSize: 0x13dd8
+    MemSize:  0x13dd8
+    Align:    0x10000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x13de0
+    VAddr:    0x143de0
+    FileSize: 0x8
+    MemSize:  0x8
+    Align:    0x10000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x143de0
+    Size:    0x8
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x10000) @ 0x10000 00:00 0 0]: r-xp /tmp/load-segment-64k-align.exe
+700000003de0 0x700000003de4/0x700000003de0/P/-/-/0
+

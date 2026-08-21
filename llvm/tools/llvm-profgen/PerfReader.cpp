@@ -611,14 +611,29 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
+    auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
+      return Event.Offset <= FileOffset &&
+             FileOffset - Event.Offset < Event.Size;
+    };
     auto It = llvm::lower_bound(Offsets, Event.Offset);
-    if (It != Offsets.end() && *It == Event.Offset) {
-      // The event is for loading a separate executable segment.
+    if (It != Offsets.end() && MMapContainsFileOffset(*It)) {
+      // setPreferredTextSegmentAddresses() rounds text segment offsets down to
+      // 4 KiB boundaries. On systems with larger OS page sizes (e.g., 64 KiB on
+      // AArch64), the kernel rounds down the mmap offset to the page boundary.
+      // Thus, the mmap region will start before and fully encompass the
+      // expected 4 KiB-aligned offset. Translate the segment start to its
+      // runtime address using its offset within the mmap.
       auto I = std::distance(Offsets.begin(), It);
-      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
-      if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-          Event.Address - Binary->getBaseAddress())
-        exitWithError("Executable segments not loaded consecutively");
+      uint64_t SegmentLoadAddress = Event.Address + (*It - Event.Offset);
+      if (It == Offsets.begin()) {
+        Binary->setBaseAddress(SegmentLoadAddress);
+        Binary->setIsLoadedByMMap(true);
+      } else {
+        const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+        if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
+            SegmentLoadAddress - Binary->getBaseAddress())
+          exitWithError("Executable segments not loaded consecutively");
+      }
     } else {
       if (It == Offsets.begin())
         exitWithError("File offset not found");
