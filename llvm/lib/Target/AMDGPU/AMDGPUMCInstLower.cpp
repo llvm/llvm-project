@@ -468,8 +468,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInstLowering.lower(MI, TmpInst);
 
     // Fix up S_PREFETCH_INST_PC_REL instructions inserted by the ICache
-    // prefetch pass. Replace the slot index in the sdata operand with an
-    // MCExpr that computes the cacheline count based on exact code size.
+    // prefetch pass. The provisional offset operand holds a function-relative
+    // target cache-line index; replace it and sdata with expressions that use
+    // final code layout.
     if (MI->getOpcode() == AMDGPU::S_PREFETCH_INST_PC_REL) {
       const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
       if (MFI->hasICachePrefetch()) {
@@ -477,12 +478,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         constexpr unsigned OffsetIdx = 0;
         constexpr unsigned SdataIdx = 2;
 
-        // The sdata operand contains the slot index [0, N) set by the pass.
-        int64_t SlotIndex = TmpInst.getOperand(SdataIdx).getImm();
+        int64_t TargetCacheLine = TmpInst.getOperand(OffsetIdx).getImm();
 
         // Emit a symbol for each prefetch instruction to calculate the offset.
-        MCSymbol *InstOffsetSym =
-            createTempSymbol("pref_inst_offset_" + Twine(SlotIndex));
+        MCSymbol *InstOffsetSym = createTempSymbol("pref_inst_offset");
         OutStreamer->emitLabel(InstOffsetSym);
 
         // Create MCExpr for code size using label subtraction.
@@ -491,9 +490,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
             MCSymbolRefExpr::create(getPrefetchEndSym(), OutContext),
             MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
 
-        // Create MCExpr for the slot index.
-        const MCExpr *SlotIndexExpr =
-            MCConstantExpr::create(SlotIndex, OutContext);
+        const MCExpr *TargetCacheLineExpr =
+            MCConstantExpr::create(TargetCacheLine, OutContext);
 
         // Create an MCExpr for this prefetch instruction's offset in the
         // function.
@@ -504,9 +502,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         // Create MCExprs that will be evaluated at fixup time when symbol
         // positions are known.
         const MCExpr *CachelinesExpr = AMDGPUMCExpr::createPrefetchCachelines(
-            SlotIndexExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
+            TargetCacheLineExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
         const MCExpr *OffsetExpr = AMDGPUMCExpr::createPrefetchOffset(
-            SlotIndexExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
+            TargetCacheLineExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
 
         // Replace the offset and sdata operands with MCExprs.
         TmpInst.getOperand(OffsetIdx) = MCOperand::createExpr(OffsetExpr);

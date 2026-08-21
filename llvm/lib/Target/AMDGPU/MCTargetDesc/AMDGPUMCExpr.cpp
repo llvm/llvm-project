@@ -253,50 +253,31 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
   return true;
 }
 
-static uint64_t calcPrefetchSize(uint64_t CodeSizeInBytes) {
-  constexpr uint64_t MaxPrefetchSize = 64 * 1024; // 64KB ICache
-  return std::min(CodeSizeInBytes, MaxPrefetchSize);
-}
-
-static uint64_t calcPrefetchSlotOffset(uint64_t SlotIndex) {
-  constexpr unsigned MaxCachelinesPerPrefetch = 32;
-  constexpr unsigned CacheLineSize = 128;
-  constexpr unsigned BytesPerPrefetch =
-      MaxCachelinesPerPrefetch * CacheLineSize;
-  return SlotIndex * BytesPerPrefetch;
-}
-
 bool AMDGPUMCExpr::evaluatePrefetchCachelines(MCValue &Res,
                                               const MCAssembler *Asm) const {
-  uint64_t SlotIndex = 0, CodeSizeInBytes = 0, InstOffset = 0;
-  if (!evaluateMCExprs(Args, Asm, {SlotIndex, CodeSizeInBytes, InstOffset}))
+  uint64_t TargetCacheLine = 0, CodeSizeInBytes = 0, InstOffset = 0;
+  if (!evaluateMCExprs(Args, Asm,
+                       {TargetCacheLine, CodeSizeInBytes, InstOffset}))
     return false;
 
-  // Constants for prefetch calculation.
-  // Each instruction can prefetch up to 32 cachelines (5-bit sdata field, plus
-  // one added). Cacheline size is 128 bytes. Each slot covers 4KiB.
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   constexpr uint64_t MaxCachelinesPerPrefetch = 32;
-  constexpr unsigned CacheLineSize = 128;
-  uint64_t PrefetchSize = calcPrefetchSize(CodeSizeInBytes);
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
+  uint64_t ICacheLines =
+      AMDGPU::IsaInfo::getInstCacheSize(*STI) / CacheLineSize;
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
+  uint64_t PrefetchEnd = std::min(CodeSizeInLines, ICacheLines);
 
-  // Calculate the byte offset for this slot.
-  uint64_t SlotOffset = calcPrefetchSlotOffset(SlotIndex);
-
-  // If this slot starts beyond the prefetchable region, use the minimum
+  // If this target starts beyond the prefetchable region, use the minimum
   // encoded prefetch size. evaluatePrefetchOffset() targets the instruction's
   // own cache line for such slots.
-  if (SlotOffset >= PrefetchSize) {
+  if (TargetCacheLine >= PrefetchEnd) {
     Res = MCValue::get(static_cast<int64_t>(0));
     return true;
   }
 
-  // Calculate remaining bytes from this slot's offset.
-  uint64_t RemainingBytes = PrefetchSize - SlotOffset;
-
-  // Calculate cachelines needed, clamped to max per instruction.
-  uint64_t CachelinesNeeded = divideCeil(RemainingBytes, CacheLineSize);
   uint64_t CachelineCount =
-      std::min(CachelinesNeeded, MaxCachelinesPerPrefetch);
+      std::min(PrefetchEnd - TargetCacheLine, MaxCachelinesPerPrefetch);
 
   // The instruction adds 1 to the encoded sdata, so deduct it here.
   Res = MCValue::get(static_cast<int64_t>(CachelineCount - 1));
@@ -305,14 +286,17 @@ bool AMDGPUMCExpr::evaluatePrefetchCachelines(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluatePrefetchOffset(MCValue &Res,
                                           const MCAssembler *Asm) const {
-  uint64_t SlotIndex = 0, CodeSizeInBytes = 0, InstOffset = 0;
-  if (!evaluateMCExprs(Args, Asm, {SlotIndex, CodeSizeInBytes, InstOffset}))
+  uint64_t TargetCacheLine = 0, CodeSizeInBytes = 0, InstOffset = 0;
+  if (!evaluateMCExprs(Args, Asm,
+                       {TargetCacheLine, CodeSizeInBytes, InstOffset}))
     return false;
 
-  int64_t PrefetchSize = calcPrefetchSize(CodeSizeInBytes);
-
-  int64_t SlotOffset = calcPrefetchSlotOffset(SlotIndex);
-  if (SlotOffset >= PrefetchSize) {
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
+  uint64_t ICacheLines =
+      AMDGPU::IsaInfo::getInstCacheSize(*STI) / CacheLineSize;
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
+  if (TargetCacheLine >= std::min(CodeSizeInLines, ICacheLines)) {
     // Instruction semantics adds one to sdata when calculating the length of
     // the prefetch. This means that even a prefetch instruction with sdata == 0
     // still performs a prefetch. Therefore, to make this prefetch neutral, we
@@ -322,8 +306,8 @@ bool AMDGPUMCExpr::evaluatePrefetchOffset(MCValue &Res,
     return true;
   }
   // Prefetch is relative to this prefetch instruction's PC.
-  int64_t Offset =
-      static_cast<int64_t>(SlotOffset) - static_cast<int64_t>(InstOffset);
+  int64_t Offset = static_cast<int64_t>(TargetCacheLine * CacheLineSize) -
+                   static_cast<int64_t>(InstOffset);
   Res = MCValue::get(Offset);
   return true;
 }
@@ -437,18 +421,18 @@ AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes, MCContext &Ctx) {
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createPrefetchCachelines(
-    const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
+    const MCExpr *TargetCacheLine, const MCExpr *CodeSizeBytes,
     const MCExpr *InstOffset, MCContext &Ctx) {
-  return create(AGVK_PrefetchCachelines, {SlotIndex, CodeSizeBytes, InstOffset},
-                Ctx);
+  return create(AGVK_PrefetchCachelines,
+                {TargetCacheLine, CodeSizeBytes, InstOffset}, Ctx);
 }
 
 const AMDGPUMCExpr *
-AMDGPUMCExpr::createPrefetchOffset(const MCExpr *SlotIndex,
+AMDGPUMCExpr::createPrefetchOffset(const MCExpr *TargetCacheLine,
                                    const MCExpr *CodeSizeBytes,
                                    const MCExpr *InstOffset, MCContext &Ctx) {
-  return create(AGVK_PrefetchOffset, {SlotIndex, CodeSizeBytes, InstOffset},
-                Ctx);
+  return create(AGVK_PrefetchOffset,
+                {TargetCacheLine, CodeSizeBytes, InstOffset}, Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,

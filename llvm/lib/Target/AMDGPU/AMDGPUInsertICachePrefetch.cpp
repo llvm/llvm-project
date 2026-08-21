@@ -99,8 +99,7 @@ static uint64_t getPreferredICachePrefetchSize(const GCNSubtarget &ST) {
   uint32_t Mask, Shift, Width, CacheLineSize;
   ST.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
   uint64_t MaxPrefetchSize = (uint64_t{1} << Width) * CacheLineSize;
-  if (ICachePrefetchSize == 0 ||
-      ICachePrefetchSize % CacheLineSize != 0 ||
+  if (ICachePrefetchSize == 0 || ICachePrefetchSize % CacheLineSize != 0 ||
       ICachePrefetchSize > MaxPrefetchSize)
     report_fatal_error(
         Twine("-amdgpu-icache-prefetch-size must be a non-zero multiple of ") +
@@ -174,6 +173,10 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   if (ICacheSize == 0 || PreferredPrefetchSize == 0)
     return false;
 
+  unsigned CacheLineSize = ST.getInstCacheLineSize();
+  unsigned ICacheLines = ICacheSize / CacheLineSize;
+  unsigned DescriptorPrefetchLines = PreferredPrefetchSize / CacheLineSize;
+
   SIProgramInfo PI;
   uint64_t ProgramSize = PI.getFunctionCodeSize(MF);
   if (ProgramSize <= PreferredPrefetchSize)
@@ -215,11 +218,16 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   constexpr uint64_t PrefetchSlack = 2 * 1024;
   constexpr uint64_t BytesPerPrefetch = 4 * 1024;
   // Each prefetch can transfer up to 32 cachelines of 128 bytes = 4KiB.
-  unsigned MaxNumPrefetchInsts = ICacheSize / BytesPerPrefetch;
+  constexpr unsigned CacheLinesPerPrefetch = 32;
+  unsigned MaxNumPrefetchInsts = llvm::divideCeil(
+      ICacheLines - DescriptorPrefetchLines, CacheLinesPerPrefetch);
   if (MaxNumPrefetchInsts == 0)
     return false;
-  unsigned NumPrefetches =
-      llvm::divideCeil(ProgramSize + PrefetchSlack, BytesPerPrefetch);
+
+  MFI->setICachePrefetchLines(DescriptorPrefetchLines);
+  uint64_t ProgramPrefetchSize = ProgramSize + PrefetchSlack;
+  unsigned NumPrefetches = llvm::divideCeil(
+      ProgramPrefetchSize - PreferredPrefetchSize, BytesPerPrefetch);
   NumPrefetches = std::min(MaxNumPrefetchInsts, NumPrefetches);
 
   size_t NumCandidates = Candidates.size();
@@ -229,31 +237,36 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   // prefetch latency.
   for (size_t Cand = 0, NextCand = 1; Cand < NumCandidates;
        ++Cand, ++NextCand) {
-    unsigned PrefetchBeforeNext = NumPrefetches;
+    unsigned TargetPrefetchCount = NumPrefetches;
     if (NextCand < NumCandidates) {
       // To the offset of the next candidate we add:
       // - PrefetchSlack: To make sure the last prefetch has the correct number
       //   of cache lines.
       // - BytesPerPrefetch: To account for the latency of the prefetch.
-      unsigned PrefetchesBeforeNext =
-          llvm::divideCeil(CandidateOffsets.lookup(Candidates[NextCand]) +
-                               PrefetchSlack + BytesPerPrefetch,
-                           BytesPerPrefetch);
-      PrefetchBeforeNext = std::min(PrefetchesBeforeNext, PrefetchBeforeNext);
+      uint64_t CandidatePrefetchSize =
+          CandidateOffsets.lookup(Candidates[NextCand]) + PrefetchSlack +
+          BytesPerPrefetch;
+
+      if (CandidatePrefetchSize <= PreferredPrefetchSize)
+        continue;
+
+      unsigned PrefetchesBeforeNext = llvm::divideCeil(
+          CandidatePrefetchSize - PreferredPrefetchSize, BytesPerPrefetch);
+      TargetPrefetchCount = std::min(PrefetchesBeforeNext, TargetPrefetchCount);
     }
     MachineBasicBlock *CandBB = Candidates[Cand];
     MachineBasicBlock::iterator InsertPt =
         findMBBInsertionPoint(*CandBB, ST, CandBB == &EntryBB);
-    for (; Prefetches < PrefetchBeforeNext; ++Prefetches) {
+    for (; Prefetches < TargetPrefetchCount; ++Prefetches) {
       BuildMI(*CandBB, InsertPt, DL, TII->get(AMDGPU::S_PREFETCH_INST_PC_REL))
-          .addImm(0)                 // offset (placeholder, fixed up later)
+          .addImm(DescriptorPrefetchLines + Prefetches * CacheLinesPerPrefetch)
+          // Function-relative target cache-line index, fixed up later.
           .addReg(AMDGPU::SGPR_NULL) // soffset
-          .addImm(Prefetches)        // sdata (slot index, fixed up later)
+          .addImm(0)                 // sdata (fixed up later)
           .addImm(0);                // cpol
     }
   }
 
-  MFI->setHasICachePrefetch(true);
   return true;
 }
 

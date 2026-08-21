@@ -120,26 +120,27 @@ public:
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
                                                 MCContext &Ctx);
 
-  /// Create an expression for computing the encoded sdata field for a prefetch
-  /// slot.
-  /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
+  /// Create an expression for computing the encoded sdata field for a
+  /// prefetch target. TargetCacheLine is the function-relative target
+  /// cache-line index.
   /// CodeSizeBytes is the total code size in bytes.
   /// InstOffset is the byte offset of this prefetch instruction from the
   /// function entry.
   /// Returns the requested cacheline count minus one, encoded for the 5-bit
   /// sdata field.
   static const AMDGPUMCExpr *
-  createPrefetchCachelines(const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
+  createPrefetchCachelines(const MCExpr *TargetCacheLine,
+                           const MCExpr *CodeSizeBytes,
                            const MCExpr *InstOffset, MCContext &Ctx);
 
-  /// Create an expression for computing the byte offset for a prefetch slot.
-  /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
+  /// Create an expression for computing the byte offset for a prefetch target.
+  /// TargetCacheLine is the function-relative target cache-line index.
   /// CodeSizeBytes is the total code size in bytes.
   /// InstOffset is the byte offset of this prefetch instruction from the
   /// function entry.
   /// Returns the byte offset from the PC of the corresponding prefetch
-  /// instruction to where this slot should start prefetching.
-  static const AMDGPUMCExpr *createPrefetchOffset(const MCExpr *SlotIndex,
+  /// instruction to where this target should start prefetching.
+  static const AMDGPUMCExpr *createPrefetchOffset(const MCExpr *TargetCacheLine,
                                                   const MCExpr *CodeSizeBytes,
                                                   const MCExpr *InstOffset,
                                                   MCContext &Ctx);

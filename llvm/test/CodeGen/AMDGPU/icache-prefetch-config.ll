@@ -10,14 +10,16 @@
 ; This 20KiB function is between those two preferred sizes.
 define amdgpu_kernel void @size_between_defaults() {
 ; GFX1200-LABEL: size_between_defaults:
-; GFX1200:       s_prefetch_inst_pc_rel
+; GFX1200:       prefetchoffset(128,
+; GFX1200:       .amdhsa_inst_pref_size 127
 ;
 ; GFX1250-LABEL: size_between_defaults:
 ; GFX1250-NOT:   s_prefetch_inst_pc_rel
 ; GFX1250:       s_endpgm
 ;
 ; OVERRIDE-ENABLE-LABEL: size_between_defaults:
-; OVERRIDE-ENABLE:       s_prefetch_inst_pc_rel
+; OVERRIDE-ENABLE:       prefetchoffset(128,
+; OVERRIDE-ENABLE:       .amdhsa_inst_pref_size 127
 ;
 ; OVERRIDE-DISABLE-LABEL: size_between_defaults:
 ; OVERRIDE-DISABLE-NOT:   s_prefetch_inst_pc_rel
@@ -26,11 +28,12 @@ define amdgpu_kernel void @size_between_defaults() {
   ret void
 }
 
-; The GFX12 cache-size feature limits explicit prefetches to eight 4KiB slots.
+; The GFX12 cache-size feature limits explicit prefetches to the four 4KiB
+; slots remaining after the 16KiB descriptor prefetch.
 define amdgpu_kernel void @gfx12_cache_size_limit() {
 ; GFX1200-LABEL: gfx12_cache_size_limit:
-; GFX1200:       prefetchoffset(7,
-; GFX1200-NOT:   prefetchoffset(8,
+; GFX1200:       prefetchoffset(224,
+; GFX1200-NOT:   prefetchoffset(256,
 ; GFX1200:       s_endpgm
   call void asm sideeffect ".space 65536", ""()
   ret void
