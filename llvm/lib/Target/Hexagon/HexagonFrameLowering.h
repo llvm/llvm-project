@@ -82,9 +82,9 @@ public:
                                 MachineBasicBlock::iterator I) const override;
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
       RegScavenger *RS = nullptr) const override;
-  void processFunctionBeforeCalleeSaves(
-      MachineFunction &MF, RegScavenger *RS = nullptr,
-      const RegisterClassInfo *RCI = nullptr) const override;
+  void
+  processFunctionBeforeCalleeSaves(MachineFunction &MF, RegScavenger *RS,
+                                   const RegisterClassInfo &RCI) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
       RegScavenger *RS) const override;
 

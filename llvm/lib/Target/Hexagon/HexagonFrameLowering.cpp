@@ -2361,15 +2361,14 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
 }
 
 void HexagonFrameLowering::processFunctionBeforeCalleeSaves(
-    MachineFunction &MF, RegScavenger *RS, const RegisterClassInfo *RCI) const {
+    MachineFunction &MF, RegScavenger *RS, const RegisterClassInfo &RCI) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   // Replace predicate register pseudo spill code.
   SmallVector<Register, 8> NewRegs;
   expandSpillMacros(MF, NewRegs);
   if (OptimizeSpillSlots && !isOptNone(MF)) {
-    assert(RCI && "RegisterClassInfo required to optimize spill slots");
-    optimizeSpillSlots(MF, NewRegs, *RCI);
+    optimizeSpillSlots(MF, NewRegs, RCI);
   }
 
   // We need to reserve a spill slot if scavenging could potentially require

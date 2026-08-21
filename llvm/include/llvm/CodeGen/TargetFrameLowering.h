@@ -405,9 +405,9 @@ public:
   /// RegisterClassInfo from the pass manager. Default is a no-op.
   /// Required since adding to determineCalleeSaves would require modifying
   /// every target override.
-  virtual void processFunctionBeforeCalleeSaves(
-      MachineFunction &MF, RegScavenger *RS = nullptr,
-      const RegisterClassInfo *RCI = nullptr) const {}
+  virtual void
+  processFunctionBeforeCalleeSaves(MachineFunction &MF, RegScavenger *RS,
+                                   const RegisterClassInfo &RCI) const {}
 
   /// processFunctionBeforeFrameFinalized - This method is called immediately
   /// before the specified function's frame layout (MF.getFrameInfo()) is
