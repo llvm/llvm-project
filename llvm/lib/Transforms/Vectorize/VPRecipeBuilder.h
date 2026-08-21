@@ -78,6 +78,9 @@ public:
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
 
+  /// If \p VPI represents a compressed load or store (as determined by
+  /// LoopVectorizationLegality) whose pointer is derived from \p PhiR, lower it
+  /// to a llvm.masked.expandload or llvm.masked.compressstore intrinsic.
   VPWidenMemIntrinsicRecipe *
   widenIfCompressedLoadOrStore(VPInstruction *VPI, VPMonotonicPHIRecipe *PhiR);
 
