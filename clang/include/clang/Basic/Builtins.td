@@ -635,18 +635,10 @@ def IsNan : Builtin {
   let Prototype = "int(...)";
 }
 
-def IsNanF : Builtin {
-  let Spellings = ["__builtin_isnanf"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    Constexpr];
-  let Prototype = "int(float)";
-}
-
-def IsNanL : Builtin {
-  let Spellings = ["__builtin_isnanl"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    Constexpr];
-  let Prototype = "int(long double)";
+def IsNaNF : Builtin, Template<["float", "long double"], ["f", "l"]> {
+  let Spellings = ["__builtin_isnan"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "int(T)";
 }
 
 def IsNormal : Builtin {
