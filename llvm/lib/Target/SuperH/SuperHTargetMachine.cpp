@@ -65,8 +65,6 @@ void SuperHPassConfig::addPreSched2() {
 }
 
 void SuperHPassConfig::addPreEmitPass() {
-  addPass(&BranchFolderPassID);
-  addPass(&IfConverterID);
   addPass(createSuperHFillDelaySlotsPass());
 }
 
