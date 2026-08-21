@@ -13,11 +13,7 @@
 ; Motivating case from the issue: (x & m) + C <u m + C+1 -> true
 define i1 @and_plus_offset_ult_i32(i32 %x, i32 %m) {
 ; CHECK-LABEL: @and_plus_offset_ult_i32(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
-; CHECK-NEXT:    [[LHS:%.*]] = add nuw i32 [[A]], 1024
-; CHECK-NEXT:    [[RHS:%.*]] = add nuw i32 [[M]], 1025
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = and i32 %x, %m
   %lhs = add nuw i32 %a, 1024
@@ -41,11 +37,7 @@ define i1 @and_plus_offset_ule_equal(i32 %x, i32 %m) {
 ; ule variant: CB > CA, (x & m) + C <=u m + C+5 -> true
 define i1 @and_plus_offset_ule_strict(i32 %x, i32 %m) {
 ; CHECK-LABEL: @and_plus_offset_ule_strict(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
-; CHECK-NEXT:    [[LHS:%.*]] = add nuw i32 [[A]], 100
-; CHECK-NEXT:    [[RHS:%.*]] = add nuw i32 [[M]], 105
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = and i32 %x, %m
   %lhs = add nuw i32 %a, 100
@@ -57,11 +49,7 @@ define i1 @and_plus_offset_ule_strict(i32 %x, i32 %m) {
 ; i64 variant
 define i1 @and_plus_offset_ult_i64(i64 %x, i64 %m) {
 ; CHECK-LABEL: @and_plus_offset_ult_i64(
-; CHECK-NEXT:    [[A:%.*]] = and i64 [[X:%.*]], [[M:%.*]]
-; CHECK-NEXT:    [[LHS:%.*]] = add nuw i64 [[A]], 4096
-; CHECK-NEXT:    [[RHS:%.*]] = add nuw i64 [[M]], 4097
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = and i64 %x, %m
   %lhs = add nuw i64 %a, 4096
@@ -73,11 +61,7 @@ define i1 @and_plus_offset_ult_i64(i64 %x, i64 %m) {
 ; Constant operand is on the first (non-canonical) side of add.
 define i1 @and_plus_offset_ult_commuted(i32 %x, i32 %m) {
 ; CHECK-LABEL: @and_plus_offset_ult_commuted(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
-; CHECK-NEXT:    [[LHS:%.*]] = add nuw i32 1024, [[A]]
-; CHECK-NEXT:    [[RHS:%.*]] = add nuw i32 1025, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = and i32 %x, %m
   %lhs = add nuw i32 1024, %a
