@@ -250,6 +250,17 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   uint64_t BytesToSkip = 0;
 
   if (!CurrentBundle) {
+    // LOAD_MULT_REG_WRITE is used by PS_crash (llvm.trap).  It
+    // encodes R1 = memw(R1++#0) where both the load destination and the
+    // post-increment destination write R1.  Intercept it here so the
+    // disassembler emits PS_crash rather than a raw instruction with a
+    // conflicting register constraint.
+    if (Bytes.size() >= HEXAGON_INSTR_SIZE &&
+        support::endian::read32le(Bytes.data()) == LOAD_MULT_REG_WRITE) {
+      MI.setOpcode(Hexagon::PS_crash);
+      Size = HEXAGON_INSTR_SIZE;
+      return MCDisassembler::Success;
+    }
     if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
       Size = BytesToSkip;
       resetBundle();
@@ -274,6 +285,18 @@ DecodeStatus HexagonDisassembler::getInstructionBundle(MCInst &MI,
   Size = 0;
   uint64_t BytesToSkip = 0;
   assert(!CurrentBundle);
+
+  // See getInstruction() for the PS_crash / LOAD_MULT_REG_WRITE rationale.
+  if (Bytes.size() >= HEXAGON_INSTR_SIZE &&
+      support::endian::read32le(Bytes.data()) == LOAD_MULT_REG_WRITE) {
+    MI.setOpcode(Hexagon::BUNDLE);
+    MI.addOperand(MCOperand::createImm(0));
+    MCInst *CrashInst = getContext().createMCInst();
+    CrashInst->setOpcode(Hexagon::PS_crash);
+    MI.addOperand(MCOperand::createInst(CrashInst));
+    Size = HEXAGON_INSTR_SIZE;
+    return MCDisassembler::Success;
+  }
 
   if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
     Size = BytesToSkip;

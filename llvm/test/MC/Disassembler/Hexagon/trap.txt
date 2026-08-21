@@ -1,0 +1,7 @@
+# RUN: llvm-mc -triple hexagon -disassemble < %s | FileCheck %s
+
+## 0x9b810001 is used by llvm.trap.  It encodes R1 = memw(R1++#0)
+## where both the load destination and the post-increment destination
+## write R1, triggering a hardware "multiple writes to register" exception.
+0x01 0x00 0x81 0x9b
+# CHECK: r1 = memw(r1++#0) // llvm.trap
