@@ -5211,9 +5211,9 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
   if constexpr (!isModes) {
-    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
     mlir::Type i32Ty = builder.getIntegerType(32);
     mlir::Type i32PtrTy = builder.getRefType(i32Ty);
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
     if (triple.isOSAIX()) {
       // On AIX, fegetenv/fesetenv does not round-trip the FPSCR trap-enable
       // bits [7:3].
@@ -5223,12 +5223,12 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
       //   bytes [20, 28) - raw FPSCR double from mffs (trap-enable bits [7:3])
       static constexpr int kAIXFenvTSize = 20; // sizeof(fenv_t) on AIX
       mlir::Type i8Ty = builder.getIntegerType(8);
-      mlir::Type f64Ty = builder.getF64Type();
       mlir::Type idxTy = builder.getIndexType();
+      mlir::Type f64Ty = builder.getF64Type();
+      mlir::Type f64PtrTy = builder.getRefType(f64Ty);
       mlir::Type i8SeqTy =
           fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
       mlir::Type i8SeqPtrTy = builder.getRefType(i8SeqTy);
-      mlir::Type f64PtrTy = builder.getRefType(f64Ty);
 
       // Cast __data base pointer to !fir.ref<!fir.array<?xi8>> for GEP
       mlir::Value base = fir::ConvertOp::create(builder, loc, i8SeqPtrTy,
@@ -5268,22 +5268,21 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
         // are not restored by fesetenv on AIX.
         fir::CallOp::create(builder, loc, setFlm, fpscr);
       }
-    } else {
-      mlir::Value addr =
-          fir::ConvertOp::create(builder, loc, i32PtrTy, fir::getBase(args[0]));
-      if constexpr (isGet) {
-        genRuntimeCall("fegetenv", i32Ty, addr);
-      } else {
-        genRuntimeCall("fesetenv", i32Ty, addr);
-      }
+      return;
+    } else if (triple.isPPC()) {
+      // Non-AIX PPC (e.g. powerpc64le)
+      mlir::Value addr = fir::ConvertOp::create(builder, loc, i32PtrTy,
+                                                fir::getBase(args[0]));
+      genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
+      return;
     }
-    return;
   }
 
-// isModes is true
 #ifndef __GLIBC_USE_IEC_60559_BFP_EXT // only use of "#include <cfenv>"
   // No definitions of fegetmode, fesetmode
-  llvm::StringRef func = isGet ? "ieee_get_modes" : "ieee_set_modes";
+  llvm::StringRef func = isModes
+                             ? (isGet ? "ieee_get_modes" : "ieee_set_modes")
+                             : (isGet ? "ieee_get_status" : "ieee_set_status");
   TODO(loc, "intrinsic module procedure: " + func);
 #else
   mlir::Type i32Ty = builder.getIntegerType(32);
@@ -5307,7 +5306,9 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     fir::ResultOp::create(builder, loc, addr);
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    mlir::Value byteSize = fir::runtime::genGetModesTypeSize(builder, loc);
+    mlir::Value byteSize =
+        isModes ? fir::runtime::genGetModesTypeSize(builder, loc)
+                : fir::runtime::genGetStatusTypeSize(builder, loc);
     byteSize = builder.createConvert(loc, builder.getIndexType(), byteSize);
     addr = fir::AllocMemOp::create(builder, loc, extractSequenceType(heapTy),
                                    /*typeparams=*/mlir::ValueRange(), byteSize);
@@ -5322,7 +5323,8 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     // Place floating point environment data in __data storage.
     addr = fir::ConvertOp::create(builder, loc, ptrTy, getBase(args[0]));
   }
-  llvm::StringRef func = isGet ? "fegetmode" : "fesetmode";
+  llvm::StringRef func = isModes ? (isGet ? "fegetmode" : "fesetmode")
+                                 : (isGet ? "fegetenv" : "fesetenv");
   genRuntimeCall(func, i32Ty, addr);
 #endif
 }

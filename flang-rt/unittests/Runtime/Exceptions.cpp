@@ -146,15 +146,17 @@ TEST(Exceptions, ClearOneLeavesOthersAlone) {
 TEST(Exceptions, GetStatusTypeSizeMatchesPlatformLayout) {
   const std::size_t sz{RTNAME(GetStatusTypeSize)()};
 #if defined(_AIX)
+  // The size must match the value (20) hardocded in IntrinsicCall.cpp
+  EXPECT_EQ(sizeof(std::fenv_t), 20u) << "expected size(fenv_t)=20";
   EXPECT_EQ(sz, sizeof(std::fenv_t) + sizeof(double))
       << "expected sizeof(fenv_t)+sizeof(double)="
       << sizeof(std::fenv_t) + sizeof(double);
-#else
-  EXPECT_EQ(sz, sizeof(std::fenv_t))
-      << "expected sizeof(fenv_t)=" << sizeof(std::fenv_t);
-#endif
   // The size must fit in ieee_status_type.__data as integer(4) with
   // extent _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT.
   EXPECT_LE(sz, 32u)
       << "GetStatusTypeSize exceeds the 32-byte ieee_status_type.__data field";
+#else
+  EXPECT_EQ(sz, sizeof(std::fenv_t))
+      << "expected sizeof(fenv_t)=" << sizeof(std::fenv_t);
+#endif
 }
