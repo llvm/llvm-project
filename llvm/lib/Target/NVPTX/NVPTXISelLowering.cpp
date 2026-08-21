@@ -7289,7 +7289,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
   case Intrinsic::nvvm_fadd_sat:
-  case Intrinsic::nvvm_fadd_sat_ftz: {
+  case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RM = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
     if (SDValue V = diagnoseInvalidFAdd(N, DCI.DAG, IID, RM, STI))

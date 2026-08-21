@@ -855,16 +855,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat.ftz",
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
                         llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat.ftz",
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
                         llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat.ftz",
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
                         llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat.ftz",
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
                         llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:

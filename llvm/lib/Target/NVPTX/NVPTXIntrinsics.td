@@ -2279,7 +2279,7 @@ foreach t = [F16RT, F16X2RT] in
     foreach sat = ["", "_sat"] in
       def INT_NVVM_ADD_RN # !toupper(ftz # sat # "_" # t.PtxType) :
         F_MATH_2_RND_TY<!subst("_", ".", "add_rn" # ftz # sat # "_" # t.PtxType),
-                        t, !cast<Intrinsic>("int_nvvm_fadd" # sat # ftz),
+                        t, !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat),
                         rnd_rn_imm>;
 
 foreach t = [BF16RT, BF16X2RT] in
@@ -2292,9 +2292,9 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
 
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in
-      def INT_NVVM_ADD # !toupper(rnd # sat # ftz) # _F :
-        F_MATH_2_RND_TY<!subst("_", ".", "add" # rnd # sat # ftz # "_f32"),
-                        F32RT, !cast<Intrinsic>("int_nvvm_fadd" # sat # ftz),
+      def INT_NVVM_ADD # !toupper(rnd # ftz # sat) # _F :
+        F_MATH_2_RND_TY<!subst("_", ".", "add" # rnd # ftz # sat # "_f32"),
+                        F32RT, !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat),
                         rnd_imm>;
 
     def INT_NVVM_ADD # !toupper(rnd # ftz) # _F32X2 :
@@ -2373,10 +2373,10 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
 
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in {
-      defvar add_intrin = !cast<Intrinsic>("int_nvvm_fadd" # sat # ftz);
+      defvar add_intrin = !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat);
       def INT_NVVM_SUB # rnd # ftz # sat # _F : 
         BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-          !subst("_", ".", "sub" # rnd # sat # ftz # "_f32"),
+          !subst("_", ".", "sub" # rnd # ftz # sat # "_f32"),
           [(set f32:$dst,
             (add_intrin f32:$a, (f32 (fneg f32:$b)), rnd_imm))]>;
     }

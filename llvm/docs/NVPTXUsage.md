@@ -1315,15 +1315,15 @@ vectors is added to `%c` to produce the return.
 
 ##### Syntax:
 
-This is an overloaded intrinsic. The '`.sat`' and '`.ftz`' modifiers are
+This is an overloaded intrinsic. The '`.ftz`' and '`.sat`' modifiers are
 optional.
 
 ```llvm
-declare half         @llvm.nvvm.fadd{.sat}{.ftz}.f16(half %a, half %b, i32 immarg %rnd)
-declare <2 x half>   @llvm.nvvm.fadd{.sat}{.ftz}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
+declare half         @llvm.nvvm.fadd{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %rnd)
+declare <2 x half>   @llvm.nvvm.fadd{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
 declare bfloat       @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 immarg %rnd)
 declare <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %rnd)
-declare float        @llvm.nvvm.fadd{.sat}{.ftz}.f32(float %a, float %b, i32 immarg %rnd)
+declare float        @llvm.nvvm.fadd{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %rnd)
 declare <2 x float>  @llvm.nvvm.fadd{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %rnd)
 declare double       @llvm.nvvm.fadd.f64(double %a, double %b, i32 immarg %rnd)
 ```
@@ -1356,13 +1356,13 @@ PTX instruction. The supported combinations are:
      - Modifiers
    * - `half`, `<2 x half>`
      - `rn`
-     - `.sat`, `.ftz`
+     - `.ftz`, `.sat`
    * - `bfloat`, `<2 x bfloat>`
      - `rn`
      - None
    * - `float`
      - `rn`, `rz`, `rp`, `rm`
-     - `.sat`, `.ftz`
+     - `.ftz`, `.sat`
    * - `<2 x float>`
      - `rn`, `rz`, `rp`, `rm`
      - `.ftz`
