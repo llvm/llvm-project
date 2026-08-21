@@ -5082,6 +5082,15 @@ public:
                              MutableArrayRef<Expr *> Args);
   Attr *CreateAnnotationAttr(const ParsedAttr &AL);
 
+  /// CreateUnknownAttr - Retain an unrecognized attribute \p AL as an
+  /// UnknownAttr, interning its argument-clause text so the node is
+  /// self-contained (see UnknownAttr in Attr.td).
+  Attr *CreateUnknownAttr(const ParsedAttr &AL);
+
+  /// CreateUnknownTypeAttr - Retain an unrecognized type-position attribute
+  /// \p AL as an UnknownTypeAttr (the TypeAttr counterpart of UnknownAttr).
+  Attr *CreateUnknownTypeAttr(const ParsedAttr &AL);
+
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
                                           MSInheritanceModel SemanticSpelling);

@@ -1958,6 +1958,15 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
                              ->getExtInfo().getProducesResult())
     return;
 
+  if (T->getAttrKind() == attr::UnknownType) {
+    // A retained unrecognized type attribute has no spelling; reconstruct
+    // "[[scope::name(args)]]" from its interned name/scope and argument text.
+    OS << ' ';
+    if (const auto *UA = dyn_cast_or_null<UnknownTypeAttr>(T->getAttr()))
+      printUnknownAttrPretty(OS, *UA, UA->getArgsText());
+    return;
+  }
+
   if (T->getAttrKind() == attr::LifetimeBound) {
     OS << " [[clang::lifetimebound]]";
     return;
@@ -2082,6 +2091,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveMost:
   case attr::PreserveNone:
   case attr::OverflowBehavior:
+  case attr::UnknownType:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:

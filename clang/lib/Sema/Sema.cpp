@@ -31,6 +31,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -3108,4 +3109,34 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+// The argument-clause text captured by the parser for an unknown attribute.
+// Interning it (UnknownAttr/UnknownTypeAttr use a StringArgument) makes the
+// retained attribute self-contained: unlike a SourceRange, interned text can be
+// cloned for template instantiation, serialized, and created implicitly, and it
+// prints without a SourceManager.
+static StringRef unknownAttrArgsText(Sema &S, const ParsedAttr &AL) {
+  SourceRange R = AL.getUnknownAttrArgsRange();
+  if (!R.isValid())
+    return StringRef();
+  // The range spans the '(' to the ')' of the argument clause, so getSourceText
+  // returns that source span verbatim. Because those delimiters are ordinary
+  // source locations in the common case, the clause is reproduced exactly as
+  // written: a macro used as an argument (e.g. `[[vendor::attr(M)]]`) is kept
+  // unexpanded as `M`, and any comments within the clause are preserved. Only
+  // when the parentheses themselves come from a macro expansion (the whole
+  // attribute is macro-generated) does makeFileCharRange return an empty range;
+  // the attribute is still retained, just without its argument text, which is
+  // preferable to reproducing tokens the user never wrote.
+  return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
+                              S.getSourceManager(), S.getLangOpts());
+}
+
+Attr *Sema::CreateUnknownAttr(const ParsedAttr &AL) {
+  return UnknownAttr::Create(Context, unknownAttrArgsText(*this, AL), AL);
+}
+
+Attr *Sema::CreateUnknownTypeAttr(const ParsedAttr &AL) {
+  return UnknownTypeAttr::Create(Context, unknownAttrArgsText(*this, AL), AL);
 }

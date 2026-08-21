@@ -15,9 +15,22 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/IdentifierTable.h"
 #include <optional>
 #include <type_traits>
 using namespace clang;
+
+void clang::printUnknownAttrPretty(raw_ostream &OS,
+                                   const AttributeCommonInfo &Info,
+                                   StringRef ArgsText) {
+  OS << "[[";
+  if (const IdentifierInfo *Scope = Info.getScopeName())
+    OS << Scope->getName() << "::";
+  if (const IdentifierInfo *Name = Info.getAttrName())
+    OS << Name->getName();
+  // ArgsText already includes the surrounding parentheses, or is empty.
+  OS << ArgsText << "]]";
+}
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,
                                      const PrintingPolicy &Policy) const {

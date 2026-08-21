@@ -7599,6 +7599,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
           << AL.getAttrName() << AL.getRange();
     } else {
       S.DiagnoseUnknownAttribute(AL);
+      // Retain a genuinely unknown attribute in the AST so tooling and plugins
+      // can recover it. Target-specific attributes that merely do not exist on
+      // this target are left dropped. Limited to C++ [[...]] syntax for now.
+      // An unrecognized attribute-token is ignored per [dcl.attr.grammar]/8
+      // (https://eel.is/c++draft/dcl.attr.grammar#8).
+      if (D && AL.getKind() == ParsedAttr::UnknownAttribute &&
+          AL.isCXX11Attribute())
+        D->addAttr(S.CreateUnknownAttr(AL));
     }
     return;
   }

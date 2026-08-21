@@ -3095,7 +3095,8 @@ private:
                                ParsedAttributes &Attrs, SourceLocation *EndLoc,
                                IdentifierInfo *ScopeName,
                                SourceLocation ScopeLoc,
-                               CachedTokens &OpenMPTokens);
+                               CachedTokens &OpenMPTokens,
+                               SourceRange *UnknownArgsRange = nullptr);
 
   /// Parse the argument to C++23's [[assume()]] attribute. Returns true on
   /// error.

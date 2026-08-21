@@ -42,6 +42,13 @@ class OMPTraitInfo;
 class OpenACCClause;
 struct StructuralEquivalenceContext;
 
+/// Print a retained unknown attribute as "[[scope::name(args)]]", where
+/// \p ArgsText is the argument-clause text (with parentheses) or empty. Shared
+/// by the declaration and statement printers; needs no SourceManager because
+/// UnknownAttr stores the argument text rather than a source range.
+void printUnknownAttrPretty(raw_ostream &OS, const AttributeCommonInfo &Info,
+                            StringRef ArgsText);
+
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
 private:

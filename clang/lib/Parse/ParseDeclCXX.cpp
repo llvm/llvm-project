@@ -4456,7 +4456,8 @@ bool Parser::ParseCXXAssumeAttributeArg(
 bool Parser::ParseCXX11AttributeArgs(
     IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, CachedTokens &OpenMPTokens) {
+    SourceLocation ScopeLoc, CachedTokens &OpenMPTokens,
+    SourceRange *UnknownArgsRange) {
   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
   SourceLocation LParenLoc = Tok.getLocation();
   const LangOptions &LO = getLangOpts();
@@ -4497,9 +4498,14 @@ bool Parser::ParseCXX11AttributeArgs(
       !hasAttribute(LO.CPlusPlus ? AttributeCommonInfo::Syntax::AS_CXX11
                                  : AttributeCommonInfo::Syntax::AS_C23,
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
-    // Eat the left paren, then skip to the ending right paren.
+    // Eat the left paren, then skip to the ending right paren. SkipUntil tracks
+    // nested ()/[]/{} so this consumes the whole balanced argument clause.
     ConsumeParen();
     SkipUntil(tok::r_paren);
+    // Remember the "(...)" range so the attribute can be retained as an
+    // UnknownAttr; PrevTokLocation is the matching ')' just consumed.
+    if (UnknownArgsRange)
+      *UnknownArgsRange = SourceRange(LParenLoc, PrevTokLocation);
     return false;
   }
 
@@ -4692,20 +4698,26 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     }
 
     // Parse attribute arguments
+    SourceRange UnknownArgsRange;
     if (Tok.is(tok::l_paren))
-      AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
-                                           ScopeName, ScopeLoc, OpenMPTokens);
+      AttrParsed =
+          ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc, ScopeName,
+                                  ScopeLoc, OpenMPTokens, &UnknownArgsRange);
 
     if (!AttrParsed) {
-      Attrs.addNew(AttrName,
-                   SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
-                                   ? ScopeLoc
-                                   : AttrLoc,
-                               AttrLoc),
-                   AttributeScopeInfo(ScopeName, ScopeLoc, CommonScopeLoc),
-                   nullptr, 0,
-                   getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
-                                           : ParsedAttr::Form::C23());
+      ParsedAttr *Attr = Attrs.addNew(
+          AttrName,
+          SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
+                          ? ScopeLoc
+                          : AttrLoc,
+                      AttrLoc),
+          AttributeScopeInfo(ScopeName, ScopeLoc, CommonScopeLoc), nullptr, 0,
+          getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
+                                  : ParsedAttr::Form::C23());
+      // Carry the captured argument-clause range (if any) so Sema can retain it
+      // as an UnknownAttr.
+      if (UnknownArgsRange.isValid())
+        Attr->setUnknownAttrArgsRange(UnknownArgsRange);
       AttrParsed = true;
     }
 

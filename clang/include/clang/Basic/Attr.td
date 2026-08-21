@@ -3847,6 +3847,45 @@ def PointerAuth : TypeAttr {
   let Documentation = [PtrAuthDocs];
 }
 
+def Unknown : DeclOrStmtAttr {
+  // Retains a C++ [[...]] attribute that Clang does not recognize, so that it
+  // survives in the AST (for -ast-print round-tripping and plugin inspection)
+  // instead of being dropped after -Wunknown-attributes. Created only by the
+  // parser when it meets an unrecognized attribute; it has no spelling of its
+  // own and is never matched by name.
+  //
+  // The attribute name, scope and syntax come from the AttributeCommonInfo
+  // base. The only extra payload is ArgsText, the source text of the argument
+  // clause "(...)" as written (empty when there is none), interned into the
+  // ASTContext. It is stored as text rather than a SourceRange so the node is
+  // self-contained: it can be cloned for template instantiation, serialized to
+  // a module, and created implicitly, none of which have a live source range,
+  // and it prints without a SourceManager. The argument tokens are deliberately
+  // not parsed into expressions, which keeps non-expression argument grammars
+  // (e.g. the C++ profiles [[profiles::suppress(type.1)]]) representable; a
+  // consumer that wants structure re-lexes ArgsText itself.
+  //
+  // The DeclOrStmtAttr base lets an unknown attribute be retained in both
+  // declaration and statement positions (e.g. [[suppress(...)]] on a block).
+  // A type-position attribute cannot share this base and is retained as the
+  // separate UnknownType attribute below.
+  let Spellings = [];
+  let Args = [StringArgument<"ArgsText">];
+  // Synthesized by the compiler to retain an unrecognized attribute; it has no
+  // user-facing spelling, so it is internal rather than documented.
+  let Documentation = [InternalOnly];
+}
+
+def UnknownType : TypeAttr {
+  // Type-position counterpart of Unknown (see it for the rationale): retains an
+  // unrecognized [[...]] attribute that appertains to a type, wrapped in an
+  // AttributedType. It carries the same interned argument text, but cannot share
+  // Unknown's DeclOrStmtAttr base, so it is a separate TypeAttr.
+  let Spellings = [];
+  let Args = [StringArgument<"ArgsText">];
+  let Documentation = [InternalOnly];
+}
+
 def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
                    C23<"", "maybe_unused", 202106>];

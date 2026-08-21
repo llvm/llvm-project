@@ -8142,6 +8142,16 @@ TEST_P(ImportAttributes, ImportEnableIf) {
   EXPECT_EQ(FromAttr->getMessage(), ToAttr->getMessage());
 }
 
+TEST_P(ImportAttributes, ImportUnknown) {
+  UnknownAttr *FromAttr, *ToAttr;
+  importAttr<VarDecl>("int test [[ns::transient(a, b)]];", FromAttr, ToAttr);
+  // The retained argument text survives import and is re-interned into the
+  // destination context: equal contents at a different address. A source-range
+  // payload could not be imported into a fresh context this way.
+  EXPECT_EQ(FromAttr->getArgsText(), ToAttr->getArgsText());
+  EXPECT_NE(FromAttr->getArgsText().data(), ToAttr->getArgsText().data());
+}
+
 TEST_P(ImportAttributes, ImportGuardedVar) {
   GuardedVarAttr *FromAttr, *ToAttr;
   importAttr<VarDecl>("int test __attribute__((guarded_var));", FromAttr,

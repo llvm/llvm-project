@@ -277,6 +277,18 @@ DeclPrinter::prettyPrintAttributes(const Decl *D,
 #define PRAGMA_SPELLING_ATTR(X) case attr::X:
 #include "clang/Basic/AttrList.inc"
       break;
+    case attr::Unknown: {
+      // UnknownAttr retains an attribute Clang did not recognize. It has no
+      // spelling, so the generated printPretty emits nothing; reconstruct
+      // "[[scope::name(args)]]" from the retained name/scope and argument text.
+      const auto *UA = cast<UnknownAttr>(A);
+      AttrPosAsWritten APos = getPosAsWritten(A, D);
+      if (Pos == AttrPosAsWritten::Default || Pos == APos) {
+        AOut << LS;
+        printUnknownAttrPretty(AOut, *UA, UA->getArgsText());
+      }
+      break;
+    }
     default:
       AttrPosAsWritten APos = getPosAsWritten(A, D);
       assert(APos != AttrPosAsWritten::Default &&

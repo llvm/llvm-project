@@ -9095,6 +9095,16 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::UnknownAttribute:
       if (attr.isStandardAttributeSyntax()) {
         state.getSema().DiagnoseUnknownAttribute(attr);
+        // Retain the unknown type-position attribute on an AttributedType so
+        // tooling can recover it, mirroring the declaration and statement
+        // paths. An unrecognized attribute-token is ignored per
+        // [dcl.attr.grammar]/8 (https://eel.is/c++draft/dcl.attr.grammar#8), so
+        // this is not an error. Limited to C++ [[...]] syntax for now.
+        if (attr.isCXX11Attribute()) {
+          Attr *A = state.getSema().CreateUnknownTypeAttr(attr);
+          type = state.getAttributedType(A, type, type);
+          attr.setUsedAsTypeAttr();
+        }
         // Mark the attribute as invalid so we don't emit the same diagnostic
         // multiple times.
         attr.setInvalid();
