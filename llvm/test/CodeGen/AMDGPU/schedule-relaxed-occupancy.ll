@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgpu9.06  < %s | FileCheck --check-prefix=OCC %s
+; RUN: llc -mtriple=amdgpu9.06 -amdgpu-use-amdgpu-trackers=0  < %s | FileCheck --check-prefix=OCC %s
 ; RUN: llc -mtriple=amdgpu9.06 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=OCC-GCNTRACKER %s
-; RUN: llc -mtriple=amdgpu9.06 -amdgpu-schedule-relaxed-occupancy=true  < %s | FileCheck --check-prefix=RELAX %s
+; RUN: llc -mtriple=amdgpu9.06 -amdgpu-use-amdgpu-trackers=0 -amdgpu-schedule-relaxed-occupancy=true  < %s | FileCheck --check-prefix=RELAX %s
 ; RUN: llc -mtriple=amdgpu9.06 -amdgpu-use-amdgpu-trackers=1 -amdgpu-schedule-relaxed-occupancy=true  < %s | FileCheck --check-prefix=RELAX-GCNTRACKER %s
 
 

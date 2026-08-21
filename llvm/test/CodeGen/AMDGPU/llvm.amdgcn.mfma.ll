@@ -9964,32 +9964,34 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v26, a2
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v25, a1
 ; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v24, a0
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v31, a7
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v30, a6
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v29, a5
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:96
-; NOLIT-SRCC-NEXT:    s_nop 0
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v3, a7
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v2, a6
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v1, a5
-; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v0, a4
+; NOLIT-SRCC-NEXT:    v_accvgpr_read_b32 v28, a4
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:112
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:64
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:80
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:32
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:48
 ; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1]
-; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:16
+; NOLIT-SRCC-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:16
 ; NOLIT-SRCC-NEXT:    s_endpgm
 ;
 ; GFX908-GISEL-LABEL: test_mfma_f32_32x32x1f32_vecarg:
 ; GFX908-GISEL:       ; %bb.0: ; %bb
 ; GFX908-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX908-GISEL-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; GFX908-GISEL-NEXT:    v_mov_b32_e32 v16, 1.0
 ; GFX908-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-GISEL-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; GFX908-GISEL-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX908-GISEL-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
 ; GFX908-GISEL-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
-; GFX908-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-GISEL-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
+; GFX908-GISEL-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX908-GISEL-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
+; GFX908-GISEL-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; GFX908-GISEL-NEXT:    s_waitcnt vmcnt(4)
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a2, v2
@@ -10006,30 +10008,27 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a13, v13
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a14, v14
 ; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a15, v15
-; GFX908-GISEL-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1] offset:64
-; GFX908-GISEL-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:80
-; GFX908-GISEL-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:96
-; GFX908-GISEL-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:112
+; GFX908-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX908-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a31, v15
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a30, v14
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a29, v13
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a28, v12
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a27, v11
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a26, v10
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a25, v9
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a24, v8
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a23, v7
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a22, v6
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a21, v5
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a20, v4
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a19, v3
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a18, v2
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a17, v1
-; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a16, v0
-; GFX908-GISEL-NEXT:    v_mov_b32_e32 v0, 2.0
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a16, v16
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a17, v17
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a18, v18
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a19, v19
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a20, v20
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a21, v21
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a22, v22
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a23, v23
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a24, v24
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a25, v25
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a26, v26
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a27, v27
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a28, v28
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a29, v29
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a30, v30
+; GFX908-GISEL-NEXT:    v_accvgpr_write_b32 a31, v31
+; GFX908-GISEL-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-GISEL-NEXT:    s_nop 1
-; GFX908-GISEL-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v16, v0, a[0:31] cbsz:1 abid:2 blgp:3
+; GFX908-GISEL-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31] cbsz:1 abid:2 blgp:3
 ; GFX908-GISEL-NEXT:    s_nop 15
 ; GFX908-GISEL-NEXT:    s_nop 1
 ; GFX908-GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
@@ -10154,19 +10153,18 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v26, a2
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v25, a1
 ; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v24, a0
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v31, a7
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v30, a6
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v29, a5
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:96
-; LIT-SRCC-NEXT:    s_nop 0
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v3, a7
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v2, a6
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v1, a5
-; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v0, a4
+; LIT-SRCC-NEXT:    v_accvgpr_read_b32 v28, a4
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:112
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:64
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:80
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:32
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:48
 ; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1]
-; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:16
+; LIT-SRCC-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:16
 ; LIT-SRCC-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: test_mfma_f32_32x32x1f32_vecarg:

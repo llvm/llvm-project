@@ -593,8 +593,8 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class(ptr add
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[32:63], a34, a33, v[0:31]
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0x41000000
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a32
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0x41800000
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    v_mov_b64_e32 v[2:3], v[32:33]
 ; CHECK-NEXT:    v_mov_b64_e32 v[4:5], v[34:35]
@@ -621,10 +621,9 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class(ptr add
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[10:13], s[0:1] offset:32
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[6:9], s[0:1] offset:16
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v26, 0x41000000
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0x41800000
-; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v1, v2, a[0:31]
+; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v26, v1, a[0:31]
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    global_store_dwordx4 v0, a[24:27], s[2:3] offset:96

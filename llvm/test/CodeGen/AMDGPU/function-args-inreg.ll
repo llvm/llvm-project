@@ -1607,11 +1607,9 @@ define void @void_func_v32i32_v2i32_v2f32_inreg(<32 x i32> inreg %arg0, <2 x i32
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v19
-; GFX9-NEXT:    v_readfirstlane_b32 s5, v18
-; GFX9-NEXT:    v_mov_b32_e32 v18, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v19, s4
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v3
 ; GFX9-NEXT:    v_readfirstlane_b32 s11, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s24
@@ -1658,29 +1656,31 @@ define void @void_func_v32i32_v2i32_v2f32_inreg(<32 x i32> inreg %arg0, <2 x i32
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v4
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s6, v21
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s15
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s14
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s13
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s12
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s7, v20
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v21
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s8
+; GFX9-NEXT:    v_mov_b32_e32 v18, s5
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v20
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s28
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s29
-; GFX9-NEXT:    v_mov_b32_e32 v2, s5
+; GFX9-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[18:19], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s7
+; GFX9-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

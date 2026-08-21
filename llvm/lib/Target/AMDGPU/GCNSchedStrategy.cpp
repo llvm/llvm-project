@@ -788,8 +788,13 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
-  if (IsLegacyScheduler)
+  // Use more accurate GCN pressure trackers.
+  if (IsLegacyScheduler) {
     GCNTrackersOverride = std::nullopt;
+    UseGCNTrackers = false;
+  } else {
+    UseGCNTrackers = true;
+  }
 }
 
 GCNMaxILPSchedStrategy::GCNMaxILPSchedStrategy(const MachineSchedContext *C)
