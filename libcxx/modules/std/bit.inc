@@ -38,6 +38,7 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 29
   // [bit.permute], permutation
+  using std::bit_compress;
   using std::bit_repeat;
   using std::bit_reverse;
 #endif
