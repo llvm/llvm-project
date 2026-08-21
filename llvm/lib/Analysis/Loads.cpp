@@ -425,10 +425,17 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment, SQ, /*IgnoreFree=*/false,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               const SCEV *DerefBytesSCEV = SE.getSCEV(RK.IRArgValue);
+               Type *WiderTy = SE.getWiderType(AccessSizeSCEV->getType(),
+                                               DerefBytesSCEV->getType());
+               const SCEV *AccessSizeExt =
+                   SE.getNoopOrZeroExtend(AccessSizeSCEV, WiderTy);
+               const SCEV *DerefBytesExt =
+                   SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
-                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
@@ -852,8 +859,15 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   if (isa<ConstantPointerNull>(From) &&
       From->getType()->getPointerAddressSpace() == 0)
     return true;
+  // Allow replacement with dereferenceable constants. This is not strictly
+  // correct, but required for vtable assumptions.
+  auto IsBasedOnConstantGlobal = [](const Value *V) {
+    auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(V));
+    return GV && GV->isConstant();
+  };
   if (isa<Constant>(To) && To->getType()->isPointerTy() &&
-      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL) &&
+      IsBasedOnConstantGlobal(To))
     return true;
   return getUnderlyingObjectAggressive(From) ==
          getUnderlyingObjectAggressive(To);

@@ -252,7 +252,7 @@ void SPIRVPassConfig::addISelPrepare() {
 }
 
 bool SPIRVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -263,14 +263,14 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   addPass(createSPIRVPostLegalizerPass());
   return false;
 }
 
 // Do not add the RegBankSelect pass, as we only ever need virtual registers.
 bool SPIRVPassConfig::addRegBankSelect() {
-  disablePass(&RegBankSelect::ID);
+  disablePass(&RegBankSelectLegacy::ID);
   return false;
 }
 

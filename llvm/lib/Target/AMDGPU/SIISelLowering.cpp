@@ -244,16 +244,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // Only targets with packed bf16 instructions, e.g. gfx13.
     if (Subtarget->hasBF16PackedInsts()) {
-      // Turn fsub into fadd(x, fneg y) so it reuses the packed v_pk_add_bf16
-      // path instead of promoting to f32.
-      setOperationAction(ISD::FSUB, MVT::bf16, Expand);
-      // Widen scalar fadd to a v2bf16 operation with an unused high lane.
-      setOperationAction(ISD::FADD, MVT::bf16, Custom);
-      // Widen scalar fcanonicalize to a v2bf16 operation with an unused high
+      // Don't use Expand for fsub - the DAG combiner will undo fadd+fneg back
+      // to fsub, causing a libcall (which doesn't exist for bf16). Instead,
+      // directly expand to widened v2bf16 operations.
+      setOperationAction(ISD::FSUB, MVT::bf16, Custom);
+      // Promote scalar operations to a v2bf16 operation with an unused high
       // lane.
-      setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Custom);
-      // Widen scalar fmul to a v2bf16 operation with an unused high lane.
-      setOperationAction(ISD::FMUL, MVT::bf16, Custom);
+      for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM,
+                           ISD::FMINNUM, ISD::FCANONICALIZE})
+        AddPromotedToType(Opc, MVT::bf16, MVT::v2bf16);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -999,7 +998,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
       // If only the vector form is available, we need to widen to a vector.
       if (!Subtarget->hasMinimum3Maximum3F16())
-        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+        setOperationPromotedToType({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
+                                   MVT::v2f16);
     }
   }
 
@@ -1060,6 +1060,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
+
+    // i8 result promotes to i16, wider vectors split down to v2i8, and v2i8 is
+    // handled in ReplaceNodeResults before the legalizer splits it per lane.
+    setOperationAction(ISD::CONVERT_TO_ARBITRARY_FP, {MVT::i16, MVT::v2i8},
+                       Custom);
   }
 
   if (Subtarget->hasFP8F16ConversionInsts()) {
@@ -3470,7 +3475,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
-  BitVector Skipped(Ins.size());
+  BitVector Skipped(Fn.arg_size());
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
@@ -7681,6 +7686,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::CONVERT_FROM_ARBITRARY_FP:
     return LowerCONVERT_FROM_ARBITRARY_FP(Op, DAG);
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    return LowerCONVERT_TO_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
@@ -7709,6 +7716,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ABS:
   case ISD::FABS:
   case ISD::FNEG:
+  case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT_SAT:
@@ -7717,15 +7725,41 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
         Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
       return splitUnaryVectorOp(Op, DAG);
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FSUB:
+    if (Op.getValueType() == MVT::bf16) {
+      // Custom expansion:
+      //   fsub bf16 %a, %b -> fadd v2bf16(widen %a), fneg v2bf16(widen %b)
+      // Then extract back to bf16.
+      //
+      // We create fneg on v2bf16 (not bf16) so the instruction selector can
+      // fold the negation into the packed add's neg_lo/neg_hi modifiers,
+      // generating a single v_pk_add_bf16 instruction. If we negate bf16 first,
+      // it becomes a separate v_xor instruction before widening.
+      SDLoc DL(Op);
+      SDValue Op0 = Op.getOperand(0);
+      SDValue Op1 = Op.getOperand(1);
+
+      // Widen both operands to v2bf16
+      SDValue Vec0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Op0);
+      SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Op1);
+
+      // Create FNEG v2bf16 for the second operand
+      SDValue NegVec1 = DAG.getNode(ISD::FNEG, DL, MVT::v2bf16, Vec1);
+
+      // Perform FADD v2bf16
+      SDValue Result = DAG.getNode(ISD::FADD, DL, MVT::v2bf16, Vec0, NegVec1);
+
+      // Extract element 0 back to bf16
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Result,
+                         DAG.getConstant(0, DL, MVT::i32));
+    }
+    return SDValue();
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
     return lowerFMINIMUMNUM_FMAXIMUMNUM(Op, DAG);
-  case ISD::FMINIMUM:
-  case ISD::FMAXIMUM:
-    return lowerFMINIMUM_FMAXIMUM(Op, DAG);
   case ISD::FLDEXP:
   case ISD::STRICT_FLDEXP:
     return lowerFLDEXP(Op, DAG);
@@ -7750,20 +7784,15 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UMAX:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
-    return splitBinaryVectorOp(Op, DAG);
   case ISD::FADD:
   case ISD::FMUL:
-    if (Op.getValueType() == MVT::bf16)
-      return lowerScalarBF16BinaryOp(Op, DAG);
     return splitBinaryVectorOp(Op, DAG);
-  case ISD::FCANONICALIZE:
-    if (Op.getValueType() == MVT::bf16)
-      return lowerScalarBF16FCanonicalize(Op, DAG);
-    return splitUnaryVectorOp(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
   case ISD::MUL:
@@ -8337,6 +8366,11 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Res);
     return;
   }
+  case ISD::CONVERT_TO_ARBITRARY_FP: {
+    if (SDValue Res = LowerCONVERT_TO_ARBITRARY_FP(SDValue(N, 0), DAG))
+      Results.push_back(Res);
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = N->getConstantOperandVal(0);
     switch (IID) {
@@ -8827,49 +8861,6 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
-SDValue SITargetLowering::lowerScalarBF16BinaryOp(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  assert(Subtarget->hasBF16PackedInsts());
-
-  SDLoc DL(Op);
-
-  auto WidenOperand = [&](SDValue Src) {
-    if (Src.getOpcode() == ISD::FNEG) {
-      SDValue WideSrc = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16,
-                                    Src.getOperand(0));
-      return DAG.getNode(ISD::FNEG, DL, MVT::v2bf16, WideSrc, Src->getFlags());
-    }
-
-    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Src);
-  };
-
-  SDValue LHS = WidenOperand(Op.getOperand(0));
-  SDValue RHS = WidenOperand(Op.getOperand(1));
-  SDValue Result =
-      DAG.getNode(Op.getOpcode(), DL, MVT::v2bf16, LHS, RHS, Op->getFlags());
-
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Result,
-                     DAG.getConstant(0, DL, MVT::i32));
-}
-
-SDValue
-SITargetLowering::lowerScalarBF16FCanonicalize(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  assert(Subtarget->hasBF16PackedInsts());
-
-  SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
-
-  // Widen to v2bf16, canonicalize with v_pk_mul_bf16, then extract.
-  SDValue WideSrc = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Src);
-
-  SDValue Canonicalized =
-      DAG.getNode(ISD::FCANONICALIZE, DL, MVT::v2bf16, WideSrc, Op->getFlags());
-
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Canonicalized,
-                     DAG.getConstant(0, DL, MVT::i32));
-}
-
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -8905,35 +8896,6 @@ SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
       VT == MVT::v32f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
-}
-
-SDValue SITargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
-                                                 SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  if (VT.isVector())
-    return splitBinaryVectorOp(Op, DAG);
-
-  assert(!Subtarget->hasIEEEMinimumMaximumInsts() &&
-         !Subtarget->hasMinimum3Maximum3F16() &&
-         Subtarget->hasMinimum3Maximum3PKF16() && VT == MVT::f16 &&
-         "should not need to widen f16 minimum/maximum to v2f16");
-
-  // Widen f16 operation to v2f16
-
-  // fminimum f16:x, f16:y ->
-  //   extract_vector_elt (fminimum (v2f16 (scalar_to_vector x))
-  //                                (v2f16 (scalar_to_vector y))), 0
-  SDLoc SL(Op);
-  SDValue WideSrc0 =
-      DAG.getNode(ISD::SCALAR_TO_VECTOR, SL, MVT::v2f16, Op.getOperand(0));
-  SDValue WideSrc1 =
-      DAG.getNode(ISD::SCALAR_TO_VECTOR, SL, MVT::v2f16, Op.getOperand(1));
-
-  SDValue Widened =
-      DAG.getNode(Op.getOpcode(), SL, MVT::v2f16, WideSrc0, WideSrc1);
-
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::f16, Widened,
-                     DAG.getConstant(0, SL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
@@ -11076,6 +11038,76 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   EVT EltVT = DstVT.getVectorElementType();
   if (EltVT == MVT::f16 || EltVT == MVT::f32)
     return lowerFromFP8(Op, IsBF8, DAG);
+  return SDValue();
+}
+
+SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
+                                     SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT ResVT = Op.getValueType();
+  bool IsF16 = Src.getValueType().getScalarType() == MVT::f16;
+  assert((!IsF16 || Subtarget->hasF16FP8ConversionInsts()) &&
+         "f16 -> fp8/bf8 conversion requires F16FP8ConversionInsts");
+  assert((!ResVT.isVector() || ResVT == MVT::v2i8) &&
+         "only the v2i8 vector result is custom lowered");
+
+  if (IsF16) {
+    unsigned Opc =
+        IsBF8 ? AMDGPUISD::CVT_PK_BF8_F16 : AMDGPUISD::CVT_PK_FP8_F16;
+    SDValue Bytes = DAG.getNode(Opc, SL, MVT::i16, Src);
+    return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
+  }
+
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_BF8_F32 : AMDGPUISD::CVT_PK_FP8_F32;
+  SDValue PoisonI32 = DAG.getPOISON(MVT::i32);
+  SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
+
+  if (!ResVT.isVector()) {
+    // Convert one lane, the second is unused. Feed it the same source so the
+    // instruction does not read an undefined register.
+    SDValue Packed =
+        DAG.getNode(Opc, SL, MVT::i32, Src, Src, PoisonI32, WordSel);
+    return DAG.getAnyExtOrTrunc(Packed, SL, ResVT);
+  }
+
+  SDValue A = DAG.getExtractVectorElt(SL, MVT::f32, Src, 0);
+  SDValue B = DAG.getExtractVectorElt(SL, MVT::f32, Src, 1);
+  SDValue Packed = DAG.getNode(Opc, SL, MVT::i32, A, B, PoisonI32, WordSel);
+  SDValue Bytes = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Packed);
+  return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
+}
+
+SDValue
+SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // Only the OCP fp8 formats E4M3FN and E5M2 map to HW conversions, everything
+  // else uses the generic expansion.
+  APFloatBase::Semantics Sem =
+      static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  if (Sem != APFloatBase::S_Float8E4M3FN && Sem != APFloatBase::S_Float8E5M2)
+    return SDValue();
+  bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
+
+  // The packed HW conversions round to nearest-even and never saturate.
+  if (static_cast<RoundingMode>(Op.getConstantOperandVal(2)) !=
+      RoundingMode::NearestTiesToEven)
+    return SDValue();
+  if (Op.getConstantOperandVal(3) != 0)
+    return SDValue();
+
+  EVT SrcEltVT = Op.getOperand(0).getValueType().getScalarType();
+  // The f32 form is built here rather than by a tablegen pattern because the
+  // HW result is i32 while the node result is i16 after the i8 promotion.
+  if (SrcEltVT == MVT::f32)
+    return lowerToFP8(Op, IsBF8, DAG);
+  if (SrcEltVT == MVT::f16 && Subtarget->hasF16FP8ConversionInsts()) {
+    // A scalar conversion is selected from the generic node by tablegen, only
+    // the illegal v2i8 result type needs lowering here.
+    if (!Op.getValueType().isVector())
+      return Op;
+    return lowerToFP8(Op, IsBF8, DAG);
+  }
   return SDValue();
 }
 
@@ -15473,6 +15505,14 @@ static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
     }
 
     assert(ScalarTySize < 32);
+    if (TypeSize % 32 == 0) {
+      assert(DWordOffset < TypeSize / 32);
+      SDValue Cast = DAG.getBitcast(
+          EVT::getVectorVT(*DAG.getContext(), MVT::i32, TypeSize / 32), Src);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Cast,
+                         DAG.getConstant(DWordOffset, SL, MVT::i32));
+    }
+
     auto NumElements = TypeSize / ScalarTySize;
     auto Trunc32Elements = (ScalarTySize * NumElements) / 32;
     auto NormalizedTrunc = Trunc32Elements * 32 / ScalarTySize;
@@ -18269,9 +18309,38 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
       Op2.getOpcode() != ISD::FP_EXTEND)
     return SDValue();
 
-  // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
-  // regardless of the denorm mode setting. Therefore,
-  // fp-contract is sufficient to allow generating fdot2.
+  // The fdot2 fold (fma_mix -> dot2) is only safe when both instructions agree
+  // on how f16 subnormal inputs are handled. However, if both FMAs carry afn
+  // the caller accepts approximate results, so any subnormal flushing
+  // introduced by dot2 is acceptable regardless of mode.
+  //
+  // gfx90a (CDNA2) is the sole exception (dot2UnconditionalFlush): v_dot2c
+  // unconditionally flushes f16 subnormal inputs to zero regardless of MODE,
+  // while v_fma_mix_f32 preserves them when ieee=1 (the default compute kernel
+  // mode). The fold is safe only when f32 denorm = PreserveSign, which implies
+  // ieee=0 so both flush.
+  //
+  // All other GPUs: v_dot2 does NOT flush f16 subnormal inputs. v_fma_mix_f32
+  // flushes them only when f32 denorm = PreserveSign. The fold is safe only
+  // when f32 denorm is IEEE (both preserve the subnormal). Dynamic mode is
+  // also rejected since the runtime value is unknown.
+  bool AllowInaccuracy = N->getFlags().hasApproximateFuncs() &&
+                         FMA->getFlags().hasApproximateFuncs();
+  if (!AllowInaccuracy) {
+    const MachineFunction &MF = DAG.getMachineFunction();
+    DenormalMode Mode = MF.getDenormalMode(APFloat::IEEEsingle());
+    if (Subtarget->dot2UnconditionalFlush()) {
+      // gfx90a: fold safe only when f32 denorm flushes.
+      if (Mode != DenormalMode::getPreserveSign())
+        return SDValue();
+    } else {
+      // All other GPUs: fold safe only when f32 denorm is IEEE.
+      if (Mode != DenormalMode::getIEEE())
+        return SDValue();
+    }
+  }
+
+  // fp-contract allows reassociating the fma tree into a dot product.
   const TargetOptions &Options = DAG.getTarget().Options;
   if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (N->getFlags().hasAllowContract() &&

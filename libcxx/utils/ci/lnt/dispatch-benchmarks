@@ -7,17 +7,21 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, NamedTuple, Optional, Sequence, TextIO
+from typing import Dict, List, NamedTuple, Optional, Sequence, Set, TextIO
 import argparse
 import common
 import github
-import json
 import logging
 import os
-import pathlib
 import re
 import sys
 import tabulate
+
+
+class RunName(NamedTuple):
+    """The name of a workflow run and the information it encodes."""
+    target: common.Target
+    dry_run: bool # whether that workflow run was only a dry-run
 
 
 class WorkflowRun(NamedTuple):
@@ -46,16 +50,18 @@ class Runs(NamedTuple):
         return sum(n for (target, n) in self.in_flight.items() if target.machine == machine)
 
 
-# The repository and the workflow this tool drives.
+# The repository and the workflow driven by this tool, and the ref to use for the
+# definition of the workflow.
 REPOSITORY = 'llvm/llvm-project'
 WORKFLOW = 'libcxx-benchmark-commit.yml'
+WORKFLOW_REF = 'main'
 
 # The name the benchmark workflow gives its runs. What a run is benchmarking can
 # only be recovered from its name (the inputs a workflow was dispatched with are
 # not available from the API) so this format is a contract with the
 # libcxx-benchmark-commit.yml workflow.
 RUN_NAME_PREFIX = '[libc++] Run benchmark suite against '
-RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)$')
+RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)( \(dry run\))?$')
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
@@ -102,14 +108,17 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
     return ordered
 
 
-def target_of_run(title: str) -> Optional[common.Target]:
+def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return what a workflow run is benchmarking, or None if it can't be told.
+    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
     match = RUN_NAME.match(title.strip())
-    return common.Target(match.group(1).lower(), match.group(2)) if match else None
+    if match is None:
+        return None
+    return RunName(target=common.Target(match.group(1).lower(), match.group(2)),
+                   dry_run=match.group(3) is not None)
 
 
 def connect(token: str, repository: str, workflow: str) -> github.Workflow.Workflow:
@@ -132,37 +141,47 @@ def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
 
     Cancelled runs or runs named in any other format are ignored: they either
     predate this tooling or don't represent expended capacity towards benchmarking
-    a target.
+    a target. Dry-runs are ignored too, since they never submit to LNT.
     """
     runs: Dict[int, WorkflowRun] = {}
+    dry: Set[int] = set()
     try:
         for run in workflow.get_runs():
-            target = target_of_run(run.display_title) if run.display_title else None
-            if target is None or run.conclusion == 'cancelled':
+            parsed = parse_run_name(run.display_title) if run.display_title else None
+            if parsed is None or run.conclusion == 'cancelled':
+                continue
+            if parsed.dry_run:
+                dry.add(run.id)
                 continue
             # Deduplicate by id: pages can overlap while runs are being created.
-            runs[run.id] = WorkflowRun(identifier=run.id, target=target,
+            runs[run.id] = WorkflowRun(identifier=run.id, target=parsed.target,
                                        finished=run.status == 'completed')
     except github.GithubException as error:
         raise GithubError(f'could not list the runs of {workflow.path}: {error}')
+    if dry:
+        logging.debug(f'ignoring {len(dry)} workflow dry runs: {", ".join(str(i) for i in sorted(dry))}')
     return list(runs.values())
 
 
-def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> None:
+def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> str:
     """
-    Request one run of a workflow.
+    Request one run of a workflow and return the URL of the run that was created.
 
-    The definition on `main` is always the one that runs, whatever commit is being
+    The definition on WORKFLOW_REF is always the one that runs, whatever commit is being
     benchmarked.
     """
     logging.debug(f'dispatching {workflow.path} with {inputs}')
     try:
-        # A refused dispatch is reported by returning False rather than by raising, and
-        # the refusal reason is not surfaced. The request is all we can report.
-        if not workflow.create_dispatch(ref='main', inputs=inputs):
-            raise GithubError(f'the API refused to dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}')
+        # Don't go through PyGithub's create_dispatch() since it doesn't support return_run_details
+        # until https://github.com/PyGithub/PyGithub/issues/3474 is fixed.
+        (_, details) = workflow.requester.requestJsonAndCheck(
+            'POST', f'{workflow.url}/dispatches',
+            input={'ref': WORKFLOW_REF, 'inputs': inputs, 'return_run_details': True})
     except github.GithubException as error:
         raise GithubError(f'could not dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}: {error}')
+    if not isinstance(details, dict) or not details.get('html_url'):
+        raise GithubError(f'failed to dispatch a workflow run for {inputs["commit"]} on {inputs["lnt-machine"]}: {details}')
+    return details['html_url']
 
 
 def summarize(runs: Sequence[WorkflowRun]) -> Runs:
@@ -242,10 +261,10 @@ def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str
     """Return the inputs to dispatch the workflow with for a work item."""
     inputs = {'commit': item.commit,
               'lnt-machine': item.machine,
-              'benchmark-suite-version': args.test_suite_commit,
-              # Submission is not optional: a run whose results are not recorded
-              # anywhere would be requested again on every future invocation.
-              # During a dry run nothing runs, so nothing is submitted either.
+              # Submitting to LNT is mandatory, since a run whose results are not recorded
+              # anywhere would be requested again on every future invocation. When run
+              # with --dry-run, this tool never actually dispatches the workflow with
+              # `submit-lnt: false`.
               'submit-lnt': 'false' if args.dry_run else 'true'}
     if args.lnt_url:
         inputs['lnt-url'] = args.lnt_url
@@ -307,14 +326,11 @@ def main(argv: List[str]) -> int:
                     'Results are submitted to LNT unless this is a dry run. That is not optional: '
                     'results that are not recorded anywhere would be requested again on every '
                     'invocation, forever.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
         formatter_class=HelpFormatter)
     parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
         help='A file containing the plan, one JSON object per line. By default, this is read from '
              'standard input.')
-    parser.add_argument('--test-suite-commit', type=common.sha, required=True,
-        help='The version of the benchmark suite to use, as a monorepo SHA. Pinning this is what '
-             'makes results comparable across commits.')
     parser.add_argument('--max-in-flight', type=common.at_least(1), default=4,
         help='The largest number of workflow runs allowed to exist at once for a single LNT machine. '
              'This counts runs that are queued but not yet started.')
@@ -332,9 +348,6 @@ def main(argv: List[str]) -> int:
              'variable. `gh auth token` can be used to print the token registered locally.')
     parser.add_argument('--dry-run', action='store_true',
         help='Do not request anything, just report what would be requested.')
-    parser.add_argument('--output', type=pathlib.Path, default=None,
-        help='Where to write the record of what was requested, one JSON object per line. Defaults '
-             'to standard output.')
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Do not print the human-readable summary to standard error.')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -366,9 +379,7 @@ def main(argv: List[str]) -> int:
     if not args.quiet:
         report(args, decisions, runs)
 
-    # Requests are made one at a time and recorded as they succeed. A failure halfway through must still
-    # leave an accurate record, since the runs already requested actually exist in Github.
-    records: List[str] = []
+    # Requests are made one at a time and reported as they succeed.
     dispatched = 0
     try:
         for decision in decisions:
@@ -377,24 +388,17 @@ def main(argv: List[str]) -> int:
             inputs = workflow_inputs(args, decision.item)
             for _ in range(decision.jobs):
                 if not args.dry_run:
-                    dispatch(workflow, inputs)
+                    url = dispatch(workflow, inputs)
+                    if not args.quiet:
+                        # Print heading with the first run to avoid clutter in the "nothing dispatched" case.
+                        if dispatched == 0:
+                            print('', file=sys.stderr)
+                            print('Requested runs:', file=sys.stderr)
+                        print(f'  {decision.item.commit[:12]} on {decision.item.machine}: {url}', file=sys.stderr)
                 dispatched += 1
-                records.append(json.dumps({'commit': decision.item.commit,
-                                           'machine': decision.item.machine,
-                                           'reason': decision.item.reason,
-                                           'dry_run': args.dry_run,
-                                           'inputs': inputs}, sort_keys=True) + '\n')
     except GithubError:
         logging.error(f'requested {dispatched} runs before failing')
         raise
-    finally:
-        # Write what we managed to do even when we fail: those runs exist and will
-        # consume machine time, so we want to report them.
-        contents = ''.join(records)
-        if args.output is None:
-            sys.stdout.write(contents)
-        else:
-            args.output.write_text(contents)
 
     if not args.quiet and not args.dry_run:
         print(f'Requested {dispatched} runs.', file=sys.stderr)

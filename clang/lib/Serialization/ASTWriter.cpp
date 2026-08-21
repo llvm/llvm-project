@@ -538,7 +538,7 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
   AddSourceLocation(CR->getTemplateKWLoc());
   AddDeclarationNameInfo(CR->getConceptNameInfo());
   AddDeclRef(CR->getFoundDecl());
-  AddDeclRef(CR->getNamedConcept());
+  AddTemplateName(CR->getNamedConcept());
   push_back(CR->getTemplateArgsAsWritten() != nullptr);
   if (CR->getTemplateArgsAsWritten())
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());
@@ -858,6 +858,7 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_CXX_PSEUDO_DESTRUCTOR);
   RECORD(EXPR_EXPR_WITH_CLEANUPS);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_MEMBER);
+  RECORD(EXPR_DEPENDENT_TEMPLATE_ID);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_DECL_REF);
   RECORD(EXPR_CXX_UNRESOLVED_CONSTRUCT);
   RECORD(EXPR_CXX_UNRESOLVED_MEMBER);
