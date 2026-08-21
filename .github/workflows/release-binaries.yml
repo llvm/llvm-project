@@ -298,7 +298,7 @@ jobs:
       run: |
         choco install wixtoolset
         # Add wix install directory to PATH.
-        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName >> $env:GITHUB_PATH
 
     # For pull requests, install a fast version of clang so that we can finish the
     # build under the 6 hour timeout limit.
