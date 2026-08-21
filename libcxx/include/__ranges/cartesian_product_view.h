@@ -12,6 +12,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
@@ -174,7 +175,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr auto __size_impl() const {
     return std::apply(
         [](auto&&... __bases) {
-          using _SizeType = common_type_t<ranges::range_size_t<decltype(__bases)>...>;
+          using _SizeType = common_type_t<size_t, ranges::range_size_t<decltype(__bases)>...>;
           return (static_cast<_SizeType>(ranges::size(__bases)) * ...);
         },
         __bases_);
@@ -211,7 +212,9 @@ public:
       tuple<range_value_t<__maybe_const<_IsConst, _First>>, range_value_t<__maybe_const<_IsConst, _Vs>>...>;
   using reference =
       tuple<range_reference_t<__maybe_const<_IsConst, _First>>, range_reference_t<__maybe_const<_IsConst, _Vs>>...>;
-  using difference_type = common_type_t<range_difference_t<_First>, range_difference_t<_Vs>...>;
+  // The type is implementation-defined. `ptrdiff_t` is folded in because the whole product's distance is
+  // computed in this type, which overflows far sooner than any single base's difference type does.
+  using difference_type = common_type_t<ptrdiff_t, range_difference_t<_First>, range_difference_t<_Vs>...>;
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 

@@ -19,6 +19,8 @@
 #include <ranges>
 #include <type_traits>
 
+#include "test_macros.h"
+
 #include "../range_adaptor_types.h"
 
 template <class T>
@@ -84,14 +86,17 @@ constexpr bool test() {
     // first range's range_size_t instead of the common type, changes it. The *value* cannot
     // be made to differ at constexpr-feasible extents, since integral promotion widens any
     // narrow-typed multiply to int before it can wrap.
+    // The exact type is implementation-defined, so only libc++ pins it.
     std::array<int, 4> buf4{};
     std::array<int, 7> buf7{};
     SizeTypeView<unsigned short> narrow{buf4};
     SizeTypeView<unsigned long long> wide{buf7};
 
     auto v = std::ranges::cartesian_product_view(narrow, wide);
-    static_assert(std::same_as<decltype(v.size()), std::common_type_t<unsigned short, unsigned long long>>);
-    static_assert(std::same_as<decltype(v.size()), unsigned long long>);
+    static_assert(std::unsigned_integral<decltype(v.size())>);
+    LIBCPP_STATIC_ASSERT(
+        std::same_as<decltype(v.size()), std::common_type_t<std::size_t, unsigned short, unsigned long long>>);
+    LIBCPP_STATIC_ASSERT(std::same_as<decltype(v.size()), unsigned long long>);
     assert(v.size() == 28);
   }
 
@@ -104,9 +109,24 @@ constexpr bool test() {
     SizeTypeView<unsigned long long> c{buf5};
 
     auto v = std::ranges::cartesian_product_view(a, b, c);
-    static_assert(
-        std::same_as<decltype(v.size()), std::common_type_t<unsigned short, unsigned int, unsigned long long>>);
+    static_assert(std::unsigned_integral<decltype(v.size())>);
+    LIBCPP_STATIC_ASSERT(
+        std::same_as<decltype(v.size()),
+                     std::common_type_t<std::size_t, unsigned short, unsigned int, unsigned long long>>);
     assert(v.size() == 30);
+  }
+
+  { // bases narrower than size_t do not narrow the product's size type, which is what the product
+    // of all the sizes is computed in
+    std::array<int, 4> buf4{};
+    std::array<int, 7> buf7{};
+    SizeTypeView<unsigned short> a{buf4};
+    SizeTypeView<unsigned short> b{buf7};
+
+    auto v = std::ranges::cartesian_product_view(a, b);
+    static_assert(std::unsigned_integral<decltype(v.size())>);
+    LIBCPP_STATIC_ASSERT(std::same_as<decltype(v.size()), std::size_t>);
+    assert(v.size() == 28);
   }
 
   return true;

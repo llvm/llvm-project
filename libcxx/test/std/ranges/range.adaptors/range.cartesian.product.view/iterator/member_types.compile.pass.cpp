@@ -13,13 +13,18 @@
 //   using iterator_concept  = ...;                         // RA / bidi / forward / input
 //   using value_type        = tuple<range_value_t<...>>;
 //   using reference         = tuple<range_reference_t<...>>;
-//   using difference_type   = common_type_t<range_difference_t<...>>;
+//   using difference_type   = see below;                    // implementation-defined
 
 #include <array>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 #include "../../range_adaptor_types.h"
 
@@ -60,7 +65,8 @@ void test() {
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::signed_integral<Iter::difference_type>);
+    LIBCPP_STATIC_ASSERT(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
     static_assert(std::is_same_v<Iter::value_type, std::tuple<int, int>>);
     static_assert(std::is_same_v<Iter::reference, std::tuple<int&, int&>>);
     static_assert(HasIterCategory<Iter>);
@@ -128,12 +134,23 @@ void test() {
   { // difference_type -- single range
     std::ranges::cartesian_product_view v{DiffTypeRange<std::intptr_t>{}};
     using Iter = decltype(v.begin());
-    static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
+    static_assert(std::signed_integral<Iter::difference_type>);
+    LIBCPP_STATIC_ASSERT(std::is_same_v<Iter::difference_type, std::common_type_t<std::ptrdiff_t, std::intptr_t>>);
   }
 
   { // difference_type -- multiple ranges with differing range_difference_t pick the common type
     std::ranges::cartesian_product_view v{DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
     using Iter = decltype(v.begin());
-    static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<std::intptr_t, std::ptrdiff_t>>);
+    static_assert(std::signed_integral<Iter::difference_type>);
+    LIBCPP_STATIC_ASSERT(
+        std::is_same_v<Iter::difference_type, std::common_type_t<std::ptrdiff_t, std::intptr_t, std::ptrdiff_t>>);
+  }
+
+  { // difference_type -- bases narrower than ptrdiff_t do not narrow the product's difference type,
+    // which is what the whole product's distance is computed in
+    std::ranges::cartesian_product_view v{DiffTypeRange<signed char>{}, DiffTypeRange<short>{}};
+    using Iter = decltype(v.begin());
+    static_assert(std::signed_integral<Iter::difference_type>);
+    LIBCPP_STATIC_ASSERT(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
   }
 }
