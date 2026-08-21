@@ -923,6 +923,7 @@ module std {
     module bit_log2         { header "__bit/bit_log2.h" }
     module bit_width        { header "__bit/bit_width.h" }
     module bit_reverse      { header "__bit/bit_reverse.h" }
+    module bit_repeat       { header "__bit/bit_repeat.h" }
     module blsr             { header "__bit/blsr.h" }
     module byteswap         { header "__bit/byteswap.h" }
     module countl           { header "__bit/countl.h" }
