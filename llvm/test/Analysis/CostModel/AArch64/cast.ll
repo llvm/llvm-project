@@ -27,6 +27,8 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r20 = zext i16 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r24 = sext i32 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r25 = zext i32 poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r26 = sext i64 poison to i128
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r27 = zext i64 poison to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i16 = sext <2 x i8> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i8i16 = zext <2 x i8> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i32 = sext <2 x i8> poison to <2 x i32>
@@ -39,6 +41,8 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i16i64 = zext <2 x i16> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i64 = sext <2 x i32> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> poison to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %s2i64i128 = sext <2 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %z2i64i128 = zext <2 x i64> poison to <2 x i128>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> poison to <4 x i32>
@@ -97,6 +101,8 @@ define void @ext() {
   %r20 = zext i16 poison to i64
   %r24 = sext i32 poison to i64
   %r25 = zext i32 poison to i64
+  %r26 = sext i64 poison to i128
+  %r27 = zext i64 poison to i128
 
   %s2i8i16 = sext <2 x i8> poison to <2 x i16>
   %z2i8i16 = zext <2 x i8> poison to <2 x i16>
@@ -110,6 +116,8 @@ define void @ext() {
   %z2i16i64 = zext <2 x i16> poison to <2 x i64>
   %s2i32i64 = sext <2 x i32> poison to <2 x i64>
   %z2i32i64 = zext <2 x i32> poison to <2 x i64>
+  %s2i64i128 = sext <2 x i64> poison to <2 x i128>
+  %z2i64i128 = zext <2 x i64> poison to <2 x i128>
 
   %s4i8i16 = sext <4 x i8>  poison to <4 x i16>
   %z4i8i16 = zext <4 x i8>  poison to <4 x i16>
@@ -164,12 +172,14 @@ define void @trunc() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r27 = trunc i64 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r28 = trunc i64 poison to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r29 = trunc i64 poison to i32
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r31 = trunc i128 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i8i16 = trunc <2 x i16> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i8i32 = trunc <2 x i32> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i64 = trunc <2 x i64> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i16i32 = trunc <2 x i32> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i16i64 = trunc <2 x i64> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i64 = trunc <2 x i64> poison to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i128 = trunc <2 x i128> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s4i8i16 = trunc <4 x i16> poison to <4 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = trunc <4 x i32> poison to <4 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s4i8i64 = trunc <4 x i64> poison to <4 x i8>
@@ -200,6 +210,7 @@ define void @trunc() {
   %r27 = trunc i64 poison to i8
   %r28 = trunc i64 poison to i16
   %r29 = trunc i64 poison to i32
+  %r31 = trunc i128 poison to i64
 
   %s2i8i16 = trunc <2 x i16> poison to <2 x i8>
   %s2i8i32 = trunc <2 x i32> poison to <2 x i8>
@@ -207,6 +218,7 @@ define void @trunc() {
   %s2i16i32 = trunc <2 x i32> poison to <2 x i16>
   %s2i16i64 = trunc <2 x i64> poison to <2 x i16>
   %s2i32i64 = trunc <2 x i64> poison to <2 x i32>
+  %s2i32i128 = trunc <2 x i128> poison to <2 x i64>
 
   %s4i8i16 = trunc <4 x i16> poison to <4 x i8>
   %s4i8i32 = trunc <4 x i32> poison to <4 x i8>
@@ -231,7 +243,7 @@ define void @trunc() {
   ret void
 }
 
-define i32 @casts_no_users() {
+define void @casts_no_users() {
 ; CHECK-LABEL: 'casts_no_users'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r30 = fptoui float poison to i1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r31 = fptosi float poison to i1
@@ -463,7 +475,7 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of 38 for: %r247 = sitofp <16 x i16> poison to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r248 = uitofp <16 x i64> poison to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r249 = sitofp <16 x i64> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r30 = fptoui float poison to i1
   %r31 = fptosi float poison to i1
@@ -710,10 +722,10 @@ define i32 @casts_no_users() {
   %r248 = uitofp <16 x i64> poison to <16 x double>
   %r249 = sitofp <16 x i64> poison to <16 x double>
 
-  ret i32 undef
+  ret void
 }
 
-define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
+define void @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e, i128 %f) {
 ; CHECK-LABEL: 'casts_with_users'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r0 = sext i8 %a to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r1 = sext i8 %a to i32
@@ -721,24 +733,28 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r3 = sext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r4 = sext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r5 = sext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s128 = sext i64 %d to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r0, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r1, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r2, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r3, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r4, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r5, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store i128 %s128, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r6 = zext i8 %a to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r7 = zext i8 %a to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r8 = zext i8 %a to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r9 = zext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r10 = zext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z128 = zext i64 %d to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r6, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r7, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r8, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r9, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r10, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r11, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store i128 %z128, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r12 = trunc i64 %d to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r13 = trunc i64 %d to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r14 = trunc i64 %d to i8
@@ -770,7 +786,7 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r23, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r24, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r25, ptr undef, align 8
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r12
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r0 = sext i8 %a to i16
   %r1 = sext i8 %a to i32
@@ -778,12 +794,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r3 = sext i16 %b to i32
   %r4 = sext i16 %b to i64
   %r5 = sext i32 %c to i64
+  %s128 = sext i64 %d to i128
   store i16 %r0, ptr undef
   store i32 %r1, ptr undef
   store i64 %r2, ptr undef
   store i32 %r3, ptr undef
   store i64 %r4, ptr undef
   store i64 %r5, ptr undef
+  store i128 %s128, ptr undef
 
   %r6 = zext i8 %a to i16
   %r7 = zext i8 %a to i32
@@ -791,12 +809,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r9 = zext i16 %b to i32
   %r10 = zext i16 %b to i64
   %r11 = zext i32 %c to i64
+  %z128 = zext i64 %d to i128
   store i16 %r6, ptr undef
   store i32 %r7, ptr undef
   store i64 %r8, ptr undef
   store i32 %r9, ptr undef
   store i64 %r10, ptr undef
   store i64 %r11, ptr undef
+  store i128 %z128, ptr undef
 
   %r12 = trunc i64 %d to i32
   %r13 = trunc i64 %d to i16
@@ -831,10 +851,10 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   store i16 %r23, ptr undef
   store i32 %r24, ptr undef
   store i64 %r25, ptr undef
-  ret i32 %r12
+  ret void
 }
 
-define i32 @bitcasts() {
+define void @bitcasts() {
 ; CHECK-LABEL: 'bitcasts'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = bitcast i32 poison to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %b = bitcast float poison to float
@@ -844,7 +864,7 @@ define i32 @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f = bitcast double poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g = bitcast half poison to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h = bitcast i16 poison to half
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a = bitcast i32 poison to i32
   %b = bitcast float poison to float
@@ -854,14 +874,15 @@ define i32 @bitcasts() {
   %f = bitcast double poison to i64
   %g = bitcast half poison to i16
   %h = bitcast i16 poison to half
-  ret i32 undef
+  ret void
 }
 
-define i32 @load_extends() {
+define void @load_extends() {
 ; CHECK-LABEL: 'load_extends'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi64 = load i64, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
@@ -869,6 +890,7 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i64 = load <2 x i64>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32
@@ -881,6 +903,8 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r9 = zext i16 %loadi16 to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r10 = sext i32 %loadi32 to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %loadi32 to i64
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r12 = sext i64 %loadi64 to i128
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r13 = zext i64 %loadi64 to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
@@ -895,11 +919,14 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %loadi8 = load i8, ptr undef
   %loadi16 = load i16, ptr undef
   %loadi32 = load i32, ptr undef
+  %loadi64 = load i64, ptr undef
   %loadv2i8 = load <2 x i8>, ptr undef
   %loadv4i8 = load <4 x i8>, ptr undef
   %loadv8i8 = load <8 x i8>, ptr undef
@@ -907,6 +934,7 @@ define i32 @load_extends() {
   %loadv4i16 = load <4 x i16>, ptr undef
   %loadv2i32 = load <2 x i32>, ptr undef
   %loadv4i32 = load <4 x i32>, ptr undef
+  %loadv2i64 = load <2 x i64>, ptr undef
 
   %r0 = sext i8 %loadi8 to i16
   %r1 = zext i8 %loadi8 to i16
@@ -920,6 +948,8 @@ define i32 @load_extends() {
   %r9 = zext i16 %loadi16 to i64
   %r10 = sext i32 %loadi32 to i64
   %r11 = zext i32 %loadi32 to i64
+  %r12 = sext i64 %loadi64 to i128
+  %r13 = zext i64 %loadi64 to i128
 
   %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
   %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
@@ -935,11 +965,13 @@ define i32 @load_extends() {
   %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
   %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
   %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
+  %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
+  %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
 
-  ret i32 undef
+  ret void
 }
 
-define i32 @store_truncs() {
+define void @store_truncs() {
 ; CHECK-LABEL: 'store_truncs'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r0 = trunc i64 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i8 %r0, ptr undef, align 1
@@ -953,7 +985,9 @@ define i32 @store_truncs() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r4, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r5 = trunc i16 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i8 %r5, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r6 = trunc i128 poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r6, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r0 = trunc i64 poison to i8
   store i8 %r0, ptr undef
@@ -967,7 +1001,9 @@ define i32 @store_truncs() {
   store i16 %r4, ptr undef
   %r5 = trunc i16 poison to i8
   store i8 %r5, ptr undef
-  ret i32 undef
+  %r6 = trunc i128 poison to i64
+  store i64 %r6, ptr undef
+  ret void
 }
 
 define void @extend_extract() {

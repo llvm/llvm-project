@@ -166,8 +166,8 @@ exit:
 }
 
 ; Post-increment with negative step.
-define i1 @postinc_negative_step_not_folded(i1 %c) {
-; CHECK-LABEL: define i1 @postinc_negative_step_not_folded(
+define i1 @postinc_negative_step(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_negative_step(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -177,10 +177,9 @@ define i1 @postinc_negative_step_not_folded(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -283,8 +282,8 @@ exit:
 }
 
 ; Post-increment condition with signed predicates in body.
-define i1 @postinc_negative_start_signed_body_not_folded(i1 %c) {
-; CHECK-LABEL: define i1 @postinc_negative_start_signed_body_not_folded(
+define i1 @postinc_negative_start_signed_body_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_negative_start_signed_body_folded(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -294,10 +293,9 @@ define i1 @postinc_negative_start_signed_body_not_folded(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp slt i64 [[IV]], 10
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -321,8 +319,8 @@ exit:
   ret i1 false
 }
 
-define void @header_postdec_negative_step_no_wrap(ptr %p) {
-; CHECK-LABEL: define void @header_postdec_negative_step_no_wrap(
+define void @header_postdec_negative_step_start_eq_bound(ptr %p) {
+; CHECK-LABEL: define void @header_postdec_negative_step_start_eq_bound(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -397,12 +395,10 @@ define void @latch_postinc_nuw_unsigned_lower_bound_folds(ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[IV]], 100
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[LT]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    store i8 [[Z]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -540,10 +536,9 @@ define void @postinc_signed_facts_when_unsigned_overflows(ptr %p, i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[UB:%.*]] = icmp slt i8 [[IV]], 100
 ; CHECK-NEXT:    [[UNS:%.*]] = icmp ult i8 [[IV]], 100
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i1 false to i8
-; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[UB]] to i8
+; CHECK-NEXT:    [[Z1:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i1 [[UNS]] to i8
 ; CHECK-NEXT:    store i8 [[Z0]], ptr [[P]], align 1
 ; CHECK-NEXT:    store i8 [[Z1]], ptr [[P]], align 1
@@ -576,3 +571,434 @@ loop.latch:
 exit:
   ret void
 }
+
+; Similar to @postinc_signed_facts_when_unsigned_overflows: here the signed sum
+; StartValue + Step (127 + 1) overflows signed but not unsigned.
+define void @postinc_unsigned_facts_when_signed_overflows(ptr %p) {
+; CHECK-LABEL: define void @postinc_unsigned_facts_when_signed_overflows(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 127, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], -100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[SLB:%.*]] = icmp slt i8 [[IV]], 127
+; CHECK-NEXT:    [[SUB:%.*]] = icmp slt i8 [[IV]], -100
+; CHECK-NEXT:    [[Z0:%.*]] = zext i1 [[SLB]] to i8
+; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[SUB]] to i8
+; CHECK-NEXT:    [[Z2:%.*]] = zext i1 true to i8
+; CHECK-NEXT:    store i8 [[Z0]], ptr [[P]], align 1
+; CHECK-NEXT:    store i8 [[Z1]], ptr [[P]], align 1
+; CHECK-NEXT:    store i8 [[Z2]], ptr [[P]], align 1
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 127, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i8 %iv, 1
+  %done = icmp eq i8 %iv.next, -100
+  br i1 %done, label %exit, label %loop.latch
+
+loop.latch:
+  %slb = icmp slt i8 %iv, 127
+  %sub = icmp slt i8 %iv, -100
+  %uns = icmp ult i8 %iv, -100
+  %z0 = zext i1 %slb to i8
+  %z1 = zext i1 %sub to i8
+  %z2 = zext i1 %uns to i8
+  store i8 %z0, ptr %p, align 1
+  store i8 %z1, ptr %p, align 1
+  store i8 %z2, ptr %p, align 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; Post-decrement compare with B < StartValue: the loop exits at %iv == B + 1,
+; so the body runs with B + 1 < %iv <= StartValue.
+define void @header_postdec_negative_step_folds() {
+; CHECK-LABEL: define void @header_postdec_negative_step_folds() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 5, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 2
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %ugt = icmp ugt i8 %iv, 2
+  call void @use(i1 %ugt)
+  %ule = icmp ule i8 %iv, 5
+  call void @use(i1 %ule)
+  %sgt = icmp sgt i8 %iv, 2
+  call void @use(i1 %sgt)
+  %sle = icmp sle i8 %iv, 5
+  call void @use(i1 %sle)
+  br label %loop
+
+exit:
+  ret void
+}
+
+; Same as @header_postdec_negative_step_folds, but the post-decrement compare is
+; in the latch, so the facts are injected into the header and also need to hold
+; for the first iteration.
+define void @latch_postdec_negative_step_folds() {
+; CHECK-LABEL: define void @latch_postdec_negative_step_folds() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 5, %entry ], [ %iv.next, %loop.latch ]
+  %ugt = icmp ugt i8 %iv, 2
+  call void @use(i1 %ugt)
+  %ule = icmp ule i8 %iv, 5
+  call void @use(i1 %ule)
+  %sgt = icmp sgt i8 %iv, 2
+  call void @use(i1 %sgt)
+  %sle = icmp sle i8 %iv, 5
+  call void @use(i1 %sle)
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 2
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B == StartValue for a latch post-decrement compare: %iv never reaches
+; B + 1 == 6 before wrapping around the whole range, so nothing must be folded.
+; The first iteration alone already has %iv == B.
+define void @latch_postdec_negative_step_start_eq_bound() {
+; CHECK-LABEL: define void @latch_postdec_negative_step_start_eq_bound() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 5
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 5, %entry ], [ %iv.next, %loop.latch ]
+  %ugt = icmp ugt i8 %iv, 5
+  call void @use(i1 %ugt)
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 5
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Variable bound guarded by the strict precondition B <u StartValue.
+define void @header_postdec_negative_step_strict_precond(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @header_postdec_negative_step_strict_precond(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[B]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ult i8 %b, %start
+  br i1 %pre, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %loop.ph ], [ %iv.next, %loop.latch ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, %b
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %ugt = icmp ugt i8 %iv, %b
+  call void @use(i1 %ugt)
+  %ule = icmp ule i8 %iv, %start
+  call void @use(i1 %ule)
+  br label %loop
+
+exit:
+  ret void
+}
+
+; Only the non-strict precondition B <=u StartValue is known. At B == StartValue
+; the loop wraps around the whole range, so nothing must be folded.
+define void @header_postdec_negative_step_non_strict_precond(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @header_postdec_negative_step_non_strict_precond(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ule i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[B]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ule i8 %b, %start
+  br i1 %pre, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %loop.ph ], [ %iv.next, %loop.latch ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, %b
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %ugt = icmp ugt i8 %iv, %b
+  call void @use(i1 %ugt)
+  %ule = icmp ule i8 %iv, %start
+  call void @use(i1 %ule)
+  br label %loop
+
+exit:
+  ret void
+}
+
+; A signed strict precondition only gives the signed facts.
+define void @header_postdec_negative_step_signed_precond(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @header_postdec_negative_step_signed_precond(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[B]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp slt i8 %b, %start
+  br i1 %pre, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %loop.ph ], [ %iv.next, %loop.latch ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, %b
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %sgt = icmp sgt i8 %iv, %b
+  call void @use(i1 %sgt)
+  %sle = icmp sle i8 %iv, %start
+  call void @use(i1 %sle)
+  %ugt = icmp ugt i8 %iv, %b
+  call void @use(i1 %ugt)
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @latch_postdec_redundant_header_guard(i32 %n) {
+; CHECK-LABEL: define void @latch_postdec_redundant_header_guard(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[EXIT]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    call void @launch(i32 [[IV_NEXT]])
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[LAST:.*]], label %[[LOOP]]
+; CHECK:       [[LAST]]:
+; CHECK-NEXT:    call void @execute()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %guard = icmp sgt i32 %n, 0
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp sgt i32 %iv, 0
+  br i1 %c, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.next = add i32 %iv, -1
+  call void @launch(i32 %iv.next)
+  %ec = icmp eq i32 %iv.next, 0
+  br i1 %ec, label %last, label %loop
+
+last:
+  call void @execute()
+  br label %exit
+
+exit:
+  ret void
+}
+
+define i64 @latch_postdec_umin_clamp(ptr %s, i64 %n) {
+; CHECK-LABEL: define i64 @latch_postdec_umin_clamp(
+; CHECK-SAME: ptr [[S:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp eq i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[EXIT:.*]], label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[S]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[FOUND:%.*]] = icmp eq i8 [[C]], 47
+; CHECK-NEXT:    br i1 [[FOUND]], label %[[IF_FOUND:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
+; CHECK:       [[IF_FOUND]]:
+; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[N]], [[IV]]
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 [[IDX]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N]], %[[LOOP_LATCH]] ], [ [[CLAMPED]], %[[IF_FOUND]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %guard = icmp eq i64 %n, 0
+  br i1 %guard, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %n, %entry ], [ %iv.next, %loop.latch ]
+  %p = phi ptr [ %s, %entry ], [ %p.next, %loop.latch ]
+  %c = load i8, ptr %p, align 1
+  %found = icmp eq i8 %c, 47
+  br i1 %found, label %if.found, label %loop.latch
+
+loop.latch:
+  %p.next = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %iv.next = add i64 %iv, -1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+if.found:
+  %idx = sub i64 %n, %iv
+  %clamped = call i64 @llvm.umin.i64(i64 %n, i64 %idx)
+  br label %exit
+
+exit:
+  %res = phi i64 [ 0, %entry ], [ %n, %loop.latch ], [ %clamped, %if.found ]
+  ret i64 %res
+}
+
+declare void @use(i1)
+declare void @launch(i32)
+declare void @execute()
+declare i64 @llvm.umin.i64(i64, i64)

@@ -438,11 +438,11 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T as() const {
-    if constexpr (cpp::is_same_v<T, bfloat16>
+    if constexpr (cpp::is_same_v<T, bfloat16> || cpp::is_same_v<T, Float128>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<T, float16>
 #endif
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
                   || cpp::is_same_v<T, float128>
 #endif
     )
@@ -472,7 +472,11 @@ template <size_t Bits> struct DyadicFloat {
       // exponents coming in to this function _shouldn't_ be that large). The
       // result should always end up as a positive size_t.
       size_t shift = -static_cast<size_t>(exponent);
-      new_mant >>= shift;
+      size_t limit = cpp::numeric_limits<MantissaType>::digits;
+      if (shift >= limit)
+        new_mant = 0;
+      else
+        new_mant >>= shift;
     }
 
     if (sign.is_neg()) {

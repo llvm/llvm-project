@@ -19,6 +19,7 @@
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <list>
 #include <map>
@@ -192,7 +194,7 @@ struct SecHdrTableEntry {
 enum class SecCommonFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagCompress = (1 << 0),
-  // Indicate the section contains only profile without context.
+  // Indicate the section contains flat profiles (without callsite samples).
   SecFlagFlat = (1 << 1)
 };
 
@@ -207,8 +209,13 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagFixedLengthMD5 = (1 << 1),
   // Profile contains ".__uniq." suffix name. Compiler shouldn't strip
   // the suffix when doing profile matching when seeing the flag.
-  SecFlagUniqSuffix = (1 << 2)
+  SecFlagUniqSuffix = (1 << 2),
+  // Name table is stored in 3-span Eytzinger layout (Nested, Flat, Inlinees).
+  SecFlagEytzinger = (1 << 3)
 };
+
+enum class EytzingerSpan : size_t { Nested, Flat, Inlinee, NumSpans };
+
 enum class SecProfileSymbolListFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagMD5 = (1 << 0)
@@ -244,6 +251,9 @@ enum class SecFuncOffsetFlags : uint32_t {
   // Store function offsets in an order of contexts. The order ensures that
   // callee contexts of a given context laid out next to it.
   SecFlagOrdered = (1 << 0),
+  // Store function offsets in a parallel array aligned with Eytzinger NameTable
+  // span.
+  SecFlagEytzinger = (1 << 1),
 };
 
 // Verify section specific flag is used for the correct section.
@@ -268,9 +278,10 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   case SecFuncMetadata:
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
-  default:
   case SecFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
+    break;
+  default:
     break;
   }
   if (!IsFlagLegal)
@@ -394,7 +405,7 @@ public:
   };
 
   using SortedCallTargetSet = SmallVector<CallTarget>;
-  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
+  using CallTargetMap = SortedVectorMap<FunctionId, uint64_t, 0>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -1058,6 +1069,9 @@ public:
     return CallsiteSamples;
   }
 
+  /// Return whether this function profile contains callsite samples.
+  bool hasCallsiteSamples() const { return !CallsiteSamples.empty(); }
+
   /// Returns vtable access samples for the C++ types collected in this
   /// function.
   const CallsiteTypeMap &getCallsiteTypeCounts() const {
@@ -1341,24 +1355,26 @@ public:
                       const HashKeyMap<DenseMap, FunctionId, FunctionId>
                           *FuncNameToProfNameMap = nullptr) const;
 
-  LLVM_ABI static bool ProfileIsProbeBased;
-
-  LLVM_ABI static bool ProfileIsCS;
-
-  LLVM_ABI static bool ProfileIsPreInlined;
-
   SampleContext &getContext() const { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
+  // These boolean variables are atomic so that parallel in-process ThinLTO
+  // backends writing the same value do not race.
+  LLVM_ABI static std::atomic<bool> ProfileIsProbeBased;
+
+  LLVM_ABI static std::atomic<bool> ProfileIsCS;
+
+  LLVM_ABI static std::atomic<bool> ProfileIsPreInlined;
+
   /// Whether the profile uses MD5 to represent string.
-  LLVM_ABI static bool UseMD5;
+  LLVM_ABI static std::atomic<bool> UseMD5;
 
   /// Whether the profile contains any ".__uniq." suffix in a name.
-  LLVM_ABI static bool HasUniqSuffix;
+  LLVM_ABI static std::atomic<bool> HasUniqSuffix;
 
   /// If this profile uses flow sensitive discriminators.
-  LLVM_ABI static bool ProfileIsFS;
+  LLVM_ABI static std::atomic<bool> ProfileIsFS;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
@@ -1519,29 +1535,6 @@ using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
 LLVM_ABI void
 sortFuncProfiles(const SampleProfileMap &ProfileMap,
                  std::vector<NameFunctionSamples> &SortedProfiles);
-
-/// Sort a LocationT->SampleT map by LocationT.
-///
-/// It produces a sorted list of <LocationT, SampleT> records by ascending
-/// order of LocationT.
-template <class LocationT, class SampleT> class SampleSorter {
-public:
-  using SamplesWithLoc = std::pair<const LocationT, SampleT>;
-  using SamplesWithLocList = SmallVector<const SamplesWithLoc *, 20>;
-
-  SampleSorter(const std::map<LocationT, SampleT> &Samples) {
-    for (const auto &I : Samples)
-      V.push_back(&I);
-    llvm::stable_sort(V, [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
-      return A->first < B->first;
-    });
-  }
-
-  const SamplesWithLocList &get() const { return V; }
-
-private:
-  SamplesWithLocList V;
-};
 
 /// SampleContextTrimmer impelements helper functions to trim, merge cold
 /// context profiles. It also supports context profile canonicalization to make
@@ -1711,9 +1704,6 @@ public:
   unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
-  void setToCompress(bool TC) { ToCompress = TC; }
-  bool toCompress() { return ToCompress; }
-
   std::vector<uint64_t> collectGUIDs() const {
     assert(!IsMD5 &&
            "Collecting GUIDs from existing MD5 table not yet implemented");
@@ -1743,10 +1733,6 @@ public:
 
 private:
   bool IsMD5 = false;
-  // Determine whether or not to compress the symbol list when
-  // writing it into profile. The variable is unused when the symbol
-  // list is read from an existing profile.
-  bool ToCompress = false;
   DenseSet<StringRef> Syms;
   EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
   BumpPtrAllocator Allocator;

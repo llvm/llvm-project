@@ -78,8 +78,18 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
 
 static bool violatesNoUndefAttr(AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(
-      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isPoison()) {
+      ContainsPoison = true;
+      return;
+    }
+    if (Scalar.isByte() && !ContainsPoison) {
+      // For non-byte-sized values, high bits are always zeroed out.
+      ContainsPoison = any_of(Scalar.asByte().bytes(), [](const Byte &V) {
+        return V.ConcreteMask != 255;
+      });
+    }
+  });
   return ContainsPoison;
 }
 
@@ -1885,10 +1895,9 @@ public:
 
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
                        ArrayRef<AnyValue> CalleeArgs) {
-    LibFunc LF;
+    LibFunc LF = CurrentFrame->TLI.getLibFunc(*ResolvedCallee);
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() ||
-        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() || LF == NotLibFunc) {
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
       return AnyValue();
@@ -2598,7 +2607,8 @@ public:
           ResVec.push_back(FV[I]);
           break;
         case BooleanKind::Poison:
-          ResVec.push_back(AnyValue::poison());
+          ResVec.push_back(
+              AnyValue::getPoisonValue(Ctx, SI.getType()->getScalarType()));
           break;
         }
       }
@@ -2663,11 +2673,12 @@ public:
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
-      return V.asPointer().address();
+      return V.asPointer().address().zextOrTrunc(BitWidth);
     });
   }
 
@@ -2769,7 +2780,8 @@ public:
     for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
       for (int Idx : SVI.getShuffleMask()) {
         if (Idx == PoisonMaskElem)
-          Res.push_back(AnyValue::poison());
+          Res.push_back(
+              AnyValue::getPoisonValue(Ctx, SVI.getType()->getScalarType()));
         else if (Idx < static_cast<int>(Size))
           Res.push_back(LHSVec[Idx]);
         else

@@ -237,6 +237,16 @@ static cl::opt<bool> SplitLayout(
     cl::desc("Split the profile to two sections with one containing sample "
              "profiles with inlined functions and the other without (only "
              "meaningful for -extbinary)"));
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::sub(MergeSubcommand),
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+static cl::opt<bool> WriteMD5IndexedTables(
+    "md5-indexed-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Write MD5-based indexed NameTable and parallel "
+             "FuncOffsetTable in Eytzinger layout (only meaningful for "
+             "-extbinary)"));
 static cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -812,12 +822,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto Reader = std::move(ReaderOrErr.get());
   if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
-    consumeError(std::move(E));
-    WC->Errors.emplace_back(
-        make_error<StringError>(
-            "Merge IR generated profile with Clang generated profile.",
-            std::error_code()),
-        Filename);
+    WC->Errors.emplace_back(std::move(E), Filename);
     return;
   }
 
@@ -1591,6 +1596,18 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
       warn("-gen-partial-profile is ignored. Specify -extbinary to enable it");
     else
       Writer.setPartialProfile();
+  }
+  if (WriteMD5ProfSymList) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-prof-sym-list is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5ProfileSymbolList();
+  }
+  if (WriteMD5IndexedTables) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5IndexedTables();
   }
 }
 

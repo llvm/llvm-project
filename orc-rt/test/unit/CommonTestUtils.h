@@ -11,6 +11,7 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/Session.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
@@ -43,18 +44,22 @@ private:
 };
 
 inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
+  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384,
+                                     "+neon, +fullfp16");
 }
 
 /// DispatchFn for tests that should never dispatch a task. Records a test
 /// failure on invocation, then runs the task inline so that any caller
-/// awaiting a result unblocks (rather than hanging) and the managed-code token
+/// awaiting a result unblocks (rather than hanging) and the keepalive token
 /// is released, even in -Asserts builds or when the dispatch arrives on a
 /// non-test thread.
-inline void noDispatch(orc_rt::move_only_function<void()> Task) {
+inline void noDispatch(orc_rt::Session::Task T) {
   ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
-  Task();
+  T();
 }
+
+/// DispatchFn that runs tasks on the current thread.
+inline void inlineDispatch(orc_rt::Session::Task T) { T(); }
 
 template <size_t Idx = 0> class OpCounter {
 public:

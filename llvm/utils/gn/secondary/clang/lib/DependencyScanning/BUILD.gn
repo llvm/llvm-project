@@ -13,7 +13,6 @@ static_library("DependencyScanning") {
   ]
   sources = [
     "DependencyGraph.cpp",
-    "DependencyScannerImpl.cpp",
     "DependencyScanningFilesystem.cpp",
     "DependencyScanningService.cpp",
     "DependencyScanningUtils.cpp",

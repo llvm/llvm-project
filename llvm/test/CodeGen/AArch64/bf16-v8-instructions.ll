@@ -1361,52 +1361,49 @@ define <8 x i1> @test_fcmp_une(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ueq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-LABEL: test_fcmp_ueq:
 ; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-CVT-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    fcmgt v4.4s, v3.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-CVT-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-CVT-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_ueq:
 ; CHECK-BF16-SD:       // %bb.0:
-; CHECK-BF16-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-BF16-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-BF16-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-BF16-SD-NEXT:    fcmgt v4.4s, v3.4s, v2.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-BF16-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-BF16-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-BF16-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-BF16-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fcmp_ueq:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v4.4s, v3.4s, v2.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16SVE-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16SVE-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-BF16SVE-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-BF16SVE-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;
@@ -1736,52 +1733,49 @@ define <8 x i1> @test_fcmp_ule(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_uno(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-LABEL: test_fcmp_uno:
 ; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-CVT-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    fcmge v4.4s, v3.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-CVT-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-CVT-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_uno:
 ; CHECK-BF16-SD:       // %bb.0:
-; CHECK-BF16-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-BF16-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-BF16-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-BF16-SD-NEXT:    fcmge v4.4s, v3.4s, v2.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-BF16-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-BF16-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-BF16-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-BF16-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fcmp_uno:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v1.8h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll2 v3.4s, v0.8h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    fcmge v4.4s, v3.4s, v2.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16SVE-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16SVE-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-BF16SVE-SD-NEXT:    addhn v2.4h, v2.4s, v4.4s
+; CHECK-BF16SVE-SD-NEXT:    addhn2 v2.8h, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    mvn v0.16b, v2.16b
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;
@@ -1835,10 +1829,9 @@ define <8 x i1> @test_fcmp_one(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-CVT-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-CVT-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_one:
@@ -1851,10 +1844,9 @@ define <8 x i1> @test_fcmp_one(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BF16-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-BF16-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-BF16-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fcmp_one:
@@ -1867,10 +1859,9 @@ define <8 x i1> @test_fcmp_one(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v3.4s, v0.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16SVE-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BF16SVE-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-BF16SVE-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_one:
@@ -2239,10 +2230,9 @@ define <8 x i1> @test_fcmp_ord(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-CVT-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-CVT-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-CVT-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fcmp_ord:
@@ -2255,10 +2245,9 @@ define <8 x i1> @test_fcmp_ord(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-BF16-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BF16-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-BF16-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-BF16-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BF16-SD-NEXT:    ret
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fcmp_ord:
@@ -2271,10 +2260,9 @@ define <8 x i1> @test_fcmp_ord(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v2.4s, v2.4s, v3.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmge v3.4s, v0.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    orr v1.16b, v2.16b, v4.16b
-; CHECK-BF16SVE-SD-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BF16SVE-SD-NEXT:    addhn v1.4h, v2.4s, v4.4s
+; CHECK-BF16SVE-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: test_fcmp_ord:
@@ -3074,16 +3062,14 @@ define <8 x i8> @test_fptosi_sat_i8(<8 x bfloat> %a) {
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fptosi_sat_i8:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    movi v1.4s, #127
-; CHECK-BF16SVE-SD-NEXT:    mvni v3.4s, #127
-; CHECK-BF16SVE-SD-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-BF16SVE-SD-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    smin v2.4s, v2.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    smax v1.4s, v2.4s, v3.4s
-; CHECK-BF16SVE-SD-NEXT:    smax v0.4s, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    smin z1.s, z1.s, #127
+; CHECK-BF16SVE-SD-NEXT:    smin z0.s, z0.s, #127
+; CHECK-BF16SVE-SD-NEXT:    smax z1.s, z1.s, #-128
+; CHECK-BF16SVE-SD-NEXT:    smax z0.s, z0.s, #-128
 ; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
@@ -3387,14 +3373,13 @@ define <8 x i8> @test_fptoui_sat_i8(<8 x bfloat> %a) {
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fptoui_sat_i8:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-BF16SVE-SD-NEXT:    fcvtzu v2.4s, v2.4s
+; CHECK-BF16SVE-SD-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    umin v2.4s, v2.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-BF16SVE-SD-NEXT:    umin z1.s, z1.s, #255
+; CHECK-BF16SVE-SD-NEXT:    umin z0.s, z0.s, #255
+; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;
@@ -5279,7 +5264,7 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #192
 ; CHECK-BF16-GI-NEXT:    ret
-  %r = call <8 x bfloat> @llvm.powi.v8bf16.v8i32(<8 x bfloat> %a, i32 %b)
+  %r = call <8 x bfloat> @llvm.powi.v8bf16.i32(<8 x bfloat> %a, i32 %b)
   ret <8 x bfloat> %r
 }
 

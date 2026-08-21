@@ -400,8 +400,6 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
   }
 
   return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
-                                          /*packed=*/recordTy.getPacked(),
-                                          /*padded=*/recordTy.getPadded(),
                                           recordTy);
 }
 
@@ -1000,17 +998,15 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
   // A label address taken in a constant context, e.g. a static computed-goto
-  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  Besides emitting
-  // the constant, register the label as address-taken so a following
-  // `goto *tbl[i]` lists it among the indirect branch's successors.  A label is
+  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  GotoSolver later
+  // collects this block-address attribute (here, from a global initializer) so
+  // the label survives and joins the indirect branch's successors.  A label is
   // always function-local, so cgf is set here.
   assert(emitter.cgf && "label address in a constant requires a function");
   CIRGenFunction &cgf = *const_cast<CIRGenFunction *>(emitter.cgf);
   auto func = cast<cir::FuncOp>(cgf.curFn);
-  cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
-      &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-  cgf.indirectGotoTargets.push_back(info);
-  return info;
+  return cir::BlockAddrInfoAttr::get(&cgf.getMLIRContext(), func.getSymName(),
+                                     e->getLabel()->getName());
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1309,9 +1305,10 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
   }
 
-  if (destType->isBitIntType()) {
-    cgm.errorNYI("emitForMemory: _BitInt type");
-  }
+  // CIR represents source types as literally as possible.  Some types, such as
+  // bool and _BitInt(N), are kept at their literal width here and expanded to
+  // their wider "in memory" types during lowering to the LLVM dialect, so the
+  // constant is already in the right form and needs no adjustment.
 
   return c;
 }
@@ -1469,11 +1466,17 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
-    if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-      assert(!cir::MissingFeatures::noUniqueAddressLayout());
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate: no_unique_address field");
-      return {};
+
+    // Empty [[no_unique_address]] fields have no CIR field index; represent the
+    // pointer-to-data-member by its concrete byte offset.
+    if (cgm.isEmptyFieldForMemberPointer(fieldDecl)) {
+      const ASTContext &astContext = cgm.getASTContext();
+      CharUnits offset =
+          astContext.getMemberPointerPathAdjustment(value) +
+          astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+      return cir::DataMemberOffsetAttr::get(cirTy, offset.getQuantity());
     }
+
     std::optional<llvm::SmallVector<int32_t>> path =
         cgm.buildMemberPath(destClass, fieldDecl);
     if (!path)
@@ -1507,11 +1510,26 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                                       cir::FPAttr::get(complexElemTy, real),
                                       cir::FPAttr::get(complexElemTy, imag));
   }
-  case APValue::FixedPoint:
-  case APValue::AddrLabelDiff:
-    cgm.errorNYI(
-        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
-    return {};
+  case APValue::FixedPoint: {
+    mlir::Type ty = cgm.convertType(destType);
+    return cir::IntAttr::get(ty, value.getFixedPoint().getValue());
+  }
+  case APValue::AddrLabelDiff: {
+    const AddrLabelExpr *lhsExpr = value.getAddrLabelDiffLHS();
+    const AddrLabelExpr *rhsExpr = value.getAddrLabelDiffRHS();
+
+    // Both labels belong to the function currently being emitted. The actual
+    // subtraction (ptrtoint of each block address, subtract, then truncate to
+    // the result type) is deferred to the LowerToLLVM pass, which is where
+    // block addresses are resolved to concrete basic blocks.
+    mlir::Type resultType = cgm.getTypes().convertType(destType);
+    auto intResultType = mlir::cast<cir::IntType>(resultType);
+    auto func = cast<cir::FuncOp>(cgf->curFn);
+    return cir::BlockAddrDiffAttr::get(
+        builder.getContext(), intResultType, func.getSymName(),
+        lhsExpr->getLabel()->getName(), rhsExpr->getLabel()->getName());
+  }
+
   case APValue::Matrix:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
     return {};

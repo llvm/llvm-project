@@ -127,6 +127,20 @@ func.func @test_norm_ret(%arg0: memref<1x16x14x14xf32, #map_tile>) -> (memref<1x
     // CHECK-NEXT: return %[[v1]], %[[v2]] : memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>
 }
 
+// Test with op_norm_ret, where results are consumed by a non-normalizable op.
+
+// CHECK-LABEL: test_norm_ret_denorm
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x32xf32>)
+func.func @test_norm_ret_denorm(%arg0: memref<1x16x14x14xf32, #map_tile>) {
+    %0, %1 = "test.op_norm_ret"(%arg0) : (memref<1x16x14x14xf32, #map_tile>) -> (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32, #map_tile>)
+    // CHECK: %[[v0:.*]], %[[v1:.*]] = "test.op_norm_ret"(%[[ARG0]]) : (memref<1x16x1x1x32x32xf32>) -> (memref<1x16x14x14xf32, #[[MAP:.*]]>, memref<1x16x14x14xf32, #[[MAP]]>)
+    "test.op_nonnorm"(%0, %0) : (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32, #map_tile>) -> ()
+    // CHECK: "test.op_nonnorm"(%[[v0]], %[[v0]]) : (memref<1x16x14x14xf32, #[[MAP]]>, memref<1x16x14x14xf32, #[[MAP]]>) -> ()
+    memref.dealloc %1 : memref<1x16x14x14xf32, #map_tile>
+    // CHECK: memref.dealloc %[[v1]] : memref<1x16x14x14xf32, #[[MAP]]>
+    return
+}
+
 // Test with an arbitrary op that references the function symbol.
 
 "test.op_funcref"() {func = @test_norm_mix} : () -> ()
@@ -186,9 +200,9 @@ func.func @test_reinterpret_cast(%arg0: memref<5x7xf32>, %arg1: memref<5x7xf32>,
 
 // CHECK-LABEL: reinterpret_cast_non_zero_offset
 func.func @reinterpret_cast_non_zero_offset(%arg0: index, %arg1: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>, %arg2: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>, %arg3: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>) -> (memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xi32>
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<2x17xf32>
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<1x10x17xi32>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<2x17xf32>
+  %alloc_1 = memref.alloc() alignment = 64 : memref<1x10x17xf32>
   cf.br ^bb3
 ^bb3:  // pred: ^bb1
   // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [32], strides: [1] : memref<2x17xf32> to memref<32xf32>
