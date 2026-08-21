@@ -3024,7 +3024,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;;
+    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
@@ -3067,7 +3067,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         return MaxFactors;
       }
     }
-    
+
     // Allow cases where the ExactTC == (VF * IC) + 1.
     //
     // This produces 1 vector iteration, and 1 scalar iteration with
@@ -5893,8 +5893,9 @@ LoopVectorizationPlanner::computeBestVF() {
     if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
-    if (!ForceVectorization && P->hasScalarTail() &&
-          ExactTC.isFixed() && ExactTC.getFixedValue() > 0 && ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
+    if (!ForceVectorization && P->hasScalarTail() && ExactTC.isFixed() &&
+        ExactTC.getFixedValue() > 0 &&
+        ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
       VFs = VFs.take_back(1);
     }
 
