@@ -222,6 +222,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexpl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -240,6 +241,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logbl
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
@@ -271,8 +273,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.round
+    libc.src.math.roundevenf128
     libc.src.math.roundf
     libc.src.math.roundf128
     libc.src.math.roundl
@@ -533,9 +537,7 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
-    libc.src.math.llrintf128
     libc.src.math.logbf128
-    libc.src.math.lrintf128
     libc.src.math.modff128
     libc.src.math.nanf128
     libc.src.math.nextafterf128
@@ -543,8 +545,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.nextupf128
     libc.src.math.remainderf128
     libc.src.math.remquof128
-    libc.src.math.rintf128
-    libc.src.math.roundevenf128
     libc.src.math.scalblnf128
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128

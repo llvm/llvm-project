@@ -334,22 +334,23 @@ static bool sinkScalarOperands(VPlan &Plan) {
   SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
   auto InsertIfValidSinkCandidate = [ScalarVFOnly, &WorkList](
                                         VPBasicBlock *SinkTo, VPValue *Op) {
-    auto *Candidate =
-        dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe());
-    if (!Candidate)
-      return;
-
-    // We only know how to sink VPReplicateRecipes and VPScalarIVStepsRecipes
-    // for now.
-    if (!isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(Candidate))
+    auto *Candidate = dyn_cast<VPSingleDefRecipe>(Op);
+    if (!isa_and_nonnull<VPReplicateRecipe, VPScalarIVStepsRecipe,
+                         VPInstruction>(Candidate))
       return;
 
     if (Candidate->getParent() == SinkTo ||
+        all_of(Candidate->operands(),
+               [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); }) ||
         vputils::cannotHoistOrSinkRecipe(*Candidate, /*Sinking=*/true))
       return;
 
-    if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
-      if (!ScalarVFOnly && RepR->isSingleScalar())
+    if (!ScalarVFOnly && !vputils::doesGeneratePerAllLanes(Candidate))
+      return;
+
+    // Only single-scalar VPInstructions can be sunk.
+    if (auto *VPI = dyn_cast<VPInstruction>(Candidate))
+      if (!vputils::isSingleScalar(VPI))
         return;
 
     WorkList.insert({SinkTo, Candidate});

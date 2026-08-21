@@ -6394,9 +6394,9 @@ libc_support_library(
     name = "__support_math_llrintf128",
     hdrs = ["src/__support/math/llrintf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6508,9 +6508,9 @@ libc_support_library(
     name = "__support_math_lrintf128",
     hdrs = ["src/__support/math/lrintf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6913,9 +6913,9 @@ libc_support_library(
     name = "__support_math_rintf128",
     hdrs = ["src/__support/math/rintf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6991,9 +6991,9 @@ libc_support_library(
     name = "__support_math_roundevenf128",
     hdrs = ["src/__support/math/roundevenf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -12542,6 +12542,8 @@ libc_math_function(
 libc_math_function(
     name = "llrintf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_llrintf128",
     ],
 )
@@ -12754,6 +12756,8 @@ libc_math_function(
 libc_math_function(
     name = "lrintf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_lrintf128",
     ],
 )
@@ -13229,6 +13233,8 @@ libc_math_function(
 libc_math_function(
     name = "rintf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_rintf128",
     ],
 )
@@ -13315,6 +13321,8 @@ libc_math_function(
 libc_math_function(
     name = "roundevenf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_roundevenf128",
     ],
 )

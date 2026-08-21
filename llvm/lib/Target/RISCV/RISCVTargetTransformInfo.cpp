@@ -2936,7 +2936,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 InstructionCost RISCVTTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) const {
+    const TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTI::TCC_Free;
   // In the basic model we take into account GEP instructions only
   // (although here can come alloca instruction, a value, constants and/or

@@ -4923,6 +4923,13 @@ public:
     return LoopRegion && LoopRegion->getHeaderMask();
   }
 
+  /// Returns true if the plan requires a scalar epilogue after the vector
+  /// loop. Must be called before removeBranchOnConst.
+  bool requiresScalarEpilogue() const {
+    const VPBasicBlock *MiddleVPBB = getMiddleBlock();
+    return MiddleVPBB->getSingleSuccessor() == getScalarPreheader();
+  }
+
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch. If there is an early exit from the vector loop, the middle block
