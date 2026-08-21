@@ -57,6 +57,7 @@ enum class SemanticInterpretation {
 struct SemanticStageInfo {
   Triple::EnvironmentType Stage;
   IOType AllowedIOTypesMask;
+  SemanticInterpretation Interpretation;
 };
 
 // Sentinel values denoting that an element is unallocated

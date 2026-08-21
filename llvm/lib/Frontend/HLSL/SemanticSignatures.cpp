@@ -62,9 +62,12 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     static constexpr IOType OutOrPatchConstant =
         static_cast<IOType>(IOType::Out | IOType::PatchConstantOrPrimitive);
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Vertex, IOType::InOut}, {Triple::Geometry, IOType::InOut},
-        {Triple::Hull, IOType::All},     {Triple::Domain, IOType::All},
-        {Triple::Pixel, IOType::In},     {Triple::Mesh, OutOrPatchConstant},
+        {Triple::Vertex, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Hull, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Mesh, OutOrPatchConstant, SemanticInterpretation::Arbitrary},
     };
     return Stages;
   }
@@ -73,43 +76,56 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   case dxbc::PSV::SemanticKind::GroupIndex:
   case dxbc::PSV::SemanticKind::GroupThreadID: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Compute, IOType::In}};
+        {Triple::Compute, IOType::In, SemanticInterpretation::NotAllocated}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Target: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Pixel, IOType::Out}};
+        {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::VertexID: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Vertex, IOType::In}};
+        {Triple::Vertex, IOType::In, SemanticInterpretation::SV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::IsFrontFace: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Geometry, IOType::Out}, {Triple::Pixel, IOType::In}};
+        {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Position: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Vertex, IOType::InOut}, {Triple::Pixel, IOType::In}};
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::ClipDistance:
   case dxbc::PSV::SemanticKind::CullDistance: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Vertex, IOType::InOut}, {Triple::Hull, IOType::All},
-        {Triple::Domain, IOType::All},   {Triple::Geometry, IOType::InOut},
-        {Triple::Pixel, IOType::In},     {Triple::Mesh, IOType::Out},
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::ClipCull},
+        {Triple::Mesh, IOType::Out, SemanticInterpretation::ClipCull},
     };
     return Stages;
   }
   case dxbc::PSV::SemanticKind::TessFactor:
   case dxbc::PSV::SemanticKind::InsideTessFactor: {
     static constexpr SemanticStageInfo Stages[] = {
-        {Triple::Hull, IOType::PatchConstantOrPrimitive},
-        {Triple::Domain, IOType::PatchConstantOrPrimitive},
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
     };
     return Stages;
   }
