@@ -850,7 +850,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   // We need to assign a unique ID to each resource that is created
   // from a heap. The ID must be unique for each unique Index value so
   // we can differentiate between resources instances of the same type.
-  DenseMap<Value *, uint32_t> IndexToHeapResID;
+  SmallDenseMap<Value *, uint32_t, 8> IndexToHeapResID;
   uint32_t NextHeapResID = 0;
 
   for (Function &F : M.functions()) {
