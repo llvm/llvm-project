@@ -1219,9 +1219,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // FuncSpec at O3 non-LTO is deferred to after buildInlinerPipeline
   // where LoopRotate and SROA expose better specialization opportunities.
   MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
-      !isLTOPreLink(Phase) &&
-      !(Level == OptimizationLevel::O3 &&
-        Phase == ThinOrFullLTOPhase::None))));
+                                       !isLTOPreLink(Phase) &&
+                                       !(Level == OptimizationLevel::O3 &&
+                                         Phase == ThinOrFullLTOPhase::None))));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
