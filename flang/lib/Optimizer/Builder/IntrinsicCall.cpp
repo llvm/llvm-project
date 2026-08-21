@@ -5271,8 +5271,8 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
       return;
     } else if (triple.isPPC()) {
       // Non-AIX PPC (e.g. powerpc64le)
-      mlir::Value addr = fir::ConvertOp::create(builder, loc, i32PtrTy,
-                                                fir::getBase(args[0]));
+      mlir::Value addr =
+          fir::ConvertOp::create(builder, loc, i32PtrTy, fir::getBase(args[0]));
       genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
       return;
     }
