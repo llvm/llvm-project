@@ -103,13 +103,13 @@ the file to disk do you need to swap the value in the SuperBlock to point to
 the new ``FreeBlockMapBlock``.
 
 The Free Block Maps are stored as a series of single blocks throughout the file
-at intervals of BlockSize. Because each FPM block is of size ``BlockSize``
-bytes, it contains 8 times as many bits as an interval has blocks. This means
-that the first block of each FPM refers to the first 8 intervals of the file
-(the first 32768 blocks), the second block of each FPM refers to the next 8
-blocks, and so on. This results in far more FPM blocks being present than are
-required, but in order to maintain backwards compatibility the format must stay
-this way.
+at intervals of ``BlockSize`` blocks. Because each FPM block is of size
+``BlockSize`` bytes, it contains 8 times as many bits as an interval has blocks.
+This means that the first block of each FPM refers to the first 8 intervals of
+the file (the first 32768 blocks), the second block of each FPM refers to the
+next 8 intervals, and so on. This results in far more FPM blocks being present
+than are required, but in order to maintain backwards compatibility the format
+must stay this way.
 
 The Stream Directory
 ====================
