@@ -14,7 +14,9 @@
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
+#include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
@@ -52,9 +54,49 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                       ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
-  return CmdList->appendLaunchKernelWithArgs(
-      Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-      NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+
+  bool AppendLaunchKernelWithArgsAvailable =
+      Device.getL0Context().LaunchKernelWithArguments.available();
+  
+  if (AppendLaunchKernelWithArgsAvailable && Device.getL0Context().AppendLaunchKernelSupported.load(std::memory_order_acquire)) {
+    auto Result = CmdList->appendLaunchKernelWithArgs(
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+
+    // Can a context have multiple users?
+    if (!Device.getL0Context().AppendLaunchKernelSupported.load(std::memory_order_acquire)) {
+      // Commandlist failed to launch kernel with arguments, fallback to older
+      // API.
+      consumeError(std::move(Result));
+    } else {
+      return Result;
+    }
+  }
+
+  // Submit kernel using older set of APIs - zeKernelSetArgumentValue
+  auto &GroupSizes = KEnv.GroupSizes;
+  auto Res = zeKernelSetGroupSize(Kernel, GroupSizes.groupSizeX,
+                                  GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
+  if (Res != ZE_RESULT_SUCCESS)
+    return error::createOffloadError(ErrorCode::UNKNOWN,
+                                     "Could not set group size!");
+
+  auto &KernelProperties = KEnv.KernelPR;
+
+  for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
+       KernelArg++) {
+    uint32_t ArgSize = KernelProperties.ArgSizes[KernelArg];
+
+    Res = zeKernelSetArgumentValue(Kernel, KernelArg, ArgSize,
+                                   KEnv.ArgPtrs[KernelArg]);
+    if (Res != ZE_RESULT_SUCCESS)
+      return error::createOffloadError(ErrorCode::UNKNOWN,
+                                       "Could not set argument to a kernel!");
+  }
+
+  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
+                                     NumWaitEvents, WaitEvents,
+                                     KEnv.IsCooperative);
 }
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,

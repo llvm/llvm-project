@@ -305,8 +305,8 @@ LevelZeroPluginTy::createPluginContext(
 
   ze_context_handle_t ZeContext = nullptr;
   bool OwnsZeContext = false;
-  if (IsFullDriver && DriverCtx.zeDriverGetDefaultContext)
-    ZeContext = DriverCtx.zeDriverGetDefaultContext(Driver);
+  if (IsFullDriver && DriverCtx.DriverGetDefaultContext.available())
+    ZeContext = DriverCtx.DriverGetDefaultContext(Driver);
   if (!ZeContext) {
     ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
     CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);

@@ -43,10 +43,10 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
 
   // Query and cache argument sizes if extension is available.
   auto &Context = L0Device.getL0Context();
-  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
+  if (KernelPR.NumKernelArgs > 0 && Context.KernelGetArgumentSize.available()) {
     KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
     for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
-      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
+      CALL_ZE_RET_ERROR(Context.KernelGetArgumentSize, zeKernel, I,
                         &KernelPR.ArgSizes[I]);
     }
   }

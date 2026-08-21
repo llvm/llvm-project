@@ -18,6 +18,8 @@
 #include "L0Defs.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
+#include "level_zero/ze_api.h"
+#include <atomic>
 #include <mutex>
 
 namespace llvm::omp::target::plugin {
@@ -129,7 +131,7 @@ public:
       ze_event_handle_t SignalEvent = nullptr, uint32_t NumWaitEvents = 0,
       ze_event_handle_t *WaitEvents = nullptr, bool IsCooperative = false) {
 
-    if (!api_helper::canCall<zeCommandListAppendLaunchKernelWithArguments>())
+    if (Context.LaunchKernelWithArguments.available() == false)
       return Plugin::error(
           ErrorCode::UNSUPPORTED,
           "zeCommandListAppendLaunchKernelWithArguments is not "
@@ -140,10 +142,26 @@ public:
         static_cast<ze_bool_t>(IsCooperative)};
     std::lock_guard<std::mutex> Lock(Mtx);
 
-    CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernelWithArguments, CmdList,
-                      Kernel, *GroupCounts, *GroupSizes, ArgPtrs,
-                      IsCooperative ? &CoopDesc : nullptr, SignalEvent,
-                      NumWaitEvents, WaitEvents);
+    auto Result = Context.LaunchKernelWithArguments(
+        CmdList, Kernel, *GroupCounts, *GroupSizes, ArgPtrs,
+        IsCooperative ? &CoopDesc : nullptr, SignalEvent, NumWaitEvents,
+        WaitEvents);
+
+    if (Result == ze_result_t::ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      Context.AppendLaunchKernelSupported.store(false, std::memory_order_release);
+      return Plugin::error(
+          ErrorCode::UNSUPPORTED,
+          "zeCommandListAppendLaunchKernelWithArguments is not "
+          "supported on this driver");
+    }
+
+    if (Result != ze_result_t::ZE_RESULT_SUCCESS) {
+      return Plugin::error(getOffloadErrorCode(Result),
+                           "zeCommandListAppendLaunchKernelWithArguments "
+                           "failed with error %d, %s",
+                           Result, getZeErrorName(Result));
+    }
+
     return Plugin::success();
   }
 
@@ -177,13 +195,12 @@ public:
                            ze_event_handle_t SignalEvent = nullptr,
                            uint32_t NumWaitEvents = 0,
                            ze_event_handle_t *WaitEvents = nullptr) {
-    auto zeCommandListAppendHost = Context.zeCommandListAppendHostFunction;
-    if (!zeCommandListAppendHost)
+    if (!Context.CommandListAppendHostFunction.available())
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "zeCommandListAppendHostFunction extension is not "
                            "available on this driver");
     std::lock_guard<std::mutex> Lock(Mtx);
-    CALL_ZE_RET_ERROR(zeCommandListAppendHost, CmdList,
+    CALL_ZE_RET_ERROR(Context.CommandListAppendHostFunction, CmdList,
                       reinterpret_cast<void *>(Callback), UserData,
                       /*pReserved*/ nullptr, SignalEvent, NumWaitEvents,
                       WaitEvents);
