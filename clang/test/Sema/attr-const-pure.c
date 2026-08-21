@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Winvalid-pure-attribute %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Winvalid-pure-attribute -x c++ %s
-
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-invalid-pure-attribute %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-invalid-pure-attribute -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,invalidpure -Winvalid-pure-attribute %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,invalidpure -Winvalid-pure-attribute -x c++ %s
 // The attributes apply to function declarations, nothing else.
 __attribute__((const)) int func1(void);
 __attribute__((pure)) int func2(void);
@@ -10,14 +11,16 @@ __attribute__((pure)) int func2(void);
 
 #ifdef __cplusplus
 struct CppTest {
-// They are fine on member functions.
-__attribute__((const)) int func();
+  // They are fine on member functions.
+  __attribute__((const)) int func();
   [[gnu::pure]] int other_func();
-int another();
-// Constructors and destructors are not allowed though because they
-// notionally return void.
+  
+  int another();
+  
+  // Constructors and destructors are not allowed though because they
+  // notionally return void.
   [[__gnu__::__const__]] CppTest(); // expected-warning {{'const' attribute on function returning 'void'; attribute ignored}}
-__attribute__((pure)) ~CppTest(); // expected-warning {{'pure' attribute on function returning 'void'; attribute ignored}}
+  __attribute__((pure)) ~CppTest(); // expected-warning {{'pure' attribute on function returning 'void'; attribute ignored}}
 };
 
 // Including out-of-line member functions.
@@ -38,11 +41,11 @@ int (*fp1)(void) [[gnu::const]]; // expected-warning {{attribute 'gnu::const' ig
 int (*fp2)(void) [[gnu::pure]];  // expected-warning {{attribute 'gnu::pure' ignored, because it cannot be applied to a type}}
 
 struct __attribute__((const)) S1 { // expected-warning {{'const' attribute only applies to functions}}
-int x;
+  int x;
 };
 
 struct __attribute__((pure)) S2 { // expected-warning {{'pure' attribute only applies to functions}}
-int x;
+  int x;
 };
 
 // Or variables, etc.
@@ -59,31 +62,30 @@ __attribute__((const, pure)) int func7(void); // expected-warning {{'const' attr
 // FIXME: this should also be diagnosed the same as func7.
 __attribute__((pure)) int func8(void);
 [[gnu::const]] int func8(void) {
-return 12;
+  return 12;
 }
-
 // Diagnosing invalid 'pure'/'const' attributes: writes through a pointer or
 // reference parameter, or to a global/static variable, violate the
 // attribute's no-visible-side-effects contract.
 
 int lookup(int key, int *value) __attribute__((__pure__));
-int lookup(int key, int *value) { // expected-note {{function declared 'pure' here}}
+int lookup(int key, int *value) { // invalidpure-note {{function declared 'pure' here}}
   if (key == 42) {
-    *value = 47; // expected-warning {{function declared 'pure' stores through pointer parameter 'value'}}
+    *value = 47; // invalidpure-warning {{function declared 'pure' stores through pointer parameter 'value'}}
     return 0;
   }
   return -1;
 }
 
 static int global_cache;
-__attribute__((pure)) int writes_global(int x) { // expected-note {{function declared 'pure' here}}
-  global_cache = x; // expected-warning {{function declared 'pure' stores to global variable 'global_cache'}}
+__attribute__((pure)) int writes_global(int x) { // invalidpure-note {{function declared 'pure' here}}
+  global_cache = x; // invalidpure-warning {{function declared 'pure' stores to global variable 'global_cache'}}
   return global_cache;
 }
 
-__attribute__((pure)) int writes_static_local(int x) { // expected-note {{function declared 'pure' here}}
+__attribute__((pure)) int writes_static_local(int x) { // invalidpure-note {{function declared 'pure' here}}
   static int cache = 0;
-  cache += x; // expected-warning {{function declared 'pure' stores to static local variable 'cache'}}
+  cache += x; // invalidpure-warning {{function declared 'pure' stores to static local variable 'cache'}}
   return cache;
 }
 
@@ -99,8 +101,8 @@ __attribute__((pure)) int reads_ptr_arg(const int *value) {
 }
 
 #ifdef __cplusplus
-__attribute__((pure)) int writes_ref_arg(int &out) { // expected-note {{function declared 'pure' here}}
-  out = 1; // expected-warning {{function declared 'pure' stores through reference parameter 'out'}}
+__attribute__((pure)) int writes_ref_arg(int &out) { // invalidpure-note {{function declared 'pure' here}}
+  out = 1; // invalidpure-warning {{function declared 'pure' stores through reference parameter 'out'}}
   return 0;
 }
 #endif

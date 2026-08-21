@@ -312,30 +312,36 @@ private:
 
   void checkLvalue(const Expr *E) {
     E = E->IgnoreParenImpCasts();
-    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
-      if (UO->getOpcode() == UO_Deref) {
-        checkPointerBase(UO->getSubExpr());
-        return;
-      }
-    }
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
-          if (PVD->getType()->isReferenceType() &&
-              !PVD->getType()->getPointeeType().isConstQualified()) {
 
-            S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_argument)
-                << IsConstAttr << true << PVD;
-            S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
-                << IsConstAttr;
-          }
-        } else if (VD->hasGlobalStorage()) {
-          S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_global)
-              << IsConstAttr << VD->isStaticLocal() << VD;
-          S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
-              << IsConstAttr;
-        }
+    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Deref)
+        checkPointerBase(UO->getSubExpr());
+      return;
+    }
+
+    const auto *DRE = dyn_cast<DeclRefExpr>(E);
+    if (!DRE)
+      return;
+    const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!VD)
+      return;
+
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+      if (PVD->getType()->isReferenceType() &&
+          !PVD->getType()->getPointeeType().isConstQualified()) {
+        S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_argument)
+            << IsConstAttr << true << PVD;
+        S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
+            << IsConstAttr;
       }
+      return;
+    }
+
+    if (VD->hasGlobalStorage()) {
+      S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_global)
+          << IsConstAttr << VD->isStaticLocal() << VD;
+      S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
+          << IsConstAttr;
     }
   }
 
@@ -353,6 +359,15 @@ private:
         << IsConstAttr;
   }
 };
+
+static void checkPureConstFunctionWrites(Sema &S, const FunctionDecl *FD,
+                                         Stmt *Body) {
+  bool IsConstAttr = FD->hasAttr<ConstAttr>();
+  if (!IsConstAttr && !FD->hasAttr<PureAttr>())
+    return;
+  PureConstWriteChecker Checker(S, FD, IsConstAttr);
+  Checker.TraverseStmt(Body);
+}
 } // namespace
 static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
                                    const Stmt *Body, AnalysisDeclContext &AC) {
@@ -3385,6 +3400,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       checkRecursiveFunction(S, FD, Body, AC);
     }
+  }
+  if (!Diags.isIgnored(diag::warn_pure_function_writes_argument,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_pure_function_writes_global,
+                       D->getBeginLoc())) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+      checkPureConstFunctionWrites(S, FD, const_cast<Stmt *>(Body));
   }
 
   // Check for throw out of non-throwing function.
