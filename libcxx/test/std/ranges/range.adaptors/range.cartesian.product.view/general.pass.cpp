@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <functional>
 #include <ranges>
 #include <tuple>
@@ -52,6 +53,32 @@ constexpr bool test() {
     int total = std::ranges::fold_left(sums, 0, std::plus{});
     // (1+10)+(1+20)+(1+30)+(2+10)+(2+20)+(2+30) = 11+21+31+12+22+32 = 129
     assert(total == 129);
+  }
+
+  { // a std::views::transform base is non-simple: iterator_t<V> and iterator_t<const V> differ,
+    // so traversing the product instantiates __iterator<false>'s __next. Helpers that hardcoded
+    // the const base type failed to compile here. Both orders, since only one of them recursed
+    // into the wrapping path.
+    std::array a{1, 2};
+    auto t = a | std::views::transform([](const auto& value) { return 2 * value + 1; });
+
+    {
+      auto v = std::views::cartesian_product(a, t);
+      // Pin the specialisation: a simple base would silently drop this coverage.
+      static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+      int seen = 0;
+      for (auto _ : v)
+        ++seen;
+      assert(seen == 4);
+    }
+    {
+      auto v = std::views::cartesian_product(t, a);
+      static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+      int seen = 0;
+      for (auto _ : v)
+        ++seen;
+      assert(seen == 4);
+    }
   }
 
   { // random-access iterator arithmetic on the cartesian iterator matches manual indexing
