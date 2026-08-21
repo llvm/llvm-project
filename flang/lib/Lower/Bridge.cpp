@@ -2568,7 +2568,8 @@ private:
   mlir::scf::ExecuteRegionOp
   wrapUnstructuredConstruct(Fortran::lower::pft::Evaluation &eval,
                             mlir::Block *&savedExitBlock) {
-    if (!Fortran::lower::pft::isWrappableConstruct(eval))
+    if (!Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()))
       return nullptr;
 
     mlir::Location loc = toLocation();
@@ -3177,7 +3178,8 @@ private:
     // allocated for us — startNewFunction runs resetEvaluationBlocks before
     // each entry-point pass, so we can trust the pointer isn't stale from a
     // previous pass.
-    if (Fortran::lower::pft::isWrappableConstruct(eval) &&
+    if (Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()) &&
         eval.hasNestedEvaluations()) {
       Fortran::lower::pft::Evaluation &firstStmt =
           eval.getFirstNestedEvaluation();
@@ -5439,10 +5441,10 @@ private:
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
       if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
-          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
-                                                            assign.rhs)) {
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(
+              getFoldingContext(), assign.lhs, assign.rhs)) {
         rewritten =
-            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+            Fortran::evaluate::TryBuildSplitSumExpressionTrees(assign.rhs);
         if (rewritten)
           rhsExpr = &*rewritten;
       }
@@ -6310,7 +6312,8 @@ private:
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
-        if (Fortran::lower::pft::isWrappableConstruct(eval)) {
+        if (Fortran::lower::pft::isWrappableConstruct(
+                eval, bridge.getSemanticsContext())) {
           // The wrap owns internal blocks; only create the entry block here
           // so the enclosing CFG can branch to it.
           if (eval.hasNestedEvaluations()) {
@@ -6898,6 +6901,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
+  // Under -gpu=mem:unified|managed, host heap allocations use the matching
+  // indirect runtime allocators (malloc_unified / malloc_managed).
+  if (languageFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaUnified))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Unified);
+  else if (languageFeatures.IsEnabled(
+               Fortran::common::LanguageFeature::CudaManaged))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

@@ -324,12 +324,48 @@ config_setting(
 )
 
 config_setting(
+    name = "is_aarch64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
     name = "is_x86_64_windows_clang_mingw",
     constraint_values = [
         "@platforms//cpu:x86_64",
         "@platforms//os:windows",
     ],
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
 )
 
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
@@ -343,6 +379,10 @@ filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        ":is_x86_64_windows_clang_cl": [
             pattern % "windows_gnu"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],

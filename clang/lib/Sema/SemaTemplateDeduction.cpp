@@ -247,14 +247,10 @@ getDeducedNTTParameterFromExpr(const Expr *E, unsigned Depth) {
       if (NTTP->getDepth() == Depth)
         return NTTP;
 
-  if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(E);
-      ULE && (ULE->isConceptReference() || ULE->isVarDeclReference())) {
-    if (auto *TTP = ULE->getTemplateTemplateDecl()) {
+  if (const auto *DTI = dyn_cast<DependentTemplateIdExpr>(E))
+    if (DTI->getParameter()->getDepth() == Depth)
+      return DTI->getParameter();
 
-      if (TTP->getDepth() == Depth)
-        return TTP;
-    }
-  }
   return nullptr;
 }
 
@@ -935,6 +931,11 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
+
+        // Function parameter packs cannot be deduced.
+        if (isa_and_present<ParmVarDecl>(
+                dyn_cast<NamedDecl *>(Unexpanded[I].first)))
+          continue;
         if (auto DI = getDepthAndIndex(Unexpanded[I]))
           std::tie(Depth, Index) = *DI;
         else
@@ -5354,7 +5355,8 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
                                                AutoTypeLoc TypeLoc,
                                                QualType Deduced) {
   ConstraintSatisfaction Satisfaction;
-  ConceptDecl *Concept = cast<ConceptDecl>(Type.getTypeConstraintConcept());
+  ConceptDecl *Concept =
+      cast<ConceptDecl>(Type.getTypeConstraintConcept().getAsTemplateDecl());
   TemplateArgumentListInfo TemplateArgs(TypeLoc.getLAngleLoc(),
                                         TypeLoc.getRAngleLoc());
   TemplateArgs.addArgument(
@@ -5380,9 +5382,11 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     llvm::raw_string_ostream OS(Buf);
     OS << "'" << Concept->getName();
     if (TypeLoc.hasExplicitTemplateArgs()) {
-      printTemplateArgumentList(
-          OS, Type.getTypeConstraintArguments(), S.getPrintingPolicy(),
-          Type.getTypeConstraintConcept()->getTemplateParameters());
+      printTemplateArgumentList(OS, Type.getTypeConstraintArguments(),
+                                S.getPrintingPolicy(),
+                                Type.getTypeConstraintConcept()
+                                    .getAsTemplateDecl()
+                                    ->getTemplateParameters());
     }
     OS << "'";
     S.Diag(TypeLoc.getConceptNameLoc(),
@@ -6872,15 +6876,10 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     return true;
   }
 
-  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *ULE) override {
-    if (ULE->isConceptReference() || ULE->isVarDeclReference()) {
-      if (auto *TTP = ULE->getTemplateTemplateDecl()) {
-        if (TTP->getDepth() == Depth)
-          Used[TTP->getIndex()] = true;
-      }
-      for (auto &TLoc : ULE->template_arguments())
-        DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(TLoc);
-    }
+  bool VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) override {
+    TemplateTemplateParmDecl *TTP = E->getParameter();
+    if (TTP->getDepth() == Depth)
+      Used[TTP->getIndex()] = true;
     return true;
   }
 
@@ -6909,11 +6908,10 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
     E = Expansion->getPattern();
 
   E = unwrapExpressionForDeduction(E);
-  if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(E);
-      ULE && (ULE->isConceptReference() || ULE->isVarDeclReference())) {
-    if (const auto *TTP = ULE->getTemplateTemplateDecl())
-      Used[TTP->getIndex()] = true;
-    for (auto &TLoc : ULE->template_arguments())
+
+  if (const auto *DTI = dyn_cast<DependentTemplateIdExpr>(E)) {
+    Used[DTI->getParameter()->getIndex()] = true;
+    for (const auto &TLoc : DTI->template_arguments())
       MarkUsedTemplateParameters(Ctx, TLoc.getArgument(), OnlyDeduced, Depth,
                                  Used);
     return;

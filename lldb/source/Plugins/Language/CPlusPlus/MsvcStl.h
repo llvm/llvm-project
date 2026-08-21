@@ -81,6 +81,9 @@ MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
 bool IsMsvcStlVector(ValueObject &valobj);
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::list and std::forward_list
 bool IsMsvcStlList(ValueObject &valobj);

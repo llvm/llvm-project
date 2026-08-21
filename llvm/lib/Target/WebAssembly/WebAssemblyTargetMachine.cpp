@@ -537,7 +537,7 @@ void WebAssemblyPassConfig::addPreRegBankSelect() {
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
