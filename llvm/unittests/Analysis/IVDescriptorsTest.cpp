@@ -481,12 +481,6 @@ for.end:
         BBI = IfThen->begin();
         Instruction *StepInst = &*BBI;
         assert(StepInst->getName() == "inc");
-        Instruction *ExtInst = &*(++BBI);
-        assert(ExtInst->getName() == "monotonic.prom");
-        Instruction *GEPInst = &*(++BBI);
-        assert(GEPInst->getName() == "arrayidx");
-        BasicBlock *IfEnd = &*(++FI);
-        assert(IfEnd->getName() == "for.inc");
         // Check %monotonic descriptor.
         MonotonicDescriptor Desc;
         bool IsMonotonicPhi =
@@ -545,8 +539,6 @@ for.end:
         assert(IfThen->getName() == "if.then");
         Instruction *StepInst = &*(IfThen->begin());
         assert(StepInst->getName() == "inc");
-        BasicBlock *IfEnd = &*(++FI);
-        assert(IfEnd->getName() == "for.inc");
         MonotonicDescriptor Desc;
         bool IsMonotonicPhi =
             MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
@@ -556,5 +548,64 @@ for.end:
         auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
         EXPECT_EQ(Desc.getPhiSCEV(),
                   SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
+      });
+}
+
+TEST(IVDescriptorsTest, InvalidMonotonicExtraStep) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %dst, i1 %cond, i1 %cond2, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %monotonic = phi i32 [ 0, %entry ], [ %monotonic.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = add nsw i32 %monotonic, 1
+  %monotonic.prom = sext i32 %monotonic to i64
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %monotonic.prom
+  store i32 10, ptr %arrayidx, align 4
+  br i1 %cond2, label %if.then1, label %for.inc
+if.then1:
+  %inc2 = add nsw i32 %monotonic, 2
+  br label %for.inc
+for.inc:
+  %monotonic.next = phi i32 [ %inc, %if.then ], [ %inc2, %if.then1 ], [ %monotonic, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        assert(Phi->getName() == "monotonic");
+        BasicBlock *IfThen = &*(++FI);
+        assert(IfThen->getName() == "if.then");
+        BBI = IfThen->begin();
+        Instruction *StepInst = &*BBI;
+        assert(StepInst->getName() == "inc");
+        // Check %monotonic descriptor.
+        MonotonicDescriptor Desc;
+        bool IsMonotonicPhi =
+            MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
+        EXPECT_FALSE(IsMonotonicPhi);
       });
 }

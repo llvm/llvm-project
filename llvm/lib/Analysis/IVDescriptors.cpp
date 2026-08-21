@@ -1715,7 +1715,7 @@ bool InductionDescriptor::isInductionPHI(
 bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
                                          MonotonicDescriptor &Desc,
                                          ScalarEvolution &SE) {
-  if (!HeaderPHI->getType()->isIntOrPtrTy() ||
+  if (!L->getLoopPreheader() || !HeaderPHI->getType()->isIntOrPtrTy() ||
       HeaderPHI->getParent() != L->getHeader())
     return false;
   auto *BackedgePHI =
@@ -1734,16 +1734,15 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
 
   // Find the step operation used to increment the value of the monotonic PHI.
   // TODO: Support chains of PHIs.
-  Value *StepOp = nullptr;
-  for (Use &Incoming : BackedgePHI->incoming_values()) {
-    if (Incoming == HeaderPHI)
-      continue;
-    if (StepOp || !Incoming->hasOneUse())
-      return {};
-    StepOp = Incoming;
-  }
+  Value *StepOp = find_singleton<Value>(
+      BackedgePHI->incoming_values(),
+      [&](Use &Incoming, bool /*AllowRepeasts*/) {
+        return Incoming != HeaderPHI ? Incoming.get() : nullptr;
+      });
+  if (!StepOp || !StepOp->hasOneUse())
+    return false;
 
-  auto *StepInst = dyn_cast_if_present<Instruction>(StepOp);
+  auto *StepInst = dyn_cast<Instruction>(StepOp);
   if (!StepInst)
     return false;
 
