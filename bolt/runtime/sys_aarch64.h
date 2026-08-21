@@ -1,5 +1,15 @@
+//===- bolt/runtime/sys_aarch64.h -------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_TOOLS_LLVM_BOLT_SYS_AARCH64
 #define LLVM_TOOLS_LLVM_BOLT_SYS_AARCH64
+
+#include "runtime_types.h"
 
 // Save all registers while keeping 16B stack alignment
 #define SAVE_ALL                                                               \
@@ -40,6 +50,36 @@
   "ldp x2, x3, [sp], #16\n"                                                    \
   "ldp x0, x1, [sp], #16\n"
 
+// https://github.com/torvalds/linux/blob/v7.1/arch/arm64/tools/syscall_64.tbl
+// https://github.com/torvalds/linux/blob/v7.1/scripts/syscall.tbl
+// scripts/syscalltbl.sh --abis common,64 arch/arm64/tools/syscall_64.tbl
+// arm64_syscalls.h
+#define __NR_ftruncate 46
+#define __NR_openat 56
+#define __NR_close 57
+#define __NR_getdents64 61
+#define __NR_lseek 62
+#define __NR_read 63
+#define __NR_write 64
+#define __NR_readlinkat 78
+#define __NR_fsync 82
+#define __NR_exit 93
+#define __NR_exit_group 94
+#define __NR_nanosleep 101
+#define __NR_kill 129
+#define __NR_rt_sigprocmask 135
+#define __NR_setpgid 154
+#define __NR_getpgid 155
+#define __NR_uname 160
+#define __NR_prctl 167
+#define __NR_getpid 172
+#define __NR_getppid 173
+#define __NR_munmap 215
+#define __NR_clone 220
+#define __NR_mmap 222
+#define __NR_mprotect 226
+#define __NR_madvise 233
+
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
@@ -62,335 +102,6 @@ uint64_t getTextBaseAddress() {
   return DynAddr - StaticAddr;
 }
 
-uint64_t __read(uint64_t fd, const void *buf, uint64_t count) {
-  uint64_t ret;
-  register uint64_t x0 __asm__("x0") = fd;
-  register const void *x1 __asm__("x1") = buf;
-  register uint64_t x2 __asm__("x2") = count;
-  register uint32_t w8 __asm__("w8") = 63;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __write(uint64_t fd, const void *buf, uint64_t count) {
-  uint64_t ret;
-  register uint64_t x0 __asm__("x0") = fd;
-  register const void *x1 __asm__("x1") = buf;
-  register uint64_t x2 __asm__("x2") = count;
-  register uint32_t w8 __asm__("w8") = 64;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-void *__mmap(uint64_t addr, uint64_t size, uint64_t prot, uint64_t flags,
-             uint64_t fd, uint64_t offset) {
-  void *ret;
-  register uint64_t x0 __asm__("x0") = addr;
-  register uint64_t x1 __asm__("x1") = size;
-  register uint64_t x2 __asm__("x2") = prot;
-  register uint64_t x3 __asm__("x3") = flags;
-  register uint64_t x4 __asm__("x4") = fd;
-  register uint64_t x5 __asm__("x5") = offset;
-  register uint32_t w8 __asm__("w8") = 222;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(x4), "r"(x5), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __munmap(void *addr, uint64_t size) {
-  uint64_t ret;
-  register void *x0 __asm__("x0") = addr;
-  register uint64_t x1 __asm__("x1") = size;
-  register uint32_t w8 __asm__("w8") = 215;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __exit(uint64_t code) {
-  uint64_t ret;
-  register uint64_t x0 __asm__("x0") = code;
-  register uint32_t w8 __asm__("w8") = 94;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0)
-                       : "r"(w8)
-                       : "cc", "memory", "x1");
-  return ret;
-}
-
-uint64_t __open(const char *pathname, uint64_t flags, uint64_t mode) {
-  uint64_t ret;
-  register int x0 __asm__("x0") = -100;
-  register const char *x1 __asm__("x1") = pathname;
-  register uint64_t x2 __asm__("x2") = flags;
-  register uint64_t x3 __asm__("x3") = mode;
-  register uint32_t w8 __asm__("w8") = 56;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-long __getdents64(unsigned int fd, dirent64 *dirp, size_t count) {
-  long ret;
-  register unsigned int x0 __asm__("x0") = fd;
-  register dirent64 *x1 __asm__("x1") = dirp;
-  register size_t x2 __asm__("x2") = count;
-  register uint32_t w8 __asm__("w8") = 61;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __readlink(const char *pathname, char *buf, size_t bufsize) {
-  uint64_t ret;
-  register int x0 __asm__("x0") = -100;
-  register const char *x1 __asm__("x1") = pathname;
-  register char *x2 __asm__("x2") = buf;
-  register size_t x3 __asm__("x3") = bufsize;
-  register uint32_t w8 __asm__("w8") = 78; // readlinkat
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __lseek(uint64_t fd, uint64_t pos, uint64_t whence) {
-  uint64_t ret;
-  register uint64_t x0 __asm__("x0") = fd;
-  register uint64_t x1 __asm__("x1") = pos;
-  register uint64_t x2 __asm__("x2") = whence;
-  register uint32_t w8 __asm__("w8") = 62;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __ftruncate(uint64_t fd, uint64_t length) {
-  int ret;
-  register uint64_t x0 __asm__("x0") = fd;
-  register uint64_t x1 __asm__("x1") = length;
-  register uint32_t w8 __asm__("w8") = 46;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __close(uint64_t fd) {
-  int ret;
-  register uint64_t x0 __asm__("x0") = fd;
-  register uint32_t w8 __asm__("w8") = 57;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0)
-                       : "r"(w8)
-                       : "cc", "memory", "x1");
-  return ret;
-}
-
-int __madvise(void *addr, size_t length, int advice) {
-  int ret;
-  register void *x0 __asm__("x0") = addr;
-  register size_t x1 __asm__("x1") = length;
-  register int x2 __asm__("x2") = advice;
-  register uint32_t w8 __asm__("w8") = 233;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __uname(struct UtsNameTy *buf) {
-  int ret;
-  register UtsNameTy *x0 __asm__("x0") = buf;
-  register uint32_t w8 __asm__("w8") = 160;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0)
-                       : "r"(w8)
-                       : "cc", "memory", "x1");
-  return ret;
-}
-
-uint64_t __nanosleep(const timespec *req, timespec *rem) {
-  uint64_t ret;
-  register const timespec *x0 __asm__("x0") = req;
-  register timespec *x1 __asm__("x1") = rem;
-  register uint32_t w8 __asm__("w8") = 101;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int64_t __fork() {
-  uint64_t ret;
-  // clone instead of fork with flags
-  // "CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD"
-  register uint64_t x0 __asm__("x0") = 0x1200011;
-  register uint64_t x1 __asm__("x1") = 0;
-  register uint64_t x2 __asm__("x2") = 0;
-  register uint64_t x3 __asm__("x3") = 0;
-  register uint64_t x4 __asm__("x4") = 0;
-  register uint32_t w8 __asm__("w8") = 220;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(x4), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __mprotect(void *addr, size_t len, int prot) {
-  int ret;
-  register void *x0 __asm__("x0") = addr;
-  register size_t x1 __asm__("x1") = len;
-  register int x2 __asm__("x2") = prot;
-  register uint32_t w8 __asm__("w8") = 226;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __getpid() {
-  uint64_t ret;
-  register uint32_t w8 __asm__("w8") = 172;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret)
-                       : "r"(w8)
-                       : "cc", "memory", "x0", "x1");
-  return ret;
-}
-
-uint64_t __getppid() {
-  uint64_t ret;
-  register uint32_t w8 __asm__("w8") = 173;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret)
-                       : "r"(w8)
-                       : "cc", "memory", "x0", "x1");
-  return ret;
-}
-
-int __setpgid(uint64_t pid, uint64_t pgid) {
-  int ret;
-  register uint64_t x0 __asm__("x0") = pid;
-  register uint64_t x1 __asm__("x1") = pgid;
-  register uint32_t w8 __asm__("w8") = 154;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-uint64_t __getpgid(uint64_t pid) {
-  uint64_t ret;
-  register uint64_t x0 __asm__("x0") = pid;
-  register uint32_t w8 __asm__("w8") = 155;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0)
-                       : "r"(w8)
-                       : "cc", "memory", "x1");
-  return ret;
-}
-
-int __kill(uint64_t pid, int sig) {
-  int ret;
-  register uint64_t x0 __asm__("x0") = pid;
-  register int x1 __asm__("x1") = sig;
-  register uint32_t w8 __asm__("w8") = 129;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __fsync(int fd) {
-  int ret;
-  register int x0 __asm__("x0") = fd;
-  register uint32_t w8 __asm__("w8") = 82;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0)
-                       : "r"(w8)
-                       : "cc", "memory", "x1");
-  return ret;
-}
-
-uint64_t __sigprocmask(int how, const void *set, void *oldset) {
-  uint64_t ret;
-  register int x0 __asm__("x0") = how;
-  register const void *x1 __asm__("x1") = set;
-  register void *x2 __asm__("x2") = oldset;
-  register long x3 asm("x3") = 8;
-  register uint32_t w8 __asm__("w8") = 135;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %0, x0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
-int __prctl(int option, unsigned long arg2, unsigned long arg3,
-            unsigned long arg4, unsigned long arg5) {
-  int ret;
-  register int x0 __asm__("x0") = option;
-  register unsigned long x1 __asm__("x1") = arg2;
-  register unsigned long x2 __asm__("x2") = arg3;
-  register unsigned long x3 __asm__("x3") = arg4;
-  register unsigned long x4 __asm__("x4") = arg5;
-  register uint32_t w8 __asm__("w8") = 167;
-  __asm__ __volatile__("svc #0\n"
-                       "mov %w0, w0"
-                       : "=r"(ret), "+r"(x0), "+r"(x1)
-                       : "r"(x2), "r"(x3), "r"(x4), "r"(w8)
-                       : "cc", "memory");
-  return ret;
-}
-
 } // anonymous namespace
 
-#endif
+#endif /* LLVM_TOOLS_LLVM_BOLT_SYS_AARCH64 */

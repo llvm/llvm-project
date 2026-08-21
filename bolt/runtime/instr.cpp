@@ -141,8 +141,7 @@ public:
       StackBase = reinterpret_cast<uint8_t *>(
           __mmap(0, MaxSize, PROT_READ | PROT_WRITE,
                  (Shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS, -1, 0));
-      assert(StackBase != MAP_FAILED,
-             "BumpPtrAllocator: failed to mmap stack!");
+      assert(!isErrValue(StackBase), "BumpPtrAllocator: failed to mmap stack!");
       StackSize = 0;
     }
 
@@ -703,13 +702,11 @@ static char *getBinaryPath() {
     return TargetPath;
 
   unsigned long CurAddr = (unsigned long)__get_pc();
-  uint64_t FDdir = __open(DirPath, O_RDONLY,
-                          /*mode=*/0666);
-  assert(static_cast<int64_t>(FDdir) >= 0,
-         "failed to open /proc/self/map_files");
+  int FDdir = __open(DirPath, O_RDONLY, /*mode=*/0666);
+  assert(FDdir >= 0, "failed to open /proc/self/map_files");
 
-  while (long Nread = __getdents64(FDdir, (struct dirent64 *)Buf, BufSize)) {
-    assert(static_cast<int64_t>(Nread) != -1, "failed to get folder entries");
+  while (ssize_t Nread = __getdents64(FDdir, (struct dirent64 *)Buf, BufSize)) {
+    assert(Nread >= 0, "failed to get folder entries");
 
     struct dirent64 *d;
     for (long Bpos = 0; Bpos < Nread; Bpos += d->d_reclen) {
@@ -724,9 +721,8 @@ static char *getBinaryPath() {
       char *C = strCopy(FindBuf, DirPath, NameMax);
       C = strCopy(C, d->d_name, NameMax - (C - FindBuf));
       *C = '\0';
-      uint64_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
-      assert(static_cast<int64_t>(Ret) >= 0 && Ret < sizeof(TargetPath),
-             "readlink error");
+      ssize_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
+      assert(Ret >= 0 && Ret < sizeof(TargetPath), "readlink error");
       TargetPath[Ret] = '\0';
       __close(FDdir);
       return TargetPath;
@@ -749,17 +745,18 @@ ProfileWriterContext readDescriptions(const uint8_t *BinContents,
     const char *BinPath = getBinaryPath();
     assert(BinPath && BinPath[0] != '\0', "failed to find binary path");
 
-    uint64_t FD = __open(BinPath, O_RDONLY,
-                         /*mode=*/0666);
-    assert(static_cast<int64_t>(FD) >= 0, "failed to open binary path");
+    int FD = __open(BinPath, O_RDONLY, /*mode=*/0666);
+    assert(FD >= 0, "failed to open binary path");
 
     Result.FileDesc = FD;
 
     // mmap our binary to memory
-    Size = __lseek(FD, 0, SEEK_END);
+    off_t Ret = __lseek(FD, 0, SEEK_END);
+    assert(Ret >= 0, "Failed to lseek!");
+    Size = static_cast<uint64_t>(Ret);
     BinContents = reinterpret_cast<uint8_t *>(
         __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
-    assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
+    assert(!isErrValue(BinContents), "readDescriptions: Failed to mmap self!");
   }
   Result.MMapPtr = BinContents;
   Result.MMapSize = Size;
@@ -1493,7 +1490,7 @@ void visitCallFlowEntry(CallFlowHashTable::MapEntry &Entry, int FD,
 int openProfile() {
   // Build the profile name string by appending our PID
   char Buf[BufSize];
-  uint64_t PID = __getpid();
+  pid_t PID = __getpid();
   char *Ptr = strCopy(Buf, __bolt_instr_filename, BufSize);
   if (__bolt_instr_use_pid) {
     Ptr = strCopy(Ptr, ".", BufSize - (Ptr - Buf + 1));
@@ -1501,13 +1498,11 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
-                       /*mode=*/0600);
-  if (static_cast<int64_t>(FD) < 0) {
+  int FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, /*mode=*/0600);
+  if (FD < 0) {
     report("Error while trying to open profile file for writing: ");
     report(Buf);
-    reportNumber("\nFailed with error number: 0x",
-                 0 - static_cast<int64_t>(FD), 16);
+    reportNumber("\nFailed with error number: 0x", FD, 16);
     __exit(1);
   }
   return FD;
@@ -1570,10 +1565,10 @@ __bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
   if (!GlobalWriteProfileMutex->acquire())
     return;
 
-  int ret = __lseek(FD, 0, SEEK_SET);
-  assert(ret == 0, "Failed to lseek!");
-  ret = __ftruncate(FD, 0);
-  assert(ret == 0, "Failed to ftruncate!");
+  off_t Ret = __lseek(FD, 0, SEEK_SET);
+  assert(Ret >= 0, "Failed to lseek!");
+  int RetTr = __ftruncate(FD, 0);
+  assert(RetTr >= 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
   HashAlloc.setMaxSize(__bolt_instr_max_size);
   ProfileWriterContext Ctx = readDescriptions(LibContents, LibSize);
@@ -1611,10 +1606,10 @@ void watchProcess() {
   timespec ts, rem;
   uint64_t Elapsed = 0ull;
   int FD = openProfile();
-  uint64_t ppid;
+  int ppid;
   if (__bolt_instr_wait_forks) {
     // Store parent pgid
-    ppid = -__getpgid(0);
+    ppid = __getpgid(0);
     // And leave parent process group
     __setpgid(0, 0);
   } else {
@@ -1673,14 +1668,14 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   const bool Shared = !__bolt_instr_use_pid | !!__bolt_instr_sleep_time;
   const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
 
-  void *Ret =
-      __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
-             MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
-  assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
+  void *Ret = __mmap(reinterpret_cast<void *>(CountersStart),
+                     CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
+                     MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
+  assert(!isErrValue(Ret), "__bolt_instr_setup: Failed to mmap counters!");
 
   GlobalMetadataStorage = __mmap(0, 4096, PROT_READ | PROT_WRITE,
                                  MapPrivateOrShared | MAP_ANONYMOUS, -1, 0);
-  assert(GlobalMetadataStorage != MAP_FAILED,
+  assert(!isErrValue(GlobalMetadataStorage),
          "__bolt_instr_setup: failed to mmap page for metadata!");
 
   GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
@@ -1704,8 +1699,10 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
     if (__bolt_instr_wait_forks)
       __setpgid(0, 0);
 
-    if (long PID = __fork())
+    if (int PID = __fork()) {
+      assert(PID > 0, "__bolt_instr_setup: fork failed");
       return;
+    }
     watchProcess();
   }
 }
