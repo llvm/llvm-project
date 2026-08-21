@@ -41,4 +41,10 @@ export namespace std {
 
   // [bit.endian], endian
   using std::endian;
+
+#if _LIBCPP_STD_VER >= 29
+  // [bit.permute], permutation
+  using std::bit_reverse;
+#endif
+
 } // namespace std

@@ -91,6 +91,7 @@ namespace std {
 #  endif
 
 #  if _LIBCPP_STD_VER >= 29
+#    include <__bit/bit_reverse.h>
 #    include <__bit/shift.h>
 #  endif
 
