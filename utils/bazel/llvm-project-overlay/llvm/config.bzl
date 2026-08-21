@@ -133,6 +133,10 @@ builtin_thread_pointer = select({
 
 # TODO: We should split out host vs. target here.
 llvm_config_defines = os_defines + builtin_thread_pointer + select({
+    Label("//llvm:is_aarch64_windows_clang_mingw"): native_arch_defines("AArch64", "aarch64-w64-windows-gnu"),
+    Label("//llvm:is_aarch64_windows_clang_cl"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
+    Label("//llvm:is_aarch64_windows_msvc"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
+    Label("//llvm:is_x86_64_windows_clang_mingw"): native_arch_defines("X86", "x86_64-w64-windows-gnu"),
     Label("//llvm:darwin_arm64"): native_arch_defines("AArch64", "arm64-apple-darwin"),
     Label("//llvm:darwin_x86_64"): native_arch_defines("X86", "x86_64-unknown-darwin"),
     Label("//llvm:linux_aarch64"): native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),

@@ -2427,6 +2427,149 @@ define <2 x i32> @test_psshlr_s_u32x2(<2 x i32> %a, i32 %shamt) {
   ret <2 x i32> %res
 }
 
+; Constant shift amounts select the immediate forms.
+define <4 x i16> @test_pssha_s_i16x4_imm(<4 x i16> %a) {
+; RV32-LABEL: test_pssha_s_i16x4_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psslai.dh a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i16x4_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.h a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pssha.v4i16.i32(<4 x i16> %a, i32 3)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_psshar_s_i16x4_imm(<4 x i16> %a) {
+; RV32-LABEL: test_psshar_s_i16x4_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psslai.dh a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psshar_s_i16x4_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.h a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psshar.v4i16.i32(<4 x i16> %a, i32 3)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pssha_s_i16x4_neg_imm(<4 x i16> %a) {
+; RV32-LABEL: test_pssha_s_i16x4_neg_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psrai.dh a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i16x4_neg_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrai.h a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pssha.v4i16.i32(<4 x i16> %a, i32 -3)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_psshar_s_i16x4_neg_imm(<4 x i16> %a) {
+; RV32-LABEL: test_psshar_s_i16x4_neg_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psrari.dh a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psshar_s_i16x4_neg_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrari.h a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psshar.v4i16.i32(<4 x i16> %a, i32 -3)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_pssha_s_i32x2_imm(<2 x i32> %a) {
+; RV32-LABEL: test_pssha_s_i32x2_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psslai.dw a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i32x2_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pssha.v2i32.i32(<2 x i32> %a, i32 3)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_psshar_s_i32x2_imm(<2 x i32> %a) {
+; RV32-LABEL: test_psshar_s_i32x2_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psslai.dw a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psshar_s_i32x2_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psshar.v2i32.i32(<2 x i32> %a, i32 3)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pssha_s_i32x2_neg_imm(<2 x i32> %a) {
+; RV32-LABEL: test_pssha_s_i32x2_neg_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psrai.dw a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i32x2_neg_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pssha.v2i32.i32(<2 x i32> %a, i32 -3)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_psshar_s_i32x2_neg_imm(<2 x i32> %a) {
+; RV32-LABEL: test_psshar_s_i32x2_neg_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psrari.dw a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psshar_s_i32x2_neg_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrari.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psshar.v2i32.i32(<2 x i32> %a, i32 -3)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pssha_s_i32x2_neg_imm_max(<2 x i32> %a) {
+; RV32-LABEL: test_pssha_s_i32x2_neg_imm_max:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psrai.dw a0, a0, 31
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i32x2_neg_imm_max:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrai.w a0, a0, 31
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pssha.v2i32.i32(<2 x i32> %a, i32 -31)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pssha_s_i32x2_neg_imm_too_large(<2 x i32> %a) {
+; RV32-LABEL: test_pssha_s_i32x2_neg_imm_too_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, -32
+; RV32-NEXT:    pssha.dws a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssha_s_i32x2_neg_imm_too_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -32
+; RV64-NEXT:    pssha.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pssha.v2i32.i32(<2 x i32> %a, i32 -32)
+  ret <2 x i32> %res
+}
+
 ; Test packed multiply high signed
 define <8 x i8> @test_pmulh_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmulh_b:
@@ -4534,12 +4677,12 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_select_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a5, a0, 1
-; RV32-NEXT:    bnez a5, .LBB236_2
+; RV32-NEXT:    bnez a5, .LBB246_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB236_2:
+; RV32-NEXT:  .LBB246_2:
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
@@ -4548,10 +4691,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a3, a0, 1
 ; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:    bnez a3, .LBB236_2
+; RV64-NEXT:    bnez a3, .LBB246_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB236_2:
+; RV64-NEXT:  .LBB246_2:
 ; RV64-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -4561,12 +4704,12 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_select_v8i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a5, a0, 1
-; RV32-NEXT:    bnez a5, .LBB237_2
+; RV32-NEXT:    bnez a5, .LBB247_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB237_2:
+; RV32-NEXT:  .LBB247_2:
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
@@ -4575,10 +4718,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a3, a0, 1
 ; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:    bnez a3, .LBB237_2
+; RV64-NEXT:    bnez a3, .LBB247_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB237_2:
+; RV64-NEXT:  .LBB247_2:
 ; RV64-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -4588,12 +4731,12 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_select_v2i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a5, a0, 1
-; RV32-NEXT:    bnez a5, .LBB238_2
+; RV32-NEXT:    bnez a5, .LBB248_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB238_2:
+; RV32-NEXT:  .LBB248_2:
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
@@ -4602,10 +4745,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a3, a0, 1
 ; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:    bnez a3, .LBB238_2
+; RV64-NEXT:    bnez a3, .LBB248_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB238_2:
+; RV64-NEXT:  .LBB248_2:
 ; RV64-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res
@@ -4653,16 +4796,16 @@ define <2 x i32> @test_vselect_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pmslt.dw a6, a2, a0
 ; RV32-NEXT:    mv a0, a4
-; RV32-NEXT:    beqz a7, .LBB241_3
+; RV32-NEXT:    beqz a7, .LBB251_3
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    beqz a6, .LBB241_4
-; RV32-NEXT:  .LBB241_2:
+; RV32-NEXT:    beqz a6, .LBB251_4
+; RV32-NEXT:  .LBB251_2:
 ; RV32-NEXT:    mv a1, a5
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB241_3:
+; RV32-NEXT:  .LBB251_3:
 ; RV32-NEXT:    mv a5, a3
-; RV32-NEXT:    bnez a6, .LBB241_2
-; RV32-NEXT:  .LBB241_4:
+; RV32-NEXT:    bnez a6, .LBB251_2
+; RV32-NEXT:  .LBB251_4:
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    mv a1, a5
 ; RV32-NEXT:    ret

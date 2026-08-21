@@ -3579,16 +3579,13 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         }
       // (A*B)/C --> A*(B/C) if safe and B/C can be folded.
       if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(LHS)) {
-        SmallVector<SCEVUse, 4> Operands;
-        for (const SCEV *Op : M->operands())
-          Operands.push_back(getZeroExtendExpr(Op, ExtTy));
-        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands)) {
+        if (M->hasNoUnsignedWrap()) {
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
             const SCEV *Div = getUDivExpr(Op, RHSC);
             if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
-              Operands = SmallVector<SCEVUse, 4>(M->operands());
+              SmallVector<SCEVUse, 4> Operands(M->operands());
               Operands[i] = Div;
               return getMulExpr(Operands);
             }
@@ -3624,13 +3621,11 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         }
       }
 
-      // (A+B)/C --> (A/C + B/C) if safe and A/C and B/C can be folded.
+      // (A+B)/C --> (A/C + B/C) if the add does not unsigned wrap and A/C and
+      // B/C can be folded.
       if (const SCEVAddExpr *A = dyn_cast<SCEVAddExpr>(LHS)) {
-        SmallVector<SCEVUse, 4> Operands;
-        for (const SCEV *Op : A->operands())
-          Operands.push_back(getZeroExtendExpr(Op, ExtTy));
-        if (getZeroExtendExpr(A, ExtTy) == getAddExpr(Operands)) {
-          Operands.clear();
+        if (A->hasNoUnsignedWrap()) {
+          SmallVector<SCEVUse, 4> Operands;
           for (unsigned i = 0, e = A->getNumOperands(); i != e; ++i) {
             const SCEV *Op = getUDivExpr(A->getOperand(i), RHS);
             if (isa<SCEVUDivExpr>(Op) ||
@@ -3698,20 +3693,6 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     return getUDivExpr(NewLHS, NewRHS);
 
   return getOrCreateUDivExpr(LHS, RHS);
-}
-
-APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
-  APInt A = C1->getAPInt().abs();
-  APInt B = C2->getAPInt().abs();
-  uint32_t ABW = A.getBitWidth();
-  uint32_t BBW = B.getBitWidth();
-
-  if (ABW > BBW)
-    B = B.zext(ABW);
-  else if (ABW < BBW)
-    A = A.zext(BBW);
-
-  return APIntOps::GreatestCommonDivisor(std::move(A), std::move(B));
 }
 
 /// Get a canonical unsigned division expression, or something simpler if
@@ -6740,6 +6721,12 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
   return getRangeRef(S, SignHint, 0);
 }
 
+const APInt *ScalarEvolution::getConstantAPIntOrNull(const SCEV *S) {
+  if (const auto *C = dyn_cast<SCEVConstant>(S))
+    return &C->getAPInt();
+  return nullptr;
+}
+
 /// Determine the range for a particular SCEV.  If SignHint is
 /// HINT_RANGE_UNSIGNED (resp. HINT_RANGE_SIGNED) then getRange prefers ranges
 /// with a "cleaner" unsigned (resp. signed) representation.
@@ -8781,39 +8768,50 @@ void ScalarEvolution::forgetValue(Value *V) {
 }
 
 void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
-  if (!isSCEVable(V->getType()))
-    return;
-
   // If SCEV looked through a trivial LCSSA phi node, we might have SCEV's
   // directly using a SCEVUnknown/SCEVAddRec defined in the loop. After an
   // extra predecessor is added, this is no longer valid. Find all Unknowns and
   // AddRecs defined in the loop and invalidate any SCEV's making use of them.
-  if (const SCEV *S = getExistingSCEV(V)) {
-    struct InvalidationRootCollector {
-      Loop *L;
-      SmallVector<SCEVUse, 8> Roots;
+  auto InvalidateValue = [&](Value *Val) {
+    if (!isSCEVable(Val->getType()))
+      return;
+    if (const SCEV *S = getExistingSCEV(Val)) {
+      struct InvalidationRootCollector {
+        Loop *L;
+        SmallVector<SCEVUse, 8> Roots;
 
-      InvalidationRootCollector(Loop *L) : L(L) {}
+        InvalidationRootCollector(Loop *L) : L(L) {}
 
-      bool follow(const SCEV *S) {
-        if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
-          if (auto *I = dyn_cast<Instruction>(SU->getValue()))
-            if (L->contains(I))
+        bool follow(const SCEV *S) {
+          if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
+            if (auto *I = dyn_cast<Instruction>(SU->getValue()))
+              if (L->contains(I))
+                Roots.push_back(S);
+          } else if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+            if (L->contains(AddRec->getLoop()))
               Roots.push_back(S);
-        } else if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
-          if (L->contains(AddRec->getLoop()))
-            Roots.push_back(S);
+          }
+          return true;
         }
-        return true;
-      }
-      bool isDone() const { return false; }
-    };
+        bool isDone() const { return false; }
+      };
 
-    InvalidationRootCollector C(L);
-    visitAll(S, C);
-    forgetMemoizedResults(C.Roots);
-  }
+      InvalidationRootCollector C(L);
+      visitAll(S, C);
+      forgetMemoizedResults(C.Roots);
+    }
+  };
 
+  InvalidateValue(V);
+
+  // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
+  // intrinsic), its users (e.g. extractvalue) may have stale SCEV
+  // expressions referencing loop-internal values.
+  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
+        return isa<WithOverflowInst>(Inc);
+      }))
+    for (User *U : V->users())
+      InvalidateValue(U);
   // Also perform the normal invalidation.
   forgetValue(V);
 }

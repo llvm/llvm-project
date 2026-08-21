@@ -202,6 +202,9 @@ struct LoweringPreparePass
   /// Get or create __cxa_guard_release function.
   cir::FuncOp getGuardReleaseFn(cir::PointerType guardPtrTy);
 
+  /// Get or create __cxa_guard_abort function.
+  cir::FuncOp getGuardAbortFn(cir::PointerType guardPtrTy);
+
   /// Get or create the __init_tls function.
   cir::FuncOp getTlsInitFn();
 
@@ -363,7 +366,7 @@ struct LoweringPreparePass
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
     cir::GlobalOp handle = getOrCreateRuntimeVariable(
-        builder, "__dso_handle", global.getLoc(), builder.getI8Type(),
+        builder, "__dso_handle", global.getLoc(), builder.getUIntNTy(8),
         cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
 
     // If this is a simple call to a destructor, get the called function.
@@ -485,15 +488,37 @@ struct LoweringPreparePass
       mlir::OpBuilder::InsertionGuard insertGuard(builder);
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-      // Call __cxa_guard_abort along the exceptional edge.
+      // An exception out of the initializer leaves the variable uninitialized
+      // and the next entry has to run the initializer again ([stmt.dcl]p4), so
+      // the guard has to be given back along the exceptional edge. Without
+      // this the guard stays held and that retry terminates instead.
+      //
+      // OG pushes an EH cleanup here and pops it after the initializer, which
+      // costs nothing when there is no unwind path. A cir.cleanup.scope is
+      // structural, so it is only worth building when there can be one.
       // OG: CGF.EHStack.pushCleanup<CallGuardAbort>(EHCleanup, guard);
-      assert(!cir::MissingFeatures::guardAbortOnException());
-
-      emitBody();
-
-      // Pop the guard-abort cleanup if we pushed one.
-      // OG: CGF.PopCleanupBlock();
-      assert(!cir::MissingFeatures::guardAbortOnException());
+      //     ... CGF.PopCleanupBlock();
+      if (astCtx->getLangOpts().Exceptions) {
+        cir::CleanupScopeOp::create(
+            builder, loc, cir::CleanupKind::EH,
+            [&](mlir::OpBuilder &, mlir::Location bodyLoc) {
+              emitBody();
+              builder.createYield(bodyLoc);
+            },
+            [&](mlir::OpBuilder &, mlir::Location cleanupLoc) {
+              cir::CallOp abortCall =
+                  builder.createCallOp(cleanupLoc, getGuardAbortFn(guardPtrTy),
+                                       mlir::ValueRange{guardPtr});
+              // __cxa_guard_abort is declared noexcept, and marking it so keeps
+              // this out of an invoke: a cleanup that can throw while unwinding
+              // needs a terminate edge, which is dead weight here.
+              abortCall.setNothrowAttr(builder.getUnitAttr());
+              builder.createYield(cleanupLoc);
+            });
+        builder.setInsertionPointToEnd(&ifOp.getThenRegion().front());
+      } else {
+        emitBody();
+      }
 
       // Call __cxa_guard_release. This cannot throw.
       builder.createCallOp(loc, getGuardReleaseFn(guardPtrTy),
@@ -1287,6 +1312,17 @@ LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
   cir::VoidType voidTy = cir::VoidType::get(&getContext());
   auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
   return buildRuntimeFunction(builder, "__cxa_guard_release", loc, fnType);
+}
+
+cir::FuncOp LoweringPreparePass::getGuardAbortFn(cir::PointerType guardPtrTy) {
+  // void __cxa_guard_abort(__guard *guard_object);
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard ipGuard{builder};
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  mlir::Location loc = mlirModule.getLoc();
+  cir::VoidType voidTy = cir::VoidType::get(&getContext());
+  auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
+  return buildRuntimeFunction(builder, "__cxa_guard_abort", loc, fnType);
 }
 
 cir::FuncOp LoweringPreparePass::getTlsInitFn() {

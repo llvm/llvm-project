@@ -285,6 +285,25 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   ];
 }
 
+def CudaHeapAllocPromotion
+    : Pass<"cuda-heap-alloc-promotion", "mlir::func::FuncOp"> {
+  let summary = "Allocate dynamically sized automatic variables in CUDA "
+                "unified or managed memory.";
+  let description = [{
+    Under -gpu=mem:unified|managed, which sets fir.cuda_heap_alloc on the
+    module, rewrite the dynamically sized fir.alloca of the user variables into
+    fir.allocmem/fir.freemem pairs marked with that mode, so that codegen calls
+    the matching allocator entry points instead of libc malloc and free. The
+    host pointer of such a variable has to be device accessible, so this is a
+    correctness requirement of those modes rather than a placement heuristic:
+    the pass runs on its own instead of being part of whichever array
+    allocation pass the pipeline happens to select. The pairs it creates are
+    marked fir.must_be_heap, which keeps those passes from moving them back to
+    the stack. Without the module attribute the pass does nothing.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let summary = "Convert stack to heap allocations and vice versa.";
   let description = [{
