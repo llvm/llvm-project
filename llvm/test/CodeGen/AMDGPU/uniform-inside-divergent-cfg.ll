@@ -6,14 +6,15 @@ define amdgpu_kernel void @div_unif_div(ptr addrspace(1) %out, float %ubeta, i32
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
 ; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s1, v0
-; CHECK-NEXT:    s_and_saveexec_b32 s1, vcc_lo
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.1: ; %A
 ; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
 ; CHECK-NEXT:  ; %bb.2: ; %B
@@ -29,14 +30,14 @@ define amdgpu_kernel void @div_unif_div(ptr addrspace(1) %out, float %ubeta, i32
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 7, v0
 ; CHECK-NEXT:  ; %bb.6: ; %Flow3
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_mov_b32 s2, -1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_or_b32 s1, s1, exec_lo
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_7:
-; CHECK-NEXT:    s_mov_b32 s2, exec_lo
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:  .LBB0_8: ; %join
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    s_and_saveexec_b32 s0, s2
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_and_saveexec_b32 s0, s1
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %do.store
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -110,7 +111,7 @@ define amdgpu_kernel void @unif_div(ptr addrspace(1) %out, float %u1, float %u2,
 ; CHECK-NEXT:  .LBB1_5: ; %D
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 3, v0
 ; CHECK-NEXT:  .LBB1_6: ; %join
-; CHECK-NEXT:    s_mov_b32 s3, -1
+; CHECK-NEXT:    s_or_b32 s3, exec_lo, exec_lo
 ; CHECK-NEXT:  .LBB1_7: ; %join
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; CHECK-NEXT:    s_and_saveexec_b32 s0, s3
