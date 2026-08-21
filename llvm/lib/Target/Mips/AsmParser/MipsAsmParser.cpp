@@ -2959,12 +2959,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     }
 
     bool IsPtr64 = ABI.ArePtrs64bit();
-    bool IsLocalSym =
-        Res.getAddSym()->isTemporary() ||
-        (getContext().isELF()
-             ? static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
-                   ELF::STB_LOCAL
-             : Res.getAddSym()->isInSection());
+    bool IsLocalSym = Res.getAddSym()->isTemporary() ||
+                      (getContext().isELF()
+                           ? static_cast<const MCSymbolELF *>(Res.getAddSym())
+                                     ->getBinding() == ELF::STB_LOCAL
+                           : Res.getAddSym()->isInSection());
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.
