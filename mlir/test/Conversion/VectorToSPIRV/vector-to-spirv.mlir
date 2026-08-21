@@ -416,8 +416,8 @@ func.func @insert_dynamic_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32>
 //       CHECK:   spirv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]], %[[ARG]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
 //       CHECK:   spirv.CompositeExtract %[[ARG]][1 : i32] : vector<4xf32>
 func.func @extract_strided_slice(%arg0: vector<4xf32>) -> (vector<2xf32>, vector<1xf32>) {
-  %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
-  %1 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [1], strides = [1]} : vector<4xf32> to vector<1xf32>
+  %0 = vector.extract_strided_slice %arg0 offsets = [1], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [1], sizes = [1], strides = [1] : vector<4xf32> to vector<1xf32>
   return %0, %1 : vector<2xf32>, vector<1xf32>
 }
 
@@ -427,7 +427,7 @@ func.func @extract_strided_slice(%arg0: vector<4xf32>) -> (vector<2xf32>, vector
 //  CHECK-SAME: %[[PART:.+]]: vector<2xf32>, %[[ALL:.+]]: vector<4xf32>
 //       CHECK:   spirv.VectorShuffle [0 : i32, 4 : i32, 5 : i32, 3 : i32] %[[ALL]], %[[PART]] : vector<4xf32>, vector<2xf32> -> vector<4xf32>
 func.func @insert_strided_slice(%arg0: vector<2xf32>, %arg1: vector<4xf32>) -> vector<4xf32> {
-  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [1], strides = [1]} : vector<2xf32> into vector<4xf32>
+  %0 = vector.insert_strided_slice %arg0, %arg1 offsets = [1], strides = [1] : vector<2xf32> into vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -438,7 +438,7 @@ func.func @insert_strided_slice(%arg0: vector<2xf32>, %arg1: vector<4xf32>) -> v
 //       CHECK:   %[[S:.+]] = builtin.unrealized_conversion_cast %[[SUB]]
 //       CHECK:   spirv.CompositeInsert %[[S]], %[[FULL]][2 : i32] : f32 into vector<3xf32>
 func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: vector<3xf32>) -> vector<3xf32> {
-  %1 = vector.insert_strided_slice %arg0, %arg1 {offsets = [2], strides = [1]} : vector<1xf32> into vector<3xf32>
+  %1 = vector.insert_strided_slice %arg0, %arg1 offsets = [2], strides = [1] : vector<1xf32> into vector<3xf32>
   return %1 : vector<3xf32>
 }
 
@@ -1164,7 +1164,7 @@ func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Storag
   %idx = arith.constant 0 : index
   // CHECK: spirv.Load
   // CHECK-SAME: ["Aligned", 8]
-  %0 = vector.load %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  %0 = vector.load %arg0[%idx] alignment = 8 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -1215,7 +1215,7 @@ func.func @vector_store_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Stora
   %idx = arith.constant 0 : index
   // CHECK: spirv.Store
   // CHECK-SAME: ["Aligned", 8]
-  vector.store %arg1, %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  vector.store %arg1, %arg0[%idx] alignment = 8 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return
 }
 

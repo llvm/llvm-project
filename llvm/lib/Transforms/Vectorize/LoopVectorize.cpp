@@ -6388,7 +6388,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
           VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
-      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+      assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,

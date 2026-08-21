@@ -173,8 +173,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.ilogb
     #libc.src.math.ilogbf
     #libc.src.math.ilogbl
+    #libc.src.math.iscanonicalf128
+    #libc.src.math.isnanf128
+    #libc.src.math.issignalingf128
     #libc.src.math.llrint
     #libc.src.math.llrintf
+    #libc.src.math.llrintf128
     #libc.src.math.llrintl
     #libc.src.math.llround
     #libc.src.math.llroundf
@@ -182,6 +186,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.llroundl
     #libc.src.math.lrint
     #libc.src.math.lrintf
+    #libc.src.math.lrintf128
     #libc.src.math.lrintl
     #libc.src.math.lround
     #libc.src.math.lroundf
@@ -221,6 +226,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.remquol
     #libc.src.math.rint
     #libc.src.math.rintf
+    #libc.src.math.rintf128
     #libc.src.math.rintl
     #libc.src.math.round
     #libc.src.math.roundevenf128
@@ -241,6 +247,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.totalordermagl
     #libc.src.math.trunc
     #libc.src.math.truncf
+    #libc.src.math.truncf128
     #libc.src.math.truncl
 )
 

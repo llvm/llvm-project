@@ -3359,18 +3359,8 @@ static bool collectUnswitchCandidatesWithInjections(
 }
 
 static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
-  if (!L.isSafeToClone())
+  if (!L.isSafeToCloneConditionally())
     return false;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
-        if (CB->isConvergent())
-          return false;
-      }
-    }
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the

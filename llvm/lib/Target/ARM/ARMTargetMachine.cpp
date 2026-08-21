@@ -509,7 +509,7 @@ bool ARMPassConfig::addLegalizeMachineIR() {
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 

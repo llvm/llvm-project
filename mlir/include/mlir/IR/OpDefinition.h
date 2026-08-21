@@ -1872,6 +1872,16 @@ private:
   using detect_has_parse_properties =
       llvm::is_detected<has_parse_properties, T>;
 
+  /// Trait to check if T provides a generated parser for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_parse_properties_from_key_value_list =
+      decltype(T::parsePropertiesFromKeyValueList(
+          std::declval<OpAsmParser &>(), std::declval<OperationState &>()));
+  template <typename T>
+  using detect_has_parse_properties_from_key_value_list =
+      llvm::is_detected<has_parse_properties_from_key_value_list, T>;
+
   /// Trait to check if T provides a 'ConcreteEntity' type alias.
   template <typename T>
   using has_concrete_entity_t = typename T::ConcreteEntity;
@@ -2039,10 +2049,11 @@ public:
         p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
-  /// Parses 'prop-dict' for the operation. Unless overridden, the method will
-  /// parse the properties using the generic property dictionary using the
-  /// '<{ ... }>' syntax. The resulting properties are stored within the
-  /// property structure of 'result', accessible via 'getOrAddProperties'.
+  /// Parses 'prop-dict' for the operation. Generated parsers accept a keyed
+  /// list whose values use their custom assembly parsers, as well as the
+  /// legacy generic '<{ ... }>' dictionary syntax. The resulting properties
+  /// are stored within the property structure of 'result', accessible via
+  /// 'getOrAddProperties'.
   template <typename T = ConcreteType>
   static ParseResult parseProperties(OpAsmParser &parser,
                                      OperationState &result) {
@@ -2050,6 +2061,9 @@ public:
       return parseProperties(
           parser, result.getOrAddProperties<InferredProperties<T>>());
     }
+
+    if constexpr (detect_has_parse_properties_from_key_value_list<T>::value)
+      return T::parsePropertiesFromKeyValueList(parser, result);
 
     Attribute propertyDictionary;
     if (genericParseProperties(parser, propertyDictionary))
