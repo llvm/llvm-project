@@ -109,22 +109,25 @@ cir.func @ullfunc() -> !u64i {
 // CHECK: }
 
 cir.func coroutine @coro() {
-  cir.coro.ret_point {
-    cir.coro.body {
-      cir.await(init, ready : {
-        %0 = cir.alloca "" align(1) : !cir.ptr<!cir.bool>
-        %1 = cir.load align(1) %0 : !cir.ptr<!cir.bool>, !cir.bool
-        cir.condition(%1)
-      }, suspend : {
-        cir.coro.suspend_point
-      }, resume : {
-        cir.yield
-      },)
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : {
+      %0 = cir.alloca "" align(1) : !cir.ptr<!cir.bool>
+      %1 = cir.load align(1) %0 : !cir.ptr<!cir.bool>, !cir.bool
+      cir.condition(%1)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
       cir.yield
-    }
+    },)
     cir.yield
-  }, ret : {
-      cir.return
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
   }
   cir.trap
 }
