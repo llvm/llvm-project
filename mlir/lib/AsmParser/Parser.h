@@ -296,6 +296,9 @@ public:
   /// Parse a DenseArrayAttr.
   Attribute parseDenseArrayAttr(Type type);
 
+  /// Parse a loaded URI elements attribute.
+  Attribute parseLoadedURIElementsAttr(Type type);
+
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);
 
