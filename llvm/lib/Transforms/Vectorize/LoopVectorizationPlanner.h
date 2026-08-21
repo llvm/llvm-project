@@ -919,14 +919,6 @@ public:
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Examines if it is unprofitable to Vectorize a small loop in a way that
-  /// leaves a Vector iteration, followed by a single iteration scalar tail.
-  /// Returns true if it is profitable to vectorize a small loop with a single
-  /// scalar tail iteration
-  bool isProfitableOneScalarTail(const VectorizationFactor &CurrentFactor,
-                                 const ElementCount &ExactTC,
-                                 unsigned int UserIC);
-
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
   /// ProfitableVFs.
@@ -1053,11 +1045,6 @@ private:
                         const VectorizationFactor &B,
                         const unsigned MaxTripCount, bool HasTail,
                         bool IsEpilogue = false) const;
-
-  /// Returns the estimated loop-body cost for \p VF and a known trip count.
-  InstructionCost getCostForKnownTripCount(const VectorizationFactor &VF,
-                                           unsigned TripCount,
-                                           bool HasTail) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
