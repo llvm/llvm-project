@@ -6,8 +6,8 @@
 ; RUN: not llc -O2 -regalloc-enable-advisor=development < %s 2>&1 | FileCheck %s
 ; RUN: not llc -O2 -regalloc-enable-advisor=release < %s 2>&1 | FileCheck %s
 ; RUN: llc -O2 -regalloc-enable-advisor=default < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: %if have_mlir_lowering %{ not llc -O2 -regalloc-enable-advisor=release -regalloc-mlgo-model=default < %s 2>&1 | FileCheck %s %}
-; RUN: %if have_mlir_lowering %{ not llc -O2 -regalloc-enable-advisor=release -regalloc-mlgo-model=invalid_model < %s 2>&1 | FileCheck %s --check-prefix=INVALID %}
+; RUN: %if have_mlir_lowering_regalloc %{ not llc -O2 -regalloc-enable-advisor=release -regalloc-mlgo-model=default < %s 2>&1 | FileCheck %s %}
+; RUN: %if have_mlir_lowering_regalloc %{ not llc -O2 -regalloc-enable-advisor=release -regalloc-mlgo-model=invalid_model < %s 2>&1 | FileCheck %s --check-prefix=INVALID %}
 
 ; regalloc-enable-advisor is not enabled for NVPTX
 ; UNSUPPORTED: target=nvptx{{.*}}

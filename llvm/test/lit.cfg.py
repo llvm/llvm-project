@@ -587,6 +587,12 @@ if config.have_tf_aot:
 if getattr(config, "have_mlir_lowering", False):
     config.available_features.add("have_mlir_lowering")
 
+if getattr(config, "have_mlir_lowering_inliner", False):
+    config.available_features.add("have_mlir_lowering_inliner")
+
+if getattr(config, "have_mlir_lowering_regalloc", False):
+    config.available_features.add("have_mlir_lowering_regalloc")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
