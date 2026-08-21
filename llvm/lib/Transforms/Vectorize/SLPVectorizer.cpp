@@ -28680,19 +28680,22 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
     // loads, where the vector loads may pay off the gathering. Two outside uses
-    // may still be part of the same tree when they are local carry deps
-    // (cmp/add in the same block); reject 3+ outside users or 2 non-local
-    // outside users.
-    auto IsBenignOutsideUser = [](Instruction *I, User *U) {
+    // may still be part of the same profitable tree when they are carry deps
+    // (cmp/add/select, or a two-incoming phi); reject 3+ outside users
+    // or 2 non-benign outside users.
+    auto IsBenignOutsideUser = [](User *U) {
       auto *UI = dyn_cast<Instruction>(U);
-      if (!UI || UI->getParent() != I->getParent())
+      if (!UI)
         return false;
-      return isa<CmpInst, BinaryOperator, SelectInst>(UI);
+      if (auto *PN = dyn_cast<PHINode>(UI))
+        return PN->getNumIncomingValues() == 2;
+      if (auto *BO = dyn_cast<BinaryOperator>(UI))
+        return !BO->isIntDivRem() && !BO->isFPDivRem();
+      return isa<CmpInst, SelectInst>(UI);
     };
     auto HasTooManyOutsideUsers = [&](Instruction *I) {
-      // Cap the walk: more than one store use + two outside users is enough to
-      // reject, so skip values with clearly too many uses.
-      if (I->hasNUsesOrMore(Stores.size() + 3))
+      // To save compilation time, bail out if the use list is huge.
+      if (I->hasNUsesOrMore(UsesLimit))
         return true;
       unsigned Outside = 0;
       bool HasNonBenign = false;
@@ -28702,7 +28705,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
         ++Outside;
         if (Outside > 2)
           return true;
-        if (!IsBenignOutsideUser(I, U))
+        if (!IsBenignOutsideUser(U))
           HasNonBenign = true;
       }
       return Outside == 2 && HasNonBenign;

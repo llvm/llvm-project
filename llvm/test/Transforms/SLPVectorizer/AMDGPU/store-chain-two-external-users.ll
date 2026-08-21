@@ -6,7 +6,8 @@
 ;
 ; A store chain is rejected when every stored value has either more than two
 ; users outside the chain, or exactly two outside users with at least one that
-; is not a same-block cmp, binop, or select.
+; is not a benign carry dependence. A benign outside user is a cmp, binop, or
+; select (in any block), or a phi with exactly two incoming values.
 
 declare void @use(i32)
 
@@ -169,5 +170,326 @@ entry:
   store i32 %a1, ptr %dst1, align 4
   call void @use(i32 %a0)
   call void @use(i32 %a1)
+  ret void
+}
+
+; Two outside users that are cmp/binop/select but live in a *different* block are
+; still benign: the heuristic is block-agnostic. Each stored value has exactly
+; two cross-block add users, so the chain reaches costing.
+define void @store_chain_two_cross_block_benign(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
+; CHECK-LABEL: define void @store_chain_two_cross_block_benign(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[DST]], align 4
+; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[USE]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[X0]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[Y1]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP14]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP16]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %a0 = add i32 %x0, %y0
+  %a1 = add i32 %x1, %y1
+  store i32 %a0, ptr %dst, align 4
+  store i32 %a1, ptr %dst1, align 4
+  br i1 %cond, label %use, label %exit
+use:
+  %b0 = add i32 %a0, %y0
+  %c0 = add i32 %a0, %x0
+  %b1 = add i32 %a1, %y1
+  %c1 = add i32 %a1, %x1
+  call void @use(i32 %b0)
+  call void @use(i32 %c0)
+  call void @use(i32 %b1)
+  call void @use(i32 %c1)
+  br label %exit
+exit:
+  ret void
+}
+
+; A two-incoming phi is a benign outside user. Each incremented limb feeds one
+; two-incoming phi plus one add, so the store chain reaches costing.
+define void @store_chain_two_incoming_phi(ptr %state, i32 %init0, i32 %init1, i32 %n) {
+; CHECK-LABEL: define void @store_chain_two_incoming_phi(
+; CHECK-SAME: ptr [[STATE:%.*]], i32 [[INIT0:%.*]], i32 [[INIT1:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[INIT0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[INIT1]], i64 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP3]] = add <2 x i32> [[TMP2]], splat (i32 1)
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[STATE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[IV]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP7]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP8]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s1 = getelementptr inbounds i32, ptr %state, i64 1
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %c0 = phi i32 [ %init0, %entry ], [ %new0, %loop ]
+  %c1 = phi i32 [ %init1, %entry ], [ %new1, %loop ]
+  %new0 = add i32 %c0, 1
+  %new1 = add i32 %c1, 1
+  store i32 %new0, ptr %state, align 4
+  store i32 %new1, ptr %s1, align 4
+  %u0 = add i32 %new0, %iv
+  %u1 = add i32 %new1, %iv
+  call void @use(i32 %u0)
+  call void @use(i32 %u1)
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Two non-benign outside users keep the store chain scalar even when they live in
+; a different block: block placement does not make a call benign.
+define void @store_chain_two_cross_block_calls(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
+; CHECK-LABEL: define void @store_chain_two_cross_block_calls(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[DST1]], align 4
+; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[USE]]:
+; CHECK-NEXT:    call void @use(i32 [[TMP6]])
+; CHECK-NEXT:    call void @use(i32 [[TMP6]])
+; CHECK-NEXT:    call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %a0 = add i32 %x0, %y0
+  %a1 = add i32 %x1, %y1
+  store i32 %a0, ptr %dst, align 4
+  store i32 %a1, ptr %dst1, align 4
+  br i1 %cond, label %use, label %exit
+use:
+  call void @use(i32 %a0)
+  call void @use(i32 %a0)
+  call void @use(i32 %a1)
+  call void @use(i32 %a1)
+  br label %exit
+exit:
+  ret void
+}
+
+; Exactly two outside users where one is benign (add) and one is non-benign
+; (call) keeps the store chain scalar: a single non-benign user among the two is
+; enough to reject.
+define void @store_chain_two_mixed_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1) {
+; CHECK-LABEL: define void @store_chain_two_mixed_users(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[DST1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP8]])
+; CHECK-NEXT:    call void @use(i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP9]])
+; CHECK-NEXT:    call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %a0 = add i32 %x0, %y0
+  %a1 = add i32 %x1, %y1
+  %b0 = add i32 %a0, %y0
+  %b1 = add i32 %a1, %y1
+  store i32 %a0, ptr %dst, align 4
+  store i32 %a1, ptr %dst1, align 4
+  call void @use(i32 %b0)
+  call void @use(i32 %a0)
+  call void @use(i32 %b1)
+  call void @use(i32 %a1)
+  ret void
+}
+
+; Two two-incoming join phis are benign. Each stored value has exactly two such
+; outside users, so the store chain reaches costing.
+define void @store_chain_two_join_phis(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
+; CHECK-LABEL: define void @store_chain_two_join_phis(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
+; CHECK:       [[LEFT]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    br label %[[MERGE:.*]]
+; CHECK:       [[RIGHT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[X0]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[Y1]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[X1]], i64 1
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP5]], %[[LEFT]] ], [ [[TMP7]], %[[RIGHT]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP6]], %[[LEFT]] ], [ [[TMP9]], %[[RIGHT]] ]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP12]])
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP11]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP14]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP11]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP15]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %a0 = add i32 %x0, %y0
+  %a1 = add i32 %x1, %y1
+  br i1 %cond, label %left, label %right
+left:
+  br label %merge
+right:
+  br label %merge
+merge:
+  %p0 = phi i32 [ %a0, %left ], [ %y0, %right ]
+  %q0 = phi i32 [ %a0, %left ], [ %x0, %right ]
+  %p1 = phi i32 [ %a1, %left ], [ %y1, %right ]
+  %q1 = phi i32 [ %a1, %left ], [ %x1, %right ]
+  store i32 %a0, ptr %dst, align 4
+  store i32 %a1, ptr %dst1, align 4
+  call void @use(i32 %p0)
+  call void @use(i32 %q0)
+  call void @use(i32 %p1)
+  call void @use(i32 %q1)
+  ret void
+}
+
+; Three-incoming phis are not benign. Exactly two such outside users keep the
+; store chain scalar.
+define void @store_chain_two_three_incoming_phis(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i32 %sel) {
+; CHECK-LABEL: define void @store_chain_two_three_incoming_phis(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = add i32 [[X0]], [[Y0]]
+; CHECK-NEXT:    [[A1:%.*]] = add i32 [[X1]], [[Y1]]
+; CHECK-NEXT:    switch i32 [[SEL]], label %[[BB2:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
+; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[A1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[MERGE:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[X0]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[Y1]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[X1]], i64 1
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[Y0]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i32> [ [[TMP1]], %[[BB0]] ], [ [[TMP5]], %[[BB1]] ], [ [[TMP9]], %[[BB2]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP3]], %[[BB0]] ], [ [[TMP7]], %[[BB1]] ], [ [[TMP11]], %[[BB2]] ]
+; CHECK-NEXT:    store i32 [[A0]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[A1]], ptr [[DST1]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP14]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP13]], i64 0
+; CHECK-NEXT:    call void @use(i32 [[TMP16]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[TMP13]], i64 1
+; CHECK-NEXT:    call void @use(i32 [[TMP17]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %a0 = add i32 %x0, %y0
+  %a1 = add i32 %x1, %y1
+  switch i32 %sel, label %else [
+  i32 0, label %then0
+  i32 1, label %then1
+  ]
+then0:
+  br label %merge
+then1:
+  br label %merge
+else:
+  br label %merge
+merge:
+  %p0 = phi i32 [ %a0, %then0 ], [ %y0, %then1 ], [ %x0, %else ]
+  %q0 = phi i32 [ %a0, %then0 ], [ %x0, %then1 ], [ %y0, %else ]
+  %p1 = phi i32 [ %a1, %then0 ], [ %y1, %then1 ], [ %x1, %else ]
+  %q1 = phi i32 [ %a1, %then0 ], [ %x1, %then1 ], [ %y1, %else ]
+  store i32 %a0, ptr %dst, align 4
+  store i32 %a1, ptr %dst1, align 4
+  call void @use(i32 %p0)
+  call void @use(i32 %q0)
+  call void @use(i32 %p1)
+  call void @use(i32 %q1)
   ret void
 }
