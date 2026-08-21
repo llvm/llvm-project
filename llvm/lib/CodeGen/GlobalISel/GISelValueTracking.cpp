@@ -879,6 +879,68 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.reverseBits();
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    // Ignore bitcasts involving scalable vectors.
+    if (SrcTy.isScalableVector() || DstTy.isScalableVector())
+      break;
+
+    unsigned SrcBitWidth = SrcTy.getScalarSizeInBits();
+
+    // Ignore bitcasts from unsupported types.
+    if (!SrcTy.isInteger() && !SrcTy.isFloat() && !SrcTy.isIntegerVector() &&
+        !SrcTy.isFloatVector())
+      break;
+
+    // Fast handling of identity bitcasts (same bit width).
+    if (BitWidth == SrcBitWidth) {
+      computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+      break;
+    }
+
+    bool IsLE = DL.isLittleEndian();
+    unsigned NumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+
+    // Bitcast 'small element' vector to 'large element' scalar/vector.
+    if ((BitWidth % SrcBitWidth) == 0) {
+      assert(SrcTy.isVector() && "Expected bitcast from vector");
+      unsigned SubScale = BitWidth / SrcBitWidth;
+      unsigned NumSrcElts = SrcTy.getNumElements();
+      APInt SubDemandedElts(NumSrcElts, 0);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SubDemandedElts.setBit(i * SubScale);
+      for (unsigned i = 0; i != SubScale; ++i) {
+        KnownBits SubKnown(SrcBitWidth);
+        computeKnownBitsImpl(SrcReg, SubKnown, SubDemandedElts.shl(i),
+                             Depth + 1);
+        unsigned Shifts = IsLE ? i : SubScale - 1 - i;
+        Known.insertBits(SubKnown, SrcBitWidth * Shifts);
+      }
+    }
+
+    // Bitcast 'large element' scalar/vector to 'small element' vector.
+    if ((SrcBitWidth % BitWidth) == 0) {
+      assert(DstTy.isVector() && "Expected bitcast to vector");
+      unsigned SubScale = SrcBitWidth / BitWidth;
+      APInt SubDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
+      // Use SrcBitWidth for Known2 since source is wider than destination
+      KnownBits SrcKnown(SrcBitWidth);
+      computeKnownBitsImpl(SrcReg, SrcKnown, SubDemandedElts, Depth + 1);
+      Known.setAllConflict();
+      for (unsigned i = 0; i != NumElts; ++i) {
+        if (DemandedElts[i]) {
+          unsigned Shifts = IsLE ? i : NumElts - 1 - i;
+          unsigned Offset = (Shifts % SubScale) * BitWidth;
+          Known = Known.intersectWith(SrcKnown.extractBits(BitWidth, Offset));
+        }
+      }
+    }
+    break;
+  }
   case TargetOpcode::G_CTPOP: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
