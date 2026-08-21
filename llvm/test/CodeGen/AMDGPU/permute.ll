@@ -474,4 +474,57 @@ bb2:
   ret void
 }
 
+define amdgpu_kernel void @dword_from_v16i16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; GCN-LABEL: dword_from_v16i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; GCN-NEXT:    v_mov_b32_e32 v4, 8
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    v_add_u32_e32 v2, vcc, 20, v0
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[2:3]
+; GCN-NEXT:    flat_load_dword v3, v[0:1]
+; GCN-NEXT:    s_mov_b32 s2, 0xc0c0500
+; GCN-NEXT:    s_mov_b32 s3, 0x4020c0c
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_lshlrev_b32_sdwa v4, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_perm_b32 v3, v4, v3, s2
+; GCN-NEXT:    v_perm_b32 v2, v5, v2, s3
+; GCN-NEXT:    v_or_b32_e32 v2, v3, v2
+; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %v = load <16 x i16>, ptr addrspace(1) %gep, align 32
+  %e0 = extractelement <16 x i16> %v, i32 0
+  %e1 = extractelement <16 x i16> %v, i32 1
+  %e10 = extractelement <16 x i16> %v, i32 10
+  %e11 = extractelement <16 x i16> %v, i32 11
+  %z0 = zext i16 %e0 to i32
+  %z1 = zext i16 %e1 to i32
+  %z10 = zext i16 %e10 to i32
+  %z11 = zext i16 %e11 to i32
+  %b0 = and i32 %z0, 255
+  %b1 = shl i32 %z1, 8
+  %b1m = and i32 %b1, 65280
+  %b2 = shl i32 %z10, 16
+  %b2m = and i32 %b2, 16711680
+  %b3 = shl i32 %z11, 24
+  %b3m = and i32 %b3, 4278190080
+  %o1 = or i32 %b0, %b1m
+  %o2 = or i32 %b2m, %b3m
+  %r = or i32 %o1, %o2
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
