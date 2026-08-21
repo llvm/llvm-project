@@ -36,6 +36,7 @@ add_llvm_unittest(CodeGenTests
   MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
+  MachineModuleInfoTest.cpp
   MachineOperandTest.cpp
   MIR2VecTest.cpp
   RegAllocBasicTest.cpp

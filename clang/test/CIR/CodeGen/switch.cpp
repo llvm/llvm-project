@@ -216,8 +216,8 @@ int sw4(int a) {
 // CIR-NEXT:  }
 
 // LLVM: define{{.*}} i32 @_Z3sw4i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -272,7 +272,7 @@ void sw5(int a) {
 // CIR-NEXT:   }
 
 // LLVM-LABEL: define{{.*}} void @_Z3sw5i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -1082,9 +1082,9 @@ int nested_switch(int a) {
 // CIR:           cir.return
 
 // LLVM: define{{.*}} i32 @_Z13nested_switchi
-// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG:.*]], ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:

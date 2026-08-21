@@ -8,7 +8,9 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -22,9 +24,11 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 
@@ -145,6 +149,58 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
+/// Build a zero-initialized offset operand matching the shape of the given
+/// coordinate operand. Accesses through `operator[]` never have offsets.
+static Value *getNullOffsetsFor(IRBuilder<> &Builder, Value *Coords) {
+  Type *CoordTy = Coords->getType();
+  Type *OffsetTy;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
+    OffsetTy =
+        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
+  else
+    OffsetTy = Builder.getInt32Ty();
+  return Constant::getNullValue(OffsetTy);
+}
+
+static void createTextureStore(IntrinsicInst *II, StoreInst *SI,
+                               dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = SI->getDataLayout();
+  IRBuilder<> Builder(SI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *ScalarType = ContainedType->getScalarType();
+
+  Value *Handle = II->getOperand(0);
+  Value *Coords = II->getOperand(1);
+
+  Value *V = SI->getValueOperand();
+  if (V->getType() == ContainedType) {
+    // V is already the right type.
+    assert(SI->getPointerOperand() == II &&
+           "Store of whole element has mismatched address to store to");
+  } else if (V->getType() == ScalarType) {
+    // We're storing a scalar, so we need to load the current value and only
+    // replace the relevant part. For operator[] the mip level and the offsets
+    // are always zero; DXILOpLowering drops the mip level for UAVs.
+    Value *MipLevel = Builder.getInt32(0);
+    Value *Offsets = getNullOffsetsFor(Builder, Coords);
+    auto *Load = Builder.CreateIntrinsic(ContainedType,
+                                         Intrinsic::dx_resource_load_level,
+                                         {Handle, Coords, MipLevel, Offsets});
+
+    uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+    Value *Offset =
+        traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
+    V = Builder.CreateInsertElement(Load, V, Offset);
+  } else {
+    llvm_unreachable("Store to texture resource has invalid type");
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_texture,
+                                       {Handle, Coords, V});
+  SI->replaceAllUsesWith(Inst);
+}
+
 static void emitRawStore(IRBuilder<> &Builder, Value *Buffer, Value *Index,
                          Value *Offset, Value *V, dxil::ResourceTypeInfo &RTI) {
   // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
@@ -209,16 +265,18 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createRawStores(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
-  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture3D:
-  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
+    return createTextureStore(II, SI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL Store not implemented for texture resources");
+    reportFatalUsageError(
+        "DXIL Store not implemented for this texture resource kind");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
@@ -390,14 +448,7 @@ static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
   Value *MipLevel = Builder.getInt32(0);
 
   // For operator[], offsets are zero.
-  Type *CoordTy = Coords->getType();
-  Type *OffsetTy;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
-    OffsetTy =
-        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
-  else
-    OffsetTy = Builder.getInt32Ty();
-  Value *Offsets = Constant::getNullValue(OffsetTy);
+  Value *Offsets = getNullOffsetsFor(Builder, Coords);
 
   Value *V =
       Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,
@@ -681,6 +732,7 @@ static const std::array<Intrinsic::ID, 2> HandleIntrins = {
 static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
   SmallVector<Value *> Worklist = {Ptr};
   SmallVector<IntrinsicInst *> Handles;
+  SmallSet<Value *, 4> VisitedPhis;
 
   while (!Worklist.empty()) {
     Value *X = Worklist.pop_back_val();
@@ -688,10 +740,13 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     if (!X->getType()->isPointerTy() && !X->getType()->isTargetExtTy())
       return {}; // Early exit on store/load into non-resource
 
-    if (auto *Phi = dyn_cast<PHINode>(X))
+    if (auto *Phi = dyn_cast<PHINode>(X)) {
+      if (VisitedPhis.contains(X))
+        continue;
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
-    else if (auto *Select = dyn_cast<SelectInst>(X))
+      VisitedPhis.insert(Phi);
+    } else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
     else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
@@ -741,7 +796,8 @@ struct AccessIndices {
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
 static AccessIndices
-getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
+getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
+                 SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
@@ -750,7 +806,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
 
     if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
-      auto AccessIdx = getAccessIndices(V, DeadInsts);
+      auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
       assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
       AccessIdx.GetPtrIdx = II->getArgOperand(1);
@@ -761,6 +817,10 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
   }
 
   if (auto *Phi = dyn_cast<PHINode>(I)) {
+    // If we're already building indices for this phi, return a ref to the phi
+    if (auto It = VisitedPhis.find(Phi); It != VisitedPhis.end())
+      return {nullptr, It->second};
+
     unsigned NumEdges = Phi->getNumIncomingValues();
     assert(NumEdges != 0 && "Malformed Phi Node");
 
@@ -768,11 +828,15 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
     PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
 
+    // Register a ref to this phi for a recursive phi
+    if (Phi->getType()->isTargetExtTy())
+      VisitedPhis[Phi] = HandlePhi;
+
     bool HasGetPtr = true;
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
-      auto AccessIdx = getAccessIndices(V, DeadInsts);
+      auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
       HasGetPtr &= AccessIdx.hasGetPtrIdx();
       if (HasGetPtr)
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
@@ -787,15 +851,30 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     Builder.Insert(HandlePhi);
 
     DeadInsts.insert(Phi);
-    return {GetPtrPhi, HandlePhi};
+
+    Value *GetPtrIdx = GetPtrPhi;
+    Value *HandleIdx = HandlePhi;
+
+    if (GetPtrPhi)
+      if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
+        GetPtrIdx = ConstantGetPtr;
+        DeadInsts.insert(GetPtrPhi);
+      }
+
+    if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
+      HandleIdx = ConstantHandle;
+      DeadInsts.insert(HandlePhi);
+    }
+
+    return {GetPtrIdx, HandleIdx};
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
     auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
-    auto TrueAccessIdx = getAccessIndices(TrueV, DeadInsts);
+    auto TrueAccessIdx = getAccessIndices(TrueV, DeadInsts, VisitedPhis);
 
     auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
-    auto FalseAccessIdx = getAccessIndices(FalseV, DeadInsts);
+    auto FalseAccessIdx = getAccessIndices(FalseV, DeadInsts, VisitedPhis);
 
     IRBuilder<> Builder(Select);
     Value *GetPtrSelect = nullptr;
@@ -817,8 +896,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
 
 static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
-                         SmallSetVector<Instruction *, 16> &DeadInsts) {
-  auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
+                         SmallSetVector<Instruction *, 16> &DeadInsts,
+                         SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
+  auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
   assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
@@ -849,6 +929,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   SmallSetVector<Instruction *, 16> DeadInsts;
+  SmallDenseMap<PHINode *, PHINode *> VisitedPhis;
+
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
       if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
@@ -868,18 +950,29 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           continue;
         }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
+        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts, VisitedPhis);
       }
     }
   }
 
   bool MadeChanges = false;
 
+  // Set up the phis to track if they are erased below
+  SmallVector<WeakTrackingVH> ResourcePhis;
+  for (const auto &HandleToIndex : VisitedPhis)
+    ResourcePhis.push_back(HandleToIndex.first);
+
   for (auto *I : llvm::reverse(DeadInsts))
     if (I->hasNUses(0)) { // Handle can still be used outside of replaced path
       I->eraseFromParent();
       MadeChanges = true;
     }
+
+  // Any remaining phi nodes are now looped with another phi node and have no
+  // other uses
+  for (WeakTrackingVH &VH : ResourcePhis)
+    if (VH) // True if not removed above or already in this loop
+      MadeChanges |= RecursivelyDeleteDeadPHINode(cast<PHINode>(VH));
 
   return MadeChanges;
 }

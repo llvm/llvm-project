@@ -171,6 +171,7 @@ def main(argv):
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
+                            '--param', 'enable_werror=False', # older versions of the library trigger new warnings, don't fail
                             artifacts / 'benchmarks/libcxx/test/benchmarks']
         if args.spec_dir is not None:
             cmd += ['--param', f'spec_dir={args.spec_dir}']

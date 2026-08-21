@@ -328,6 +328,14 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 /// dedicated attempt.
 bool isOnceUsedSeed(const Instruction *I);
 
+/// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
+/// back to the type of \p V, returns the fptrunc; the round-trip source is its
+/// operand, always an instruction of the same type as \p V. If
+/// \p MustBeElidable, matches only when the intermediate rounding may be
+/// removed: both casts must allow contraction and the widening cast cannot
+/// produce nan/inf.
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H

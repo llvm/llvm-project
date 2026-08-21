@@ -19,7 +19,12 @@ using namespace lldb_private;
 
 static const char *vtable_demangled_prefix = "vtable for ";
 
-ItaniumABIRuntime::ItaniumABIRuntime(Process *process) : m_process(process) {}
+ItaniumABIRuntime::ItaniumABIRuntime(Process *process)
+    : CommonABIRuntime(process) {}
+
+llvm::StringRef ItaniumABIRuntime::GetName() const {
+  return "Itanium ABI runtime";
+}
 
 bool ItaniumABIRuntime::IsVTableSymbol(Mangled &mangled) const {
   return mangled.GetDemangledName().GetStringRef().starts_with(
@@ -54,93 +59,22 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
       lookup_name.append(class_name.data(), class_name.size());
 
       type_info.SetName(class_name);
-      ConstString const_lookup_name(lookup_name);
-      TypeList class_types;
-      ModuleSP module_sp = vtable_info.symbol->CalculateSymbolContextModule();
-      // First look in the module that the vtable symbol came from and
-      // look for a single exact match.
-      TypeResults results;
-      TypeQuery query(const_lookup_name.GetStringRef(),
-                      TypeQueryOptions::e_exact_match |
-                          TypeQueryOptions::e_strict_namespaces |
-                          TypeQueryOptions::e_find_one);
-      if (module_sp) {
-        module_sp->FindTypes(query, results);
-        TypeSP type_sp = results.GetFirstType();
-        if (type_sp)
-          class_types.Insert(type_sp);
-      }
+      bool any_found = false;
+      TypeSP type_sp = LookupTypeByName(
+          class_name, vtable_info.symbol->CalculateSymbolContextModule(),
+          any_found);
+      if (!any_found)
+        return TypeAndOrName(); // Type is not dynamic.
 
-      // If we didn't find a symbol, then move on to the entire module
-      // list in the target and get as many unique matches as possible
-      if (class_types.Empty()) {
-        query.SetFindOne(false);
-        m_process->GetTarget().GetImages().FindTypes(nullptr, query, results);
-        for (const auto &type_sp : results.GetTypeMap().Types())
-          class_types.Insert(type_sp);
-      }
-
-      lldb::TypeSP type_sp;
-      if (class_types.Empty()) {
-        LLDB_LOGF(log, "0x%16.16" PRIx64 ": is not dynamic\n",
-                  in_value.GetPointerValue().address);
-        return TypeAndOrName();
-      }
-      if (class_types.GetSize() == 1) {
-        type_sp = class_types.GetTypeAtIndex(0);
-        if (type_sp) {
-          if (TypeSystemClang::IsCXXClassType(
-                  type_sp->GetForwardCompilerType())) {
-            LLDB_LOGF(log,
-                      "0x%16.16" PRIx64
-                      ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
-                      "}, type-name='%s'\n",
-                      in_value.GetPointerValue().address,
-                      in_value.GetTypeName().AsCString(""), type_sp->GetID(),
-                      type_sp->GetName().GetCString());
-            type_info.SetTypeSP(type_sp);
-          }
-        }
-      } else {
-        size_t i;
-        if (log) {
-          for (i = 0; i < class_types.GetSize(); i++) {
-            type_sp = class_types.GetTypeAtIndex(i);
-            if (type_sp) {
-              LLDB_LOGF(log,
-                        "0x%16.16" PRIx64
-                        ": static-type = '%s' has multiple matching dynamic "
-                        "types: uid={0x%" PRIx64 "}, type-name='%s'\n",
-                        in_value.GetPointerValue().address,
-                        in_value.GetTypeName().AsCString(""), type_sp->GetID(),
-                        type_sp->GetName().GetCString());
-            }
-          }
-        }
-
-        for (i = 0; i < class_types.GetSize(); i++) {
-          type_sp = class_types.GetTypeAtIndex(i);
-          if (type_sp) {
-            if (TypeSystemClang::IsCXXClassType(
-                    type_sp->GetForwardCompilerType())) {
-              LLDB_LOGF(log,
-                        "0x%16.16" PRIx64 ": static-type = '%s' has multiple "
-                        "matching dynamic types, picking "
-                        "this one: uid={0x%" PRIx64 "}, type-name='%s'\n",
-                        in_value.GetPointerValue().address,
-                        in_value.GetTypeName().AsCString(""), type_sp->GetID(),
-                        type_sp->GetName().GetCString());
-              type_info.SetTypeSP(type_sp);
-            }
-          }
-        }
-
+      if (type_sp) {
         LLDB_LOGF(log,
                   "0x%16.16" PRIx64
-                  ": static-type = '%s' has multiple matching dynamic "
-                  "types, didn't find a C++ match\n",
+                  ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
+                  "}, type-name='%s'\n",
                   in_value.GetPointerValue().address,
-                  in_value.GetTypeName().AsCString(""));
+                  in_value.GetTypeName().AsCString(""), type_sp->GetID(),
+                  type_sp->GetName().GetCString());
+        type_info.SetTypeSP(std::move(type_sp));
       }
       if (type_info)
         SetDynamicTypeInfo(vtable_info.addr, type_info);
@@ -153,8 +87,7 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
 bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     const LanguageRuntime::VTableInfo &vtable_info,
-    TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type) {
+    TypeAndOrName &class_type_or_name, Address &dynamic_address) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -325,20 +258,4 @@ ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
     return dyn_exception;
 
   return exception;
-}
-
-TypeAndOrName ItaniumABIRuntime::GetDynamicTypeInfo(
-    const lldb_private::Address &vtable_addr) {
-  std::lock_guard<std::mutex> locker(m_mutex);
-  DynamicTypeCache::const_iterator pos = m_dynamic_type_map.find(vtable_addr);
-  if (pos == m_dynamic_type_map.end())
-    return TypeAndOrName();
-  else
-    return pos->second;
-}
-
-void ItaniumABIRuntime::SetDynamicTypeInfo(
-    const lldb_private::Address &vtable_addr, const TypeAndOrName &type_info) {
-  std::lock_guard<std::mutex> locker(m_mutex);
-  m_dynamic_type_map[vtable_addr] = type_info;
 }

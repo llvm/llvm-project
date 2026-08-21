@@ -780,7 +780,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
         m_ivars.push_back(
             {ConstString(name), ivar_type, size, offset_scalar.SInt()});
       } else
-        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
+        LLDB_LOG_VERBOSE(log, "offset_ptr = {0:x} --> read fail, read = {1}",
                          offset_ptr, read);
     }
     return stop_loop;

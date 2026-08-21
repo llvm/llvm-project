@@ -217,7 +217,7 @@ static const llvm::omp::DirectiveSet compositeConstructSet{
 static const llvm::omp::DirectiveSet blockConstructSet{
     Directive::OMPD_masked,
     Directive::OMPD_master,
-    Directive::OMPD_ordered,
+    Directive::OMPD_ordered_blockassoc,
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_masked,
     Directive::OMPD_parallel_master,
@@ -327,7 +327,7 @@ static const llvm::omp::DirectiveSet nestedBarrierErrSet{
         Directive::OMPD_atomic,
         Directive::OMPD_critical,
         Directive::OMPD_master,
-        Directive::OMPD_ordered,
+        Directive::OMPD_ordered_blockassoc,
     } | taskGeneratingSet |
         workShareSet,
 };
@@ -372,7 +372,7 @@ static const llvm::omp::DirectiveSet nestedOrderedDoAllowedSet{
 static const llvm::omp::DirectiveSet nestedOrderedErrSet{
     Directive::OMPD_atomic,
     Directive::OMPD_critical,
-    Directive::OMPD_ordered,
+    Directive::OMPD_ordered_blockassoc,
     Directive::OMPD_task,
     Directive::OMPD_taskloop,
 };
@@ -413,7 +413,7 @@ static const llvm::omp::DirectiveSet nestedWorkshareErrSet{
         Directive::OMPD_atomic,
         Directive::OMPD_critical,
         Directive::OMPD_master,
-        Directive::OMPD_ordered,
+        Directive::OMPD_ordered_blockassoc,
         Directive::OMPD_task,
         Directive::OMPD_taskloop,
     } | workShareSet,
@@ -427,7 +427,7 @@ static const llvm::omp::DirectiveSet nestedWorkshareErrSet{
 static const llvm::omp::DirectiveSet simpleStandaloneNonSimdOnlySet{
     Directive::OMPD_taskyield,
     Directive::OMPD_barrier,
-    Directive::OMPD_ordered,
+    Directive::OMPD_ordered_standalone,
     Directive::OMPD_target_enter_data,
     Directive::OMPD_target_exit_data,
     Directive::OMPD_target_update,

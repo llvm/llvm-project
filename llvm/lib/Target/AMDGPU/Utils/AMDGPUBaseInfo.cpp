@@ -2573,6 +2573,11 @@ bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
 }
 
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureApertureRegs) &&
+         !STI.hasFeature(AMDGPU::FeatureGloballyAddressableScratch);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }

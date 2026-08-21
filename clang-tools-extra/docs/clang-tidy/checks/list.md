@@ -30,7 +30,6 @@ openmp/*
 performance/*
 portability/*
 readability/*
-zircon/*
 ```
 
 | Name | Offers fixes |
@@ -373,6 +372,7 @@ zircon/*
 | {doc}`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>` | Yes |
 | {doc}`performance-unnecessary-value-param <performance/unnecessary-value-param>` | Yes |
 | {doc}`performance-use-std-move <performance/use-std-move>` | Yes |
+| {doc}`portability-avoid-pragma-comment <portability/avoid-pragma-comment>` |  |
 | {doc}`portability-avoid-pragma-once <portability/avoid-pragma-once>` |  |
 | {doc}`portability-no-assembler <portability/no-assembler>` |  |
 | {doc}`portability-restrict-system-includes <portability/restrict-system-includes>` | Yes |
@@ -427,6 +427,7 @@ zircon/*
 | {doc}`readability-redundant-string-cstr <readability/redundant-string-cstr>` | Yes |
 | {doc}`readability-redundant-string-init <readability/redundant-string-init>` | Yes |
 | {doc}`readability-redundant-typename <readability/redundant-typename>` | Yes |
+| {doc}`readability-redundant-zero-initializer <readability/redundant-zero-initializer>` | Yes |
 | {doc}`readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary>` |  |
 | {doc}`readability-simplify-boolean-expr <readability/simplify-boolean-expr>` | Yes |
 | {doc}`readability-simplify-subscript-expr <readability/simplify-subscript-expr>` | Yes |
@@ -441,7 +442,6 @@ zircon/*
 | {doc}`readability-use-anyofallof <readability/use-anyofallof>` |  |
 | {doc}`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>` | Yes |
 | {doc}`readability-use-std-min-max <readability/use-std-min-max>` | Yes |
-| {doc}`zircon-temporary-objects <zircon/temporary-objects>` |  |
 
 ## Check aliases
 

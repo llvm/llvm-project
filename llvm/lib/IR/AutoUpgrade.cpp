@@ -1254,6 +1254,52 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("tcgen05.commit."))
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("shared."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("mc.shared.")) {
+    // Only upgrade older i16 mc variants.
+    if (!F->getArg(1)->getType()->isIntegerTy(16))
+      return Intrinsic::not_intrinsic;
+
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_mc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_mc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+  if (F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("tcgen05.alloc.shared.") ||
+      Name.consume_front("tcgen05.alloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("tcgen05.dealloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1320,10 +1366,106 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("tcgen05.mma."))
+    return Intrinsic::not_intrinsic;
+
+  // tcgen05.mma.ws.* variants do not need collector-b appended.
+  if (Name.starts_with("ws"))
+    return Intrinsic::not_intrinsic;
+
+  return F->getIntrinsicID();
+}
+
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
          Name.consume_front("param");
+}
+
+static unsigned getFunctionalOpcodeForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<unsigned>(Name)
+      .StartsWith("select", Instruction::Select)
+      .StartsWith("add", Instruction::Add)
+      .StartsWith("sub", Instruction::Sub)
+      .StartsWith("mul", Instruction::Mul)
+      .StartsWith("ashr", Instruction::AShr)
+      .StartsWith("lshr", Instruction::LShr)
+      .StartsWith("shl", Instruction::Shl)
+      .StartsWith("or", Instruction::Or)
+      .StartsWith("and", Instruction::And)
+      .StartsWith("xor", Instruction::Xor)
+      .StartsWith("fadd", Instruction::FAdd)
+      .StartsWith("fsub", Instruction::FSub)
+      .StartsWith("fmuladd", 0)
+      .StartsWith("fmul", Instruction::FMul)
+      .StartsWith("fdiv", Instruction::FDiv)
+      .StartsWith("frem", Instruction::FRem)
+      .StartsWith("fneg", Instruction::FNeg)
+      .StartsWith("trunc", Instruction::Trunc)
+      .StartsWith("zext", Instruction::ZExt)
+      .StartsWith("sext", Instruction::SExt)
+      .StartsWith("fptrunc", Instruction::FPTrunc)
+      .StartsWith("fpext", Instruction::FPExt)
+      .StartsWith("fptoui", Instruction::FPToUI)
+      .StartsWith("fptosi", Instruction::FPToSI)
+      .StartsWith("uitofp", Instruction::UIToFP)
+      .StartsWith("sitofp", Instruction::SIToFP)
+      .StartsWith("ptrtoint", Instruction::PtrToInt)
+      .StartsWith("inttoptr", Instruction::IntToPtr)
+      .StartsWith("icmp", Instruction::ICmp)
+      .StartsWith("fcmp", Instruction::FCmp)
+      .Default(0);
+}
+
+static Intrinsic::ID getFunctionalIntrinsicIDForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<Intrinsic::ID>(Name)
+      .StartsWith("abs", Intrinsic::abs)
+      .StartsWith("smax", Intrinsic::smax)
+      .StartsWith("smin", Intrinsic::smin)
+      .StartsWith("umax", Intrinsic::umax)
+      .StartsWith("umin", Intrinsic::umin)
+      .StartsWith("copysign", Intrinsic::copysign)
+      .StartsWith("minnum", Intrinsic::minnum)
+      .StartsWith("maxnum", Intrinsic::maxnum)
+      .StartsWith("minimum", Intrinsic::minimum)
+      .StartsWith("maximum", Intrinsic::maximum)
+      .StartsWith("fabs", Intrinsic::fabs)
+      .StartsWith("sqrt", Intrinsic::sqrt)
+      .StartsWith("fma", Intrinsic::fma)
+      .StartsWith("fmuladd", Intrinsic::fmuladd)
+      .StartsWith("ceil", Intrinsic::ceil)
+      .StartsWith("floor", Intrinsic::floor)
+      .StartsWith("rint", Intrinsic::rint)
+      .StartsWith("nearbyint", Intrinsic::nearbyint)
+      .StartsWith("roundeven", Intrinsic::roundeven)
+      .StartsWith("roundtozero", Intrinsic::trunc)
+      .StartsWith("round", Intrinsic::round)
+      .StartsWith("lrint", Intrinsic::lrint)
+      .StartsWith("llrint", Intrinsic::llrint)
+      .StartsWith("bitreverse", Intrinsic::bitreverse)
+      .StartsWith("bswap", Intrinsic::bswap)
+      .StartsWith("ctpop", Intrinsic::ctpop)
+      .StartsWith("ctlz", Intrinsic::ctlz)
+      .StartsWith("cttz.elts", 0)
+      .StartsWith("cttz", Intrinsic::cttz)
+      .StartsWith("sadd.sat", Intrinsic::sadd_sat)
+      .StartsWith("uadd.sat", Intrinsic::uadd_sat)
+      .StartsWith("ssub.sat", Intrinsic::ssub_sat)
+      .StartsWith("usub.sat", Intrinsic::usub_sat)
+      .StartsWith("fshl", Intrinsic::fshl)
+      .StartsWith("fshr", Intrinsic::fshr)
+      .StartsWith("is.fpclass", Intrinsic::is_fpclass)
+      .Default(0);
+}
+
+static bool shouldUpgradeVPIntrinsic(StringRef Name) {
+  return getFunctionalOpcodeForVP(Name) || getFunctionalIntrinsicIDForVP(Name);
 }
 
 static bool convertIntrinsicValidType(StringRef Name,
@@ -1764,12 +1906,42 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), IID, F->getReturnType(),
+            F->getFunctionType()->params());
+        return true;
+      }
+
+      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
+      // tcgen05.alloc shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        if (Intrinsic::isOverloaded(IID))
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getArg(0)->getType()});
+        else
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       // Upgrade TMA copy G2S Intrinsics
       IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
+      }
+
+      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
+      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return NewFn != F;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -1965,6 +2137,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break;
       return true;
     }
+    if (shouldUpgradeVPIntrinsic(Name))
+      return true;
     break;
   }
 
@@ -5172,6 +5346,77 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static ICmpInst::Predicate getVPIntPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return ICmpInst::BAD_ICMP_PREDICATE;
+  return StringSwitch<ICmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("eq", ICmpInst::ICMP_EQ)
+      .Case("ne", ICmpInst::ICMP_NE)
+      .Case("ugt", ICmpInst::ICMP_UGT)
+      .Case("uge", ICmpInst::ICMP_UGE)
+      .Case("ult", ICmpInst::ICMP_ULT)
+      .Case("ule", ICmpInst::ICMP_ULE)
+      .Case("sgt", ICmpInst::ICMP_SGT)
+      .Case("sge", ICmpInst::ICMP_SGE)
+      .Case("slt", ICmpInst::ICMP_SLT)
+      .Case("sle", ICmpInst::ICMP_SLE)
+      .Default(ICmpInst::BAD_ICMP_PREDICATE);
+}
+
+static FCmpInst::Predicate getVPFPPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return FCmpInst::BAD_FCMP_PREDICATE;
+  return StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("oeq", FCmpInst::FCMP_OEQ)
+      .Case("ogt", FCmpInst::FCMP_OGT)
+      .Case("oge", FCmpInst::FCMP_OGE)
+      .Case("olt", FCmpInst::FCMP_OLT)
+      .Case("ole", FCmpInst::FCMP_OLE)
+      .Case("one", FCmpInst::FCMP_ONE)
+      .Case("ord", FCmpInst::FCMP_ORD)
+      .Case("uno", FCmpInst::FCMP_UNO)
+      .Case("ueq", FCmpInst::FCMP_UEQ)
+      .Case("ugt", FCmpInst::FCMP_UGT)
+      .Case("uge", FCmpInst::FCMP_UGE)
+      .Case("ult", FCmpInst::FCMP_ULT)
+      .Case("ule", FCmpInst::FCMP_ULE)
+      .Case("une", FCmpInst::FCMP_UNE)
+      .Default(FCmpInst::BAD_FCMP_PREDICATE);
+}
+
+static Value *upgradeVPIntrinsicCall(StringRef Name, CallBase *CI,
+                                     IRBuilder<> &Builder) {
+  Value *Rep;
+  unsigned Opcode = getFunctionalOpcodeForVP(Name);
+  if (Opcode && Instruction::isUnaryOp(Opcode))
+    Rep =
+        Builder.CreateUnOp((Instruction::UnaryOps)Opcode, CI->getArgOperand(0));
+  else if (Opcode && Instruction::isBinaryOp(Opcode))
+    Rep = Builder.CreateBinOp((Instruction::BinaryOps)Opcode,
+                              CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode && Instruction::isCast(Opcode))
+    Rep = Builder.CreateCast((Instruction::CastOps)Opcode, CI->getArgOperand(0),
+                             CI->getType());
+  else if (Opcode == Instruction::ICmp)
+    Rep = Builder.CreateICmp(getVPIntPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::FCmp)
+    Rep = Builder.CreateFCmp(getVPFPPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::Select)
+    Rep = Builder.CreateSelect(CI->getArgOperand(0), CI->getArgOperand(1),
+                               CI->getArgOperand(2));
+  else if (auto IntrinsicID = getFunctionalIntrinsicIDForVP(Name)) {
+    SmallVector<Value *, 2> Args(drop_end(CI->args(), 2));
+    Rep = Builder.CreateIntrinsic(CI->getType(), IntrinsicID, Args, {});
+  } else
+    llvm_unreachable("Unexpected vp intrinsic");
+  Rep->takeName(CI);
+  return Rep;
+}
+
 static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
                                                 IRBuilder<> &Builder) {
   Intrinsic::ID IID = NewFn->getIntrinsicID();
@@ -5280,6 +5525,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
       // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
       Rep = nullptr;
+    } else if (shouldUpgradeVPIntrinsic(Name)) {
+      Rep = upgradeVPIntrinsicCall(Name, CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5680,6 +5927,83 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::nvvm_tcgen05_mma_shared:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
+    SmallVector<Value *, 12> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   Builder.getFalse()});
+    break;
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
