@@ -88,6 +88,11 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Vertex, IOType::In}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::IsFrontFace: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Geometry, IOType::Out}, {Triple::Pixel, IOType::In}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Position: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::InOut}, {Triple::Pixel, IOType::In}};
