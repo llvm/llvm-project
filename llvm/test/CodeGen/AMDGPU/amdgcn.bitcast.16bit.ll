@@ -60,10 +60,9 @@ define half @bitcast_i16_to_f16(i16 %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_nc_u16 v1.l, v0.l, 3
-; GFX11-TRUE16-NEXT:  .LBB0_4: ; %end
+; GFX11-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
@@ -268,10 +267,9 @@ define i16 @bitcast_f16_to_i16(half %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB2_4
 ; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, 0x200, v0.l
-; GFX11-TRUE16-NEXT:  .LBB2_4: ; %end
+; GFX11-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
@@ -495,10 +493,9 @@ define bfloat @bitcast_i16_to_bf16(i16 %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB4_4
 ; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_nc_u16 v1.l, v0.l, 3
-; GFX11-TRUE16-NEXT:  .LBB4_4: ; %end
+; GFX11-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
@@ -987,10 +984,9 @@ define bfloat @bitcast_f16_to_bf16(half %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB8_4
 ; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, 0x200, v0.l
-; GFX11-TRUE16-NEXT:  .LBB8_4: ; %end
+; GFX11-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l

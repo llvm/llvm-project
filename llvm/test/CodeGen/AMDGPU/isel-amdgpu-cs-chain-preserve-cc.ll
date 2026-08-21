@@ -780,8 +780,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, killed [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -805,8 +805,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, killed [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -988,8 +988,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, killed [[COPY2]], 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -1013,8 +1013,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, killed [[COPY2]], 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)

@@ -512,7 +512,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX12-TRUE16-LABEL: sample_c_d_o_2darray_V1:
 ; GFX12-TRUE16:       ; %bb.0: ; %main_body
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v9, v5 ; encoding: [0x05,0x03,0x12,0x7e]
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l ; encoding: [0x04,0x39,0x0a,0x7e]
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v5, v4 ; encoding: [0x04,0x03,0x0a,0x7e]
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l ; encoding: [0x03,0x39,0x04,0x7f]
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) ; encoding: [0x03,0x00,0x87,0xbf]
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l ; encoding: [0x09,0x39,0x0a,0x7f]
@@ -531,7 +531,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX13-TRUE16-LABEL: sample_c_d_o_2darray_V1:
 ; GFX13-TRUE16:       ; %bb.0: ; %main_body
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v5 ; encoding: [0x05,0x03,0x12,0x7e]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l ; encoding: [0x04,0x39,0x0a,0x7e]
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, v4 ; encoding: [0x04,0x03,0x0a,0x7e]
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l ; encoding: [0x03,0x39,0x04,0x7f]
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) ; encoding: [0x03,0x00,0xae,0xbf]
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l ; encoding: [0x09,0x39,0x0a,0x7f]
@@ -583,7 +583,7 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX12-TRUE16-LABEL: sample_c_d_o_2darray_V2:
 ; GFX12-TRUE16:       ; %bb.0: ; %main_body
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v9, v5 ; encoding: [0x05,0x03,0x12,0x7e]
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l ; encoding: [0x04,0x39,0x0a,0x7e]
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v5, v4 ; encoding: [0x04,0x03,0x0a,0x7e]
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l ; encoding: [0x03,0x39,0x04,0x7f]
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) ; encoding: [0x03,0x00,0x87,0xbf]
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l ; encoding: [0x09,0x39,0x0a,0x7f]
@@ -602,7 +602,7 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX13-TRUE16-LABEL: sample_c_d_o_2darray_V2:
 ; GFX13-TRUE16:       ; %bb.0: ; %main_body
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v5 ; encoding: [0x05,0x03,0x12,0x7e]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l ; encoding: [0x04,0x39,0x0a,0x7e]
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, v4 ; encoding: [0x04,0x03,0x0a,0x7e]
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l ; encoding: [0x03,0x39,0x04,0x7f]
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) ; encoding: [0x03,0x00,0xae,0xbf]
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l ; encoding: [0x09,0x39,0x0a,0x7f]

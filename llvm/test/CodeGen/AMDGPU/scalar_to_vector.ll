@@ -467,16 +467,12 @@ define i64 @bitcast_combine_scalar_to_vector_v4i16(i16 %arg) {
 ; GFX11-LABEL: bitcast_combine_scalar_to_vector_v4i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b16 v1.h, 0xff00, v1.l
-; GFX11-NEXT:    v_lshrrev_b16 v1.l, 8, v1.l
-; GFX11-NEXT:    v_or_b16 v2.h, v1.l, v1.h
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.h
-; GFX11-NEXT:    v_mov_b16_e32 v1.h, v2.h
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_and_b16 v0.h, 0xff00, v0.l
+; GFX11-NEXT:    v_lshrrev_b16 v1.l, 8, v0.l
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b16 v0.h, v1.l, v0.h
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.h
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg.cast = bitcast i16 %arg to <2 x i8>
   %tmp1 = shufflevector <2 x i8> %arg.cast, <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>

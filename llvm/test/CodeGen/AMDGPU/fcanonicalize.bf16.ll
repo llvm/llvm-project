@@ -1247,10 +1247,9 @@ define <2 x bfloat> @v_test_canonicalize_reg_k_v2bf16(bfloat %val) #1 {
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_mov_b16_e32 v1.h, 0x4000
-; REAL16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x4000
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat 2.0, i32 1

@@ -360,7 +360,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX12PLUS-TRUE16-LABEL: sample_c_d_o_2darray_V1:
 ; GFX12PLUS-TRUE16:       ; %bb.0: ; %main_body
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b32_e32 v9, v5
-; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l
+; GFX12PLUS-TRUE16-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l
 ; GFX12PLUS-TRUE16-NEXT:    image_sample_c_d_o_g16 v0, [v0, v1, v2, v[5:8]], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY
@@ -411,7 +411,7 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX12PLUS-TRUE16-LABEL: sample_c_d_o_2darray_V2:
 ; GFX12PLUS-TRUE16:       ; %bb.0: ; %main_body
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b32_e32 v9, v5
-; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.l
+; GFX12PLUS-TRUE16-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v9.l
 ; GFX12PLUS-TRUE16-NEXT:    image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v[5:8]], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY

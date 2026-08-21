@@ -393,9 +393,9 @@ define amdgpu_ps half @bitop3_b16_vii(i16 %a) {
 ; GFX1250-SDG-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0x7d0
+; GFX1250-SDG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0x7d0
 ; GFX1250-SDG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, 0x3e8 bitop3:0x14
+; GFX1250-SDG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 0x3e8 bitop3:0x14
 ; GFX1250-SDG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDG-FAKE16-LABEL: bitop3_b16_vii:

@@ -4783,9 +4783,90 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
                ->isMemOpHasNoClobberedMemOperand(N)));
 }
 
+MachineSDNode *AMDGPUDAGToDAGISel::fixTrue16VGPRLiveInUses(MachineSDNode *N) {
+  bool Changed = false;
+  if (!CurDAG->getTarget().getTargetTriple().isAMDGCN() ||
+      !Subtarget->useRealTrue16Insts())
+    return N;
+
+  MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+
+  auto IsVGPR16Use = [TRI](const TargetRegisterClass *RC) {
+    if (!RC || TRI->getRegSizeInBits(*RC) != 16)
+      return false;
+
+    const TargetRegisterClass *CommonRC =
+        TRI->getCommonSubClass(RC, &AMDGPU::VGPR_16RegClass);
+    return CommonRC && CommonRC->isAllocatable();
+  };
+
+  auto GetLo16 = [&](SDValue Src) -> SDValue {
+    if (Src.getOpcode() != ISD::CopyFromReg)
+      return SDValue();
+
+    EVT VT = Src.getValueType();
+    if (VT != MVT::i16 && VT != MVT::f16 && VT != MVT::bf16)
+      return SDValue();
+
+    Register Reg = cast<RegisterSDNode>(Src.getOperand(1))->getReg();
+    if (!Reg.isVirtual() || MRI.getRegClass(Reg) != &AMDGPU::VGPR_32RegClass)
+      return SDValue();
+
+    MCRegister PhysReg = MRI.getLiveInPhysReg(Reg);
+    if (!PhysReg || !AMDGPU::VGPR_32RegClass.contains(PhysReg))
+      return SDValue();
+
+    return CurDAG->getTargetExtractSubreg(AMDGPU::lo16, SDLoc(Src),
+                                          Src.getValueType(), Src);
+  };
+
+  // Keep the ABI VGPR_32 carrier for full-width users. Only expose its low
+  // half to selected operands that require a 16-bit VGPR lane.
+  SmallVector<SDValue, 8> Ops(N->ops());
+  if (N->getMachineOpcode() == AMDGPU::REG_SEQUENCE) {
+    const TargetRegisterClass *DstRC =
+        TRI->getRegClass(N->getConstantOperandVal(0));
+    for (unsigned I = 1, E = N->getNumOperands(); I + 1 < E; I += 2) {
+      ConstantSDNode *SubReg = dyn_cast<ConstantSDNode>(N->getOperand(I + 1));
+      if (!SubReg)
+        continue;
+
+      const TargetRegisterClass *SrcRC =
+          TRI->getSubRegisterClass(DstRC, SubReg->getZExtValue());
+      if (!IsVGPR16Use(SrcRC))
+        continue;
+
+      SDValue Lo16 = GetLo16(N->getOperand(I));
+      if (!Lo16)
+        continue;
+
+      Ops[I] = Lo16;
+      Changed = true;
+    }
+  } else {
+    for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I) {
+      if (!IsVGPR16Use(getOperandRegClass(N, I)))
+        continue;
+
+      SDValue Lo16 = GetLo16(N->getOperand(I));
+      if (!Lo16)
+        continue;
+
+      Ops[I] = Lo16;
+      Changed = true;
+    }
+  }
+
+  if (!Changed)
+    return N;
+
+  return cast<MachineSDNode>(CurDAG->UpdateNodeOperands(N, Ops));
+}
+
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
-  const AMDGPUTargetLowering& Lowering =
-    *static_cast<const AMDGPUTargetLowering*>(getTargetLowering());
+  const AMDGPUTargetLowering &Lowering =
+      *static_cast<const AMDGPUTargetLowering *>(getTargetLowering());
   bool IsModified = false;
   do {
     IsModified = false;
@@ -4798,10 +4879,17 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
       if (!MachineNode)
         continue;
 
+      MachineSDNode *FixedNode = fixTrue16VGPRLiveInUses(MachineNode);
+      if (FixedNode != MachineNode) {
+        ReplaceUses(MachineNode, FixedNode);
+        MachineNode = FixedNode;
+        IsModified = true;
+      }
+
       SDNode *ResNode = Lowering.PostISelFolding(MachineNode, *CurDAG);
-      if (ResNode != Node) {
+      if (ResNode != MachineNode) {
         if (ResNode)
-          ReplaceUses(Node, ResNode);
+          ReplaceUses(MachineNode, ResNode);
         IsModified = true;
       }
     }
