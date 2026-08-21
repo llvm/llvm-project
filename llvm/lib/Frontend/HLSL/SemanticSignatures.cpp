@@ -104,6 +104,14 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     };
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::TessFactor:
+  case dxbc::PSV::SemanticKind::InsideTessFactor: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Hull, IOType::PatchConstantOrPrimitive},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive},
+    };
+    return Stages;
+  }
   default:
     llvm_unreachable(
         "available stages for given semantic kind are not handled");
