@@ -6940,7 +6940,10 @@ libc_support_library(
     hdrs = ["src/__support/math/round.h"],
     deps = [
         ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
     ],
 )
 
@@ -7018,7 +7021,10 @@ libc_support_library(
     hdrs = ["src/__support/math/roundf.h"],
     deps = [
         ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
     ],
 )
 
