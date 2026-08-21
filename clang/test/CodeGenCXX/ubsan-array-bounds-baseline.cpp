@@ -186,11 +186,11 @@ void x_base_to_derived(int i) {
 }
 
 // CHECK-LABEL: define {{.*}}@_Z15x_ptr_to_memberi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ptr_to_member(int i) { ma[i].*pmf = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z21x_ptr_to_member_arrowi(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void x_ptr_to_member_arrow(int i) { (&ma[i])->*pmf = 1; }
 
 // CHECK-LABEL: define {{.*}}@_Z10x_cond_armib(

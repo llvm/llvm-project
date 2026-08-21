@@ -7250,9 +7250,11 @@ LValue CodeGenFunction::
 EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
   Address BaseAddr = Address::invalid();
   if (E->getOpcode() == BO_PtrMemI) {
-    BaseAddr = EmitPointerWithAlignment(E->getLHS());
+    BaseAddr = EmitPointerWithAlignment(E->getLHS(), nullptr, nullptr,
+                                       NotKnownNonNull, ObjectRequired);
   } else {
-    BaseAddr = EmitLValue(E->getLHS()).getAddress();
+    BaseAddr =
+        EmitLValue(E->getLHS(), NotKnownNonNull, ObjectRequired).getAddress();
   }
 
   llvm::Value *OffsetV = EmitScalarExpr(E->getRHS());
