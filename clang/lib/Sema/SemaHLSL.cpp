@@ -1158,12 +1158,19 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
             ValidType.push_back("input");
           if (Case.AllowedIOTypesMask & IOType::Out)
             ValidType.push_back("output");
+          if (Case.AllowedIOTypesMask & IOType::PatchConstantOrPrimitive)
+            ValidType.push_back("patch constant or primitive");
           return std::string(
                      HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage)) +
                  " " + join(ValidType, "/");
         });
+    StringRef CurrentIOTypeName = "patch constant or primitive";
+    if (CurrentIOType & IOType::In)
+      CurrentIOTypeName = "input";
+    else if (CurrentIOType & IOType::Out)
+      CurrentIOTypeName = "output";
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
-        << A->getAttrName() << (CurrentIOType & IOType::In ? "input" : "output")
+        << A->getAttrName() << CurrentIOTypeName
         << llvm::Triple::getEnvironmentTypeName(Case.Stage)
         << join(ValidCases, ", ");
     return;
