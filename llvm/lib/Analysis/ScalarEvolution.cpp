@@ -1984,7 +1984,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
   // operands (often constants).  This allows analysis of something like
   // this:  for (signed char X = 0; X < 100; ++X) { int Y = X; }
   if (match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
-    // Redo the AddRec check, computing nsw this time.
+    // Redo the AddRec check, attempting to prove no-wrap this time.
     const auto *AR = cast<SCEVAddRecExpr>(Op);
     inferNoWrapViaConstantRanges(AR);
     auto NewFlags = proveNoSignedWrapViaInduction(AR);
@@ -2013,6 +2013,43 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
         const SCEV *SSExtR = getSignExtendExpr(SResidual, Ty, Depth + 1);
         return getAddExpr(SSExtD, SSExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
                           Depth + 1);
+      }
+    }
+
+    // We know that when
+    //
+    //   sext(Start + Step * MaxBTC) = sext(Start) + sext(Step) * MaxBTC
+    //
+    // it does not signed-wrap, but we haven't been able to prove nsw.
+    //
+    // Instead, prove that it's equal to sext(Start) + zext(Step) * MaxBTC, i.e.
+    // zero-extending the Step instead of sign-extending it, to prove nsuw.
+    // TODO: Is there a cheaper way to prove this?
+    const APInt *MaxBECount = nullptr;
+    unsigned BW = getTypeSizeInBits(AR->getType());
+    unsigned WideBW = 2 * BW;
+    if (match(getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBECount)) &&
+        MaxBECount->getActiveBits() <= WideBW) {
+      const APInt WideBTC(MaxBECount->zextOrTrunc(WideBW));
+      Type *WideTy = IntegerType::get(getContext(), WideBW);
+      const SCEV *SExtStart = getSignExtendExpr(Start, WideTy, Depth + 1);
+      const SCEV *ZExtStep = getZeroExtendExpr(Step, WideTy, Depth + 1);
+      if (getSignExtendExpr(
+              getAddExpr(Start,
+                         getMulExpr(getConstant(MaxBECount->zextOrTrunc(BW)),
+                                    Step, SCEV::FlagAnyWrap, Depth + 1),
+                         SCEV::FlagAnyWrap, Depth + 1),
+              WideTy, Depth + 1) ==
+          getAddExpr(SExtStart,
+                     getMulExpr(getConstant(WideBTC), ZExtStep,
+                                SCEV::FlagAnyWrap, Depth + 1),
+                     SCEV::FlagAnyWrap, Depth + 1)) {
+        // We have proved nsuw, of which nw is a weaker version.
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
+        Start =
+            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+        Step = getZeroExtendExpr(Step, Ty, Depth + 1);
+        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
       }
     }
   }
