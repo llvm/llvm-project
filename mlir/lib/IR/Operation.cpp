@@ -276,7 +276,9 @@ InFlightDiagnostic Operation::emitError(const Twine &message) {
 InFlightDiagnostic Operation::emitWarning(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitWarning(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic())
-    diag.attachNote(getLoc()) << "see current operation: " << *this;
+    diag.attachNote(getLoc())
+        << "see current operation: "
+        << OpWithFlags(this, OpPrintingFlags().skipRegions());
   return diag;
 }
 
@@ -285,7 +287,9 @@ InFlightDiagnostic Operation::emitWarning(const Twine &message) {
 InFlightDiagnostic Operation::emitRemark(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitRemark(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic())
-    diag.attachNote(getLoc()) << "see current operation: " << *this;
+    diag.attachNote(getLoc())
+        << "see current operation: "
+        << OpWithFlags(this, OpPrintingFlags().skipRegions());
   return diag;
 }
 
