@@ -486,7 +486,7 @@ private:
 /// A struct for saving information about monotonic variables.
 /// Monotonic variable can be considered as a "conditional" induction variable:
 /// its update happens only on loop iterations for which a certain predicate is
-/// satisfied.
+/// satisfied. The step of the monotonic variable must be loop-invariant.
 class MonotonicDescriptor {
 public:
   MonotonicDescriptor() = default;
