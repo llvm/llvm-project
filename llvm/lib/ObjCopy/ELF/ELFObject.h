@@ -28,6 +28,7 @@
 
 namespace llvm {
 enum class DebugCompressionType;
+class raw_fd_stream;
 namespace objcopy {
 namespace elf {
 
@@ -46,6 +47,18 @@ class DecompressedSection;
 class Segment;
 class Object;
 struct Symbol;
+
+class ELFWriterOutput {
+public:
+  virtual ~ELFWriterOutput() = default;
+
+  virtual void writeAt(uint64_t Offset,
+                       function_ref<void(raw_ostream &)> Write) = 0;
+  virtual Error finalize() = 0;
+
+  void write(ArrayRef<uint8_t> Data, uint64_t Offset);
+  void writeZeros(uint64_t Offset, uint64_t Size);
+};
 
 class SectionTableRef {
   ArrayRef<std::unique_ptr<SectionBase>> Sections;
@@ -106,8 +119,11 @@ public:
 
 class SectionWriter : public SectionVisitor {
 protected:
-  WritableMemoryBuffer &Out;
-  virtual void writeSectionContents(ArrayRef<uint8_t> Data, uint64_t Offset);
+  virtual void writeSectionContents(ArrayRef<uint8_t> Data,
+                                    uint64_t Offset) = 0;
+  virtual void
+  writeSectionContents(uint64_t Offset,
+                       function_ref<void(raw_ostream &)> Write) = 0;
 
 public:
   ~SectionWriter() override = default;
@@ -123,8 +139,6 @@ public:
   Error visit(const SectionIndexSection &Sec) override = 0;
   Error visit(const CompressedSection &Sec) override = 0;
   Error visit(const DecompressedSection &Sec) override = 0;
-
-  explicit SectionWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
 };
 
 template <class ELFT> class ELFSectionWriter : public SectionWriter {
@@ -133,6 +147,11 @@ private:
   using Elf_Rel = typename ELFT::Rel;
   using Elf_Rela = typename ELFT::Rela;
   using Elf_Sym = typename ELFT::Sym;
+
+  ELFWriterOutput &Out;
+  void writeSectionContents(ArrayRef<uint8_t> Data, uint64_t Offset) override;
+  void writeSectionContents(uint64_t Offset,
+                            function_ref<void(raw_ostream &)> Write) override;
 
 public:
   ~ELFSectionWriter() override = default;
@@ -144,7 +163,7 @@ public:
   Error visit(const CompressedSection &Sec) override;
   Error visit(const DecompressedSection &Sec) override;
 
-  explicit ELFSectionWriter(WritableMemoryBuffer &Buf) : SectionWriter(Buf) {}
+  explicit ELFSectionWriter(ELFWriterOutput &Out) : Out(Out) {}
 };
 
 template <class ELFT> class ELFSectionSizer : public MutableSectionVisitor {
@@ -180,6 +199,12 @@ public:
   template <class ELFT> friend class ELFSectionSizer;
 
 class BinarySectionWriter : public SectionWriter {
+protected:
+  WritableMemoryBuffer &Out;
+  void writeSectionContents(ArrayRef<uint8_t> Data, uint64_t Offset) override;
+  void writeSectionContents(uint64_t Offset,
+                            function_ref<void(raw_ostream &)> Write) override;
+
 public:
   ~BinarySectionWriter() override = default;
 
@@ -191,8 +216,7 @@ public:
   Error visit(const CompressedSection &Sec) override;
   Error visit(const DecompressedSection &Sec) override;
 
-  explicit BinarySectionWriter(WritableMemoryBuffer &Buf)
-      : SectionWriter(Buf) {}
+  explicit BinarySectionWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
 };
 
 using IHexLineData = SmallVector<char, 64>;
@@ -332,8 +356,8 @@ private:
   void initEhdrSegment();
 
   void writeEhdr();
-  void writePhdr(const Segment &Seg);
-  void writeShdr(const SectionBase &Sec);
+  void writePhdr(raw_ostream &Out, const Segment &Seg);
+  void writeShdr(raw_ostream &Out, const SectionBase &Sec);
 
   void writePhdrs();
   void writeShdrs();
@@ -342,6 +366,7 @@ private:
 
   void assignOffsets();
 
+  std::unique_ptr<ELFWriterOutput> Output;
   std::unique_ptr<ELFSectionWriter<ELFT>> SecWriter;
 
   size_t totalSize() const;
