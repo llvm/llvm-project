@@ -699,8 +699,9 @@ void ARMAsmPrinter::emitAttributes() {
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
   FloatABI::ABIType FloatABI = ATM.getFloatABI(*MMI->getModule());
+  ARM::ARMABI ABI = ATM.getEffectiveABI(*MMI->getModule());
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian(), FloatABI);
+                         ATM.isLittleEndian(), FloatABI, ABI);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);
@@ -808,7 +809,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (getTM().isAAPCS_ABI() && STI.isTargetHardFloat())
+  if (STI.isAAPCS_ABI() && STI.isTargetHardFloat())
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the

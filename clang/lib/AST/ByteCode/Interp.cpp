@@ -1591,10 +1591,15 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool allowNullSubObj(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return Ptr.isZero() && S.shouldRelaxDiag(S.Current->getSource(OpPC).getLoc(),
+                                           diag::note_constexpr_null_subobject);
+}
+
 static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                      uint32_t Off) {
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
+      !allowNullSubObj(S, OpPC, Ptr) && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -2714,9 +2719,12 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
   SourceInfo E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  if (Ptr.isBlockPointer() && !Ptr.isZero())
+    S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
 
@@ -3016,6 +3024,11 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
+  case CastKind::ReinterpretPtrToInt:
+    // Don't emit anything as we'll emit diag
+    // for this in CheckPointerToIntegralCast
+    assert(!Fatal);
+    return true;
   case CastKind::ReinterpretLike:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret

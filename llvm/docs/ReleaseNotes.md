@@ -52,6 +52,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added `nofreeobj` attribute for attributes and returns, which forbids
+  freeing the underlying object (as opposed to only frees through that specific
+  pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
+  semantics.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be

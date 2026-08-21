@@ -138,6 +138,9 @@ features cannot lower the translation-unit ABI level;
 
 #### C++2c Feature Support
 
+- Added `__builtin_type_order` for compatibility with GCC as part of the
+  implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
+
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
 
 #### C++23 Feature Support
@@ -211,6 +214,13 @@ features cannot lower the translation-unit ABI level;
   (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
   `-fsanitize=shadow-call-stack`. The selected register must also be reserved
   with the matching `-ffixed-<reg>`.
+
+- Added `-fmodules-ignore-search-path=<path>`, the search-path counterpart to
+  `-fmodules-ignore-macro=<macro>`: the path is dropped from the context hash of
+  every module and physically removed from every module build, and kept only for
+  the translation unit itself. This lets builds that differ only in a search
+  path share one module cache, and is only sound when no module needs the path
+  -- a lookup that would have resolved through an ignored path simply fails.
 
 ### Deprecated Compiler Flags
 
@@ -510,6 +520,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
+
+- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
+
+- Fixed an assertion when a redeclaration of a function template or an out-of-line
+  definition of a member of a class template added a default argument to a
+  parameter that follows a parameter pack (e.g.
+  `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
 #### Bug Fixes to AST Handling
 

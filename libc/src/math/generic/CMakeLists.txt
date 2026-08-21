@@ -990,6 +990,7 @@ add_entrypoint_object(
   HDRS
     ../rintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.rintf128
 )
 
@@ -1050,6 +1051,7 @@ add_entrypoint_object(
   HDRS
     ../lrintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.lrintf128
 )
 
@@ -1110,6 +1112,7 @@ add_entrypoint_object(
   HDRS
     ../llrintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llrintf128
 )
 
