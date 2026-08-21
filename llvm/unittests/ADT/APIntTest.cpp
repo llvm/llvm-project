@@ -2905,7 +2905,7 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(SGreatestCommonDivisor(Zero, MinusTwo), Two);
       EXPECT_EQ(SGreatestCommonDivisor(MinusOne, MinusTwo), One);
       EXPECT_EQ(SGreatestCommonDivisor(One, MinusTwo), One);
-      EXPECT_EQ(GreatestCommonDivisor(MinusTwo, MinusTwo), MinusTwo);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, MinusTwo), Two);
 
       // Test some corner cases near the highest representable value.
       APInt Max(Bits, 0);
