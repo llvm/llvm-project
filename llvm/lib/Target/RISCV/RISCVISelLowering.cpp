@@ -12140,17 +12140,17 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
     llvm_unreachable(
         "Unexpected RISC-V packed multiply high accumulate intrinsic");
   case Intrinsic::riscv_pmhacc:
-    return RISCVISD::PMHACC;
+    return RISCVISD::MHACC;
   case Intrinsic::riscv_pmhracc:
-    return RISCVISD::PMHRACC;
+    return RISCVISD::MHRACC;
   case Intrinsic::riscv_pmhaccu:
-    return RISCVISD::PMHACCU;
+    return RISCVISD::MHACCU;
   case Intrinsic::riscv_pmhraccu:
-    return RISCVISD::PMHRACCU;
+    return RISCVISD::MHRACCU;
   case Intrinsic::riscv_pmhaccsu:
-    return RISCVISD::PMHACCSU;
+    return RISCVISD::MHACCSU;
   case Intrinsic::riscv_pmhraccsu:
-    return RISCVISD::PMHRACCSU;
+    return RISCVISD::MHRACCSU;
   }
 }
 
