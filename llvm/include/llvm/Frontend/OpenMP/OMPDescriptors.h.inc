@@ -39,6 +39,7 @@
   ReductionParticipating,
   ReductionScoping,
   RegionInvariant,
+  Repeatable,
   Required,
   ScheduleSpecification,
   SpaceConfiguring,

@@ -1645,9 +1645,9 @@
     descriptor::Modifier(
       "adjust-op",
       {
-        {51, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
-        {52, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
-        {60, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
+        {51, {{{Property::Required, Property::Unique}}, {Clause::OMPC_adjust_args}}},
+        {52, {{{Property::Required, Property::Unique}}, {Clause::OMPC_adjust_args}}},
+        {60, {{{Property::Required, Property::Unique}}, {Clause::OMPC_adjust_args}}},
       }
     ),
   },
@@ -1706,7 +1706,7 @@
     descriptor::Modifier(
       "always-modifier",
       {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
       }
     ),
@@ -1749,7 +1749,7 @@
     descriptor::Modifier(
       "close-modifier",
       {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
       }
     ),
@@ -1781,7 +1781,7 @@
     descriptor::Modifier(
       "delete-modifier",
       {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
       }
     ),
@@ -1791,12 +1791,12 @@
     descriptor::Modifier(
       "dependence-type",
       {
-        {45, {{{Property::Required}}, {Clause::OMPC_depend}}},
-        {50, {{{Property::Required}}, {Clause::OMPC_depend}}},
-        {51, {{{Property::Required}}, {Clause::OMPC_depend}}},
-        {52, {{{Property::Required}}, {Clause::OMPC_doacross}}},
-        {60, {{{Property::Required}}, {Clause::OMPC_doacross}}},
-        {61, {{{Property::Required}}, {Clause::OMPC_doacross}}},
+        {45, {{{Property::Unique}}, {Clause::OMPC_depend}}},
+        {50, {{{Property::Unique}}, {Clause::OMPC_depend}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_depend}}},
+        {52, {{{Property::Required, Property::Unique}}, {Clause::OMPC_doacross}}},
+        {60, {{{Property::Required, Property::Unique}}, {Clause::OMPC_doacross}}},
+        {61, {{{Property::Required, Property::Unique}}, {Clause::OMPC_doacross}}},
       }
     ),
   },
@@ -1887,8 +1887,8 @@
     descriptor::Modifier(
       "induction-identifier",
       {
-        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
-        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
+        {60, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_induction}}},
+        {61, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_induction}}},
       }
     ),
   },
@@ -1916,9 +1916,9 @@
     descriptor::Modifier(
       "interop-type",
       {
-        {51, {{{Property::Required}}, {Clause::OMPC_init}}},
-        {52, {{{Property::Required}}, {Clause::OMPC_init}}},
-        {60, {{{}}, {Clause::OMPC_init}}},
+        {51, {{{Property::Repeatable, Property::Required}}, {Clause::OMPC_init}}},
+        {52, {{{Property::Repeatable, Property::Required}}, {Clause::OMPC_init}}},
+        {60, {{{Property::Repeatable}}, {Clause::OMPC_init}}},
       }
     ),
   },
@@ -1987,8 +1987,8 @@
     descriptor::Modifier(
       "loop-modifier",
       {
-        {60, {{{Property::Optional}}, {Clause::OMPC_apply}}},
-        {61, {{{Property::Optional}}, {Clause::OMPC_apply}}},
+        {60, {{{Property::Optional, Property::Unique}}, {Clause::OMPC_apply}}},
+        {61, {{{Property::Optional, Property::Unique}}, {Clause::OMPC_apply}}},
       }
     ),
   },
@@ -2024,10 +2024,10 @@
     descriptor::Modifier(
       "map-type-modifier",
       {
-        {45, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {50, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {51, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {52, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {45, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+        {50, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
+        {51, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
+        {52, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
       }
     ),
   },
@@ -2214,12 +2214,12 @@
     descriptor::Modifier(
       "reduction-identifier",
       {
-        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_reduction}}},
-        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {45, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_reduction}}},
+        {50, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {51, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {52, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {60, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {61, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
       }
     ),
   },
@@ -2269,7 +2269,7 @@
     descriptor::Modifier(
       "self-modifier",
       {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
       }
     ),
@@ -2299,9 +2299,9 @@
     descriptor::Modifier(
       "step-modifier",
       {
-        {52, {{{Property::Required}}, {}}},
-        {60, {{{Property::Required}}, {Clause::OMPC_induction}}},
-        {61, {{{Property::Required}}, {Clause::OMPC_induction}}},
+        {52, {{{Property::Required, Property::Unique}}, {}}},
+        {60, {{{Property::Required, Property::Unique}}, {Clause::OMPC_induction}}},
+        {61, {{{Property::Required, Property::Unique}}, {Clause::OMPC_induction}}},
       }
     ),
   },
@@ -2339,10 +2339,10 @@
     descriptor::Modifier(
       "task-dependence-type",
       {
-        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
+        {45, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_depend}}},
+        {50, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_depend}}},
+        {51, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_depend}}},
+        {52, {{{Property::Required, Property::Ultimate, Property::Unique}}, {Clause::OMPC_depend}}},
         {60, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
       }
