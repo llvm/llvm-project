@@ -13,7 +13,6 @@
 #include <__concepts/equality_comparable.h>
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__iterator/access.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
@@ -32,9 +31,11 @@
 #include <__ranges/zip_view.h>
 #include <__tuple/tuple_transform.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/maybe_const.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
@@ -393,33 +394,24 @@ private:
     const auto __sz    = static_cast<difference_type>(ranges::size(__v));
     const auto __first = ranges::begin(__v);
 
-    if (__sz > 0) {
-      const auto __idx = static_cast<difference_type>(std::distance(__first, __it));
-      __x += __idx;
+    // An empty base makes the whole product empty, so a non-zero advance from a valid iterator is already
+    // undefined; `__sz` is therefore positive here.
+    const auto __idx = static_cast<difference_type>(std::distance(__first, __it));
+    __x += __idx;
 
-      difference_type __mod;
-      if constexpr (_Np > 0) {
-        difference_type __div = __x / __sz;
-        __mod                 = __x % __sz;
-        if (__mod < 0) {
-          __mod += __sz;
-          __div--;
-        }
-        __advance<_Np - 1>(__div);
-      } else {
-        __mod = (__x >= 0 && __x < __sz) ? __x : __sz;
+    difference_type __mod;
+    if constexpr (_Np > 0) {
+      difference_type __div = __x / __sz;
+      __mod                 = __x % __sz;
+      if (__mod < 0) {
+        __mod += __sz;
+        __div--;
       }
-      __it = std::next(__first, __mod);
-
+      __advance<_Np - 1>(__div);
     } else {
-      // Defensive: an empty base makes the whole product empty, so any non-zero advance from a
-      // valid iterator is already undefined. Keep the iterator pinned to begin rather than
-      // dividing by zero. Not reachable from well-defined calls, hence untested.
-      if constexpr (_Np > 0) {
-        __advance<_Np - 1>(__x);
-      }
-      __it = __first;
+      __mod = (__x >= 0 && __x < __sz) ? __x : __sz;
     }
+    __it = std::next(__first, __mod);
   }
 
   template <auto _Np = sizeof...(_Vs)>
