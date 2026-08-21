@@ -902,9 +902,6 @@ struct Derived : Base {
 void base_cleanup() {
   Derived x{{1}, 2};
 }
-// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
-
 // CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
@@ -913,18 +910,20 @@ void base_cleanup() {
 // CIR:   cir.yield
 // CIR: }
 
-// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
 // OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // OGCG-NOT: define
 // OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // OGCG: }
 
-// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
-
 // LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // LLVMCIR-NOT: define
 // LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // LLVMCIR: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
 
 }

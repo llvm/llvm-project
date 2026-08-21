@@ -1239,9 +1239,8 @@ DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 LocationSize DSEState::strengthenLocationSize(const Instruction *I,
                                               LocationSize Size) const {
   if (auto *CB = dyn_cast<CallBase>(I)) {
-    LibFunc F;
-    if (TLI.getLibFunc(*CB, F) && TLI.has(F) &&
-        (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
+    LibFunc F = TLI.getLibFunc(*CB);
+    if (TLI.has(F) && (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
       // Use the precise location size specified by the 3rd argument
       // for determining KillingI overwrites DeadLoc if it is a memset_chk
       // instruction. memset_chk will write either the amount specified as 3rd
@@ -2294,10 +2293,9 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   auto *InnerCallee = Malloc->getCalledFunction();
   if (!InnerCallee)
     return false;
-  LibFunc Func = NotLibFunc;
+  LibFunc Func = TLI.getLibFunc(*InnerCallee);
   StringRef ZeroedVariantName;
-  if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-      Func != LibFunc_malloc) {
+  if (Func != LibFunc_malloc || !TLI.has(Func)) {
     Attribute Attr = Malloc->getFnAttr("alloc-variant-zeroed");
     if (!Attr.isValid())
       return false;

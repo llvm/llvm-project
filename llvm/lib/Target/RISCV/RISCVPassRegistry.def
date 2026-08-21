@@ -34,4 +34,5 @@ FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #endif
 MACHINE_FUNCTION_PASS("riscv-asm-printer", RISCVAsmPrinterPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
 #undef MACHINE_FUNCTION_PASS

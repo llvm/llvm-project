@@ -114,6 +114,8 @@ class StringRef;
 /// This class provides default implementations for FoldingSetTrait
 /// implementations.
 template <typename T> struct DefaultFoldingSetTrait {
+  struct ContextStorage {};
+
   static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
   static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
 
@@ -143,6 +145,12 @@ struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
 
 /// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
 template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
+  struct ContextStorage {
+    Ctx Context;
+    explicit ContextStorage(Ctx Context) : Context(Context) {}
+    Ctx getContext() const { return Context; }
+  };
+
   static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
     X.Profile(ID, Context);
   }
@@ -299,7 +307,7 @@ protected:
   /// is greater than twice the number of buckets.
   unsigned NumNodes;
 
-  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize = 6);
+  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
   LLVM_ABI FoldingSetBase &operator=(FoldingSetBase &&RHS);
   LLVM_ABI ~FoldingSetBase();
@@ -361,9 +369,6 @@ protected:
   };
 
 private:
-  /// Double the size of the hash table and rehash everything.
-  void GrowHashTable(const FoldingSetInfo &Info);
-
   /// Resize the hash table and rehash everything. \p NewBucketCount must be a
   /// power of two, and must be greater than the old bucket count.
   void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
@@ -372,9 +377,8 @@ protected:
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
 
-  /// Increase the number of buckets such that adding the \p EltCount th node
-  /// won't cause a rebucket operation. reserve is permitted to allocate more
-  /// space than requested by EltCount.
+  /// Grow the number of buckets so that we can hold at least \p EltCount
+  /// nodes before rebucketing. May allocate more space than requested.
   LLVM_ABI void reserve(unsigned EltCount, const FoldingSetInfo &Info);
 
   /// Remove a node from the folding set, returning true if one
@@ -434,10 +438,56 @@ inline unsigned DefaultContextualFoldingSetTrait<T, Ctx>::ComputeHash(
 //===----------------------------------------------------------------------===//
 /// An implementation detail that lets us share code between FoldingSet and
 /// ContextualFoldingSet.
-template <class Derived, class T> class FoldingSetImpl : public FoldingSetBase {
-protected:
-  explicit FoldingSetImpl(unsigned Log2InitSize)
+template <class T, class Trait = FoldingSetTrait<T>>
+class FoldingSetImpl : public FoldingSetBase, public Trait::ContextStorage {
+  // We define Info inside a static member function rather than as a static
+  // constexpr member variable to avoid eager instantiation on MSVC when T is an
+  // incomplete type.
+  static const FoldingSetBase::FoldingSetInfo &getFoldingSetInfo() {
+    static constexpr FoldingSetBase::FoldingSetInfo Info = {
+        // GetNodeProfile
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           FoldingSetNodeID &ID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            Trait::Profile(*static_cast<T *>(N), ID);
+          else
+            Trait::Profile(
+                *static_cast<T *>(N), ID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        },
+        // NodeEquals
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           const FoldingSetNodeID &ID, unsigned IDHash,
+           FoldingSetNodeID &TempID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            return Trait::Equals(*static_cast<T *>(N), ID, IDHash, TempID);
+          else
+            return Trait::Equals(
+                *static_cast<T *>(N), ID, IDHash, TempID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        },
+        // ComputeNodeHash
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           FoldingSetNodeID &TempID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            return Trait::ComputeHash(*static_cast<T *>(N), TempID);
+          else
+            return Trait::ComputeHash(
+                *static_cast<T *>(N), TempID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        }};
+    return Info;
+  }
+
+public:
+  explicit FoldingSetImpl(unsigned Log2InitSize = 6)
       : FoldingSetBase(Log2InitSize) {}
+
+  template <typename C, typename = std::enable_if_t<std::is_constructible_v<
+                            typename Trait::ContextStorage, C>>>
+  explicit FoldingSetImpl(C &&Context, unsigned Log2InitSize = 6)
+      : FoldingSetBase(Log2InitSize),
+        Trait::ContextStorage(std::forward<C>(Context)) {}
 
   FoldingSetImpl(FoldingSetImpl &&Arg) = default;
   FoldingSetImpl &operator=(FoldingSetImpl &&RHS) = default;
@@ -454,11 +504,10 @@ public:
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
 
-  /// Increase the number of buckets such that adding the \p EltCount th node
-  /// won't cause a rebucket operation. reserve is permitted to allocate more
-  /// space than requested by EltCount.
+  /// Grow the number of buckets so that we can hold at least \p EltCount
+  /// nodes before rebucketing. May allocate more space than requested.
   void reserve(unsigned EltCount) {
-    FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
+    FoldingSetBase::reserve(EltCount, getFoldingSetInfo());
   }
 
   /// Remove a node from the folding set, returning true if one
@@ -469,21 +518,21 @@ public:
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     return static_cast<T *>(
-        FoldingSetBase::GetOrInsertNode(N, Derived::getFoldingSetInfo()));
+        FoldingSetBase::GetOrInsertNode(N, getFoldingSetInfo()));
   }
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
   T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
     return static_cast<T *>(FoldingSetBase::FindNodeOrInsertPos(
-        ID, InsertPos, Derived::getFoldingSetInfo()));
+        ID, InsertPos, getFoldingSetInfo()));
   }
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
   void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos, Derived::getFoldingSetInfo());
+    FoldingSetBase::InsertNode(N, InsertPos, getFoldingSetInfo());
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -504,47 +553,8 @@ public:
 /// moved-from state is not a valid state for anything other than
 /// move-assigning and destroying. This is primarily to enable movable APIs
 /// that incorporate these objects.
-template <class T> class FoldingSet : public FoldingSetImpl<FoldingSet<T>, T> {
-  using Super = FoldingSetImpl<FoldingSet, T>;
-  using Node = typename Super::Node;
-
-  /// Each instantiation of the FoldingSet needs to provide a
-  /// way to convert nodes into a unique specifier.
-  static void GetNodeProfile(const FoldingSetBase *, Node *N,
-                             FoldingSetNodeID &ID) {
-    T *TN = static_cast<T *>(N);
-    FoldingSetTrait<T>::Profile(*TN, ID);
-  }
-
-  /// Instantiations may optionally provide a way to compare a
-  /// node with a specified ID.
-  static bool NodeEquals(const FoldingSetBase *, Node *N,
-                         const FoldingSetNodeID &ID, unsigned IDHash,
-                         FoldingSetNodeID &TempID) {
-    T *TN = static_cast<T *>(N);
-    return FoldingSetTrait<T>::Equals(*TN, ID, IDHash, TempID);
-  }
-
-  /// Instantiations may optionally provide a way to compute a
-  /// hash value directly from a node.
-  static unsigned ComputeNodeHash(const FoldingSetBase *, Node *N,
-                                  FoldingSetNodeID &TempID) {
-    T *TN = static_cast<T *>(N);
-    return FoldingSetTrait<T>::ComputeHash(*TN, TempID);
-  }
-
-  static const FoldingSetBase::FoldingSetInfo &getFoldingSetInfo() {
-    static constexpr FoldingSetBase::FoldingSetInfo Info = {
-        GetNodeProfile, NodeEquals, ComputeNodeHash};
-    return Info;
-  }
-  friend Super;
-
-public:
-  explicit FoldingSet(unsigned Log2InitSize = 6) : Super(Log2InitSize) {}
-  FoldingSet(FoldingSet &&Arg) = default;
-  FoldingSet &operator=(FoldingSet &&RHS) = default;
-};
+template <class T, class Trait = FoldingSetTrait<T>>
+using FoldingSet = FoldingSetImpl<T, Trait>;
 
 //===----------------------------------------------------------------------===//
 /// This template class is a further refinement of FoldingSet which provides a
@@ -555,58 +565,8 @@ public:
 /// function with signature
 ///   void Profile(FoldingSetNodeID &, Ctx);
 template <class T, class Ctx>
-class ContextualFoldingSet
-    : public FoldingSetImpl<ContextualFoldingSet<T, Ctx>, T> {
-  // Unfortunately, this can't derive from FoldingSet<T> because the
-  // construction of the vtable for FoldingSet<T> requires
-  // FoldingSet<T>::GetNodeProfile to be instantiated, which in turn
-  // requires a single-argument T::Profile().
-
-  using Super = FoldingSetImpl<ContextualFoldingSet, T>;
-  using Node = typename Super::Node;
-
-  Ctx Context;
-
-  static const Ctx &getContext(const FoldingSetBase *Base) {
-    return static_cast<const ContextualFoldingSet *>(Base)->Context;
-  }
-
-  /// Each instantiatation of the FoldingSet needs to provide a way to convert
-  /// nodes into a unique specifier.
-  static void GetNodeProfile(const FoldingSetBase *Base, Node *N,
-                             FoldingSetNodeID &ID) {
-    T *TN = static_cast<T *>(N);
-    ContextualFoldingSetTrait<T, Ctx>::Profile(*TN, ID, getContext(Base));
-  }
-
-  static bool NodeEquals(const FoldingSetBase *Base, Node *N,
-                         const FoldingSetNodeID &ID, unsigned IDHash,
-                         FoldingSetNodeID &TempID) {
-    T *TN = static_cast<T *>(N);
-    return ContextualFoldingSetTrait<T, Ctx>::Equals(*TN, ID, IDHash, TempID,
-                                                     getContext(Base));
-  }
-
-  static unsigned ComputeNodeHash(const FoldingSetBase *Base, Node *N,
-                                  FoldingSetNodeID &TempID) {
-    T *TN = static_cast<T *>(N);
-    return ContextualFoldingSetTrait<T, Ctx>::ComputeHash(*TN, TempID,
-                                                          getContext(Base));
-  }
-
-  static const FoldingSetBase::FoldingSetInfo &getFoldingSetInfo() {
-    static constexpr FoldingSetBase::FoldingSetInfo Info = {
-        GetNodeProfile, NodeEquals, ComputeNodeHash};
-    return Info;
-  }
-  friend Super;
-
-public:
-  explicit ContextualFoldingSet(Ctx Context, unsigned Log2InitSize = 6)
-      : Super(Log2InitSize), Context(Context) {}
-
-  Ctx getContext() const { return Context; }
-};
+using ContextualFoldingSet =
+    FoldingSetImpl<T, ContextualFoldingSetTrait<T, Ctx>>;
 
 //===----------------------------------------------------------------------===//
 /// This template class combines a FoldingSet and a vector to provide the
