@@ -99,7 +99,7 @@ public:
                                      bool Rev = false);
 
   /// Update cached register class information using \p ReservedInput, MRI's
-  /// current frozen reserved-register set. Cached orders are compacted when
+  /// current reserved-register set. Cached orders are compacted when
   /// only registers are added and `-stress-regalloc` is disabled; otherwise,
   /// they are invalidated and recomputed on demand.
   ///
