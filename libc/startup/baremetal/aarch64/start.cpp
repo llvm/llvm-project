@@ -73,7 +73,26 @@ uintptr_t get_stackheap_start() {
 }
 
 void setup_mmu() {
-  constexpr uint64_t PAGE_TABLE_ENTRY = 0x405; // Index = 1, AF=1.
+  constexpr uint64_t PAGE_TABLE_BLOCK_DESCRIPTOR = 1ULL;
+  constexpr uint64_t PAGE_TABLE_BLOCK_ATTR_NORMAL = 1ULL << 2; // AttrIndx = 1.
+  constexpr uint64_t PAGE_TABLE_BLOCK_AF = 1ULL << 10;
+#if !defined(__ARM_ARCH_PROFILE) || __ARM_ARCH_PROFILE != 'R'
+  // With FEAT_RME, descriptor bit 11 is NSE rather than nG; NS=0,NSE=1
+  // selects Root PAS for Root execution. Without RME this retains the previous
+  // nG meaning, which is harmless for these baremetal identity mappings.
+  constexpr uint64_t PAGE_TABLE_BLOCK_ROOT_PAS = 1ULL << 11;
+#else
+  constexpr uint64_t PAGE_TABLE_BLOCK_ROOT_PAS = 0;
+#endif
+  constexpr uint64_t PAGE_TABLE_ENTRY =
+      PAGE_TABLE_BLOCK_DESCRIPTOR | PAGE_TABLE_BLOCK_ATTR_NORMAL |
+      PAGE_TABLE_BLOCK_AF | PAGE_TABLE_BLOCK_ROOT_PAS;
+  static_assert((PAGE_TABLE_ENTRY & (1ULL << 5)) == 0,
+                "normal-memory mappings must not set NS");
+#if !defined(__ARM_ARCH_PROFILE) || __ARM_ARCH_PROFILE != 'R'
+  static_assert((PAGE_TABLE_ENTRY & (1ULL << 11)) != 0,
+                "normal-memory mappings must set NSE for Root PAS");
+#endif
   // Map the stack/heap as normal memory, but mark it non-executable for both
   // privileged and unprivileged execution. This prevents accidentally executing
   // code from writable stack/heap memory.
