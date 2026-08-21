@@ -75,7 +75,7 @@ LLVM_ABI void initializeCFGSimplifyPassPass(PassRegistry &);
 LLVM_ABI void initializeCFGuardPass(PassRegistry &);
 LLVM_ABI void initializeCFGuardLongjmpPass(PassRegistry &);
 LLVM_ABI void initializeCFIFixupLegacyPass(PassRegistry &);
-LLVM_ABI void initializeCFIInstrInserterPass(PassRegistry &);
+LLVM_ABI void initializeCFIInstrInserterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeCallGraphDOTPrinterPass(PassRegistry &);
 LLVM_ABI void initializeCallGraphViewerPass(PassRegistry &);
 LLVM_ABI void initializeCallGraphWrapperPassPass(PassRegistry &);

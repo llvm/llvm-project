@@ -48,8 +48,8 @@ void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
 FunctionPass *createRISCVLandingPadSetupPass();
 void initializeRISCVLandingPadSetupPass(PassRegistry &);
 
-FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
-                                 CodeGenOptLevel OptLevel);
+FunctionPass *createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
+                                           CodeGenOptLevel OptLevel);
 
 class RISCVISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -61,6 +61,19 @@ void initializeRISCVLateBranchOptPass(PassRegistry &);
 
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
+
+class RISCVGatherScatterLoweringPass
+    : public OptionalPassInfoMixin<RISCVGatherScatterLoweringPass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVGatherScatterLoweringPass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createRISCVGatherScatterLoweringLegacyPass();
+void initializeRISCVGatherScatterLoweringLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVVectorPeepholePass();
 void initializeRISCVVectorPeepholePass(PassRegistry &);
@@ -118,7 +131,7 @@ public:
   RISCVZacasABIFixPass(const RISCVTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
-FunctionPass *createRISCVZacasABIFixPass();
+FunctionPass *createRISCVZacasABIFixLegacyPass();
 void initializeRISCVZacasABIFixLegacyPass(PassRegistry &);
 
 InstructionSelector *

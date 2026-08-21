@@ -436,6 +436,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -454,6 +455,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logf
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
@@ -491,6 +493,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.roundeven
     libc.src.math.roundevenf
