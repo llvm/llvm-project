@@ -192,12 +192,6 @@ Fortran::parser::CharBlock OmpGetModifierSource(
   }
   llvm_unreachable("`specific` must be a member of `modifiers`");
 }
-
-template <typename ClauseTy>
-bool OmpVerifyModifiers(const ClauseTy &clause, llvm::omp::Clause id,
-    parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
-  return true;
-}
 } // namespace Fortran::semantics
 
 #endif // FORTRAN_SEMANTICS_OPENMP_MODIFIERS_H_

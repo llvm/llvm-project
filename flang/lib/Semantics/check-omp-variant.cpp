@@ -187,8 +187,6 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
