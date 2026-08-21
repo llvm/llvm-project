@@ -107,7 +107,7 @@ subroutine implicit_explicit()
 end subroutine
 
 ! TODO Treat implied-DO variables in I/O lists as private.
-subroutine implicit_do_in_io_list()
+subroutine implied_do_in_io_list()
   !$omp parallel !default(none)
     write(6,*) (i,i=1,10)
   !$omp end parallel
