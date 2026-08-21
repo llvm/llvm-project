@@ -91,6 +91,18 @@ func.func @broadcast_transpose_final_group(%arg0 : vector<4x7x1x1xi8>) -> vector
 
 // -----
 
+// CHECK-LABEL: broadcast_transpose_reorders_broadcast_dims
+//  CHECK-SAME:  %[[ARG:.*]]: vector<4x1xf32>) -> vector<1x100x4x5xf32> {
+//       CHECK:  %[[RES:.*]] = vector.broadcast %[[ARG]] : vector<4x1xf32> to vector<1x100x4x5xf32>
+//       CHECK:  return %[[RES]] : vector<1x100x4x5xf32>
+func.func @broadcast_transpose_reorders_broadcast_dims(%arg0 : vector<4x1xf32>) -> vector<1x100x4x5xf32> {
+  %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<100x5x4x1xf32>
+  %1 = vector.transpose %0, [3, 0, 2, 1] : vector<100x5x4x1xf32> to vector<1x100x4x5xf32>
+  return %1 : vector<1x100x4x5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: negative_broadcast_transpose_square
 //  CHECK-SAME:  %[[ARG:.*]]:
 //       CHECK:  %[[BCT:.*]] = vector.broadcast %[[ARG]]
@@ -312,14 +324,11 @@ func.func @negative_transpose_fold(%arg : vector<2x2xi8>) -> vector<2x2xi8> {
 //    transpose(broadcast(shape_cast)) -> broadcast
 // +----------------------------------------------------------------------------
 
-// The shape_cast drops a trailing unit dim, so the broadcast must prepend the
-// new dim and the transpose moves it back to the trailing position. Peeking
-// through the shape_cast recovers a single direct broadcast.
-// CHECK-LABEL: func @transpose_shape_cast_broadcast
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_drop_unit_dim
 //  CHECK-SAME: (%[[ARG:.+]]: vector<1x32x1xf32>)
 //       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1x32x1xf32> to vector<1x32x64xf32>
 //       CHECK:   return %[[V]] : vector<1x32x64xf32>
-func.func @transpose_shape_cast_broadcast(%arg: vector<1x32x1xf32>) -> vector<1x32x64xf32> {
+func.func @transpose_shape_cast_broadcast_drop_unit_dim(%arg: vector<1x32x1xf32>) -> vector<1x32x64xf32> {
   %sc = vector.shape_cast %arg : vector<1x32x1xf32> to vector<1x32xf32>
   %bc = vector.broadcast %sc : vector<1x32xf32> to vector<64x1x32xf32>
   %t = vector.transpose %bc, [1, 2, 0] : vector<64x1x32xf32> to vector<1x32x64xf32>
@@ -328,13 +337,11 @@ func.func @transpose_shape_cast_broadcast(%arg: vector<1x32x1xf32>) -> vector<1x
 
 // -----
 
-// The broadcast stretches an existing size-1 dim rather than prepending one;
-// still equivalent to a single broadcast (no leading/trailing dim rule).
-// CHECK-LABEL: func @transpose_shape_cast_broadcast_stretch
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_stretch_unit_dim
 //  CHECK-SAME: (%[[ARG:.+]]: vector<1x4xf32>)
 //       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1x4xf32> to vector<3x4xf32>
 //       CHECK:   return %[[V]] : vector<3x4xf32>
-func.func @transpose_shape_cast_broadcast_stretch(%arg: vector<1x4xf32>) -> vector<3x4xf32> {
+func.func @transpose_shape_cast_broadcast_stretch_unit_dim(%arg: vector<1x4xf32>) -> vector<3x4xf32> {
   %sc = vector.shape_cast %arg : vector<1x4xf32> to vector<4x1xf32>
   %bc = vector.broadcast %sc : vector<4x1xf32> to vector<4x3xf32>
   %t = vector.transpose %bc, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
@@ -343,14 +350,12 @@ func.func @transpose_shape_cast_broadcast_stretch(%arg: vector<1x4xf32>) -> vect
 
 // -----
 
-// The transpose reorders the two non-unit dims (2 and 4), so the chain is not a
-// plain broadcast and must not be folded.
-// CHECK-LABEL: func @negative_transpose_shape_cast_broadcast_reorder
+// CHECK-LABEL: func @negative_transpose_reorders_nonbroadcast_dims
 //       CHECK:   vector.shape_cast
 //       CHECK:   vector.broadcast
 //       CHECK:   %[[T:.+]] = vector.transpose
 //       CHECK:   return %[[T]]
-func.func @negative_transpose_shape_cast_broadcast_reorder(%arg: vector<2x1x4xf32>) -> vector<4x8x2xf32> {
+func.func @negative_transpose_reorders_nonbroadcast_dims(%arg: vector<2x1x4xf32>) -> vector<4x8x2xf32> {
   %sc = vector.shape_cast %arg : vector<2x1x4xf32> to vector<2x4xf32>
   %bc = vector.broadcast %sc : vector<2x4xf32> to vector<8x2x4xf32>
   %t = vector.transpose %bc, [2, 0, 1] : vector<8x2x4xf32> to vector<4x8x2xf32>
@@ -359,14 +364,12 @@ func.func @negative_transpose_shape_cast_broadcast_reorder(%arg: vector<2x1x4xf3
 
 // -----
 
-// The shape_cast merges two non-unit dims (not a unit-dim-only reshape), so the
-// look-through does not apply and nothing is folded.
-// CHECK-LABEL: func @negative_transpose_shape_cast_broadcast_nonunit_reshape
+// CHECK-LABEL: func @negative_shape_cast_merges_nonbroadcast_dims
 //       CHECK:   vector.shape_cast
 //       CHECK:   vector.broadcast
 //       CHECK:   %[[T:.+]] = vector.transpose
 //       CHECK:   return %[[T]]
-func.func @negative_transpose_shape_cast_broadcast_nonunit_reshape(%arg: vector<2x4xf32>) -> vector<8x3xf32> {
+func.func @negative_shape_cast_merges_nonbroadcast_dims(%arg: vector<2x4xf32>) -> vector<8x3xf32> {
   %sc = vector.shape_cast %arg : vector<2x4xf32> to vector<8xf32>
   %bc = vector.broadcast %sc : vector<8xf32> to vector<3x8xf32>
   %t = vector.transpose %bc, [1, 0] : vector<3x8xf32> to vector<8x3xf32>
@@ -375,12 +378,25 @@ func.func @negative_transpose_shape_cast_broadcast_nonunit_reshape(%arg: vector<
 
 // -----
 
-// Scalable non-unit dims ([4]) are handled like any other non-unit dim.
-// CHECK-LABEL: func @transpose_shape_cast_broadcast_scalable
+// CHECK-LABEL: func @negative_shape_cast_reorders_nonbroadcast_dims
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_shape_cast_reorders_nonbroadcast_dims(%arg: vector<5x4xf32>) -> vector<5x4x3xf32> {
+  %sc = vector.shape_cast %arg : vector<5x4xf32> to vector<4x5x1xf32>
+  %bc = vector.broadcast %sc : vector<4x5x1xf32> to vector<4x5x3xf32>
+  %t = vector.transpose %bc, [1, 0, 2] : vector<4x5x3xf32> to vector<5x4x3xf32>
+  return %t : vector<5x4x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_scalable_dim
 //  CHECK-SAME: (%[[ARG:.+]]: vector<[4]x1xf32>)
 //       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<[4]x1xf32> to vector<1x[4]x8xf32>
 //       CHECK:   return %[[V]] : vector<1x[4]x8xf32>
-func.func @transpose_shape_cast_broadcast_scalable(%arg: vector<[4]x1xf32>) -> vector<1x[4]x8xf32> {
+func.func @transpose_shape_cast_broadcast_scalable_dim(%arg: vector<[4]x1xf32>) -> vector<1x[4]x8xf32> {
   %sc = vector.shape_cast %arg : vector<[4]x1xf32> to vector<[4]xf32>
   %bc = vector.broadcast %sc : vector<[4]xf32> to vector<8x1x[4]xf32>
   %t = vector.transpose %bc, [1, 2, 0] : vector<8x1x[4]xf32> to vector<1x[4]x8xf32>
@@ -389,14 +405,12 @@ func.func @transpose_shape_cast_broadcast_scalable(%arg: vector<[4]x1xf32>) -> v
 
 // -----
 
-// A scalable [1] is not a fixed unit dim, so the shape_cast that folds it into
-// the [4] reshapes a scalable dim and must not be looked through.
-// CHECK-LABEL: func @negative_transpose_shape_cast_broadcast_scalable_unit
+// CHECK-LABEL: func @negative_shape_cast_reshapes_scalable_unit_dim
 //       CHECK:   vector.shape_cast
 //       CHECK:   vector.broadcast
 //       CHECK:   %[[T:.+]] = vector.transpose
 //       CHECK:   return %[[T]]
-func.func @negative_transpose_shape_cast_broadcast_scalable_unit(%arg: vector<[1]x4xf32>) -> vector<[4]x8xf32> {
+func.func @negative_shape_cast_reshapes_scalable_unit_dim(%arg: vector<[1]x4xf32>) -> vector<[4]x8xf32> {
   %sc = vector.shape_cast %arg : vector<[1]x4xf32> to vector<[4]xf32>
   %bc = vector.broadcast %sc : vector<[4]xf32> to vector<8x[4]xf32>
   %t = vector.transpose %bc, [1, 0] : vector<8x[4]xf32> to vector<[4]x8xf32>

@@ -2100,9 +2100,8 @@ func.func @store_to_load_tensor_broadcast_scalable(%arg0 : tensor<?xf32>,
 
 // CHECK-LABEL: func @store_to_load_tensor_perm_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4x4xf32>, %[[V0:.*]]: vector<4x1xf32>)
-//       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x1xf32> to vector<100x5x4x1xf32>
-//       CHECK:   %[[T:.*]] = vector.transpose %[[B]], [3, 0, 2, 1] : vector<100x5x4x1xf32> to vector<1x100x4x5xf32>
-//       CHECK:   return %[[T]] : vector<1x100x4x5xf32>
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x1xf32> to vector<1x100x4x5xf32>
+//       CHECK:   return %[[B]] : vector<1x100x4x5xf32>
 func.func @store_to_load_tensor_perm_broadcast(%arg0 : tensor<4x4x4xf32>,
   %v0 : vector<4x1xf32>) -> vector<1x100x4x5xf32> {
   %c0 = arith.constant 0 : index

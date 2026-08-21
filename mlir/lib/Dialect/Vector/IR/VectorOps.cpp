@@ -7523,9 +7523,32 @@ public:
   }
 };
 
-/// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
-/// 'order preserving', where 'order preserving' means the flattened
-/// inputs and outputs of the transpose have identical (numerical) values.
+/// Positions (in order) of `type`'s non-broadcast dims: the data-carrying dims
+/// (size != 1, or a scalable [1]) a broadcast copies verbatim. Size-1 dims are
+/// replicated, so their position is irrelevant.
+static SmallVector<int64_t> nonBroadcastAxes(VectorType type) {
+  SmallVector<int64_t> axes;
+  for (auto [i, size] : llvm::enumerate(type.getShape()))
+    if (size != 1 || type.getScalableDims()[i])
+      axes.push_back(i);
+  return axes;
+}
+
+/// Returns true if `permutation` moves the axis at each input position `from[i]`
+/// to output position `to[i]`.
+static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
+                              ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> invPerm = invertPermutationVector(permutation);
+  for (auto [f, t] : llvm::zip_equal(from, to))
+    if (invPerm[f] != t)
+      return false;
+  return true;
+}
+
+/// Folds transpose(broadcast(x)) to broadcast(x) when the transpose is order
+/// preserving, i.e. it only reorders broadcast/size-1 dims and leaves every
+/// non-broadcast dim of x where a direct broadcast to the transpose result would
+/// place it.
 ///
 /// Example:
 /// ```
@@ -7537,17 +7560,6 @@ public:
 /// ```
 ///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<8x1xi32>.
 /// ```
-/// The algorithm works by partitioning dimensions into groups that can be
-/// locally permuted while preserving order, and checks that the transpose
-/// only permutes within these groups.
-///
-/// Groups are either contiguous sequences of 1s, or non-1s (1-element groups).
-/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7. This is equivalent to
-/// broadcasting from 1x1x4x1x1x7.
-///                   ^^^ ^ ^^^ ^
-///          groups:   0  1  2  3
-/// Order preserving permutations for this example are ones that only permute
-/// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
   using Base::Base;
@@ -7556,75 +7568,46 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransposeOp transpose,
                                 PatternRewriter &rewriter) const override {
-
     vector::BroadcastOp broadcast =
         transpose.getVector().getDefiningOp<vector::BroadcastOp>();
-    if (!broadcast) {
+    if (!broadcast)
       return rewriter.notifyMatchFailure(transpose,
                                          "not preceded by a broadcast");
+
+    VectorType outType = transpose.getResultVectorType();
+    auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
+
+    // transpose(broadcast(scalar)) always folds. Otherwise the source must be
+    // broadcastable to the result and the transpose must leave its non-broadcast
+    // dims in place, i.e. map each to itself (from == to).
+    if (srcType) {
+      if (vector::isBroadcastableTo(srcType, outType) !=
+          vector::BroadcastableToResult::Success)
+        return rewriter.notifyMatchFailure(transpose, "not broadcastable");
+
+      int64_t rankDelta = outType.getRank() - srcType.getRank();
+      SmallVector<int64_t> axes;
+      for (int64_t axis : nonBroadcastAxes(srcType))
+        axes.push_back(axis + rankDelta);
+      if (!transposeMapsAxes(axes, axes, transpose.getPermutation()))
+        return rewriter.notifyMatchFailure(transpose,
+                                           "not an order-preserving broadcast");
     }
 
-    auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
-    VectorType outputType = transpose.getResultVectorType();
-
-    // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid
-    bool inputIsScalar = !inputType;
-    if (inputIsScalar) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                       broadcast.getSource());
-      return success();
-    }
-
-    ArrayRef<int64_t> permutation = transpose.getPermutation();
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    int64_t inputRank = inputType.getRank();
-    int64_t outputRank = transpose.getType().getRank();
-    int64_t deltaRank = outputRank - inputRank;
-
-    int low = 0;
-    for (int inputIndex = 0; inputIndex < inputRank; ++inputIndex) {
-      bool notOne = inputShape[inputIndex] != 1;
-      bool prevNotOne = (inputIndex != 0 && inputShape[inputIndex - 1] != 1);
-      bool groupEndFound = notOne || prevNotOne;
-      if (groupEndFound) {
-        int high = inputIndex + deltaRank;
-        // Return failure if not all permutation destinations for indices in
-        // [low, high) are in [low, high), i.e. the permutation is not local to
-        // the group.
-        for (int i = low; i < high; ++i) {
-          if (permutation[i] < low || permutation[i] >= high) {
-            return rewriter.notifyMatchFailure(
-                transpose, "permutation not local to group");
-          }
-        }
-        low = high;
-      }
-    }
-
-    // We don't need to check the final group [low, outputRank) because if it is
-    // not locally bound, there must be a preceding group that already failed
-    // the check (impossible to have just 1 non-locally bound group).
-
-    // The preceding logic also ensures that at this point, the output of the
-    // transpose is definitely broadcastable from the input shape, assert so:
-    assert(vector::isBroadcastableTo(inputType, outputType) ==
-               vector::BroadcastableToResult::Success &&
-           "not broadcastable directly to transpose output");
-
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outType,
                                                      broadcast.getSource());
-
     return success();
   }
 };
 
-/// Folds transpose(broadcast(shape_cast(x))) to broadcast(x) when the chain is
-/// equivalent to a single broadcast of x to the transpose result type.
+/// Folds transpose(broadcast(shape_cast(x))) to broadcast(x) when a
+/// size-1-dim-only shape_cast `x -> y` sits between the broadcast and its
+/// source, i.e. y (the broadcast's input) is x with only size-1 dims rearranged.
 ///
-/// FoldTransposeBroadcast only folds transpose(broadcast(y)) when the transpose
-/// permutes within y's own broadcast groups. Here the equivalent broadcast is
-/// of x, not of the shape_cast result y, so that check fails even though the
-/// chain is a plain broadcast of x. Looking through the shape_cast recovers it.
+/// Such a shape_cast leaves x and y with the same non-broadcast dims (in order),
+/// so the chain is still a plain broadcast of x even when the transpose moves
+/// things relative to y. Reusing transposeMapsAxes, each non-broadcast axis is
+/// mapped from its position in y to its direct-broadcast position in x.
 ///
 /// Example 1, broadcast prepends a dim that the transpose moves to the back:
 /// ```
@@ -7642,12 +7625,6 @@ public:
 ///  %2 = vector.transpose %1, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
 /// ```
 /// rewrites to broadcast %x : vector<1x4xf32> to vector<3x4xf32>.
-///
-/// The fold is valid when two things hold. First, the only difference between x
-/// and the shape_cast result is in unit (size-1) dims; the rest of the dims are
-/// the same size in the same order. Second, the transpose puts each non-unit
-/// dim where a plain broadcast of x would put it. The rest are size-1 or
-/// broadcast dims, and a broadcast fills those the same way wherever they land.
 class FoldTransposeShapeCastBroadcast
     : public OpRewritePattern<vector::TransposeOp> {
 public:
@@ -7662,46 +7639,45 @@ public:
     if (!shapeCast)
       return rewriter.notifyMatchFailure(transpose, "not a shape_cast source");
 
-    VectorType srcType = shapeCast.getSourceVectorType();
-    VectorType midType = shapeCast.getResultVectorType();
-    VectorType bcastType = broadcast.getResultVectorType();
+    VectorType srcType = shapeCast.getSourceVectorType(); // x
+    VectorType midType = shapeCast.getResultVectorType(); // y, the broadcast input
     VectorType outType = transpose.getResultVectorType();
 
-    // Non-unit axis positions, in order. A scalable [1] is not a unit dim.
-    auto nonUnitAxes = [](VectorType ty) {
-      SmallVector<int64_t> axes;
-      for (auto [i, d] : llvm::enumerate(ty.getShape()))
-        if (d != 1 || ty.getScalableDims()[i])
-          axes.push_back(i);
-      return axes;
-    };
-    SmallVector<int64_t> srcAxes = nonUnitAxes(srcType);
-    SmallVector<int64_t> midAxes = nonUnitAxes(midType);
+    if (vector::isBroadcastableTo(srcType, outType) !=
+        vector::BroadcastableToResult::Success)
+      return rewriter.notifyMatchFailure(transpose, "not broadcastable");
 
-    if (srcAxes.size() != midAxes.size() ||
-        vector::isBroadcastableTo(srcType, outType) !=
-            vector::BroadcastableToResult::Success)
-      return rewriter.notifyMatchFailure(transpose, "not a plain broadcast");
-
-    // Check that non-unit dims are preserved (same size and scalability) in
-    // order and land where a direct broadcast of x would.
-    SmallVector<int64_t> invPerm =
-        invertPermutationVector(transpose.getPermutation());
-    for (auto [srcAxis, midAxis] : llvm::zip_equal(srcAxes, midAxes)) {
+    // Size-1-dim-only shape_cast: x and y must have identical non-broadcast dims
+    // in the same order. E.g. rejects 5x4 -> 4x5x1, which reorders 5 and 4.
+    SmallVector<int64_t> srcAxes = nonBroadcastAxes(srcType);
+    SmallVector<int64_t> midAxes = nonBroadcastAxes(midType);
+    if (srcAxes.size() != midAxes.size())
+      return rewriter.notifyMatchFailure(transpose,
+                                         "reshapes a non-broadcast dim");
+    for (auto [srcAxis, midAxis] : llvm::zip_equal(srcAxes, midAxes))
       if (srcType.getDimSize(srcAxis) != midType.getDimSize(midAxis) ||
           srcType.getScalableDims()[srcAxis] !=
               midType.getScalableDims()[midAxis])
         return rewriter.notifyMatchFailure(transpose,
-                                           "reshapes a non-unit dim");
-      int64_t bcastAxis = midAxis + bcastType.getRank() - midType.getRank();
-      int64_t directAxis = srcAxis + outType.getRank() - srcType.getRank();
-      if (invPerm[bcastAxis] != directAxis)
-        return rewriter.notifyMatchFailure(transpose,
-                                           "reorders a broadcast axis");
-    }
+                                           "reshapes a non-broadcast dim");
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outType,
-                                                     shapeCast.getSource());
+    // For each non-broadcast axis, find its index in the broadcast result
+    // (`from`) and in a direct broadcast of x (`to`), then check the transpose
+    // maps `from` -> `to`. E.g. dim 32 in Example 1:
+    //   bcast    = 64x1x32  ->  32 at index 2  (from)
+    //   bcast(x) = 1x32x64  ->  32 at index 1  (to)
+    int64_t bcastRank = broadcast.getResultVectorType().getRank();
+    SmallVector<int64_t> from, to;
+    for (auto [srcAxis, midAxis] : llvm::zip_equal(srcAxes, midAxes)) {
+      from.push_back(midAxis + bcastRank - midType.getRank());
+      to.push_back(srcAxis + outType.getRank() - srcType.getRank());
+    }
+    if (!transposeMapsAxes(from, to, transpose.getPermutation()))
+      return rewriter.notifyMatchFailure(transpose,
+                                         "not a plain broadcast of the source");
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        transpose, outType, shapeCast.getSource());
     return success();
   }
 };
