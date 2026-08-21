@@ -1,6 +1,6 @@
 // REQUIRES: host-supports-jit
 //
-// -emit-llvm prints the IR of each input instead of running it.
+// -emit-llvm prints the IR of each input before running them.
 //
 // RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
 
@@ -14,7 +14,8 @@ extern "C" int answer = 42;
 extern "C" int neg(int a) { return -a; }
 // CHECK: define {{.*}}i32 @neg(
 
-// Not run, so the value is not printed.
 extern "C" int r = add(19, 23);
+// CHECK: @r = {{.*}}global i32
+// CHECK: call i32 @add(
 r
-// CHECK-NOT: (int) 42
+// CHECK: (int) 42
