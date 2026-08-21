@@ -172,3 +172,35 @@ early.exit:
   %ret = phi i32 [ 1, %if.then ], [ 0, %for.inc ]
   ret i32 %ret
 }
+
+; CHECK: loop not vectorized
+
+; Negative test: Using the monotonic phi outside the loop is not supported.
+define i32 @out_of_loop_use_of_monotonic_phi(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.idx = sext i32 %idx to i64
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %dst.idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i32 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i32 %idx
+}
