@@ -40,31 +40,32 @@
 #include <optional>
 
 namespace clang {
-  class AllocSizeAttr;
-  class APValue;
-  class ASTContext;
-  class BlockDecl;
-  class CXXBaseSpecifier;
-  class CXXMemberCallExpr;
-  class CXXOperatorCallExpr;
-  class CastExpr;
-  class Decl;
-  class IdentifierInfo;
-  class MaterializeTemporaryExpr;
-  class NamedDecl;
-  class ObjCPropertyRefExpr;
-  class OpaqueValueExpr;
-  class ParmVarDecl;
-  class StringLiteral;
-  class TargetInfo;
-  class ValueDecl;
-  class WarnUnusedResultAttr;
+class AllocSizeAttr;
+class APValue;
+class ASTContext;
+class BlockDecl;
+class CXXBaseSpecifier;
+class CXXMemberCallExpr;
+class CXXOperatorCallExpr;
+class CastExpr;
+class Decl;
+class IdentifierInfo;
+class MaterializeTemporaryExpr;
+class NamedDecl;
+class ObjCPropertyRefExpr;
+class OpaqueValueExpr;
+class ParmVarDecl;
+class StringLiteral;
+class TargetInfo;
+class ValueDecl;
+class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
-typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
+typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
 
 /// An adjustment to be made to the temporary created when emitting a
-/// reference binding, which accesses a particular subobject of that temporary.
+/// reference binding, which accesses a particular subobject of that
+/// temporary.
 struct SubobjectAdjustment {
   enum {
     DerivedToBaseAdjustment,
@@ -90,7 +91,7 @@ struct SubobjectAdjustment {
 
   SubobjectAdjustment(const CastExpr *BasePath,
                       const CXXRecordDecl *DerivedClass)
-    : Kind(DerivedToBaseAdjustment) {
+      : Kind(DerivedToBaseAdjustment) {
     DerivedToBase.BasePath = BasePath;
     DerivedToBase.DerivedClass = DerivedClass;
   }
@@ -100,7 +101,7 @@ struct SubobjectAdjustment {
   }
 
   SubobjectAdjustment(const MemberPointerType *MPT, Expr *RHS)
-    : Kind(MemberPointerAdjustment) {
+      : Kind(MemberPointerAdjustment) {
     this->Ptr.MPT = MPT;
     this->Ptr.RHS = RHS;
   }
