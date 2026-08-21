@@ -94,10 +94,6 @@ public:
   // Returns the method call which parses this property from textual MLIR.
   StringRef getParserCall() const { return parserCall; }
 
-  // Returns true if this property uses the parser inherited from the base
-  // Property class.
-  bool usesDefaultParser() const;
-
   // Returns true if this property has defined an optional parser.
   bool hasOptionalParser() const { return !optionalParserCall.empty(); }
 

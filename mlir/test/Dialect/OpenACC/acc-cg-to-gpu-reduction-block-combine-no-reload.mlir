@@ -53,7 +53,7 @@ module attributes {gpu.container_module} {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.predicate_region {
-        acc.reduction_combine %a_slot into %a_res <add> : memref<i32> {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+        acc.reduction_combine %a_slot into %a_res <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<i32>
       }
       acc.yield
     } {kernel_func_name = @test_block_combine_no_reload_kernel, kernel_module_name = @cuda_device_mod, origin = "acc.parallel"}
