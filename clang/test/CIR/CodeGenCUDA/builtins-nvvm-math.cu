@@ -81,9 +81,9 @@ __device__ double test_add_rz_d(double x, double y) {
 }
 
 // CIR-LABEL: @_Z21test_add_rm_ftz_sat_fff
-// CIR: cir.call_llvm_intrinsic "nvvm.fadd.sat.ftz" {{.*}} : (!cir.float, !cir.float, !s32i) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "nvvm.fadd.ftz.sat" {{.*}} : (!cir.float, !cir.float, !s32i) -> !cir.float
 // LLVM-LABEL: @_Z21test_add_rm_ftz_sat_fff
-// LLVM: call {{.*}}float @llvm.nvvm.fadd.sat.ftz.f32(float {{.*}}, float {{.*}}, /* rnd=rm */ i32 3)
+// LLVM: call {{.*}}float @llvm.nvvm.fadd.ftz.sat.f32(float {{.*}}, float {{.*}}, /* rnd=rm */ i32 3)
 __device__ float test_add_rm_ftz_sat_f(float x, float y) {
   return __nvvm_add_rm_ftz_sat_f(x, y);
 }
