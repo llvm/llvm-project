@@ -113,7 +113,7 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
-  // TODO: RISCVVectorPeepholePass
+  addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
   // TODO: RISCVFoldMemOffsetPass
 
   Base::addMachineSSAOptimization(PMW);
