@@ -20,6 +20,7 @@
 namespace llvm::omp::target::plugin {
 
 class LevelZeroPluginTy;
+class LevelZeroPluginContextTy;
 
 class L0ContextTLSTy {
   StagingBufferTy StagingBuffer;
@@ -65,6 +66,9 @@ class L0ContextTy {
   /// Host Memory allocator for this driver.
   MemAllocatorTy HostMemAllocator;
 
+  /// Default plugin-side context used by the libomptarget path.
+  std::unique_ptr<LevelZeroPluginContextTy> DefaultUserCtx;
+
 public:
   /// Named constants for checking the imported external pointer regions.
   static constexpr int32_t ImportNotExist = -1;
@@ -73,8 +77,7 @@ public:
 
   /// Create context, initialize event pool and extension functions.
   L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-              int32_t DriverId)
-      : Plugin(Plugin), zeDriver(zeDriver) {}
+              int32_t DriverId);
 
   L0ContextTy(const L0ContextTy &) = delete;
   L0ContextTy(L0ContextTy &&) = delete;
@@ -82,7 +85,7 @@ public:
   L0ContextTy &operator=(const L0ContextTy &&) = delete;
 
   /// Release resources.
-  ~L0ContextTy() = default;
+  ~L0ContextTy();
 
   Error init();
   Error deinit();
@@ -122,6 +125,11 @@ public:
   /// Return context associated with the driver.
   ze_context_handle_t getZeContext() const { return zeContext; }
 
+  /// Return the default plugin-side context used by the libomptarget path.
+  LevelZeroPluginContextTy &getDefaultUserCtx() const {
+    return *DefaultUserCtx;
+  }
+
   /// Return driver API version.
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
 
@@ -149,9 +157,7 @@ public:
       uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) = nullptr;
 
   /// Level Zero extension function pointer for querying the driver's default
-  /// ze_context, when the extension is supported. Used by
-  /// LevelZeroPluginTy::createPluginContext to reuse the driver default
-  /// context when the user asks for every device on the driver.
+  /// ze_context, when the extension is supported.
   ze_context_handle_t(ZE_APICALL *zeDriverGetDefaultContext)(
       ze_driver_handle_t hDriver) = nullptr;
 };

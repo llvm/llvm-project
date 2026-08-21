@@ -1395,7 +1395,11 @@ module std {
     module formatter_tuple                    { header "__format/formatter_tuple.h" }
     module fwd                                { header "__fwd/format.h" }
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
-    module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
+    module parser_std_format_spec             {
+      header "__format/parser_std_format_spec.h"
+      export std.format.parser_std_format_spec_data
+    }
+    module parser_std_format_spec_data        { header "__format/parser_std_format_spec_data.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
     module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
@@ -2436,6 +2440,12 @@ module std {
       }
       module reverse {
         header "__pstl/cpu_algos/reverse.h"
+      }
+      module search {
+        header "__pstl/cpu_algos/search.h"
+      }
+      module search_n {
+        header "__pstl/cpu_algos/search_n.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"

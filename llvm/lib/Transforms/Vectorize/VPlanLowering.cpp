@@ -40,8 +40,8 @@ using namespace SCEVPatternMatch;
 
 void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF, unsigned UF,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
+    unsigned UF) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   if (!LoopRegion)
     return;
@@ -95,7 +95,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Bail out if the additional wide induction phi increase the expected spill
   // cost.
   VPRegisterUsage UnrolledBase =
-      calculateRegisterUsageForPlan(Plan, VF, TTI, ValuesToIgnore)[0];
+      calculateRegisterUsageForPlan(Plan, VF, TTI)[0];
   for (unsigned &NumUsers : make_second_range(UnrolledBase.MaxLocalUsers))
     NumUsers *= UF;
   unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
@@ -980,10 +980,8 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul,
-      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
-      {true, false});
+  VPValue *MulByUF =
+      Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -1005,8 +1003,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, AddrType, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, AddrType, DebugLoc::getUnknown());
+      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
+      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write

@@ -316,7 +316,7 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.getType()->isAnyComplexType())
     return true;
 
-  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
+  if (const Expr *Base = Ptr.getRootExpr())
     return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
   return false;
 }
@@ -575,7 +575,7 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                    uint32_t Offset) {
-  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t MinOffset = Ptr.block()->getMetadataSize();
   uint32_t PtrOffset = Ptr.getByteOffset();
 
   // We subtract Offset from PtrOffset. The result must be at least
@@ -1437,7 +1437,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     // Check that new[]/delete[] or new/delete were used, not a mixture.
@@ -1591,10 +1591,15 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool allowNullSubObj(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return Ptr.isZero() && S.emitRelaxedDiag(S.Current->getSource(OpPC).getLoc(),
+                                           diag::note_constexpr_null_subobject);
+}
+
 static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                      uint32_t Off) {
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
+      !allowNullSubObj(S, OpPC, Ptr) && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -2246,15 +2251,16 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     if (R.valid()) {
       Result = Iter.atField(*R.Offset);
       break;
-    } else if (R.Ambiguous) {
+    }
+    if (R.Ambiguous) {
       Ambiguous = true;
       break;
     }
 
-    // This moves us DOWN the type hierarchy.
-    Iter = Iter.getBase();
     if (Iter.isRoot() || !Iter.isBaseClass())
       break;
+    // This moves us DOWN the type hierarchy.
+    Iter = Iter.getBase();
   }
 
   if (Ambiguous)
@@ -2713,9 +2719,12 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
   SourceInfo E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  if (Ptr.isBlockPointer() && !Ptr.isZero())
+    S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
 
@@ -2856,8 +2865,8 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
 
   unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
   unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
-  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
+  const auto *LHSLit = cast<StringLiteral>(LHS.getRootExpr());
+  const auto *RHSLit = cast<StringLiteral>(RHS.getRootExpr());
 
   StringRef LHSStr(LHSLit->getBytes());
   unsigned LHSLength = LHSStr.size();
@@ -3015,6 +3024,11 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
+  case CastKind::ReinterpretPtrToInt:
+    // Don't emit anything as we'll emit diag
+    // for this in CheckPointerToIntegralCast
+    assert(!Fatal);
+    return true;
   case CastKind::ReinterpretLike:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
