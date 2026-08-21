@@ -275,16 +275,25 @@ fxdivi(IntType n, IntType d) {
     d_mag = d;
   }
 
+  if constexpr (OutRep::INTEGRAL_LEN > 0) {
+    constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1)
+                                  << OutRep::INTEGRAL_LEN;
+
+    if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
+                      MAX_UNITS * static_cast<UInt128>(d_mag)))
+      return result_is_negative ? OutRep::MIN() : OutRep::MAX();
+  }
+
   WideFXType res;
+
+  constexpr int INTERMEDIATE_BITS = cpp::numeric_limits<UIntType>::digits + WF;
+  using WideIntType =
+      cpp::conditional_t<(INTERMEDIATE_BITS <= 64), uint64_t, UInt128>;
 
   if ((d_mag & (d_mag - 1)) == 0) {
     // d is a power of 2. n/d is an exact right shift.
     int log2_d = cpp::countr_zero(d_mag);
 
-    constexpr int INTERMEDIATE_BITS =
-        cpp::numeric_limits<UIntType>::digits + WF;
-    using WideIntType =
-        cpp::conditional_t<(INTERMEDIATE_BITS <= 64), uint64_t, UInt128>;
     WideIntType scaled_n = (static_cast<WideIntType>(n_mag) << WF) >> log2_d;
 
     constexpr int WIDE_STORAGE_BITS = cpp::numeric_limits<WideStorage>::digits;
@@ -293,6 +302,10 @@ fxdivi(IntType n, IntType d) {
       return result_is_negative ? OutRep::MIN() : OutRep::MAX();
 
     res = FXBits<WideFXType>(static_cast<WideStorage>(scaled_n)).get_val();
+  } else if constexpr (WF <= F) {
+    WideIntType wide_n = static_cast<WideIntType>(n_mag) << WF;
+    WideIntType quotient = wide_n / static_cast<WideIntType>(d_mag);
+    res = FXBits<WideFXType>(static_cast<WideStorage>(quotient)).get_val();
   } else {
     // General case: Approximate 1/d, then multiply by n.
 
@@ -331,9 +344,6 @@ fxdivi(IntType n, IntType d) {
 
     if constexpr (F >= 15)
       recip = nrstep(d_scaled, recip); // E3 <= 1.434e-10
-
-    if constexpr (F >= 31)
-      recip = nrstep(d_scaled, recip); // E4 <= 2.055e-20
 
     res = n_scaled * recip;
   }

@@ -165,6 +165,15 @@ public:
         EXPECT_EQ(func(-3, -1), fx_max);
       }
     }
+
+    if constexpr (has_integral) {
+      constexpr IntType over_max =
+          static_cast<IntType>(6) *
+          (static_cast<IntType>(1) << FXRep::INTEGRAL_LEN);
+      EXPECT_EQ(func(over_max, 3), fx_max);
+      constexpr IntType at_max = static_cast<IntType>(1) << FXRep::INTEGRAL_LEN;
+      EXPECT_EQ(func(at_max, 1), fx_max);
+    }
   }
 
   void testWideOperands(FxDiviFunc func) {
