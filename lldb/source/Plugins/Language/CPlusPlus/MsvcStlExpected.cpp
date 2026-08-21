@@ -26,7 +26,7 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    if (!m_active_sp)
+    if (!m_active)
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     if (m_has_value) {
       if (name == "Value" || name == "$$dereference$$")
@@ -38,17 +38,17 @@ public:
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    return m_active_sp ? 1U : 0U;
+    return m_active ? 1U : 0U;
   }
 
   ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    if (!m_active_sp || idx != 0)
+    if (!m_active || idx != 0)
       return {};
-    return m_active_sp->Clone(m_has_value ? "Value" : "Unexpected");
+    return m_active->Clone(m_has_value ? "Value" : "Unexpected");
   }
 
   lldb::ChildCacheState Update() override {
-    m_active_sp.reset();
+    m_active = nullptr;
     m_has_value = false;
     ValueObjectSP ns = m_backend.GetNonSyntheticValue();
     if (!ns)
@@ -60,13 +60,14 @@ public:
 
     m_has_value = has_sp->GetValueAsUnsigned(0) != 0;
     // expected<void, E> has no value child when engaged.
-    m_active_sp =
-        ns->GetChildMemberWithName(m_has_value ? "_Value" : "_Unexpected");
+    m_active =
+        ns->GetChildMemberWithName(m_has_value ? "_Value" : "_Unexpected")
+            .get();
     return lldb::ChildCacheState::eRefetch;
   }
 
 private:
-  ValueObjectSP m_active_sp;
+  ValueObject *m_active = nullptr;
   bool m_has_value = false;
 };
 } // namespace
@@ -86,6 +87,7 @@ bool formatters::MsvcStlExpectedSummaryProvider(ValueObject &valobj,
   ValueObjectSP has_sp = ns->GetChildMemberWithName("_Has_value");
   if (!has_sp)
     return false;
+  // Keep the summary consistent with std::optional.
   stream.Printf(" Has Value=%s ",
                 has_sp->GetValueAsUnsigned(0) ? "true" : "false");
   return true;
