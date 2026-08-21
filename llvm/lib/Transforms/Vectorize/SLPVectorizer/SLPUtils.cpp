@@ -772,8 +772,7 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
 
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
   assert(F && "Expected function.");
-  return F->hasOptSize() ? TargetTransformInfo::TCK_CodeSize
-                         : TargetTransformInfo::TCK_RecipThroughput;
+  return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
 }
 
 } // namespace llvm::slpvectorizer

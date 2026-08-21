@@ -19788,9 +19788,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (CostKind != TargetTransformInfo::TargetCostKind::TCK_CodeSize &&
-      SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
-      getRootNode().getVectorFactor() == 2 && SLPCostThreshold == 0 &&
+  if (CostKind != TTI::TCK_CodeSize && SLPInstCountCheck &&
+      TTI->preferSLPInstCountCheck() && getRootNode().getVectorFactor() == 2 &&
+      SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(getRootNodeScalars().front()->getType()))) {
     // Loop containing the tree root; null for flat code or disabled
