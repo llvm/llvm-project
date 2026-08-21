@@ -13984,12 +13984,12 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     break;
   }
 
-  // A shape the target reaches by a ladder of narrower reductions is built a
-  // rung at a time, each halving the element count and doubling the width.
+  // A wide partial reduction is built from a ladder of narrower ones, a rung
+  // at a time, each halving the element count and doubling the width.
   unsigned Opc = N->getOpcode();
   if (Opc != ISD::PARTIAL_REDUCE_FMLA &&
       MulOpVT.getVectorMinNumElements() > 2 * AccVT.getVectorMinNumElements() &&
-      isPartialReduceMLALegalOrCustom(Opc, AccVT, MulOpVT)) {
+      getPartialReduceMLAAction(Opc, AccVT, MulOpVT) == Custom) {
     LLVMContext &Ctx = *DAG.getContext();
     EVT ProdVT = MulOpVT.widenIntegerVectorElementType(Ctx);
 
@@ -14003,7 +14003,7 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                          DAG.getConstant(1, DL, RungVT));
     }
 
-    // A multiply widens the products by one rung, which legalises back into a
+    // A multiply widens the products by one rung, which legalizes back into a
     // widening multiply per half, and the ladder re-enters as a plain sum.
     SDValue Prod = DAG.getNode(ISD::MUL, DL, ProdVT,
                                DAG.getNode(ExtOpcLHS, DL, ProdVT, MulLHS),

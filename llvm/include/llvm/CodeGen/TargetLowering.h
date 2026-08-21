@@ -1768,41 +1768,11 @@ public:
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
-  /// legal or custom for this target. A target that does not take the fold
-  /// directly can still build it from a ladder of narrower steps, each halving
-  /// the element count and doubling the width.
+  /// legal or custom for this target.
   bool isPartialReduceMLALegalOrCustom(unsigned Opc, EVT AccVT,
                                        EVT InputVT) const {
-    auto Supported = [&](EVT Acc, EVT In) {
-      LegalizeAction Action = getPartialReduceMLAAction(Opc, Acc, In);
-      return Action == Legal || Action == Custom;
-    };
-    if (Supported(AccVT, InputVT))
-      return true;
-    // The rungs below widen an integer element type.
-    if (Opc == ISD::PARTIAL_REDUCE_FMLA)
-      return false;
-
-    ElementCount AccEC = AccVT.getVectorElementCount();
-    ElementCount InEC = InputVT.getVectorElementCount();
-    // Scalable and fixed lengths are not comparable below.
-    if (AccEC.isScalable() != InEC.isScalable())
-      return false;
-
-    // Step down a rung at a time, taking each step the target supports, until
-    // one of them lands on the accumulator.
-    EVT In = InputVT;
-    while (InEC.getKnownMinValue() > 2 * AccEC.getKnownMinValue()) {
-      InEC = InEC.divideCoefficientBy(2);
-      MVT Next = MVT::getVectorVT(
-          MVT::getIntegerVT(In.getScalarSizeInBits() * 2), InEC);
-      if (!Next.isValid() || !Supported(Next, In))
-        return false;
-      In = Next;
-      if (Supported(AccVT, In))
-        return true;
-    }
-    return false;
+    LegalizeAction Action = getPartialReduceMLAAction(Opc, AccVT, InputVT);
+    return Action == Legal || Action == Custom;
   }
 
   /// If the action for this operation is to promote, this method returns the

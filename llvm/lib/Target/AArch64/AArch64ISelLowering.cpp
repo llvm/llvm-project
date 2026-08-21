@@ -1551,6 +1551,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
     if (Subtarget->hasDotProd()) {
@@ -19235,13 +19243,6 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
                       m_Intrinsic<Intrinsic::vector_partial_reduce_add>(
                           m_Value(), m_Specific(I))))
               return true;
-            // The extend can also reach a partial reduction through a mul
-            // of two extends, which folds into the reduction.
-            if (match(SingleUser, m_c_Mul(m_Specific(I), m_ZExt(m_Value()))) &&
-                SingleUser->hasOneUse() &&
-                match(SingleUser->user_back(),
-                      m_Intrinsic<Intrinsic::vector_partial_reduce_add>()))
-              return true;
             return false;
           }))
         return false;
@@ -35003,13 +35004,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   return Scatter;
 }
 
-/// Lower a PARTIAL_REDUCE_MLA node. The following cases are handled:
+/// Lower a PARTIAL_REDUCE_MLA node. Three cases are handled:
 /// 1. (v2i32, v16i8): widen Acc to v4i32 and fold the high half with ADDP.
 /// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via (nx)v4i32, using
 ///    (U|S)ADALP when available, otherwise add(add(Acc, ext(lo), ext(hi))).
 /// 3. SUMLA on (v4i32, v16i8) or (v2i32, v8i8) without +i8mm: rewrite as two
 ///    UDOTs using the bias-128 identity sext(s) = zext(s ^ 128) - 128.
-/// 4. Wider fixed-length folds do one [SU]ADDLP rung and re-enter.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -35089,6 +35089,13 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.isFixedLengthVector() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();

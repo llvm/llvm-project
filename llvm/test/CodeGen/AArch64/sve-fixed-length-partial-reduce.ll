@@ -784,13 +784,11 @@ define <2 x i64> @four_way_i16_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
 ;
 ; SVE-LABEL: four_way_i16_i64_vl128:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    ldr q0, [x0]
 ; SVE-NEXT:    ldr q1, [x1]
 ; SVE-NEXT:    ldr q2, [x2]
-; SVE-NEXT:    ldr q0, [x0]
-; SVE-NEXT:    umull v3.4s, v2.4h, v1.4h
-; SVE-NEXT:    umull2 v1.4s, v2.8h, v1.8h
-; SVE-NEXT:    uadalp v0.2d, v3.4s
-; SVE-NEXT:    uadalp v0.2d, v1.4s
+; SVE-NEXT:    udot z0.d, z2.h, z1.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: four_way_i16_i64_vl128:
@@ -838,17 +836,13 @@ define <4 x i64> @four_way_i16_i64_vl128_double_width(ptr %accptr, ptr %uptr, pt
 ;
 ; SVE-LABEL: four_way_i16_i64_vl128_double_width:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ldp q2, q5, [x2]
-; SVE-NEXT:    ldp q3, q4, [x1]
 ; SVE-NEXT:    ldp q0, q1, [x0]
-; SVE-NEXT:    umull v6.4s, v2.4h, v3.4h
-; SVE-NEXT:    umull v7.4s, v5.4h, v4.4h
-; SVE-NEXT:    umull2 v2.4s, v2.8h, v3.8h
-; SVE-NEXT:    umull2 v3.4s, v5.8h, v4.8h
-; SVE-NEXT:    uadalp v0.2d, v6.4s
-; SVE-NEXT:    uadalp v1.2d, v7.4s
-; SVE-NEXT:    uadalp v0.2d, v2.4s
-; SVE-NEXT:    uadalp v1.2d, v3.4s
+; SVE-NEXT:    ldp q3, q2, [x1]
+; SVE-NEXT:    ldp q5, q4, [x2]
+; SVE-NEXT:    udot z0.d, z5.h, z3.h
+; SVE-NEXT:    udot z1.d, z4.h, z2.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: four_way_i16_i64_vl128_double_width:
