@@ -42,6 +42,7 @@ public:
   /// to be chained together.
   bool canFillDelaySlot(unsigned Opcode) const;
   ISD::CondCode getCondFromBranchOp(unsigned Op) const;
+  ISD::CondCode getOppositeCondCode(ISD::CondCode CC) const;
   const MCInstrDesc &getBrCond(ISD::CondCode CC) const;
 
   // Instruction Info

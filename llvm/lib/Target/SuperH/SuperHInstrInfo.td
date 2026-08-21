@@ -637,6 +637,38 @@ let hasSideEffects = 0, isCommutable = 1 in {
 
 
 //===--------------------------------------------------------------------------===//
+// Sign/Zero Extend
+//===--------------------------------------------------------------------------===//
+  
+// exts.b Rm, Rn
+def EXTSBRmRn       : InstRmRn<0b0110000000001110, 
+                              (outs GPR:$Rn), (ins GPR:$Rm),
+                              "exts.b $Rm,$Rn",
+                              [(set i32:$Rn, (sext i8:$Rm))]>;
+
+// exts.w Rm, Rn
+def EXTSWRmRn       : InstRmRn<0b0110000000001111, 
+                              (outs GPR:$Rn), (ins GPR:$Rm),
+                              "exts.w $Rm,$Rn",
+                             [(set i32:$Rn, (sext i16:$Rm))]>;
+
+// extu.b Rm, Rn
+def EXTUBRmRn       : InstRmRn<0b0110000000001100, 
+                             (outs GPR:$Rn), (ins GPR:$Rm),
+                             "extu.b $Rm,$Rn",
+                             [(set i32:$Rn, (zext i8:$Rm))]>;
+
+// extu.w Rm, Rn
+def EXTUWRmRn       : InstRmRn<0b0110000000001101, 
+                              (outs GPR:$Rn), (ins GPR:$Rm),
+                             "extu.w $Rm,$Rn",
+                              [(set i32:$Rn, (zext i16:$Rm))]>;
+
+
+
+
+
+//===--------------------------------------------------------------------------===//
 // Comparison
 //===--------------------------------------------------------------------------===//
 
@@ -1189,6 +1221,27 @@ def TRAPAI8           : InstI8<0b1100001100000000,
 //===--------------------------------------------------------------------------===//
 
 include "SuperHInstrDSP.td"
+
+
+
+
+
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+//                            Non-Instruction Patterns
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+
+//===--------------------------------------------------------------------------===//
+// Zero-Extend Load
+//===--------------------------------------------------------------------------===//
+
+def : Pat<(i32 (zextloadi1 i32:$src)), (EXTUBRmRn (MOVBRmiRn i32:$src))>;
+def : Pat<(i32 (zextloadi8 i32:$src)), (EXTUBRmRn (MOVBRmiRn i32:$src))>;
+def : Pat<(i32 (zextloadi16 i32:$src)), (EXTUWRmRn (MOVWRmiRn i32:$src))>;
+def : Pat<(i32 (extloadi1 i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
+def : Pat<(i32 (extloadi8 i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
+def : Pat<(i32 (extloadi16 i32:$src)), (EXTSWRmRn (MOVWRmiRn i32:$src))>;
 
 
 
