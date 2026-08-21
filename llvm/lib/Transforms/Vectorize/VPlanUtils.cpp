@@ -956,7 +956,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       bool GuaranteedNotPoison =
           ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
       if (!GuaranteedNotPoison)
-        RHS = Builder.createScalarFreeze(RHS, Ty, DL);
+        RHS = Builder.createScalarFreeze(RHS, DL);
       if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
         RHS = Builder.createScalarIntrinsic(
             Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
@@ -1050,7 +1050,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       if (!OpV)
         return nullptr;
       if (MayShortCircuit)
-        OpV = Builder.createScalarFreeze(OpV, ResultTy, DL);
+        OpV = Builder.createScalarFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
