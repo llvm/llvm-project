@@ -43,6 +43,17 @@ enum IOType {
   All = 0b111,
 };
 
+enum class SemanticInterpretation {
+  Invalid,
+  NotAllocated,
+  Arbitrary,
+  SV,
+  SGV,
+  ClipCull,
+  TessFactor,
+  Target,
+};
+
 struct SemanticStageInfo {
   Triple::EnvironmentType Stage;
   IOType AllowedIOTypesMask;
