@@ -64,6 +64,119 @@ body: |
     PseudoRET implicit $v0
 ...
 
+# The vmand VL can be smaller than the comparison VL. The folded comparison
+# uses the vmand VL.
+---
+name: vmand_vl_lt_cmp_vl
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10
+    ; CHECK-LABEL: name: vmand_vl_lt_cmp_vl
+    ; CHECK: liveins: $v8, $v9, $v10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %mask:vr = COPY $v10
+    ; CHECK-NEXT: %b:vrnov0 = COPY $v9
+    ; CHECK-NEXT: %a:vrnov0 = COPY $v8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY %mask
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY %mask
+    ; CHECK-NEXT: %and:vr = PseudoVMSLT_VV_M1_MASK [[COPY1]], %a, %b, [[COPY]], 2 /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: $v0 = COPY %and
+    ; CHECK-NEXT: PseudoRET implicit $v0
+    %mask:vr = COPY $v10
+    %b:vr = COPY $v9
+    %a:vr = COPY $v8
+    %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 4, 5 /* e32 */
+    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 2, 0 /* e8 */
+    $v0 = COPY %and
+    PseudoRET implicit $v0
+...
+
+# Keep the current behavior when the comparison VL is smaller than the vmand
+# VL.
+---
+name: cmp_vl_lt_vmand_vl
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10
+    ; CHECK-LABEL: name: cmp_vl_lt_vmand_vl
+    ; CHECK: liveins: $v8, $v9, $v10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %mask:vr = COPY $v10
+    ; CHECK-NEXT: %b:vrnov0 = COPY $v9
+    ; CHECK-NEXT: %a:vrnov0 = COPY $v8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY %mask
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY %mask
+    ; CHECK-NEXT: %and:vr = PseudoVMSLT_VV_M1_MASK [[COPY1]], %a, %b, [[COPY]], 2 /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: $v0 = COPY %and
+    ; CHECK-NEXT: PseudoRET implicit $v0
+    %mask:vr = COPY $v10
+    %b:vr = COPY $v9
+    %a:vr = COPY $v8
+    %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 2, 5 /* e32 */
+    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 4, 0 /* e8 */
+    $v0 = COPY %and
+    PseudoRET implicit $v0
+...
+
+# Don't fold when the relative order of the VLs is unknown.
+---
+name: unrelated_vls
+body: |
+  bb.0:
+    liveins: $x10, $x11, $v8, $v9, $v10
+    ; CHECK-LABEL: name: unrelated_vls
+    ; CHECK: liveins: $x10, $x11, $v8, $v9, $v10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %cmp_avl:gprnox0 = COPY $x10
+    ; CHECK-NEXT: %and_avl:gprnox0 = COPY $x11
+    ; CHECK-NEXT: %mask:vr = COPY $v10
+    ; CHECK-NEXT: %b:vr = COPY $v9
+    ; CHECK-NEXT: %a:vr = COPY $v8
+    ; CHECK-NEXT: %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %cmp_avl /* vl */, 5 /* e32 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, %and_avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: $v0 = COPY %and
+    ; CHECK-NEXT: PseudoRET implicit $v0
+    %cmp_avl:gprnox0 = COPY $x10
+    %and_avl:gprnox0 = COPY $x11
+    %mask:vr = COPY $v10
+    %b:vr = COPY $v9
+    %a:vr = COPY $v8
+    %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %cmp_avl, 5 /* e32 */
+    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, %and_avl, 0 /* e8 */
+    $v0 = COPY %and
+    PseudoRET implicit $v0
+...
+
+# Fold through a chain of single-use copies and remove the copies.
+---
+name: fold_through_copies
+body: |
+  bb.0:
+    liveins: $x10, $v8, $v9, $v10
+    ; CHECK-LABEL: name: fold_through_copies
+    ; CHECK: liveins: $x10, $v8, $v9, $v10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %avl:gprnox0 = COPY $x10
+    ; CHECK-NEXT: %mask:vr = COPY $v10
+    ; CHECK-NEXT: %b:vrnov0 = COPY $v9
+    ; CHECK-NEXT: %a:vrnov0 = COPY $v8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vmv0 = COPY %mask
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY %mask
+    ; CHECK-NEXT: %and:vr = PseudoVMSLT_VV_M1_MASK [[COPY1]], %a, %b, [[COPY]], %avl /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: $v0 = COPY %and
+    ; CHECK-NEXT: PseudoRET implicit $v0
+    %avl:gprnox0 = COPY $x10
+    %mask:vr = COPY $v10
+    %b:vr = COPY $v9
+    %a:vr = COPY $v8
+    %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %avl, 5 /* e32 */
+    %copy1:vr = COPY %cmp
+    %copy2:vr = COPY %copy1
+    %and:vr = PseudoVMAND_MM_B32 killed %copy2, killed %mask, %avl, 0 /* e8 */
+    $v0 = COPY %and
+    PseudoRET implicit $v0
+...
+
 # A quiet floating-point compare (nofpexcept) can be folded.
 ---
 name: fold_fp_nofpexcept
