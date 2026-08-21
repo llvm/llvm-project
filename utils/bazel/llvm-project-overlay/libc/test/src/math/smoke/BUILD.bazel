@@ -1674,6 +1674,9 @@ math_test(
 math_test(
     name = "truncf128",
     hdrs = ["TruncTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

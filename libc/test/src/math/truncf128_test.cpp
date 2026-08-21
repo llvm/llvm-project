@@ -1,4 +1,4 @@
-//===-- Implementation header for truncf128 ---------------------*- C++ -*-===//
+//===-- Unittests for truncf128 -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_TRUNCF128_H
-#define LLVM_LIBC_SRC_MATH_TRUNCF128_H
+#include "TruncTest.h"
 
 #include "src/__support/FPUtil/float128.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
-
-namespace LIBC_NAMESPACE_DECL {
+#include "src/math/truncf128.h"
 
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-float128 truncf128(float128 x);
-
-} // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_MATH_TRUNCF128_H
+LIST_TRUNC_TESTS(float128, LIBC_NAMESPACE::truncf128)
