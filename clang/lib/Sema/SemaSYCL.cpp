@@ -978,26 +978,25 @@ public:
             !CD->isIneligibleOrNotSelected()) {
           if (CD->getAccess() != AS_public) {
             SemaSYCLRef.Diag(CD->getLocation(),
-                              diag::warn_sycl_device_copyable_smf_not_public)
+                             diag::warn_sycl_device_copyable_smf_not_public)
                 << Type
-                << (CD->isCopyConstructor()
-                        ? diag::EligibleSMFKind::CopyCtor
-                        : diag::EligibleSMFKind::MoveCtor);
+                << (CD->isCopyConstructor() ? diag::EligibleSMFKind::CopyCtor
+                                            : diag::EligibleSMFKind::MoveCtor);
             emitObjectAccessPathNotes();
           }
           HasEligibleSMF = true;
         }
       }
       for (const NamedDecl *ND :
-            SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
+           SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
         auto *MD = dyn_cast<CXXMethodDecl>(ND);
         if (MD &&
             (MD->isCopyAssignmentOperator() ||
-              MD->isMoveAssignmentOperator()) &&
+             MD->isMoveAssignmentOperator()) &&
             !MD->isDeleted() && !MD->isIneligibleOrNotSelected()) {
           if (MD->getAccess() != AS_public) {
             SemaSYCLRef.Diag(MD->getLocation(),
-                              diag::warn_sycl_device_copyable_smf_not_public)
+                             diag::warn_sycl_device_copyable_smf_not_public)
                 << Type
                 << (MD->isCopyAssignmentOperator()
                         ? diag::EligibleSMFKind::CopyAssign
@@ -1012,7 +1011,7 @@ public:
       //   copy assignment operator, or move assignment operator;
       if (!HasEligibleSMF) {
         SemaSYCLRef.Diag(RD->getLocation(),
-                          diag::warn_sycl_device_copyable_no_eligible_smf)
+                         diag::warn_sycl_device_copyable_no_eligible_smf)
             << Type;
         emitObjectAccessPathNotes();
       }
