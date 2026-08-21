@@ -823,8 +823,7 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
     break;
 
   case Scalar::e_int:
-    // bit_offset is externally supplied and may exceed the width, which the
-    // APSInt shift asserts on.
+    // Avoid APSInt assertion when exceeding the width.
     m_integer >>= std::min(bit_offset, m_integer.getBitWidth());
     m_integer = m_integer.extOrTrunc(bit_size).extOrTrunc(8 * GetByteSize());
     return true;
