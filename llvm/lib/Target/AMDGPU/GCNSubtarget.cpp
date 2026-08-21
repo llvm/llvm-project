@@ -252,8 +252,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  // CU mode confines a work-group to half of the block's SIMDs.
-  WorkGroupSIMDs = isCuModeEnabled() ? HalfSIMDs : AMDGPU::FullSIMDs;
+  WorkGroupSIMDs =
+      AMDGPU::isFullSIMDMode(*this) ? AMDGPU::FullSIMDs : HalfSIMDs;
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

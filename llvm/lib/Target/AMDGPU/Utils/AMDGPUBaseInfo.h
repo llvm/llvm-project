@@ -188,10 +188,6 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI);
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize);
 
-/// \returns Minimum number of waves per execution unit for given subtarget \p
-/// STI.
-unsigned getMinWavesPerEU(const MCSubtargetInfo &STI);
-
 /// \returns Number of waves per execution unit required to support the given \p
 /// FlatWorkGroupSize.
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,

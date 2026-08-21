@@ -3040,12 +3040,19 @@ TEST(TargetParserTest, testAMDGPUgetWorkGroupSIMDs) {
   // Two SIMDs outside full-SIMD mode on hardware that can split the block,
   // four everywhere else. The second argument is the full-SIMD-mode flag.
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch900, true), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch900, false), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch908, true), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch908, false), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch942, true), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch942, false), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch950, true), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch950, false), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1030, true), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1030, false), 2u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1250, true), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1250, false), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1310, true), 4u);
+  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1310, false), 2u);
 
   // The GPUKind overload resolves to the same values.
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(AMDGPU::GK_GFX900, true), 4u);
@@ -3054,8 +3061,10 @@ TEST(TargetParserTest, testAMDGPUgetWorkGroupSIMDs) {
 }
 
 TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
-  // GFX90A+ -> 8, other pre-GFX10 -> 10, GFX10.1 -> 20, GFX10.3 and every
-  // later generation -> 16.
+  EXPECT_EQ(AMDGPU::getMinWavesPerEU(), 1u);
+
+  // GFX90A/GFX9.4/GFX9.5 -> 8, other pre-GFX10 -> 10, GFX10.1 -> 20,
+  // GFX10.3 and every later generation -> 16.
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch900), 10u);
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch908), 10u);
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch90A), 8u);

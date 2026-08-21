@@ -1232,7 +1232,7 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
   if (!STI.getTargetTriple().isAMDGCN())
     return 8;
   GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  bool FullSIMDMode = !STI.getFeatureBits().test(FeatureCuMode);
+  bool FullSIMDMode = isFullSIMDMode(STI);
   unsigned MaxWaves =
       getMaxWavesPerEU(Kind) * getWorkGroupSIMDs(Kind, FullSIMDMode);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
@@ -1248,12 +1248,10 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
   return std::min(MaxWaves / N, MaxBarriers);
 }
 
-unsigned getMinWavesPerEU(const MCSubtargetInfo &STI) { return 1; }
-
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize) {
   GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  bool FullSIMDMode = !STI.getFeatureBits().test(FeatureCuMode);
+  bool FullSIMDMode = isFullSIMDMode(STI);
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
                     getWorkGroupSIMDs(Kind, FullSIMDMode));
 }

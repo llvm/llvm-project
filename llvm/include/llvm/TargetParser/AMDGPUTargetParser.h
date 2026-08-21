@@ -211,6 +211,9 @@ LLVM_ABI unsigned getWorkGroupSIMDs(GPUKind AK, bool FullSIMDMode);
 LLVM_ABI unsigned getWorkGroupSIMDs(Triple::SubArchType SubArch,
                                     bool FullSIMDMode);
 
+/// \returns Minimum number of waves per execution unit.
+constexpr unsigned getMinWavesPerEU() { return 1; }
+
 /// \returns Maximum number of waves per execution unit without any kind of
 /// limitation.
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
