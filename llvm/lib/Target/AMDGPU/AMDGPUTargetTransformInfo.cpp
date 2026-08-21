@@ -529,12 +529,16 @@ bool GCNTTIImpl::canFuseFMulWithFAddSub(Type *Ty, const Instruction *FMul,
     return false;
 
   // The mad forms fuse exactly without fast-math flags but flush denormals.
-  if (TLI->isFMADLegal(*FAddSub->getFunction(), Ty))
-    return true;
+  // An fma forms only when it is not slower than the separate operations.
+  const Function &F = *FAddSub->getFunction();
+  const bool HasFMAD = TLI->isFMADLegal(F, Ty);
+  const bool HasFMA = TLI->isFMAFasterThanFMulAndFAdd(F, Ty);
+  if (!HasFMAD && !HasFMA)
+    return false;
 
-  // Other types fuse only with contract or fast.
+  // Without a mad the pair fuses only with contract or fast.
   const TargetOptions &Options = TLI->getTargetMachine().Options;
-  return Options.AllowFPOpFusion == FPOpFusion::Fast ||
+  return HasFMAD || Options.AllowFPOpFusion == FPOpFusion::Fast ||
          (FAddSub->hasAllowContract() && FMul->hasAllowContract());
 }
 

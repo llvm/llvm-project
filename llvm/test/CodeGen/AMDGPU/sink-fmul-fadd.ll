@@ -25,11 +25,10 @@ define float @fma_in_loop_f32(float %a, float %b, i32 %n) {
 ; GFX8-LABEL: fma_in_loop_f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v3, v0
+; GFX8-NEXT:    v_mul_f32_e32 v1, v0, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s6, 0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
-; GFX8-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX8-NEXT:  .LBB0_1: ; %loop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_add_i32 s6, s6, 1
@@ -117,11 +116,10 @@ define float @fsub_in_loop_f32(float %a, float %b, i32 %n) {
 ; GFX8-LABEL: fsub_in_loop_f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v3, v0
+; GFX8-NEXT:    v_mul_f32_e32 v1, v0, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s6, 0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
-; GFX8-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX8-NEXT:  .LBB1_1: ; %loop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_add_i32 s6, s6, 1
@@ -780,11 +778,10 @@ define <2 x half> @no_fma_in_loop_v2f16(<2 x half> %a, <2 x half> %b, i32 %n) #0
 ; GFX10-LABEL: no_fma_in_loop_v2f16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-NEXT:    v_pk_mul_f16 v1, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s5, 0
-; GFX10-NEXT:    v_pk_mul_f16 v1, v3, v1
 ; GFX10-NEXT:  .LBB8_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_add_i32 s5, s5, 1
