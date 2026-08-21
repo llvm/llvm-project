@@ -1184,6 +1184,20 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       C.addOffloadDeviceToolChain(&TC, Kind);
     }
   }
+
+  // Non-RDC SYCL device code is finalized by a clang-linker-wrapper job
+  // bound to one device toolchain, so only one SYCL target can be requested
+  // now.
+  if (Kinds.contains(Action::OFK_SYCL)) {
+    const Arg *RDCArg = C.getInputArgs().getLastArg(options::OPT_fgpu_rdc,
+                                                    options::OPT_fno_gpu_rdc);
+    if (RDCArg && RDCArg->getOption().matches(options::OPT_fno_gpu_rdc)) {
+      auto TCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
+      if (std::distance(TCRange.first, TCRange.second) > 1)
+        Diag(clang::diag::err_drv_sycl_no_rdc_multiple_targets)
+            << RDCArg->getAsString(C.getInputArgs());
+    }
+  }
 }
 
 bool Driver::loadZOSCustomizationFile(llvm::cl::ExpansionContext &ExpCtx) {
@@ -5106,6 +5120,12 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
+  // SYCL defaults to relocatable device code.
+  bool SYCLNoRDC =
+      C.isOffloadingHostKind(Action::OFK_SYCL) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                    /*Default=*/true);
+
   bool HIPRelocatableObj =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       Args.hasFlag(options::OPT_fhip_emit_relocatable,
@@ -5318,6 +5338,21 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     DDep.add(*PackagerAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
              /*BA=*/{}, Action::OFK_HIP);
+  } else if (SYCLNoRDC) {
+    // Package all the offloading actions into a single output that can be
+    // embedded in the host and linked.
+    Action *PackagerAction =
+        C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
+
+    // Wrap the device binary with linker wrapper before bundling with host
+    // code. Do not bind a specific arch here, as the packaged binary may
+    // contain entries for multiple architectures.
+    ActionList AL{PackagerAction};
+    PackagerAction =
+        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_SYCL_FATBIN);
+    DDep.add(*PackagerAction,
+             *C.getOffloadToolChains<Action::OFK_SYCL>().first->second,
+             /*BA=*/{}, Action::OFK_SYCL);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.

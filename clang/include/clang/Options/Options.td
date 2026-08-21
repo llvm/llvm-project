@@ -7735,6 +7735,15 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
+def : Flag<["-"], "fsycl-rdc">, Alias<fgpu_rdc>;
+def : Flag<["-"], "fno-sycl-rdc">, Alias<fno_gpu_rdc>,
+  HelpText<"Generate non-relocatable device code during SYCL offload target "
+           "compilation. Use of this option in combination with '-c' will "
+           "produce final device binaries within the generated fat object. "
+           "When using this option, each kernel must be self-contained within "
+           "its translation unit (source file); a device function defined in "
+           "another translation unit cannot be called, even if declared "
+           "SYCL_EXTERNAL.">;
 def fsycl_device_image_split_EQ : Joined<["-"], "fsycl-device-image-split=">,
   HelpText<"Select the granularity at which SYCL device code is grouped into "
            "device images: kernel (one device image per kernel) | "

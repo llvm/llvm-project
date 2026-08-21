@@ -60,6 +60,89 @@
 // CHK-SYCL-RDC-HOST: "-cc1"{{.*}} "-fsycl-is-host" {{.*}} "-fgpu-rdc"
 // CHK-SYCL-NORDC-NOT: "-fgpu-rdc"
 
+/// Check that -fsycl-rdc / -fno-sycl-rdc are accepted as aliases of
+/// -fgpu-rdc / -fno-gpu-rdc for the SYCL device compilation.
+// RUN: %clang -### -fsycl -fsycl-rdc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SYCL-RDC %s
+// RUN: %clang -### -fsycl -fno-sycl-rdc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SYCL-NORDC %s
+
+/// Check the phases graph in non-RDC mode.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-PHASES-NORDC %s
+// CHK-PHASES-NORDC: 6: backend, {5}, ir, (device-sycl)
+// CHK-PHASES-NORDC-NEXT: 7: offload, "device-sycl (spirv64-unknown-unknown)" {6}, ir
+// CHK-PHASES-NORDC-NEXT: 8: llvm-offload-binary, {7}, image, (device-sycl)
+// CHK-PHASES-NORDC-NEXT: 9: clang-linker-wrapper, {8}, sycl-fatbin, (device-sycl)
+// CHK-PHASES-NORDC-NEXT: 10: offload, "host-sycl (x86_64{{.*}})" {2}, "device-sycl (spirv64{{.*}})" {9}, ir
+// CHK-PHASES-NORDC-NEXT: 11: backend, {10}, assembler, (host-sycl)
+// CHK-PHASES-NORDC-NEXT: 12: assembler, {11}, object, (host-sycl)
+// CHK-PHASES-NORDC-NEXT: 13: clang-linker-wrapper, {12}, image, (host-sycl)
+
+/// With more than one architecture the packaged image holds an entry per
+/// architecture, and a single fat binary is expected to reach the host.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic --offload-arch=bmg_g21 \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-PHASES-NORDC-ARCHS %s
+// CHK-PHASES-NORDC-ARCHS: 7: offload, "device-sycl (spirv64-unknown-unknown:bmg_g21)" {6}, ir
+// CHK-PHASES-NORDC-ARCHS: 12: offload, "device-sycl (spirv64-unknown-unknown:generic)" {11}, ir
+// CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
+// CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
+
+/// More than one device triple is not supported today.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NORDC-MULTI-TRIPLE %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NORDC-MULTI-TRIPLE-GPU %s
+// CHK-NORDC-MULTI-TRIPLE: error: '-fno-sycl-rdc' is not supported with more than one SYCL offloading target
+// CHK-NORDC-MULTI-TRIPLE-GPU: error: '-fno-gpu-rdc' is not supported with more than one SYCL offloading target
+
+/// A single target repeated is one target.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown,spirv64-unknown-unknown -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NORDC-DUP-TRIPLE %s
+// CHK-NORDC-DUP-TRIPLE-NOT: error:
+// CHK-NORDC-DUP-TRIPLE: clang-linker-wrapper{{.*}} "--emit-fatbin-only"
+
+/// The same two targets in RDC mode are supported.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-RDC-MULTI-TRIPLE %s
+// CHK-RDC-MULTI-TRIPLE-NOT: error:
+// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv32-unknown-unknown"{{.*}} "-fsycl-is-device"
+// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-fsycl-is-device"
+
+/// Check that in non-RDC mode clang-linker-wrapper finalizes the packaged
+/// device images into a fat binary rather than a host object, and that the
+/// binary is included into the host compilation via -foffload-include-binary.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NORDC-INCLUDE %s \
+// RUN:     --implicit-check-not='"-fembed-offload-object='
+// CHK-NORDC-INCLUDE: clang-linker-wrapper{{.*}} "--linker-path={{.*}}clang-sycl-linker" "--emit-fatbin-only" "-o" "[[FB:.*]].syclfb"
+// CHK-NORDC-INCLUDE: "-cc1"{{.*}} "-fsycl-is-host"{{.*}} "-foffload-include-binary" "[[FB]].syclfb"
+
+/// Conversely, RDC mode embeds unlinked device code via -fembed-offload-object.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-rdc %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-RDC-EMBED %s \
+// RUN:     --implicit-check-not='"-foffload-include-binary"' \
+// RUN:     --implicit-check-not='"--emit-fatbin-only"'
+// CHK-RDC-EMBED: "-cc1"{{.*}} "-fsycl-is-host"{{.*}} "-fembed-offload-object=
+
+/// -flto on a SYCL command line requests *host* LTO. It must not divert the
+/// per-TU device finalize to llvm-lto, which would write bitcode where a
+/// finalized device image is expected; the device link is unaffected and the
+/// image is still included at compile time.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   -flto -c %s 2>&1 | FileCheck -check-prefix=CHK-NORDC-LTO %s \
+// RUN:     --implicit-check-not=llvm-lto
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   -flto %s 2>&1 | FileCheck -check-prefix=CHK-NORDC-LTO %s \
+// RUN:     --implicit-check-not=llvm-lto
+// CHK-NORDC-LTO: clang-linker-wrapper{{.*}} "--linker-path={{.*}}clang-sycl-linker" "--emit-fatbin-only"
+// CHK-NORDC-LTO: "-cc1"{{.*}} "-fsycl-is-host"{{.*}} "-foffload-include-binary"
+
 // Check that --allow-partial-linkage and --create-library are not passed to
 // clang-linker-wrapper for SYCL (they are spirv-link flags, not clang-sycl-linker flags).
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
@@ -97,6 +180,12 @@
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=kernel %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-UNUSED %s
 // CHK-SPLIT-UNUSED: warning: argument unused during compilation: '-fsycl-device-image-split=kernel'
+
+/// In non-RDC mode the split does happen while compiling.
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
+// RUN:   -fsycl-device-image-split=kernel %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-KERNEL %s \
+// RUN:     --implicit-check-not='argument unused during compilation'
 
 /// Check for option incompatibility with -fsycl
 // RUN: not %clang -### -fsycl -ffreestanding %s 2>&1 \
