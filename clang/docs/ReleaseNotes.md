@@ -215,6 +215,13 @@ features cannot lower the translation-unit ABI level;
   `-fsanitize=shadow-call-stack`. The selected register must also be reserved
   with the matching `-ffixed-<reg>`.
 
+- Added `-fmodules-ignore-search-path=<path>`, the search-path counterpart to
+  `-fmodules-ignore-macro=<macro>`: the path is dropped from the context hash of
+  every module and physically removed from every module build, and kept only for
+  the translation unit itself. This lets builds that differ only in a search
+  path share one module cache, and is only sound when no module needs the path
+  -- a lookup that would have resolved through an ignored path simply fails.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -471,6 +478,9 @@ features cannot lower the translation-unit ABI level;
   template was instantiated after the global module fragment was closed,
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
+
+- Fixed a crash when module directive export module foo not following a 
+  semicolon and there are no rest pp-tokens in current module file. (#GH187771)
   
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.

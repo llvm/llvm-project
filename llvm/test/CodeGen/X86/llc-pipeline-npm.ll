@@ -74,6 +74,7 @@
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     x86-seses
 ; O0-NEXT:     x86-return-thunks
+; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
@@ -200,6 +201,7 @@
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     x86-seses
 ; O2-NEXT:     x86-return-thunks
+; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
