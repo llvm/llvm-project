@@ -35,6 +35,11 @@ void from_typedef() {}
 // CHECK-DAG: @_Z6taggedB16riscv_vls_cc_128B4userv
 __attribute__((abi_tag("user"), riscv_vls_cc(128))) void tagged() {}
 
+// One tag sorts before it and one after, and they are written the other way
+// round.
+// CHECK-DAG: @_Z7tagged2B3abcB16riscv_vls_cc_128B4userv
+__attribute__((abi_tag("user", "abc"), riscv_vls_cc(128))) void tagged2() {}
+
 namespace ns {
 struct S {
   // CHECK-DAG: @_ZN2ns1S6memberB16riscv_vls_cc_128Ev
