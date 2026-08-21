@@ -123,8 +123,8 @@ static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
       intTy && intTy.isBitInt()) {
     if (isSplitStorageBitInt(intTy, dataLayout))
       return {};
-    return mlir::IntegerType::get(
-        type.getContext(), intTy.storageBitwidth(dataLayout));
+    return mlir::IntegerType::get(type.getContext(),
+                                  intTy.storageBitwidth(dataLayout));
   }
 
   return converter.convertType(type);

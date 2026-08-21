@@ -140,7 +140,6 @@ struct CIRRecordLowering final {
       return CharUnits::fromQuantity(intTy.storageBitwidth(dataLayout.layout) /
                                      8);
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
-
   }
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
