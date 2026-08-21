@@ -136,6 +136,10 @@ struct TemplateParameterListBuilder {
   TemplateParameterListBuilder &
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType());
 
+  TemplateParameterListBuilder &
+  addNonTypeParameter(StringRef Name, QualType Ty,
+                      Expr *DefaultValue = nullptr);
+
   ConceptSpecializationExpr *
   constructConceptSpecializationExpr(Sema &S, ConceptDecl *CD);
 
@@ -316,6 +320,28 @@ TemplateParameterListBuilder::addTypeParameter(StringRef Name,
     Decl->setDefaultArgument(AST,
                              Builder.SemaRef.getTrivialTemplateArgumentLoc(
                                  DefaultValue, QualType(), SourceLocation()));
+
+  Params.emplace_back(Decl);
+  return *this;
+}
+
+TemplateParameterListBuilder &
+TemplateParameterListBuilder::addNonTypeParameter(StringRef Name, QualType Ty,
+                                                  Expr *DefaultValue) {
+  assert(!Builder.Record->isCompleteDefinition() &&
+         "record is already complete");
+  ASTContext &AST = Builder.SemaRef.getASTContext();
+  unsigned Position = static_cast<unsigned>(Params.size());
+  auto *Decl = NonTypeTemplateParmDecl::Create(
+      AST, Builder.Record->getDeclContext(), SourceLocation(), SourceLocation(),
+      /* TemplateDepth */ 0, Position,
+      &AST.Idents.get(Name, tok::TokenKind::identifier), Ty,
+      /* ParameterPack */ false, AST.getTrivialTypeSourceInfo(Ty));
+  if (DefaultValue)
+    Decl->setDefaultArgument(
+        AST, Builder.SemaRef.getTrivialTemplateArgumentLoc(
+                 TemplateArgument(DefaultValue, /*IsCanonical=*/false), Ty,
+                 SourceLocation()));
 
   Params.emplace_back(Decl);
   return *this;
@@ -1071,12 +1097,12 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
   return *this;
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addTextureHandle(ResourceClass RC, bool IsROV,
-                                         bool IsArray, ResourceDimension RD,
-                                         AccessSpecifier Access) {
-  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, IsArray,
-                  getHandleElementType(), Access);
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addTextureHandle(
+    ResourceClass RC, bool IsROV, bool IsArray, ResourceDimension RD,
+    Expr *SampleCountExpr, AccessSpecifier Access) {
+  addResourceMember("__handle", RC, RD, IsROV, /*RawBuffer=*/false,
+                    /*IsCounter=*/false, IsArray, getHandleElementType(),
+                    SampleCountExpr, Access);
   return *this;
 }
 
@@ -1140,7 +1166,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, ResourceDimension RD, bool IsROV, bool RawBuffer,
     bool IsArray, QualType ElementTy, AccessSpecifier Access) {
   return addResourceMember("__handle", RC, RD, IsROV, RawBuffer,
-                           /*IsCounter=*/false, IsArray, ElementTy, Access);
+                           /*IsCounter=*/false, IsArray, ElementTy,
+                           /*SampleCountExpr=*/nullptr, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
@@ -1148,13 +1175,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
     AccessSpecifier Access) {
   return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
                            IsROV, RawBuffer, /*IsCounter=*/true,
-                           /*IsArray=*/false, ElementTy, Access);
+                           /*IsArray=*/false, ElementTy,
+                           /*SampleCountExpr=*/nullptr, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     StringRef MemberName, ResourceClass RC, ResourceDimension RD, bool IsROV,
     bool RawBuffer, bool IsCounter, bool IsArray, QualType ElementTy,
-    AccessSpecifier Access) {
+    Expr *SampleCountExpr, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -1180,9 +1208,12 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     Attrs.push_back(HLSLIsCounterAttr::CreateImplicit(Ctx));
   if (IsArray)
     Attrs.push_back(HLSLIsArrayAttr::CreateImplicit(Ctx));
+  if (SampleCountExpr)
+    Attrs.push_back(HLSLIsMultiSampledAttr::CreateImplicit(Ctx));
 
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
-                                       AttributedResTy))
+                                       AttributedResTy, /*LocInfo=*/nullptr,
+                                       SampleCountExpr))
     addMemberVariable(MemberName, AttributedResTy, {}, Access);
   return *this;
 }
@@ -1607,12 +1638,49 @@ BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
       .finalize();
 
   // T Load(int3 location, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
       .addParam("Location", LocationTy)
       .addParam("Offset", OffsetTy)
       .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
                    PH::_0, PH::_1)
       .finalize();
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addTextureLoadMSMethods(ResourceDimension Dim,
+                                                bool IsArray) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = Record->getASTContext();
+  uint32_t OffsetSize = getResourceDimensions(Dim);
+  // Multisampled textures use a plain location (no mip/LOD component).
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  QualType IntTy = AST.IntTy;
+  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType ReturnType = getHandleElementType();
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T Load(int2 location, int sampleIndex)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .addParam("SampleIndex", IntTy)
+      .callBuiltin("__builtin_hlsl_resource_load_ms", ReturnType, PH::Handle,
+                   PH::_0, PH::_1)
+      .finalize();
+
+  // T Load(int2 location, int sampleIndex, int2 offset)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .addParam("SampleIndex", IntTy)
+      .addParam("Offset", OffsetTy)
+      .callBuiltin("__builtin_hlsl_resource_load_ms", ReturnType, PH::Handle,
+                   PH::_0, PH::_1, PH::_2)
+      .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -1670,6 +1738,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   // original-value parameter for each entry.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
+  addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
+                                        "__builtin_hlsl_interlocked_min");
+  addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedOr", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_or");
   addByteAddressBufferInterlockedMethod("InterlockedXor", AST.UnsignedIntTy,
@@ -1685,6 +1757,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_add");
+    addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
+                                          "__builtin_hlsl_interlocked_min");
+    addByteAddressBufferInterlockedMethod("InterlockedMin64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedOr64", AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_or");
     addByteAddressBufferInterlockedMethod("InterlockedXor64",
@@ -2319,6 +2396,26 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
     QualType DefaultTy = DefaultTypes.empty() ? QualType() : DefaultTypes[i];
     Builder.addTypeParameter(Names[i], DefaultTy);
   }
+  return Builder.finalizeTemplateArgs(CD);
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addMSTextureTemplateParams(
+    StringRef ElementName, StringRef SampleCountName, ConceptDecl *CD) {
+  if (Record->isCompleteDefinition()) {
+    assert(Template && "existing record it not a template");
+    assert(Template->getTemplateParameters()->size() == 2 &&
+           "template param count mismatch");
+    return *this;
+  }
+
+  ASTContext &AST = SemaRef.getASTContext();
+  TemplateParameterListBuilder Builder = TemplateParameterListBuilder(*this);
+  // No default element type (`Texture2DMS` and `Texture2DMS<>` are errors).
+  // A sample count of 0 means the count comes from the bound resource rather
+  // than denoting zero samples.
+  Builder.addTypeParameter(ElementName);
+  Builder.addNonTypeParameter(SampleCountName, AST.IntTy,
+                              getConstantIntExpr(0));
   return Builder.finalizeTemplateArgs(CD);
 }
 

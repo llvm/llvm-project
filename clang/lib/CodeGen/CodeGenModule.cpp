@@ -352,7 +352,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  if (T.getArch() == llvm::Triple::aarch64 && !T.isOSWindows())
+  if (T.getArch() == llvm::Triple::aarch64 ||
+      T.getArch() == llvm::Triple::aarch64_32 ||
+      T.getArch() == llvm::Triple::aarch64_be)
     return true;
 
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
@@ -390,7 +392,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   default:
     llvm_unreachable("LLVMABI lowering requested for an unsupported target");
 
-  case llvm::Triple::aarch64: {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
     StringRef ABI = getTarget().getABI();
     llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
     if (ABI == "darwinpcs")
@@ -1472,6 +1476,17 @@ void CodeGenModule::Release() {
   }
 
   llvm::Triple T = Context.getTargetInfo().getTriple();
+
+  // TODO: This should probably be just generally emitted for non-empty ABI
+  // names. LoongArch actively consumes the flag, but it is excluded here.
+  // Other targets have no apparent need for the ABI name, but set a non-empty
+  // value.
+  if (StringRef ABIStr = Target.getABI();
+      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+    getModule().addModuleFlag(llvm::Module::Error, "target-abi",
+                              llvm::MDString::get(VMContext, ABIStr));
+  }
+
   if (T.isARM() || T.isThumb()) {
     // The minimum width of an enum in bytes
     uint32_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
@@ -1479,10 +1494,7 @@ void CodeGenModule::Release() {
   }
 
   if (T.isRISCV()) {
-    StringRef ABIStr = Target.getABI();
     llvm::LLVMContext &Ctx = TheModule.getContext();
-    getModule().addModuleFlag(llvm::Module::Error, "target-abi",
-                              llvm::MDString::get(Ctx, ABIStr));
 
     // Add the canonical ISA string as metadata so the backend can set the ELF
     // attributes correctly. We use AppendUnique so LTO will keep all of the
@@ -3422,6 +3434,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    getTarget().getTargetOpts().Features);
       }
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else if (getTarget().getTriple().isSPIRV() &&
+               getTarget().getTriple().getVendor() == llvm::Triple::AMD) {
+      // The AMDGCN-flavored SPIR-V target unions every GPU's features so it can
+      // report all builtins as supported, but that union is meaningless in the
+      // emitted IR.
     } else {
       Features = getTarget().getTargetOpts().Features;
     }
