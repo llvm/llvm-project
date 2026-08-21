@@ -308,6 +308,19 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(SrcDevice, nullptr);
         return OL_SUCCESS;
       });
+
+  ON_CALL(*this, olMemFill)
+      .WillByDefault([](ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                        const void *PatternPtr,
+                        size_t FillSize) -> ol_result_t {
+        EXPECT_NE(Queue, nullptr);
+        EXPECT_NE(Ptr, nullptr);
+        EXPECT_GT(PatternSize, 0);
+        EXPECT_NE(PatternPtr, nullptr);
+        EXPECT_GT(FillSize, 0);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olMemPrefetch)
       .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
                             const void **Mems, const size_t *Sizes,
@@ -321,6 +334,7 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
         return OL_SUCCESS;
       });
+
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
                             size_t PropSize, void *PropValue) -> ol_result_t {

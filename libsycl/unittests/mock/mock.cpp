@@ -117,6 +117,12 @@ ol_result_t olMemcpy(ol_queue_handle_t Queue, void *DstPtr,
                                             SrcDevice, Size);
 }
 
+ol_result_t olMemFill(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                      const void *PatternPtr, size_t FillSize) {
+  return mock::getMockLiboffload().olMemFill(Queue, Ptr, PatternSize,
+                                             PatternPtr, FillSize);
+}
+
 ol_result_t olMemPrefetch(ol_queue_handle_t Queue, size_t Count,
                           const void **Mems, const size_t *Sizes,
                           ol_mem_migration_flags_t Flags) {

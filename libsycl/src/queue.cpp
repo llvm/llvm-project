@@ -69,4 +69,12 @@ void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
 }
 
+event queue::fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                      std::size_t Count, const std::vector<event> &DepEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr = impl->fill(
+      Ptr, Pattern, PatternSize, Count, detail::getSyclObjImpls(DepEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
 _LIBSYCL_END_NAMESPACE_SYCL

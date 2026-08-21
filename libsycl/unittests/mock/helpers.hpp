@@ -126,6 +126,9 @@ public:
               (ol_queue_handle_t Queue, void *DstPtr,
                ol_device_handle_t DstDevice, const void *SrcPtr,
                ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olMemFill,
+              (ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+               const void *PatternPtr, size_t FillSize));
   MOCK_METHOD(ol_result_t, olMemPrefetch,
               (ol_queue_handle_t Queue, size_t Count, const void **Mems,
                const size_t *Sizes, ol_mem_migration_flags_t Flags));

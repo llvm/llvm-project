@@ -117,6 +117,17 @@ public:
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
 
+  /// Submits a fill operation that replicates a pattern into USM.
+  ///
+  /// \param Ptr is the pointer to memory to be filled.
+  /// \param Pattern is the pattern to be replicated.
+  /// \param PatternSize is the size of the pattern.
+  /// \param Count is the number of times the pattern is filled.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  EventImplPtr fill(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                    std::size_t Count,
+                    const std::vector<EventImplPtr> &DepEvents);
+
   /// Submits a prefetch operation for a USM pointer.
   ///
   /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
