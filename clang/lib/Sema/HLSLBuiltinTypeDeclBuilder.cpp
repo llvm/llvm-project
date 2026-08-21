@@ -1450,6 +1450,10 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
                                                    bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  if (Dim == ResourceDimension::Cube)
+    return *this;
+
   ASTContext &AST = Record->getASTContext();
 
   uint32_t VecSize = 1;
@@ -1586,6 +1590,10 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  if (Dim == ResourceDimension::Cube)
+    return *this;
+
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
 
@@ -1602,6 +1610,10 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
                                               bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  if (Dim == ResourceDimension::Cube)
+    return *this;
+
   ASTContext &AST = Record->getASTContext();
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
@@ -1799,28 +1811,31 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T Sample(SamplerState s, float2 location, int2 offset)
-  BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
-                   PH::LastStmt, PH::_1, PH::_2)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T Sample(SamplerState s, float2 location, int2 offset)
+    BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                     PH::LastStmt, PH::_1, PH::_2)
+        .returnValue(PH::LastStmt)
+        .finalize();
 
-  // T Sample(SamplerState s, float2 location, int2 offset, float clamp)
-  BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Offset", OffsetTy)
-      .addParam("Clamp", FloatTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
-                   PH::LastStmt, PH::_1, PH::_2, PH::_3)
-      .returnValue(PH::LastStmt)
-      .finalize();
+    // T Sample(SamplerState s, float2 location, int2 offset, float clamp)
+    BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Offset", OffsetTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                     PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
 
   // Sample uses implicit derivatives to calculate the mip level.
   return addDerivativeAvailability("Sample");
@@ -1853,31 +1868,34 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleBias(SamplerState s, float2 location, float bias, int2 offset)
-  BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Bias", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T SampleBias(SamplerState s, float2 location, float bias, int2 offset)
+    BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Bias", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
 
-  // T SampleBias(SamplerState s, float2 location, float bias, int2 offset,
-  // float clamp)
-  BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Bias", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .addParam("Clamp", FloatTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
-      .returnValue(PH::LastStmt)
-      .finalize();
+    // T SampleBias(SamplerState s, float2 location, float bias, int2 offset,
+    // float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Bias", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
 
   // SampleBias uses implicit derivatives to calculate the mip level.
   return addDerivativeAvailability("SampleBias");
@@ -1912,35 +1930,40 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
-  // int2 offset)
-  BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("DDX", OffsetFloatTy)
-      .addParam("DDY", OffsetFloatTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
+    // int2 offset)
+    BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("DDX", OffsetFloatTy)
+        .addParam("DDY", OffsetFloatTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+        .returnValue(PH::LastStmt)
+        .finalize();
 
-  // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
-  // int2 offset, float clamp)
-  return BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("DDX", OffsetFloatTy)
-      .addParam("DDY", OffsetFloatTy)
-      .addParam("Offset", OffsetTy)
-      .addParam("Clamp", FloatTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4,
-                   PH::_5)
-      .returnValue(PH::LastStmt)
-      .finalize();
+    // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
+    // int2 offset, float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("DDX", OffsetFloatTy)
+        .addParam("DDY", OffsetFloatTy)
+        .addParam("Offset", OffsetTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4,
+                     PH::_5)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -1970,17 +1993,22 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
-      .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("LOD", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
+    BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("LOD", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -2010,32 +2038,35 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
-  // int2 offset)
-  BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
-      .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
-      .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
-                   PH::LastStmt, PH::_1, PH::_2, PH::_3)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T SampleCmp(SamplerComparisonState s, float2 location, float
+    // compare_value, int2 offset)
+    BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", CoordTy)
+        .addParam("CompareValue", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
 
-  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
-  // int2 offset, float clamp)
-  BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
-      .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
-      .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .addParam("Clamp", FloatTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
-                   PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
-      .returnValue(PH::LastStmt)
-      .finalize();
+    // T SampleCmp(SamplerComparisonState s, float2 location, float
+    // compare_value, int2 offset, float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", CoordTy)
+        .addParam("CompareValue", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
 
   // SampleCmp uses implicit derivatives to calculate the mip level.
   return addDerivativeAvailability("SampleCmp");
@@ -2069,18 +2100,24 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
-  // compare_value, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
-      .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
-      .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
-      .accessHandleFieldOnResource(PH::_0)
-      .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero", ReturnType,
-                   PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
-      .returnValue(PH::LastStmt)
-      .finalize();
+  // Cube textures do not support offsets.
+  if (Dim != ResourceDimension::Cube) {
+    // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
+    // compare_value, int2 offset)
+    BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", CoordTy)
+        .addParam("CompareValue", FloatTy)
+        .addParam("Offset", OffsetTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero",
+                     ReturnType, PH::Handle, PH::LastStmt, PH::_1, PH::_2,
+                     PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
+  }
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -2218,15 +2255,17 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
         .finalize();
 
     // ret GatherVariant(SamplerState s, float2 location, int2 offset)
-    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
-        .addParam("Sampler", SamplerStateType)
-        .addParam("Location", CoordTy)
-        .addParam("Offset", OffsetTy)
-        .accessHandleFieldOnResource(PH::_0)
-        .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
-                     PH::LastStmt, PH::_1,
-                     getConstantUnsignedIntExpr(V.Component), PH::_2)
-        .finalize();
+    // Cube textures do not support offsets.
+    if (Dim != ResourceDimension::Cube)
+      BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+          .addParam("Sampler", SamplerStateType)
+          .addParam("Location", CoordTy)
+          .addParam("Offset", OffsetTy)
+          .accessHandleFieldOnResource(PH::_0)
+          .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
+                       PH::LastStmt, PH::_1,
+                       getConstantUnsignedIntExpr(V.Component), PH::_2)
+          .finalize();
   }
 
   return *this;
@@ -2276,16 +2315,18 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
 
     // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float
     // compare_value, int2 offset)
-    BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
-        .addParam("Sampler", SamplerComparisonStateType)
-        .addParam("Location", CoordTy)
-        .addParam("CompareValue", FloatTy)
-        .addParam("Offset", OffsetTy)
-        .accessHandleFieldOnResource(PH::_0)
-        .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
-                     PH::Handle, PH::LastStmt, PH::_1, PH::_2,
-                     getConstantUnsignedIntExpr(V.Component), PH::_3)
-        .finalize();
+    // Cube textures do not support offsets.
+    if (Dim != ResourceDimension::Cube)
+      BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
+          .addParam("Sampler", SamplerComparisonStateType)
+          .addParam("Location", CoordTy)
+          .addParam("CompareValue", FloatTy)
+          .addParam("Offset", OffsetTy)
+          .accessHandleFieldOnResource(PH::_0)
+          .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
+                       PH::Handle, PH::LastStmt, PH::_1, PH::_2,
+                       getConstantUnsignedIntExpr(V.Component), PH::_3)
+          .finalize();
   }
 
   return *this;

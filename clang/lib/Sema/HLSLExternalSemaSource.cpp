@@ -807,6 +807,27 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                        ResourceDimension::Dim2D)
         .completeDefinition();
   });
+
+  // TextureCube — SRV cube texture. Locations are float3 direction vectors.
+  // Cube textures do not support Load, operator[], mips or offsets.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCube")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/false, ResourceDimension::Cube)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecCube = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecCube, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/false, ResourceDimension::Cube)
+        .completeDefinition();
+  });
 }
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
