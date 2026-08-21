@@ -251,7 +251,7 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  // Pass the DWARF version on when debug information is being generated, or
+  // Pass on the DWARF version when debug information is being generated, or
   // when -gdwarf-N names a version. Leaving it out means the version stays
   // unset and the backend falls back to dwarf::DWARF_VERSION (4) instead of
   // honouring toolchain default like clang does.
