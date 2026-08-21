@@ -1120,9 +1120,29 @@ func.func @extFPVectorConstant() -> vector<2xf128> {
   return %0 : vector<2xf128>
 }
 
+// A f8E8M0FNU NaN has no payload bits; folding must not turn it into an Inf.
+// CHECK-LABEL: @extFPConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant 0x7FC00000 : f32
+//       CHECK:   return %[[cres]]
+func.func @extFPConstantE8M0NaN() -> f32 {
+  %cst = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.extf %cst : f8E8M0FNU to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @extFPVectorConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[1.000000e+00, 0x7FC00000]> : vector<2xf32>
+//       CHECK:   return %[[cres]]
+func.func @extFPVectorConstantE8M0NaN() -> vector<2xf32> {
+  %cst = arith.constant dense<[1.000000e+00, 0xFF]> : vector<2xf8E8M0FNU>
+  %0 = arith.extf %cst : vector<2xf8E8M0FNU> to vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 // CHECK-LABEL: @truncExtf
-//       CHECK-NOT:  truncf
-//       CHECK:   return  %arg0
+//       CHECK:  %[[EXT:.*]] = arith.extf %arg0 : f32 to f64
+//       CHECK:  %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f64 to f32
+//       CHECK:  return %[[TRUNC]]
 func.func @truncExtf(%arg0: f32) -> f32 {
   %extf = arith.extf %arg0 : f32 to f64
   %trunc = arith.truncf %extf : f64 to f32
@@ -1130,8 +1150,9 @@ func.func @truncExtf(%arg0: f32) -> f32 {
 }
 
 // CHECK-LABEL: @truncExtf1
-//       CHECK-NOT:  truncf
-//       CHECK:   return  %arg0
+//       CHECK:  %[[EXT:.*]] = arith.extf %arg0 : bf16 to f32
+//       CHECK:  %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f32 to bf16
+//       CHECK:  return %[[TRUNC]]
 func.func @truncExtf1(%arg0: bf16) -> bf16 {
   %extf = arith.extf %arg0 : bf16 to f32
   %trunc = arith.truncf %extf : f32 to bf16
@@ -1150,13 +1171,200 @@ func.func @truncExtf2(%arg0: bf16) -> f16 {
 }
 
 // CHECK-LABEL: @truncExtf3
-//       CHECK:  %[[ARG0:.+]]: f32
-//       CHECK:  %[[CST:.*]] = arith.truncf %[[ARG0:.+]] : f32 to f16
-//       CHECK:   return  %[[CST:.*]]
+//       CHECK:  %[[EXT:.*]] = arith.extf %arg0 : f32 to f64
+//       CHECK:  %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f64 to f16
+//       CHECK:  return %[[TRUNC]]
 func.func @truncExtf3(%arg0: f32) -> f16 {
   %extf = arith.extf %arg0 : f32 to f64
   %truncf = arith.truncf %extf : f64 to f16
   return %truncf : f16
+}
+
+// CHECK-LABEL: @narrowExtremaOfExtf
+// CHECK-NOT: arith.extf
+// CHECK-NOT: arith.truncf
+// CHECK: %[[MAXIMUM:.*]] = arith.maximumf %arg0, %arg1 fastmath<nnan> : f16
+// CHECK: %[[MAXNUM:.*]] = arith.maxnumf %arg0, %arg1 fastmath<nnan> : f16
+// CHECK: %[[MINIMUM:.*]] = arith.minimumf %arg0, %arg1 fastmath<nnan> : f16
+// CHECK: %[[MINNUM:.*]] = arith.minnumf %arg0, %arg1 fastmath<nnan> : f16
+// CHECK: return %[[MAXIMUM]], %[[MAXNUM]], %[[MINIMUM]], %[[MINNUM]]
+func.func @narrowExtremaOfExtf(%arg0: f16, %arg1: f16)
+    -> (f16, f16, f16, f16) {
+  %lhs = arith.extf %arg0 : f16 to f32
+  %rhs = arith.extf %arg1 : f16 to f32
+  %maximum = arith.maximumf %lhs, %rhs fastmath<nnan> : f32
+  %maxnum = arith.maxnumf %lhs, %rhs fastmath<nnan> : f32
+  %minimum = arith.minimumf %lhs, %rhs fastmath<nnan> : f32
+  %minnum = arith.minnumf %lhs, %rhs fastmath<nnan> : f32
+  %maximumTrunc = arith.truncf %maximum : f32 to f16
+  %maxnumTrunc = arith.truncf %maxnum : f32 to f16
+  %minimumTrunc = arith.truncf %minimum : f32 to f16
+  %minnumTrunc = arith.truncf %minnum : f32 to f16
+  return %maximumTrunc, %maxnumTrunc, %minimumTrunc, %minnumTrunc
+      : f16, f16, f16, f16
+}
+
+// CHECK-LABEL: @narrowIntegerExtrema
+// CHECK-NOT: arith.extsi
+// CHECK-NOT: arith.extui
+// CHECK-NOT: arith.trunci
+// CHECK: %[[SMAX:.*]] = arith.maxsi %arg0, %arg1 : i8
+// CHECK: %[[SMIN:.*]] = arith.minsi %arg0, %arg1 : i8
+// CHECK: %[[UMAX:.*]] = arith.maxui %arg0, %arg1 : i8
+// CHECK: %[[UMIN:.*]] = arith.minui %arg0, %arg1 : i8
+// CHECK: return %[[SMAX]], %[[SMIN]], %[[UMAX]], %[[UMIN]]
+func.func @narrowIntegerExtrema(%arg0: i8, %arg1: i8)
+    -> (i8, i8, i8, i8) {
+  %slhs = arith.extsi %arg0 : i8 to i32
+  %srhs = arith.extsi %arg1 : i8 to i32
+  %ulhs = arith.extui %arg0 : i8 to i32
+  %urhs = arith.extui %arg1 : i8 to i32
+  %smax = arith.maxsi %slhs, %srhs : i32
+  %smin = arith.minsi %slhs, %srhs : i32
+  %umax = arith.maxui %ulhs, %urhs : i32
+  %umin = arith.minui %ulhs, %urhs : i32
+  %smaxTrunc = arith.trunci %smax : i32 to i8
+  %sminTrunc = arith.trunci %smin : i32 to i8
+  %umaxTrunc = arith.trunci %umax : i32 to i8
+  %uminTrunc = arith.trunci %umin : i32 to i8
+  return %smaxTrunc, %sminTrunc, %umaxTrunc, %uminTrunc : i8, i8, i8, i8
+}
+
+// CHECK-LABEL: @doNotNarrowIntegerExtremumWithWideUse
+// CHECK: %[[LHS:.*]] = arith.extsi %arg0 : i8 to i32
+// CHECK: %[[RHS:.*]] = arith.extsi %arg1 : i8 to i32
+// CHECK: %[[MAX:.*]] = arith.maxsi %[[LHS]], %[[RHS]] : i32
+// CHECK: %[[TRUNC:.*]] = arith.trunci %[[MAX]] : i32 to i8
+// CHECK: return %[[TRUNC]], %[[MAX]]
+func.func @doNotNarrowIntegerExtremumWithWideUse(%arg0: i8, %arg1: i8)
+    -> (i8, i32) {
+  %lhs = arith.extsi %arg0 : i8 to i32
+  %rhs = arith.extsi %arg1 : i8 to i32
+  %max = arith.maxsi %lhs, %rhs : i32
+  %trunc = arith.trunci %max : i32 to i8
+  return %trunc, %max : i8, i32
+}
+
+// Zero extension does not preserve signed ordering across the sign boundary.
+// CHECK-LABEL: @doNotNarrowSignedExtremumOfZeroExtension
+// CHECK: %[[LHS:.*]] = arith.extui %arg0 : i8 to i32
+// CHECK: %[[RHS:.*]] = arith.extui %arg1 : i8 to i32
+// CHECK: %[[MAX:.*]] = arith.maxsi %[[LHS]], %[[RHS]] : i32
+// CHECK: %[[TRUNC:.*]] = arith.trunci %[[MAX]] : i32 to i8
+// CHECK: return %[[TRUNC]]
+func.func @doNotNarrowSignedExtremumOfZeroExtension(
+    %arg0: i8, %arg1: i8) -> i8 {
+  %lhs = arith.extui %arg0 : i8 to i32
+  %rhs = arith.extui %arg1 : i8 to i32
+  %max = arith.maxsi %lhs, %rhs : i32
+  %trunc = arith.trunci %max : i32 to i8
+  return %trunc : i8
+}
+
+// CHECK-LABEL: @doNotNarrowExtremumWithWideUse
+// CHECK: %[[LHS:.*]] = arith.extf %arg0 : f16 to f32
+// CHECK: %[[RHS:.*]] = arith.extf %arg1 : f16 to f32
+// CHECK: %[[MAXIMUM:.*]] = arith.maximumf %[[LHS]], %[[RHS]] : f32
+// CHECK: %[[TRUNC:.*]] = arith.truncf %[[MAXIMUM]] : f32 to f16
+// CHECK: return %[[TRUNC]], %[[MAXIMUM]]
+func.func @doNotNarrowExtremumWithWideUse(%arg0: f16, %arg1: f16)
+    -> (f16, f32) {
+  %lhs = arith.extf %arg0 : f16 to f32
+  %rhs = arith.extf %arg1 : f16 to f32
+  %maximum = arith.maximumf %lhs, %rhs : f32
+  %trunc = arith.truncf %maximum : f32 to f16
+  return %trunc, %maximum : f16, f32
+}
+
+// CHECK-LABEL: @doNotNarrowExtremumThroughInexactExtension
+// CHECK: %[[LHS:.*]] = arith.extf %arg0 : f8E8M0FNU to f16
+// CHECK: %[[RHS:.*]] = arith.extf %arg1 : f8E8M0FNU to f16
+// CHECK: %[[MAXIMUM:.*]] = arith.maximumf %[[LHS]], %[[RHS]] : f16
+// CHECK: %[[TRUNC:.*]] = arith.truncf %[[MAXIMUM]] : f16 to f8E8M0FNU
+// CHECK: return %[[TRUNC]]
+func.func @doNotNarrowExtremumThroughInexactExtension(
+    %arg0: f8E8M0FNU, %arg1: f8E8M0FNU) -> f8E8M0FNU {
+  %lhs = arith.extf %arg0 : f8E8M0FNU to f16
+  %rhs = arith.extf %arg1 : f8E8M0FNU to f16
+  %maximum = arith.maximumf %lhs, %rhs : f16
+  %trunc = arith.truncf %maximum : f16 to f8E8M0FNU
+  return %trunc : f8E8M0FNU
+}
+
+// f8E4M3FNUZ has no negative zero. For two f4E2M1FN negative-zero arguments
+// (bits 0x8), the wide computation returns +0 (bits 0x0) while the narrow
+// computation returns -0 (bits 0x8).
+// CHECK-LABEL: @doNotNarrowExtremumThroughFNUZ
+// CHECK: %[[LHS:.*]] = arith.extf %arg0 : f4E2M1FN to f8E4M3FNUZ
+// CHECK: %[[RHS:.*]] = arith.extf %arg1 : f4E2M1FN to f8E4M3FNUZ
+// CHECK: %[[MAXIMUM:.*]] = arith.maximumf %[[LHS]], %[[RHS]] : f8E4M3FNUZ
+// CHECK: %[[TRUNC:.*]] = arith.truncf %[[MAXIMUM]] : f8E4M3FNUZ to f4E2M1FN
+// CHECK: return %[[TRUNC]]
+func.func @doNotNarrowExtremumThroughFNUZ(
+    %arg0: f4E2M1FN, %arg1: f4E2M1FN) -> f4E2M1FN {
+  %lhs = arith.extf %arg0 : f4E2M1FN to f8E4M3FNUZ
+  %rhs = arith.extf %arg1 : f4E2M1FN to f8E4M3FNUZ
+  %maximum = arith.maximumf %lhs, %rhs : f8E4M3FNUZ
+  %trunc = arith.truncf %maximum : f8E4M3FNUZ to f4E2M1FN
+  return %trunc : f4E2M1FN
+}
+
+// Extending an f8E5M2 signaling NaN (bits 0x7d) to f16 quiets it. With 1.0
+// (bits 0x3c) as the other operand, the wide maxnum returns 1.0 while the
+// narrow operation returns the quieted NaN (bits 0x7f).
+// CHECK-LABEL: @doNotNarrowMaxNumThroughSNaNQuieting
+// CHECK: %[[LHS:.*]] = arith.extf %arg0 : f8E5M2 to f16
+// CHECK: %[[RHS:.*]] = arith.extf %arg1 : f8E5M2 to f16
+// CHECK: %[[MAXNUM:.*]] = arith.maxnumf %[[LHS]], %[[RHS]] : f16
+// CHECK: %[[MAXTRUNC:.*]] = arith.truncf %[[MAXNUM]] : f16 to f8E5M2
+// CHECK: return %[[MAXTRUNC]]
+func.func @doNotNarrowMaxNumThroughSNaNQuieting(
+    %arg0: f8E5M2, %arg1: f8E5M2) -> f8E5M2 {
+  %lhs = arith.extf %arg0 : f8E5M2 to f16
+  %rhs = arith.extf %arg1 : f8E5M2 to f16
+  %maxnum = arith.maxnumf %lhs, %rhs : f16
+  %trunc = arith.truncf %maxnum : f16 to f8E5M2
+  return %trunc : f8E5M2
+}
+
+// Extending an f8E5M2 signaling NaN (bits 0x7d) to f16 quiets it. With 1.0
+// (bits 0x3c) as the other operand, the wide minnum returns 1.0 while the
+// narrow operation returns the quieted NaN (bits 0x7f).
+// CHECK-LABEL: @doNotNarrowMinNumThroughSNaNQuieting
+// CHECK: %[[LHS:.*]] = arith.extf %arg0 : f8E5M2 to f16
+// CHECK: %[[RHS:.*]] = arith.extf %arg1 : f8E5M2 to f16
+// CHECK: %[[MINNUM:.*]] = arith.minnumf %[[LHS]], %[[RHS]] : f16
+// CHECK: %[[MINTRUNC:.*]] = arith.truncf %[[MINNUM]] : f16 to f8E5M2
+// CHECK: return %[[MINTRUNC]]
+func.func @doNotNarrowMinNumThroughSNaNQuieting(
+    %arg0: f8E5M2, %arg1: f8E5M2) -> f8E5M2 {
+  %lhs = arith.extf %arg0 : f8E5M2 to f16
+  %rhs = arith.extf %arg1 : f8E5M2 to f16
+  %minnum = arith.minnumf %lhs, %rhs : f16
+  %trunc = arith.truncf %minnum : f16 to f8E5M2
+  return %trunc : f8E5M2
+}
+
+// The same representational differences also prevent folding the bare
+// truncf(extf(x)) round trips.
+// CHECK-LABEL: @doNotFoldFNUZRoundTrip
+// CHECK: %[[EXT:.*]] = arith.extf %arg0 : f4E2M1FN to f8E4M3FNUZ
+// CHECK: %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f8E4M3FNUZ to f4E2M1FN
+// CHECK: return %[[TRUNC]]
+func.func @doNotFoldFNUZRoundTrip(%arg0: f4E2M1FN) -> f4E2M1FN {
+  %ext = arith.extf %arg0 : f4E2M1FN to f8E4M3FNUZ
+  %trunc = arith.truncf %ext : f8E4M3FNUZ to f4E2M1FN
+  return %trunc : f4E2M1FN
+}
+
+// CHECK-LABEL: @doNotFoldSNaNRoundTrip
+// CHECK: %[[EXT:.*]] = arith.extf %arg0 : f8E5M2 to f16
+// CHECK: %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f16 to f8E5M2
+// CHECK: return %[[TRUNC]]
+func.func @doNotFoldSNaNRoundTrip(%arg0: f8E5M2) -> f8E5M2 {
+  %ext = arith.extf %arg0 : f8E5M2 to f16
+  %trunc = arith.truncf %ext : f16 to f8E5M2
+  return %trunc : f8E5M2
 }
 
 // CHECK-LABEL: @truncSitofp
@@ -2647,6 +2855,18 @@ func.func @bitcastChain(%arg: i16) -> f16 {
   %0 = arith.bitcast %arg : i16 to bf16
   %1 = arith.bitcast %0 : bf16 to f16
   return %1 : f16
+}
+
+// -----
+
+// CHECK-LABEL: func @bitcastForeignConstantAttr
+func.func @bitcastForeignConstantAttr() -> f64 {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i64
+  // CHECK: %[[CAST:.*]] = arith.bitcast %[[UNDEF]] : i64 to f64
+  // CHECK: return %[[CAST]] : f64
+  %0 = llvm.mlir.undef : i64
+  %1 = arith.bitcast %0 : i64 to f64
+  return %1 : f64
 }
 
 // -----

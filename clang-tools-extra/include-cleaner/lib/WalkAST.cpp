@@ -193,7 +193,7 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    // Always treat consturctor calls as implicit. We'll have an explicit
+    // Always treat constructor calls as implicit. We'll have an explicit
     // reference for the constructor calls that mention the type-name (through
     // TypeLocs). This reference only matters for cases where there's no
     // explicit syntax at all or there're only braces.
@@ -417,16 +417,27 @@ public:
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+    auto StartLoc = E->getSelectorStartLoc();
     // Identify the selector and the method declaration
     if (auto *Method = E->getMethodDecl()) {
       // Report the method as a used symbol
-      report(E->getSelectorStartLoc(), Method);
+      report(StartLoc, Method);
     }
 
     // If it's a class message, report the interface/class as used
     if (E->getReceiverKind() == ObjCMessageExpr::Class) {
       if (auto *Interface = E->getReceiverInterface()) {
         report(E->getReceiverRange().getBegin(), Interface);
+      }
+      return true;
+    }
+    if (auto *Interface = E->getReceiverInterface()) {
+      report(StartLoc, Interface, RefType::Implicit);
+    }
+    QualType Type = E->getReceiverType();
+    if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
+      for (auto *Proto : ObjCPtr->quals()) {
+        report(StartLoc, Proto, RefType::Implicit);
       }
     }
     return true;

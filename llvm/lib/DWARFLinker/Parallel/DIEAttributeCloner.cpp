@@ -549,12 +549,29 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   return Result.second;
 }
 
+static bool expressionDependsOnOriginUnit(const DWARFExpression &Expr) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  for (const DWARFExpression::Operation &Op : Expr) {
+    switch (Op.getCode()) {
+    case dwarf::DW_OP_addr:
+    case dwarf::DW_OP_addrx:
+    case dwarf::DW_OP_constx:
+      return true;
+    default:
+      break;
+    }
+
+    if (llvm::is_contained(Op.getDescription().Op, Encoding::BaseTypeRef))
+      return true;
+  }
+
+  return false;
+}
+
 size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
-
-  if (OutUnit.isTypeUnit())
-    return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
@@ -568,6 +585,12 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
+
+    // A type unit is shared by every compile unit that references the type, so
+    // an expression resolving against one origin unit has no single correct
+    // value there.
+    if (OutUnit.isTypeUnit() && expressionDependsOnOriginUnit(Expr))
+      return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
                                   VarAddressAdjustment, PatchesOffsets);

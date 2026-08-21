@@ -360,6 +360,15 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
   "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
+// Source-language dialect values are defined by LLVM's
+// dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
+// represents "no source-language dialect" as 0; the LLVM IR printer omits the
+// `dialect:` field for that value.
+def LLVM_DILanguageDialectParameter : LLVM_DIParameter<
+  "language dialect", /*default=*/"0", "LanguageDialect",
+  /*errorCase=*/"~0U"
+>;
+
 def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"0", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
@@ -448,6 +457,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
+    LLVM_DILanguageDialectParameter:$sourceLanguageDialect,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
     OptionalParameter<"bool">:$isOptimized,
@@ -459,6 +469,21 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage,
+      "unsigned":$sourceLanguageDialect, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
+    ), [{
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, sourceLanguageDialect, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
@@ -468,9 +493,9 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, file, producer, isOptimized, emissionKind,
-                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
-                   importedEntities);
+                   sourceLanguage, /*sourceLanguageDialect=*/0, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";

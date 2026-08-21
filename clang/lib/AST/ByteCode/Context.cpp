@@ -208,7 +208,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
+        !Ptr.getFieldDesc()->isPrimitiveArray())
       return false;
 
     // Must be char.
@@ -554,8 +555,8 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-  InterpState State(Parent, *P, Stk, *this, Func);
   auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  InterpState State(Parent, *P, Stk, *this, Func);
   InterpFrame *Frame = new (Memory.get()) InterpFrame(
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;

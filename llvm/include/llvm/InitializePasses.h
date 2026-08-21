@@ -174,7 +174,6 @@ LLVM_ABI void initializeLocalStackSlotPassPass(PassRegistry &);
 LLVM_ABI void initializeLocalizerPass(PassRegistry &);
 LLVM_ABI void initializeLogicalSROALegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopDataPrefetchLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeLoopExtractorLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopSimplifyPass(PassRegistry &);
@@ -306,7 +305,6 @@ LLVM_ABI void
 initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeShadowStackGCLoweringPass(PassRegistry &);
 LLVM_ABI void initializeShrinkWrapLegacyPass(PassRegistry &);
-LLVM_ABI void initializeSingleLoopExtractorPass(PassRegistry &);
 LLVM_ABI void initializeSinkingLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeSjLjEHPreparePass(PassRegistry &);
 LLVM_ABI void initializeSlotIndexesWrapperPassPass(PassRegistry &);

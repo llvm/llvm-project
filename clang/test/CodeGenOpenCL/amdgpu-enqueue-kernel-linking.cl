@@ -30,7 +30,7 @@
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel_first(
 
 
-// CHECK-LABEL: define internal fastcc void @static_invoker(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr)
+// CHECK-LABEL: define internal void @static_invoker(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr)
 // CHECK:  call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle to ptr), ptr %{{.+}})
 
 // CHECK: declare i32 @__enqueue_kernel_basic(ptr addrspace(1), i32, ptr addrspace(5), ptr, ptr) local_unnamed_addr
@@ -48,7 +48,7 @@
 
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel_second(ptr addrspace(1) noundef align 4 %outptr, ptr addrspace(1) noundef align 4 %argptr, ptr addrspace(1) noundef align 4 %difference)
 
-// CHECK-LABEL: define internal fastcc void @static_invoker.5(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr) unnamed_addr #{{[0-9]+}} {
+// CHECK-LABEL: define internal void @static_invoker.5(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr) unnamed_addr #{{[0-9]+}} {
 // CHECK: call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle.3 to ptr), ptr %{{.+}})
 
 

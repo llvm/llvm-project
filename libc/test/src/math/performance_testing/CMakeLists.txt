@@ -1,7 +1,7 @@
 add_library(
   libc_diff_test_utils STATIC
-  Timer.cpp
-  Timer.h
+    Timer.cpp
+    Timer.h
 )
 target_include_directories(
   libc_diff_test_utils
@@ -26,21 +26,21 @@ function(add_perf_binary target_name)
   )
   if(NOT PERF_SRCS)
     message(FATAL_ERROR "'add_perf_binary' target requires a SRCS list of .cpp "
-                        "files.")
+      "files.")
   endif()
   if(NOT PERF_DEPENDS)
     message(FATAL_ERROR "'add_perf_binary' target requires a DEPENDS list of "
-                        "'add_entrypoint_object' targets.")
+      "'add_entrypoint_object' targets.")
   endif()
 
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${PERF_DEPENDS})
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+    link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Will not build ${fq_target_name} as it has missing deps: "
-              "${skipped_entrypoints_list}.")
+        "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
     return()
@@ -69,8 +69,8 @@ function(add_perf_binary target_name)
     list(APPEND link_libraries ${lib}.unit)
   endforeach()
   target_link_libraries(
-      ${fq_target_name}
-      PRIVATE ${link_libraries} libc_diff_test_utils)
+    ${fq_target_name}
+    PRIVATE ${link_libraries} libc_diff_test_utils)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

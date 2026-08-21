@@ -2557,6 +2557,11 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
         semantics->nanEncoding != fltNanEncoding::NegativeZero)
       makeNaN(false, false);
 
+    // If the source has no significand, there are no payload bits to carry
+    // over, and an all-zero significand would encode an Inf. Create a new NaN.
+    if (!APFloat::hasSignificand(fromSemantics))
+      makeNaN(false, sign);
+
     *losesInfo = lostFraction != lfExactlyZero || X86SpecialNan;
 
     // For x87 extended precision, we want to make a NaN, not a special NaN if

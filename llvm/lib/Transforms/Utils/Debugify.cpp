@@ -29,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include <cmath>
 #include <optional>
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 // We need the Signals header to operate on stacktraces if we're using DebugLoc
@@ -1132,30 +1133,32 @@ static bool isIgnoredPass(StringRef PassID) {
 
 void DebugifyEachInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
-  PIC.registerBeforeNonSkippedPassCallback([this, &MAM](StringRef P, Any IR) {
+  PIC.registerBeforeNonSkippedPassCallback([this, &MAM](StringRef P,
+                                                        const Any &IR) {
     if (isIgnoredPass(P))
       return;
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    if (const auto **CF = llvm::any_cast<const Function *>(&IR)) {
+    if (const auto *const *CF = llvm::any_cast<const Function *>(&IR)) {
       Function &F = *const_cast<Function *>(*CF);
       applyDebugify(F, Mode, DebugInfoBeforePass, P);
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
           .getManager()
           .invalidate(F, PA);
-    } else if (const auto **CM = llvm::any_cast<const Module *>(&IR)) {
+    } else if (const auto *const *CM = llvm::any_cast<const Module *>(&IR)) {
       Module &M = *const_cast<Module *>(*CM);
       applyDebugify(M, Mode, DebugInfoBeforePass, P);
       MAM.invalidate(M, PA);
     }
   });
   PIC.registerAfterPassCallback(
-      [this, &MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, &MAM](StringRef P, const Any &IR,
+                   const PreservedAnalyses &PassPA) {
         if (isIgnoredPass(P))
           return;
         PreservedAnalyses PA;
         PA.preserveSet<CFGAnalyses>();
-        if (const auto **CF = llvm::any_cast<const Function *>(&IR)) {
+        if (const auto *const *CF = llvm::any_cast<const Function *>(&IR)) {
           auto &F = *const_cast<Function *>(*CF);
           Module &M = *F.getParent();
           auto It = F.getIterator();
@@ -1171,7 +1174,8 @@ void DebugifyEachInstrumentation::registerCallbacks(
           MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
               .getManager()
               .invalidate(F, PA);
-        } else if (const auto **CM = llvm::any_cast<const Module *>(&IR)) {
+        } else if (const auto *const *CM =
+                       llvm::any_cast<const Module *>(&IR)) {
           Module &M = *const_cast<Module *>(*CM);
           if (Mode == DebugifyMode::SyntheticDebugInfo)
             checkDebugifyMetadata(M, M.functions(), P, "CheckModuleDebugify",

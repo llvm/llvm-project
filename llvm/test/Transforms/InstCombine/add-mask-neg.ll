@@ -119,5 +119,173 @@ define <2 x i32> @dec_mask_multiuse_neg_multiuse_v2i32(<2 x i32> %X) {
   ret <2 x i32> %dec
 }
 
+;
+; X + ((-X) & (C - 1)) --> (X + C - 1) & -C, for a power-of-two C
+;
+define i32 @align_up(i32 %x) {
+; CHECK-LABEL: @align_up(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], -16
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 %neg, 15
+  %r = add i32 %x, %and
+  ret i32 %r
+}
+
+define i32 @align_up_commuted(i32 %x) {
+; CHECK-LABEL: @align_up_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], -16
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 %neg, 15
+  %r = add i32 %and, %x
+  ret i32 %r
+}
+
+define i32 @align_up_commuted_and(i32 %x) {
+; CHECK-LABEL: @align_up_commuted_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], -16
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 15, %neg
+  %r = add i32 %x, %and
+  ret i32 %r
+}
+
+define <2 x i32> @align_up_vec(<2 x i32> %x) {
+; CHECK-LABEL: @align_up_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], splat (i32 -16)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = sub <2 x i32> zeroinitializer, %x
+  %and = and <2 x i32> %neg, splat (i32 15)
+  %r = add <2 x i32> %x, %and
+  ret <2 x i32> %r
+}
+
+; negative test - the mask is not a low-bit mask
+
+define i32 @align_up_not_lowbitmask(i32 %x) {
+; CHECK-LABEL: @align_up_not_lowbitmask(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 13
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], [[AND]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 %neg, 13
+  %r = add i32 %x, %and
+  ret i32 %r
+}
+
+; negative test - extra use of the and
+
+define i32 @align_up_multiuse_and(i32 %x) {
+; CHECK-LABEL: @align_up_multiuse_and(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], [[AND]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 %neg, 15
+  %r = add i32 %x, %and
+  call void @use(i32 %and)
+  ret i32 %r
+}
+
+; negative test - a different value is negated
+
+define i32 @align_up_wrong_value(i32 %x, i32 %y) {
+; CHECK-LABEL: @align_up_wrong_value(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[AND]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %y
+  %and = and i32 %neg, 15
+  %r = add i32 %x, %and
+  ret i32 %r
+}
+
+; negative test - non-splat vector
+
+define <2 x i32> @align_up_nonsplat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @align_up_nonsplat_vec(
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[NEG]], <i32 15, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[X]], [[AND]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = sub <2 x i32> zeroinitializer, %x
+  %and = and <2 x i32> %neg, <i32 15, i32 7>
+  %r = add <2 x i32> %x, %and
+  ret <2 x i32> %r
+}
+
+; the neg has an extra use
+
+define i32 @align_up_multiuse_neg(i32 %x) {
+; CHECK-LABEL: @align_up_multiuse_neg(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 15
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], -16
+; CHECK-NEXT:    call void @use(i32 [[NEG]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub i32 0, %x
+  %and = and i32 %neg, 15
+  %r = add i32 %x, %and
+  call void @use(i32 %neg)
+  ret i32 %r
+}
+
+; nsw/nuw on the source add are dropped
+
+define i32 @align_up_nsw_nuw(i32 %x) {
+; CHECK-LABEL: @align_up_nsw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], -16
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = sub nsw i32 0, %x
+  %and = and i32 %neg, 15
+  %r = add nuw nsw i32 %x, %and
+  ret i32 %r
+}
+
+define <vscale x 2 x i32> @align_up_scalable_vec(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @align_up_scalable_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i32> [[TMP1]], splat (i32 -16)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %neg = sub <vscale x 2 x i32> zeroinitializer, %x
+  %and = and <vscale x 2 x i32> %neg, splat (i32 15)
+  %r = add <vscale x 2 x i32> %x, %and
+  ret <vscale x 2 x i32> %r
+}
+
+define <2 x i32> @align_up_vec_poison_elt(<2 x i32> %x) {
+; CHECK-LABEL: @align_up_vec_poison_elt(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], splat (i32 -16)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = sub <2 x i32> zeroinitializer, %x
+  %and = and <2 x i32> %neg, <i32 15, i32 poison>
+  %r = add <2 x i32> %x, %and
+  ret <2 x i32> %r
+}
+
 declare void @use(i32)
 declare void @usev(<2 x i32>)

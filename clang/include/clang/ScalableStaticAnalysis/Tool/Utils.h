@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -46,6 +47,19 @@ template <typename... Ts>
 }
 
 [[noreturn]] void fail(llvm::Error Err);
+
+/// Number of spaces per indentation level used by info().
+constexpr unsigned IndentationWidth = 2;
+
+/// Prints an indented note to stderr when Verbose is set.
+template <typename... Ts>
+inline void info(bool Verbose, unsigned Level, const char *Fmt, Ts &&...Args) {
+  if (Verbose) {
+    llvm::WithColor::note()
+        << std::string(Level * IndentationWidth, ' ') << "- "
+        << llvm::formatv(Fmt, std::forward<Ts>(Args)...) << "\n";
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Plugin Loading

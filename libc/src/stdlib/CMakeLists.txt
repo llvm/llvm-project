@@ -70,11 +70,11 @@ add_entrypoint_object(
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
-   (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
-   (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+  (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+  (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
   set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
-      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
-      "-fdisable-tree-waccess3")
+    "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+    "-fdisable-tree-waccess3")
 endif()
 
 set(environ_internal_deps
@@ -340,7 +340,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
-    libc.src.string.memory_utils.inline_memcpy    
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -509,7 +509,7 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
 
     # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
     # set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
-    if (LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
+    if(LIBC_TARGET_OS_IS_DARWIN AND (LIBC_TARGET_ARCHITECTURE STREQUAL "arm"))
       set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO arm64)
     else()
       set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
@@ -526,14 +526,14 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     endif()
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-        RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
+      RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
 
-    if (COMPILER_RT_BUILD_GWP_ASAN)
+    if(COMPILER_RT_BUILD_GWP_ASAN)
       list(APPEND SCUDO_DEPS
         RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
-        )
+      )
     endif()
 
     add_entrypoint_external(
@@ -762,18 +762,18 @@ add_entrypoint_object(
 # TODO: Move all exit functions to linux specific
 
 if(TARGET libc.src.__support.threads.mutex)
-add_header_library(
-  exit_handler
-  HDRS
-    exit_handler.h
-  DEPENDS
-    libc.src.__support.CPP.mutex
-    libc.src.__support.CPP.new
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.blockstore
-    libc.src.__support.fixedvector
-    libc.src.__support.threads.mutex
-)
+  add_header_library(
+    exit_handler
+    HDRS
+      exit_handler.h
+    DEPENDS
+      libc.src.__support.CPP.mutex
+      libc.src.__support.CPP.new
+      libc.src.__support.OSUtil.osutil
+      libc.src.__support.blockstore
+      libc.src.__support.fixedvector
+      libc.src.__support.threads.mutex
+  )
 endif()
 
 add_entrypoint_object(
@@ -805,7 +805,7 @@ list(APPEND exit_deps
   libc.src.__support.OSUtil.osutil
   ._Exit
 )
-if (NOT LIBC_TARGET_OS_IS_BAREMETAL)
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   list(APPEND exit_deps
     .atexit
   )

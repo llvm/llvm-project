@@ -2745,6 +2745,61 @@ define <2 x i16> @test_riscv_pzext_b_v2i16(<2 x i16> %a) {
   ret <2 x i16> %res
 }
 
+; Packed multiply high
+define <2 x i16> @test_pmulh_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulh_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulh.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhr_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhr.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhru_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhru_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhru.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhru.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhsu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhsu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhsu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhsu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhrsu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhrsu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhrsu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhrsu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
 ; Packed absolute difference sum
 define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pabdsumu_u8x4_u32:

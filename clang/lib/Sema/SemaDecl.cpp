@@ -3800,7 +3800,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       Diag(New->getLocation(), diag::ext_static_non_static) << New;
       Diag(OldLocation, PrevDiag) << Old << Old->getType();
     } else {
-      Diag(New->getLocation(), diag::err_static_non_static) << New;
+      Diag(New->getLocation(), diag::err_static_non_static)
+          << New << /*MixedLinkageUB=*/false;
       Diag(OldLocation, PrevDiag) << Old << Old->getType();
       return true;
     }
@@ -4190,13 +4191,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         } else {
           Diag(NewMethod->getLocation(),
                diag::err_definition_of_implicitly_declared_member)
-              << New << getSpecialMember(OldMethod);
+              << New << OldMethod->getSpecialMemberKind();
           return true;
         }
       } else if (OldMethod->getFirstDecl()->isExplicitlyDefaulted() && !isFriend) {
         Diag(NewMethod->getLocation(),
              diag::err_definition_of_explicitly_defaulted_member)
-            << getSpecialMember(OldMethod);
+            << OldMethod->getSpecialMemberKind();
         return true;
       }
     }
@@ -4821,12 +4822,37 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
           << New->getDeclName();
       Diag(OldLocation, PrevDiag);
     } else {
+      // This is the same internal/external linkage conflict as C2y 6.7.1p7;
+      // before C2y it was undefined behavior (C11 6.2.2p7), so note that in
+      // the older C language modes.
       Diag(New->getLocation(), diag::err_static_non_static)
-          << New->getDeclName();
+          << New->getDeclName()
+          << (!getLangOpts().CPlusPlus && !getLangOpts().C2y);
       Diag(OldLocation, PrevDiag);
       return New->setInvalidDecl();
     }
   }
+
+  // C2y 6.7.1p7: an identifier shall not appear with both internal and
+  // external linkage within a translation unit. Before C2y this was UB
+  // (C11 6.2.2p7).
+  //
+  // In C, a local shadow prevents a block-scope extern from inheriting the
+  // file-scope static's internal linkage (C2y 6.2.2p6), so it defaults to
+  // external linkage, creating the conflict.
+  //
+  // In C++, block-scope extern declarations target the enclosing namespace
+  // scope ([dcl.meaning.general]/3.5), bypassing local shadows entirely, so
+  // the extern always inherits internal linkage. No conflict arises.
+  if (!getLangOpts().CPlusPlus && New->isLocalVarDecl() &&
+      New->hasExternalStorage() && Previous.isShadowed() &&
+      Old->getFormalLinkage() == Linkage::Internal) {
+    Diag(New->getLocation(), diag::err_internal_extern_mismatch)
+        << New->getDeclName() << getLangOpts().C2y;
+    Diag(OldLocation, diag::note_previous_declaration);
+    return New->setInvalidDecl();
+  }
+
   // C99 6.2.2p4:
   //   For an identifier declared with the storage-class specifier
   //   extern in a scope in which a prior declaration of that
@@ -6230,7 +6256,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeof_unqualType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case DeclSpec::TST_atomic: {
     // Grab the type from the parser.
     TypeSourceInfo *TSI = nullptr;
@@ -9238,6 +9264,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
+  }
+
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
+      NewVD->setInvalidDecl();
+      return;
+    }
   }
 
   if (T.hasAddressSpace() &&
@@ -19661,6 +19694,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
 
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewFD->getLocation()))
+      NewFD->setInvalidDecl();
+  }
+
   NewFD->setAccess(AS);
   return NewFD;
 }
@@ -20508,6 +20546,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+
+  if (Record)
+    AMDGPU().checkNamedBarrierWrapper(Record);
+
   if (Record && !isa<ClassTemplateSpecializationDecl>(Record))
     ProcessAPINotes(Record);
 }

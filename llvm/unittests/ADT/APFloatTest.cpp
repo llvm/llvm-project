@@ -2304,6 +2304,36 @@ TEST(APFloatTest, Float8E8M0FNUValues) {
   EXPECT_EQ(0x1.0p-127, test.convertToDouble());
 }
 
+// Test that a Float8E8M0FNU NaN, which has no payload bits, does not
+// become an Inf when converted to a format that has infinities.
+TEST(APFloatTest, Float8E8M0FNUNaNConvert) {
+  APFloat nan = APFloat(APFloat::Float8E8M0FNU(), "nan");
+  EXPECT_TRUE(nan.isNaN());
+  EXPECT_EQ(APInt(8, 0xff), nan.bitcastToAPInt());
+
+  const std::pair<const fltSemantics *, uint64_t> ToSemantics[] = {
+      {&APFloat::IEEEhalf(), 0x7e00},
+      {&APFloat::BFloat(), 0x7fc0},
+      {&APFloat::IEEEsingle(), 0x7fc00000},
+      {&APFloat::IEEEdouble(), 0x7ff8000000000000ULL},
+  };
+
+  for (const auto &[Sem, ExpectedBits] : ToSemantics) {
+    APFloat test = nan;
+    bool losesInfo = true;
+    APFloat::opStatus status =
+        test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_TRUE(test.isNaN());
+    EXPECT_FALSE(test.isInfinity());
+    APInt bits = test.bitcastToAPInt();
+    EXPECT_EQ(APInt(APFloat::getSizeInBits(*Sem), ExpectedBits), bits);
+    // The stored bit pattern, not just the category, has to say NaN.
+    EXPECT_TRUE(APFloat(*Sem, bits).isNaN());
+  }
+}
+
 TEST(APFloatTest, getLargest) {
   EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
   EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());

@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2c -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports _Complex types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2c -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2c -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2c -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2c -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -16,10 +18,10 @@ auto pack_indexing(auto... p) { return p...[0]; }
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[P_0:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[P_1:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[P_2:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RET_VAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[P_0:.*]] = alloca i32, align 4
+// LLVM: %[[P_1:.*]] = alloca i32, align 4
+// LLVM: %[[P_2:.*]] = alloca i32, align 4
+// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = load i32, ptr %[[P_0]], align 4
 // LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
@@ -39,7 +41,7 @@ int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[RET_VAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = call noundef i32 @_Z13pack_indexingIJiiiEEDaDpT_(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
@@ -69,9 +71,9 @@ float _Complex pack_indexing_complex() {
 // CIR:   cir.return %[[TMP_RET]] : !cir.complex<!cir.float>
 
 // LLVM: define {{.*}} { float, float } @_Z21pack_indexing_complexv()
-// LLVM:   %[[RET_VAL:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[COMPLEX_0:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[COMPLEX_1:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   %[[RET_VAL:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[COMPLEX_0:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[COMPLEX_1:.*]] = alloca { float, float }, align 4
 // LLVM:   store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[COMPLEX_0]], align 4
 // LLVM:   %[[TMP_COMPLEX_0:.*]] = load { float, float }, ptr %[[COMPLEX_0]], align 4
 // LLVM:   store { float, float } { float 3.000000e+00, float 4.000000e+00 }, ptr %[[COMPLEX_1]], align 4

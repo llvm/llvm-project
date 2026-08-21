@@ -76,7 +76,7 @@ NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   (void)wpid;
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }

@@ -64,6 +64,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
@@ -1009,13 +1010,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
-    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    // Enforce the single-operand form of the loop enable/disable pairs.
     if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+        any_of(OldBooleanLoopTags, [CurrentMD](const BooleanLoopTags &Tags) {
+          return CurrentMD->getOperand(0).equalsStr(Tags.Enable) ||
+                 CurrentMD->getOperand(0).equalsStr(Tags.Disable);
+        }))
       Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.distribute metadata",
-            CurrentMD);
+            "Expecting only the metadata name", CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -2549,6 +2551,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-to-size", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-value", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
@@ -3918,11 +3922,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
-            Call.getFunction()->isStrictFP(),
-        "call site marked strictfp without caller function marked strictfp",
-        Call);
-
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4617,7 +4616,6 @@ void Verifier::visitLoadInst(LoadInst &LI) {
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
 
-    Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
       Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
             "atomic elementwise load cannot be sequentially consistent.", &LI);
@@ -4625,20 +4623,18 @@ void Verifier::visitLoadInst(LoadInst &LI) {
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,
             ElTy);
-      if (VecTy) {
-        checkAtomicMemAccessSize(ScalarTy, &LI);
-        ScalarTy = VecTy->getElementType();
-      }
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &LI);
     }
 
-    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
-              ScalarTy->getScalarType()->isByteTy() ||
-              ScalarTy->getScalarType()->isFloatingPointTy(),
+    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+              ElTy->getScalarType()->isByteTy() ||
+              ElTy->getScalarType()->isFloatingPointTy(),
           "atomic load operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &LI);
 
-    checkAtomicMemAccessSize(ScalarTy, &LI);
+    checkAtomicMemAccessSize(ElTy, &LI);
   } else {
     Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
@@ -4761,6 +4757,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
+    if (VecTy)
+      checkAtomicMemAccessSize(VecTy->getElementType(), &RMWI);
   }
 
   if (Op == AtomicRMWInst::Xchg) {
@@ -5571,11 +5569,15 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
     return MD->getNumOperands() == 0 && MD->isDistinct();
   };
 
-  // It must be either an access scope itself...
-  if (IsValidAccessScope(MD))
+  // An empty node is an access scope, and it must be 'distinct'. It is never a
+  // list, because an empty list is not allowed: it would look the same as an
+  // access scope.
+  if (MD->getNumOperands() == 0) {
+    Check(MD->isDistinct(), "Access scope must be 'distinct'", MD);
     return;
+  }
 
-  // ...or a list of access scopes.
+  // A non-empty node is a list of access scopes.
   for (const MDOperand &Op : MD->operands()) {
     const auto *OpMD = dyn_cast<MDNode>(Op);
     Check(OpMD != nullptr, "Access scope list must consist of MDNodes", MD);

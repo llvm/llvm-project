@@ -8,14 +8,14 @@ common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 entire of part of the test suite .  Example:
 
 # Exercises the test suite in the types directory....
-/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py types
 ...
 
 Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-Command invoked: python ./dotest.py -A x86_64 types
+Command invoked: python ./dotest.py types
 compilers=['clang']
 
-Configuration: arch=x86_64 compiler=clang
+Configuration: compiler=clang
 ----------------------------------------------------------------------
 Collected 72 tests
 
@@ -347,13 +347,10 @@ class ValueCheck:
 
         test_base.assertSuccess(val.GetError())
 
-        # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-        pattern_type = type(re.compile(""))
-
         if self.expect_name:
             test_base.assertEqual(self.expect_name, val.GetName(), this_error_msg)
         if self.expect_value:
-            if isinstance(self.expect_value, pattern_type):
+            if isinstance(self.expect_value, re.Pattern):
                 test_base.assertRegex(val.GetValue(), self.expect_value, this_error_msg)
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
@@ -362,7 +359,7 @@ class ValueCheck:
                 self.expect_type, val.GetDisplayTypeName(), this_error_msg
             )
         if self.expect_summary:
-            if isinstance(self.expect_summary, pattern_type):
+            if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
                     val.GetSummary(), self.expect_summary, this_error_msg
                 )
@@ -1589,18 +1586,6 @@ class Base(unittest.TestCase):
                 return True
 
         return False
-
-    def getRunOptions(self):
-        """Command line option for -A and -C to run this test again, called from
-        self.dumpSessionInfo()."""
-        arch = self.getArchitecture()
-        comp = self.getCompiler()
-        option_str = ""
-        if arch:
-            option_str = "-A " + arch
-        if comp:
-            option_str += " -C " + comp
-        return option_str
 
     def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)

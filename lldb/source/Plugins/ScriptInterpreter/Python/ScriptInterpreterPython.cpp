@@ -770,17 +770,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   RunSimpleString(run_string.GetData());
 
   run_string.Clear();
-  run_string.Printf(
-      "run_one_line (%s, 'import copy, keyword, os, re, sys, uuid, lldb')",
-      m_dictionary_name.c_str());
-  RunSimpleString(run_string.GetData());
-
-  // Reloading modules requires a different syntax in Python 2 and Python 3.
-  // This provides a consistent syntax no matter what version of Python.
-  run_string.Clear();
-  run_string.Printf(
-      "run_one_line (%s, 'from importlib import reload as reload_module')",
-      m_dictionary_name.c_str());
+  run_string.Printf("run_one_line (%s, 'import copy, keyword, os, re, sys, "
+                    "uuid, lldb, importlib')",
+                    m_dictionary_name.c_str());
   RunSimpleString(run_string.GetData());
 
   // WARNING: temporary code that loads Cocoa formatters - this should be done
@@ -1300,6 +1292,14 @@ ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
                                    callable_name.str().c_str());
   }
   llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+  if (!arg_info) {
+    // `-f` may point at a builtin, unlike other GetArgInfo() callers.
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), arg_info.takeError(),
+                   "GetArgInfo failed for callable {1}, falling back to "
+                   "inspect.signature: {0}",
+                   callable_name);
+    arg_info = PythonCallable::GetArgInfoFromInspectSignature(pfunc);
+  }
   if (!arg_info)
     return arg_info.takeError();
   return arg_info.get().max_positional_args;
@@ -2627,10 +2627,10 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   if (was_imported_globally || was_imported_locally) {
     if (!was_imported_locally)
-      command_stream.Printf("import %s ; reload_module(%s)",
+      command_stream.Printf("import %s ; importlib.reload(%s)",
                             module_name.c_str(), module_name.c_str());
     else
-      command_stream.Printf("reload_module(%s)", module_name.c_str());
+      command_stream.Printf("importlib.reload(%s)", module_name.c_str());
   } else
     command_stream.Printf("import %s", module_name.c_str());
 

@@ -140,6 +140,33 @@ libc_test(
 )
 
 libc_test(
+    name = "realpath_test",
+    srcs = ["realpath_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_string",
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_cpp_utility",
+        "//libc:__support_fixedvector",
+        "//libc:__support_libc_assert",
+        "//libc:__support_osutil_path",
+        "//libc:chdir",
+        "//libc:close",
+        "//libc:getcwd",
+        "//libc:getpid",
+        "//libc:getrandom",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_limits_macros",
+        "//libc:mkdirat",
+        "//libc:openat",
+        "//libc:realpath",
+        "//libc:strdup",
+        "//libc:symlinkat",
+        "//libc:types_size_t",
+        "//libc:unlinkat",
+    ],
+)
+
+libc_test(
     name = "heap_sort_test",
     srcs = ["heap_sort_test.cpp"],
     deps = [

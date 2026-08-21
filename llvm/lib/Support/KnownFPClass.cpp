@@ -614,8 +614,9 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
 KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
-  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative.
-  Known.knownNot(fcNegative);
+  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative,
+  // zero, or subnormal.
+  Known.knownNot(fcNegative | fcZero | fcSubnormal);
 
   Known.propagateNaN(KnownSrc);
 
@@ -643,14 +644,15 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
   // asin is bounded to [-pi/2, pi/2], never Inf.
   Known.knownNot(fcInf);
 
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
   // asin is sign-preserving.
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 
@@ -661,10 +663,11 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   Known.knownNot(fcInf);
   Known.knownNot(fcNegative);
 
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
   // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 

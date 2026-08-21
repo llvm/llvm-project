@@ -83,14 +83,14 @@ public:
   // already invalidated IRUnit is unsafe. There are ways to handle invalidated
   // IRUnits in a safe way, and we might pursue that as soon as there is a
   // useful instrumentation that needs it.
-  using BeforePassFunc = bool(StringRef, Any);
-  using BeforeSkippedPassFunc = void(StringRef, Any);
-  using BeforeNonSkippedPassFunc = void(StringRef, Any);
-  using AfterPassFunc = void(StringRef, Any, const PreservedAnalyses &);
+  using BeforePassFunc = bool(StringRef, const Any &);
+  using BeforeSkippedPassFunc = void(StringRef, const Any &);
+  using BeforeNonSkippedPassFunc = void(StringRef, const Any &);
+  using AfterPassFunc = void(StringRef, const Any &, const PreservedAnalyses &);
   using AfterPassInvalidatedFunc = void(StringRef, const PreservedAnalyses &);
-  using BeforeAnalysisFunc = void(StringRef, Any);
-  using AfterAnalysisFunc = void(StringRef, Any);
-  using AnalysisInvalidatedFunc = void(StringRef, Any);
+  using BeforeAnalysisFunc = void(StringRef, const Any &);
+  using AfterAnalysisFunc = void(StringRef, const Any &);
+  using AnalysisInvalidatedFunc = void(StringRef, const Any &);
   using AnalysesClearedFunc = void(StringRef);
 
 public:

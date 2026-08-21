@@ -1478,3 +1478,54 @@ define i1 @shl_nuw_signed_shift_zero(i8 %x) {
   %t = icmp slt i8 %m, 0
   ret i1 %t
 }
+
+define i1 @shl_nuw_by_62(i64 %start, i64 %high) {
+; CHECK-LABEL: @shl_nuw_by_62(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_SHL_62:%.*]] = shl nuw i64 [[START:%.*]], 62
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[START_SHL_62]], [[HIGH:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %start.shl.62 = shl nuw i64 %start, 62
+  %c.1 = icmp ult i64 %start.shl.62, %high
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp ult i64 %start, %high
+  ret i1 %t.1
+}
+
+; A shift of 63 would require a scale of 2^63, which is not representable in
+; the signed i64 coefficient
+define i1 @shl_nuw_by_63(i64 %start, i64 %high) {
+; CHECK-LABEL: @shl_nuw_by_63(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_SHL_63:%.*]] = shl nuw i64 [[START:%.*]], 63
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[START_SHL_63]], [[HIGH:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i64 [[START]], [[HIGH]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+entry:
+  %start.shl.63 = shl nuw i64 %start, 63
+  %c.1 = icmp ult i64 %start.shl.63, %high
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp ult i64 %start, %high
+  ret i1 %t.1
+}
+
+define i1 @shl_nuw_by_63_self(i64 %x, i64 %b) {
+; CHECK-LABEL: @shl_nuw_by_63_self(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 63
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[S]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = shl nuw i64 %x, 63
+  %c = icmp ule i64 %s, %b
+  call void @llvm.assume(i1 %c)
+  %c2 = icmp ule i64 %s, %b
+  ret i1 %c2
+}

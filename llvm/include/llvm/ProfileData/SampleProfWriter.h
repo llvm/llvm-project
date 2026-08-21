@@ -18,7 +18,6 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -279,52 +278,6 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
-/// Trait class for writing the on-disk function offset hash table mapping
-/// function name GUIDs to their offsets in the SecLBRProfile section.
-class FuncOffsetHashTableWriterInfo {
-public:
-  using key_type = uint64_t;
-  using key_type_ref = uint64_t;
-  using data_type = uint32_t; // Offset
-  using data_type_ref = uint32_t;
-  using hash_value_type = uint32_t;
-  using offset_type = uint32_t;
-  using internal_key_type = uint64_t;
-  using external_key_type = uint64_t;
-
-  static hash_value_type ComputeHash(key_type_ref Key) {
-    return static_cast<hash_value_type>(Key);
-  }
-
-  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
-    return LHS == RHS;
-  }
-
-  static key_type GetInternalKey(key_type_ref Key) { return Key; }
-  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
-
-  static std::pair<offset_type, offset_type>
-  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
-    // Implicit lengths: do NOT write anything to Out.
-    return {sizeof(key_type), sizeof(data_type)};
-  }
-
-  static void EmitKey(raw_ostream &Out, key_type_ref K, offset_type Len) {
-    using namespace llvm::support;
-    endian::Writer LE(Out, llvm::endianness::little);
-    assert(Len == sizeof(key_type) && "Key length mismatch");
-    LE.write<uint64_t>(K);
-  }
-
-  static void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
-                       offset_type Len) {
-    using namespace llvm::support;
-    endian::Writer LE(Out, llvm::endianness::little);
-    assert(Len == sizeof(data_type) && "Data length mismatch");
-    LE.write<uint32_t>(V);
-  }
-};
-
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
@@ -417,7 +370,9 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
-  std::error_code writeFuncOffsetTable();
+  std::error_code writeFuncOffsetTable(bool IsNested);
+  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
+  std::error_code writeLegacyFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
   std::error_code writeMD5ProfileSymbolListSection();
@@ -466,6 +421,8 @@ private:
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
+  size_t NumNested = 0;
+  size_t NumFlat = 0;
 
   /// CSNameTable maps function context to its offset in SecCSNameTable section.
   /// The offset will be used everywhere where the context is referenced.

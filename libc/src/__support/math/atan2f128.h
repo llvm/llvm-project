@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "atan_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -97,7 +97,7 @@ LIBC_INLINE float128 atan2f128(float128 y, float128 x) {
   constexpr DFloat128 PI_OVER_4 = {Sign::POS, -128,
                                    0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
   constexpr DFloat128 THREE_PI_OVER_4 = {
-      Sign::POS, -128, 0x96cbe3f9'990e91a7'9394c9e8'a0a5159d_u128};
+      Sign::POS, -126, 0x96cbe3f9'990e91a7'9394c9e8'a0a5159d_u128};
 
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]
@@ -210,6 +210,6 @@ LIBC_INLINE float128 atan2f128(float128 y, float128 x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F128_H

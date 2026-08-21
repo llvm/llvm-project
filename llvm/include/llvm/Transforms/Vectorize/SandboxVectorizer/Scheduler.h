@@ -66,12 +66,7 @@ public:
   void insert(DGNode *N) {
 #ifndef NDEBUG
     assert(!N->scheduled() && "Don't insert a scheduled node!");
-    auto ListCopy = List;
-    while (!ListCopy.empty()) {
-      DGNode *Top = ListCopy.top();
-      ListCopy.pop();
-      assert(Top != N && "Node already exists in ready list!");
-    }
+    assert(!contains(N) && "Node already exists in ready list!");
 #endif
     List.push(N);
   }
@@ -82,6 +77,17 @@ public:
   }
   bool empty() const { return List.empty(); }
   void clear() { List = {}; }
+  bool contains(DGNode *N) const {
+    // TODO: We should update the data structure to make this O(1).
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      if (Top == N)
+        return true;
+      ListCopy.pop();
+    }
+    return false;
+  }
   /// \Removes \p N if found in the ready list.
   void remove(DGNode *N) {
     // TODO: Use a more efficient data-structure for the ready list because the
@@ -103,14 +109,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
 };
-
-enum class SchedDirection {
-  BottomUp,
-  TopDown,
-};
-#ifndef NDEBUG
-StringLiteral schedDirectionToStr(SchedDirection Dir);
-#endif
 
 /// The nodes that need to be scheduled back-to-back in a single scheduling
 /// cycle form a SchedBundle.
@@ -337,7 +335,7 @@ private:
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
-      : DAG(AA, Ctx), Ctx(Ctx), Dir(Dir) {
+      : DAG(Dir, AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     CreateInstrCB = Ctx.registerCreateInstrCallback(

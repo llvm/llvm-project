@@ -5,13 +5,14 @@ Test lldb-dap evaluate request
 import re
 from typing import Optional, Union
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectEval, FrameContext
 from lldbsuite.test.tools.lldb_dap.types import EvaluateContext, LaunchArgs, ValueFormat
 
 
+@skipIfWasm  # no expression evaluation
 class TestDAP_evaluate(DAPTestCaseBase):
     # The frame that `assert_eval*` functions calls evaluate in.
     _eval_frame: Optional[FrameContext] = None

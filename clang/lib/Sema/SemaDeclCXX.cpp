@@ -514,6 +514,14 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       continue;
     }
 
+    if (PrevForDefaultArgs->getFriendObjectKind()) {
+      // Don't inherit default arguments from a friend declaration. It's invalid
+      // to redeclare such a function at all if it owns the default arguments;
+      // we check for that later. Otherwise, it's not the declaration that we're
+      // inheriting them from.
+      continue;
+    }
+
     // We found the right previous declaration.
     break;
   }
@@ -666,8 +674,10 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   // is ill-formed. This can only happen for constructors.
   if (isa<CXXConstructorDecl>(New) &&
       New->getMinRequiredArguments() < Old->getMinRequiredArguments()) {
-    CXXSpecialMemberKind NewSM = getSpecialMember(cast<CXXMethodDecl>(New)),
-                         OldSM = getSpecialMember(cast<CXXMethodDecl>(Old));
+    CXXSpecialMemberKind NewSM =
+                             cast<CXXMethodDecl>(New)->getSpecialMemberKind(),
+                         OldSM =
+                             cast<CXXMethodDecl>(Old)->getSpecialMemberKind();
     if (NewSM != OldSM) {
       ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
       assert(NewParam->hasDefaultArg());
@@ -2343,6 +2353,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
+  case Stmt::IndirectGotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
     for (Stmt *SubStmt : S->children()) {
@@ -6387,8 +6398,19 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
   if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
     return;
 
+  if (Class->isInvalidDecl())
+    return;
+
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
+    // Nested classes finish delayed default argument parsing with the outermost
+    // class, so check each nested definition here.
+    if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
+      if (NestedClass->isThisDeclarationADefinition())
+        checkForMultipleExportedDefaultConstructors(S, NestedClass);
+      continue;
+    }
+
     // Look for exported default constructors.
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
     if (!CD || !CD->isDefaultConstructor())
@@ -6859,60 +6881,6 @@ void Sema::propagateDLLAttrToBaseClassTemplate(
   }
 }
 
-Sema::DefaultedFunctionKind
-Sema::getDefaultedFunctionKind(const FunctionDecl *FD) {
-  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
-      if (Ctor->isDefaultConstructor())
-        return CXXSpecialMemberKind::DefaultConstructor;
-
-      if (Ctor->isCopyConstructor())
-        return CXXSpecialMemberKind::CopyConstructor;
-
-      if (Ctor->isMoveConstructor())
-        return CXXSpecialMemberKind::MoveConstructor;
-    }
-
-    if (MD->isCopyAssignmentOperator())
-      return CXXSpecialMemberKind::CopyAssignment;
-
-    if (MD->isMoveAssignmentOperator())
-      return CXXSpecialMemberKind::MoveAssignment;
-
-    if (isa<CXXDestructorDecl>(FD))
-      return CXXSpecialMemberKind::Destructor;
-  }
-
-  switch (FD->getDeclName().getCXXOverloadedOperator()) {
-  case OO_EqualEqual:
-    return DefaultedComparisonKind::Equal;
-
-  case OO_ExclaimEqual:
-    return DefaultedComparisonKind::NotEqual;
-
-  case OO_Spaceship:
-    // No point allowing this if <=> doesn't exist in the current language mode.
-    if (!getLangOpts().CPlusPlus20)
-      break;
-    return DefaultedComparisonKind::ThreeWay;
-
-  case OO_Less:
-  case OO_LessEqual:
-  case OO_Greater:
-  case OO_GreaterEqual:
-    // No point allowing this if <=> doesn't exist in the current language mode.
-    if (!getLangOpts().CPlusPlus20)
-      break;
-    return DefaultedComparisonKind::Relational;
-
-  default:
-    break;
-  }
-
-  // Not defaultable.
-  return DefaultedFunctionKind();
-}
-
 namespace {
 /// RAII object to restore the floating-point (FP) features active at the time
 /// a defaulted function was declared. This ensures that the synthesized body
@@ -6934,7 +6902,7 @@ struct DefaultedFunctionFPFeaturesRAII {
 
 static void DefineDefaultedFunction(Sema &S, FunctionDecl *FD,
                                     SourceLocation DefaultLoc) {
-  Sema::DefaultedFunctionKind DFK = S.getDefaultedFunctionKind(FD);
+  FunctionDecl::DefaultedFunctionKind DFK = FD->getDefaultedFunctionKind();
   if (DFK.isComparison())
     return S.DefineDefaultedComparison(DefaultLoc, FD, DFK.asComparison());
 
@@ -7252,7 +7220,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     if (!FD || FD->isInvalidDecl() || !FD->isExplicitlyDefaulted())
       return false;
 
-    DefaultedFunctionKind DFK = getDefaultedFunctionKind(FD);
+    FunctionDecl::DefaultedFunctionKind DFK = FD->getDefaultedFunctionKind();
     if (DFK.asComparison() == DefaultedComparisonKind::NotEqual ||
         DFK.asComparison() == DefaultedComparisonKind::Relational) {
       DefaultedSecondaryComparisons.push_back(FD);
@@ -7277,7 +7245,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
     // For an explicitly defaulted or deleted special member, we defer
     // determining triviality until the class is complete. That time is now!
-    CXXSpecialMemberKind CSM = getSpecialMember(M);
+    CXXSpecialMemberKind CSM = M->getSpecialMemberKind();
     if (!M->isImplicit() && !M->isUserProvided()) {
       if (CSM != CXXSpecialMemberKind::Invalid) {
         M->setTrivial(SpecialMemberIsTrivial(M, CSM));
@@ -7811,11 +7779,11 @@ ComputeDefaultedSpecialMemberExceptionSpec(Sema &S, SourceLocation Loc,
 static Sema::ImplicitExceptionSpecification
 ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
                                         FunctionDecl *FD,
-                                        Sema::DefaultedComparisonKind DCK);
+                                        DefaultedComparisonKind DCK);
 
 static Sema::ImplicitExceptionSpecification
 computeImplicitExceptionSpec(Sema &S, SourceLocation Loc, FunctionDecl *FD) {
-  auto DFK = S.getDefaultedFunctionKind(FD);
+  auto DFK = FD->getDefaultedFunctionKind();
   if (DFK.isSpecialMember())
     return ComputeDefaultedSpecialMemberExceptionSpec(
         S, Loc, cast<CXXMethodDecl>(FD), DFK.asSpecialMember(), nullptr);
@@ -7864,7 +7832,7 @@ void Sema::EvaluateImplicitExceptionSpec(SourceLocation Loc, FunctionDecl *FD) {
 void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
   assert(FD->isExplicitlyDefaulted() && "not explicitly-defaulted");
 
-  DefaultedFunctionKind DefKind = getDefaultedFunctionKind(FD);
+  FunctionDecl::DefaultedFunctionKind DefKind = FD->getDefaultedFunctionKind();
   if (!DefKind) {
     assert(FD->getDeclContext()->isDependentContext());
     return;
@@ -8165,8 +8133,6 @@ template<typename Derived, typename ResultList, typename Result,
          typename Subobject>
 class DefaultedComparisonVisitor {
 public:
-  using DefaultedComparisonKind = Sema::DefaultedComparisonKind;
-
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
@@ -9430,7 +9396,7 @@ void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
 static Sema::ImplicitExceptionSpecification
 ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
                                         FunctionDecl *FD,
-                                        Sema::DefaultedComparisonKind DCK) {
+                                        DefaultedComparisonKind DCK) {
   ComputingExceptionSpec CES(S, FD, Loc);
   Sema::ImplicitExceptionSpecification ExceptSpec(S);
 
@@ -10133,10 +10099,10 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     // is treated as certain special member, which may not reflect what special
     // member MD really is. However inferTargetForImplicitSpecialMember
     // expects CSM to match MD, therefore recalculate CSM.
-    assert(ICI || CSM == getSpecialMember(MD));
+    assert(ICI || CSM == MD->getSpecialMemberKind());
     auto RealCSM = CSM;
     if (ICI)
-      RealCSM = getSpecialMember(MD);
+      RealCSM = MD->getSpecialMemberKind();
 
     return CUDA().inferTargetForImplicitSpecialMember(RD, RealCSM, MD,
                                                       SMI.ConstArg, Diagnose);
@@ -10146,7 +10112,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
 }
 
 void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
-  DefaultedFunctionKind DFK = getDefaultedFunctionKind(FD);
+  FunctionDecl::DefaultedFunctionKind DFK = FD->getDefaultedFunctionKind();
   assert(DFK && "not a defaultable function");
   assert(FD->isDefaulted() && FD->isDeleted() && "not defaulted and deleted");
 
@@ -18781,7 +18747,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   auto *FD = dyn_cast<FunctionDecl>(Dcl);
   if (!FD) {
     if (auto *FTD = dyn_cast<FunctionTemplateDecl>(Dcl)) {
-      if (getDefaultedFunctionKind(FTD->getTemplatedDecl()).isComparison()) {
+      if (FTD->getTemplatedDecl()->getDefaultedFunctionKind().isComparison()) {
         Diag(DefaultLoc, diag::err_defaulted_comparison_template);
         return;
       }
@@ -18793,7 +18759,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   }
 
   // Reject if this can't possibly be a defaultable function.
-  DefaultedFunctionKind DefKind = getDefaultedFunctionKind(FD);
+  FunctionDecl::DefaultedFunctionKind DefKind = FD->getDefaultedFunctionKind();
   if (!DefKind &&
       // A dependent function that doesn't locally look defaultable can
       // still instantiate to a defaultable function if it's a constructor

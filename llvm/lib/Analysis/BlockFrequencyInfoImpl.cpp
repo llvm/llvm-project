@@ -296,6 +296,7 @@ void BlockFrequencyInfoImplBase::clear() {
   IsIrrLoopHeader.clear();
   std::vector<WorkingData>().swap(Working);
   Loops.clear();
+  TopContainsIrreducible = false;
 }
 
 /// Clear all memory not needed downstream.
@@ -309,7 +310,7 @@ static void cleanup(BlockFrequencyInfoImplBase &BFI) {
   BFI.IsIrrLoopHeader = std::move(SavedIsIrrLoopHeader);
 }
 
-bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
+void BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
                                            const LoopData *OuterLoop,
                                            const BlockNode &Pred,
                                            const BlockNode &Succ,
@@ -329,6 +330,7 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
            << " [" << Type << "] weight = " << Weight;
     if (!isLoopHeader(Resolved))
       dbgs() << ", succ = " << getBlockName(Succ);
+    dbgs() << ", pred = " << getBlockName(Pred);
     if (Resolved != Succ)
       dbgs() << ", resolved = " << getBlockName(Resolved);
     dbgs() << "\n";
@@ -339,48 +341,31 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
   if (isLoopHeader(Resolved)) {
     LLVM_DEBUG(debugSuccessor("backedge"));
     Dist.addBackedge(Resolved, Weight);
-    return true;
+    return;
   }
 
   if (Working[Resolved.Index].getContainingLoop() != OuterLoop) {
     LLVM_DEBUG(debugSuccessor("  exit  "));
     Dist.addExit(Resolved, Weight);
-    return true;
+    return;
   }
 
   if (Resolved < Pred) {
-    if (!isLoopHeader(Pred)) {
-      // If OuterLoop is an irreducible loop, we can't actually handle this.
-      assert((!OuterLoop || !OuterLoop->isIrreducible()) &&
-             "unhandled irreducible control flow");
-
-      // Irreducible backedge.  Abort.
-      LLVM_DEBUG(debugSuccessor("abort!!!"));
-      return false;
-    }
-
-    // If "Pred" is a loop header, then this isn't really a backedge; rather,
-    // OuterLoop must be irreducible.  These false backedges can come only from
-    // secondary loop headers.
-    assert(OuterLoop && OuterLoop->isIrreducible() && !isLoopHeader(Resolved) &&
+    // Every irreducible SCC is packaged before mass distribution, so this is
+    // a false backedge from a secondary header of an irreducible OuterLoop.
+    assert(isLoopHeader(Pred) && OuterLoop->isIrreducible() &&
            "unhandled irreducible control flow");
   }
 
   LLVM_DEBUG(debugSuccessor(" local  "));
   Dist.addLocal(Resolved, Weight);
-  return true;
 }
 
-bool BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
+void BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
     const LoopData *OuterLoop, LoopData &Loop, Distribution &Dist) {
   // Copy the exit map into Dist.
   for (const auto &I : Loop.Exits)
-    if (!addToDist(Dist, OuterLoop, Loop.getHeader(), I.first,
-                   I.second.getMass()))
-      // Irreducible backedge.
-      return false;
-
-  return true;
+    addToDist(Dist, OuterLoop, Loop.getHeader(), I.first, I.second.getMass());
 }
 
 /// Compute the loop scale for a loop.
@@ -767,18 +752,6 @@ BlockFrequencyInfoImplBase::analyzeIrreducible(
   if (OuterLoop)
     return make_range(std::next(Prev), Insert);
   return make_range(Loops.begin(), Insert);
-}
-
-void
-BlockFrequencyInfoImplBase::updateLoopWithIrreducible(LoopData &OuterLoop) {
-  OuterLoop.Exits.clear();
-  for (auto &Mass : OuterLoop.BackedgeMass)
-    Mass = BlockMass::getEmpty();
-  auto O = OuterLoop.Nodes.begin() + 1;
-  for (auto I = O, E = OuterLoop.Nodes.end(); I != E; ++I)
-    if (!Working[I->Index].isPackaged())
-      *O++ = *I;
-  OuterLoop.Nodes.erase(O, OuterLoop.Nodes.end());
 }
 
 void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {

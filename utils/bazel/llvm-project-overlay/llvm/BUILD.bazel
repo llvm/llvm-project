@@ -51,6 +51,9 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
+    # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
+    "include/llvm/TargetParser/TripleName.def",
+    "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
@@ -2361,6 +2364,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":runtime_libcalls_gen",
         ":vt_gen",
     ],
 )
@@ -4341,6 +4345,16 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "orc_headers",
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/**/*.h",
+        "include/llvm/ExecutionEngine/JITLink/**/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
+cc_library(
     name = "JITLink",
     srcs = glob([
         "lib/ExecutionEngine/JITLink/*.cpp",
@@ -4348,7 +4362,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4366,6 +4379,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4431,6 +4445,7 @@ cc_library(
         ":TransformUtils",
         ":WindowsDriver",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4458,6 +4473,7 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4517,6 +4533,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4843,7 +4860,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],

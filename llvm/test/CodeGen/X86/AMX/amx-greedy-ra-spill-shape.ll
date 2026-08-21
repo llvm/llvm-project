@@ -13,8 +13,8 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rcx :: (store (s64) into %stack.1)
   ; CHECK-NEXT:   undef [[COPY2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = COPY $edx
   ; CHECK-NEXT:   undef [[COPY3:%[0-9]+]].sub_32bit:gr64_nosp = COPY $esi
-  ; CHECK-NEXT:   [[AVX512_512_SET0_:%[0-9]+]]:vr512 = AVX512_512_SET0
-  ; CHECK-NEXT:   VMOVUPSZmr %stack.0, 1, $noreg, 0, $noreg, [[AVX512_512_SET0_]] :: (store (s512) into %stack.0, align 4)
+  ; CHECK-NEXT:   undef [[AVX512_128_SET0_:%[0-9]+]].sub_xmm:vr512 = AVX512_128_SET0
+  ; CHECK-NEXT:   VMOVUPSZmr %stack.0, 1, $noreg, 0, $noreg, [[AVX512_128_SET0_]] :: (store (s512) into %stack.0, align 4)
   ; CHECK-NEXT:   MOV8mi %stack.0, 1, $noreg, 0, $noreg, 1 :: (store (s512) into %stack.0, align 4)
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.4, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.4, align 8)
   ; CHECK-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.5, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.5, align 16)

@@ -2638,19 +2638,19 @@ define half @mixlo_fptrunc(float %a, float %b) #0 {
 ; GFX1100-LABEL: mixlo_fptrunc:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: mixlo_fptrunc:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, 0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: mixlo_fptrunc:
 ; GFX906:       ; %bb.0: ; %.entry
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mixlo_fptrunc:
@@ -2683,7 +2683,7 @@ define half @mixlo_fptrunc_no_flush(float %a, float %b) {
 ; GFX1100-LABEL: mixlo_fptrunc_no_flush:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: mixlo_fptrunc_no_flush:
@@ -2696,7 +2696,7 @@ define half @mixlo_fptrunc_no_flush(float %a, float %b) {
 ; GFX906-LABEL: mixlo_fptrunc_no_flush:
 ; GFX906:       ; %bb.0: ; %.entry
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, 0
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mixlo_fptrunc_no_flush:
@@ -2729,19 +2729,19 @@ define half @mixlo_fptrunc_abs_src_mod(float %a, float %b) #0 {
 ; GFX1100-LABEL: mixlo_fptrunc_abs_src_mod:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, 0
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, neg(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: mixlo_fptrunc_abs_src_mod:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v0, |v0|, v1, 0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, |v0|, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: mixlo_fptrunc_abs_src_mod:
 ; GFX906:       ; %bb.0: ; %.entry
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, 0
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, |v0|, v1, neg(0)
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mixlo_fptrunc_abs_src_mod:
@@ -2775,19 +2775,19 @@ define half @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
 ; GFX1100-LABEL: mixlo_fptrunc_neg_src_mod:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, 0
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, neg(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: mixlo_fptrunc_neg_src_mod:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v0, -v0, v1, 0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, -v0, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: mixlo_fptrunc_neg_src_mod:
 ; GFX906:       ; %bb.0: ; %.entry
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, 0
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, -v0, v1, neg(0)
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: mixlo_fptrunc_neg_src_mod:

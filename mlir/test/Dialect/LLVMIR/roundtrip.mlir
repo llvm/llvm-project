@@ -1200,6 +1200,14 @@ llvm.func @llvm.aarch64.neon.st3.v8i8.p0(vector<8xi8>, vector<8xi8>, vector<8xi8
 
 llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
 // CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(generaldynamic) unnamed_addr @myglobal_gd(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal_gd(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(localdynamic) unnamed_addr @myglobal_ld(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(localdynamic) unnamed_addr @myglobal_ld(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(initialexec) unnamed_addr @myglobal_ie(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(initialexec) unnamed_addr @myglobal_ie(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(localexec) unnamed_addr @myglobal_le(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(localexec) unnamed_addr @myglobal_le(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
 
 // CHECK-LABEL: llvm.func @escapedtypename
 llvm.func @escapedtypename() {

@@ -25,9 +25,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,6 +103,10 @@ static cl::opt<unsigned> GatherOptSearchLimit(
     "aarch64-search-limit", cl::Hidden, cl::init(2048),
     cl::desc("Restrict range of instructions to search for the "
              "machine-combiner gather pattern optimization"));
+
+static cl::opt<bool> UseCompactUnwindFrameRecordForOutlinedFunctions(
+    "aarch64-outliner-compact-unwind-frame", cl::Hidden, cl::init(true),
+    cl::desc("Use a frame record for Mach-O non-leaf outlined functions"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(STI, RI, AArch64::ADJCALLSTACKDOWN,
@@ -10317,6 +10320,59 @@ enum MachineOutlinerMBBFlags {
   UnsafeRegsDead = 0x8
 };
 
+/// Return true if the frame-record form of the outlined prologue is enabled for
+/// the target of \p MF.
+///
+/// A non-leaf outlined function must save LR. On MachO, saving LR alone
+/// (str x30) has no compact unwind encoding, so we get a large DWARF FDE
+/// instead. Saving FP and LR as a frame record (stp x29, x30 ; mov x29, sp)
+/// gets the small FRAME encoding, and costs one extra instruction.
+static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
+  return UseCompactUnwindFrameRecordForOutlinedFunctions &&
+         MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+}
+
+/// Return true if the outlined function in \p MBB should save FP and LR as a
+/// frame record instead of saving LR alone.
+static bool shouldUseCompactUnwindFrameRecordForOutlinedFunction(
+    const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Only worth it if the function has unwind info to shrink.
+  if (!isCompactUnwindFrameRecordEnabled(MF) ||
+      !MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF))
+    return false;
+
+  // Only safe if the outlined code never touches FP, since we overwrite it.
+  LiveRegUnits LRU(*MF.getSubtarget().getRegisterInfo());
+  for (const MachineInstr &MI : MBB.instrs())
+    LRU.accumulate(MI);
+  return LRU.available(AArch64::FP);
+}
+
+/// Predict what the above will answer, for use while costing candidates. The
+/// outlined function does not exist yet, so answer from \p RepeatedSequenceLocs
+/// instead. This is only an estimate; buildOutlinedFrame() makes the call.
+static bool predictCompactUnwindFrameRecordForOutlinedFunction(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    const TargetRegisterInfo &TRI) {
+  if (!isCompactUnwindFrameRecordEnabled(*RepeatedSequenceLocs.front().getMF()))
+    return false;
+
+  // The outlined function is nounwind only if every candidate is, so it has
+  // unwind info if any candidate does.
+  if (llvm::none_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+        const MachineFunction &MF = *C.getMF();
+        return MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+      }))
+    return false;
+
+  // FP is free in the outlined function only if it is free in every candidate.
+  return llvm::all_of(RepeatedSequenceLocs, [&TRI](outliner::Candidate &C) {
+    return C.isAvailableInsideSeq(AArch64::FP, TRI);
+  });
+}
+
 Register
 AArch64InstrInfo::findRegisterToSaveLRTo(outliner::Candidate &C) const {
   MachineFunction *MF = C.getMF();
@@ -10783,6 +10839,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
+
+      // Add the extra mov if we will save a frame record instead of just LR.
+      if (predictCompactUnwindFrameRecordForOutlinedFunction(
+              RepeatedSequenceLocs, TRI))
+        NumBytesToCreateFrame += 4;
     }
   }
 
@@ -11215,32 +11276,75 @@ void AArch64InstrInfo::buildOutlinedFrame(
         OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
-    // Insert a save before the outlined region
-    MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-                                .addReg(AArch64::SP, RegState::Define)
-                                .addReg(AArch64::LR)
+    // There is a call in the range, so we must save LR. Save it as part of a
+    // frame record when that gives us a smaller compact unwind encoding.
+    if (shouldUseCompactUnwindFrameRecordForOutlinedFunction(MBB)) {
+      // FP is saved here, so it must be live-in.
+      if (!MBB.isLiveIn(AArch64::FP))
+        MBB.addLiveIn(AArch64::FP);
+
+      // stp x29, x30, [sp, #-16]!   (the pre-index imm is scaled by 8: -2 * 8)
+      MachineInstr *STPXpre = BuildMI(MF, DebugLoc(), get(AArch64::STPXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::FP)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-2);
+      It = MBB.insert(It, STPXpre);
+
+      // mov x29, sp  (add x29, sp, #0), so x29 points at the frame record.
+      MachineInstr *SetFP = BuildMI(MF, DebugLoc(), get(AArch64::ADDXri))
+                                .addReg(AArch64::FP, RegState::Define)
                                 .addReg(AArch64::SP)
-                                .addImm(-16);
-    It = MBB.insert(It, STRXpre);
+                                .addImm(0)
+                                .addImm(0);
+      MBB.insertAfter(It, SetFP);
 
-    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+      // Describe the frame record with FP as the CFA. The encoder needs all
+      // three to pick FRAME. No need to check for unwind info here: we only
+      // get here if the function has it.
+      CFIInstBuilder CFIBuilder(MBB, std::next(SetFP->getIterator()),
+                                MachineInstr::FrameSetup);
+      CFIBuilder.buildDefCFA(AArch64::FP, 16);
+      CFIBuilder.buildOffset(AArch64::LR, -8);
+      CFIBuilder.buildOffset(AArch64::FP, -16);
 
-      // Add a CFI saying the stack was moved 16 B down.
-      CFIBuilder.buildDefCFAOffset(16);
+      // ldp x29, x30, [sp], #16
+      MachineInstr *LDPXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDPXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::FP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(2);
+      Et = MBB.insert(Et, LDPXpost);
+    } else {
+      // Insert a save before the outlined region
+      MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-16);
+      It = MBB.insert(It, STRXpre);
 
-      // Add a CFI saying that the LR that we want to find is now 16 B higher
-      // than before.
-      CFIBuilder.buildOffset(AArch64::LR, -16);
+      if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
+        CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+
+        // Add a CFI saying the stack was moved 16 B down.
+        CFIBuilder.buildDefCFAOffset(16);
+
+        // Add a CFI saying that the LR that we want to find is now 16 B higher
+        // than before.
+        CFIBuilder.buildOffset(AArch64::LR, -16);
+      }
+
+      // Insert a restore before the terminator for the function.
+      MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(16);
+      Et = MBB.insert(Et, LDRXpost);
     }
-
-    // Insert a restore before the terminator for the function.
-    MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                                 .addReg(AArch64::SP, RegState::Define)
-                                 .addReg(AArch64::LR, RegState::Define)
-                                 .addReg(AArch64::SP)
-                                 .addImm(16);
-    Et = MBB.insert(Et, LDRXpost);
   }
 
   auto RASignCondition = FI->getSignReturnAddressCondition();
@@ -12065,8 +12169,7 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
 }
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-AArch64InstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // Accept loops that meet the following conditions
   // * The conditional branch is BCC
   // * The compare instruction is ADDS/SUBS/WHILEXX
@@ -12075,66 +12178,24 @@ AArch64InstrInfo::analyzeLoopForPipelining(
   // * The induction variable is incremented/decremented by a single instruction
   // * Does not contain CALL or instructions which have unmodeled side effects
 
-  for (MachineInstr &MI : *LoopBB) {
-    // This instruction may use NZCV, which interferes with the instruction to
-    // be inserted for loop control.
-    if (MI.isCall()) {
-      if (ORE)
-        ORE->emit([&]() {
-          return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                   &MI)
-                 << "loop contains a call and therefore cannot be pipelined";
-        });
+  for (MachineInstr &MI : *LoopBB)
+    if (MI.isCall() || MI.hasUnmodeledSideEffects())
+      // This instruction may use NZCV, which interferes with the instruction to
+      // be inserted for loop control.
       return nullptr;
-    }
-    if (MI.hasUnmodeledSideEffects()) {
-      if (ORE)
-        ORE->emit([&]() {
-          return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                   &MI)
-                 << "loop contains an instruction with unmodeled side effects, "
-                    "and therefore cannot be pipelined";
-        });
-      return nullptr;
-    }
-  }
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (analyzeBranch(*LoopBB, TBB, FBB, Cond)) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "branch cannot be analyzed";
-      });
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond))
     return nullptr;
-  }
 
   // Infinite loops are not supported
-  if (TBB == LoopBB && FBB == LoopBB) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "infinite loops are not supported";
-      });
+  if (TBB == LoopBB && FBB == LoopBB)
     return nullptr;
-  }
 
   // Must be conditional branch
-  if (TBB != LoopBB && FBB == nullptr) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "loop is not terminated by a conditional branch";
-      });
+  if (TBB != LoopBB && FBB == nullptr)
     return nullptr;
-  }
 
   assert((TBB == LoopBB || FBB == LoopBB) &&
          "The Loop must be a single-basic-block loop");
@@ -12142,16 +12203,8 @@ AArch64InstrInfo::analyzeLoopForPipelining(
   MachineInstr *CondBranch = &*LoopBB->getFirstTerminator();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
-  if (CondBranch->getOpcode() != AArch64::Bcc) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                 CondBranch)
-               << "branch opcode not yet supported for pipelining: "
-               << ore::NV("Opcode", getName(CondBranch->getOpcode()));
-      });
+  if (CondBranch->getOpcode() != AArch64::Bcc)
     return nullptr;
-  }
 
   // Normalization for createTripCountGreaterCondition()
   if (TBB == LoopBB)
@@ -12183,13 +12236,6 @@ AArch64InstrInfo::analyzeLoopForPipelining(
           Comp = &MI;
           break;
         }
-        if (ORE)
-          ORE->emit([&]() {
-            return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                     &MI)
-                   << "compare instruction not recognized: "
-                   << ore::NV("Opcode", getName(MI.getOpcode()));
-          });
         return nullptr;
       }
 
@@ -12198,44 +12244,22 @@ AArch64InstrInfo::analyzeLoopForPipelining(
           CompCounterOprNum = 2;
         else if (isDefinedOutside(Comp->getOperand(2).getReg(), LoopBB))
           CompCounterOprNum = 1;
-        else {
-          if (ORE)
-            ORE->emit([&]() {
-              return MachineOptimizationRemarkAnalysis("pipeliner",
-                                                       "analyzeLoop", Comp)
-                     << "neither operand of the compare is loop invariant";
-            });
+        else
           return nullptr;
-        }
       }
       break;
     }
   }
-  if (!Comp) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "no NZCV-modifying compare instruction found";
-      });
+  if (!Comp)
     return nullptr;
-  }
 
   MachineInstr *Update = nullptr;
   Register Init;
   bool IsUpdatePriorComp;
   unsigned UpdateCounterOprNum;
   if (!getIndVarInfo(Comp->getOperand(CompCounterOprNum).getReg(), LoopBB,
-                     Update, UpdateCounterOprNum, Init, IsUpdatePriorComp)) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                 Comp)
-               << "loop induction variable pattern not recognized";
-      });
+                     Update, UpdateCounterOprNum, Init, IsUpdatePriorComp))
     return nullptr;
-  }
 
   return std::make_unique<AArch64PipelinerLoopInfo>(
       LoopBB, CondBranch, Comp, CompCounterOprNum, Update, UpdateCounterOprNum,

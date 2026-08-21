@@ -23,6 +23,7 @@
 
 namespace clang::ssaf {
 
+class MultiArchCreateCLI;
 class StaticLibraryCreateCLI;
 
 /// Represents a static library of translation unit summary encodings.
@@ -41,6 +42,7 @@ class StaticLibraryCreateCLI;
 /// static-library tool never decodes per-entity payloads, and the linker
 /// consumes them as-is during its selective inclusion pass.
 class StaticLibrary {
+  friend class MultiArchCreateCLI;
   friend class MultiArchStaticLibrary;
   friend class SerializationFormat;
   friend class StaticLibraryCreateCLI;
