@@ -16,6 +16,8 @@ declare float @llvm.fmuladd.f32(float, float, float)
 
 declare void @use(float)
 declare void @usebool(i1)
+declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
+declare void @llvm.assume(i1 noundef)
 
 define float @replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @replace_fabs_call_f32(
@@ -1852,6 +1854,38 @@ define i1 @fptosi_no_fabs_unknown_sign(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FPTOSI]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+; fptosi of -inf is poison (it can never fit in the result type), so a
+; source known to be -inf does not disqualify the fold.
+define i1 @fptosi_known_neg_inf_is_never_negative(float %x) {
+; CHECK-LABEL: @fptosi_known_neg_inf_is_never_negative(
+; CHECK-NEXT:    [[ISNINF:%.*]] = fcmp oeq float [[X:%.*]], -inf
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISNINF]])
+; CHECK-NEXT:    ret i1 false
+;
+  %isninf = call i1 @llvm.is.fpclass.f32(float %x, i32 4)
+  call void @llvm.assume(i1 %isninf)
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+; A source that is known to be a genuine negative normal (e.g. -2.0) must
+; not be folded.
+define i1 @fptosi_known_neg_normal_no_fold(float %x) {
+; CHECK-LABEL: @fptosi_known_neg_normal_no_fold(
+; CHECK-NEXT:    [[ISNEGTWO:%.*]] = fcmp oeq float [[X:%.*]], -2.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISNEGTWO]])
+; CHECK-NEXT:    [[FPTOSI:%.*]] = fptosi float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FPTOSI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %isnegtwo = fcmp oeq float %x, -2.0
+  call void @llvm.assume(i1 %isnegtwo)
   %fptosi = fptosi float %x to i32
   %cmp = icmp slt i32 %fptosi, 0
   ret i1 %cmp

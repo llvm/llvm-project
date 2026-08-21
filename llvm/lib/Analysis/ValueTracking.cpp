@@ -1479,13 +1479,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::FPToSI: {
     // fptosi is poison if the rounded value doesn't fit in the result type,
     // so we can assume the conversion is well-defined and rounds towards
-    // zero. Negative subnormals and negative zero round to 0, so only
-    // negative normals and negative infinity (i.e. values <= -1.0) can
-    // produce a negative result.
-    FPClassTest NegativeResultClasses = fcNegNormal | fcNegInf;
+    // zero. +-Inf can never fit in an integer type, so it is always poison,
+    // like NaN. Negative subnormals and negative zero round to 0. That
+    // leaves negative normals as the only class that can produce a defined
+    // negative result.
     KnownFPClass SrcFPClass = computeKnownFPClass(
-        I->getOperand(0), DemandedElts, NegativeResultClasses, Q, Depth + 1);
-    if (SrcFPClass.isKnownNever(NegativeResultClasses))
+        I->getOperand(0), DemandedElts, fcNegNormal, Q, Depth + 1);
+    if (SrcFPClass.isKnownNever(fcNegNormal))
       Known.makeNonNegative();
     break;
   }
