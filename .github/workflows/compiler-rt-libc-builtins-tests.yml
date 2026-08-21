@@ -52,3 +52,62 @@ jobs:
             --build build \
             --parallel \
             --target check-builtins
+
+  # Build the libc-backed builtins against only the extracted shared subset, so
+  # the build fails if they ever reach into the rest of libc.
+  isolation:
+    name: builtins isolation (subset-only build)
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/libc-ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Manifest matches the live header closure
+        shell: bash
+        run: |
+          d="compiler-rt/lib/builtins/libc-isolation"
+          if ! diff -u \
+              <(grep -v '^#' "$d/libc-shared-manifest.txt") \
+              <(CXX=clang++-23 bash "$d/libc-shared-closure.sh"); then
+            echo "::error::libc-shared-manifest.txt is stale. Regenerate it with:"
+            echo "  CXX=clang++-23 $d/regen-manifest.sh"
+            exit 1
+          fi
+
+      - name: Extract the shared subset
+        run: |
+          d="compiler-rt/lib/builtins/libc-isolation"
+          cmake \
+            -DLIBC_ROOT="$PWD/libc" \
+            -DDEST="$PWD/libc-shared-subset" \
+            -DMANIFEST="$PWD/$d/libc-shared-manifest.txt" \
+            -P "$d/export-libc-shared.cmake"
+
+      - name: Configure CMake against the subset only
+        run: |
+          cmake \
+            -B build-iso \
+            -S runtimes \
+            -DLLVM_ENABLE_RUNTIMES=compiler-rt \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang-23 \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCOMPILER_RT_STANDALONE_BUILD=ON \
+            -DCOMPILER_RT_USE_LIBC_MATH=ON \
+            -DCOMPILER_RT_LIBC_SHARED_INCLUDE_ROOT="$PWD/libc-shared-subset" \
+            -DLLVM_EXTERNAL_LIT=$(which lit-23) \
+            -DCOMPILER_RT_INCLUDE_TESTS=ON
+
+      - name: Build and test builtins against the subset
+        run: |
+          cmake \
+            --build build-iso \
+            --parallel \
+            --target check-builtins
