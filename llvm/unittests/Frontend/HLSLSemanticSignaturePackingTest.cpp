@@ -34,6 +34,9 @@ protected:
     uint8_t Col;
   };
 
+  static constexpr ExpectedLocation Unallocated = {UnallocatedRow,
+                                                   UnallocatedCol};
+
   struct TestConfig {
     Triple::EnvironmentType ShaderStage;
     IOType IOTy;
@@ -95,6 +98,10 @@ protected:
                           unsigned ExpectedElementIndex) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
     Error E = packStacked(Elements, Config);
+    if (!E) {
+      ADD_FAILURE() << "expected a SignaturePackingError";
+      return;
+    }
     ASSERT_TRUE(E.isA<SignaturePackingError>());
     handleAllErrors(std::move(E), [&](const SignaturePackingError &PackingErr) {
       EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
@@ -138,6 +145,198 @@ TEST_F(HLSLSemanticSignaturePackingTest, CreatesSignatureFromConfig) {
   EXPECT_EQ(Elements[1].SemanticIndices, SmallVector<uint32_t>({0, 1}));
   EXPECT_EQ(Elements[1].Rows, 2u);
   EXPECT_EQ(Elements[1].Cols, 3u);
+}
+
+//===----------------------------------------------------------------------===//
+// Valid packing tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
+  // Semantics accessed through dedicated intrinsics do not consume signature
+  // rows and remain unallocated.
+
+  // struct CSIn {
+  //   uint3 DispatchThreadID : SV_DispatchThreadID;
+  //   uint3 GroupID          : SV_GroupID;
+  //   uint GroupIndex        : SV_GroupIndex;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Compute, IOType::In,
+      {{dxbc::PSV::SemanticKind::DispatchThreadID, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::GroupID, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::GroupIndex, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout: no registers are used.
+  expectPacking(Config, /*ExpectedRows=*/0,
+                {Unallocated, Unallocated, Unallocated});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
+  // Elements are assigned whole rows in declaration order, regardless of their
+  // semantic interpretation.
+
+  // struct VSIn {
+  //   uint VertexID       : SV_VertexID;
+  //   float2 Data         : DATA;
+  //   float3 ClipDistance : SV_ClipDistance;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::In,
+      {{dxbc::PSV::SemanticKind::VertexID, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: VertexID.x       | unused.yzw
+  // reg1: Data.xy          | unused.zw
+  // reg2: ClipDistance.xyz | unused.w
+  expectPacking(
+      Config, /*ExpectedRows=*/3,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, DoesNotCoPackElements) {
+  // Elements are never co-packed even when they would fit in one row.
+
+  // struct VSIn {
+  //   float A : A;
+  //   float B : B;
+  //   float C : C;
+  //   float D : D;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A.x | unused.yzw
+  // reg1: B.x | unused.yzw
+  // reg2: C.x | unused.yzw
+  // reg3: D.x | unused.yzw
+  expectPacking(Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/2, /*Col=*/0},
+                 {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, StacksMultiRowElements) {
+  // A multi-row element occupies consecutive whole rows.
+
+  // struct VSIn {
+  //   float A[3]  : A;
+  //   float3 B[2] : B;
+  //   float4 C    : C;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/3, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: A[0].x   | unused.yzw
+  // reg1: A[1].x   | unused.yzw
+  // reg2: A[2].x   | unused.yzw
+  // reg3: B[0].xyz | unused.w
+  // reg4: B[1].xyz | unused.w
+  // reg5: C.xyzw
+  expectPacking(
+      Config, /*ExpectedRows=*/6,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/0}, {/*Row=*/5, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, ExactlyFillsSignature) {
+  // An element may occupy all available signature rows.
+
+  // struct VSIn {
+  //   float4 A[32] : A;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows,
+        /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0-31: A[0-31].xyzw
+  expectPacking(Config, /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/0, /*Col=*/0}});
+}
+
+//===----------------------------------------------------------------------===//
+// Packing error tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, RejectsSignatureOverflow) {
+  // A signature that requires more than 32 rows cannot be packed.
+
+  // struct VSIn {
+  //   float4 A0  : A0;
+  //   ...
+  //   float4 A32 : A32;
+  // };
+  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::In, {});
+  for (unsigned I = 0; I != MaxSignatureRows + 1; ++I)
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                               /*Cols=*/MaxSignatureCols,
+                               dxil::ElementType::F32,
+                               dxbc::PSV::InterpolationMode::Linear});
+
+  // The last element is the one that no longer fits.
+  expectPackingError(Config, SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/MaxSignatureRows);
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
+  // A single element may also require more rows than the signature provides.
+
+  // struct VSIn {
+  //   float4 A[33] : A;
+  // };
+  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::In,
+                    {{dxbc::PSV::SemanticKind::Arbitrary,
+                      /*Rows=*/MaxSignatureRows + 1,
+                      /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear}});
+
+  expectPackingError(Config, SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/0);
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
+  // Each element is valid on its own, but together they require 33 rows.
+
+  // struct VSIn {
+  //   float4 A[31] : A;
+  //   float4 B[2]  : B;
+  // };
+  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::In,
+                    {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/31,
+                      /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear},
+                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2,
+                      /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear}});
+
+  expectPackingError(Config, SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/1);
 }
 
 } // namespace
