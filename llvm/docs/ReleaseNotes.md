@@ -52,6 +52,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added `nofreeobj` attribute for attributes and returns, which forbids
+  freeing the underlying object (as opposed to only frees through that specific
+  pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
+  semantics.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
@@ -110,17 +115,20 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added experimental MC support for the `Smcsps` and `Sscsps`
   conditional stack pointer swap extensions.
-
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
-
 * Added experimental MC support for the `Smijt` and `Ssijt` interrupt jump
   table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
   vectoring extensions.
-
+* Added experimental MC support for the `Smip` and `Ssip` interrupt handler
+  push/pop extensions.
 * Bump Svukte extension to 1.0.
+* Remove experimental from Zicfiss.
 
 ### Changes to the WebAssembly Backend
+
+* Added support for emitting common symbols (.comm) using the WASM_SYMBOL_BINDING_COMMON
+  flag (see https://github.com/WebAssembly/tool-conventions/pull/267)
 
 ### Changes to the Windows Target
 

@@ -280,37 +280,33 @@ static BlockDtorFn getDtorArrayPrim(PrimType Type) {
 
 /// Primitives.
 Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
-                       MetadataSize MD, bool IsConst, bool IsTemporary,
-                       bool IsMutable, bool IsVolatile)
+                       bool IsConst, bool IsTemporary, bool IsMutable,
+                       bool IsVolatile)
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
-      MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsVolatile(IsVolatile), CtorFn(getCtorPrim(Type)),
-      DtorFn(getDtorPrim(Type)) {
-  assert(AllocSize >= Size);
+      AllocSize(align(ElemSize)), PrimT(Type), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), IsVolatile(IsVolatile),
+      CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)) {
   assert(Source && "Missing source");
 }
 
 /// Primitive arrays.
 Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
-                       MetadataSize MD, size_t NumElems, bool IsConst,
-                       bool IsTemporary, bool IsMutable, bool IsVolatile)
+                       size_t NumElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable, bool IsVolatile)
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)),
-      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
-      AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)), PrimT(Type),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsVolatile(IsVolatile), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
-      DtorFn(getDtorArrayPrim(Type)) {
+      Size(ElemSize * NumElems), AllocSize(align(Size) + sizeof(InitMapPtr)),
+      PrimT(Type), IsConst(IsConst), IsMutable(IsMutable),
+      IsTemporary(IsTemporary), IsVolatile(IsVolatile), IsArray(true),
+      CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
 }
 
 /// Primitive unknown-size arrays.
-Descriptor::Descriptor(DeclOrExpr D, PrimType Type, MetadataSize MD,
-                       bool IsTemporary, bool IsConst, UnknownSize)
+Descriptor::Descriptor(DeclOrExpr D, PrimType Type, bool IsConst,
+                       bool IsTemporary, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
-      MDSize(MD.value_or(0)),
-      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
+      AllocSize(sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
       IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)) {
@@ -319,47 +315,42 @@ Descriptor::Descriptor(DeclOrExpr D, PrimType Type, MetadataSize MD,
 
 /// Arrays of composite elements.
 Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy,
-                       const Descriptor *Elem, MetadataSize MD,
-                       unsigned NumElems, bool IsConst, bool IsTemporary,
-                       bool IsMutable)
+                       const Descriptor *Elem, unsigned NumElems, bool IsConst,
+                       bool IsTemporary, bool IsMutable)
     : Source(D), SourceType(SourceTy),
       ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
-      AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
-      ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
-      IsTemporary(IsTemporary), IsArray(true), CtorFn(ctorArrayDesc),
+      Size(ElemSize * NumElems),
+      AllocSize(std::max<size_t>(alignof(void *), Size)), ElemDesc(Elem),
+      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
+      IsArray(true), CtorFn(ctorArrayDesc),
       DtorFn(Elem->DtorFn ? dtorArrayDesc : nullptr) {
   assert(Source && "Missing source");
 }
 
 /// Unknown-size arrays of composite elements.
-Descriptor::Descriptor(DeclOrExpr D, const Descriptor *Elem, MetadataSize MD,
-                       bool IsTemporary, UnknownSize)
+Descriptor::Descriptor(DeclOrExpr D, const Descriptor *Elem, bool IsTemporary,
+                       UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(UnknownSizeMark), MDSize(MD.value_or(0)),
-      AllocSize(MDSize + alignof(void *)), ElemDesc(Elem), IsConst(true),
-      IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
+      Size(UnknownSizeMark), AllocSize(alignof(void *)), ElemDesc(Elem),
+      IsConst(true), IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(ctorArrayDesc), DtorFn(Elem->DtorFn ? dtorArrayDesc : nullptr) {
   assert(Source && "Missing source");
 }
 
 /// Composite records.
-Descriptor::Descriptor(DeclOrExpr D, const Record *R, MetadataSize MD,
-                       bool IsConst, bool IsTemporary, bool IsMutable,
-                       bool IsVolatile)
+Descriptor::Descriptor(DeclOrExpr D, const Record *R, bool IsConst,
+                       bool IsTemporary, bool IsMutable, bool IsVolatile)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
-      Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),
-      ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
-      IsTemporary(IsTemporary), IsVolatile(IsVolatile), CtorFn(ctorRecord),
-      DtorFn(needsRecordDtor(R) ? dtorRecord : nullptr) {
+      Size(ElemSize), AllocSize(Size), ElemRecord(R), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), IsVolatile(IsVolatile),
+      CtorFn(ctorRecord), DtorFn(needsRecordDtor(R) ? dtorRecord : nullptr) {
   assert(Source && "Missing source");
 }
 
 /// Dummy.
-Descriptor::Descriptor(DeclOrExpr D, MetadataSize MD)
-    : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
-      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
-      IsTemporary(false) {
+Descriptor::Descriptor(DeclOrExpr D)
+    : Source(D), ElemSize(1), Size(1), AllocSize(0), ElemDesc(nullptr),
+      IsConst(true), IsMutable(false), IsTemporary(false) {
   assert(Source && "Missing source");
 }
 

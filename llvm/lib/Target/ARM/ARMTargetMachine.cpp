@@ -247,6 +247,13 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   return M.getTargetTriple().getDefaultFloatABI();
 }
 
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return TargetABI;
+}
+
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -283,10 +290,13 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // registers, but no floating-point hardware (mve+nofp)
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       FloatABI, F.hasMinSize(), DM);
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -494,17 +504,17 @@ bool ARMPassConfig::addIRTranslator() {
 }
 
 bool ARMPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 

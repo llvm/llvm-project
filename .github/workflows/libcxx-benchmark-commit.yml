@@ -42,7 +42,7 @@ on:
         description: 'The URL of the LNT instance to submit to'
         required: false
         type: string
-        default: http://lnt.llvm.org
+        default: https://lnt.llvm.org
 
 jobs:
   # Determine which configuration to run based on the `lnt-machine` input.
@@ -144,7 +144,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install -r libcxx/utils/requirements.txt
+          pip install -r libcxx/utils/ci/lnt/requirements.txt
 
       - name: Run the benchmarks
         env:

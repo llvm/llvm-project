@@ -879,7 +879,7 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
       // don't want a static variable in a function to force us to keep the
       // enclosing function, unless requested explicitly.
       std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
-          Entry.CU->getContaingFile().Addresses->getVariableRelocAdjustment(
+          Entry.CU->getContainingFile().Addresses->getVariableRelocAdjustment(
               DIE, Entry.CU->getGlobalData().getOptions().Verbose);
 
       if (LocExprAddrAndRelocAdjustment.first)
@@ -917,7 +917,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
     Info.setHasAnAddress();
 
     RelocAdjustment =
-        Entry.CU->getContaingFile().Addresses->getSubprogramRelocAdjustment(
+        Entry.CU->getContainingFile().Addresses->getSubprogramRelocAdjustment(
             DIE, Verbose);
     if (!RelocAdjustment)
       return false;
@@ -958,9 +958,8 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
           Entry.CU->getOrigUnit().getUnitDIE().find(dwarf::DW_AT_language), 0);
       if (Language == dwarf::DW_LANG_Mips_Assembler ||
           Language == dwarf::DW_LANG_Assembly) {
-        if (auto Range =
-                Entry.CU->getContaingFile().Addresses->getSymbolRangeForAddress(
-                    *LowPc))
+        if (auto Range = Entry.CU->getContainingFile()
+                             .Addresses->getSymbolRangeForAddress(*LowPc))
           Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
                                      *RelocAdjustment);
       }
@@ -977,7 +976,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
 
   Entry.CU->addFunctionRange(
       *LowPc,
-      Entry.CU->getContaingFile().Addresses->constrainCodeRangeHighPC(
+      Entry.CU->getContainingFile().Addresses->constrainCodeRangeHighPC(
           *LowPc, *HighPc, *RelocAdjustment),
       *RelocAdjustment);
   return true;

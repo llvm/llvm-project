@@ -499,3 +499,9 @@ add_macro_header(
   HDR
     alloca-macros.h
 )
+
+add_macro_header(
+  syslog_macros
+  HDR
+    syslog-macros.h
+)
