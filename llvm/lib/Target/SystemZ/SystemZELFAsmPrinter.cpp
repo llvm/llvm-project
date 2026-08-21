@@ -87,21 +87,17 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerPATCHABLE_RET(*MI, Lower);
     return;
   case SystemZ::CallBASR: {
-    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-    SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(SystemZ::BASR)
-                       .addReg(Regs->getReturnFunctionAddressRegister())
+                       .addReg(SystemZ::R14D)
                        .addReg(MI->getOperand(0).getReg()));
     return;
   }
   case SystemZ::CallBRASL: {
-    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-    SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(SystemZ::BRASL)
-            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addReg(SystemZ::R14D)
             .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT)));
     return;
   }
@@ -118,23 +114,19 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                                             SystemZ::S_PLT)));
     return;
   case SystemZ::TLS_GDCALL: {
-    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-    SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(SystemZ::BRASL)
-            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addReg(SystemZ::R14D)
             .addExpr(getTLSGetOffset(MF->getContext()))
             .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSGD)));
     return;
   }
   case SystemZ::TLS_LDCALL: {
-    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-    SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(SystemZ::BRASL)
-            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addReg(SystemZ::R14D)
             .addExpr(getTLSGetOffset(MF->getContext()))
             .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSLDM)));
     return;

@@ -18,11 +18,10 @@ add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
-  SystemZELFAsmPrinter.cpp
-  SystemZXPLINKAsmPrinter.cpp
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
+  SystemZELFAsmPrinter.cpp
   SystemZElimCompare.cpp
   SystemZFrameLowering.cpp
   SystemZHazardRecognizer.cpp
@@ -43,6 +42,7 @@ add_llvm_target(SystemZCodeGen
   SystemZTargetObjectFile.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
+  SystemZXPLINKAsmPrinter.cpp
 
   LINK_COMPONENTS
   Analysis
