@@ -555,7 +555,7 @@ void TextNodeDumper::Visit(const ConceptReference *R) {
   dumpPointer(R);
   dumpSourceRange(R->getSourceRange());
   OS << ' ';
-  dumpBareDeclRef(R->getNamedConcept());
+  dumpBareConcept(R->getNamedConcept());
 }
 
 void TextNodeDumper::Visit(const concepts::Requirement *R) {
@@ -955,6 +955,21 @@ void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
 void TextNodeDumper::dumpType(QualType T) {
   OS << ' ';
   dumpBareType(T);
+}
+
+void TextNodeDumper::dumpBareConcept(TemplateName TN) {
+  {
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
+    OS << "Concept";
+  }
+
+  const TemplateDecl *TD = TN.getAsTemplateDecl();
+  dumpPointer(TD);
+
+  ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
+  OS << " '";
+  OS << TD->getDeclName();
+  OS << '\'';
 }
 
 void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
@@ -2317,7 +2332,7 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
   // Not necessary to dump the keyword since it's spelled plainly in the printed
   // type anyway.
   if (T->isConstrained())
-    dumpDeclRef(T->getTypeConstraintConcept());
+    AddChild([=] { dumpBareConcept(T->getTypeConstraintConcept()); });
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
@@ -2931,11 +2946,12 @@ void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
 
 void TextNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   if (const auto *TC = D->getTypeConstraint()) {
-    OS << " ";
-    dumpBareDeclRef(TC->getNamedConcept());
-    if (TC->getNamedConcept() != TC->getFoundDecl()) {
+    OS << ' ';
+    dumpBareConcept(TC->getNamedConcept());
+    if (const auto *USD =
+            dyn_cast_if_present<UsingShadowDecl>(TC->getFoundDecl())) {
       OS << " (";
-      dumpBareDeclRef(TC->getFoundDecl());
+      dumpBareDeclRef(USD);
       OS << ")";
     }
   } else if (D->wasDeclaredWithTypename())
