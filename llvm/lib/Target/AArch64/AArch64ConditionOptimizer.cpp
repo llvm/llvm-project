@@ -668,7 +668,7 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
     case AArch64::SUBSXri:
     case AArch64::ADDSXri:
       Bit = 63;
-      bzOpc = CC == AArch64CC::GE ? AArch64::TBZX : AArch64::TBNZX;
+      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZX : AArch64::TBNZX;
       break;
     default:
       return false;
