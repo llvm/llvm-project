@@ -2242,8 +2242,9 @@ bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, const Expr *E,
 
 LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
                                            const MemberExpr *E) {
-  LValue Base =
-      CGF.EmitCheckedLValue(E->getBase(), CodeGenFunction::TCK_MemberAccess);
+  LValue Base = CGF.EmitLValue(E->getBase(), NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_MemberAccess, E->getBase(), Base);
   auto *Field = dyn_cast<FieldDecl>(E->getMemberDecl());
   assert(Field && "Unexpected access into HLSL buffer");
 

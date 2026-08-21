@@ -3347,8 +3347,9 @@ Result ARCExprEmitter<Impl,Result>::
   Result result = asImpl().visit(e->getRHS());
 
   // Perform the store.
-  LValue lvalue =
-    CGF.EmitCheckedLValue(e->getLHS(), CodeGenFunction::TCK_Store);
+  LValue lvalue = CGF.EmitLValue(e->getLHS(), NotKnownNonNull,
+                                 CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, e->getLHS(), lvalue);
   CGF.EmitStoreThroughLValue(RValue::get(asImpl().getValueOfResult(result)),
                              lvalue);
 

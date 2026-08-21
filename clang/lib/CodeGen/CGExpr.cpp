@@ -1710,16 +1710,6 @@ bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
   return true;
 }
 
-LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
-  LValue LV;
-  if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
-    LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), ObjectRequired);
-  else
-    LV = EmitLValue(E);
-  EmitTypeCheck(TCK, E, LV);
-  return LV;
-}
-
 void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, const Expr *E,
                                     LValue LV) {
   if (isa<DeclRefExpr>(E) || LV.isBitField() || !LV.isSimple())
@@ -5001,7 +4991,8 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
     if (!ArrayInst.isValid()) {
       // An invalid Address indicates we're checking a pointer array access.
       // Emit the checked L-Value here.
-      LValue LV = EmitCheckedLValue(ArrayExpr, TCK_MemberAccess);
+      LValue LV = EmitLValue(ArrayExpr, NotKnownNonNull, ObjectRequired);
+      EmitTypeCheck(TCK_MemberAccess, ArrayExpr, LV);
       ArrayInst = LV.getAddress();
     }
 

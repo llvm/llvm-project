@@ -4352,11 +4352,6 @@ private:
                           ObjectRequirement_t Req);
 
 public:
-  /// Same as EmitLValue but additionally we generate checking code to
-  /// guard against undefined behavior.  This is only suitable when we know
-  /// that the address will be used to access the object.
-  LValue EmitCheckedLValue(const Expr *E, TypeCheckKind TCK);
-
   RValue convertTempToRValue(Address addr, QualType type, SourceLocation Loc);
 
   void EmitAtomicInit(Expr *E, LValue lvalue);
