@@ -65,3 +65,9 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
 
   return NextRow;
 }
+
+Error llvm::hlsl::packSignatureIndexed(
+    MutableArrayRef<SemanticSignatureElement>, Triple::EnvironmentType,
+    IOType) {
+  return Error::success();
+}
