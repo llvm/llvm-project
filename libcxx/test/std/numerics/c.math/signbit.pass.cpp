@@ -8,9 +8,6 @@
 
 // bool signbit(floating-point-type x); // constexpr since C++23
 
-// We don't control the implementation on windows
-// UNSUPPORTED: windows
-
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 
@@ -42,9 +39,6 @@ struct TestFloat {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
@@ -65,18 +59,15 @@ struct TestInt {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() {
     test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 template <typename T>
 struct ConvertibleTo {
-  operator T() const { return T(); }
+  TEST_CONSTEXPR_CXX23 operator T() const { return T(); }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
@@ -88,5 +79,14 @@ int main(int, char**) {
     assert(!std::signbit(ConvertibleTo<double>()));
     assert(!std::signbit(ConvertibleTo<long double>()));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
   return 0;
 }

@@ -25,9 +25,34 @@ namespace __math {
 
 // signbit
 
-// The universal C runtime (UCRT) in the WinSDK provides floating point overloads
-// for std::signbit(). By defining our overloads as templates, we can work around
-// this issue as templates are less preferred than non-template functions.
+// MS UCRT provides non-template signbit overloads for float, double, and long double that are unconditionally
+// non-constexpr.
+// To workaround this, we use _LIBCPP_PREFERRED_OVERLOAD to make our overloads stronger those overloads, which is
+// necessary for constexpr addition in C++23. When _LIBCPP_PREFERRED_OVERLOAD is not supported, we use template
+// overloads as workaround to avoid conflicts.
+
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool signbit(float __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+signbit(double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+signbit(long double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+signbit(_A1 __x) _NOEXCEPT {
+  return __x < 0;
+}
+#else
 template <class = void>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
   return __builtin_signbit(__x);
@@ -47,6 +72,7 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
+#endif
 
 // isfinite
 
