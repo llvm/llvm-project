@@ -151,6 +151,14 @@ SyntheticChildrenFrontEnd *
 MsvcStlBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::expected<>
+bool IsMsvcStlExpected(ValueObject &valobj);
+bool MsvcStlExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
