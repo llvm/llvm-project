@@ -1242,7 +1242,7 @@ class __owns_one_state : public __has_one_state<_CharT> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __owns_one_state(__node<_CharT>* __s) : base(__s) {}
 
-  ~__owns_one_state() override;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~__owns_one_state() override;
 };
 
 template <class _CharT>
@@ -1273,9 +1273,9 @@ void __empty_state<_CharT>::__exec(__state& __s) const {
 template <class _CharT>
 class __regex_search_state : public __empty_state<_CharT> {
 public:
-  explicit __regex_search_state(__node<_CharT>* __s) : __empty_state<_CharT>(__s) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __regex_search_state(__node<_CharT>* __s) : __empty_state<_CharT>(__s) {}
 
-  virtual __regex::__search_result<_CharT> __exec_regex_search(
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __regex::__search_result<_CharT> __exec_regex_search(
       const _CharT* __first, const _CharT* __last, regex_constants::match_flag_type, size_t __marked_count) = 0;
 };
 
@@ -1298,7 +1298,7 @@ public:
     __state.__current_ = __res.second;
   }
 
-  __regex::__search_result<_CharT> __exec_regex_search(
+  _LIBCPP_HIDE_FROM_ABI __regex::__search_result<_CharT> __exec_regex_search(
       const _CharT* __first,
       const _CharT* __last,
       regex_constants::match_flag_type __flags,
@@ -2591,7 +2591,7 @@ bool basic_regex<_CharT, _Traits>::__search(
       return false;
     }
     vector<sub_match<const _CharT*>> __sub_matches(std::move(__res.__sub_matches_));
-    std::__destroy_at(&__res.__sub_matches_);
+    std::__destroy_at(std::addressof(__res.__sub_matches_));
     __m.__matches_[0].first   = __res.__match_first_;
     __m.__matches_[0].second  = __res.__match_last_;
     __m.__matches_[0].matched = true;

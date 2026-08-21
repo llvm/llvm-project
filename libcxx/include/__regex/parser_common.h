@@ -350,12 +350,12 @@ bool __parse_expression_term(
     return false;
   if (*__first == '[' && *__next == '.') {
     __first = ++__next;
-    __parse_collating_symbol(__machine, __end_range, __first, __last);
+    __regex::__parse_collating_symbol(__machine, __end_range, __first, __last);
   } else if (auto __grammar = regex_constants::__get_grammar(__flags);
              __grammar == regex_constants::awk && *__first == '\\') {
     if (++__first == __last)
       return false;
-    __start_range = __parse_awk_escape<_CharT>(__first, __last);
+    __start_range = __regex::__parse_awk_escape<_CharT>(__first, __last);
   } else if (__grammar == regex_constants::ECMAScript && *__first == '\\') {
     if (++__first == __last)
       return false;

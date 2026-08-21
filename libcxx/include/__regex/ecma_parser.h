@@ -11,7 +11,9 @@
 
 #include <__config>
 #include <__regex/interpreter.h>
+#include <__regex/parser_common.h>
 #include <__regex/regex_error.h>
+#include <__utility/exchange.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -211,7 +213,7 @@ class __parser {
     }
 
     case '[':
-      return __parse_bracket_expression(__machine_, __first_, __last_, __flags_);
+      return __regex::__parse_bracket_expression(__machine_, __first_, __last_, __flags_);
 
     case '(': {
       ++__first_;
@@ -263,7 +265,7 @@ class __parser {
 
     if (!__parse_atom())
       return false;
-    __parse_dupl_symbol(__machine_, __first_, __last_, __expr_start, true);
+    __regex::__parse_dupl_symbol(__machine_, __first_, __last_, __expr_start, true);
     return true;
   }
 

@@ -9,21 +9,18 @@
 #ifndef _LIBCPP___REGEX_INTERPRETER_H
 #define _LIBCPP___REGEX_INTERPRETER_H
 
-#include <__algorithm/copy_if.h>
 #include <__algorithm/equal.h>
-#include <__algorithm/min.h>
-#include <__algorithm/reverse.h>
-#include <__algorithm/reverse_copy.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__locale_dir/ctype_base.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__regex/regex_error.h>
+#include <__type_traits/make_signed.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
-#include <__utility/to_underlying.h>
+#include <__utility/unreachable.h>
 #include <__vector/vector.h>
-#include <stack>
 #include <string_view>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -73,8 +70,8 @@ struct __state {
 };
 
 namespace __regex {
-using _MatchingSetT        = unsigned _BitInt(256);
-using _MatchingSetWithEndT = unsigned _BitInt(257);
+using _MatchingSetT _LIBCPP_NODEBUG        = unsigned _BitInt(256);
+using _MatchingSetWithEndT _LIBCPP_NODEBUG = unsigned _BitInt(257);
 
 enum class __state : uint8_t {
   // Anchors
@@ -156,7 +153,7 @@ template <class _CharT>
 size_t __read_uleb(const __interpreter_info<_CharT>* __machine, size_t& __current_pos) {
   auto __val = __machine[__current_pos++].__int_;
   if (__val & 0x80) {
-    auto __res    = __read_uleb_impl(__machine, __current_pos);
+    auto __res    = __regex::__read_uleb_impl(__machine, __current_pos);
     __current_pos = __res.second;
     return __res.first;
   }
@@ -210,7 +207,7 @@ struct __global_execution_state;
 
 template <class _CharT, class _Traits>
 struct __local_execution_state {
-  using __global_state = __global_execution_state<_CharT, _Traits>;
+  using __global_state _LIBCPP_NODEBUG = __global_execution_state<_CharT, _Traits>;
 
   pair<const _CharT*, const _CharT*>& __get_submatch(size_t __n) {
     return *reinterpret_cast<pair<const _CharT*, const _CharT*>*>(
@@ -259,19 +256,19 @@ struct __local_execution_state {
     for (size_t __i = 0; __i != __buffer_size; ++__i)
       __buffer[__i] = __code[__current_pos++].__char_;
     typename _Traits::char_class_type __mask;
-    __builtin_memcpy(&__mask, __buffer, sizeof(typename _Traits::char_class_type));
+    __builtin_memcpy(std::addressof(__mask), __buffer, sizeof(typename _Traits::char_class_type));
 
     for (size_t __i = 0; __i != __buffer_size; ++__i)
       __buffer[__i] = __code[__current_pos++].__char_;
     typename _Traits::char_class_type __neg_mask;
-    __builtin_memcpy(&__neg_mask, __buffer, sizeof(typename _Traits::char_class_type));
+    __builtin_memcpy(std::addressof(__neg_mask), __buffer, sizeof(typename _Traits::char_class_type));
 
-    auto __chars       = __read_uleb(__code, __current_pos);
-    auto __digraphs    = __read_uleb(__code, __current_pos) * 2;
-    auto __ranges      = __read_uleb(__code, __current_pos) * 4;
-    auto __neg_chars   = __read_uleb(__code, __current_pos);
-    auto __equiv_count = __read_uleb(__code, __current_pos);
-    auto __equiv_size  = __read_uleb(__code, __current_pos);
+    auto __chars       = __regex::__read_uleb(__code, __current_pos);
+    auto __digraphs    = __regex::__read_uleb(__code, __current_pos) * 2;
+    auto __ranges      = __regex::__read_uleb(__code, __current_pos) * 4;
+    auto __neg_chars   = __regex::__read_uleb(__code, __current_pos);
+    auto __equiv_count = __regex::__read_uleb(__code, __current_pos);
+    auto __equiv_size  = __regex::__read_uleb(__code, __current_pos);
 
     bool __found = false;
 
@@ -355,7 +352,7 @@ struct __local_execution_state {
     auto __after_pos   = __current_pos + __equiv_size;
     auto __transformed = __gstate.__machine_.__traits_.transform_primary(__current, __current + 1);
     for (size_t __i = 0; __i != __equiv_count; ++__i) {
-      auto __size = __read_uleb(__code, __current_pos);
+      auto __size = __regex::__read_uleb(__code, __current_pos);
       basic_string<_CharT> __str;
       std::transform(__code + __current_pos,
                      __code + __current_pos + __size,
@@ -381,15 +378,15 @@ struct __local_execution_state {
       const __interpreter_info<_CharT>* const __code,
       size_t __current_pos,
       bool __is_positive) {
-    auto __jump_offset    = __read_uleb(__code, __current_pos);
-    auto __submatch_count = __read_uleb(__code, __current_pos);
-    auto __submatch_base  = __read_uleb(__code, __current_pos);
-    auto __loop_count     = __read_uleb(__code, __current_pos);
+    auto __jump_offset    = __regex::__read_uleb(__code, __current_pos);
+    auto __submatch_count = __regex::__read_uleb(__code, __current_pos);
+    auto __submatch_base  = __regex::__read_uleb(__code, __current_pos);
+    auto __loop_count     = __regex::__read_uleb(__code, __current_pos);
 
     vector<__loop_value<_CharT>> __initial_loop_values;
 
     for (size_t __i = 0; __i != __loop_count; ++__i)
-      __initial_loop_values.push_back(__read_uleb(__code, __current_pos));
+      __initial_loop_values.push_back(__regex::__read_uleb(__code, __current_pos));
 
     __global_state __gexec_state{
         {__loop_count, __gstate.__states_.__get_submatch_count()},
@@ -417,9 +414,9 @@ struct __local_execution_state {
       const _CharT* const __current,
       size_t __current_pos,
       bool __is_greedy) {
-    auto __loop_index     = __read_uleb(__code, __current_pos);
+    auto __loop_index     = __regex::__read_uleb(__code, __current_pos);
     auto __again_pos_base = __current_pos;
-    auto __again_pos      = __again_pos_base - __read_uleb(__code, __current_pos);
+    auto __again_pos      = __again_pos_base - __regex::__read_uleb(__code, __current_pos);
     if (__loop_values_[__loop_index + 1].__int_ > 0) {
       --__loop_values_[__loop_index + 1].__int_;
       __current_pos = __again_pos;
@@ -508,14 +505,14 @@ struct __local_execution_state {
       } break;
 
       case __branch_alternative: {
-        auto __offset = __read_uleb(__code, __current_pos);
+        auto __offset = __regex::__read_uleb(__code, __current_pos);
         __gstate.__states_.push(this);
         __gstate.__states_.back().__current_     = __current;
         __gstate.__states_.back().__current_pos_ = __current_pos + __offset;
       } break;
 
       case __relative_jump: {
-        __current_pos += __read_uleb(__code, __current_pos);
+        __current_pos += __regex::__read_uleb(__code, __current_pos);
       } break;
 
       case __conditional_jump_forward:
@@ -523,7 +520,7 @@ struct __local_execution_state {
         _MatchingSetT __set;
         __builtin_memcpy(&__set, __code + __current_pos, sizeof(_MatchingSetT));
         __current_pos += sizeof(_MatchingSetT);
-        auto __jump_offset = std::__to_signed_like(__read_uleb(__code, __current_pos));
+        auto __jump_offset = std::__to_signed_like(__regex::__read_uleb(__code, __current_pos));
         if (__st == __conditional_jump_backward)
           __jump_offset *= -1;
         if (__current == __last)
@@ -539,7 +536,7 @@ struct __local_execution_state {
       } break;
 
       case __match_backref: {
-        auto& __match = __get_submatch(__read_uleb(__code, __current_pos) - 1);
+        auto& __match = __get_submatch(__regex::__read_uleb(__code, __current_pos) - 1);
         if (__match.first == nullptr)
           return {false, __counter};
 
@@ -551,7 +548,7 @@ struct __local_execution_state {
       } break;
 
       case __match_icase_backref: {
-        auto& __match = __get_submatch(__read_uleb(__code, __current_pos) - 1);
+        auto& __match = __get_submatch(__regex::__read_uleb(__code, __current_pos) - 1);
         if (__match.first == nullptr)
           return {false, __counter};
 
@@ -597,12 +594,12 @@ struct __local_execution_state {
       } break;
 
       case __marked_subexpression_begin: {
-        auto __match                  = __read_uleb(__code, __current_pos);
+        auto __match                  = __regex::__read_uleb(__code, __current_pos);
         __get_submatch(__match).first = __current;
       } break;
 
       case __marked_subexpression_end: {
-        auto __match                   = __read_uleb(__code, __current_pos);
+        auto __match                   = __regex::__read_uleb(__code, __current_pos);
         __get_submatch(__match).second = __current;
       } break;
 
@@ -896,19 +893,19 @@ class __interpreter {
 
     case __marked_subexpression_begin:
     case __marked_subexpression_end: {
-      __read_uleb(__m, __pos);
+      __regex::__read_uleb(__m, __pos);
       return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __relative_jump: {
-      __pos += __read_uleb(__m, __pos);
+      __pos += __regex::__read_uleb(__m, __pos);
       return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __branch_n_to_m_matcher:
     case __branch_nongreedy_n_to_m_matcher: {
-      auto __loop_index = __read_uleb(__m, __pos);
-      __read_uleb(__m, __pos);
+      auto __loop_index = __regex::__read_uleb(__m, __pos);
+      __regex::__read_uleb(__m, __pos);
       if (__initial_loop_values_[__loop_index + 1].__int_ == 0)
         return ~_MatchingSetWithEndT();
       return __get_possibly_matching_characters(__m, __pos);
@@ -935,7 +932,7 @@ class __interpreter {
       _MatchingSetT __set;
       __builtin_memcpy(&__set, __m + __pos, sizeof(_MatchingSetT));
       __pos += sizeof(_MatchingSetT);
-      auto __jump_offset = std::__to_signed_like(__read_uleb(__m, __pos));
+      auto __jump_offset = std::__to_signed_like(__regex::__read_uleb(__m, __pos));
       if (__state == __conditional_jump_backward)
         __jump_offset *= -1;
       return __set | __get_possibly_matching_characters(__m, __pos + __jump_offset);
@@ -1025,7 +1022,7 @@ public:
             (__expr1_set & __get_possibly_matching_characters(__machine_.data(), __expr2_start)) == _MatchingSetT()) {
           __buffer.push_back(__state::__conditional_jump_forward);
           __interpreter_info<_CharT> __sbuffer[sizeof(_MatchingSetT)];
-          __builtin_memcpy(__sbuffer, &__expr1_set, sizeof(_MatchingSetT));
+          __builtin_memcpy(__sbuffer, std::addressof(__expr1_set), sizeof(_MatchingSetT));
           __buffer.append_range(__sbuffer);
           __write_uleb(__buffer, __expr2_start - __expr1_start);
           insert(__expr1_start, __buffer);
@@ -1094,9 +1091,9 @@ public:
     push_back(__negate ? __state::__match_no_character_list : __state::__match_character_list);
 
     _CharT __buffer[std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1))];
-    __builtin_memcpy(__buffer, &__expr.__mask_, sizeof(__buffer));
+    __builtin_memcpy(__buffer, std::addressof(__expr.__mask_), sizeof(__buffer));
     append_range(__buffer);
-    __builtin_memcpy(__buffer, &__expr.__neg_mask_, sizeof(__buffer));
+    __builtin_memcpy(__buffer, std::addressof(__expr.__neg_mask_), sizeof(__buffer));
     append_range(__buffer);
 
     basic_string<_CharT> __equivalences_buffer;

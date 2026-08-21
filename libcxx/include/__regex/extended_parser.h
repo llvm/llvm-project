@@ -9,13 +9,11 @@
 #ifndef _LIBCPP___REGEX_EXTENDED_PARSER_H
 #define _LIBCPP___REGEX_EXTENDED_PARSER_H
 
-#include <__algorithm/search.h>
 #include <__config>
 #include <__iterator/next.h>
 #include <__regex/interpreter.h>
 #include <__regex/parser_common.h>
 #include <__regex/regex_error.h>
-#include <__utility/exchange.h>
 #include <string>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -81,7 +79,7 @@ class __parser {
     default:
       if (regex_constants::__get_grammar(__flags_) == regex_constants::awk) {
         __first_ = __next;
-        __machine_.__push_char_matcher(__parse_awk_escape<_CharT>(__first_, __last_));
+        __machine_.__push_char_matcher(__regex::__parse_awk_escape<_CharT>(__first_, __last_));
         return true;
       }
       auto __val = __machine_.__get_traits().value(*__next, 10);

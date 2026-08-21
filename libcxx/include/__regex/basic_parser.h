@@ -9,17 +9,15 @@
 #ifndef _LIBCPP___REGEX_BASIC_PARSER_H
 #define _LIBCPP___REGEX_BASIC_PARSER_H
 
-#include <__algorithm/search.h>
 #include <__config>
 #include <__iterator/next.h>
 #include <__regex/interpreter.h>
 #include <__regex/parser_common.h>
 #include <__regex/regex_error.h>
-#include <__utility/exchange.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace __regex::__basic::inline __preserve_none {
+namespace __regex::__basic {
 
 template <class _CharT, class _Traits, class _ForwardIterator>
 class __parser {
@@ -260,7 +258,7 @@ public:
   __interpreter<_CharT, _Traits> __extract_interpreter() { return std::move(__machine_); }
   size_t mark_count() const { return __marked_count_; }
 };
-} // namespace __regex::__basic::inline __preserve_none
+} // namespace __regex::__basic
 
 _LIBCPP_END_NAMESPACE_STD
 
