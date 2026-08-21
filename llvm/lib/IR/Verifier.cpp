@@ -6862,17 +6862,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       break;
     }
 
-    uint64_t MinResultElements = ResultEC.getKnownMinValue();
-    if (ResultEC.isScalable() && InputEC.isFixed()) {
-      Attribute Attr =
-          Call.getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (Attr.isValid())
-        MinResultElements *= Attr.getVScaleRangeMin();
+    // We can only compare element counts when the types are both scalable or
+    // non-scalable.
+    if (ResultEC.isScalable() == InputEC.isScalable()) {
+      Check(ResultEC.isKnownMultipleOf(InputEC),
+            "vector_broadcast result element count must be a multiple of the "
+            "argument element count.",
+            &Call);
     }
-    Check(MinResultElements % InputEC.getKnownMinValue() == 0,
-          "vector_broadcast result element count must be a multiple of the "
-          "argument element count for all possible values of vscale.",
-          &Call);
     break;
   }
   case Intrinsic::vector_insert: {

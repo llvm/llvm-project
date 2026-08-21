@@ -638,7 +638,8 @@ enum NodeType {
 
   /// VECTOR_BROADCAST(SRC_SUBVEC)
   /// Duplicate a vector in a larger vector. The element count of the result
-  /// type is expected to be a multiple of the input vector's.
+  /// type is expected to be a multiple of the input vector's at runtime. If it
+  /// is not, the result is poison.
   VECTOR_BROADCAST,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,

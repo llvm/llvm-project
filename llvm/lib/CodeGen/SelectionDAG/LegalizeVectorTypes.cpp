@@ -3468,6 +3468,19 @@ void DAGTypeLegalizer::SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(N->getOpcode(), dl, DstVTHi, SrcHi, N->getOperand(1));
 }
 
+static SDValue buildSplitVectorBroadcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
+                                         SDValue SrcLo, SDValue SrcHi) {
+  EVT SrcVT = SrcLo.getValueType();
+  SDValue Deinterleaved = DAG.getNode(
+      ISD::VECTOR_DEINTERLEAVE, DL, DAG.getVTList(SrcVT, SrcVT), SrcLo, SrcHi);
+  SDValue Even =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(0));
+  SDValue Odd =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(1));
+  return DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(VT, VT), Even,
+                     Odd);
+}
+
 void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
                                                     SDValue &Hi) {
   EVT VT = N->getValueType(0);
@@ -3483,30 +3496,21 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
     return;
   }
 
-  // Second case: Src is known to be wider than LoVT.
+  // Second case: the split result is known to be at least as wide as Src.
   SDLoc DL(N);
   if (LoVT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements()) {
     Lo = Hi = DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Src);
     return;
   }
 
-  // Final case: VT is scalable and has the same minimum EC.
+  // Final case: VT is scalable and Src is a wider fixed-length vector.
   // Use smaller even/odd source vectors so their broadcasts can be
   // reinterleaved in the original lane order for every value of vscale.
-  assert(VT.getVectorMinNumElements() == SrcVT.getVectorMinNumElements() &&
-         VT.isScalableVector());
+  assert(VT.isScalableVector() && SrcVT.isFixedLengthVector() &&
+         "Expected a fixed source wider than the split scalable result");
   SDValue SrcLo, SrcHi;
   std::tie(SrcLo, SrcHi) = DAG.SplitVector(Src, DL);
-  EVT SrcSplitVT = SrcLo.getValueType();
-  SDValue Deinterleaved =
-      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                  DAG.getVTList(SrcSplitVT, SrcSplitVT), SrcLo, SrcHi);
-  SDValue Even =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(0));
-  SDValue Odd =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(1));
-  SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                                    DAG.getVTList(LoVT, HiVT), Even, Odd);
+  SDValue Interleaved = buildSplitVectorBroadcast(DAG, DL, LoVT, SrcLo, SrcHi);
   Lo = Interleaved.getValue(0);
   Hi = Interleaved.getValue(1);
 }
@@ -3828,6 +3832,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::INSERT_SUBVECTOR:  Res = SplitVecOp_INSERT_SUBVECTOR(N, OpNo); break;
   case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_BROADCAST:
+    Res = SplitVecOp_VECTOR_BROADCAST(N);
+    break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
@@ -4003,6 +4010,13 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   ReplaceValueWith(SDValue(N, 0), Res);
   return false;
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+  SDValue SrcLo, SrcHi;
+  GetSplitVector(N->getOperand(0), SrcLo, SrcHi);
+  return buildSplitVectorBroadcast(DAG, DL, N->getValueType(0), SrcLo, SrcHi);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {

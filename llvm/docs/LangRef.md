@@ -20560,10 +20560,9 @@ to express this operation for fixed-width vectors is still to use a
 ##### Arguments:
 
 The argument and result must be vectors with the same element type. A scalable
-argument cannot be broadcast to a fixed-width result. For every possible value
-of `vscale`, the element count of the result must be a multiple of the element
-count of the argument. A `vscale_range` attribute may be used to establish this
-for a scalable result and fixed-width argument.
+argument cannot be broadcast to a fixed-width result. At runtime, the element
+count of the result must be a multiple of the element count of the argument.
+Otherwise, the results is a {ref}`poison value <poisonvalues>`.
 
 #### '`llvm.vector.reverse`' Intrinsic
 
