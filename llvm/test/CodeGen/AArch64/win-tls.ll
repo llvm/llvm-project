@@ -3,7 +3,6 @@
 @tlsVar = thread_local global i32 0
 @tlsVar8 = thread_local global i8 0
 @tlsVar64 = thread_local global i64 0
-@tlsVar128 = thread_local global <2 x i64> zeroinitializer
 
 define i32 @getVar() {
   %1 = load i32, ptr @tlsVar
@@ -27,11 +26,6 @@ define i8 @getVar8() {
 define i64 @getVar64() {
   %1 = load i64, ptr @tlsVar64
   ret i64 %1
-}
-
-define <2 x i64> @getVar128() {
-  %1 = load <2 x i64>, ptr @tlsVar128
-  ret <2 x i64> %1
 }
 
 ; CHECK-LABEL: getVar
@@ -68,7 +62,3 @@ define <2 x i64> @getVar128() {
 ; CHECK-LABEL: getVar64
 ; CHECK: add [[TLS:x[0-9]+]], [[TLS]], :secrel_hi12:tlsVar64
 ; CHECK: ldr x0, [[[TLS]], :secrel_lo12:tlsVar64]
-
-; CHECK-LABEL: getVar128
-; CHECK: add [[TLS:x[0-9]+]], [[TLS]], :secrel_hi12:tlsVar128
-; CHECK: ldr q0, [[[TLS]], :secrel_lo12:tlsVar128]

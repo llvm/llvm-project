@@ -228,6 +228,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  syslog
+  ../libc/include/syslog.yaml
+  syslog.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.syslog_macros
+)
+
+add_header_macro(
   alloca
   ../libc/include/alloca.yaml
   alloca.h
@@ -405,11 +414,13 @@ add_header_macro(
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.pid_t
     .llvm-libc-types.sig_atomic_t
+    .llvm-libc-types.sig_t
     .llvm-libc-types.sighandler_t
     .llvm-libc-types.siginfo_t
     .llvm-libc-types.sigset_t
     .llvm-libc-types.stack_t
     .llvm-libc-types.struct_sigaction
+    .llvm-libc-types.struct_sigevent
     .llvm-libc-types.union_sigval
 )
 
@@ -863,6 +874,16 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.struct_statvfs
+)
+
+add_header_macro(
+  sys_sysmacros
+  ../libc/include/sys/sysmacros.yaml
+  sys/sysmacros.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sysmacros_macros
+    .llvm-libc-types.dev_t
 )
 
 add_header_macro(

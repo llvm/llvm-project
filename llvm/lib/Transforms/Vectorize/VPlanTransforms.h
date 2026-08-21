@@ -188,15 +188,6 @@ struct VPlanTransforms {
   /// VPReductionRecipe instances.
   static void createInLoopReductionRecipes(VPlan &Plan, ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits. If \p Style is not
-  /// NoUncountableExit, handles uncountable early exits and checks that all
-  /// loads are dereferenceable. Returns false if a non-dereferenceable load is
-  /// found.
-  LLVM_ABI_FOR_TEST static bool
-  handleEarlyExits(VPlan &Plan, UncountableExitStyle Style, Loop *TheLoop,
-                   PredicatedScalarEvolution &PSE, DominatorTree &DT,
-                   AssumptionCache *AC);
-
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan);
@@ -319,6 +310,11 @@ struct VPlanTransforms {
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
 
+  /// Check \p Plan's live-ins and replace them with constants, if they can be
+  /// simplified via SCEV.
+  static void simplifyLiveInsWithSCEV(VPlan &Plan,
+                                      PredicatedScalarEvolution &PSE);
+
   /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
   /// possible.
   static void
@@ -371,14 +367,26 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
+  /// Check if all loads in the loop are dereferenceable. Iterates over the
+  /// loop body blocks reachable from \p HeaderVPBB. Returns false if any
+  /// non-dereferenceable load is found.
+  static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
+                                         Loop *TheLoop,
+                                         PredicatedScalarEvolution &PSE,
+                                         DominatorTree &DT,
+                                         AssumptionCache *AC);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static bool handleUncountableEarlyExits(
-      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
-      VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
-      DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
+  LLVM_ABI_FOR_TEST static bool
+  handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
+                              PredicatedScalarEvolution &PSE, DominatorTree &DT,
+                              AssumptionCache *AC, UncountableExitStyle Style);
+
+  /// Disconnect countable early exits from the loop.
+  LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
