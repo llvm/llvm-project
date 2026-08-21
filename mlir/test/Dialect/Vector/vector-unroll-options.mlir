@@ -867,10 +867,8 @@ func.func @deinterleave_2d(%v: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4x
 
 // -----
 
-// The native unroll shape {2, 2} has fewer dimensions than the source vector.
-// It applies to the trailing dimensions, so the leading ones are sliced one
-// element at a time.
-
+// TargetShape [2, 2] has a lower rank than the reduced source <2x2x4>, so it
+// applies to the trailing dimensions and is padded to [1, 2, 2].
 func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: vector<2x2xf32>) -> vector<2x2xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [2] : vector<2x2x4xf32> to vector<2x2xf32>
   return %0 : vector<2x2xf32>
