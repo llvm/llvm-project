@@ -216,8 +216,9 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_NVIDIA_mux) {
                          "DW_OP_LLVM_NVIDIA_mux (13)>");
 }
 
-// The selector is a ULEB128 operand, so 165 encodes as two bytes.
-TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux) {
+// No NVIDIA operation is known here, so the selector cannot be resolved and
+// decoding must stop rather than guess how long the operation is.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_UnknownSelector) {
   const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01};
 
   std::string Result;
@@ -228,12 +229,13 @@ TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux) {
   DIDumpOptions DumpOpts;
   printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
 
-  EXPECT_EQ(OS.str(), "DW_OP_LLVM_user DW_OP_LLVM_NVIDIA_mux 0xa5");
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5 01");
 }
 
-// A trailing operation must still decode, proving the selector consumed
-// the bytes of its ULEB128 encoding.
-TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOp) {
+// An unknown selector may imply operands of its own, so nothing after it can
+// be located. A trailing operation must be reported as undecoded bytes rather
+// than parsed from a guessed offset.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOpNotDecoded) {
   const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01,
                          DW_OP_stack_value};
 
@@ -245,8 +247,7 @@ TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOp) {
   DIDumpOptions DumpOpts;
   printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
 
-  EXPECT_EQ(OS.str(),
-            "DW_OP_LLVM_user DW_OP_LLVM_NVIDIA_mux 0xa5, DW_OP_stack_value");
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5 01 9f");
 }
 
 // NVPTX packs virtual register names into DWARF register numbers, so compact

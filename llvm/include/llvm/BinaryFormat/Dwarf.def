@@ -966,8 +966,12 @@ HANDLE_DW_OP_LLVM_USEROP(0x000c, select_bit_piece)
 // The DW_OP_LLVM_NVIDIA_mux operation takes a single ULEB128 operand that
 // selects an NVIDIA-specific operation. It acts as a second-level multiplexer,
 // giving NVIDIA a private encoding space without requiring every NVIDIA
-// operation to be registered here. The selector is opaque to LLVM; no NVIDIA
-// operation semantics are defined here.
+// operation to be registered here.
+//
+// The number and type of the operands that follow the selector are implied by
+// it, so an unrecognized selector cannot be skipped. No NVIDIA operation is
+// known here, so an expression using one is reported as undecodable rather
+// than parsed from a guessed offset.
 HANDLE_DW_OP_LLVM_USEROP(0x000d, NVIDIA_mux)
 
 // DWARF languages.

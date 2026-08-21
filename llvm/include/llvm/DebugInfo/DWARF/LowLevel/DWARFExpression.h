@@ -47,6 +47,11 @@ public:
       /// for the first operand of an operation.
       SizeSubOpLEB = 9,
       WasmLocationArg = 30,
+      /// The operand is a ULEB128 encoded selector naming an NVIDIA specific
+      /// operation. The number and type of any operands that follow are
+      /// implied by the selector, so an unrecognized one cannot be skipped
+      /// and stops decoding.
+      NvidiaMuxArg = 31,
       SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
       SignedSize2 = SignBit | Size2,
