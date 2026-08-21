@@ -20,8 +20,7 @@
 // RUN: sed -e 's|$NS|{{([^]]\|[[:space:]])+\\],}}|g' \
 // RUN:     -e 's|$WS|{{[[:space:]]+}}|g' \
 // RUN:     -e 's|$PTR_L1|{{[[:space:]]+\\},[[:space:]]+1[[:space:]]+\\]}}|g' \
-// RUN:     %s > %t/checks.txt
-// RUN: FileCheck %t/checks.txt --input-file=%t/wpa.json
+// RUN:     %s | FileCheck - --input-file=%t/wpa.json
 
 
 int main(int argc, char **argv) {
@@ -37,9 +36,9 @@ void foo(int *q) {
 // CHECK-DAG: "id": [[Q_ID:[0-9]+]],$NS$WS"suffix": "1",$WS"usr": "c:@F@foo#*I#"
 // CHECK-DAG: "id": [[ARGV_ID:[0-9]+]],$NS$WS"suffix": "2",$WS"usr": "c:@F@main{{.*}}"
 
-// Contributor function ids:
+// Contributor function id (main contributes nothing in the end thus absent):
 // CHECK-DAG: "id": [[CONTRIBUTOR_FOO:[0-9]+]],$NS$WS"suffix": "",$WS"usr": "c:@F@foo#*I#"
-// CHECK-DAG: "id": [[CONTRIBUTOR_MAIN:[0-9]+]],$NS$WS"suffix": "",$WS"usr": "c:@F@main{{.*}}"
+// CHECK-NOT: "id": [[CONTRIBUTOR_MAIN:[0-9]+]],$NS$WS"suffix": "",$WS"usr": "c:@F@main{{.*}}"
 
 // 'argv' is reported as type-constrained.
 // CHECK: "analysis_name": "TypeConstrainedPointersAnalysisResult"
@@ -52,9 +51,5 @@ void foo(int *q) {
 // CHECK: "@": [[CONTRIBUTOR_FOO]]$WS},$WS[
 // CHECK: "@": [[Q_ID]]$PTR_L1
 // CHECK-NOT: "@":
-
-// 'main' contributes nothing: 'argv' is type-constrained and excluded.
-// CHECK: "@": [[CONTRIBUTOR_MAIN]]$WS},$WS[
-// CHECK-NOT: "@": [[ARGV_ID]]
 
 // CHECK: "analysis_name"

@@ -1181,9 +1181,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
-    case CC_SpirFunction:
-      // Do nothing. These CCs are not available as attributes.
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;
@@ -1415,12 +1412,14 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
     if (T->isConstrained()) {
       // FIXME: Track a TypeConstraint as type sugar, so that we can print the
       // type as it was written.
-      T->getTypeConstraintConcept()->getDeclName().print(OS, Policy);
+      T->getTypeConstraintConcept().getAsTemplateDecl()->getDeclName().print(
+          OS, Policy);
       auto Args = T->getTypeConstraintArguments();
       if (!Args.empty())
-        printTemplateArgumentList(
-            OS, Args, Policy,
-            T->getTypeConstraintConcept()->getTemplateParameters());
+        printTemplateArgumentList(OS, Args, Policy,
+                                  T->getTypeConstraintConcept()
+                                      .getAsTemplateDecl()
+                                      ->getTemplateParameters());
       OS << ' ';
     }
     switch (T->getKeyword()) {
@@ -2213,7 +2212,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();
