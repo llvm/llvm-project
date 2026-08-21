@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
+#include "llvm/ADT/STLExtras.h"
+#include <cassert>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -27,7 +29,35 @@ void SignaturePackingError::log(raw_ostream &OS) const {
 }
 
 Error llvm::hlsl::packSignatureStacked(
-    MutableArrayRef<SemanticSignatureElement>, Triple::EnvironmentType,
-    IOType) {
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  unsigned NextRow = 0;
+  for (const auto &[Index, Element] : enumerate(Elements)) {
+    assert(Element.StartRow == UnallocatedRow &&
+           Element.StartCol == UnallocatedCol && "already allocated?");
+    assert(Element.Rows > 0 && "signature element must have at least one row");
+    assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
+           "signature element must have between 1 and 4 columns");
+
+    SemanticInterpretation Interpretation =
+        getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
+    if (Interpretation == SemanticInterpretation::NotAllocated)
+      continue;
+
+    assert((Interpretation == SemanticInterpretation::Arbitrary ||
+            Interpretation == SemanticInterpretation::SV ||
+            Interpretation == SemanticInterpretation::SGV) &&
+           "unexpected semantic interpretation for stacked packing");
+
+    if (Element.Rows > MaxSignatureRows - NextRow)
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::SignatureOverflow,
+          static_cast<unsigned>(Index));
+
+    Element.StartRow = NextRow;
+    Element.StartCol = 0;
+    NextRow += Element.Rows;
+  }
+
   return Error::success();
 }
