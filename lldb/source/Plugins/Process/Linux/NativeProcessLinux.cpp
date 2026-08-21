@@ -1347,8 +1347,9 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   }
 
-  llvm::scope_exit restore_mem(
-      [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
+  llvm::scope_exit restore_mem([&] {
+    DoWriteMemory(exe_addr, memory.data(), memory.size(), bytes_read);
+  });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())
     return std::move(Err);
@@ -1361,8 +1362,8 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
       return std::move(Err);
     }
   }
-  if (llvm::Error Err = WriteMemory(exe_addr, syscall_data.Insn.data(),
-                                    syscall_data.Insn.size(), bytes_read)
+  if (llvm::Error Err = DoWriteMemory(exe_addr, syscall_data.Insn.data(),
+                                      syscall_data.Insn.size(), bytes_read)
                             .ToError())
     return std::move(Err);
 
@@ -1667,8 +1668,8 @@ Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
   return Status();
 }
 
-Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
-                                       size_t size, size_t &bytes_written) {
+Status NativeProcessLinux::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                         size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;
   Status error;
@@ -1699,7 +1700,7 @@ Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
       memcpy(buff, src, remainder);
 
       size_t bytes_written_rec;
-      error = WriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
+      error = DoWriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
       if (error.Fail())
         return error;
 
