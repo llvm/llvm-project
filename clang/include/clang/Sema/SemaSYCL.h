@@ -99,7 +99,6 @@ public:
   StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
                                                Expr *LaunchIdExpr);
 
-
   /// Lookup the sycl namespace declaration. Return nullptr if lookup fails.
   NamespaceDecl *getSyclNamespace(SourceLocation Loc);
 
@@ -120,7 +119,7 @@ private:
   // Cache used by getSyclNamespace as the lookup is expensive. Since
   // NamespaceDecls always track a "primary" DeclContext chain, saving this
   // pointer is fine as future changes to the namespace will still be reachable
-  // via the decl chain. 
+  // via the decl chain.
   NamespaceDecl *SyclNamespacePtr = nullptr;
 
   /// Cache used by checkExplicitDEviceCopyable().

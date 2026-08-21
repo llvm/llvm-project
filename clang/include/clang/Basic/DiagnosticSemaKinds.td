@@ -13522,6 +13522,8 @@ def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
 def err_sycl_incomplete_type_trait : Error<
   "SYCL type trait %0 is declared but incomplete">;
+def err_sycl_type_trait_bad_value : Error<
+  "SYCL type trait %0 does not provide a valid 'value' member">;
 def err_sycl_unexpected_type_trait_val : Error<
   "expected %1 for SYCL type trait %0, but found %2 instead">;
 
@@ -13587,6 +13589,24 @@ def err_sycl_entry_point_device_use : Error<
 def warn_sycl_kernel_param_not_device_copyable : Warning<
   "%0 is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter">,
   InGroup<SyclDeviceCopyable>, DefaultError;
+def warn_sycl_device_copyable_no_eligible_smf : Warning<
+  "%0 is explicitly marked as device copyable (sycl::is_device_copyable) but"
+  " has no eligible copy constructor, move constructor, copy assignment"
+  " operator, or move assignment operator">,
+  InGroup<PedanticSycl>, DefaultIgnore;
+def warn_sycl_device_copyable_smf_not_public : Warning<
+  "%0 is explicitly marked as device copyable (sycl::is_device_copyable) but"
+  " its eligible %enum_select<EligibleSMFKind>{"
+  "%CopyCtor{copy constructor}|"
+  "%MoveCtor{move constructor}|"
+  "%CopyAssign{copy assignment operator}|"
+  "%MoveAssign{move assignment operator}"
+  "}1 is not public">,
+  InGroup<PedanticSycl>, DefaultIgnore;
+def warn_sycl_device_copyable_bad_destructor : Warning<
+  "%0 is explicitly marked as device copyable (sycl::is_device_copyable) but"
+  " does not have a public, non-deleted destructor">,
+  InGroup<PedanticSycl>;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

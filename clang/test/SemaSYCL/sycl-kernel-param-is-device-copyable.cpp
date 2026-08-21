@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -Wpedantic-sycl -DCHECK_PEDANTIC_SYCL -verify %s
+// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -fsycl-is-device -Wpedantic-sycl -DCHECK_PEDANTIC_SYCL -verify %s
 
 namespace std {
 
@@ -20,10 +22,6 @@ inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
 
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
-
-// A generic kernel launch function.
-template<typename KNT, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
 
 namespace sycl {
 
@@ -56,6 +54,10 @@ static_assert(std::is_trivially_copyable_v<DefinitelyCopyable>,
 
 // Check that sycl::is_device_copyable is respected
 namespace iscopyable1 {
+
+template<typename KNT, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
+
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
@@ -104,6 +106,10 @@ struct sycl::is_device_copyable<ExplicitlyDeviceCopyableWithMember>
     : std::true_type {};
 
 namespace iscopyable2 {
+
+template<typename KNT, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
+
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '{{.*}}' declared here}}
@@ -120,3 +126,149 @@ void test() {
 }
 } // namespace iscopyable2
 
+#ifdef CHECK_PEDANTIC_SYCL
+
+struct BadDestructorDeleted {
+  // Classes with deleted destructors are still is_trivially_copyable: This
+  // copy constructor is added to make the class not trivially copyable.
+  // FIXME: SYCL spec simultaneously stipulates deleted destructors are UB
+  // for device-copyable classes while also stipulates that all
+  // is_trivially_copyable classes are device-copyable. Which is it?
+  BadDestructorDeleted(const BadDestructorDeleted &) {}
+  ~BadDestructorDeleted() = delete;
+  // expected-warning@-1 {{'BadDestructorDeleted' is explicitly marked as device copyable (sycl::is_device_copyable) but does not have a public, non-deleted destructor}}
+};
+template<>
+struct sycl::is_device_copyable<BadDestructorDeleted> : std::true_type {};
+
+struct BadDestructorPrivate {
+  // Classes with deleted destructors are still is_trivially_copyable: This
+  // copy constructor is added to make the class not trivially copyable.
+  BadDestructorPrivate(const BadDestructorPrivate &) {}
+private:
+  ~BadDestructorPrivate() {}
+  // expected-warning@-1 {{'BadDestructorPrivate' is explicitly marked as device copyable (sycl::is_device_copyable) but does not have a public, non-deleted destructor}}
+};
+template<>
+struct sycl::is_device_copyable<BadDestructorPrivate> : std::true_type {};
+
+struct PrivateCopyCtor {
+  PrivateCopyCtor() {}
+private:
+  PrivateCopyCtor(const PrivateCopyCtor &) {}
+  // expected-warning@-1 {{'PrivateCopyCtor' is explicitly marked as device copyable (sycl::is_device_copyable) but its eligible copy constructor is not public}}
+};
+template<>
+struct sycl::is_device_copyable<PrivateCopyCtor> : std::true_type {};
+
+struct PrivateMoveAssign {
+  PrivateMoveAssign() {}
+private:
+  PrivateMoveAssign& operator=(PrivateMoveAssign &&other) { return other; }
+  // expected-warning@-1 {{'PrivateMoveAssign' is explicitly marked as device copyable (sycl::is_device_copyable) but its eligible move assignment operator is not public}}
+};
+template<>
+struct sycl::is_device_copyable<PrivateMoveAssign> : std::true_type {};
+
+struct NoEligibleSMF {
+  // expected-warning@-1 {{'NoEligibleSMF' is explicitly marked as device copyable (sycl::is_device_copyable) but has no eligible copy constructor, move constructor, copy assignment operator, or move assignment operator}}
+  NoEligibleSMF() {}
+  ~NoEligibleSMF() {}
+  NoEligibleSMF(const NoEligibleSMF &) = delete;
+  NoEligibleSMF(NoEligibleSMF &&) = delete;
+  NoEligibleSMF &operator=(const NoEligibleSMF &) = delete;
+  NoEligibleSMF &operator=(NoEligibleSMF &&) = delete;
+};
+template<>
+struct sycl::is_device_copyable<NoEligibleSMF> : std::true_type {};
+
+namespace pedanticsycl {
+
+// Custom sycl_kernel_launch that forwards its arguments directly, preventing
+// passing by value and the resulting additional copy + decay/deletion. 
+// Although technically incorrect, this version of sycl_kernel_launch allows us
+// to pass "objects" without triggering its destructor (that we delete for test
+// purposes).
+template<typename KNT, typename... Ts>
+void sycl_kernel_launch(const char *, Ts &&...) {}
+
+// Custom kernel_single_task that takes a ref instead
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T &t) {}
+// expected-note-re@-1 5{{within parameter 't' of type '{{.*}}' declared here}}
+
+// Used to obtain an T& argument without ever constructing a real T object,
+// preventing destructors (that we deleted for test purposes) from triggering.
+template <typename T> T &getRef();
+
+void test() {
+  kernel_single_task<KN<11>>(getRef<BadDestructorDeleted>());
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  kernel_single_task<KN<12>>(getRef<BadDestructorPrivate>());
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  PrivateCopyCtor c1;
+  kernel_single_task<KN<13>>(c1);
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  PrivateMoveAssign m1;
+  kernel_single_task<KN<14>>(m1);
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  kernel_single_task<KN<15>>(getRef<NoEligibleSMF>());
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+}
+
+} // namespace pedanticsycl
+#endif // CHECK_PEDANTIC_SYCL
+
+// Same as previous pendanticsycl testcase, but this time checking warnings are
+// not thrown if -Wpendantic-sycl is not enabled
+#ifndef CHECK_PEDANTIC_SYCL
+
+struct BadDestructorDeleted {
+  // Classes with deleted destructors are still is_trivially_copyable: This
+  // copy constructor is added to make the class not trivially copyable.
+  BadDestructorDeleted(const BadDestructorDeleted &) {}
+  ~BadDestructorDeleted() = delete;
+  // expected-warning@-1 {{'BadDestructorDeleted' is explicitly marked as device copyable (sycl::is_device_copyable) but does not have a public, non-deleted destructor}}
+};
+template<>
+struct sycl::is_device_copyable<BadDestructorDeleted> : std::true_type {};
+
+struct PrivateCopyCtor {
+  PrivateCopyCtor() {}
+private:
+  PrivateCopyCtor(const PrivateCopyCtor &) {}
+};
+template<>
+struct sycl::is_device_copyable<PrivateCopyCtor> : std::true_type {};
+
+namespace pedanticsycl {
+
+template<typename KNT, typename... Ts>
+void sycl_kernel_launch(const char *, Ts &&...) {}
+
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T &t) {}
+// expected-note-re@-1 {{within parameter 't' of type '{{.*}}' declared here}}
+
+template <typename T> T &getRef();
+
+void test() {
+  // Destructor tests are cheap and still enabled without -Wpendantic-sycl:
+  kernel_single_task<KN<16>>(getRef<BadDestructorDeleted>());
+  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  // Eligible special member function tests are expensive, and thus should not
+  // trigger without -Wpendantic-sycl:
+  PrivateCopyCtor c2;
+  kernel_single_task<KN<17>>(c2);
+}
+
+} // namespace pedanticsycl
+
+#endif // !CHECK_PEDANTIC_SYCL

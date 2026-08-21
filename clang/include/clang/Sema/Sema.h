@@ -9637,6 +9637,9 @@ public:
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
 
+  /// Look up the copy and move assignment operators for the given class.
+  DeclContextLookupResult LookupAssignmentOperators(CXXRecordDecl *Class);
+
   /// Look up the default constructor for the given class.
   CXXConstructorDecl *LookupDefaultConstructor(CXXRecordDecl *Class);
 

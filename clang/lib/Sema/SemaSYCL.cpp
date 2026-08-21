@@ -523,9 +523,6 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
                                            SourceLocation Loc) {
   ASTContext &Ctx = getASTContext();
 
-  // TODO: do I even bother caching lambdas?
-  // Lambda signatures are weird, and odds are lambdas are a one-time lookup
-  // anyway
   QualType CanonicalTy = Ctx.getCanonicalType(Ty);
   auto It = MarkedDeviceCopyableCache.find(CanonicalTy);
   if (It != MarkedDeviceCopyableCache.end()) {
@@ -534,21 +531,16 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
 
   // VMT's are not legal template parameters and cannot be marked device
   // copyable.
-  if (Ty->isVariablyModifiedType()) {
-    llvm::errs() << "VMT shortpath\n";
+  if (Ty->isVariablyModifiedType())
     return false;
-  }
-
   // If we are not checking device-copyability, completely ignore
   // is_device_copyable.
   if (!isEnforcingDeviceCopyable(Loc))
     return false;
 
   NamespaceDecl *SyclNamespace = getSyclNamespace(Loc);
-  if (!SyclNamespace) {
-    llvm::errs() << "Debug: SYCL namespace undefined / not found.\n";
+  if (!SyclNamespace)
     return false;
-  }
 
   // is_device_copyable Identifier
   IdentifierInfo const &IDCIdent = Ctx.Idents.get("is_device_copyable");
@@ -556,18 +548,13 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
   SemaRef.LookupQualifiedName(IdentResult, SyclNamespace);
 
   if (IdentResult.isAmbiguous()) {
-    // TODO warn or error
-    llvm::errs() << "debug2\n";
+    SemaRef.DiagnoseAmbiguousLookup(IdentResult);
     return false;
   }
 
   ClassTemplateDecl *IDCDecl = IdentResult.getAsSingle<ClassTemplateDecl>();
-  if (nullptr == IDCDecl) {
-    // TODO simply let go; it's undefined
-    // TODO perhaps consider a warning: is_device_copyable *should* be defined
-    llvm::errs() << "debug3\n";
+  if (!IDCDecl)
     return false;
-  }
 
   TemplateArgumentListInfo Args{};
   TemplateArgument TyArg{Ty};
@@ -583,46 +570,38 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
     IDCTrait = SemaRef.CheckTemplateIdType(
         ElaboratedTypeKeyword::None, TemplateName{IDCDecl}, Loc, Args,
         /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
-
-    if (IDCTrait.isNull()) {
-      // TODO simply let go; it's undefined
-      llvm::errs() << "debug4\n";
+    if (IDCTrait.isNull())
       return false;
-    }
 
     // IDCTrait must be checked for null before calling RequireCompleteType:
     // it isn't valid to require completeness of a null QualType.
     if (SemaRef.RequireCompleteType(Loc, IDCTrait,
-                                    diag::err_sycl_incomplete_type_trait)) {
-      llvm::errs() << "debug5\n";
+                                    diag::err_sycl_incomplete_type_trait))
       return false;
-    }
   }
 
   CXXRecordDecl *RD = IDCTrait->getAsCXXRecordDecl();
   assert(RD && "specialization of class template is not a class?");
-
-  if (!RD->hasDefinition()) {
-    llvm::errs() << "RD undefined\n";
-    return false;
-  }
+  assert(RD->hasDefinition() &&
+         "RequireCompleteType should have guaranteed a definition exists");
 
   // Look up the ::value member.
   IdentifierInfo const &ValueIdent = Ctx.Idents.get("value");
   LookupResult ValueResult(SemaRef, &ValueIdent, Loc, Sema::LookupOrdinaryName);
   SemaRef.LookupQualifiedName(ValueResult, RD);
-  if (ValueResult.empty() || ValueResult.isAmbiguous()) {
-    // TODO should I error or let go?
-    // definitely error on ambiguous, but what about empty?
-    llvm::errs() << "debug6\n";
+  if (ValueResult.isAmbiguous()) {
+    SemaRef.DiagnoseAmbiguousLookup(ValueResult);
+    return false;
+  }
+  if (ValueResult.empty()) {
+    SemaRef.Diag(Loc, diag::err_sycl_type_trait_bad_value) << IDCTrait;
     return false;
   }
 
   ExprResult ValueExpr = SemaRef.BuildDeclarationNameExpr(
       CXXScopeSpec{}, ValueResult, /*NeedsADL=*/false);
   if (ValueExpr.isInvalid()) {
-    // TODO compiler error: this shouldn't happen?
-    llvm::errs() << "debug7\n";
+    SemaRef.Diag(Loc, diag::err_sycl_type_trait_bad_value) << IDCTrait;
     return false;
   }
 
@@ -640,11 +619,8 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
   llvm::APSInt IDCValue;
   ValueExpr = SemaRef.VerifyIntegerConstantExpression(ValueExpr.get(),
                                                       &IDCValue, Diagnoser);
-  if (ValueExpr.isInvalid()) {
-    // TODO compiler error: this shouldn't happen?
-    llvm::errs() << "debug8\n";
+  if (ValueExpr.isInvalid())
     return false;
-  }
 
   bool Marked = IDCValue.getBoolValue();
   MarkedDeviceCopyableCache.try_emplace(Ty, Marked);
@@ -952,9 +928,6 @@ public:
     return true;
   }
 
-  // TODO this function needs more context to produce useful diagnostics
-  // - i.e. if traversal class is already marked is_device_copyable, then issue
-  //   a warning instead
   // TODO should these results be cached?
   bool checkDeviceCopyable(QualType Ty) {
     auto DirectParent = ObjectAccessPath.back();
@@ -964,38 +937,99 @@ public:
     QualType Type = Ty;
     if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent))
       Type = Ty->getPointeeType();
-    // TODO exit earlier if it's a reference but not a parmvardecl
 
     // No need to lookup anything if trivially copyable already
     if (Type.isTriviallyCopyableType(SemaSYCLRef.getASTContext()))
       return true;
+    // FIXME: isTriviallyCopyableType allows explicitly deleted destructors,
+    // but the SYCL spec stipulates that deleted destructors on an explicitly-
+    // marked device-copyable class is UB.
+    // This shortcut path ends up resulting in missed -Wpendantic-sycl deleted
+    // destructor warnings. Consider moving -Wpendantic-sycl deleted destructor
+    // test before this shortcut.
 
-    bool markedCopyable =
+    bool MarkedCopyable =
         SemaSYCLRef.checkExplicitDeviceCopyable(Type, Detail.Loc);
 
-    if (const CXXRecordDecl *RD = Type->getAsCXXRecordDecl()) {
-      // Set all lambdas as copyable: Future traversal deeper into the lambda
-      // will determine whether or not the parameters/capture of the lambda are
-      // actually copyable.
-      if (RD->isLambda())
-        return true;
-      // TODO confirm:
-      // - does RD have at least one eligible copy constructor, move
-      //   constructor, copy assignment operator, or move assignment operator?
-      //   - for each of aforementioned, ensure it is public
-      //   - confirm each does a bitwise copy (perhaps not possible, up to the
-      //   user to enforce)
-      // - confirm it has a non deleted destructor
-      //   - does the destructor have "no effect"? (perhaps not possible, up to
-      //   user to enforce)
+    CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+    // Set all lambdas as copyable: Future traversal deeper into the lambda
+    // will determine whether or not the parameters/capture of the lambda are
+    // actually copyable.
+    if (RD && RD->isLambda())
+      return true;
 
-      // MAKE SURE THE SPECIAL FUNCTION CHECKS PROPAGATE TO THE BASE CLASSES
+    // Checking SYCL 2020 3.13.1, when explicitly declaring certain class types
+    // as device copyable:
+    if (MarkedCopyable && RD) {
+      // * Type T has a public non-deleted destructor; and
+      CXXDestructorDecl *DD = SemaSYCLRef.SemaRef.LookupDestructor(RD);
+      if (!DD || DD->isDeleted() || DD->getAccess() != AS_public) {
+        SemaSYCLRef.Diag(DD ? DD->getLocation() : RD->getLocation(),
+                         diag::warn_sycl_device_copyable_bad_destructor)
+            << Type;
+        emitObjectAccessPathNotes();
+      }
+
+      DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
+      bool CheckSMFEligible = !Diags.isIgnored(
+          diag::warn_sycl_device_copyable_smf_not_public, Detail.Loc);
+      if (CheckSMFEligible) {
+        // * Each eligible copy constructor, move constructor, copy assignment
+        //   operator, and move assignment operator is public;
+        bool HasEligibleSMF = false;
+        for (const NamedDecl *ND : SemaSYCLRef.SemaRef.LookupConstructors(RD)) {
+          auto *CD = dyn_cast<CXXConstructorDecl>(ND);
+          if (CD && CD->isCopyOrMoveConstructor() && !CD->isDeleted() &&
+              !CD->isIneligibleOrNotSelected()) {
+            if (CD->getAccess() != AS_public) {
+              SemaSYCLRef.Diag(CD->getLocation(),
+                               diag::warn_sycl_device_copyable_smf_not_public)
+                  << Type
+                  << (CD->isCopyConstructor()
+                          ? diag::EligibleSMFKind::CopyCtor
+                          : diag::EligibleSMFKind::MoveCtor);
+              emitObjectAccessPathNotes();
+            }
+            HasEligibleSMF = true;
+          }
+        }
+        for (const NamedDecl *ND :
+             SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
+          auto *MD = dyn_cast<CXXMethodDecl>(ND);
+          if (MD &&
+              (MD->isCopyAssignmentOperator() ||
+               MD->isMoveAssignmentOperator()) &&
+              !MD->isDeleted() && !MD->isIneligibleOrNotSelected()) {
+            if (MD->getAccess() != AS_public) {
+              SemaSYCLRef.Diag(MD->getLocation(),
+                               diag::warn_sycl_device_copyable_smf_not_public)
+                  << Type
+                  << (MD->isCopyAssignmentOperator()
+                          ? diag::EligibleSMFKind::CopyAssign
+                          : diag::EligibleSMFKind::MoveAssign);
+              emitObjectAccessPathNotes();
+            }
+            HasEligibleSMF = true;
+          }
+        }
+        // * Type T has at least one eligible copy constructor, move
+        //   constructor,
+        //   copy assignment operator, or move assignment operator;
+        if (!HasEligibleSMF) {
+          SemaSYCLRef.Diag(RD->getLocation(),
+                           diag::warn_sycl_device_copyable_no_eligible_smf)
+              << Type;
+          emitObjectAccessPathNotes();
+        }
+      }
+      // Not possible to check for the following:
+      // * The effect of each eligible copy constructor, move constructor, copy
+      //   assignment operator, and move assignment operator is the same as a
+      //   bitwise copy of the object;
+      // * The destructor has no effect.
     }
-    // TODO subsequent base classes shouldn't be checked for not device copyable
 
-    if (!markedCopyable) {
-      // TODO Type is culprit but Ty is original caller: fix diagnostics to
-      // include both
+    if (!MarkedCopyable) {
       SemaSYCLRef.Diag(Detail.Loc,
                        diag::warn_sycl_kernel_param_not_device_copyable)
           << Type;
@@ -1004,7 +1038,7 @@ public:
       // Continue traversal if not enforcing device-copyability.
       if (!SemaSYCLRef.isEnforcingDeviceCopyable(Detail.Loc))
         return true;
-      // Do not continue traversing if enforcing device-copyability.
+      // Otherwise, do not continue if enforcing device-copyability.
       IsValid = false;
       return false;
     }
