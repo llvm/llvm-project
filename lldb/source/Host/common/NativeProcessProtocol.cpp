@@ -661,11 +661,11 @@ Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
   if (m_software_breakpoints.empty())
     return DoWriteMemory(addr, buf, size, bytes_written);
 
-  // Find first breakpoint that starts > addr.
+  // Find first breakpoint that starts >= addr.
   std::map<lldb::addr_t, SoftwareBreakpoint>::iterator bkpt =
-      m_software_breakpoints.upper_bound(addr);
+      m_software_breakpoints.lower_bound(addr);
 
-  // it points to the first breakpoint starting at > addr, but the one
+  // it points to the first breakpoint starting at >= addr, but the one
   // immediately before it may extend over addr, or begin exactly at addr.
   if (bkpt != m_software_breakpoints.begin())
     bkpt = std::prev(bkpt);
