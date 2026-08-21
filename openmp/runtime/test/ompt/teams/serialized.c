@@ -27,12 +27,13 @@ int main() {
 
 // CHECK: {{^}}[[MASTER]]: ompt_event_teams_begin:
 // CHECK-SAME: parent_task_id=[[INIT_TASK]]
+// CHECK-SAME: {{.*}} parallel_id=[[TEAMS_ID:[0-9]+]]
 // CHECK-SAME: {{.*}} requested_num_teams=1
 // CHECK-SAME: {{.*}} invoker=[[TEAMS_FLAGS:[0-9]+]]
 
 // initial task in the teams construct starts
 // CHECK: {{^}}[[MASTER]]: ompt_event_initial_task_begin:
-// CHECK-SAME: task_id=[[INIT_TASK_0:[0-f]+]], actual_parallelism=1, index=0
+// CHECK-SAME: parallel_id=[[TEAMS_ID]], task_id=[[INIT_TASK_0:[0-f]+]], actual_parallelism=1, index=0
 
 // parallel region forked by runtime
 // CHECK: {{^}}[[MASTER]]: ompt_event_parallel_begin:
