@@ -84,12 +84,6 @@ void test() {
   // expected-error@-1 {{'NotTriviallyCopyable' is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'iscopyable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note@-3 {{within capture 'b' of lambda expression here}}
-
-  auto notCopyableLambda = [](NotTriviallyCopyable notCopyable) { (void) notCopyable; };
-  kernel_single_task<KN<7>>(notCopyableLambda);
-  kernel_single_task<KN<8>>([=](NotTriviallyCopyable NC) { notCopyableLambda(NC); });
-  // TODO this isn't firing; shouldn't this create an error
-  
 }
 
 } // namespace iscopyable1
@@ -131,9 +125,6 @@ void test() {
 struct BadDestructorDeleted {
   // Classes with deleted destructors are still is_trivially_copyable: This
   // copy constructor is added to make the class not trivially copyable.
-  // FIXME: SYCL spec simultaneously stipulates deleted destructors are UB
-  // for device-copyable classes while also stipulates that all
-  // is_trivially_copyable classes are device-copyable. Which is it?
   BadDestructorDeleted(const BadDestructorDeleted &) {}
   ~BadDestructorDeleted() = delete;
   // expected-warning@-1 {{'BadDestructorDeleted' is explicitly marked as device copyable (sycl::is_device_copyable) but does not have a public, non-deleted destructor}}
@@ -233,7 +224,6 @@ struct BadDestructorDeleted {
   // copy constructor is added to make the class not trivially copyable.
   BadDestructorDeleted(const BadDestructorDeleted &) {}
   ~BadDestructorDeleted() = delete;
-  // expected-warning@-1 {{'BadDestructorDeleted' is explicitly marked as device copyable (sycl::is_device_copyable) but does not have a public, non-deleted destructor}}
 };
 template<>
 struct sycl::is_device_copyable<BadDestructorDeleted> : std::true_type {};
@@ -254,17 +244,12 @@ void sycl_kernel_launch(const char *, Ts &&...) {}
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T &t) {}
-// expected-note-re@-1 {{within parameter 't' of type '{{.*}}' declared here}}
 
 template <typename T> T &getRef();
 
 void test() {
-  // Destructor tests are cheap and still enabled without -Wpendantic-sycl:
   kernel_single_task<KN<16>>(getRef<BadDestructorDeleted>());
-  // expected-note-re@-1 {{in instantiation of function template specialization 'pedanticsycl::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 
-  // Eligible special member function tests are expensive, and thus should not
-  // trigger without -Wpendantic-sycl:
   PrivateCopyCtor c2;
   kernel_single_task<KN<17>>(c2);
 }

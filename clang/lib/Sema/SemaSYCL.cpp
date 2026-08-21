@@ -919,11 +919,9 @@ public:
       return false;
     }
 
-    // TODO Make sure I'm descending into Lambdas properly
     return true;
   }
 
-  // TODO should these results be cached?
   bool checkDeviceCopyable(QualType Ty) {
     auto DirectParent = ObjectAccessPath.back();
     DiagDetails Detail = getObjectAccessDiagDetails(DirectParent);
@@ -932,16 +930,6 @@ public:
     QualType Type = Ty;
     if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent))
       Type = Ty->getPointeeType();
-
-    // No need to lookup anything if trivially copyable already
-    if (Type.isTriviallyCopyableType(SemaSYCLRef.getASTContext()))
-      return true;
-    // FIXME: isTriviallyCopyableType allows explicitly deleted destructors,
-    // but the SYCL spec stipulates that deleted destructors on an explicitly-
-    // marked device-copyable class is UB.
-    // This shortcut path ends up resulting in missed -Wpendantic-sycl deleted
-    // destructor warnings. Consider moving -Wpendantic-sycl deleted destructor
-    // test before this shortcut.
 
     bool MarkedCopyable =
         SemaSYCLRef.checkExplicitDeviceCopyable(Type, Detail.Loc);
@@ -953,10 +941,16 @@ public:
     if (RD && RD->isLambda())
       return true;
 
+    // These SMF checks are not cheap and should only be enabled with
+    // -Wpendantic-sycl.
+    DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
+    bool CheckSMFs = !Diags.isIgnored(
+        diag::warn_sycl_device_copyable_smf_not_public, Detail.Loc);
+
     // Checking SYCL 2020 3.13.1, when explicitly declaring certain class types
     // as device copyable:
-    if (MarkedCopyable && RD) {
-      // * Type T has a public non-deleted destructor; and
+    if (CheckSMFs && MarkedCopyable && RD) {
+      // * Type T has a public non-deleted destructor;
       CXXDestructorDecl *DD = SemaSYCLRef.SemaRef.LookupDestructor(RD);
       if (!DD || DD->isDeleted() || DD->getAccess() != AS_public) {
         SemaSYCLRef.Diag(DD ? DD->getLocation() : RD->getLocation(),
@@ -964,58 +958,63 @@ public:
             << Type;
         emitObjectAccessPathNotes();
       }
+    }
 
-      DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
-      bool CheckSMFEligible = !Diags.isIgnored(
-          diag::warn_sycl_device_copyable_smf_not_public, Detail.Loc);
-      if (CheckSMFEligible) {
-        // * Each eligible copy constructor, move constructor, copy assignment
-        //   operator, and move assignment operator is public;
-        bool HasEligibleSMF = false;
-        for (const NamedDecl *ND : SemaSYCLRef.SemaRef.LookupConstructors(RD)) {
-          auto *CD = dyn_cast<CXXConstructorDecl>(ND);
-          if (CD && CD->isCopyOrMoveConstructor() && !CD->isDeleted() &&
-              !CD->isIneligibleOrNotSelected()) {
-            if (CD->getAccess() != AS_public) {
-              SemaSYCLRef.Diag(CD->getLocation(),
-                               diag::warn_sycl_device_copyable_smf_not_public)
-                  << Type
-                  << (CD->isCopyConstructor()
-                          ? diag::EligibleSMFKind::CopyCtor
-                          : diag::EligibleSMFKind::MoveCtor);
-              emitObjectAccessPathNotes();
-            }
-            HasEligibleSMF = true;
+    // SYCL 2020 3.13.1: trivially copyable implies device-copyability.
+    // However, due to Clang not implementing DR 1734, Clang treats classes
+    // with deleted destructors as trivially copyable. Thus, checking for
+    // is_trivially_copyable must happen after deleted destructors are checked.
+    // FIXME: DR1734
+    if (Type.isTriviallyCopyableType(SemaSYCLRef.getASTContext()))
+      return true;
+
+    if (CheckSMFs && MarkedCopyable && RD) {
+      // * Each eligible copy constructor, move constructor, copy assignment
+      //   operator, and move assignment operator is public;
+      bool HasEligibleSMF = false;
+      for (const NamedDecl *ND : SemaSYCLRef.SemaRef.LookupConstructors(RD)) {
+        auto *CD = dyn_cast<CXXConstructorDecl>(ND);
+        if (CD && CD->isCopyOrMoveConstructor() && !CD->isDeleted() &&
+            !CD->isIneligibleOrNotSelected()) {
+          if (CD->getAccess() != AS_public) {
+            SemaSYCLRef.Diag(CD->getLocation(),
+                              diag::warn_sycl_device_copyable_smf_not_public)
+                << Type
+                << (CD->isCopyConstructor()
+                        ? diag::EligibleSMFKind::CopyCtor
+                        : diag::EligibleSMFKind::MoveCtor);
+            emitObjectAccessPathNotes();
           }
+          HasEligibleSMF = true;
         }
-        for (const NamedDecl *ND :
-             SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
-          auto *MD = dyn_cast<CXXMethodDecl>(ND);
-          if (MD &&
-              (MD->isCopyAssignmentOperator() ||
-               MD->isMoveAssignmentOperator()) &&
-              !MD->isDeleted() && !MD->isIneligibleOrNotSelected()) {
-            if (MD->getAccess() != AS_public) {
-              SemaSYCLRef.Diag(MD->getLocation(),
-                               diag::warn_sycl_device_copyable_smf_not_public)
-                  << Type
-                  << (MD->isCopyAssignmentOperator()
-                          ? diag::EligibleSMFKind::CopyAssign
-                          : diag::EligibleSMFKind::MoveAssign);
-              emitObjectAccessPathNotes();
-            }
-            HasEligibleSMF = true;
+      }
+      for (const NamedDecl *ND :
+            SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
+        auto *MD = dyn_cast<CXXMethodDecl>(ND);
+        if (MD &&
+            (MD->isCopyAssignmentOperator() ||
+              MD->isMoveAssignmentOperator()) &&
+            !MD->isDeleted() && !MD->isIneligibleOrNotSelected()) {
+          if (MD->getAccess() != AS_public) {
+            SemaSYCLRef.Diag(MD->getLocation(),
+                              diag::warn_sycl_device_copyable_smf_not_public)
+                << Type
+                << (MD->isCopyAssignmentOperator()
+                        ? diag::EligibleSMFKind::CopyAssign
+                        : diag::EligibleSMFKind::MoveAssign);
+            emitObjectAccessPathNotes();
           }
+          HasEligibleSMF = true;
         }
-        // * Type T has at least one eligible copy constructor, move
-        //   constructor,
-        //   copy assignment operator, or move assignment operator;
-        if (!HasEligibleSMF) {
-          SemaSYCLRef.Diag(RD->getLocation(),
-                           diag::warn_sycl_device_copyable_no_eligible_smf)
-              << Type;
-          emitObjectAccessPathNotes();
-        }
+      }
+      // * Type T has at least one eligible copy constructor, move
+      //   constructor,
+      //   copy assignment operator, or move assignment operator;
+      if (!HasEligibleSMF) {
+        SemaSYCLRef.Diag(RD->getLocation(),
+                          diag::warn_sycl_device_copyable_no_eligible_smf)
+            << Type;
+        emitObjectAccessPathNotes();
       }
       // Not possible to check for the following:
       // * The effect of each eligible copy constructor, move constructor, copy
