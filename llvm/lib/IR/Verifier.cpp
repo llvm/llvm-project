@@ -164,6 +164,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Keep track which DISubprogram is attached to which function.
   DenseMap<const DISubprogram *, const Function *> DISubprogramAttachments;
 
+  /// Cache of whether following a DIScope's scope chain repeats a node.
+  DenseMap<const Metadata *, bool> DIScopeCycleCache;
+
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
 
@@ -269,6 +272,7 @@ public:
 
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
+    DIScopeCycleCache.clear();
     LandingPadResultTy = nullptr;
     SawFrameEscape = false;
     SiblingFuncletInfo.clear();
@@ -314,6 +318,7 @@ public:
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
+    DIScopeCycleCache.clear();
     return !Broken;
   }
 
@@ -380,6 +385,9 @@ private:
 #include "llvm/IR/Metadata.def"
   void visitDIType(const DIType &N);
   void visitDIScope(const DIScope &N);
+  void visitDIScopeChain(const DIScope &N);
+  bool hasDIScopeCycle(const Metadata *S);
+  DISubprogram *getSubprogram(Metadata *LocalScope);
   void visitDIVariable(const DIVariable &N);
   void visitDILexicalBlockBase(const DILexicalBlockBase &N);
   void visitDITemplateParameter(const DITemplateParameter &N);
@@ -949,6 +957,55 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   }
 }
 
+/// Parent scope operand of \p S, or null if \p S has no parent (a \c DIFile,
+/// \c DICompileUnit, or non-scope). Mirrors \c DIScope::getScope() without
+/// asserting on unexpected metadata kinds.
+static const Metadata *getRawDIScopeParent(const Metadata *S) {
+  if (auto *T = dyn_cast_or_null<DIType>(S))
+    return T->getRawScope();
+  if (auto *SP = dyn_cast_or_null<DISubprogram>(S))
+    return SP->getRawScope();
+  if (auto *LB = dyn_cast_or_null<DILexicalBlockBase>(S))
+    return LB->getRawScope();
+  if (auto *NS = dyn_cast_or_null<DINamespace>(S))
+    return NS->getRawScope();
+  if (auto *CB = dyn_cast_or_null<DICommonBlock>(S))
+    return CB->getRawScope();
+  if (auto *M = dyn_cast_or_null<DIModule>(S))
+    return M->getRawScope();
+  return nullptr;
+}
+
+/// True if following the scope operand from \p S repeats a node.
+bool Verifier::hasDIScopeCycle(const Metadata *S) {
+  SmallPtrSet<const Metadata *, 8> Seen;
+  auto CacheSeen = [&](bool HasCycle) {
+    for (const Metadata *M : Seen)
+      DIScopeCycleCache[M] = HasCycle;
+    return HasCycle;
+  };
+
+  while (auto *Scope = dyn_cast_or_null<DIScope>(S)) {
+    auto It = DIScopeCycleCache.find(Scope);
+    bool IsInCache = It != DIScopeCycleCache.end();
+    if (IsInCache)
+      return CacheSeen(It->second);
+    bool AlreadySeen = !Seen.insert(Scope).second;
+    if (AlreadySeen) // New cycle detected
+      return CacheSeen(true);
+    // No new cycle detected
+    S = getRawDIScopeParent(Scope);
+  }
+
+  // Finished walking node chain without detecting any cycles
+  return CacheSeen(false);
+}
+
+void Verifier::visitDIScopeChain(const DIScope &N) {
+  CheckDI(!hasDIScopeCycle(&N), "DIScope scope chain must not contain a cycle",
+          &N);
+}
+
 void Verifier::visitMDNode(const MDNode &BaseMD,
                            AreDebugLocsAllowed AllowLocs) {
   // Only visit each node once.  Metadata can be mutually recursive, so this
@@ -976,6 +1033,10 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
     break;
 #include "llvm/IR/Metadata.def"
     }
+
+    // A scope chain must terminate.
+    if (const auto *S = dyn_cast<DIScope>(CurrentMD))
+      visitDIScopeChain(*S);
 
     for (const Metadata *Op : CurrentMD->operands()) {
       if (!Op)
@@ -3377,6 +3438,10 @@ void Verifier::visitFunction(const Function &F) {
     Check(Scope, "Failed to find DILocalScope", DL);
 
     if (!Seen.insert(Scope).second)
+      return;
+
+    // Cycles are diagnosed when the DIScope nodes themselves are visited.
+    if (hasDIScopeCycle(Scope))
       return;
 
     DISubprogram *SP = Scope->getSubprogram();
@@ -7154,7 +7219,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 ///
 /// This carefully grabs the subprogram from a local scope, avoiding the
 /// built-in assertions that would typically fire.
-static DISubprogram *getSubprogram(Metadata *LocalScope) {
+DISubprogram *Verifier::getSubprogram(Metadata *LocalScope) {
+  if (hasDIScopeCycle(LocalScope))
+    return nullptr;
+
   if (!LocalScope)
     return nullptr;
 
