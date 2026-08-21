@@ -893,7 +893,7 @@ private:
         Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
                             tok::kw___finally, tok::r_brace,
                             Keywords.kw___except) ||
-        Line.First->is(TT_ExportLBrace) || Line.Last->is(TT_ExportLBrace)) {
+        Line.Last->is(TT_ExportLBrace)) {
       if (IsSplitBlock)
         return 0;
       // Don't merge when we can't except the case when
