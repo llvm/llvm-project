@@ -413,6 +413,16 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
+    if (!OrcRuntimePath.empty()) {
+      JITBuilder->setPlatformSetUp(
+          llvm::orc::ExecutorNativePlatform(OrcRuntimePath));
+    } else {
+      auto Err = llvm::make_error<llvm::StringError>(
+          "OrcRuntime not found, running JIT without native platform support "
+          "and some features may not work.",
+          std::error_code());
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "warning: ");
+    }
     // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
     // (which provides __emutls_get_address and supports the full TLS
     // lifecycle). That will also remove the in-process-only constraint below.
