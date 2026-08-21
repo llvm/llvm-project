@@ -215,7 +215,7 @@ class ExtendedIRTraits {
   ExtendedIRTraits& operator=(ExtendedIRTraits&&) = delete;
 
   virtual ~ExtendedIRTraits() = default;
-  virtual std::optional<std::string> getIRName(Any IR) = 0;
+  virtual std::optional<std::string> getIRName(Any IR) const = 0;
 };
 
 struct ExtendedIRContext {
@@ -226,7 +226,6 @@ struct ExtendedIRContext {
   ExtendedIRContext(ExtendedIRContext&&) = delete;
   ExtendedIRContext& operator=(ExtendedIRContext&&) = delete;
 
-  ExtendedIRContext* context;
   llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
   // Add an ExtendedIRTraits to the traits vector
   void addTrait(std::unique_ptr<ExtendedIRTraits> trait) {
@@ -249,9 +248,10 @@ struct ExtendedIRContext {
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class LLVM_ABI ChangeReporter : public ExtendedIRContext {
+template <typename IRUnitT> class LLVM_ABI ChangeReporter {
 protected:
   ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
+  void setContext(ExtendedIRContext *Context) { context = Context; }
 
 public:
   virtual ~ChangeReporter();
@@ -293,6 +293,9 @@ protected:
 
   // Run in verbose mode, printing everything?
   const bool VerboseMode;
+
+  // Optional extended context used to resolve custom IR names.
+  ExtendedIRContext *context = nullptr;
 };
 
 // An abstract template base class that handles printing banners and
