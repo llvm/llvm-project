@@ -16,8 +16,6 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
 
-#include "Plugins/SymbolFile/DWARF/DWARFASTParserFortran.h"
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
@@ -52,12 +50,6 @@ void TypeSystemFortran::Initialize() {
 
 void TypeSystemFortran::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-plugin::dwarf::DWARFASTParser *TypeSystemFortran::GetDWARFParser() {
-  if (!m_dwarf_ast_parser_up)
-    m_dwarf_ast_parser_up = std::make_unique<DWARFASTParserFortran>(*this);
-  return m_dwarf_ast_parser_up.get();
 }
 
 lldb::TypeSystemSP
