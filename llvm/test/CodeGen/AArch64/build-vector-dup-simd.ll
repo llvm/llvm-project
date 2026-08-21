@@ -301,8 +301,8 @@ entry:
 define <4 x i32> @dup_v4i32_bitcast_fp_to_int(float %a) {
 ; CHECK-LABEL: dup_v4i32_bitcast_fp_to_int:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast float %a to i32
@@ -328,8 +328,8 @@ entry:
 define <2 x i64> @dup_v2i64_bitcast_double_to_int(double %a) {
 ; CHECK-LABEL: dup_v2i64_bitcast_double_to_int:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast double %a to i64
