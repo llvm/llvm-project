@@ -71,6 +71,11 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Pixel, IOType::Out}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::VertexID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In}};
+    return Stages;
+  }
   default:
     llvm_unreachable(
         "available stages for given semantic kind are not handled");
