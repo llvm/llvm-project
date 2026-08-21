@@ -2339,7 +2339,8 @@ LLVM_ABI APInt pow(const APInt &X, int64_t N);
 /// \returns the greatest common divisor of A and B.
 LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B);
 
-/// Compute GCD of two signed APInt values.
+/// Compute GCD of two signed APInt values. It takes the absolute value of the
+/// both \p A and \p B, and returns the unsigned greatest common divisor.
 LLVM_ABI APInt SGreatestCommonDivisor(APInt A, APInt B);
 
 /// Converts the given APInt to a double value.
