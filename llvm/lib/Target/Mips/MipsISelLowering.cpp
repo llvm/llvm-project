@@ -5015,8 +5015,7 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
     }
     const MCRegisterClass &RC = MRI->getRegClass(RegClassID);
     Register Reg = RC.getRegister(RegIdx);
-    BitVector ReservedRegs =
-        Subtarget.getRegisterInfo()->getReservedRegs(MF);
+    BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
     if (!ReservedRegs.test(Reg))
       reportFatalUsageError(Twine("Trying to obtain non-reserved register \"" +
                                   StringRef(RegName) + "\"."));
