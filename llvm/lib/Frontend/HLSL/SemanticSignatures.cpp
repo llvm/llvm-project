@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -52,6 +53,11 @@ dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
       return Kind.value();
 
   return dxbc::PSV::SemanticKind::Invalid;
+}
+
+ArrayRef<SemanticStageInfo>
+hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
+  llvm_unreachable("available stages for given semantic kind are not handled");
 }
 
 Expected<SemanticSignatureElement>

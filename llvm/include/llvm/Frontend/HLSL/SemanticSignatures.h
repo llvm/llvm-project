@@ -119,6 +119,9 @@ struct SemanticSignatureElement {
 
 LLVM_ABI dxbc::PSV::SemanticKind getSemanticKind(StringRef SemanticName);
 
+LLVM_ABI ArrayRef<SemanticStageInfo>
+getAvailableStages(dxbc::PSV::SemanticKind SemanticKind);
+
 } // namespace hlsl
 } // namespace llvm
 
