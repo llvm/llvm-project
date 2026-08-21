@@ -1284,11 +1284,6 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
   return ExtraSGPRs;
 }
 
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed) {
-  return getNumExtraSGPRs(STI, VCCUsed, FlatScrUsed, hasXNACK(STI));
-}
-
 static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
                                                unsigned Granule) {
   return divideCeil(std::max(1u, NumRegs), Granule);
