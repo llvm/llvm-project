@@ -1,7 +1,7 @@
 ; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | FileCheck %s
 ; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes=tree < %s 2>&1 \
-; RUN:   | FileCheck %s
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
 ; CHECK: require<MachineModuleAnalysis>
 ; CHECK-NEXT: require<profile-summary>
@@ -59,6 +59,7 @@
 ; CHECK-NEXT:     machine-sink
 ; CHECK-NEXT:     peephole-opt
 ; CHECK-NEXT:     dead-mi-elimination
+; RV64-NEXT:      riscv-opt-w-instrs
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     process-imp-defs

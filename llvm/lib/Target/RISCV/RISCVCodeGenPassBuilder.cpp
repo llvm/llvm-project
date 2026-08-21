@@ -118,9 +118,8 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
 
   Base::addMachineSSAOptimization(PMW);
 
-  if (TM.getTargetTriple().isRISCV64()) {
-    // TODO: RISCVOptWInstrsPass
-  }
+  if (TM.getTargetTriple().isRISCV64())
+    addMachineFunctionPass(RISCVOptWInstrsPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {

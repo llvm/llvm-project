@@ -88,8 +88,14 @@ public:
 FunctionPass *createRISCVVectorPeepholeLegacyPass();
 void initializeRISCVVectorPeepholeLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVOptWInstrsPass();
-void initializeRISCVOptWInstrsPass(PassRegistry &);
+class RISCVOptWInstrsPass : public OptionalPassInfoMixin<RISCVOptWInstrsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVOptWInstrsLegacyPass();
+void initializeRISCVOptWInstrsLegacyPass(PassRegistry &);
 
 class RISCVFoldMemOffsetPass
     : public OptionalPassInfoMixin<RISCVFoldMemOffsetPass> {
