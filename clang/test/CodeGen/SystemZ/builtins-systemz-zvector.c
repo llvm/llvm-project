@@ -775,7 +775,7 @@ void test_core(void) {
 
   vsl = vec_load_pair(sl1 + 1, sl2 - 1);
   // CHECK-ASM: vlvgp
-  vul = vec_load_pair(ul1 + 1, ul1 - 1);
+  vul = vec_load_pair(ul1 + 1, ul2 - 1);
   // CHECK-ASM: vlvgp
 
   vuc = vec_genmask(0);
