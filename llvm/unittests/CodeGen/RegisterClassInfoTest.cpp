@@ -33,7 +33,7 @@ public:
 #endif
   }
 
-  void SetUp() override { setUpImpl("amdgcn-amd-amdhsa", "gfx900", /*FS=*/""); }
+  void SetUp() override { setUpImpl("amdgpu9.00-amd-amdhsa", "", /*FS=*/""); }
 };
 
 static void materializeAll(RegisterClassInfo &RCI,
