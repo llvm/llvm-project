@@ -161,12 +161,18 @@ infrastructure are described first, followed by tool-specific sections.
   different constructor.
 
 - Improved {doc}`performance-inefficient-algorithm
-  <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
-  produce a fix with the container or the searched-for value missing, such as
-  `.find(43)` or `s.find()`, when either comes from a macro. The value is
-  copied as written rather than with its parentheses stripped, and no fix is
-  offered when an argument covers only part of a macro expansion, as it then
-  has no source text of its own.
+  <clang-tidy/checks/performance/inefficient-algorithm>` check:
+
+  - Added a diagnostic for a `std::find_if` over a `std::set` or
+    `std::multiset` whose predicate compares the element against a fixed bound
+    with a built-in `<`, `<=`, `>` or `>=`. `upper_bound` and `lower_bound`
+    find that element in logarithmic instead of linear time.
+
+  - No longer produces a fix with the container or the searched-for value
+    missing, such as `.find(43)` or `s.find()`, when either comes from a macro.
+    The value is copied as written rather than with its parentheses stripped,
+    and no fix is offered when an argument covers only part of a macro
+    expansion, as it then has no source text of its own.
 
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding

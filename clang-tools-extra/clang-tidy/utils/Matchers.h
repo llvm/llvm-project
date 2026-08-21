@@ -57,6 +57,12 @@ AST_MATCHER(QualType, isSimpleChar) {
           ActualType->isSpecificBuiltinType(BuiltinType::Char_U));
 }
 
+/// Matches a lambda whose call operator matches `InnerMatcher`.
+AST_MATCHER_P(LambdaExpr, hasCallOperator,
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getCallOperator(), Finder, Builder);
+}
+
 AST_MATCHER(Expr, hasUnevaluatedContext) {
   if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
     return true;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OwningMemoryCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,11 +19,6 @@ using namespace clang::ast_matchers::internal;
 namespace clang::tidy::cppcoreguidelines {
 
 namespace {
-AST_MATCHER_P(LambdaExpr, hasCallOperator, Matcher<CXXMethodDecl>,
-              InnerMatcher) {
-  return InnerMatcher.matches(*Node.getCallOperator(), Finder, Builder);
-}
-
 AST_MATCHER_P(LambdaExpr, hasLambdaBody, Matcher<Stmt>, InnerMatcher) {
   return InnerMatcher.matches(*Node.getBody(), Finder, Builder);
 }
@@ -197,7 +193,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                            hasAncestor(decl(equalsBoundNode("context"),
                                             equalsBoundNode("scope-decl"))))
                            .bind("bad_owner_return")))),
-          hasCallOperator(returns(
+          matchers::hasCallOperator(returns(
               qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))))
           .bind("lambda"),
       this);
