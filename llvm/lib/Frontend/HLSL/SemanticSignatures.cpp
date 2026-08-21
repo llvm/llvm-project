@@ -58,6 +58,18 @@ dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
 ArrayRef<SemanticStageInfo>
 hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
   switch (SemanticKind) {
+  case dxbc::PSV::SemanticKind::Arbitrary: {
+    static constexpr IOType AllIOTypes =
+        static_cast<IOType>(IOType::InOut | IOType::PatchConstantOrPrimitive);
+    static constexpr IOType OutOrPatchConstant =
+        static_cast<IOType>(IOType::Out | IOType::PatchConstantOrPrimitive);
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::InOut}, {Triple::Geometry, IOType::InOut},
+        {Triple::Hull, AllIOTypes},      {Triple::Domain, AllIOTypes},
+        {Triple::Pixel, IOType::In},     {Triple::Mesh, OutOrPatchConstant},
+    };
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::DispatchThreadID:
   case dxbc::PSV::SemanticKind::GroupID:
   case dxbc::PSV::SemanticKind::GroupIndex:
