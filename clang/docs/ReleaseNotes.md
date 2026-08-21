@@ -96,6 +96,13 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On x86-64 System V, an eightbyte occupied only by a non-zero-width unnamed
+  bit-field is now classified INTEGER rather than NO_CLASS, matching GCC. As a
+  result a struct holding a run of `__int128`/`_BitInt(128)` bit-fields (which
+  record lowering merges into a single 128-bit access unit) is now passed and
+  returned in the two integer registers the ABI assigns it, instead of one.
+  This also fixes a crash when such a struct was passed or returned. (#GH202205)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
