@@ -1033,4 +1033,82 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedAfterSystemValue) {
   expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
+
+//===----------------------------------------------------------------------===//
+// Prefix-stable tessellation factor tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableTessFactors) {
+  // Indexed tess factors are reserved in the last column of their rows so that
+  // arbitrary values can still be co-packed into the same rows.
+
+  // struct PatchConstants {
+  //   float TessFactor[2] : SV_TessFactor;
+  //   float3 Data[2]      : DATA;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Hull, IOType::PatchConstantOrPrimitive,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::TessFactor, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: Data[0].xyz | TessFactor[0].w
+  // reg1: Data[1].xyz | TessFactor[1].w
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/3}, {/*Row=*/0, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSingleRowTessFactor) {
+  // A single row tess factor is not dynamically indexable and is packed like
+  // any other system value, rather than being reserved in the last column.
+
+  // struct PatchConstants {
+  //   float TessFactor : SV_TessFactor;
+  //   float3 Data      : DATA;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Hull, IOType::PatchConstantOrPrimitive,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::TessFactor, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: TessFactor.x | unused.yzw
+  // reg1: Data.xyz     | unused.w
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableIndexedTessFactorAfterIndexedElement) {
+  // An indexed tess factor may only be placed in rows whose indexed range is
+  // contained by its own, so it cannot be packed into the rows of the wider
+  // indexed range of Data.
+
+  // struct PatchConstants {
+  //   float3 Data[3]      : DATA;
+  //   float TessFactor[2] : SV_TessFactor;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Hull, IOType::PatchConstantOrPrimitive,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/3, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::TessFactor, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: Data[0].xyz | unused.w
+  // reg1: Data[1].xyz | unused.w
+  // reg2: Data[2].xyz | unused.w
+  // reg3: unused.xyz  | TessFactor[0].w
+  // reg4: unused.xyz  | TessFactor[1].w
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/5,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/3}});
+}
 } // namespace
