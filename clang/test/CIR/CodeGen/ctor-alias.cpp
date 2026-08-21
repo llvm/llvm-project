@@ -42,7 +42,7 @@ void bar() {
 // CHECK:   cir.return
 
 // LLVM: define{{.*}} void @_Z3barv()
-// LLVM:   %[[B:.*]] = alloca %struct.B, i64 1, align 1
+// LLVM:   %[[B:.*]] = alloca %struct.B, align 1
 // LLVM:   call void @_ZN1BC1Ev(ptr{{.*}} %[[B]])
 // LLVM:   ret void
 

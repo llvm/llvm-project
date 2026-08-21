@@ -63,7 +63,6 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   QualType T = VD->getType();
   this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                 !T->isObjCObjectPointerType();
-  EvalResult.setSource(VD);
 
   if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();

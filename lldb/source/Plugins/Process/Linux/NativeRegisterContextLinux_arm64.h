@@ -117,15 +117,28 @@ private:
 
   RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
+  // Returns the ptrace register set number for the given register set.
+  unsigned int GetPtraceSet(RegisterSetType set) const;
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
     return any(m_validity & set);
   }
 
+  /// Returns the mask of sets that would be invalidated if the given set was
+  /// invalidated. That is, the set itself and any sets that depend on it.
+  ///
+  /// If you need anything more complex such as only invalidating during certain
+  /// modes, put that logic in the function that calls Invalidate().
+  RegisterSetType GetInvalidationMask(const RegisterSetType set) const;
+
+  /// Invalidate our saved copies of the given register sets and any sets that
+  /// depend on those sets.
   template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
     static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
-    m_validity &= ~(first | ... | rest);
+    m_validity &=
+        ~(GetInvalidationMask(first) | ... | GetInvalidationMask(rest));
   }
 
   Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
@@ -264,8 +277,6 @@ private:
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
-
-  unsigned GetSVERegSet();
 
   void *GetZABuffer() { return m_za_ptrace_payload.data(); };
 

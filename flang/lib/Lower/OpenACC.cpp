@@ -4791,8 +4791,11 @@ void Fortran::lower::materializeOpenACCRoutineBindTargets(
       if (mlir::func::FuncOp func =
               fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
         return func;
-      return fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module,
-                                               name, type, symbolTable);
+      // The bind target has no declaration of its own in the source: attribute
+      // it to the routine directive that named it so diagnostics can point at
+      // something meaningful.
+      return fir::FirOpBuilder::createFunction(routineOp.getLoc(), module, name,
+                                               type, symbolTable);
     };
 
     auto createRoutineForBindTarget =

@@ -73,18 +73,9 @@ void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
 
 } // namespace
 
-void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "LanaiPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(LanaiAsmPrinterBeginPass::name(),
-                            "lanai-asm-printer-begin");
-    PIC->addClassToPassName(LanaiAsmPrinterPass::name(), "lanai-asmprinter");
-    PIC->addClassToPassName(LanaiAsmPrinterEndPass::name(),
-                            "lanai-asm-printer-end");
-  }
 }
 
 Error LanaiTargetMachine::buildCodeGenPipeline(

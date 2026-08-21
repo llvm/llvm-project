@@ -7,9 +7,11 @@ import re
 
 from lldbsuite.test.decorators import (
     requireDarwin,
+    skipIf,
     skipIfWindows,
     skipIfTargetDoesNotSupportSharedLibraries,
 )
+import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnitsArgs,
@@ -21,6 +23,10 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
+@skipIf(
+    oslist=lldbplatformutil.getDarwinOSTriples(),
+    bugnumber="https://github.com/llvm/llvm-project/issues/216150",
+)
 class TestDAP_module(DAPTestCaseBase):
     def run_test(self, symbol_basename: str, expect_debug_info_size: bool):
         session = self.build_and_create_session()

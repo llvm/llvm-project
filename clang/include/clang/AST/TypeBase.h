@@ -1635,6 +1635,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Strip nullability attributes from the given type.
+  QualType stripNullability(const ASTContext &ctx) const;
+
   /// Remove all qualifiers including _Atomic.
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a

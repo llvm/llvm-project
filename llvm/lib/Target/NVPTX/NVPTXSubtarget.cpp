@@ -131,6 +131,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   if (PTXVersion == 0) {
     // User didn't request a specific PTX version; use the minimum for this SM.
+    ApplyFeatureFlag(("+ptx" + Twine(MinPTX)).str());
     PTXVersion = MinPTX;
   } else if (PTXVersion < MinPTX) {
     // User explicitly requested an insufficient PTX version.
@@ -159,7 +160,7 @@ bool NVPTXSubtarget::allowFP16Math() const {
 }
 
 bool NVPTXSubtarget::hasF32x2Instructions() const {
-  return hasFeature(NVPTX::SM100) && PTXVersion >= 86 && !NoF32x2;
+  return hasFeature(NVPTX::SM100) && !NoF32x2;
 }
 
 bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
@@ -182,7 +183,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   case ISD::FRINT:
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
-    return hasFeature(NVPTX::SM90) && getPTXVersion() >= 78;
+    return hasFeature(NVPTX::SM90);
   // Several BF16 instructions are available on sm_80 only.
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
@@ -190,7 +191,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
-    return hasFeature(NVPTX::SM80) && getPTXVersion() >= 70;
+    return hasFeature(NVPTX::SM80);
   }
   return true;
 }

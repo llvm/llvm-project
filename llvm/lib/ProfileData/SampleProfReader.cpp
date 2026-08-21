@@ -899,14 +899,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
           hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger);
       bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
       // An unflagged function offset table inherently indexes the primary
-      // context-sensitive symbol span.
-      bool IsCS = !IsFlat;
+      // Nested symbol span.
+      bool IsNested = !IsFlat;
       assert((!ProfileIsCS ||
               hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered) ||
               IsEytzinger) &&
              "func offset table should always be sorted or in Eytzinger BFS "
              "order in CS profile");
-      if (std::error_code EC = readFuncOffsetTable(IsEytzinger, IsCS))
+      if (std::error_code EC = readFuncOffsetTable(IsEytzinger, IsNested))
         return EC;
     }
     break;
@@ -995,27 +995,27 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
 
 std::error_code
 SampleProfileReaderExtBinaryBase::readFuncOffsetTable(bool IsEytzinger,
-                                                      bool IsCS) {
+                                                      bool IsNested) {
   if (IsEytzinger)
-    return readEytzingerFuncOffsetTable(IsCS);
+    return readEytzingerFuncOffsetTable(IsNested);
   return readLegacyFuncOffsetTable();
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readEytzingerFuncOffsetTable(bool IsCS) {
+SampleProfileReaderExtBinaryBase::readEytzingerFuncOffsetTable(bool IsNested) {
   // If there are more than one function offset section, the profile associated
   // with the previous section has to be done reading before next one is read.
   FuncOffsetTable.reset();
 
   size_t Size = End - Data;
-  size_t SpanSize = NameTable->getEytzingerSpan(IsCS).size();
+  size_t SpanSize = NameTable->getEytzingerSpan(IsNested).size();
   if (Size != SpanSize * sizeof(uint32_t))
     return sampleprof_error::malformed;
 
   auto *Array = reinterpret_cast<const support::ulittle32_t *>(Data);
   ArrayRef<support::ulittle32_t> Offsets(Array, SpanSize);
 
-  FuncOffsetTable.emplace(EytzingerMode, NameTable->getEytzingerSpan(IsCS),
+  FuncOffsetTable.emplace(EytzingerMode, NameTable->getEytzingerSpan(IsNested),
                           Offsets);
 
   Data = End;
@@ -1365,16 +1365,16 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(
 
 // Read the Eytzinger layout for SecNameTable from an ExtBinary MD5 profile.
 //
-// The section consists of three sequential ULEB128 symbol counts (CS, Flat, and
-// Inlinees) followed by their corresponding arrays of 64-bit MD5 hash keys laid
-// out in Eytzinger order.
+// The section consists of three sequential ULEB128 symbol counts (Nested, Flat,
+// and Inlinees) followed by their corresponding arrays of 64-bit MD5 hash keys
+// laid out in Eytzinger order.
 std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
     bool IsMD5, bool FixedLengthMD5) {
   assert(IsMD5 && "Eytzinger name tables require MD5 representation");
   if (!IsMD5)
     return sampleprof_error::malformed;
 
-  // Read the table sizes for CS, flat, and inlinee symbols.
+  // Read the table sizes for Nested, flat, and inlinee symbols.
   std::array<uint64_t, static_cast<size_t>(EytzingerSpan::NumSpans)> Counts;
   for (uint64_t &Count : Counts) {
     auto ValOrErr = readNumber<uint64_t>();
@@ -1382,20 +1382,20 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
       return EC;
     Count = *ValOrErr;
   }
-  auto [NumCS, NumFlat, NumInlinees] = Counts;
+  auto [NumNested, NumFlat, NumInlinees] = Counts;
 
   // Guard against unsigned overflow in total entry computation.
-  if (NumCS > std::numeric_limits<uint32_t>::max() ||
+  if (NumNested > std::numeric_limits<uint32_t>::max() ||
       NumFlat > std::numeric_limits<uint32_t>::max() ||
       NumInlinees > std::numeric_limits<uint32_t>::max())
     return sampleprof_error::malformed;
 
-  uint64_t TotalEntries = NumCS + NumFlat + NumInlinees;
+  uint64_t TotalEntries = NumNested + NumFlat + NumInlinees;
   if (static_cast<size_t>(End - Data) < TotalEntries * sizeof(uint64_t))
     return sampleprof_error::truncated;
 
   NameTable = std::make_unique<EytzingerSampleProfileNameTable>(
-      reinterpret_cast<const support::ulittle64_t *>(Data), NumCS, NumFlat,
+      reinterpret_cast<const support::ulittle64_t *>(Data), NumNested, NumFlat,
       NumInlinees);
 
   if (!ProfileIsCS)

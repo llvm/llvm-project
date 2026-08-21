@@ -26,8 +26,8 @@ int test(const char *p) {
 // it sees first - here, the my_stat declaration.
 //
 // CIR-LABEL: cir.func private @real_impl(
-// CIR-SAME:    !cir.ptr<!s8i> {{.*}},
-// CIR-SAME:    !cir.ptr<!rec_my_stat> {{.*}}) -> !s32i
+// CIR-SAME:    !cir.ptr<!s8i> {{[^,]*}},
+// CIR-SAME:    !cir.ptr<!rec_my_stat> {{[^,]*}}) -> !s32i
 
 // CIR-LABEL: cir.func {{.*}} @test(
 //

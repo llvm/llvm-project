@@ -35,14 +35,15 @@ uint32_t ThreadPlanStepInRange::s_default_flag_values =
 
 ThreadPlanStepInRange::ThreadPlanStepInRange(
     Thread &thread, const AddressRange &range,
-    const SymbolContext &addr_context, const char *step_into_target,
+    const SymbolContext &addr_context, std::string step_into_target,
     lldb::RunMode stop_others, LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info)
     : ThreadPlanStepRange(ThreadPlan::eKindStepInRange,
                           "Step Range stepping in", thread, range, addr_context,
                           stop_others),
       ThreadPlanShouldStopHere(this), m_step_past_prologue(true),
-      m_virtual_step(eLazyBoolCalculate), m_step_into_target(step_into_target) {
+      m_virtual_step(eLazyBoolCalculate),
+      m_step_into_target(std::move(step_into_target)) {
   SetCallbacks();
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_in_avoids_code_without_debug_info,
@@ -112,7 +113,7 @@ void ThreadPlanStepInRange::GetDescription(Stream *s,
     printed_line_info = true;
   }
 
-  if (m_step_into_target)
+  if (!m_step_into_target.empty())
     s->Format(" targeting {0}", m_step_into_target);
 
   if (!printed_line_info || level == eDescriptionLevelVerbose) {
@@ -376,30 +377,23 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
       operation == eFrameCompareYounger) {
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);
-    if (step_in_range_plan->m_step_into_target) {
+    if (!step_in_range_plan->m_step_into_target.empty()) {
+      llvm::StringRef target_name = step_in_range_plan->m_step_into_target;
       SymbolContext sc = frame->GetSymbolContext(
           eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
       if (sc.symbol != nullptr) {
-        // First try an exact match, since that's cheap with ConstStrings.
-        // Then do a strstr compare.
-        if (step_in_range_plan->m_step_into_target == sc.GetFunctionName()) {
+        if (target_name == sc.GetFunctionName()) {
           should_stop_here = true;
         } else {
-          const char *target_name =
-              step_in_range_plan->m_step_into_target.AsCString(nullptr);
-          const char *function_name = sc.GetFunctionName().AsCString(nullptr);
-
-          if (function_name == nullptr)
-            should_stop_here = false;
-          else if (strstr(function_name, target_name) == nullptr)
+          llvm::StringRef function_name = sc.GetFunctionName().GetStringRef();
+          if (function_name.empty() || !function_name.contains(target_name))
             should_stop_here = false;
         }
         if (log && !should_stop_here)
           LLDB_LOG(log,
                    "Stepping out of frame {0} which did not match step into "
                    "target {1}.",
-                   sc.GetFunctionName(),
-                   step_in_range_plan->m_step_into_target);
+                   sc.GetFunctionName(), target_name);
       }
     }
 

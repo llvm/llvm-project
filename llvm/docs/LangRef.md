@@ -2551,6 +2551,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `optnone`
 :   This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.
+    Interprocedural passes may still analyze this function, transform its body,
+    and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the `alwaysinline`
     attribute; this attribute is also incompatible
@@ -8088,18 +8090,15 @@ main loop. Each node has a single operand containing the name string:
 
 Additionally, enabling predication implicitly enables vectorization.
 
-#### '`llvm.loop.vectorize.scalable.enable`' Metadata
+#### '`llvm.loop.vectorize.scalable.enable`' and '`llvm.loop.vectorize.scalable.disable`' Metadata
 
 This metadata selectively enables or disables scalable vectorization for the
 loop, and only has any effect if vectorization for the loop is already enabled.
-The first operand is the string `llvm.loop.vectorize.scalable.enable`
-and the second operand is a bit. If the bit operand value is 1 scalable
-vectorization is enabled, whereas a value of 0 reverts to the default fixed
-width vectorization:
+Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.scalable.enable"}
+!1 = !{!"llvm.loop.vectorize.scalable.disable"}
 ```
 
 #### '`llvm.loop.vectorize.width`' Metadata
@@ -9524,6 +9523,14 @@ flags metadata, using the following key-value pairs:
 ```
 
 ### Other Module Flags
+
+`executable-stack`
+:   A non-zero value indicates the module contains code requiring an executable
+    stack, such as a trampoline built in stack memory and jumped to. On ELF
+    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
+    telling the linker to mark the binary's stack executable. The flag must use
+    the `max` merge behavior, so that a module requiring an executable stack
+    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -21664,10 +21671,9 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory usually allocated on the
-stack, which also contains code to splice the nest value into the
-argument list. This is used to implement the GCC nested function address
-extension.
+in advance in a "trampoline", a block of memory which also contains code
+to splice the nest value into the argument list. This is used to
+implement the GCC nested function address extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21706,6 +21712,13 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
+
+The block may be allocated anywhere - the stack, the heap, a global, or a
+runtime-managed pool - as long as it is writable when
+`llvm.init.trampoline` executes and the address returned by
+{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
+addresses need not be equal, so a W^X implementation may map the block
+twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the

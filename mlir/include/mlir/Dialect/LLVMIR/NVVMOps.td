@@ -5317,15 +5317,19 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101,
     The multicast variants allow signaling on the *mbarrier objects*
     of multiple CTAs within the cluster. Operand `multicastMask`,
     when present, specifies the destination CTAs in the cluster such
-    that each bit position in the 16-bit `multicastMask` operand
+    that each bit position in the 16-bit or 32-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+    When present, the `smem_a_read` attribute restricts tracking to
+    shared-memory reads of matrix A performed by prior `tcgen05.mma`
+    operations.
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
-    Optional<I16>:$multicastMask,
-    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group);
+    Optional<AnyTypeOf<[I16, I32]>>:$multicastMask,
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
+    DefaultValuedAttr<BoolAttr, "false">:$smem_a_read);
 
   let assemblyFormat = [{
     $addr (`,` `multicast_mask` `=` $multicastMask^)?

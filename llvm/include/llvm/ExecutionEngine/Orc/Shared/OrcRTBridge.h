@@ -23,10 +23,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
-
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;
@@ -45,6 +41,7 @@ LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
+LLVM_ABI extern const char *DeregisterJITLoaderGDBAllocActionName;
 
 LLVM_ABI extern const char *const DispatchName;
 LLVM_ABI extern const char *const DispatchCtxName;
@@ -64,18 +61,13 @@ struct SimpleExecutorMemoryManagerSymbolNames {
 extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
-/// Symbol names for dylib management implementation.
-/// FIXME: We should find a better home for this struct.
-struct SimpleExecutorDylibManagerSymbolNames {
-  StringRef InstanceName;
-  StringRef OpenName;
-  StringRef ResolveName;
-};
-
-/// Default symbol names for the ORC runtime's NativeDylibManager SPS
-/// interface.
-extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
-    orc_rt_NativeDylibManagerSPSSymbols;
+/// Symbol names for the ORC runtime's NativeDylibManager SPS interface.
+inline constexpr char NativeDylibManagerInstanceName[] =
+    "orc_rt_ci_NativeDylibManager_Instance";
+inline constexpr char NativeDylibManagerLoadWrapperName[] =
+    "orc_rt_ci_sps_NativeDylibManager_load";
+inline constexpr char NativeDylibManagerLookupWrapperName[] =
+    "orc_rt_ci_sps_NativeDylibManager_lookup";
 
 /// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
 /// SPS interface.

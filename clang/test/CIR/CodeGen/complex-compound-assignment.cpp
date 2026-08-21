@@ -24,8 +24,8 @@ void foo() {
 // CIR: %[[RESULT:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
@@ -68,8 +68,8 @@ void foo1() {
 // CIR: %[[RESULT:.*]] = cir.complex.sub %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
@@ -112,8 +112,8 @@ void foo2() {
 // CIR: %[[RESULT:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_B]], 0
@@ -171,8 +171,8 @@ void foo3() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[ADD_REAL_F16]], %[[ADD_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, i64 1, align 2
-// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, i64 1, align 2
+// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, align 2
 // LLVM: %[[TMP_A:.*]] = load { half, half }, ptr %[[A_ADDR]], align 2
 // LLVM: %[[A_REAL:.*]] = extractvalue { half, half } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { half, half } %[[TMP_A]], 1
@@ -244,9 +244,9 @@ void foo4() {
 // CXX_CIR: %[[TMP_B:.*]] = cir.load volatile {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CXX_CIR: cir.store{{.*}} %[[TMP_B]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>
 
-// CXX_LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// CXX_LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// CXX_LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// CXX_LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// CXX_LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// CXX_LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
 // CXX_LLVM: %[[TMP_A:.*]] = load volatile { i32, i32 }, ptr %[[A_ADDR]], align 4
 // CXX_LLVM: %[[TMP_B:.*]] = load volatile { i32, i32 }, ptr %[[B_ADDR]], align 4
 // CXX_LLVM: %[[B_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_B]], 0
@@ -303,8 +303,8 @@ void foo5() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
@@ -350,8 +350,8 @@ void foo6() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !s32i -> !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_B]], 0
@@ -422,8 +422,8 @@ void foo7() {
 // CIR: }) : (!cir.bool) -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
@@ -508,8 +508,8 @@ void foo8() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
@@ -551,8 +551,8 @@ void foo10() {
 // CIR: %[[RESULT:.*]] = cir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
@@ -601,8 +601,8 @@ void foo11() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
@@ -657,8 +657,8 @@ void foo12() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !s32i -> !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_B_COMPLEX:.*]] = insertvalue { i32, i32 } {{.*}}, i32 %[[TMP_B]], 0
 // LLVM: %[[B_COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP_B_COMPLEX]], i32 0, 1
@@ -744,8 +744,8 @@ void foo13() {
 // CIR: %[[RESULT_COMPLEX_F16:.*]] = cir.complex.create %[[RESULT_REAL_F16]], %[[RESULT_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR: cir.store{{.*}} %[[RESULT_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, i64 1, align 2
-// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, i64 1, align 2
+// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, align 2
 // LLVM: %[[TMP_A:.*]] = load { half, half }, ptr %[[A_ADDR]], align 2
 // LLVM: %[[A_REAL:.*]] = extractvalue { half, half } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { half, half } %[[TMP_A]], 1
@@ -839,8 +839,8 @@ void foo9() {
 // C_CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
 // C_CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
-// C_LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// C_LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// C_LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// C_LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // C_LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // C_LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
 // C_LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
@@ -887,9 +887,9 @@ void compound_assignment_atomic() {
 // CIR: %[[A_PTR:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!u64i>
 // CIR: cir.store {{.*}} atomic(seq_cst) %[[RESULT]], %[[A_PTR]] : !u64i, !cir.ptr<!u64i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 8
-// LLVM: %[[ATOMIC_TMP1_ADDR:.*]] = alloca { float, float }, i64 1, align 8
-// LLVM: %[[ATOMIC_TMP2_ADDR:.*]] = alloca { float, float }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 8
+// LLVM: %[[ATOMIC_TMP1_ADDR:.*]] = alloca { float, float }, align 8
+// LLVM: %[[ATOMIC_TMP2_ADDR:.*]] = alloca { float, float }, align 8
 // LLVM: store { float, float } { float 2.000000e+00, float 0.000000e+00 }, ptr %[[A_ADDR]], align 8
 // LLVM: %[[TMP_A:.*]] = load atomic i64, ptr %[[A_ADDR]] seq_cst, align 8
 // LLVM: store i64 %[[TMP_A]], ptr %[[ATOMIC_TMP1_ADDR]], align 8

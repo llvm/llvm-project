@@ -276,6 +276,7 @@ public:
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
   bool isLargeGlobalValue(const GlobalValue *GV) const;
+  bool isLargeDataSize(uint64_t Size) const;
 
   bool isPositionIndependent() const;
 

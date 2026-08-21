@@ -1,20 +1,22 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the !cir.long_double wrapper and the f16 and f128 types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.double
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=double
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=double
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.f80
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=x86_fp80
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=x86_fp80
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.f128
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=fp128
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=fp128

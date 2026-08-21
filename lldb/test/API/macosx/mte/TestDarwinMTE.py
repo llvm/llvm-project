@@ -11,7 +11,7 @@ import lldbsuite.test.cpu_feature as cpu_feature
 exe_name = "uaf"  # Must match Makefile
 
 
-@requireNotWasm  # memory tagging is a Darwin AArch64 feature
+@requireNotWasm("memory tagging is a Darwin AArch64 feature")
 class TestDarwinMTE(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True

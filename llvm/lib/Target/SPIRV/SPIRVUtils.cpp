@@ -449,6 +449,14 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem) {
+  bool DropStorageClass =
+      TT.isVulkanOS() &&
+      OrderSem == static_cast<uint32_t>(SPIRV::MemorySemantics::None);
+  return OrderSem | (DropStorageClass ? 0 : StorageClassSem);
+}
+
 SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
                                 SyncScope::ID Id) {
   // Named by

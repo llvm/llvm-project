@@ -12,24 +12,23 @@
 // LLVM's own ORC-runtime-lite. Concrete implementations live in subdirectories
 // (e.g. RTBridge/SPS).
 //
+// This header provides only the core Proxy machinery. Named proxies for
+// specific operation families live in sibling headers (e.g. CallProxies.h,
+// MemoryAccessProxies.h).
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
 #define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
-#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
-#include <cstdint>
 #include <future>
-#include <string>
 #include <type_traits>
-#include <vector>
 
 namespace llvm::orc::rt {
 
@@ -204,60 +203,6 @@ Error buildProxies(JITDylib &JD, ProxyInit<FnT> PI, ProxyInit<FnTs>... PIs) {
     return POrErr.takeError();
   return buildProxies(JD, PIs...);
 }
-
-/// Runtime-agnostic interface for running a main-like function
-/// (int(int argc, char *argv[])) in the executor.
-///
-/// The function to run is given by its ExecutorAddr, its arguments as an
-/// argument vector, and its int64_t result is returned.
-using CallMainProxy = Proxy<int64_t(ExecutorAddr, ArrayRef<std::string>)>;
-
-/// Runtime-agnostic interface for running a void() function in the executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallVoidVoidProxy = Proxy<void(ExecutorAddr)>;
-
-/// Runtime-agnostic interface for running an int32_t() function in the
-/// executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallInt32VoidProxy = Proxy<int32_t(ExecutorAddr)>;
-
-/// Runtime-agnostic interface for running an int32_t(int32_t) function in the
-/// executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallInt32Int32Proxy = Proxy<int32_t(ExecutorAddr, int32_t)>;
-
-/// Runtime-agnostic interfaces for the memory-access operations. Unlike the
-/// Call* proxies above, these target wrappers that perform the operation
-/// directly, so they take the operation's data arguments rather than a callee
-/// address.
-using MemWriteUInt8sProxy = Proxy<void(ArrayRef<tpctypes::UInt8Write>)>;
-using MemWriteUInt16sProxy = Proxy<void(ArrayRef<tpctypes::UInt16Write>)>;
-using MemWriteUInt32sProxy = Proxy<void(ArrayRef<tpctypes::UInt32Write>)>;
-using MemWriteUInt64sProxy = Proxy<void(ArrayRef<tpctypes::UInt64Write>)>;
-using MemWritePointersProxy = Proxy<void(ArrayRef<tpctypes::PointerWrite>)>;
-using MemWriteBuffersProxy = Proxy<void(ArrayRef<tpctypes::BufferWrite>)>;
-using MemReadUInt8sProxy = Proxy<std::vector<uint8_t>(ArrayRef<ExecutorAddr>)>;
-using MemReadUInt16sProxy =
-    Proxy<std::vector<uint16_t>(ArrayRef<ExecutorAddr>)>;
-using MemReadUInt32sProxy =
-    Proxy<std::vector<uint32_t>(ArrayRef<ExecutorAddr>)>;
-using MemReadUInt64sProxy =
-    Proxy<std::vector<uint64_t>(ArrayRef<ExecutorAddr>)>;
-using MemReadPointersProxy =
-    Proxy<std::vector<ExecutorAddr>(ArrayRef<ExecutorAddr>)>;
-using MemReadBuffersProxy =
-    Proxy<std::vector<std::vector<uint8_t>>(ArrayRef<ExecutorAddrRange>)>;
-using MemReadStringsProxy =
-    Proxy<std::vector<std::string>(ArrayRef<ExecutorAddr>)>;
 
 } // namespace llvm::orc::rt
 

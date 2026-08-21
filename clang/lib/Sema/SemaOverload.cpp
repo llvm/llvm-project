@@ -15938,7 +15938,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     case OR_Deleted: {
       if (isImplicitlyDeleted(Best->Function)) {
         FunctionDecl *DeletedFD = Best->Function;
-        DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            DeletedFD->getDefaultedFunctionKind();
         if (DFK.isSpecialMember()) {
           Diag(OpLoc, diag::err_ovl_deleted_special_oper)
               << Args[0]->getType() << DFK.asSpecialMember();

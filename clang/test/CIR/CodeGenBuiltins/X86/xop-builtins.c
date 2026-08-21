@@ -1,21 +1,23 @@
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-cir -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-cir -fno-clangir-call-conv-lowering -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-cir -o %t.cir
-// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fclangir -emit-llvm -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -fclangir -emit-llvm -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
-
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-cir -o %t.cir
-// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-cir -o %t.cir
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-cir -fno-clangir-call-conv-lowering -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fclangir -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -fclangir -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-cir -fno-clangir-call-conv-lowering -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-cir -fno-clangir-call-conv-lowering -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG

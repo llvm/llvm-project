@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt-c/Logging.h"
 #include "orc-rt-c/Session.h"
 
 namespace orc_rt {
@@ -54,14 +55,20 @@ Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
                  ErrorReporterFn ReportError)
     : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
-      Notifiers(createService<NotificationService>()) {}
+      Notifiers(createService<NotificationService>()) {
+  ORC_RT_LOG(Info, Session, "Session %p constructed", this);
+}
 
 Session::~Session() {
+  ORC_RT_LOG(Info, Session, "Session %p destructor called", this);
   shutdown();
+  ORC_RT_LOG(Info, Session,
+             "Session %p destructor waiting for shutdown state...", this);
   std::unique_lock<std::mutex> Lock(M);
   CV.wait(Lock, [&]() {
     return CurrentState == State::Shutdown && TargetState == State::None;
   });
+  ORC_RT_LOG(Info, Session, "Session %p destructor complete", this);
 }
 
 void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
@@ -126,6 +133,7 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
 }
 
 void Session::detach(OnDetachFn OnDetach) {
+  ORC_RT_LOG(Info, Session, "Session %p detach called", this);
   addOnDetach(std::move(OnDetach));
 
   std::shared_ptr<ControllerAccess> TmpCA;
@@ -161,6 +169,7 @@ void Session::detach(OnDetachFn OnDetach) {
 }
 
 void Session::shutdown(OnShutdownFn OnShutdown) {
+  ORC_RT_LOG(Info, Session, "Session %p shutdown called", this);
   addOnShutdown(std::move(OnShutdown));
 
   std::shared_ptr<ControllerAccess> TmpCA;
@@ -268,6 +277,7 @@ void Session::appendService(std::unique_ptr<Service> Srv) {
 }
 
 void Session::handleDisconnect() {
+  ORC_RT_LOG(Info, Session, "Session %p handle-disconnect", this);
   // If we get here we _don't_ need to call disconnect.
   std::unique_lock<std::mutex> Lock(M);
   assert(CurrentState <= State::Attached);
@@ -289,6 +299,7 @@ void Session::proceedToDetach(std::unique_lock<std::mutex> &Lock,
   TmpCA.reset();
 
   // Notify services.
+  ORC_RT_LOG(Debug, Session, "Session %p detaching services", this);
   detachServices(std::move(ToNotify), ShutdownRequested);
 }
 
@@ -322,6 +333,7 @@ void Session::completeDetach() {
 }
 
 void Session::waitForManagedCodeTasksThenShutdown() {
+  ORC_RT_LOG(Info, Session, "Session %p waiting for managed tasks", this);
   ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
   ManagedCodeTaskGroup->close();
 }
@@ -336,6 +348,7 @@ void Session::proceedToShutdown() {
     CurrentState = State::Shutdown;
   }
 
+  ORC_RT_LOG(Debug, Session, "Session %p shutting down services", this);
   shutdownServices(std::move(ToNotify));
 }
 
@@ -351,6 +364,7 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 }
 
 void Session::completeShutdown() {
+  ORC_RT_LOG(Info, Session, "Session %p completing shutdown", this);
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(CurrentState == State::Shutdown);

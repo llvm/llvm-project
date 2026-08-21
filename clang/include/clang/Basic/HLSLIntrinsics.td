@@ -675,12 +675,13 @@ prevision partial derivative of the input value.
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgBuiltin<"degrees", "__builtin_hlsl_elementwise_degrees"> {
+def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
 \param x The specified input value.
 }];
+  let ParamNames = ["x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1082,7 +1083,6 @@ to True if the x parameter is +INF or -INF. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Determines if the specified value x is Not a Number.
@@ -1097,7 +1097,6 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the result of multiplying the specified value by two raised
@@ -1145,7 +1144,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 }
 
 // Returns the linear interpolation of x to y by s.
-def hlsl_lerp : HLSLThreeArgBuiltin<"lerp", "__builtin_hlsl_lerp"> {
+def hlsl_lerp : HLSLThreeArgDetail<"lerp", "lerp_impl"> {
   let Doc = [{
 \fn T lerp(T x, T y, T s)
 \brief Returns the linear interpolation of x to y by s.
@@ -1157,6 +1156,7 @@ the y parameter.
 Linear interpolation is based on the following formula: x*(1-s) + y*s which
 can equivalently be written as x + s(y-x).
 }];
+  let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1356,11 +1356,12 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgBuiltin<"radians", "__builtin_hlsl_elementwise_radians"> {
+def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
+  let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }

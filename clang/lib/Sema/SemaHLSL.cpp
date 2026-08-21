@@ -2140,7 +2140,7 @@ bool clang::CreateHLSLAttributedResourceType(
       HasResourceDimension = true;
       break;
     }
-    case attr::HLSLROV:
+    case attr::HLSLIsROV:
       if (ResAttrs.IsROV) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
@@ -2272,8 +2272,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     break;
   }
 
-  case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), ACI);
+  case ParsedAttr::AT_HLSLIsROV:
+    A = HLSLIsROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
@@ -3518,10 +3518,13 @@ static bool CheckExpectedBitWidth(Sema *S, CallExpr *TheCall,
 
 static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
-  auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
-  if (VecTyA)
+  if (auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>())
     ReturnType =
         S->Context.getExtVectorType(ReturnType, VecTyA->getNumElements());
+  else if (auto *MatTyA =
+               TheCall->getArg(0)->getType()->getAs<ConstantMatrixType>())
+    ReturnType = S->Context.getConstantMatrixType(
+        ReturnType, MatTyA->getNumRows(), MatTyA->getNumColumns());
 
   TheCall->setType(ReturnType);
 }
@@ -4434,8 +4437,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_degrees:
-  case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac:
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
@@ -4461,18 +4462,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
-      return true;
-    if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {
