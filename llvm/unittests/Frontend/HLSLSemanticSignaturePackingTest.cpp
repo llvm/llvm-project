@@ -1111,4 +1111,303 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/5,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/3}});
 }
+
+//===----------------------------------------------------------------------===//
+// Prefix-stable clip/cull tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCull) {
+  // struct VSOut {
+  //   float3 First         : First;
+  //   float  Clip0         : SV_ClipDistance0;
+  //   float3 Cull1         : SV_CullDistance1;
+  //   float  Cull0         : SV_CullDistance0;
+  //   float2 Clip1         : SV_ClipDistance1;
+  //   float  WithFirst     : WithFirst;
+  //   float  AfterClipCull : AfterClipCull;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: First.xyz       | WithFirst.w
+  // reg1: Clip0.x         | Cull1.yzw
+  // reg2: Cull0.x         | Clip1.yz | unused.w
+  // reg3: AfterClipCull.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/1},
+                 {/*Row=*/2, /*Col=*/0},
+                 {/*Row=*/2, /*Col=*/1},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedClipCull) {
+  // struct VSOut {
+  //   float3 First         : First;
+  //   float  Clip0         : SV_ClipDistance0;
+  //   float2 Cull1[2]      : SV_CullDistance1;
+  //   float  Clip1         : SV_ClipDistance1;
+  //   float  WithFirst     : WithFirst;
+  //   float  AfterClipCull : AfterClipCull;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/2, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: First.xyz       | WithFirst.w
+  // reg1: Clip0.x         | Cull1[0].yz | Clip1.w
+  // reg2: unused.x        | Cull1[1].yz | unused.w
+  // reg3: AfterClipCull.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/1},
+                 {/*Row=*/1, /*Col=*/3},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMultipleIndexedClipCull) {
+  // struct VSOut {
+  //   float3 First         : First;
+  //   float  Clip0         : SV_ClipDistance0;
+  //   float2 Cull1[2]      : SV_CullDistance1;
+  //   float  Clip1[2]      : SV_ClipDistance1;
+  //   float  WithFirst     : WithFirst;
+  //   float  AfterClipCull : AfterClipCull;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/2, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: First.xyz       | WithFirst.w
+  // reg1: Clip0.x         | Cull1[0].yz | Clip1[0].w
+  // reg2: unused.x        | Cull1[1].yz | Clip1[1].w
+  // reg3: AfterClipCull.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/1},
+                 {/*Row=*/1, /*Col=*/3},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullFillsTwoRows) {
+  // Clip and cull distances may use a combined maximum of eight components
+  // spread over two registers.
+
+  // struct VSOut {
+  //   float4 Clip0 : SV_ClipDistance0;
+  //   float4 Cull0 : SV_CullDistance0;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: Clip0.xyzw
+  // reg1: Cull0.xyzw
+  expectPacking(PackingMethod::PrefixStable, Config,
+                /*ExpectedRows=*/MaxClipCullRows,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSeparatesClipCullRows) {
+  // Non-indexed clip and cull distance registers do not need to be adjacent.
+  // Elements declared between them may separate their reserved registers while
+  // the clip/cull elements continue to count toward the common two-register
+  // limit.
+
+  // struct VSOut {
+  //   float3 Clip0 : SV_ClipDistance0;
+  //   float4 A[30] : A;
+  //   float3 Cull0 : SV_CullDistance0;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/30, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0:     Clip0.xyz | unused.w
+  // reg1-30:  A[0-29].xyzw
+  // reg31:    Cull0.xyz | unused.w
+  expectPacking(PackingMethod::PrefixStable, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/31, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullAsArbitrary) {
+  // Clip and cull distances are arbitrary values in a patch constant
+  // signature, so the two register limit does not apply to them.
+
+  // struct PatchConstants {
+  //   float3 Clip0 : SV_ClipDistance0;
+  //   float3 Clip1 : SV_ClipDistance1;
+  //   float3 Cull0 : SV_CullDistance0;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Hull, IOType::PatchConstantOrPrimitive,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: Clip0.xyz | unused.w
+  // reg1: Clip1.xyz | unused.w
+  // reg2: Cull0.xyz | unused.w
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
+  // Clip and cull distances reserve whole registers ahead of the elements that
+  // follow them, so appending elements does not move them either, not even
+  // when the appended elements are clip/cull values themselves.
+
+  // struct Prefix {
+  //   float3 First    : First;
+  //   float  Clip0    : SV_ClipDistance0;
+  //   float2 Cull1[2] : SV_CullDistance1;
+  // };
+  TestConfig PrefixConfig(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/2, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: First.xyz | unused.w
+  // reg1: Clip0.x   | Cull1[0].yz | unused.w
+  // reg2: unused.x  | Cull1[1].yz | unused.w
+  expectPacking(
+      PackingMethod::PrefixStable, PrefixConfig, /*ExpectedRows=*/3,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/1, /*Col=*/1}});
+
+  TestConfig ExtendedConfig = PrefixConfig;
+  ExtendedConfig.Elements.push_back(
+      {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+       dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
+  ExtendedConfig.Elements.push_back(
+      {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+       dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
+  ExtendedConfig.Elements.push_back(
+      {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+       dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
+
+  // Expected layout:
+  // reg0: First.xyz       | WithFirst.w
+  // reg1: Clip0.x         | Cull1[0].yz | Clip1.w
+  // reg2: unused.x        | Cull1[1].yz | unused.w
+  // reg3: AfterClipCull.x | unused.yzw
+  expectPacking(PackingMethod::PrefixStable, ExtendedConfig, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/1},
+                 {/*Row=*/1, /*Col=*/3},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
+  // Clip and cull distances may use at most eight components, shared between
+  // them, so nine components cannot be packed.
+
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  expectPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::ClipCullOverflow,
+                     /*ExpectedElementIndex=*/2);
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableRejectsUnpackableClipCull) {
+  // These clip and cull distances fit in eight components, but they cannot be
+  // split across the two registers available to them.
+
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  expectPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::ClipCullOverflow,
+                     /*ExpectedElementIndex=*/2);
+}
 } // namespace

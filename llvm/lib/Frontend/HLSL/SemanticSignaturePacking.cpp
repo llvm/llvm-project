@@ -88,6 +88,15 @@ struct ElementPlacement {
   SemanticInterpretation Interpretation;
 };
 
+// Clip/cull elements are first packed into an independent two-row grid. Each
+// row used in that grid maps to a whole reserved row in the signature.
+struct ClipCullState {
+  std::array<SignatureRow, MaxClipCullRows> Rows;
+  std::array<unsigned, MaxClipCullRows> SignatureRows = {UnallocatedRow,
+                                                         UnallocatedRow};
+  unsigned RowsUsed = 0;
+};
+
 } // namespace
 
 static uint8_t getStartColumn(uint8_t ColumnMask) {
@@ -194,9 +203,8 @@ static std::optional<uint8_t> canPlaceAt(ArrayRef<SignatureRow> Rows,
   return std::nullopt;
 }
 
-static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
-                    const ElementPlacement &Placement, uint8_t ColumnMask,
-                    SemanticSignatureElement &Element) {
+static void placeRowsAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
+                        const ElementPlacement &Placement, uint8_t ColumnMask) {
   const IndexedRowRange IndexedRange =
       IndexedRowRange::of(StartRow, Placement.Rows);
   for (unsigned ElementRow = 0; ElementRow != Placement.Rows; ++ElementRow) {
@@ -221,7 +229,12 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
       Row.IndexedRangeFixed = true;
     }
   }
+}
 
+static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
+                    const ElementPlacement &Placement, uint8_t ColumnMask,
+                    SemanticSignatureElement &Element) {
+  placeRowsAt(Rows, StartRow, Placement, ColumnMask);
   Element.StartRow = StartRow;
   Element.StartCol = getStartColumn(ColumnMask);
 }
@@ -237,6 +250,107 @@ static bool packElement(SemanticSignatureElement &Element,
     return true;
   }
   return false;
+}
+
+// A clip/cull grid row is backed by a whole reserved signature row.
+static ElementPlacement
+getClipCullReservation(const ElementPlacement &Placement, unsigned RowCount) {
+  ElementPlacement Reservation = Placement;
+  Reservation.Rows = RowCount;
+  Reservation.Cols = MaxSignatureCols;
+  return Reservation;
+}
+
+static bool reserveClipCullRows(MutableArrayRef<SignatureRow> Rows,
+                                unsigned StartRow,
+                                const ElementPlacement &Reservation) {
+  std::optional<uint8_t> ColumnMask = canPlaceAt(Rows, StartRow, Reservation);
+  if (!ColumnMask)
+    return false;
+  placeRowsAt(Rows, StartRow, Reservation, *ColumnMask);
+  return true;
+}
+
+static std::optional<unsigned>
+reserveNextClipCullRows(MutableArrayRef<SignatureRow> Rows,
+                        const ElementPlacement &Reservation) {
+  for (unsigned StartRow = 0; StartRow != Rows.size(); ++StartRow)
+    if (reserveClipCullRows(Rows, StartRow, Reservation))
+      return StartRow;
+  return std::nullopt;
+}
+
+// Reserves the whole signature rows that back the clip/cull grid rows that the
+// element is packed into. Existing rows cannot be moved without breaking
+// prefix stability, so an indexed element requires them to be adjacent.
+static std::optional<SignaturePackingError::ErrorKind>
+reserveClipCullSignatureRows(MutableArrayRef<SignatureRow> SignatureRows,
+                             ClipCullState &State,
+                             const ElementPlacement &Placement,
+                             unsigned NewRowsUsed) {
+  if (Placement.Rows == 1) {
+    const ElementPlacement Reservation = getClipCullReservation(Placement, 1);
+    for (unsigned Row = State.RowsUsed; Row < NewRowsUsed; ++Row) {
+      std::optional<unsigned> StartRow =
+          reserveNextClipCullRows(SignatureRows, Reservation);
+      if (!StartRow)
+        return SignaturePackingError::SignatureOverflow;
+      State.SignatureRows[Row] = *StartRow;
+    }
+    return std::nullopt;
+  }
+
+  if (State.RowsUsed == 0) {
+    std::optional<unsigned> StartRow = reserveNextClipCullRows(
+        SignatureRows, getClipCullReservation(Placement, MaxClipCullRows));
+    if (!StartRow)
+      return SignaturePackingError::SignatureOverflow;
+    State.SignatureRows[0] = *StartRow;
+    State.SignatureRows[1] = *StartRow + 1;
+    return std::nullopt;
+  }
+
+  if (State.RowsUsed == 1) {
+    const unsigned StartRow = State.SignatureRows[0] + 1;
+    if (StartRow >= SignatureRows.size() ||
+        !reserveClipCullRows(SignatureRows, StartRow,
+                             getClipCullReservation(Placement, 1)))
+      return SignaturePackingError::SignatureOverflow;
+    State.SignatureRows[1] = StartRow;
+    return std::nullopt;
+  }
+
+  if (State.SignatureRows[0] + 1 != State.SignatureRows[1])
+    return SignaturePackingError::ClipCullOverflow;
+  return std::nullopt;
+}
+
+static std::optional<SignaturePackingError::ErrorKind>
+packClipCullElement(SemanticSignatureElement &Element,
+                    MutableArrayRef<SignatureRow> SignatureRows,
+                    ClipCullState &State, const ElementPlacement &Placement) {
+  std::optional<uint8_t> ColumnMask;
+  unsigned ClipCullStartRow = 0;
+  while (ClipCullStartRow + Placement.Rows <= MaxClipCullRows) {
+    ColumnMask = canPlaceAt(State.Rows, ClipCullStartRow, Placement);
+    if (ColumnMask)
+      break;
+    ++ClipCullStartRow;
+  }
+  if (!ColumnMask)
+    return SignaturePackingError::ClipCullOverflow;
+
+  const unsigned NewRowsUsed = ClipCullStartRow + Placement.Rows;
+  if (std::optional<SignaturePackingError::ErrorKind> Kind =
+          reserveClipCullSignatureRows(SignatureRows, State, Placement,
+                                       NewRowsUsed))
+    return Kind;
+
+  placeRowsAt(State.Rows, ClipCullStartRow, Placement, *ColumnMask);
+  State.RowsUsed = std::max(State.RowsUsed, NewRowsUsed);
+  Element.StartRow = State.SignatureRows[ClipCullStartRow];
+  Element.StartCol = getStartColumn(*ColumnMask);
+  return std::nullopt;
 }
 
 void SignaturePackingError::log(raw_ostream &OS) const {
@@ -323,6 +437,7 @@ Error llvm::hlsl::packSignaturePrefixStable(
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
   std::array<SignatureRow, MaxSignatureRows> Rows = {};
+  ClipCullState ClipCull;
   for (const auto &[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
@@ -354,6 +469,15 @@ Error llvm::hlsl::packSignaturePrefixStable(
     const ElementPlacement Placement = {Element.Rows, Element.Cols,
                                         ComponentWidth, Element.InterpMode,
                                         PackingInterpretation};
+
+    if (Interpretation == SemanticInterpretation::ClipCull) {
+      if (std::optional<SignaturePackingError::ErrorKind> Kind =
+              packClipCullElement(Element, Rows, ClipCull, Placement))
+        return make_error<SignaturePackingError>(*Kind,
+                                                 static_cast<unsigned>(Index));
+      continue;
+    }
+
     if (!packElement(Element, Rows, Placement))
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
