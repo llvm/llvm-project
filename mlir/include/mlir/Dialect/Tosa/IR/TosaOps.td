@@ -2598,6 +2598,10 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `values` `(` $values `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//

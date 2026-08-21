@@ -11,7 +11,7 @@ func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<1xi32> {
 
 // CHECK-LABEL: @test_argmax_fold_i64_index
 func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
-  // CHECK: "tosa.const"() <{values = dense<0> : tensor<i64>}> : () -> tensor<i64>
+  // CHECK: tosa.const values(dense<0> : tensor<i64>) : () -> tensor<i64>
   %0 = tosa.argmax %arg0 {axis = 0 : i32} : (tensor<1xi8>) -> tensor<i64>
   return %0 : tensor<i64>
 }
@@ -532,7 +532,7 @@ func.func @pad_noop_type_mismatch_nofold(%arg0: tensor<10xf32>) -> tensor<?xf32>
 
 // CHECK-LABEL: @pad_determine_val_i32
 func.func @pad_determine_val_i32(%arg0: tensor<?x?xi32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xi32> {
-  // CHECK-DAG: %[[ZERO:.+]] = "tosa.const"() <{values = dense<0> : tensor<1xi32>}
+  // CHECK-DAG: %[[ZERO:.+]] = tosa.const values(dense<0> : tensor<1xi32>)
   // CHECK-DAG: %[[PADDING:.+]] = tosa.const_shape {values = dense<[1, 0, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   // CHECK: tosa.pad %arg0, %[[PADDING]], %[[ZERO]]
   %pad_const = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
@@ -545,7 +545,7 @@ func.func @pad_determine_val_i32(%arg0: tensor<?x?xi32>, %arg1 : tensor<2x2xi32>
 
 // CHECK-LABEL: @pad_determine_val_f32
 func.func @pad_determine_val_f32(%arg0: tensor<?x?xf32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xf32> {
-  // CHECK-DAG: %[[ZERO:.+]] = "tosa.const"() <{values = dense<3.140000e+00> : tensor<1xf32>}
+  // CHECK-DAG: %[[ZERO:.+]] = tosa.const values(dense<3.140000e+00> : tensor<1xf32>)
   // CHECK-DAG: %[[PADDING:.+]] = tosa.const_shape {values = dense<[1, 0, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   // CHECK: tosa.pad %arg0, %[[PADDING]], %[[ZERO]]
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
@@ -558,7 +558,7 @@ func.func @pad_determine_val_f32(%arg0: tensor<?x?xf32>, %arg1 : tensor<2x2xi32>
 
 // CHECK-LABEL: @pad_determine_val_quant
 func.func @pad_determine_val_quant(%arg0: tensor<?x?xi32>, %arg1 : tensor<2x2xi32>) -> tensor<?x?xi32> {
-  // CHECK-DAG: %[[ZERO:.+]] = "tosa.const"() <{values = dense<3> : tensor<1xi32>}
+  // CHECK-DAG: %[[ZERO:.+]] = tosa.const values(dense<3> : tensor<1xi32>)
   // CHECK-DAG: %[[PADDING:.+]] = tosa.const_shape {values = dense<[1, 0, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   // CHECK: tosa.pad %arg0, %[[PADDING]], %[[ZERO]]
   %pad_const = "tosa.const"() {values =dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
@@ -725,7 +725,7 @@ func.func @reshape_canonicalize_double(%arg0: tensor<?x10xf32>) -> tensor<?x5xf3
 
 // CHECK-LABEL: @reshape_canonicalize_const
 func.func @reshape_canonicalize_const() -> tensor<1x5xi32> {
-  // CHECK: %[[VAR0:.+]] = "tosa.const"() <{values = dense<{{\[\[}}0, 1, 2, 3, 4]]> : tensor<1x5xi32>}
+  // CHECK: %[[VAR0:.+]] = tosa.const values(dense<{{\[\[}}0, 1, 2, 3, 4]]> : tensor<1x5xi32>)
   // CHECK: return %[[VAR0]]
   %0 = "tosa.const"() {values = dense<[0, 1, 2, 3, 4]> : tensor<5xi32>} : () -> tensor<5xi32>
   %1 = "tosa.const_shape"() {values = dense<[1, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -748,8 +748,8 @@ func.func @reshape_canonicalize_const_dynamic() -> tensor<1x?xi32> {
 
 // CHECK-LABEL: @reshape_canonicalize_const_splat
 func.func @reshape_canonicalize_const_splat() -> (tensor<10xi32>, tensor<1x10xi32>) {
-  // CHECK-DAG: %[[VAR0:.+]] = "tosa.const"() <{values = dense<0> : tensor<10xi32>}
-  // CHECK-DAG: %[[VAR1:.+]] = "tosa.const"() <{values = dense<0> : tensor<1x10xi32>}
+  // CHECK-DAG: %[[VAR0:.+]] = tosa.const values(dense<0> : tensor<10xi32>)
+  // CHECK-DAG: %[[VAR1:.+]] = tosa.const values(dense<0> : tensor<1x10xi32>)
   // CHECK: return %[[VAR0]], %[[VAR1]]
   %0 = "tosa.const"() {values = dense<0> : tensor<10xi32>} : () -> tensor<10xi32>
   %2 = "tosa.const_shape"() {values = dense<[1, 10]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -773,7 +773,7 @@ func.func @reshape_canonicalize_const_sparse() -> (tensor<3xi32>, tensor<1x3xi32
 // CHECK-LABEL: @reshape_canonicalize_quant_nofold
 func.func @reshape_canonicalize_quant_nofold() -> (tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>) {
   // disabled folding for quantized element types
-  // CHECK{LITERAL}: "tosa.const"() <{values = dense<[1, 2, 3]> : tensor<3xi8>}> : () -> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
+  // CHECK{LITERAL}: tosa.const values(dense<[1, 2, 3]> : tensor<3xi8>) : () -> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
   // CHECK{LITERAL}: tosa.reshape %0, %1 : (tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>, !tosa.shape<2>) -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
   %0 = "tosa.const"() {values = dense<[1, 2, 3]> : tensor<3xi8>} : ()-> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
   %2 = "tosa.const_shape"() {values = dense<[1, 3]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -786,7 +786,7 @@ func.func @reshape_canonicalize_quant_nofold() -> (tensor<1x3x!quant.uniform<i8:
 // CHECK-LABEL: @transpose_canonicalize_strip_quant
 func.func @transpose_canonicalize_strip_quant() -> (tensor<2x1x3x!quant.uniform<i8:f32, 1.000000e+00>>) {
   // CHECK-DAG: %[[SHAPE:.*]] = tosa.const_shape {values = dense<[2, 1, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // CHECK-DAG: %[[CONST:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x2x3xi8>}> : () -> tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  // CHECK-DAG: %[[CONST:.*]] = tosa.const values(dense<0> : tensor<1x2x3xi8>) : () -> tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>
   // CHECK: tosa.reshape %[[CONST]], %[[SHAPE]] : (tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>, !tosa.shape<3>) -> tensor<2x1x3x!quant.uniform<i8:f32, 1.000000e+00>>
   %0 = "tosa.const"() {values = dense<0> : tensor<1x2x3xi8>} : ()-> tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0, 2> }: (tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>) -> tensor<2x1x3x!quant.uniform<i8:f32, 1.000000e+00>>
@@ -903,7 +903,7 @@ func.func @transpose_is_reshape_unknown_dim(%arg0: tensor<1x4x?x1xf32>) -> tenso
 // CHECK-LABEL: @single_bit_reshape
 // https://github.com/llvm/llvm-project/issues/55440
 func.func @single_bit_reshape() -> tensor<1xi1> {
-  // CHECK: "tosa.const"() <{values = dense<true> : tensor<1xi1>}
+  // CHECK: tosa.const values(dense<true> : tensor<1xi1>)
   %0 = arith.constant dense<true> : tensor<1x1xi1>
   %2 = "tosa.const_shape"() <{values = dense<1> : tensor<1xindex>}> : () -> !tosa.shape<1>
   %1 = tosa.reshape %0, %2 : (tensor<1x1xi1>, !tosa.shape<1>) -> tensor<1xi1>
@@ -1077,7 +1077,7 @@ func.func @canonicalize_concat_slice_on_non_concat_axis(%arg0 : tensor<1x12x12xf
 // -----
 
 // CHECK-LABEL: @canonicalize_pad_slice_overlap
-// CHECK-DAG: %[[PAD_CONST:.*]] = "tosa.const"() <{values = dense<0.000000e+00> : tensor<1xf32>}> : () -> tensor<1xf32>
+// CHECK-DAG: %[[PAD_CONST:.*]] = tosa.const values(dense<0.000000e+00> : tensor<1xf32>) : () -> tensor<1xf32>
 // CHECK-DAG: %[[ZERO:.*]] = tosa.const_shape {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
 // CHECK-DAG: %[[PADDING:.*]] = tosa.const_shape {values = dense<[0, 0, 0, 0, 1, 1, 0, 0]> : tensor<8xindex>}
 // CHECK-DAG: %[[SLICE_SIZE:.*]] = tosa.const_shape  {values = dense<[-1, 14, 18, 3]> : tensor<4xindex>}
@@ -1113,7 +1113,7 @@ func.func @canonicalize_pad_slice_inside(%arg0: tensor<1x16x16x3xf32>) -> tensor
 // -----
 
 // CHECK-LABEL: func @canonicalize_pad_slice_exact
-// CHECK-DAG: %[[PAD_CONST:.*]] = "tosa.const"() <{values = dense<0.000000e+00> : tensor<1xf32>}> : () -> tensor<1xf32>
+// CHECK-DAG: %[[PAD_CONST:.*]] = tosa.const values(dense<0.000000e+00> : tensor<1xf32>) : () -> tensor<1xf32>
 // CHECK-DAG: %[[ZERO:.*]] = tosa.const_shape {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
 // CHECK-DAG: %[[PADDING:.*]] = tosa.const_shape {values = dense<[0, 0, 0, 0, 2, 2, 0, 0]> : tensor<8xindex>}
 // CHECK-DAG: %[[SLICE_SIZE:.*]] = tosa.const_shape  {values = dense<[1, 16, 20, 2]> : tensor<4xindex>}
@@ -1249,7 +1249,7 @@ func.func @sub_quant_nofold() -> tensor<!quant.uniform<i8:f32, 3.075740460189990
 // CHECK-LABEL: @greater_quant_fold
 func.func @greater_quant_fold() -> tensor<i1> {
    %0 = "tosa.const"() {values = dense<0> : tensor<i8>} : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
-   // CHECK: "tosa.const"() <{values = dense<false>
+   // CHECK: tosa.const values(dense<false>
    %2 = "tosa.greater"(%0, %0) : (tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>, tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<i1>
    return %2 : tensor<i1>
 }
@@ -1259,7 +1259,7 @@ func.func @greater_quant_fold() -> tensor<i1> {
 // CHECK-LABEL: @greater_equal_quant_fold
 func.func @greater_equal_quant_fold() -> tensor<i1> {
    %0 = "tosa.const"() {values = dense<0> : tensor<i8>} : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
-   // CHECK: "tosa.const"() <{values = dense<true>
+   // CHECK: tosa.const values(dense<true>
    %2 = "tosa.greater_equal"(%0, %0) : (tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>, tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<i1>
    return %2 : tensor<i1>
 }
@@ -1269,7 +1269,7 @@ func.func @greater_equal_quant_fold() -> tensor<i1> {
 // CHECK-LABEL: @equal_quant_fold
 func.func @equal_quant_fold() -> tensor<i1> {
    %0 = "tosa.const"() {values = dense<0> : tensor<i8>} : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
-   // CHECK: "tosa.const"() <{values = dense<true>
+   // CHECK: tosa.const values(dense<true>
    %2 = "tosa.equal"(%0, %0) : (tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>, tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<i1>
    return %2 : tensor<i1>
 }
@@ -1288,7 +1288,7 @@ func.func @cast_quant_nofold() -> tensor<!quant.uniform<i8:f32, 3.07574046018999
 
 // CHECK-LABEL: @reverse_quant_fold
 func.func @reverse_quant_fold() -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>> {
-   // CHECK: %[[CST:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
+   // CHECK: %[[CST:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
    // CHECK: return %[[CST]]
    %0 = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
    %1 = "tosa.reverse"(%0) { axis = 0 : i32 } : (tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
@@ -1330,7 +1330,7 @@ func.func @reverse_nofold_splat_type_unmatch() -> tensor<*xf32> {
 
 // CHECK-LABEL: @select_quant_fold
 func.func @select_quant_fold() -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>> {
-   // CHECK: %[[CONST_0:.*]] = "tosa.const"() <{values = dense<0> : tensor<i8>}> : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
+   // CHECK: %[[CONST_0:.*]] = tosa.const values(dense<0> : tensor<i8>) : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
    // CHECK: return %[[CONST_0]]
    %0 = "tosa.const"() {values = dense<true> : tensor<i1>} : () -> tensor<i1>
    %1 = "tosa.const"() {values = dense<0> : tensor<i8>} : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
@@ -1356,7 +1356,7 @@ func.func @mul_quant_nofold() -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899
 
 // CHECK-LABEL: @fold_reciprocal
 func.func nested @fold_reciprocal() -> tensor<3x600x1200xf32> {
-  // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{values = dense<8.620690e-03> : tensor<3x600x1200xf32>}> : () -> tensor<3x600x1200xf32>
+  // CHECK:           %[[VAL_0:.*]] = tosa.const values(dense<8.620690e-03> : tensor<3x600x1200xf32>) : () -> tensor<3x600x1200xf32>
   // CHECK:           return %[[VAL_0]] : tensor<3x600x1200xf32>
   // CHECK:         }
   %0 = "tosa.const"(){ values = dense<116.0>: tensor<3x600x1200xf32> }: () -> tensor<3x600x1200xf32>
@@ -1403,7 +1403,7 @@ func.func @slice_dynamic_size_static_output_canonicalize(%arg0: tensor<2x60x59x?
 // -----
 
 // CHECK-LABEL: @fold_mul_shift
-// CHECK-DAG: "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+// CHECK-DAG: tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
 func.func @fold_mul_shift() -> tensor<i32> {
     %0 = "tosa.const"() <{values = dense<-23661> : tensor<i32>}> : () -> tensor<i32>
     %1 = "tosa.const"() <{values = dense<-33022> : tensor<i32>}> : () -> tensor<i32>
@@ -1415,7 +1415,7 @@ func.func @fold_mul_shift() -> tensor<i32> {
 // -----
 
 // CHECK-LABEL: @fold_mul_no_shift
-// CHECK-DAG: "tosa.const"() <{values = dense<781333542> : tensor<i32>}> : () -> tensor<i32>
+// CHECK-DAG: tosa.const values(dense<781333542> : tensor<i32>) : () -> tensor<i32>
 func.func @fold_mul_no_shift() -> tensor<i32> {
     %0 = "tosa.const"() <{values = dense<-23661> : tensor<i32>}> : () -> tensor<i32>
     %1 = "tosa.const"() <{values = dense<-33022> : tensor<i32>}> : () -> tensor<i32>
@@ -1427,9 +1427,9 @@ func.func @fold_mul_no_shift() -> tensor<i32> {
 // -----
 
 // CHECK-LABEL: @no_fold_mul_result_exceeds_i32
-// CHECK-DAG: %[[LHS:.*]] = "tosa.const"() <{values = dense<23661> : tensor<i32>}> : () -> tensor<i32>
-// CHECK-DAG: %[[RHS:.*]] = "tosa.const"() <{values = dense<330222> : tensor<i32>}> : () -> tensor<i32>
-// CHECK-DAG: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK-DAG: %[[LHS:.*]] = tosa.const values(dense<23661> : tensor<i32>) : () -> tensor<i32>
+// CHECK-DAG: %[[RHS:.*]] = tosa.const values(dense<330222> : tensor<i32>) : () -> tensor<i32>
+// CHECK-DAG: %[[SHIFT:.*]] = tosa.const values(dense<1> : tensor<1xi8>) : () -> tensor<1xi8>
 // CHECK: tosa.mul %[[LHS]], %[[RHS]], %[[SHIFT]] : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
 func.func @no_fold_mul_result_exceeds_i32() -> tensor<i32> {
     %0 = "tosa.const"() <{values = dense<23661> : tensor<i32>}> : () -> tensor<i32>
@@ -1467,7 +1467,7 @@ func.func @no_fold_intdiv_dynamic_result() -> tensor<?xi32> {
 // -----
 
 // CHECK-LABEL: @test_fold_i1_to_i32_cast
-// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+// CHECK: %[[OUT:.*]] = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
 // CHECK: return %[[OUT]] : tensor<i32>
 func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
   %0 = "tosa.const"() <{values = dense<1> : tensor<i1>}> : () -> tensor<i1>
@@ -1478,7 +1478,7 @@ func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
 // -----
 
 // CHECK-LABEL: @test_fold_i32_to_i1_cast
-// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<true> : tensor<i1>}> : () -> tensor<i1>
+// CHECK: %[[OUT:.*]] = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
 // CHECK: return %[[OUT]] : tensor<i1>
 func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
   %0 = "tosa.const"() <{values = dense<10> : tensor<i32>}> : () -> tensor<i32>

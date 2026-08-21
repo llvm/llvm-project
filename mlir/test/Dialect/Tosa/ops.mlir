@@ -1313,7 +1313,7 @@ func.func @test_rescale_i16_rounding_mode(%arg0 : tensor<2xi8>) -> tensor<2xi16>
 // -----
 // CHECK-LABEL: const
 func.func @test_const(%arg0 : index) -> tensor<4xi32> {
-    %0 = "tosa.const"() {values = dense<[3, 0, 1, 2]> : tensor<4xi32>} : () -> tensor<4xi32>
+    %0 = tosa.const values(dense<[3, 0, 1, 2]> : tensor<4xi32>) : () -> tensor<4xi32>
     return %0 : tensor<4xi32>
 }
 

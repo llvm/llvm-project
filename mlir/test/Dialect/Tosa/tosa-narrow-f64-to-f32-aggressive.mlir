@@ -61,7 +61,7 @@ func.func @test_convert_input_parameters(%arg0: tensor<1x3xf64>) -> tensor<1x3xf
 
 // CHECK-LABEL: test_f64_const
 func.func @test_f64_const() -> tensor<2xf64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>}> : () -> tensor<2xf32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : () -> tensor<2xf32>
   %0 = "tosa.const"() <{values = dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>}> : () -> tensor<2xf64>
   // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] : (tensor<2xf32>) -> tensor<2xf64>
   // DEFAULT: return %[[OUT]] : tensor<2xf64>
@@ -73,7 +73,7 @@ func.func @test_f64_const() -> tensor<2xf64> {
 
 // CHECK-LABEL: test_dense_ressource_f64
 func.func @test_dense_ressource_f64() -> tensor<1x2xf64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xf32>}> : () -> tensor<1x2xf32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense_resource<resource> : tensor<1x2xf32>) : () -> tensor<1x2xf32>
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xf64>}> : () -> tensor<1x2xf64>
   // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xf32>) -> tensor<1x2xf64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xf64>
