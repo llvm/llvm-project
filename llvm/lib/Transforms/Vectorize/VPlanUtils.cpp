@@ -864,11 +864,10 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createVScale(S->getType(), DL);
-  case scAddExpr:
-  case scMulExpr: {
-    auto *NAry = cast<SCEVNAryExpr>(S);
-    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
-                                     NAry->hasNoSignedWrap());
+  case scAddExpr: {
+    auto *AddE = cast<SCEVAddExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(AddE->hasNoUnsignedWrap(),
+                                     AddE->hasNoSignedWrap());
 
     // Expanded poiner SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
@@ -885,22 +884,18 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
     }
 
-    bool IsAdd = isa<SCEVAddExpr>(S);
-    unsigned Opcode = IsAdd ? Instruction::Add : Instruction::Mul;
     // Non-constant-negative add operands are expanded negated and subtracted
     // from the running result below, instead of being negated and added.
-    auto UseSubtract = [IsAdd](const SCEV *Op) {
-      return IsAdd && Op->isNonConstantNegative();
+    auto UseSubtract = [](const SCEV *Op) {
+      return Op->isNonConstantNegative();
     };
     // Iterate in reverse so that constants are emitted last, and move the
     // subtracted operands last, matching SCEVExpander's LoopCompare, so that
     // they don't start the running result.
-    SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
-    if (IsAdd) {
-      stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
-        return !UseSubtract(L) && UseSubtract(R);
-      });
-    }
+    SmallVector<const SCEV *, 2> SCEVOps(reverse(AddE->operands()));
+    stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
+      return !UseSubtract(L) && UseSubtract(R);
+    });
     SmallVector<VPValue *, 2> Ops;
     for (const SCEV *Op : SCEVOps) {
       // The first operand starts the result, so it is never subtracted.
@@ -922,8 +917,26 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
                                              {/*HasNUW=*/false, HasNSW}, DL);
         continue;
       }
-      Result =
-          Builder.createOverflowingOp(Opcode, {Result, OpV}, WrapFlags, DL);
+      Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
+                                           WrapFlags, DL);
+    }
+    return Result;
+  }
+  case scMulExpr: {
+    auto *MulE = cast<SCEVMulExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(MulE->hasNoUnsignedWrap(),
+                                     MulE->hasNoSignedWrap());
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEV *Op : reverse(MulE->operands())) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPValue *Result = Ops.front();
+    for (VPValue *OpV : drop_begin(Ops)) {
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, OpV},
+                                           WrapFlags, DL);
     }
     return Result;
   }
