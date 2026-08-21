@@ -57,7 +57,19 @@ dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
 
 ArrayRef<SemanticStageInfo>
 hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
-  llvm_unreachable("available stages for given semantic kind are not handled");
+  switch (SemanticKind) {
+  case dxbc::PSV::SemanticKind::DispatchThreadID:
+  case dxbc::PSV::SemanticKind::GroupID:
+  case dxbc::PSV::SemanticKind::GroupIndex:
+  case dxbc::PSV::SemanticKind::GroupThreadID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Compute, IOType::In}};
+    return Stages;
+  }
+  default:
+    llvm_unreachable(
+        "available stages for given semantic kind are not handled");
+  }
 }
 
 Expected<SemanticSignatureElement>
