@@ -152,6 +152,14 @@ constexpr bool test() {
     assert(out.str == expected);
   }
 
+  { // LWG3801 example
+    int x[] = {1, 2, 3};
+    auto v  = std::views::cartesian_product(x, x);
+    auto i  = v.begin() + 5; // *i == {2, 3}
+    assert((*i == std::tuple{2, 3}));
+    assert(i - v.begin() == 5);
+  }
+
   return true;
 }
 
