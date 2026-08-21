@@ -832,4 +832,142 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableDistinctInterpModes) {
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
+
+//===----------------------------------------------------------------------===//
+// Prefix-stable component ordering tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSystemValueOrdering) {
+  // System values may be co-packed to the right of arbitrary values, and a
+  // system generated value may be co-packed to the right of both.
+
+  // struct PSIn {
+  //   uint A             : A;
+  //   float Position      : SV_Position;
+  //   bool IsFrontFace   : SV_IsFrontFace;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::In,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Position, /*Rows=*/1,
+        /*Cols=*/1, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I1, dxbc::PSV::InterpolationMode::Constant}});
+
+  // Expected layout:
+  // reg0: A.x | Position.y | IsFrontFace.z | unused.w
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableArbitraryNotRightOfSV) {
+  // Arbitrary values may never be placed to the right of a system value in the
+  // same register, so B cannot co-pack with Position even though there is
+  // space for it.
+
+  // struct VSOut {
+  //   float2 Position : SV_Position;
+  //   float2 A        : A;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Vertex, IOType::Out,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::Position, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+  // Expected layout:
+  // reg0: Position.xy | unused.zw
+  // reg1: A.xy        | unused.zw
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSGVIsRightmost) {
+  // Nothing may be placed to the right of a system generated value, so both A
+  // and Position are pushed into the next register.
+
+  // struct PSIn {
+  //   bool IsFrontFace : SV_IsFrontFace;
+  //   uint A           : A;
+  //   float Position    : SV_Position;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::In,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I1, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Position, /*Rows=*/1,
+        /*Cols=*/1, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Constant}});
+
+  // Expected layout:
+  // reg0: IsFrontFace.x | unused.yzw
+  // reg1: A.x | Position.y | unused.zw
+  expectPacking(
+      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/1, /*Col=*/1}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableRejectsOverflowFromComponentOrdering) {
+  // Nothing may be placed to the right of a system generated value, so
+  // declaring one first leaves the rest of its register unusable by the
+  // arbitrary values that follow, and they no longer fit in 32 rows. Every
+  // element here shares an interpolation mode and a data width, so component
+  // ordering is the only reason the signature overflows.
+  //
+  // Note that the optimal algorithm packs the arbitrary values into reg0 to
+  // reg31 first and backfills IsFrontFace into reg0.w, so the very same
+  // signature does fit when it is packed optimally.
+
+  // struct PSIn {
+  //   nointerpolation bool IsFrontFace : SV_IsFrontFace;
+  //   nointerpolation int3 A0          : A0;
+  //   ...
+  //   nointerpolation int3 A31         : A31;
+  // };
+  TestConfig Config(Triple::EnvironmentType::Pixel, IOType::In,
+                    /*UseNative16BitTypes=*/false,
+                    {{dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1,
+                      /*Cols=*/1, dxil::ElementType::I1,
+                      dxbc::PSV::InterpolationMode::Constant}});
+  for (unsigned I = 0; I != MaxSignatureRows; ++I)
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                               /*Cols=*/3, dxil::ElementType::I32,
+                               dxbc::PSV::InterpolationMode::Constant});
+  // The last element is the one that no longer fits.
+  expectPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/MaxSignatureRows);
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableSkipsNotAllocatedElements) {
+  // Semantics accessed through dedicated intrinsics remain unallocated and do
+  // not reserve signature rows.
+
+  // struct CSIn {
+  //   uint3 DispatchThreadID : SV_DispatchThreadID;
+  //   uint GroupIndex        : SV_GroupIndex;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Compute, IOType::In,
+      /*UseNative16BitTypes=*/false,
+      {{dxbc::PSV::SemanticKind::DispatchThreadID, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::GroupIndex, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout: no registers are used.
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/0,
+                {Unallocated, Unallocated});
+}
 } // namespace

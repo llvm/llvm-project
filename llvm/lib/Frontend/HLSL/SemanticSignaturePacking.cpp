@@ -24,11 +24,21 @@ char SignaturePackingError::ID;
 
 namespace {
 
+static_assert(SemanticInterpretation::Arbitrary < SemanticInterpretation::SV &&
+                  SemanticInterpretation::SV < SemanticInterpretation::SGV &&
+                  SemanticInterpretation::SGV <
+                      SemanticInterpretation::ClipCull &&
+                  SemanticInterpretation::ClipCull <
+                      SemanticInterpretation::TessFactor,
+              "semantic interpretations must be in component packing order");
+
 struct SignatureRow {
   uint8_t OccupiedColumns = 0;
   unsigned ComponentWidth = 0;
   dxbc::PSV::InterpolationMode InterpMode =
       dxbc::PSV::InterpolationMode::Undefined;
+  SemanticInterpretation RightmostInterpretation =
+      SemanticInterpretation::Arbitrary;
 };
 
 // Everything the packing rules need to know about the element that is being
@@ -38,6 +48,7 @@ struct ElementPlacement {
   unsigned Cols;
   unsigned ComponentWidth;
   dxbc::PSV::InterpolationMode InterpMode;
+  SemanticInterpretation Interpretation;
 };
 
 } // namespace
@@ -79,6 +90,9 @@ static bool canCoPack(const SignatureRow &Row,
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
       Row.InterpMode != Placement.InterpMode)
     return false;
+  if (Row.OccupiedColumns &&
+      Placement.Interpretation < Row.RightmostInterpretation)
+    return false;
   return true;
 }
 
@@ -115,11 +129,15 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
     SignatureRow &Row = Rows[StartRow + ElementRow];
     assert(!(Row.OccupiedColumns & ColumnMask) &&
            "cannot overlap signature elements");
-    if (!Row.OccupiedColumns)
+    const uint8_t PreviousOccupiedColumns = Row.OccupiedColumns;
+    if (!PreviousOccupiedColumns)
       Row.ComponentWidth = Placement.ComponentWidth;
     Row.OccupiedColumns |= ColumnMask;
     if (Row.InterpMode == dxbc::PSV::InterpolationMode::Undefined)
       Row.InterpMode = Placement.InterpMode;
+    // Non-overlapping masks compare according to their rightmost set bit.
+    if (!PreviousOccupiedColumns || ColumnMask > PreviousOccupiedColumns)
+      Row.RightmostInterpretation = Placement.Interpretation;
   }
 
   Element.StartRow = StartRow;
@@ -245,7 +263,8 @@ Error llvm::hlsl::packSignaturePrefixStable(
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
     const ElementPlacement Placement = {Element.Rows, Element.Cols,
-                                        ComponentWidth, Element.InterpMode};
+                                        ComponentWidth, Element.InterpMode,
+                                        Interpretation};
     if (!packElement(Element, Rows, Placement))
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
