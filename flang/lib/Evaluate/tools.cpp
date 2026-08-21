@@ -1397,6 +1397,16 @@ template <common::TypeCategory CAT, int KIND> struct SignedNumericExpr {
   bool isPositive;
 };
 
+struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
+  using Base = AnyTraverse<HasConversionHelper>;
+  HasConversionHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename TO, common::TypeCategory FROM>
+  bool operator()(const Convert<TO, FROM> &) const {
+    return true;
+  }
+};
+
 template <common::TypeCategory CAT, int KIND>
 static void flattenTopLevelAddSubtract(const NumericExpr<CAT, KIND> &expr,
     llvm::SmallVectorImpl<SignedNumericTerm<CAT, KIND>> &terms,
@@ -1464,8 +1474,29 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
 }
 
 template <common::TypeCategory CAT, int KIND>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
+static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT, KIND> &expr) {
+  if (const auto *convert =
+          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
+    std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
+        [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeKind<CAT>>{std::move(*result)};
+          return std::nullopt;
+        },
+        convert->left().u);
+    if (!rewritten)
+      return std::nullopt;
+    return NumericExpr<CAT, KIND>{
+        Convert<Numeric<CAT, KIND>, CAT>{std::move(*rewritten)}};
+  }
+
+  // Only a conversion around the complete expression is supported. Keep
+  // conversions embedded in a mixed-kind tree attached to their original
+  // operations until those cases have their own correctness coverage.
+  if (HasConversionHelper{}(expr))
+    return std::nullopt;
+
   if (!std::get_if<Add<Numeric<CAT, KIND>>>(&expr.u) &&
       !std::get_if<Subtract<Numeric<CAT, KIND>>>(&expr.u))
     return std::nullopt;
@@ -1484,7 +1515,7 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
       buildSignedAdd(std::move(tailExpr), std::move(headExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
-  return Expr<SomeType>{std::move(result.expr)};
+  return std::move(result.expr);
 }
 
 template <common::TypeCategory CAT>
@@ -1496,7 +1527,9 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
       CAT == common::TypeCategory::Complex) {
     return common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          return tryBuildSplitSumExpressionTree(typedExpr);
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeType>{std::move(*result)};
+          return std::nullopt;
         },
         expr.u);
   }
@@ -1505,10 +1538,10 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
 
 } // namespace
 
-bool CanBuildSplitSumExpressionTree(
+bool CanBuildSplitSumExpressionTree(FoldingContext &context,
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
-      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasVectorSubscript(lhs) && !FindImpureCall(context, rhs) &&
       !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
       !HasVolatileOrAsynchronousSymbol(lhs);
 }
@@ -2767,7 +2800,8 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 }
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
-  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived);
+  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
+      !(derived && derived->IsVectorType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

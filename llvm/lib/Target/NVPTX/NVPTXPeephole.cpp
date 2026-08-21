@@ -130,8 +130,8 @@ static bool runNVPTXPeephole(MachineFunction &MF) {
   // Remove unnecessary %VRFrame = cvta.local %VRFrameLocal
   const auto &MRI = MF.getRegInfo();
   if (MRI.use_empty(NRI->getFrameRegister(MF))) {
-    if (auto MI = MRI.getUniqueVRegDef(NRI->getFrameRegister(MF))) {
-      MI->eraseFromParent();
+    if (auto *MO = MRI.getOneDef(NRI->getFrameRegister(MF))) {
+      MO->getParent()->eraseFromParent();
       Changed = true;
     }
   }

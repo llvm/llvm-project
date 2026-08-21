@@ -57,9 +57,7 @@ struct PtrView {
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
-  bool isRoot() const {
-    return Base == Pointee->getDescriptor()->getMetadataSize();
-  }
+  bool isRoot() const { return Base == Pointee->getMetadataSize(); }
 
   bool isConst() const {
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
@@ -132,10 +130,9 @@ struct PtrView {
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    const Descriptor *Desc =
-        (Next == Pointee->getDescriptor()->getMetadataSize())
-            ? getDeclDesc()
-            : getDescriptor(Next)->Desc;
+    const Descriptor *Desc = (Next == Pointee->getMetadataSize())
+                                 ? getDeclDesc()
+                                 : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
@@ -251,7 +248,7 @@ struct PtrView {
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
-    assert(ReadOffset + sizeof(T) <= Pointee->getDescriptor()->getAllocSize());
+    assert(ReadOffset + sizeof(T) <= Pointee->getSize());
 
     return *reinterpret_cast<T *>(Pointee->rawData() + ReadOffset);
   }
@@ -586,6 +583,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
 
@@ -877,7 +875,7 @@ public:
     assert(isBlockPointer());
     assert(BS.Pointee);
     assert(isDereferencable());
-    assert(Offset + sizeof(T) <= BS.Pointee->getDescriptor()->getAllocSize());
+    assert(Offset + sizeof(T) <= BS.Pointee->getSize());
 
     return view().deref<T>();
   }

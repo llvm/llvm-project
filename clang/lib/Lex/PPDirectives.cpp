@@ -2535,6 +2535,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       // actual module containing it exists (because the umbrella header is
       // incomplete).  Treat this as a textual inclusion.
       ModuleToImport = nullptr;
+      UsableClangHeaderModule = false;
     } else if (Imported.isConfigMismatch()) {
       // On a configuration mismatch, enter the header textually. We still know
       // that it's part of the corresponding module.
@@ -2590,7 +2591,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (UsableHeaderUnit && !getLangOpts().CompilingPCH)
       Action = TrackGMFState.inGMF() ? Import : Skip;
     else
-      Action = (ModuleToImport && !getLangOpts().CompilingPCH) ? Import : Skip;
+      Action = (UsableClangHeaderModule && !getLangOpts().CompilingPCH) ? Import
+                                                                        : Skip;
   }
 
   // Check for circular inclusion of the main file.
