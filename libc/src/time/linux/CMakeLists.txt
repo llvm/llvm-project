@@ -89,3 +89,19 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  timer_delete
+  SRCS
+    timer_delete.cpp
+  HDRS
+    ../timer_delete.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_delete
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+

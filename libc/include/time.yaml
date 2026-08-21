@@ -162,3 +162,10 @@ functions:
       - type: clockid_t
       - type: struct sigevent *__restrict
       - type: timer_t *__restrict
+  - name: timer_delete
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: timer_t
+

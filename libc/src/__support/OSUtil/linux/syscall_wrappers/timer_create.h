@@ -14,10 +14,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_TIMER_CREATE_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_TIMER_CREATE_H
 
+#include "hdr/signal_macros.h"
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/pid_t.h"
 #include "hdr/types/struct_sigevent.h"
 #include "hdr/types/timer_t.h"
+#include "src/__support/CPP/cstddef.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -49,13 +51,19 @@ struct KernelSigevent {
 
   LIBC_INLINE KernelSigevent() = default;
 
-  LIBC_INLINE KernelSigevent(const sigevent &sev) {
+  LIBC_INLINE KernelSigevent(const sigevent &sev) : _sigev_un{} {
     sigev_value = sev.sigev_value;
     sigev_signo = sev.sigev_signo;
     sigev_notify = sev.sigev_notify;
-    _sigev_un._tid = sev.sigev_notify_thread_id;
-    _sigev_un._sigev_thread._function = sev.sigev_notify_function;
-    _sigev_un._sigev_thread._attribute = sev.sigev_notify_attributes;
+    // Zero initialize `_sigev_un`.
+    for (size_t i = 0; i < __SIGEV_PAD_SIZE; ++i)
+      _sigev_un._pad[i] = 0;
+    if ((sev.sigev_notify & SIGEV_THREAD_ID) != 0) {
+      _sigev_un._tid = sev.sigev_notify_thread_id;
+    } else if (sev.sigev_notify == SIGEV_THREAD) {
+      _sigev_un._sigev_thread._function = sev.sigev_notify_function;
+      _sigev_un._sigev_thread._attribute = sev.sigev_notify_attributes;
+    }
   }
 };
 

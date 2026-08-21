@@ -144,11 +144,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  timer_create_test
+  timer_test
   SUITE
     libc_time_unittests
   SRCS
-    timer_create_test.cpp
+    timer_test.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.signal_macros
@@ -158,6 +158,7 @@ add_libc_test(
     libc.hdr.types.timer_t
     libc.src.__support.OSUtil.osutil
     libc.src.time.timer_create
+    libc.src.time.timer_delete
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
