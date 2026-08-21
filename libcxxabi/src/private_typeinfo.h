@@ -18,7 +18,7 @@ namespace __cxxabiv1 {
 
 class _LIBCXXABI_TYPE_VIS __shim_type_info : public std::type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__shim_type_info();
+  _LIBCXXABI_HIDDEN ~__shim_type_info() override;
 
   _LIBCXXABI_HIDDEN virtual void noop1() const;
   _LIBCXXABI_HIDDEN virtual void noop2() const;
@@ -26,32 +26,28 @@ public:
                                            void *&adjustedPtr) const = 0;
 };
 
-class _LIBCXXABI_TYPE_VIS __fundamental_type_info : public __shim_type_info {
+class _LIBCXXABI_TYPE_VIS __fundamental_type_info final : public __shim_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__fundamental_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN ~__fundamental_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
 };
 
-class _LIBCXXABI_TYPE_VIS __array_type_info : public __shim_type_info {
+class _LIBCXXABI_TYPE_VIS __array_type_info final : public __shim_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__array_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN ~__array_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
 };
 
-class _LIBCXXABI_TYPE_VIS __function_type_info : public __shim_type_info {
+class _LIBCXXABI_TYPE_VIS __function_type_info final : public __shim_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__function_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN ~__function_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
 };
 
-class _LIBCXXABI_TYPE_VIS __enum_type_info : public __shim_type_info {
+class _LIBCXXABI_TYPE_VIS __enum_type_info final : public __shim_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__enum_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN ~__enum_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
 };
 
 enum
@@ -122,7 +118,7 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
 // Has no base class
 class _LIBCXXABI_TYPE_VIS __class_type_info : public __shim_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__class_type_info();
+  _LIBCXXABI_HIDDEN ~__class_type_info() override;
 
   _LIBCXXABI_HIDDEN void process_static_type_above_dst(__dynamic_cast_info *,
                                                        const void *,
@@ -136,26 +132,21 @@ public:
                                                   int, bool) const;
   _LIBCXXABI_HIDDEN virtual void
   search_below_dst(__dynamic_cast_info *, const void *, int, bool) const;
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
   _LIBCXXABI_HIDDEN virtual void
   has_unambiguous_public_base(__dynamic_cast_info *, void *, int) const;
 };
 
 // Has one non-virtual public base class at offset zero
-class _LIBCXXABI_TYPE_VIS __si_class_type_info : public __class_type_info {
+class _LIBCXXABI_TYPE_VIS __si_class_type_info final : public __class_type_info {
 public:
   _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION const __class_type_info* __base_type;
 
-  _LIBCXXABI_HIDDEN virtual ~__si_class_type_info();
+  _LIBCXXABI_HIDDEN ~__si_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN virtual void search_above_dst(__dynamic_cast_info *,
-                                                  const void *, const void *,
-                                                  int, bool) const;
-  _LIBCXXABI_HIDDEN virtual void
-  search_below_dst(__dynamic_cast_info *, const void *, int, bool) const;
-  _LIBCXXABI_HIDDEN virtual void
-  has_unambiguous_public_base(__dynamic_cast_info *, void *, int) const;
+  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(__dynamic_cast_info*, void*, int) const final;
 };
 
 struct _LIBCXXABI_HIDDEN __base_class_type_info
@@ -177,7 +168,7 @@ public:
 };
 
 // Has one or more base classes
-class _LIBCXXABI_TYPE_VIS __vmi_class_type_info : public __class_type_info {
+class _LIBCXXABI_TYPE_VIS __vmi_class_type_info final : public __class_type_info {
 public:
   unsigned int __flags;
   unsigned int __base_count;
@@ -190,15 +181,11 @@ public:
                                      //    more derived objects
   };
 
-  _LIBCXXABI_HIDDEN virtual ~__vmi_class_type_info();
+  _LIBCXXABI_HIDDEN ~__vmi_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN virtual void search_above_dst(__dynamic_cast_info *,
-                                                  const void *, const void *,
-                                                  int, bool) const;
-  _LIBCXXABI_HIDDEN virtual void
-  search_below_dst(__dynamic_cast_info *, const void *, int, bool) const;
-  _LIBCXXABI_HIDDEN virtual void
-  has_unambiguous_public_base(__dynamic_cast_info *, void *, int) const;
+  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(__dynamic_cast_info*, void*, int) const final;
 };
 
 class _LIBCXXABI_TYPE_VIS __pbase_type_info : public __shim_type_info {
@@ -229,28 +216,24 @@ public:
     __no_add_flags_mask = __transaction_safe_mask | __noexcept_mask
   };
 
-  _LIBCXXABI_HIDDEN virtual ~__pbase_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
+  _LIBCXXABI_HIDDEN ~__pbase_type_info() override;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const override;
 };
 
-class _LIBCXXABI_TYPE_VIS __pointer_type_info : public __pbase_type_info {
+class _LIBCXXABI_TYPE_VIS __pointer_type_info final : public __pbase_type_info {
 public:
-  _LIBCXXABI_HIDDEN virtual ~__pointer_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
-  _LIBCXXABI_HIDDEN bool can_catch_nested(const __shim_type_info *) const;
+  _LIBCXXABI_HIDDEN ~__pointer_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
+  _LIBCXXABI_HIDDEN bool can_catch_nested(const __shim_type_info*) const;
 };
 
-class _LIBCXXABI_TYPE_VIS __pointer_to_member_type_info
-    : public __pbase_type_info {
+class _LIBCXXABI_TYPE_VIS __pointer_to_member_type_info final : public __pbase_type_info {
 public:
   _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION const __class_type_info* __context;
 
-  _LIBCXXABI_HIDDEN virtual ~__pointer_to_member_type_info();
-  _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,
-                                           void *&) const;
-  _LIBCXXABI_HIDDEN bool can_catch_nested(const __shim_type_info *) const;
+  _LIBCXXABI_HIDDEN ~__pointer_to_member_type_info() final;
+  _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
+  _LIBCXXABI_HIDDEN bool can_catch_nested(const __shim_type_info*) const;
 };
 
 }  // __cxxabiv1

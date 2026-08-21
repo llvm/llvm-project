@@ -39,6 +39,11 @@ bool SPIRVTypeInst::isAnyTypeFloat() const {
   return MI->getOpcode() == SPIRV::OpTypeFloat;
 }
 
+bool SPIRVTypeInst::isPointer() const {
+  unsigned Op = MI->getOpcode();
+  return Op == SPIRV::OpTypePointer || Op == SPIRV::OpTypeUntypedPointerKHR;
+}
+
 bool SPIRVTypeInst::isTypePtr() const {
   return MI->getOpcode() == SPIRV::OpTypePointer;
 }

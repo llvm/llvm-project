@@ -1933,7 +1933,7 @@ foreach Index = 0-31 in {
 // 16-bit bitcast
 foreach vt = Reg16Types.types in {
   foreach st = Reg16Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VGPR_32>;
       def : BitConvert <vt, st, SReg_32>;
     }
@@ -1943,7 +1943,7 @@ foreach vt = Reg16Types.types in {
 // 32-bit bitcast
 foreach vt = Reg32DataTypes.types in {
   foreach st = Reg32DataTypes.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VGPR_32>;
       def : BitConvert <vt, st, SReg_32>;
     }
@@ -1954,7 +1954,7 @@ foreach vt = Reg32DataTypes.types in {
 // 64-bit bitcast
 foreach vt = Reg64DataTypes.types in {
   foreach st = Reg64DataTypes.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_64>;
     }
   }
@@ -1964,7 +1964,7 @@ foreach vt = Reg64DataTypes.types in {
 // 96-bit bitcast
 foreach vt = Reg96Types.types in {
   foreach st = Reg96Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, SGPR_96>;
     }
   }
@@ -1974,7 +1974,7 @@ foreach vt = Reg96Types.types in {
 // 128-bit bitcast
 foreach vt = Reg128Types.types in {
   foreach st = Reg128Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_128>;
       def : BitConvert <vt, st, SReg_128>;
     }
@@ -1985,7 +1985,7 @@ foreach vt = Reg128Types.types in {
 // 160-bit bitcast
 foreach vt = Reg160Types.types in {
   foreach st = Reg160Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_160>;
       def : BitConvert <vt, st, SReg_160>;
     }
@@ -1995,7 +1995,7 @@ foreach vt = Reg160Types.types in {
 // 192-bit bitcast
 foreach vt = Reg192Types.types in {
   foreach st = Reg192Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_192>;
       def : BitConvert <vt, st, SReg_192>;
     }
@@ -2005,7 +2005,7 @@ foreach vt = Reg192Types.types in {
 // 224-bit bitcast
 foreach vt = Reg224Types.types in {
   foreach st = Reg224Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_224>;
       def : BitConvert <vt, st, SReg_224>;
     }
@@ -2016,7 +2016,7 @@ foreach vt = Reg224Types.types in {
 // 256-bit bitcast
 foreach vt = Reg256Types.types in {
   foreach st = Reg256Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_256>;
       def : BitConvert <vt, st, SReg_256>;
     }
@@ -2027,7 +2027,7 @@ foreach vt = Reg256Types.types in {
 // 288-bit bitcast
 foreach vt = Reg288Types.types in {
   foreach st = Reg288Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_288>;
       def : BitConvert <vt, st, SReg_288>;
     }
@@ -2037,7 +2037,7 @@ foreach vt = Reg288Types.types in {
 // 320-bit bitcast
 foreach vt = Reg320Types.types in {
   foreach st = Reg320Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_320>;
       def : BitConvert <vt, st, SReg_320>;
     }
@@ -2047,7 +2047,7 @@ foreach vt = Reg320Types.types in {
 // 320-bit bitcast
 foreach vt = Reg352Types.types in {
   foreach st = Reg352Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_352>;
       def : BitConvert <vt, st, SReg_352>;
     }
@@ -2057,7 +2057,7 @@ foreach vt = Reg352Types.types in {
 // 384-bit bitcast
 foreach vt = Reg384Types.types in {
   foreach st = Reg384Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_384>;
       def : BitConvert <vt, st, SReg_384>;
     }
@@ -2067,7 +2067,7 @@ foreach vt = Reg384Types.types in {
 // 512-bit bitcast
 foreach vt = Reg512Types.types in {
   foreach st = Reg512Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_512>;
       def : BitConvert <vt, st, SReg_512>;
     }
@@ -2078,7 +2078,7 @@ foreach vt = Reg512Types.types in {
 // 1024-bit bitcast
 foreach vt = Reg1024Types.types in {
   foreach st = Reg1024Types.types in {
-    if !not(!eq (vt, st)) then {
+    if !ne(vt, st) then {
       def : BitConvert <vt, st, VReg_1024>;
       def : BitConvert <vt, st, SReg_1024>;
     }
@@ -2397,7 +2397,7 @@ def : GCNPat <
       (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
-  let SubtargetPredicate = HasPackedFP32Ops;
+  let SubtargetPredicate = HasAnyPackedFP32Ops;
 }
 
 def : GCNPat <
@@ -2405,7 +2405,7 @@ def : GCNPat <
   (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
                 !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
 > {
-  let SubtargetPredicate = HasPackedFP64Ops;
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -3819,16 +3819,28 @@ def : GCNPat<
 >;
 
 let SubtargetPredicate = HasPackedFP32Ops in {
-def : GCNPat<
-  (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
 
-def : GCNPat<
-  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
 } // End SubtargetPredicate = HasPackedFP32Ops
+
+let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
+
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
+} // End SubtargetPredicate = HasPackedFP32SingleSGPROps
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
@@ -3892,7 +3904,7 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
     (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64SingleSGPROps]);
   }
 }
 
@@ -4100,9 +4112,9 @@ def : GCNPat <
     (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
     i32:$src2)),
   (REG_SEQUENCE VGPR_32,
-    (i16 (EXTRACT_SUBREG $src2, lo16)), lo16,
+    (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), lo16)), lo16,
     (V_OR_B16_t16_e64 (i32 0), VGPR_16:$src_hi,
-                      (i32 0), (i16 (EXTRACT_SUBREG $src2, hi16))), hi16)
+                      (i32 0), (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), hi16))), hi16)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and

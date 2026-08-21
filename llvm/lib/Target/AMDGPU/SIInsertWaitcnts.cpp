@@ -1094,7 +1094,6 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
   // in practical cases. We do separately truncate the array when processing a
   // loop, which should be sufficient.
   AsyncMarks.push_back(AsyncScore);
-  AsyncScore = {};
   LLVM_DEBUG({
     dbgs() << "recordAsyncMark:\n" << Inst;
     for (const auto &Mark : AsyncMarks) {
@@ -1323,7 +1322,7 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
   // operations that use a different counter (like SAMPLE_CNT).
   static constexpr AMDGPU::InstCounterType VmemCounters[] = {
       AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
-      AMDGPU::DS_CNT};
+      AMDGPU::DS_CNT,   AMDGPU::ASYNC_CNT};
   HWEvents VmemEvents = llvm::accumulate(
       VmemCounters, HWEvents(), [&](HWEvents Acc, AMDGPU::InstCounterType T) {
         return Acc | Context->getWaitEvents(T);
@@ -2796,21 +2795,28 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   });
 
   // Merge element-wise using the existing mergeScore function and the
-  // appropriate MergeInfo for each counter type. Iterate only while we have
-  // elements in both vectors.
-  unsigned OtherSize = OtherMarks.size();
-  unsigned OurSize = AsyncMarks.size();
-  unsigned MergeCount = std::min(OtherSize, OurSize);
-  // OtherMarks is empty -> OtherSize == 0 -> MergeCount == 0.
-  // Our existing marks are the conservative result; return early to avoid
-  // passing MergeCount == 0 to seq_inclusive which asserts Begin <= End.
-  if (MergeCount == 0)
-    return StrictDom;
-  for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
-    for (auto T : inst_counter_types(Context->MaxCounter)) {
-      StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
-                              OtherMarks[OtherSize - Idx][T]);
-    }
+  // appropriate MergeInfo for each counter type. Rebase and merge EVERY
+  // surviving mark into the new (widened) frame, aligned by recency from the
+  // back. A mark with no counterpart on the other side merges against the
+  // zero/identity mark: mergeScore still applies MyShift, so the mark is
+  // re-expressed in the new frame instead of being left with a stale
+  // (pre-merge) score.
+  const unsigned OtherSize = OtherMarks.size();
+  const unsigned OurSize = AsyncMarks.size();
+  // After the both-empty early-return above, max(AsyncMarks, OtherMarks) >= 1,
+  // and the erase/pad steps normalize AsyncMarks to exactly MaxSize. Hence
+  // OurSize == MaxSize >= 1 (as long as MaxAsyncMarks != 0), so the
+  // seq_inclusive(1, OurSize) below never trips its "Begin <= End" assertion
+  // the way seq_inclusive(1, MergeCount) could when OtherSize == 0.
+  assert(OurSize >= 1 &&
+         "AsyncMarks padded to MaxSize >= 1 (needs MaxAsyncMarks != 0)");
+
+  for (auto Idx : seq_inclusive<unsigned>(1, OurSize)) {
+    const CounterValueArray &OtherMark =
+        Idx <= OtherSize ? OtherMarks[OtherSize - Idx] : ZeroMark;
+    for (auto T : inst_counter_types(Context->MaxCounter))
+      StrictDom |=
+          mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T], OtherMark[T]);
   }
 
   LLVM_DEBUG({
@@ -3699,18 +3705,39 @@ bool SIInsertWaitcnts::run() {
     }
   }
 
-  if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
-    // Hardware entrypoints must begin with a specific sequence:
-    //   GLOBAL_PREFETCH_B8 V0, S[0:1] SCOPE:SCOPE_SE
-    //   V_NOP
-    MachineBasicBlock::iterator I = EntryBB.begin();
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
-        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
-        .addReg(AMDGPU::VGPR0, RegState::Undef)
-        .addImm(0)
-        .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
-    Modified = true;
+  if (MFI->isEntryFunction()) {
+    MachineBasicBlock::iterator InsertPt = EntryBB.begin();
+
+    if (ST.hasWaitXcnt()) {
+      // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+      // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+      // insertion logic, which assumes multi-group mode by default.
+      unsigned RegEncoding =
+          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+      BuildMI(EntryBB, InsertPt, DebugLoc(),
+              TII.get(AMDGPU::S_SETREG_IMM32_B32))
+          .addImm(1)
+          .addImm(RegEncoding);
+      Modified = true;
+    }
+
+    if (ST.hasRequiresInitialUnclausedVmem()) {
+      // Hardware entrypoints must begin with a specific sequence:
+      //   S_MOV_B64 S[64:65], 0
+      //   V_NOP
+      //   GLOBAL_PREFETCH_B8 V0, S[64:65] SCOPE:SCOPE_SE TH:TH_LOAD_RT
+      BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::S_MOV_B64),
+              AMDGPU::SGPR64_SGPR65)
+          .addImm(0);
+      BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+      BuildMI(EntryBB, InsertPt, DebugLoc(),
+              TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
+          .addReg(AMDGPU::SGPR64_SGPR65)
+          .addReg(AMDGPU::VGPR0, RegState::Undef)
+          .addImm(0)
+          .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
+      Modified = true;
+    }
   }
 
   return Modified;

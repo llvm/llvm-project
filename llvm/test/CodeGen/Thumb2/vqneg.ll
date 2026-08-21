@@ -46,8 +46,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqneg_sat_test16(<16 x i8> %A) {
 ; CHECK-LABEL: vqneg_sat_test16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vqsub.s8 q0, q1, q0
+; CHECK-NEXT:    vqneg.s8 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> zeroinitializer, <16 x i8> %A)
@@ -57,8 +56,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqneg_sat_test8(<8 x i16> %A) {
 ; CHECK-LABEL: vqneg_sat_test8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vqsub.s16 q0, q1, q0
+; CHECK-NEXT:    vqneg.s16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> zeroinitializer, <8 x i16> %A)
@@ -68,8 +66,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vqneg_sat_test4(<4 x i32> %A) {
 ; CHECK-LABEL: vqneg_sat_test4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vqsub.s32 q0, q1, q0
+; CHECK-NEXT:    vqneg.s32 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> zeroinitializer, <4 x i32> %A)

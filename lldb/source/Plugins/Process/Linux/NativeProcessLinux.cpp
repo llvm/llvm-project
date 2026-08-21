@@ -285,7 +285,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -1093,7 +1093,7 @@ Status NativeProcessLinux::Signal(int signo) {
   Status error;
 
   Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "sending signal {0} ({1}) to pid {1}", signo,
+  LLDB_LOG(log, "sending signal {0} ({1}) to pid {2}", signo,
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
@@ -1347,8 +1347,9 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   }
 
-  llvm::scope_exit restore_mem(
-      [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
+  llvm::scope_exit restore_mem([&] {
+    DoWriteMemory(exe_addr, memory.data(), memory.size(), bytes_read);
+  });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())
     return std::move(Err);
@@ -1361,8 +1362,8 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
       return std::move(Err);
     }
   }
-  if (llvm::Error Err = WriteMemory(exe_addr, syscall_data.Insn.data(),
-                                    syscall_data.Insn.size(), bytes_read)
+  if (llvm::Error Err = DoWriteMemory(exe_addr, syscall_data.Insn.data(),
+                                      syscall_data.Insn.size(), bytes_read)
                             .ToError())
     return std::move(Err);
 
@@ -1614,8 +1615,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
@@ -1665,8 +1668,8 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status();
 }
 
-Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
-                                       size_t size, size_t &bytes_written) {
+Status NativeProcessLinux::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                         size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;
   Status error;
@@ -1697,7 +1700,7 @@ Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
       memcpy(buff, src, remainder);
 
       size_t bytes_written_rec;
-      error = WriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
+      error = DoWriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
       if (error.Fail())
         return error;
 

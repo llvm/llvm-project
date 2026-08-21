@@ -1632,35 +1632,21 @@ void Preprocessor::HandleLineDirective() {
 
   int FilenameID = -1;
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   // If the StrTok is "eod", then it wasn't present.  Otherwise, it must be a
   // string followed by eod.
   if (StrTok.is(tok::eod))
     ; // ok
-  else if (StrTok.isNot(tok::string_literal)) {
+  else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_line_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this,
-                                StringLiteralEvalMethod::Unevaluated);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
+    FilenameID = SourceMgr.getLineTableFilenameID(Filename);
 
     // Verify that there is nothing after the string, other than EOD.  Because
     // of C99 6.10.4p5, macros that expand to empty tokens are ok.
@@ -1778,7 +1764,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
 
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   bool IsFileEntry = false, IsFileExit = false;
   int FilenameID = -1;
@@ -1790,29 +1776,14 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     Diag(StrTok, diag::ext_pp_gnu_line_directive);
     // Treat this like "#line NN", which doesn't change file characteristics.
     FileKind = SourceMgr.getFileCharacteristic(DigitTok.getLocation());
-  } else if (StrTok.isNot(tok::string_literal)) {
+  } else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this,
-                                StringLiteralEvalMethod::Unevaluated);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
@@ -1821,8 +1792,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
 
     // Exiting to an empty string means pop to the including file, so leave
     // FilenameID as -1 in that case.
-    if (!(IsFileExit && Literal.GetString().empty()))
-      FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    if (!(IsFileExit && Filename.empty()))
+      FilenameID = SourceMgr.getLineTableFilenameID(Filename);
   }
 
   // Create a line note with this information.
@@ -2010,6 +1981,18 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   // Skip the brackets.
   Buffer = Buffer.substr(1, Buffer.size()-2);
   return isAngled;
+}
+
+void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
+                                                    StringRef &Buffer) {
+  // Get the text form of the filename.
+  assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
+  if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
+    Diag(Loc, diag::err_pp_line_invalid_filename);
+    Buffer = StringRef();
+    return;
+  }
+  Buffer = Buffer.substr(1, Buffer.size() - 2);
 }
 
 /// Push a token onto the token stream containing an annotation.
@@ -2552,6 +2535,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       // actual module containing it exists (because the umbrella header is
       // incomplete).  Treat this as a textual inclusion.
       ModuleToImport = nullptr;
+      UsableClangHeaderModule = false;
     } else if (Imported.isConfigMismatch()) {
       // On a configuration mismatch, enter the header textually. We still know
       // that it's part of the corresponding module.
@@ -2607,7 +2591,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (UsableHeaderUnit && !getLangOpts().CompilingPCH)
       Action = TrackGMFState.inGMF() ? Import : Skip;
     else
-      Action = (ModuleToImport && !getLangOpts().CompilingPCH) ? Import : Skip;
+      Action = (UsableClangHeaderModule && !getLangOpts().CompilingPCH) ? Import
+                                                                        : Skip;
   }
 
   // Check for circular inclusion of the main file.

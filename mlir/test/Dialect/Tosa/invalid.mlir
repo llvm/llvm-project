@@ -4,17 +4,16 @@
 // validation flow.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_int,pro_fp extensions=int16,int4,int64,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround,mxfp_conv,shape" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_int,pro_fp extensions=int16,int4,int64,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround,mxfp_conv,shape" -tosa-validate="strict-op-spec-alignment validate-function-signature=false"
 
 
 func.func @test_cast(%arg0: tensor<i1>) -> tensor<5xi32> {
   // expected-error@+1{{'tosa.cast' op requires the same shape for all operands and results}}
-  %1 = "tosa.cast"(%arg0) : (tensor<i1>) -> tensor<5xi32>
+  %1 = "tosa.cast"(%arg0) {input_unsigned = false} : (tensor<i1>) -> tensor<5xi32>
   return %1 : tensor<5xi32>
 }
 
 // -----
-
 func.func @test_const() -> tensor<1xf32> {
   // expected-error@+1{{'tosa.const' op expected same attr/result element types}}
   %0 = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xf32>
@@ -1133,6 +1132,28 @@ func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tenso
 
 // -----
 
+func.func @test_resize_mixed_fp8_types(%arg0: tensor<1x32x32x8xf8E4M3FN>) -> tensor<1x64x64x8xf8E5M2> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op illegal: operation operand/result data types did not align with any profile or extension, got (fp8e4m3,fp8e5m2)}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xf8E4M3FN>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf8E5M2>
+  return %0 : tensor<1x64x64x8xf8E5M2>
+}
+
+// -----
+
+func.func @test_resize_mixed_mxfp_types(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op illegal: operation operand/result data types did not align with any profile or extension, got (bs32_fp8e8m0_fp4e2m1,bs32_fp8e8m0_fp6e2m3)}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %0 : tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+}
+
+// -----
+
 // CHECK-LABEL: broadcast_resize_nearest_f32
 func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
   %scale = tosa.const_shape { values = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
@@ -2146,24 +2167,9 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf
 
 // -----
 
-// expected-error@+1 {{func.func' op Function argument types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
-func.func @test_shape_func_input(%arg0: !tosa.shape<1>) {
-  return
-}
-
-// -----
-
-// expected-error@+1 {{'func.func' op Function return types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
-func.func @test_shape_func_output() -> !tosa.shape<4> {
-  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
-}
-
-// -----
-
 func.func @test_cast_f32_plain_fp4(%arg0: tensor<4x32xf32>) -> tensor<4x32xf4E2M1FN> {
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (f32,fp4e2m1)}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32xf4E2M1FN>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xf32>) -> tensor<4x32xf4E2M1FN>
   return %0 : tensor<4x32xf4E2M1FN>
 }
 
@@ -2171,7 +2177,7 @@ func.func @test_cast_f32_plain_fp4(%arg0: tensor<4x32xf32>) -> tensor<4x32xf4E2M
 
 func.func @test_cast_fp4_block_scaled(%arg0: tensor<4x32xf4E2M1FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (fp4e2m1,bs32_fp8e8m0_fp4e2m1), did you mean (fp8e4m3,bs32_fp8e8m0_fp4e2m1)? Otherwise, please refer to the 'supported data types' for 'tosa.cast' in the specification.}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf4E2M1FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xf4E2M1FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
@@ -2179,7 +2185,7 @@ func.func @test_cast_fp4_block_scaled(%arg0: tensor<4x32xf4E2M1FN>) -> tensor<4x
 
 func.func @test_cast_block_scaled_fp6e2m3(%arg0: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf6E2M3FN> {
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (bs32_fp8e8m0_fp4e2m1,fp6e2m3), did you mean (bs32_fp8e8m0_fp4e2m1,fp8e4m3)? Otherwise, please refer to the 'supported data types' for 'tosa.cast' in the specification.}}
-  %0 = tosa.cast %arg0 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf6E2M3FN>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf6E2M3FN>
   return %0 : tensor<4x32xf6E2M3FN>
 }
 
@@ -2187,6 +2193,6 @@ func.func @test_cast_block_scaled_fp6e2m3(%arg0: tensor<4x32x!tosa.block_scaled<
 
 func.func @test_cast_fp6e3m2_block_scaled(%arg0: tensor<4x32xf6E3M2FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (fp6e3m2,bs32_fp8e8m0_mxint8), did you mean (fp8e4m3,bs32_fp8e8m0_mxint8)? Otherwise, please refer to the 'supported data types' for 'tosa.cast' in the specification.}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf6E3M2FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xf6E3M2FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }

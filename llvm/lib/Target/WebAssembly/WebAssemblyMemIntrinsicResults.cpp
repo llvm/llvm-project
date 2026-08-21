@@ -81,10 +81,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
@@ -187,8 +184,7 @@ bool WebAssemblyMemIntrinsicResultsImpl::optimizeCall(
   if (!CallReturnsInput)
     return false;
 
-  LibFunc Func;
-  if (!LibInfo->getLibFunc(Name, Func))
+  if (LibInfo->getLibFunc(Name) == NotLibFunc)
     return false;
 
   Register FromReg = MI.getOperand(2).getReg();
@@ -265,11 +261,11 @@ WebAssemblyMemIntrinsicResultsPass::run(MachineFunction &MF,
            .getResult<TargetLibraryAnalysis>(MF.getFunction());
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
-  const LibcallLoweringInfo &LibCalls =
-      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-          .getCachedResult<LibcallLoweringModuleAnalysis>(
-              *MF.getFunction().getParent())
-          ->getLibcallLowering(Subtarget);
+  const LibcallLoweringInfo &LibCalls = getLibcallLowering(
+      *MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+           .getCachedResult<LibcallLoweringModuleAnalysis>(
+               *MF.getFunction().getParent()),
+      Subtarget);
   WebAssemblyMemIntrinsicResultsImpl Impl(MDT, LIS, LibInfo, LibCalls);
   bool Changed = Impl.runOnMachineFunction(MF);
   if (!Changed)

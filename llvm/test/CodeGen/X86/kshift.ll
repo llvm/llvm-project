@@ -61,23 +61,23 @@ define i16 @kshiftl_v16i1_1(<16 x i32> %x, <16 x i32> %y) {
 define i32 @kshiftl_v32i1_1(<32 x i16> %x, <32 x i16> %y) {
 ; KNL-LABEL: kshiftl_v32i1_1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm2, %ymm2
-; KNL-NEXT:    vpmovsxwd %ymm2, %zmm2
-; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
+; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm3, %ymm3
+; KNL-NEXT:    vpmovsxwd %ymm3, %zmm3
+; KNL-NEXT:    vptestmd %zmm3, %zmm3, %k1
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
 ; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; KNL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[15],zmm2[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
+; KNL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[15],zmm3[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 ; KNL-NEXT:    kshiftlw $1, %k2, %k1
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm2, %ymm2
-; KNL-NEXT:    vpmovsxwd %ymm2, %zmm2
-; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k2
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm3, %ymm3
+; KNL-NEXT:    vpmovsxwd %ymm3, %zmm3
+; KNL-NEXT:    vptestmd %zmm3, %zmm3, %k2
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %ecx
@@ -357,23 +357,23 @@ define i16 @kshiftr_v16i1_1(<16 x i32> %x, <16 x i32> %y) {
 define i32 @kshiftr_v32i1_1(<32 x i16> %x, <32 x i16> %y) {
 ; KNL-LABEL: kshiftr_v32i1_1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm2, %ymm2
-; KNL-NEXT:    vpmovsxwd %ymm2, %zmm2
-; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
+; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm3, %ymm3
+; KNL-NEXT:    vpmovsxwd %ymm3, %zmm3
+; KNL-NEXT:    vptestmd %zmm3, %zmm3, %k1
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
 ; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; KNL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm2[0]
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
+; KNL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm3[0]
 ; KNL-NEXT:    kshiftrw $1, %k1, %k1
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm2
-; KNL-NEXT:    vpmovsxwd %ymm2, %zmm2
-; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k2
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm3
+; KNL-NEXT:    vpmovsxwd %ymm3, %zmm3
+; KNL-NEXT:    vptestmd %zmm3, %zmm3, %k2
 ; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm1
 ; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %ecx
@@ -403,8 +403,8 @@ define i32 @kshiftr_v32i1_1(<32 x i16> %x, <32 x i16> %y) {
 define i64 @kshiftr_v64i1_1(<64 x i8> %x, <64 x i8> %y) {
 ; KNL-LABEL: kshiftr_v64i1_1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
 ; KNL-NEXT:    vpcmpeqb %ymm2, %ymm3, %ymm3
 ; KNL-NEXT:    vextracti128 $1, %ymm3, %xmm4
 ; KNL-NEXT:    vpmovsxbd %xmm4, %zmm4
@@ -529,8 +529,8 @@ define i16 @kshiftr_v16i1_15(<16 x i32> %x, <16 x i32> %y) {
 define i32 @kshiftr_v32i1_31(<32 x i16> %x, <32 x i16> %y) {
 ; KNL-LABEL: kshiftr_v32i1_31:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0

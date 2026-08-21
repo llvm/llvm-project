@@ -1,7 +1,7 @@
 #include <thread>
 
-#include "lldb/API/LLDB.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBTarget.h"
 
 using namespace lldb;

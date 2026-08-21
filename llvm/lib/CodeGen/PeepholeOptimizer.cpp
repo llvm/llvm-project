@@ -575,11 +575,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
@@ -748,8 +745,11 @@ public:
                const TargetInstrInfo *TII = nullptr)
       : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
-      Def = MRI.getVRegDef(Reg);
-      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
+      if (DI != MRI.def_end()) {
+        Def = DI->getParent();
+        DefIdx = DI.getOperandNo();
+      }
     }
   }
 
@@ -963,6 +963,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(
     return false;
 
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
   ++NumCmps;
 
   // The eliminated compare may have been the extra use preventing a
@@ -1724,8 +1725,6 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -1845,7 +1844,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }

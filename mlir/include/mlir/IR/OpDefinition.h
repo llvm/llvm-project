@@ -1607,8 +1607,8 @@ using detect_has_any_fold_trait =
 /// Returns the result of folding a trait that implements a `foldTrait` function
 /// that is specialized for operations that have a single result.
 template <typename Trait>
-static std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
-                        LogicalResult>
+std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
+                 LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   assert(op->hasTrait<OpTrait::OneResult>() &&
@@ -1629,7 +1629,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
 /// Returns the result of folding a trait that implements a generalized
 /// `foldTrait` function that is supports any operation type.
 template <typename Trait>
-static std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
+std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   // If a previous trait has already been folded and replaced this operation, we
@@ -1637,8 +1637,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
   return results.empty() ? Trait::foldTrait(op, operands, results) : failure();
 }
 template <typename Trait>
-static inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value,
-                               LogicalResult>
+inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
   return failure();
 }
@@ -1646,8 +1645,8 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 /// Given a tuple type containing a set of traits, return the result of folding
 /// the given operation.
 template <typename... Ts>
-static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
-                                SmallVectorImpl<OpFoldResult> &results) {
+LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) {
   return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
 
@@ -1873,6 +1872,16 @@ private:
   using detect_has_parse_properties =
       llvm::is_detected<has_parse_properties, T>;
 
+  /// Trait to check if T provides a generated parser for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_parse_properties_from_key_value_list =
+      decltype(T::parsePropertiesFromKeyValueList(
+          std::declval<OpAsmParser &>(), std::declval<OperationState &>()));
+  template <typename T>
+  using detect_has_parse_properties_from_key_value_list =
+      llvm::is_detected<has_parse_properties_from_key_value_list, T>;
+
   /// Trait to check if T provides a 'ConcreteEntity' type alias.
   template <typename T>
   using has_concrete_entity_t = typename T::ConcreteEntity;
@@ -2040,10 +2049,11 @@ public:
         p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
-  /// Parses 'prop-dict' for the operation. Unless overridden, the method will
-  /// parse the properties using the generic property dictionary using the
-  /// '<{ ... }>' syntax. The resulting properties are stored within the
-  /// property structure of 'result', accessible via 'getOrAddProperties'.
+  /// Parses 'prop-dict' for the operation. Generated parsers accept a keyed
+  /// list whose values use their custom assembly parsers, as well as the
+  /// legacy generic '<{ ... }>' dictionary syntax. The resulting properties
+  /// are stored within the property structure of 'result', accessible via
+  /// 'getOrAddProperties'.
   template <typename T = ConcreteType>
   static ParseResult parseProperties(OpAsmParser &parser,
                                      OperationState &result) {
@@ -2051,6 +2061,9 @@ public:
       return parseProperties(
           parser, result.getOrAddProperties<InferredProperties<T>>());
     }
+
+    if constexpr (detect_has_parse_properties_from_key_value_list<T>::value)
+      return T::parsePropertiesFromKeyValueList(parser, result);
 
     Attribute propertyDictionary;
     if (genericParseProperties(parser, propertyDictionary))

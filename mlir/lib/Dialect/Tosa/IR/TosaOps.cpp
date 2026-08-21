@@ -44,10 +44,8 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
-#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -741,22 +739,31 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 // TOSA block scaling utilities.
 //===----------------------------------------------------------------------===//
 
-LogicalResult mlir::tosa::verifyBlockScaledTensorType(mlir::Type type,
-                                                      bool allowScaleValues) {
+LogicalResult mlir::tosa::verifyBlockScaledTensorType(
+    mlir::Type type, llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    bool allowScaleValues) {
   const auto tensorType = llvm::cast<ShapedType>(type);
   const BlockScaledType elemType =
       llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
   if (!elemType)
     return success();
 
-  if (!allowScaleValues && elemType.hasScaleValues())
+  if (!allowScaleValues && elemType.hasScaleValues()) {
+    if (emitError)
+      emitError()
+          << "block scaled tensor type with scale values is not allowed";
     return failure();
+  }
 
   if (!tensorType.hasRank())
     return success();
 
-  if (tensorType.getRank() == 0)
+  if (tensorType.getRank() == 0) {
+    if (emitError)
+      emitError() << "block scaled tensor type must have rank greater than "
+                     "zero";
     return failure();
+  }
 
   const ArrayRef<int64_t> tensorShape = tensorType.getShape();
   const uint32_t blockSize =
@@ -765,17 +772,45 @@ LogicalResult mlir::tosa::verifyBlockScaledTensorType(mlir::Type type,
   if (allowScaleValues && elemType.hasScaleValues() &&
       tensorType.hasStaticShape()) {
     const size_t numBlocks = tensorType.getNumElements() / blockSize;
-    if (elemType.getScaleValues().size() != numBlocks)
+    if (elemType.getScaleValues().size() != numBlocks) {
+      if (emitError)
+        emitError() << "block scaled tensor type with scale values must have "
+                       "scale values for each block, expected "
+                    << numBlocks << ", got "
+                    << elemType.getScaleValues().size();
       return failure();
+    }
   }
 
   const int64_t blockedDimension = tensorShape.back();
   if (ShapedType::isDynamic(blockedDimension))
     return success();
-  if (blockedDimension % blockSize != 0)
+
+  if (blockedDimension % blockSize != 0) {
+    if (emitError)
+      emitError() << "last dimension of block scaled tensor type ("
+                  << blockedDimension << ") must be divisible by block size ("
+                  << blockSize << ")";
+
     return failure();
+  }
 
   return success();
+}
+
+std::string mlir::tosa::getTosaTensorTypeErrorMessage(mlir::Type type) {
+  MLIRContext *ctx = type.getContext();
+  std::string message;
+  ScopedDiagnosticHandler handler(
+      ctx, [&](Diagnostic &diag) { message = diag.str(); });
+
+  if (failed(verifyBlockScaledTensorType(
+          type, [ctx] { return emitError(UnknownLoc::get(ctx)); })) &&
+      !message.empty()) {
+    return ": " + message;
+  }
+
+  return "";
 }
 
 static ParseResult parseScaleValues(AsmParser &parser,
@@ -964,9 +999,12 @@ LogicalResult tosa::ConstOp::verify() {
       return op.emitOpError(
           "attribute block scaled type must have scale values");
 
-    if (failed(verifyBlockScaledTensorType(attrType, true)))
-      return op.emitOpError("block scaled attribute type is not valid, got ")
-             << attrType;
+    const auto emitAttributeError = [&op]() {
+      return op.emitOpError("attribute block scaled type is invalid: ");
+    };
+
+    if (failed(verifyBlockScaledTensorType(attrType, emitAttributeError, true)))
+      return failure();
 
     const BlockScaledType resultBlockScaledType =
         llvm::dyn_cast<mlir::tosa::BlockScaledType>(resultElemType);
@@ -3985,6 +4023,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 LogicalResult tosa::ResizeOp::verify() {
   const Value input = getInput();
   const Value output = getOutput();
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
+
+  if (isa<BlockScaledType>(inputElementType) &&
+      getMode() != ResizeMode::NEAREST_NEIGHBOR)
+    return emitOpError("requires NEAREST_NEIGHBOR mode for block scaled input");
+
   const RankedTensorType inputType =
       llvm::dyn_cast<RankedTensorType>(input.getType());
   const RankedTensorType outputType =
@@ -5331,6 +5375,16 @@ LogicalResult CastOp::verify() {
   const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
   const bool outputIsBlockScaled =
       llvm::isa<BlockScaledType>(outputElementType);
+
+  const bool isUnsigned = this->getInputUnsigned();
+  const Type inputDataType = getStorageElementTypeOrSelf(inputType);
+
+  if (isUnsigned)
+    if (!inputDataType.isInteger() || inputDataType.isInteger(1))
+      return emitOpError()
+             << "attribute input_unsigned requires integer type inputs. Got: "
+             << inputDataType;
+
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();
 

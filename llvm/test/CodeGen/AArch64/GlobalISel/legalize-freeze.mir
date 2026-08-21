@@ -27,12 +27,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %q0:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x i32>) = G_FREEZE %q0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[FREEZE]](<4 x i32>)
-    ; CHECK-NEXT: $x0 = COPY [[UV]](<2 x s32>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[FREEZE]](<4 x i32>)
+    ; CHECK-NEXT: $x0 = COPY [[UV]](<2 x i32>)
     ; CHECK-NEXT: $x1 = COPY [[UV1]](<2 x i32>)
     %q0:_(<4 x i32>) = COPY $q0
     %0:_(<4 x i32>) = G_FREEZE %q0
-    %1:_(<2 x s32> ), %2:_(<2 x i32>) = G_UNMERGE_VALUES %0
+    %1:_(<2 x i32> ), %2:_(<2 x i32>) = G_UNMERGE_VALUES %0
     $x0 = COPY %1
     $x1 = COPY %2
 ...
@@ -49,7 +49,7 @@ body: |
     ; CHECK-NEXT: $q1 = COPY [[FREEZE1]](<2 x i64>)
     %undef:_(<4 x i64>) = G_IMPLICIT_DEF
     %0:_(<4 x i64>) = G_FREEZE %undef
-    %1:_(<2 x s64> ), %2:_(<2 x i64>) = G_UNMERGE_VALUES %0
+    %1:_(<2 x i64> ), %2:_(<2 x i64>) = G_UNMERGE_VALUES %0
     $q0 = COPY %1
     $q1 = COPY %2
 ...

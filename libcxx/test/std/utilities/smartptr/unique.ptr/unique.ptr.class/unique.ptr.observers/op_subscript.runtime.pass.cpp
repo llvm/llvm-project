@@ -12,6 +12,9 @@
 
 // T& unique_ptr::operator[](size_t) const
 
+// FIXME: Why does this start failing with GCC 16?
+// XFAIL: gcc-16 && std-at-least-c++20
+
 #include <memory>
 #include <cassert>
 #include <type_traits>

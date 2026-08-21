@@ -2209,7 +2209,17 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    error.Clear();
+    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
+    return bytes_read;
   }
   return 0;
 }
@@ -2531,8 +2541,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // module in the shared module cache.
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
-              module_spec, m_process_sp.get(), module_sp, &old_modules,
-              &did_create_module);
+              module_spec, *this, module_sp, &old_modules, &did_create_module);
         } else {
           error = Status::FromErrorString("no platform is currently set");
         }
@@ -2729,13 +2738,11 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const std::string &name,
-                                     const lldb_private::RegisterFlags &flags,
-                                     uint32_t byte_size) {
+CompilerType Target::GetRegisterType(const RegisterInfo &reg_info) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
+  return m_register_type_builder_sp->GetRegisterType(reg_info);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2977,7 +2984,7 @@ ExpressionResults Target::EvaluateExpression(
             GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                     "Unable to get scratch type system");
+                     "Unable to get scratch type system: {0}");
     } else {
       auto ts = *type_system_or_err;
       if (!ts)
@@ -3119,11 +3126,13 @@ Target::ReadInstructions(const Address &start_addr, uint32_t count,
       ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
                  force_live_memory, &load_addr);
 
-  if (error.Fail())
-    return llvm::createStringErrorV(
-        error.AsCString(
-            "Target::ReadInstructions failed to read memory at {:x}"),
-        start_addr.GetLoadAddress(this));
+  if (error.Fail()) {
+    return llvm::joinErrors(
+        llvm::createStringErrorV(
+            "Target::ReadInstructions failed to read memory at {:x}: ",
+            start_addr.GetLoadAddress(this)),
+        error.takeError());
+  }
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
   if (!flavor_string || flavor_string[0] == '\0') {
@@ -3640,8 +3649,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   // its own hijacking listener or if the process is created by the target
   // manually, without the platform).
   if (!launch_info.GetHijackListener())
-    launch_info.SetHijackListener(Listener::MakeListener(
-        Process::LaunchSynchronousHijackListenerName.data()));
+    launch_info.SetHijackListener(
+        Listener::MakeListener(Process::LaunchSynchronousHijackListenerName));
 
   // If we're not already connected to the process, and if we have a platform
   // that can launch a process for debugging, go ahead and do that here.
@@ -3822,8 +3831,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   ListenerSP hijack_listener_sp;
   const bool async = attach_info.GetAsync();
   if (!async) {
-    hijack_listener_sp = Listener::MakeListener(
-        Process::AttachSynchronousHijackListenerName.data());
+    hijack_listener_sp =
+        Listener::MakeListener(Process::AttachSynchronousHijackListenerName);
     attach_info.SetHijackListener(hijack_listener_sp);
   }
 
@@ -4911,6 +4920,19 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
+    {
+        eJITEngineMCJIT,
+        "mcjit",
+        "Use LLVM's MCJIT execution engine.",
+    },
+    {
+        eJITEngineORC,
+        "orc",
+        "Use LLVM's ORC execution engine.",
+    },
+};
+
 static constexpr OptionEnumValueElement g_import_std_module_value_types[] = {
     {
         eImportStdModuleFalse,
@@ -5530,6 +5552,12 @@ FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
+JITEngine TargetProperties::GetJITEngine() const {
+  const uint32_t idx = ePropertyJITEngine;
+  return GetPropertyAtIndexAs<JITEngine>(
+      idx, static_cast<JITEngine>(g_target_properties[idx].default_uint_value));
+}
+
 void TargetProperties::CheckJITObjectsDir() {
   FileSpec new_dir = GetSaveJITObjectsDir();
   if (!new_dir)
@@ -5992,12 +6020,15 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() {
-  Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return m_private_mutex;
+TargetAPIMutex Target::GetAPIMutex() {
+  return TargetAPIMutex(shared_from_this());
+}
 
-  return m_mutex;
+std::recursive_mutex *Target::GetAPIMutexForCurrentPolicy() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.capabilities.can_bypass_target_api_mutex)
+    return nullptr;
+  return policy.view == Policy::View::Private ? &m_private_mutex : &m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.
