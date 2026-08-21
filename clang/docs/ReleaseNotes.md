@@ -528,6 +528,12 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Fixed a crash when an ill-formed qualified member function definition written
+  inside a class (e.g. a definition of a virtual member of a nested class)
+  incorrectly caused the enclosing class to be treated as a polymorphic class,
+  which asserted during record layout when the enclosing class was a union.
+  (#GH213854)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
