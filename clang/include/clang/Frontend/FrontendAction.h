@@ -159,9 +159,7 @@ public:
 
   Module *getCurrentModule() const;
 
-  std::unique_ptr<ASTUnit> takeCurrentASTUnit() {
-    return std::move(CurrentASTUnit);
-  }
+  std::unique_ptr<ASTUnit> takeCurrentASTUnit();
 
   void setCurrentInput(const FrontendInputFile &CurrentInput,
                        std::unique_ptr<ASTUnit> AST = nullptr);

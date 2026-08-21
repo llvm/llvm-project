@@ -395,10 +395,14 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
   CurrentASTUnit = std::move(AST);
 }
 
+std::unique_ptr<ASTUnit> FrontendAction::takeCurrentASTUnit() {
+  return std::move(CurrentASTUnit);
+}
+
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch=*/false);
 }
 
 std::unique_ptr<ASTConsumer>
