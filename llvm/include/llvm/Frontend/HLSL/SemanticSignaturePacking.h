@@ -105,6 +105,14 @@ LLVM_ABI Expected<unsigned>
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
+/// Sorts eligible signature elements using the optimized ordering and then
+/// packs them with the prefix-stable packing algorithm.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
+LLVM_ABI Error packSignatureOptimized(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
+
 } // namespace llvm::hlsl
 
 #endif // LLVM_FRONTEND_HLSL_SEMANTICSIGNATUREPACKING_H
