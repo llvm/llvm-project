@@ -261,6 +261,12 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addReg(CombOldVGPR.Reg, getUndefRegState(!Def),
                      CombOldVGPR.SubReg);
       ++NumOperands;
+
+      if (!TII->isOperandLegal(*DPPInst, OldIdx)) {
+        LLVM_DEBUG(dbgs() << "  failed: old operand is illegal\n");
+        Fail = true;
+        break;
+      }
     } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
                                       TII->isVOPC(OrigOpE32))) {
       // VOPC DPP and VOPC promoted to VOP3 DPP do not have an old operand
