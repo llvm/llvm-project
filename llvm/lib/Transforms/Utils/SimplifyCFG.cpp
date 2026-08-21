@@ -1804,6 +1804,16 @@ static void hoistConditionalLoadsStores(
         }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range)) {
+        ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+        if (PassThru && !isa<PoisonValue>(PassThru)) {
+          auto *C = dyn_cast<Constant>(PassThru);
+          CR = C && !isa<UndefValue>(C)
+                   ? CR.unionWith(C->toConstantRange())
+                   : ConstantRange::getFull(CR.getBitWidth());
+        }
+        MaskedLoadStore->addRangeRetAttr(CR);
+      }
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
       if (PN)
         PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
@@ -1819,12 +1829,8 @@ static void hoistConditionalLoadsStores(
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
     // !nonnull, !align : Not support pointer type, no need to keep.
-    // !range: Load type is changed from scalar to vector, but the metadata on
-    //         vector specifies a per-element range, so the semantics stay the
-    //         same. Keep it.
+    // !range: Kept as a return attribute, widened over PassThru (see above).
     // !annotation: Not impact semantics. Keep it.
-    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
-      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
     I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
