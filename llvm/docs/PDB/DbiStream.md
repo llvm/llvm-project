@@ -112,7 +112,7 @@ subtle implications on the algorithm used to look up type records.
   enumeration. Common values are `0x8664` (x86-64) and `0x14C` (x86).
 
 Immediately after the fixed-size DBI Stream header are `7` variable-length
-`substreams`. The following `7` fields of the DBI Stream header specify the
+*substreams*. The following `7` fields of the DBI Stream header specify the
 number of bytes of the corresponding substream. Each substream's contents will
 be described in detail {ref}`below <dbi_substreams>`. The length of the entire
 DBI Stream should equal `64` (the length of the header above) plus the value
@@ -319,7 +319,7 @@ struct FileInfoSubstream {
 
 **NumModules** - The number of modules for which source file information is
 contained within this substream. Should match the corresponding value from the
-ref:`dbi_header`.
+{ref}`dbi_header`.
 
 **NumSourceFiles**: In theory this is supposed to contain the number of source
 files for which this substream contains information. But that would present a
@@ -337,7 +337,7 @@ the number of source files which contribute to the module at the specified index
 While each individual module is limited to 64K contributing source files, the
 union of all modules' source files may be greater than 64K. The real number of
 source files is thus computed by summing this array. Note that summing this array
-does not give the number of `unique` source files, only the total number of source
+does not give the number of *unique* source files, only the total number of source
 file contributions to modules.
 
 **FileNameOffsets** - An array of **NumSourceFiles** integers (where **NumSourceFiles**

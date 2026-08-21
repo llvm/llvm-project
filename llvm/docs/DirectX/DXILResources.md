@@ -98,8 +98,8 @@ target("dx.RawBuffer", ElementType, IsWriteable, IsROV)
 ```
 
 We need two separate buffer types to account for the differences between the
-16-byte [bufferLoad][bufferload] / [bufferStore][bufferstore] operations that work on DXIL's
-TypedBuffers and the [rawBufferLoad][rawbufferload] / [rawBufferStore][rawbufferstore] operations that are
+16-byte [bufferLoad] / [bufferStore] operations that work on DXIL's
+TypedBuffers and the [rawBufferLoad] / [rawBufferStore] operations that are
 used for DXIL's RawBuffers and StructuredBuffers. We call the latter
 "RawBuffer" to match the naming of the operations, but it can represent both
 the Raw and Structured variants.
@@ -118,23 +118,26 @@ well as atomics.
 
 There are a few fields to describe variants of all of these types:
 
-```{eval-rst}
-.. list-table:: Buffer Fields
-   :header-rows: 1
+:::{list-table} Buffer Fields
+:header-rows: 1
 
-   * - Field
-     - Description
-   * - ElementType
-     - Type for a single element, such as ``i8``, ``v4f32``, or a structure
-       type.
-   * - IsWriteable
-     - Whether or not the field is writeable. This distinguishes SRVs (not
-       writeable) and UAVs (writeable).
-   * - IsROV
-     - Whether the UAV is a rasterizer ordered view. Always ``0`` for SRVs.
-   * - IsSigned
-     - Whether an int element type is signed ("dx.TypedBuffer" only)
-```
+* - Field
+  - Description
+* - ElementType
+  - Type for a single element, such as `i8`, `v4f32`, or a structure type.
+* - IsWriteable
+  - Whether or not the field is writeable. This distinguishes SRVs (not
+    writeable) and UAVs (writeable).
+* - IsROV
+  - Whether the UAV is a rasterizer ordered view. Always `0` for SRVs.
+* - IsSigned
+  - Whether an int element type is signed ("dx.TypedBuffer" only)
+:::
+
+[bufferLoad]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
+[bufferStore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+[rawBufferLoad]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
+[rawBufferStore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
 
 ## Resource Operations
 
@@ -152,7 +155,7 @@ The three operations we need are `llvm.dx.resource.handlefrombinding`,
 rougly equivalent to the DXIL operations `dx.op.createHandleFromBinding`,
 `dx.op.createHandleFromHeap`, and `dx.op.createHandleForLib`, but they fold
 the subsequent `dx.op.annotateHandle` operation in. Note that we don't have
-an analogue for [dx.op.createHandle][dx.op.createhandle], since `dx.op.createHandleFromBinding`
+an analogue for [dx.op.createHandle], since `dx.op.createHandleFromBinding`
 subsumes it.
 
 We diverge from DXIL and index from the beginning of the binding rather than
@@ -160,39 +163,40 @@ indexing from the beginning of the binding space. This matches the semantics
 more clearly and avoids a non-obvious invariant in what constitutes valid
 arguments.
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.handlefrombinding``
-   :header-rows: 1
+[dx.op.createHandle]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A ``target()`` type
-     - A handle which can be operated on
-   * - ``%reg_space``
-     - 1
-     - ``i32``
-     - Register space ID in the root signature for this resource.
-   * - ``%lower_bound``
-     - 2
-     - ``i32``
-     - Lower bound of the binding in its register space.
-   * - ``%range_size``
-     - 3
-     - ``i32``
-     - Range size of the binding, where ``0`` denotes an unbounded range.
-   * - ``%index``
-     - 4
-     - ``i32``
-     - Index from the beginning of the binding.
-   * - ``%non-uniform``
-     - 5
-     - i1
-     - Must be ``true`` if the resource index may be non-uniform.
-```
+:::{list-table} `@llvm.dx.resource.handlefrombinding`
+:header-rows: 1
+
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A `target()` type
+  - A handle which can be operated on
+* - `%reg_space`
+  - 1
+  - `i32`
+  - Register space ID in the root signature for this resource.
+* - `%lower_bound`
+  - 2
+  - `i32`
+  - Lower bound of the binding in its register space.
+* - `%range_size`
+  - 3
+  - `i32`
+  - Range size of the binding, where `0` denotes an unbounded range.
+* - `%index`
+  - 4
+  - `i32`
+  - Index from the beginning of the binding.
+* - `%non-uniform`
+  - 5
+  - i1
+  - Must be `true` if the resource index may be non-uniform.
+:::
 
 :::{note}
 TODO: Can we drop the uniformity bit? I suspect we can derive it from
@@ -235,27 +239,26 @@ Examples:
         i32 5, i32 6, i32 3, i32 2, i1 false)
 ```
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.handle.fromHeap``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.handle.fromHeap`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A ``target()`` type
-     - A handle which can be operated on
-   * - ``%index``
-     - 0
-     - ``i32``
-     - Index of the resource to access.
-   * - ``%non-uniform``
-     - 1
-     - i1
-     - Must be ``true`` if the resource index may be non-uniform.
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A `target()` type
+  - A handle which can be operated on
+* - `%index`
+  - 0
+  - `i32`
+  - Index of the resource to access.
+* - `%non-uniform`
+  - 1
+  - i1
+  - Must be `true` if the resource index may be non-uniform.
+:::
 
 Examples:
 
@@ -289,27 +292,26 @@ Currently the pointers returned by `dx.resource.getpointer` are in
 the default address space, but that will likely change in the future.
 :::
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.getpointer``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.getpointer`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - Pointer
-     - A pointer to an object in the buffer
-   * - ``%resource``
-     - 0
-     - Any buffer, texture, or cbuffer type
-     - The resource to access
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the resource
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - Pointer
+  - A pointer to an object in the buffer
+* - `%resource`
+  - 0
+  - Any buffer, texture, or cbuffer type
+  - The resource to access
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the resource
+:::
 
 Examples:
 
@@ -322,10 +324,10 @@ Examples:
 
 *relevant types: Buffers and Textures*
 
-All load, sample, and gather operations in DXIL return a [ResRet][resret] type. These
+All load, sample, and gather operations in DXIL return a [ResRet] type. These
 types are structs containing 4 elements of some basic type, and a 5th element
-that is used by the [CheckAccessFullyMapped][checkaccessfullymapped] operation. Some of these
-operations, like [RawBufferLoad][rawbufferload] include a mask and/or alignment that tell us
+that is used by the [CheckAccessFullyMapped] operation. Some of these
+operations, like [RawBufferLoad] include a mask and/or alignment that tell us
 some information about how to interpret those four values.
 
 In the LLVM IR representations of these operations we instead return scalars or
@@ -349,27 +351,29 @@ here is that `double` types in the elements are special - these are allowed in
 the LLVM intrinsics, but are lowered to pairs of `i32` followed by
 `MakeDouble` operations for DXIL.
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.load.typedbuffer``
-   :header-rows: 1
+[ResRet]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+[CheckAccessFullyMapped]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/checkaccessfullymapped
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A structure of the contained type and the check bit
-     - The data loaded from the buffer and the check bit
-   * - ``%buffer``
-     - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-```
+:::{list-table} `@llvm.dx.resource.load.typedbuffer`
+:header-rows: 1
+
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A structure of the contained type and the check bit
+  - The data loaded from the buffer and the check bit
+* - `%buffer`
+  - 0
+  - `target(dx.TypedBuffer, ...)`
+  - The buffer to load from
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+:::
 
 Examples:
 
@@ -394,7 +398,7 @@ Examples:
 For RawBuffer, an HLSL load operation may return an arbitrarily sized result,
 but we still constrain the LLVM intrinsic to return only up to 4 elements of a
 basic type. This means that larger loads are represented as a series of loads,
-which matches DXIL. Unlike in the [RawBufferLoad][rawbufferload] operation, we do not need
+which matches DXIL. Unlike in the [RawBufferLoad] operation, we do not need
 arguments for the mask/type size and alignment, since we can calculate these
 from the return type of the load during lowering.
 
@@ -403,31 +407,30 @@ StructuredBuffer\<T>, or a "raw" access, as in HLSL's "ByteAddressBuffer". The
 `%offset` parameter is only used for structured accesses, and *must* be
 `poison` for raw accesses.
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.load.rawbuffer``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.load.rawbuffer`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A structure of a scalar or vector and the check bit
-     - The data loaded from the buffer and the check bit
-   * - ``%buffer``
-     - 0
-     - ``target(dx.RawBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-   * - ``%offset``
-     - 2
-     - ``i32``
-     - Offset into the structure at the given index
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A structure of a scalar or vector and the check bit
+  - The data loaded from the buffer and the check bit
+* - `%buffer`
+  - 0
+  - `target(dx.RawBuffer, ...)`
+  - The buffer to load from
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+* - `%offset`
+  - 2
+  - `i32`
+  - Offset into the structure at the given index
+:::
 
 Examples:
 
@@ -495,7 +498,7 @@ Examples:
 
 *relevant types: Textures and Buffer*
 
-The [TextureStore][texturestore], [BufferStore][bufferstore], and [RawBufferStore][rawbufferstore] DXIL operations
+The [TextureStore], [BufferStore], and [RawBufferStore] DXIL operations
 write four components to a texture or a buffer. These include a mask argument
 that is used when fewer than 4 components are written, but notably this only
 takes on the contiguous x, xy, xyz, and xyzw values.
@@ -504,6 +507,8 @@ We define the LLVM store intrinsics to accept vectors when storing multiple
 components rather than using `undef` and a mask, but otherwise match the DXIL
 ops fairly closely.
 
+[TextureStore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+
 For TypedBuffer, we only need one coordinate, and we must always write a vector
 since partial writes aren't possible. Similarly to the load operations
 described above, we handle 64-bit types specially and only handle 2-element
@@ -511,31 +516,30 @@ vectors rather than 4.
 
 Examples:
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.store.typedbuffer``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.store.typedbuffer`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - ``void``
-     -
-   * - ``%buffer``
-     - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to store into
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-   * - ``%data``
-     - 2
-     - A 4- or 2-element vector of the type of the buffer
-     - The data to store
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - `void`
+  -
+* - `%buffer`
+  - 0
+  - `target(dx.TypedBuffer, ...)`
+  - The buffer to store into
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+* - `%data`
+  - 2
+  - A 4- or 2-element vector of the type of the buffer
+  - The data to store
+:::
 
 Examples:
 
@@ -555,31 +559,30 @@ read-modify-write of the full value.
 
 Examples:
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.store.texture``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.store.texture`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - ``void``
-     -
-   * - ``%texture``
-     - 0
-     - ``target(dx.Texture, ...)``
-     - The texture to store into
-   * - ``%coords``
-     - 1
-     - ``i32`` or a 2- or 3-element vector of ``i32``
-     - Coordinates into the texture
-   * - ``%data``
-     - 2
-     - Scalar or vector of the type of the texture
-     - The data to store
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - `void`
+  -
+* - `%texture`
+  - 0
+  - `target(dx.Texture, ...)`
+  - The texture to store into
+* - `%coords`
+  - 1
+  - `i32` or a 2- or 3-element vector of `i32`
+  - Coordinates into the texture
+* - `%data`
+  - 2
+  - Scalar or vector of the type of the texture
+  - The data to store
+:::
 
 Examples:
 
@@ -600,35 +603,34 @@ fewer elements. Note that we do allow vectors of 4 64-bit elements here.
 
 Examples:
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.store.rawbuffer``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.store.rawbuffer`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - ``void``
-     -
-   * - ``%buffer``
-     - 0
-     - ``target(dx.RawBuffer, ...)``
-     - The buffer to store into
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-   * - ``%offset``
-     - 2
-     - ``i32``
-     - Byte offset into structured buffer elements
-   * - ``%data``
-     - 3
-     - Scalar or vector
-     - The data to store
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - `void`
+  -
+* - `%buffer`
+  - 0
+  - `target(dx.RawBuffer, ...)`
+  - The buffer to store into
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+* - `%offset`
+  - 2
+  - `i32`
+  - Byte offset into structured buffer elements
+* - `%data`
+  - 3
+  - Scalar or vector
+  - The data to store
+:::
 
 Examples:
 
@@ -682,36 +684,38 @@ call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(
 
 *relevant types: CBuffers*
 
-The [CBufferLoadLegacy][cbufferloadlegacy] operation, which despite the name is the only
+The [CBufferLoadLegacy] operation, which despite the name is the only
 supported way to load from a cbuffer in any DXIL version, loads a single "row"
 of a cbuffer, which is exactly 16 bytes. The return value of the operation is
-represented by a [CBufRet][cbufret] type, which has variants for 2 64-bit values, 4
+represented by a [CBufRet] type, which has variants for 2 64-bit values, 4
 32-bit values, and 8 16-bit values.
 
 We represent these in LLVM IR with 3 separate operations, which return a
 2-element, 4-element, or 8-element struct respectively.
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.load.cbufferrow.4``
-   :header-rows: 1
+[CBufferLoadLegacy]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferLoadLegacy
+[CBufRet]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A struct of 4 32-bit values
-     - A single row of a cbuffer, interpreted as 4 32-bit values
-   * - ``%buffer``
-     - 0
-     - ``target(dx.CBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-```
+:::{list-table} `@llvm.dx.resource.load.cbufferrow.4`
+:header-rows: 1
+
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A struct of 4 32-bit values
+  - A single row of a cbuffer, interpreted as 4 32-bit values
+* - `%buffer`
+  - 0
+  - `target(dx.CBuffer, ...)`
+  - The buffer to load from
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+:::
 
 Examples:
 
@@ -726,27 +730,26 @@ Examples:
         i32 %index)
 ```
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.load.cbufferrow.2``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.load.cbufferrow.2`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A struct of 2 64-bit values
-     - A single row of a cbuffer, interpreted as 2 64-bit values
-   * - ``%buffer``
-     - 0
-     - ``target(dx.CBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A struct of 2 64-bit values
+  - A single row of a cbuffer, interpreted as 2 64-bit values
+* - `%buffer`
+  - 0
+  - `target(dx.CBuffer, ...)`
+  - The buffer to load from
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+:::
 
 Examples:
 
@@ -761,27 +764,26 @@ Examples:
         i32 %index)
 ```
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.load.cbufferrow.8``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.load.cbufferrow.8`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - A struct of 8 16-bit values
-     - A single row of a cbuffer, interpreted as 8 16-bit values
-   * - ``%buffer``
-     - 0
-     - ``target(dx.CBuffer, ...)``
-     - The buffer to load from
-   * - ``%index``
-     - 1
-     - ``i32``
-     - Index into the buffer
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - A struct of 8 16-bit values
+  - A single row of a cbuffer, interpreted as 8 16-bit values
+* - `%buffer`
+  - 0
+  - `target(dx.CBuffer, ...)`
+  - The buffer to load from
+* - `%index`
+  - 1
+  - `i32`
+  - Index into the buffer
+:::
 
 Examples:
 
@@ -800,12 +802,12 @@ Examples:
 
 *relevant types: Textures and Buffer*
 
-The [getDimensions][getdimensions] DXIL operation returns the dimensions of a texture or
-buffer resource. It returns a [Dimensions][dimensions] type, which is a struct
+The [GetDimensions] DXIL operation returns the dimensions of a texture or
+buffer resource. It returns a [Dimensions] type, which is a struct
 containing four `i32` values. The values in the struct represent the size
 of each dimension of the resource, and when aplicable the number of array
 elements or number of samples. The mapping is defined in the
-[getDimensions][getdimensions] documentation.
+[GetDimensions] documentation.
 
 The LLVM IR representation of this operation has several forms
 depending on the resource type and the specific `getDimensions` query.
@@ -834,27 +836,26 @@ i32 @llvm.dx.resource.getdimensions.x( target("dx.*") handle )
 {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
 ```
 
-```{eval-rst}
-.. list-table:: ``@llvm.dx.resource.getdimensions.*``
-   :header-rows: 1
+:::{list-table} `@llvm.dx.resource.getdimensions.*`
+:header-rows: 1
 
-   * - Argument
-     -
-     - Type
-     - Description
-   * - Return value
-     -
-     - `i32`, `{i32, i32}`, `{i32, i32, i32}`, or `{i32, i32, i32, i32}`
-     - Width, height, and depth of the resource (based on the specific suffix), and a number of levels or samples where aplicable.
-   * - ``%handle``
-     - 0
-     - ``target(dx.*)``
-     - Resource handle
-   * - ``%mip_level``
-     - 1
-     - ``i32``
-     - MIP level for the requested dimensions.
-```
+* - Argument
+  -
+  - Type
+  - Description
+* - Return value
+  -
+  - `i32`, `{i32, i32}`, `{i32, i32, i32}`, or `{i32, i32, i32, i32}`
+  - Width, height, and depth of the resource (based on the specific suffix), and a number of levels or samples where aplicable.
+* - `%handle`
+  - 0
+  - `target(dx.*)`
+  - Resource handle
+* - `%mip_level`
+  - 1
+  - `i32`
+  - MIP level for the requested dimensions.
+:::
 
 Examples:
 
@@ -883,16 +884,5 @@ Examples:
 %tex2dms_samples_count = extractvalue {i32, i32, i32} %2, 2
 ```
 
-[bufferload]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
-[bufferstore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
-[cbufferloadlegacy]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferLoadLegacy
-[cbufret]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
-[checkaccessfullymapped]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/checkaccessfullymapped
-[dimensions]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
-[dx.op.createhandle]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
-[getdimensions]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions
-[rawbufferload]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
-[rawbufferstore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
-[resret]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
-[texturestore]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
-
+[Dimensions]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+[GetDimensions]: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions

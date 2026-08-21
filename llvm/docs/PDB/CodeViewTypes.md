@@ -18,11 +18,11 @@ to encounter when dealing with modern C++ toolchains.
 ## Record Categories
 
 We can think of a sequence of CodeView type records as an array of variable length
-`leaf records`. Each such record describes its own length as part of a fixed-size
+*leaf records*. Each such record describes its own length as part of a fixed-size
 header, as well as the kind of record it is. Leaf records are either padded to 4
 bytes (if this type stream appears in a TPI/IPI stream of a PDB) or not padded at
 all (if this type stream appears in the `.debug$T` section of an object file).
-Padding is implemented by inserting a decreasing sequence of `<_padding_records>`
+Padding is implemented by inserting a decreasing sequence of {ref}`padding records <padding_records>`
 that terminates with `LF_PAD0`.
 
 The final category of record is a `member record`. One particular leaf type --
