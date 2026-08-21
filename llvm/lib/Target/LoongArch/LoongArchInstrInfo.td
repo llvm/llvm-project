@@ -492,7 +492,14 @@ def simm20_pcaddi : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddi">;
 }
 
+// Kept for JISCR[01] without PC-rel branching semantics
 def simm21_lsl2 : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr<2>";
+  let DecoderMethod = "decodeSImmOperand<21, 2>";
+}
+
+def simm21_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
@@ -766,7 +773,7 @@ class BrCC_2RI16<bits<32> op>
   let isTerminator = 1;
 }
 class BrCCZ_1RI21<bits<32> op>
-    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21),
+    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2_br:$imm21),
                "$rj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;
