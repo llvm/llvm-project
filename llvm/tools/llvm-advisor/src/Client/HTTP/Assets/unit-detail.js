@@ -55,7 +55,7 @@ const UnitDetailView = {
     const tabState = { active: 'Overview', results: [], byCapability: new Map() };
 
     // Code viewer and tabs
-    const tabs = ['Overview', 'Diagnostics', 'Remarks', 'Functions', 'Artifacts'];
+    const tabs = ['Overview', 'Remarks', 'Artifacts'];
     const tabHeaders = h('div', { class: 'code-tabs' });
     const contentArea = h('div', { class: 'code-content', id: 'code-content' });
     const inlineExplorer = h('div', { id: 'inline-explorer' });
@@ -99,76 +99,6 @@ const UnitDetailView = {
     );
   },
 
-  openFunctionExplorer(unit, snapshotId, functionName) {
-    const container = document.getElementById('inline-explorer');
-    if (!container) return;
-    clearEl(container);
-
-    const card = h('div', { class: 'inline-explorer' });
-    const header = h('div', { class: 'inline-explorer-header' },
-      h('span', { class: 'capability-card-title mono' }, functionName),
-      h('button', {
-        class: 'detail-card-close',
-        onClick: () => clearEl(container),
-        title: 'Close'
-      }, '×')
-    );
-
-    const controls = h('div', { class: 'cap-pills' });
-    const body = h('div', { class: 'capability-stack' });
-    const modes = [
-      ['signals', 'Signals'],
-      ['ir', 'IR'],
-      ['cfg', 'CFG'],
-      ['dom', 'Dom'],
-      ['loop', 'Loops'],
-      ['callgraph', 'Call Graph'],
-      ['asm', 'Asm'],
-      ['mca', 'MCA'],
-      ['remarks', 'Remarks'],
-      ['debug', 'Debug'],
-      ['passes', 'Passes'],
-    ];
-
-    const loadMode = async (mode, pill) => {
-      Array.from(controls.children).forEach(node => node.classList.remove('available'));
-      if (pill) pill.classList.add('available');
-      clearEl(body);
-      body.appendChild(h('div', { class: 'empty-state' },
-        h('div', {}, `Loading ${mode}`),
-        h('div', { class: 'reason mono' }, functionName)));
-      const res = await API.inspect(mode, {
-        snapshot_id: snapshotId,
-        unit: unit.id,
-        function: functionName,
-      });
-      clearEl(body);
-      if (!res.ok) {
-        body.appendChild(h('div', { class: 'empty-state' },
-          h('div', {}, 'Inspection failed'),
-          h('div', { class: 'reason mono' }, res.error || 'unknown error')));
-        return;
-      }
-      body.appendChild(UI.inspectResult(res.data));
-    };
-
-    modes.forEach(([mode, label], index) => {
-      const pill = h('button', {
-        class: `cap-pill ${index === 0 ? 'available' : ''}`,
-        onClick: () => loadMode(mode, pill),
-      }, label);
-      controls.appendChild(pill);
-      if (index === 0) setTimeout(() => loadMode(mode, pill), 0);
-    });
-
-    card.appendChild(header);
-    card.appendChild(controls);
-    card.appendChild(body);
-    container.appendChild(card);
-
-    // Scroll into view
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  },
 
   renderCapSidebar(sidebar, unit) {
     clearEl(sidebar);
@@ -182,49 +112,12 @@ const UnitDetailView = {
       h('div', { class: 'rail-title' }, 'Coverage'),
       h('div', { class: 'rail-empty' }, 'Loading analysis coverage')
     ));
-    // Function list placeholder in sidebar
-    sidebar.appendChild(h('div', { class: 'unit-side-card', id: 'function-list-card' },
-      h('div', { class: 'rail-title' }, 'Functions'),
-      h('div', { class: 'rail-empty' }, 'Loading function list')
-    ));
-  },
-
-  addSection(parent, title, open, kvPairs) {
-    const section = h('div', { class: 'cap-section' + (open ? ' open' : '') });
-    const header = h('div', { class: 'cap-section-header', onClick: () => section.classList.toggle('open') },
-      h('span', {}, title)
-    );
-    const body = h('div', { class: 'cap-section-body' });
-    kvPairs.forEach(([k, v]) => {
-      body.appendChild(h('div', { class: 'kv' },
-        h('span', { class: 'k' }, k),
-        h('span', { class: 'v' }, v)
-      ));
-    });
-    section.appendChild(header);
-    section.appendChild(body);
-    parent.appendChild(section);
-  },
 
   renderTab(tab, state) {
     if (!state.results.length)
       return h('div', { class: 'empty-state', style: { padding: '40px' } },
         h('div', {}, 'Loading capabilities'),
         h('div', { class: 'reason mono' }, 'Querying analyzer results for this unit'));
-
-    if (tab === 'Diagnostics') {
-      const findings = state.results
-        .filter(r => r.capability.startsWith('clang.diag'))
-        .flatMap(r => r.findings);
-      if (!findings.length) return this.emptyTab('No diagnostics', 'This unit has no compiler diagnostics in the current snapshot.');
-      const bySev = {};
-      findings.forEach(f => { const s = (f.severity || 'info').toLowerCase(); bySev[s] = (bySev[s] || 0) + 1; });
-      const chartData = Object.entries(bySev).map(([label, amount]) => ({ label, amount }));
-      return h('div', { class: 'capability-stack' },
-        chartData.length ? UI.barChart(chartData) : null,
-        UI.findingList(findings)
-      );
-    }
 
     if (tab === 'Remarks') {
       const relResult = state.byCapability.get('llvm.remarks.relational');
@@ -248,13 +141,6 @@ const UnitDetailView = {
       );
     }
 
-    if (tab === 'Functions') {
-      const fnResult = state.byCapability.get('llvm.ir.function_stats') || state.byCapability.get('llvm.lto.function_stats');
-      const rows = fnResult?.value?.functions || [];
-      if (!rows.length) return this.emptyTab('No function stats', 'Function-level metrics are not available for this unit.');
-      return UI.dataTable(rows, { columns: ['name', 'instructions', 'basic_blocks', 'arg_count', 'stable_key'], limit: 500 });
-    }
-
     if (tab === 'Artifacts') {
       const artifacts = state.results.flatMap(r => r.artifacts.map(a => ({ capability: r.capability, ...a })));
       if (!artifacts.length)
@@ -272,9 +158,6 @@ const UnitDetailView = {
     return h('div', { class: 'unit-overview-panel' },
       h('div', { class: 'quiet-section-title' }, 'Summary'),
       h('div', { class: 'unit-overview-cards' },
-        this.summaryCard('Functions', metrics.functions, 'neutral'),
-        this.summaryCard('Basic blocks', metrics.basic_blocks, 'neutral'),
-        this.summaryCard('Sections', metrics.sections, 'neutral'),
         this.summaryCard('Remarks', metrics.remarks, metrics.remarks ? 'info' : 'neutral')
       ),
       h('div', { class: 'quiet-section-title' }, 'Available Analysis'),
@@ -298,12 +181,9 @@ const UnitDetailView = {
   },
 
   collectOverview(results) {
-    const metrics = { functions: 0, basic_blocks: 0, sections: 0, remarks: 0 };
+    const metrics = { remarks: 0 };
     results.forEach(r => {
       if (!r.available) return;
-      metrics.functions += Number(r.metrics.functions || r.metrics.function_count || 0);
-      metrics.basic_blocks += Number(r.metrics.basic_blocks || 0);
-      metrics.sections += Number(r.metrics.sections || 0);
       metrics.remarks += Number(r.metrics.count && r.capability.includes('remarks') ? r.metrics.count : 0);
     });
     return metrics;
@@ -313,7 +193,7 @@ const UnitDetailView = {
     const capRes = await API.capabilities();
     const caps = Array.isArray(capRes.data)
       ? capRes.data.filter(spec => CapabilityData.shouldQueryCapability(spec, 'unit')).map(c => c.id).filter(Boolean)
-      : ['clang.diag.summary', 'llvm.ir.function_stats', 'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational'];
+      : ['llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational', 'llvm.remarks.hotspot'];
     const res = await API.queryUnit(unit.id, caps);
     if (!res.ok) {
       if (main) main.appendChild(UI.errorCard(res.error || 'query failed', () => this.render({ id: unit.id, snapshot: unit.snapshot_id || State.get('currentSnapshot')?.id })));
@@ -325,30 +205,6 @@ const UnitDetailView = {
     tabState.byCapability = new Map(results.map(r => [r.capability, r]));
     this.renderCoverage(sidebar, results);
 
-    // Populate function list in sidebar
-    const fnCard = sidebar.querySelector('#function-list-card');
-    results.forEach(r => {
-      const val = r.value;
-      if ((r.capability === 'llvm.ir.function_stats' || r.capability === 'llvm.lto.function_stats') && val.functions) {
-        if (fnCard) {
-          clearEl(fnCard);
-          fnCard.appendChild(h('div', { class: 'rail-title' }, `Functions (${val.functions.length})`));
-          const fns = [...val.functions].sort((a, b) => (b.instructions || b.instruction_count || 0) - (a.instructions || a.instruction_count || 0));
-          const list = h('div', { class: 'fn-section' });
-          fns.slice(0, 50).forEach(fn => {
-            list.appendChild(h('button', { class: 'fn-list-item', onClick: () => this.openFunctionExplorer(unit, unit.snapshot_id || State.get('currentSnapshot')?.id, fn.name || '(anonymous)') },
-              h('span', { class: 'fn-name' }, fn.name || '(anonymous)'),
-              h('span', { class: 'fn-count' }, formatNumber(fn.instructions || fn.instruction_count))
-            ));
-          });
-          if (fns.length > 50) {
-            list.appendChild(h('div', { class: 'text-muted', style: { fontSize: '11px', padding: '4px 12px' } },
-              `+ ${fns.length - 50} more…`));
-          }
-          fnCard.appendChild(list);
-        }
-      }
-    });
     if (refresh) refresh();
   },
 

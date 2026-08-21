@@ -450,8 +450,7 @@ const CompareView = {
 
   async _loadUnitDetail(detail, change) {
     const matchType = change.match_type || 'changed';
-    const coreCaps = ['llvm.ir.summary', 'llvm.ir.function_stats', 'clang.diag.summary',
-                      'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.debug.summary'];
+    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail'];
 
     const unitId = change.candidate_unit_id || change.base_unit_id;
     const snapId = change.candidate_unit_id ? this._candidateId : this._baseId;

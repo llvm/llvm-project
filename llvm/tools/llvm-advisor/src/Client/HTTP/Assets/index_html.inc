@@ -748,8 +748,6 @@ const Icons = {
   overview: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>`,
   units: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg>`,
   compare: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,14 7,6 11,12 15,4 17,8"/></svg>`,
-  timeline: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="10,6 10,10 13,12"/></svg>`,
-  insights: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="10,2 12,8 18,8 13,12 15,18 10,14 5,18 7,12 2,8 8,8"/></svg>`,
   remarks: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="10" rx="1.5"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="9.5" x2="11" y2="9.5"/><polyline points="7,13 5,17 10,15 15,17 13,13"/></svg>`,
   heatmap: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1" fill="rgba(255,100,100,0.3)"/><rect x="11" y="2" width="7" height="7" rx="1" fill="rgba(255,150,50,0.3)"/><rect x="2" y="11" width="7" height="7" rx="1" fill="rgba(255,200,50,0.3)"/><rect x="11" y="11" width="7" height="7" rx="1" fill="rgba(100,200,100,0.3)"/></svg>`,
   settings: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10,2v3M10,15v3M2,10h3M15,10h3M4.2,4.2l2.1,2.1M13.7,13.7l2.1,2.1M4.2,15.8l2.1-2.1M13.7,6.3l2.1-2.1"/></svg>`,
@@ -864,17 +862,10 @@ const API = {
     }
     return API.get(url);
   },
-  insights: (snapId) => API.get(`/snapshots/${snapId}/insights`),
-  insight: (snapId, name, baseline) => {
-    let url = `/snapshots/${snapId}/insights/${name}`;
-    if (baseline) url += `?baseline=${encodeURIComponent(baseline)}`;
-    return API.get(url);
-  },
   compare: (before, after) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}`),
   compareRemarks: (before, after, offset, limit) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks?offset=${offset||0}&limit=${limit||100}`),
   compareFunctionDetail: (before, after, fn) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks/${encodeURIComponent(fn)}`),
   inspect: (mode, body) => API.post(`/inspect/${encodeURIComponent(mode)}`, body),
-  jobs: () => API.get('/jobs'),
   async importFile(file, sourceRoot) {
     let url = `${this.base}/import?filename=${encodeURIComponent(file.name)}`;
     if (sourceRoot) url += `&source_root=${encodeURIComponent(sourceRoot)}`;
@@ -994,7 +985,7 @@ const Keys = {
     if (this._pending === 'g') {
       clearTimeout(this._timeout);
       this._pending = null;
-      const navMap = { o: '/', u: '/units', c: '/compare', t: '/timeline', i: '/insights', r: '/remarks', h: '/heatmap', e: '/explorer', s: '/settings' };
+      const navMap = { o: '/', u: '/units', c: '/compare', r: '/remarks', h: '/heatmap', e: '/explorer', s: '/settings' };
       if (navMap[e.key]) { e.preventDefault(); Router.navigate(navMap[e.key]); }
       return;
     }
@@ -2202,8 +2193,6 @@ const Shell = {
       { icon: 'overview', label: 'Overview', route: '/', shortcut: 'g o' },
       { icon: 'units', label: 'Units', route: '/units', shortcut: 'g u' },
       { icon: 'compare', label: 'Compare', route: '/compare', shortcut: 'g c' },
-      { icon: 'timeline', label: 'Timeline', route: '/timeline', shortcut: 'g t' },
-      { icon: 'insights', label: 'Insights', route: '/insights', shortcut: 'g i' },
       { icon: 'remarks', label: 'Remarks', route: '/remarks', shortcut: 'g r' },
       { icon: 'heatmap', label: 'Heatmap', route: '/heatmap', shortcut: 'g h' },
       { icon: 'explorer', label: 'Explorer', route: '/explorer', shortcut: 'g e' },
@@ -2331,8 +2320,6 @@ const CommandPalette = {
     { label: 'Go to Overview', shortcut: 'g o', action: () => Router.navigate('/') },
     { label: 'Go to Units', shortcut: 'g u', action: () => Router.navigate('/units') },
     { label: 'Go to Compare', shortcut: 'g c', action: () => Router.navigate('/compare') },
-    { label: 'Go to Timeline', shortcut: 'g t', action: () => Router.navigate('/timeline') },
-    { label: 'Go to Insights', shortcut: 'g i', action: () => Router.navigate('/insights') },
     { label: 'Go to Remarks', shortcut: 'g r', action: () => Router.navigate('/remarks') },
     { label: 'Go to Heatmap', shortcut: 'g h', action: () => Router.navigate('/heatmap') },
     { label: 'Go to Explorer', shortcut: 'g e', action: () => Router.navigate('/explorer') },
@@ -2455,10 +2442,7 @@ const OverviewView = {
     }
 
     // Query core capabilities only — avoid expensive/unstable capabilities
-    const coreCaps = ['llvm.ir.summary', 'llvm.ir.function_stats', 'clang.diag.summary',
-                      'llvm.obj.summary', 'llvm.remarks.summary',
-                      'llvm.debug.summary', 'clang.ast.summary',
-                      'llvm.lto.summary', 'llvm.lto.function_stats'];
+    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational', 'llvm.remarks.hotspot'];
     const registeredIds = new Set(specs.map(s => s.id));
     const dashboardCaps = coreCaps.filter(id => registeredIds.size === 0 || registeredIds.has(id));
     let aggregate = { metrics: {}, rows: [], errors: 0, warnings: 0, remarks: 0, unavailable: 0, families: [] };
@@ -3260,7 +3244,7 @@ const UnitDetailView = {
     const tabState = { active: 'Overview', results: [], byCapability: new Map() };
 
     // Code viewer and tabs
-    const tabs = ['Overview', 'Diagnostics', 'Remarks', 'Functions', 'Artifacts'];
+    const tabs = ['Overview', 'Remarks', 'Artifacts'];
     const tabHeaders = h('div', { class: 'code-tabs' });
     const contentArea = h('div', { class: 'code-content', id: 'code-content' });
     const inlineExplorer = h('div', { id: 'inline-explorer' });
@@ -3304,76 +3288,6 @@ const UnitDetailView = {
     );
   },
 
-  openFunctionExplorer(unit, snapshotId, functionName) {
-    const container = document.getElementById('inline-explorer');
-    if (!container) return;
-    clearEl(container);
-
-    const card = h('div', { class: 'inline-explorer' });
-    const header = h('div', { class: 'inline-explorer-header' },
-      h('span', { class: 'capability-card-title mono' }, functionName),
-      h('button', {
-        class: 'detail-card-close',
-        onClick: () => clearEl(container),
-        title: 'Close'
-      }, '×')
-    );
-
-    const controls = h('div', { class: 'cap-pills' });
-    const body = h('div', { class: 'capability-stack' });
-    const modes = [
-      ['signals', 'Signals'],
-      ['ir', 'IR'],
-      ['cfg', 'CFG'],
-      ['dom', 'Dom'],
-      ['loop', 'Loops'],
-      ['callgraph', 'Call Graph'],
-      ['asm', 'Asm'],
-      ['mca', 'MCA'],
-      ['remarks', 'Remarks'],
-      ['debug', 'Debug'],
-      ['passes', 'Passes'],
-    ];
-
-    const loadMode = async (mode, pill) => {
-      Array.from(controls.children).forEach(node => node.classList.remove('available'));
-      if (pill) pill.classList.add('available');
-      clearEl(body);
-      body.appendChild(h('div', { class: 'empty-state' },
-        h('div', {}, `Loading ${mode}`),
-        h('div', { class: 'reason mono' }, functionName)));
-      const res = await API.inspect(mode, {
-        snapshot_id: snapshotId,
-        unit: unit.id,
-        function: functionName,
-      });
-      clearEl(body);
-      if (!res.ok) {
-        body.appendChild(h('div', { class: 'empty-state' },
-          h('div', {}, 'Inspection failed'),
-          h('div', { class: 'reason mono' }, res.error || 'unknown error')));
-        return;
-      }
-      body.appendChild(UI.inspectResult(res.data));
-    };
-
-    modes.forEach(([mode, label], index) => {
-      const pill = h('button', {
-        class: `cap-pill ${index === 0 ? 'available' : ''}`,
-        onClick: () => loadMode(mode, pill),
-      }, label);
-      controls.appendChild(pill);
-      if (index === 0) setTimeout(() => loadMode(mode, pill), 0);
-    });
-
-    card.appendChild(header);
-    card.appendChild(controls);
-    card.appendChild(body);
-    container.appendChild(card);
-
-    // Scroll into view
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  },
 
   renderCapSidebar(sidebar, unit) {
     clearEl(sidebar);
@@ -3387,49 +3301,12 @@ const UnitDetailView = {
       h('div', { class: 'rail-title' }, 'Coverage'),
       h('div', { class: 'rail-empty' }, 'Loading analysis coverage')
     ));
-    // Function list placeholder in sidebar
-    sidebar.appendChild(h('div', { class: 'unit-side-card', id: 'function-list-card' },
-      h('div', { class: 'rail-title' }, 'Functions'),
-      h('div', { class: 'rail-empty' }, 'Loading function list')
-    ));
-  },
-
-  addSection(parent, title, open, kvPairs) {
-    const section = h('div', { class: 'cap-section' + (open ? ' open' : '') });
-    const header = h('div', { class: 'cap-section-header', onClick: () => section.classList.toggle('open') },
-      h('span', {}, title)
-    );
-    const body = h('div', { class: 'cap-section-body' });
-    kvPairs.forEach(([k, v]) => {
-      body.appendChild(h('div', { class: 'kv' },
-        h('span', { class: 'k' }, k),
-        h('span', { class: 'v' }, v)
-      ));
-    });
-    section.appendChild(header);
-    section.appendChild(body);
-    parent.appendChild(section);
-  },
 
   renderTab(tab, state) {
     if (!state.results.length)
       return h('div', { class: 'empty-state', style: { padding: '40px' } },
         h('div', {}, 'Loading capabilities'),
         h('div', { class: 'reason mono' }, 'Querying analyzer results for this unit'));
-
-    if (tab === 'Diagnostics') {
-      const findings = state.results
-        .filter(r => r.capability.startsWith('clang.diag'))
-        .flatMap(r => r.findings);
-      if (!findings.length) return this.emptyTab('No diagnostics', 'This unit has no compiler diagnostics in the current snapshot.');
-      const bySev = {};
-      findings.forEach(f => { const s = (f.severity || 'info').toLowerCase(); bySev[s] = (bySev[s] || 0) + 1; });
-      const chartData = Object.entries(bySev).map(([label, amount]) => ({ label, amount }));
-      return h('div', { class: 'capability-stack' },
-        chartData.length ? UI.barChart(chartData) : null,
-        UI.findingList(findings)
-      );
-    }
 
     if (tab === 'Remarks') {
       const relResult = state.byCapability.get('llvm.remarks.relational');
@@ -3453,13 +3330,6 @@ const UnitDetailView = {
       );
     }
 
-    if (tab === 'Functions') {
-      const fnResult = state.byCapability.get('llvm.ir.function_stats') || state.byCapability.get('llvm.lto.function_stats');
-      const rows = fnResult?.value?.functions || [];
-      if (!rows.length) return this.emptyTab('No function stats', 'Function-level metrics are not available for this unit.');
-      return UI.dataTable(rows, { columns: ['name', 'instructions', 'basic_blocks', 'arg_count', 'stable_key'], limit: 500 });
-    }
-
     if (tab === 'Artifacts') {
       const artifacts = state.results.flatMap(r => r.artifacts.map(a => ({ capability: r.capability, ...a })));
       if (!artifacts.length)
@@ -3477,9 +3347,6 @@ const UnitDetailView = {
     return h('div', { class: 'unit-overview-panel' },
       h('div', { class: 'quiet-section-title' }, 'Summary'),
       h('div', { class: 'unit-overview-cards' },
-        this.summaryCard('Functions', metrics.functions, 'neutral'),
-        this.summaryCard('Basic blocks', metrics.basic_blocks, 'neutral'),
-        this.summaryCard('Sections', metrics.sections, 'neutral'),
         this.summaryCard('Remarks', metrics.remarks, metrics.remarks ? 'info' : 'neutral')
       ),
       h('div', { class: 'quiet-section-title' }, 'Available Analysis'),
@@ -3503,12 +3370,9 @@ const UnitDetailView = {
   },
 
   collectOverview(results) {
-    const metrics = { functions: 0, basic_blocks: 0, sections: 0, remarks: 0 };
+    const metrics = { remarks: 0 };
     results.forEach(r => {
       if (!r.available) return;
-      metrics.functions += Number(r.metrics.functions || r.metrics.function_count || 0);
-      metrics.basic_blocks += Number(r.metrics.basic_blocks || 0);
-      metrics.sections += Number(r.metrics.sections || 0);
       metrics.remarks += Number(r.metrics.count && r.capability.includes('remarks') ? r.metrics.count : 0);
     });
     return metrics;
@@ -3518,7 +3382,7 @@ const UnitDetailView = {
     const capRes = await API.capabilities();
     const caps = Array.isArray(capRes.data)
       ? capRes.data.filter(spec => CapabilityData.shouldQueryCapability(spec, 'unit')).map(c => c.id).filter(Boolean)
-      : ['clang.diag.summary', 'llvm.ir.function_stats', 'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational'];
+      : ['llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational', 'llvm.remarks.hotspot'];
     const res = await API.queryUnit(unit.id, caps);
     if (!res.ok) {
       if (main) main.appendChild(UI.errorCard(res.error || 'query failed', () => this.render({ id: unit.id, snapshot: unit.snapshot_id || State.get('currentSnapshot')?.id })));
@@ -3530,30 +3394,6 @@ const UnitDetailView = {
     tabState.byCapability = new Map(results.map(r => [r.capability, r]));
     this.renderCoverage(sidebar, results);
 
-    // Populate function list in sidebar
-    const fnCard = sidebar.querySelector('#function-list-card');
-    results.forEach(r => {
-      const val = r.value;
-      if ((r.capability === 'llvm.ir.function_stats' || r.capability === 'llvm.lto.function_stats') && val.functions) {
-        if (fnCard) {
-          clearEl(fnCard);
-          fnCard.appendChild(h('div', { class: 'rail-title' }, `Functions (${val.functions.length})`));
-          const fns = [...val.functions].sort((a, b) => (b.instructions || b.instruction_count || 0) - (a.instructions || a.instruction_count || 0));
-          const list = h('div', { class: 'fn-section' });
-          fns.slice(0, 50).forEach(fn => {
-            list.appendChild(h('button', { class: 'fn-list-item', onClick: () => this.openFunctionExplorer(unit, unit.snapshot_id || State.get('currentSnapshot')?.id, fn.name || '(anonymous)') },
-              h('span', { class: 'fn-name' }, fn.name || '(anonymous)'),
-              h('span', { class: 'fn-count' }, formatNumber(fn.instructions || fn.instruction_count))
-            ));
-          });
-          if (fns.length > 50) {
-            list.appendChild(h('div', { class: 'text-muted', style: { fontSize: '11px', padding: '4px 12px' } },
-              `+ ${fns.length - 50} more…`));
-          }
-          fnCard.appendChild(list);
-        }
-      }
-    });
     if (refresh) refresh();
   },
 
@@ -4030,8 +3870,7 @@ const CompareView = {
 
   async _loadUnitDetail(detail, change) {
     const matchType = change.match_type || 'changed';
-    const coreCaps = ['llvm.ir.summary', 'llvm.ir.function_stats', 'clang.diag.summary',
-                      'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.debug.summary'];
+    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail'];
 
     const unitId = change.candidate_unit_id || change.base_unit_id;
     const snapId = change.candidate_unit_id ? this._candidateId : this._baseId;
@@ -4076,716 +3915,6 @@ const CompareView = {
 
   </script>
   <script>
-/* ============================================================
-   LLVM Advisor — Timeline View
-   ============================================================ */
-
-const TimelineView = {
-  _metrics: ['unit_count', 'instruction_count', 'health_score'],
-  _colors: {
-    unit_count: '#5B8DB8',
-    instruction_count: '#5DB8A8',
-    health_score: '#6EC9C4',
-    warning_count: '#D4A574',
-    error_count: '#D48B9B',
-  },
-  _snapData: [],
-
-  async render() {
-    const container = h('div', {});
-
-    const chips = h('div', { class: 'metric-chips' });
-    ['unit_count', 'instruction_count', 'health_score', 'warning_count', 'error_count'].forEach(m => {
-      const label = m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const chip = h('div', {
-        class: 'metric-chip' + (this._metrics.includes(m) ? ' active' : ''),
-        onClick: () => {
-          const idx = this._metrics.indexOf(m);
-          if (idx >= 0) this._metrics.splice(idx, 1);
-          else if (this._metrics.length < 4) this._metrics.push(m);
-          chip.classList.toggle('active');
-          this._drawChart();
-        },
-      },
-        h('span', { class: 'chip-dot', style: { background: this._colors[m] || 'var(--text-muted)' } }),
-        label
-      );
-      chips.appendChild(chip);
-    });
-    container.appendChild(chips);
-
-    container.appendChild(h('div', { class: 'timeline-chart', id: 'timeline-chart-container' }));
-
-    container.appendChild(h('div', { class: 'metric-cards', id: 'timeline-metrics', style: { marginBottom: '18px' } }));
-
-    container.appendChild(h('div', { class: 'section-header' }, 'Snapshots'));
-    container.appendChild(h('div', { class: 'snapshot-list', id: 'snapshot-list' }));
-
-    Shell.renderMain(container);
-    await this._loadData();
-  },
-
-  async _loadData() {
-    const snaps = State.get('snapshots') || [];
-    if (!snaps.length) {
-      this._renderSnapList([]);
-      return;
-    }
-
-    const summaries = await Promise.all(snaps.map(s => API.snapshotSummary(s.id)));
-    this._snapData = snaps.map((s, i) => {
-      const sum = summaries[i].ok && summaries[i].data ? summaries[i].data : {};
-      return {
-        ...s,
-        unit_count: sum.unit_count ?? s.unit_count ?? 0,
-        instruction_count: sum.instructions ?? (sum.metrics || {}).instruction_count ?? 0,
-        health_score: sum.health_score ?? 0,
-        warning_count: sum.warnings ?? (sum.metrics || {}).warnings ?? 0,
-        error_count: sum.errors ?? (sum.metrics || {}).errors ?? 0,
-        remark_count: sum.remarks ?? (sum.metrics || {}).remark_count ?? 0,
-        function_count: sum.functions ?? (sum.metrics || {}).function_count ?? 0,
-      };
-    });
-
-    this._renderSnapList(this._snapData);
-    this._renderMetricCards();
-    this._drawChart();
-  },
-
-  _renderMetricCards() {
-    const el = document.getElementById('timeline-metrics');
-    if (!el || !this._snapData.length) return;
-    clearEl(el);
-    const latest = this._snapData[0];
-    const metricDefs = [
-      { key: 'unit_count', label: 'Units' },
-      { key: 'instruction_count', label: 'Instructions' },
-      { key: 'health_score', label: 'Health' },
-      { key: 'remark_count', label: 'Remarks' },
-      { key: 'function_count', label: 'Functions' },
-    ];
-    metricDefs.forEach(m => {
-      const val = latest[m.key] ?? 0;
-      let delta = null, deltaCls = 'neutral';
-      if (this._snapData.length > 1) {
-        const prev = this._snapData[1];
-        const d = (latest[m.key] ?? 0) - (prev[m.key] ?? 0);
-        if (d !== 0) {
-          const sign = d > 0 ? '+' : '';
-          const isGood = m.key === 'health_score' ? d > 0 : m.key === 'warning_count' || m.key === 'error_count' ? d < 0 : null;
-          deltaCls = isGood === true ? 'improvement' : isGood === false ? 'regression' : 'neutral';
-          delta = `${sign}${formatNumber(d)} vs prev`;
-        }
-      }
-      el.appendChild(UI.metric(m.label, val, delta, deltaCls));
-    });
-  },
-
-  _drawChart() {
-    const container = document.getElementById('timeline-chart-container');
-    if (!container) return;
-    clearEl(container);
-    const data = this._snapData;
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.style.width = '100%';
-    svg.style.height = '220px';
-    container.appendChild(svg);
-
-    if (data.length < 2) {
-      const text = document.createElementNS(svgNS, 'text');
-      text.setAttribute('x', '50%'); text.setAttribute('y', '50%');
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', 'var(--fg3)'); text.setAttribute('font-size', '12');
-      text.textContent = data.length === 1 ? 'Add another snapshot to see trends' : 'Capture snapshots to see trends';
-      svg.appendChild(text);
-      return;
-    }
-
-    const w = 800, ht = 220, padL = 48, padR = 16, padT = 20, padB = 36;
-    svg.setAttribute('viewBox', `0 0 ${w} ${ht}`);
-    const chartW = w - padL - padR;
-    const chartH = ht - padT - padB;
-
-    // Horizontal grid lines
-    for (let i = 0; i <= 4; i++) {
-      const y = padT + (chartH * i / 4);
-      const line = document.createElementNS(svgNS, 'line');
-      line.setAttribute('x1', padL); line.setAttribute('y1', y);
-      line.setAttribute('x2', w - padR); line.setAttribute('y2', y);
-      line.setAttribute('stroke', 'rgba(142,142,147,0.12)');
-      line.setAttribute('stroke-width', '1');
-      svg.appendChild(line);
-    }
-
-    const xStep = chartW / (data.length - 1);
-
-    this._metrics.forEach(m => {
-      const values = data.map(s => Number(s[m]) || 0);
-      const max = Math.max(...values, 1);
-      const min = Math.min(...values, 0);
-      const range = max - min || 1;
-      const color = this._colors[m] || 'var(--accent)';
-
-      const points = data.map((_, i) => {
-        const x = padL + i * xStep;
-        const y = padT + chartH - ((values[i] - min) / range) * chartH;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      });
-
-      // Area fill
-      const areaPoints = `${padL},${padT + chartH} ${points.join(' ')} ${(padL + (data.length - 1) * xStep).toFixed(1)},${padT + chartH}`;
-      const area = document.createElementNS(svgNS, 'polygon');
-      area.setAttribute('points', areaPoints);
-      area.setAttribute('fill', color);
-      area.setAttribute('opacity', '0.08');
-      svg.appendChild(area);
-
-      const poly = document.createElementNS(svgNS, 'polyline');
-      poly.setAttribute('points', points.join(' '));
-      poly.setAttribute('fill', 'none');
-      poly.setAttribute('stroke', color);
-      poly.setAttribute('stroke-width', '2');
-      poly.setAttribute('stroke-linejoin', 'round');
-      svg.appendChild(poly);
-
-      data.forEach((_, i) => {
-        const [x, y] = points[i].split(',');
-        const circle = document.createElementNS(svgNS, 'circle');
-        circle.setAttribute('cx', x); circle.setAttribute('cy', y);
-        circle.setAttribute('r', '3.5'); circle.setAttribute('fill', color);
-        svg.appendChild(circle);
-      });
-
-      // Y-axis labels for first metric only
-      if (m === this._metrics[0]) {
-        for (let i = 0; i <= 4; i++) {
-          const val = min + (range * (4 - i) / 4);
-          const y = padT + (chartH * i / 4);
-          const text = document.createElementNS(svgNS, 'text');
-          text.setAttribute('x', String(padL - 6));
-          text.setAttribute('y', String(y + 3));
-          text.setAttribute('text-anchor', 'end');
-          text.setAttribute('fill', 'var(--fg3)');
-          text.setAttribute('font-size', '9');
-          text.setAttribute('font-family', 'var(--mono)');
-          text.textContent = val >= 1000 ? (val / 1000).toFixed(1) + 'k' : String(Math.round(val));
-          svg.appendChild(text);
-        }
-      }
-    });
-
-    // X-axis labels
-    data.forEach((s, i) => {
-      const x = padL + i * xStep;
-      const text = document.createElementNS(svgNS, 'text');
-      text.setAttribute('x', x); text.setAttribute('y', ht - 8);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('fill', 'var(--fg3)');
-      text.setAttribute('font-size', '9');
-      text.setAttribute('font-family', 'var(--mono)');
-      text.textContent = (s.id || '').slice(0, 6);
-      svg.appendChild(text);
-    });
-
-    // Legend
-    const legendX = w - padR - this._metrics.length * 100;
-    this._metrics.forEach((m, i) => {
-      const x = legendX + i * 100;
-      const rect = document.createElementNS(svgNS, 'rect');
-      rect.setAttribute('x', x); rect.setAttribute('y', '4');
-      rect.setAttribute('width', '8'); rect.setAttribute('height', '8');
-      rect.setAttribute('rx', '2');
-      rect.setAttribute('fill', this._colors[m] || 'var(--accent)');
-      svg.appendChild(rect);
-
-      const text = document.createElementNS(svgNS, 'text');
-      text.setAttribute('x', String(x + 12)); text.setAttribute('y', '12');
-      text.setAttribute('fill', 'var(--fg3)');
-      text.setAttribute('font-size', '9');
-      text.setAttribute('font-family', 'var(--mono)');
-      text.textContent = m.replace(/_/g, ' ');
-      svg.appendChild(text);
-    });
-  },
-
-  _renderSnapList(snaps) {
-    const el = document.getElementById('snapshot-list');
-    if (!el) return;
-    clearEl(el);
-    if (!snaps.length) {
-      el.appendChild(h('div', { class: 'empty-state' }, h('div', {}, 'No snapshots yet')));
-      return;
-    }
-    snaps.forEach((s, idx) => {
-      const healthPct = Number(s.health_score) || 0;
-      const healthCls = healthPct >= 80 ? 'excellent' : healthPct >= 60 ? 'good' : healthPct >= 40 ? 'fair' : 'poor';
-      const healthColors = { excellent: 'var(--green)', good: 'var(--teal)', fair: 'var(--orange)', poor: 'var(--red)' };
-
-      const deltas = h('div', { class: 'snap-row-deltas', style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } });
-      if (idx < snaps.length - 1) {
-        const prev = snaps[idx + 1];
-        const defs = [
-          { key: 'instruction_count', label: 'inst' },
-          { key: 'health_score', label: 'health' },
-          { key: 'unit_count', label: 'units' },
-        ];
-        defs.forEach(d => {
-          const delta = (s[d.key] || 0) - (prev[d.key] || 0);
-          if (delta !== 0) {
-            const cls = delta > 0 ? 'positive' : 'negative';
-            deltas.appendChild(h('span', { class: `snap-delta ${cls}` },
-              `${delta > 0 ? '+' : ''}${formatNumber(delta)} ${d.label}`));
-          }
-        });
-      }
-
-      el.appendChild(h('div', { class: 'snap-row', onClick: () => { State.set('currentSnapshot', s); Router.navigate('/'); } },
-        h('span', { class: 'snap-id mono' }, (s.id || '').slice(0, 8)),
-        h('span', { class: 'snap-date text-secondary' }, timeAgo(s.created_unix)),
-        h('span', { class: 'snap-root text-muted mono' }, s.source_root || '–'),
-        deltas,
-        h('span', { class: 'snap-num mono' }, formatNumber(s.unit_count || 0)),
-        h('span', { class: 'snap-health mono', style: { color: healthColors[healthCls] } },
-          healthPct > 0 ? String(Math.round(healthPct)) : '–'),
-      ));
-    });
-  },
-};
-
-/* ============================================================
-   LLVM Advisor — Insights View
-   ============================================================ */
-
-const insightEmptyReasons = {
-  call_frequency: 'Requires call graph data. Ensure IR function stats are available.',
-  header_depth: 'Requires header dependency data. Compile with -H or enable header tracking.',
-  diagnostic_delta: 'Requires at least two snapshots to compare diagnostic changes.',
-  optimization_delta: 'Requires at least two snapshots to compare optimization remarks.',
-  compilation_flow: 'Requires time-trace data. Compile with -ftime-trace.',
-  metric_trends: 'Requires IR summary data. Ensure IR bitcode files are available.',
-};
-
-const insightNeedsBaseline = new Set(['diagnostic_delta', 'optimization_delta']);
-
-const InsightsView = {
-  _running: new Set(),
-
-  async render() {
-    this._running = new Set();
-    const container = h('div', {});
-    container.appendChild(h('div', { class: 'section-header' }, 'Cross-Unit Insights'));
-    const grid = h('div', { class: 'insight-grid', id: 'insight-grid' });
-    container.appendChild(grid);
-    Shell.renderMain(container);
-
-    const snap = State.get('currentSnapshot');
-    if (!snap) {
-      grid.appendChild(h('div', { class: 'empty-state' }, h('div', {}, 'Select a snapshot first')));
-      return;
-    }
-
-    const res = await API.insights(snap.id);
-    const insights = Array.isArray(res.data) ? res.data : [];
-
-    if (!insights.length) {
-      grid.appendChild(h('div', { class: 'empty-state' },
-        h('div', {}, 'No insights available'),
-        h('div', { class: 'reason' }, res.error || 'No insights registered for this snapshot')));
-      return;
-    }
-
-    const available = insights.filter(i => i.available);
-    const unavailable = insights.filter(i => !i.available);
-
-    if (available.length) {
-      available.forEach((insight, idx) => {
-        grid.appendChild(this._renderInsightCard(insight, idx, snap.id));
-      });
-    }
-
-    if (unavailable.length) {
-      grid.appendChild(h('div', { class: 'insight-section-label' }, 'Requires Additional Data'));
-      unavailable.forEach((insight, idx) => {
-        grid.appendChild(this._renderInsightCard(insight, available.length + idx, snap.id));
-      });
-    }
-
-    available.forEach((insight, idx) => {
-      this._runInsight(insight, idx, snap.id);
-    });
-  },
-
-  _renderInsightCard(insight, idx, snapId) {
-    const category = CapabilityData.category(insight.required_capability || '');
-    const card = h('div', { class: 'insight-card', id: `insight-card-${idx}` },
-      h('div', { class: 'insight-title' }, titleCase(insight.name || 'Unnamed')),
-      h('div', { class: 'insight-category text-muted', style: { fontSize: '11px' } }, category),
-      h('div', { class: 'insight-desc' }, insight.description || '')
-    );
-
-    if (!insight.available) {
-      const reason = insightEmptyReasons[insight.name] || insight.reason || 'Additional data sources needed for this analysis.';
-      card.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: 'auto', paddingTop: '8px', lineHeight: '1.5' } },
-        h('span', { style: { display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--fg3)', marginRight: '6px', verticalAlign: 'middle' } }),
-        reason
-      ));
-      return card;
-    }
-
-    const body = h('div', { class: 'insight-body', id: `insight-body-${idx}` });
-    body.appendChild(h('div', { class: 'insight-skeleton' }));
-    card.appendChild(body);
-    return card;
-  },
-
-  async _runInsight(insight, idx, snapId) {
-    if (this._running.has(insight.name)) return;
-    this._running.add(insight.name);
-
-    const body = document.getElementById(`insight-body-${idx}`);
-    if (!body) return;
-
-    let res = null;
-    if (insightNeedsBaseline.has(insight.name)) {
-      const snaps = State.get('snapshots') || [];
-      const curIdx = snaps.findIndex(s => s.id === snapId);
-      for (let i = curIdx + 1; i < snaps.length && !res?.ok; i++) {
-        res = await API.insight(snapId, insight.name, snaps[i].id);
-      }
-      if (!res?.ok) res = await API.insight(snapId, insight.name);
-    } else {
-      res = await API.insight(snapId, insight.name);
-    }
-    clearEl(body);
-
-    if (!res.ok) {
-      const reason = insightEmptyReasons[insight.name] || 'This insight requires additional capability data that is not yet available.';
-      body.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', lineHeight: '1.6', padding: '8px 0' } },
-        h('span', { style: { display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--fg3)', marginRight: '6px', verticalAlign: 'middle' } }),
-        reason
-      ));
-      return;
-    }
-
-    const rawData = res.data?.data || res.data;
-    if (!rawData || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
-      body.appendChild(h('div', { class: 'empty-state', style: { minHeight: '80px' } },
-        h('div', {}, 'No data to display'),
-        h('div', { class: 'reason' }, 'This insight did not find notable patterns in the current snapshot.')));
-      return;
-    }
-
-    const rendered = this._renderInsightData(insight.name, rawData);
-    if (rendered) {
-      body.appendChild(rendered);
-    } else {
-      const normalized = CapabilityData.normalizeResults([
-        { capability: insight.required_capability || insight.name, value: rawData }
-      ])[0];
-      body.appendChild(normalized ? UI.capabilityPanel(normalized) : h('div', { class: 'text-muted', style: { fontSize: '12px' } }, 'No data returned'));
-    }
-  },
-
-  _renderInsightData(name, data) {
-    const d = data || {};
-    const wrap = h('div', { class: 'insight-content' });
-
-    if (name === 'pass_impact') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Optimization Hit Rate'), h('strong', { class: 'mono' }, `${(d.optimization_hit_rate_pct || 0).toFixed(1)}%`)));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Remarks'), h('strong', { class: 'mono' }, formatNumber(d.total_remarks || 0))));
-      const byType = d.by_type || {};
-      Object.entries(byType).forEach(([k, v]) => {
-        metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, `Type ${titleCase(k)}`), h('strong', { class: 'mono' }, formatNumber(v))));
-      });
-      wrap.appendChild(metrics);
-      if (d.by_type && Object.keys(d.by_type).length > 1) {
-        const donutData = Object.entries(d.by_type).filter(([, v]) => v > 0).map(([label, value]) => ({ label: titleCase(label), value }));
-        const donut = UI.donutChart(donutData, { size: 100 });
-        if (donut) wrap.appendChild(donut);
-      }
-      const passes = Array.isArray(d.top_passes_by_remarks) ? d.top_passes_by_remarks : [];
-      if (passes.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Top Passes By Remarks'));
-        wrap.appendChild(UI.dataTable(passes.slice(0, 10), { columns: ['count', 'pass', 'pct_of_total'] }));
-      }
-      return wrap;
-    }
-
-    if (name === 'function_complexity') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Functions'), h('strong', { class: 'mono' }, formatNumber(d.total_functions || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Instructions'), h('strong', { class: 'mono' }, formatNumber(d.total_instructions || 0))));
-      if (d.p90_instruction_threshold) metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'P90 Threshold'), h('strong', { class: 'mono' }, formatNumber(d.p90_instruction_threshold))));
-      wrap.appendChild(metrics);
-      const fns = (Array.isArray(d.top_by_instructions) ? d.top_by_instructions : []).filter(f => f.name && !isCorruptedString(f.name));
-      if (fns.length) {
-        const barData = fns.slice(0, 8).map(f => ({ label: f.name, amount: f.instructions || f.basic_blocks || 0 }));
-        const chart = UI.barChart(barData);
-        if (chart) wrap.appendChild(chart);
-      }
-      return wrap;
-    }
-
-    if (name === 'debug_info') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Debug Info'), h('strong', { class: 'mono' }, d.has_debug_info ? 'Yes' : 'No')));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Coverage'), h('strong', { class: 'mono' }, titleCase(d.coverage || 'unknown'))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Compile Units'), h('strong', { class: 'mono' }, formatNumber(d.compile_units || 0))));
-      if (d.max_dwo_version) metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'DWO Version'), h('strong', { class: 'mono' }, String(d.max_dwo_version))));
-      wrap.appendChild(metrics);
-      const interps = Array.isArray(d.interpretations) ? d.interpretations : [];
-      if (interps.length) {
-        const list = h('div', { style: { marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' } });
-        interps.forEach(msg => {
-          list.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg2)', lineHeight: '1.5', padding: '6px 10px', background: 'var(--bg2)', borderRadius: 'var(--r)', borderLeft: '3px solid var(--accent)' } }, msg));
-        });
-        wrap.appendChild(list);
-      }
-      return wrap;
-    }
-
-    if (name === 'section_sizes') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Size'), h('strong', { class: 'mono' }, formatBytes(d.total_size || 0))));
-      if (d.format && !isCorruptedString(d.format)) metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Format'), h('strong', { class: 'mono' }, d.format)));
-      wrap.appendChild(metrics);
-      const cats = d.category_breakdown || {};
-      const catEntries = Object.entries(cats).filter(([k, v]) => v && v.size > 0 && !isCorruptedString(k)).sort((a, b) => b[1].size - a[1].size);
-      if (catEntries.length) {
-        const flameItems = catEntries.map(([label, v]) => ({ label: titleCase(label), value: v.size }));
-        const flame = UI.flameBars(flameItems);
-        if (flame) wrap.appendChild(flame);
-        const legend = h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', fontSize: '11px' } });
-        const colors = ['#5B8DB8', '#5DB8A8', '#D4A574', '#9DB86E', '#C97DB8', '#9B7DB8', '#D48B9B', '#6EC9C4'];
-        catEntries.forEach(([label, v], i) => {
-          legend.appendChild(h('span', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-            h('i', { style: { width: '8px', height: '8px', borderRadius: '2px', background: colors[i % colors.length], display: 'inline-block', flexShrink: '0' } }),
-            `${titleCase(label)}: ${formatBytes(v.size)} (${(v.pct_of_total || 0).toFixed(1)}%)`
-          ));
-        });
-        wrap.appendChild(legend);
-      }
-      const sections = (Array.isArray(d.sections) ? d.sections : []).filter(s => s.name && !isCorruptedString(s.name)).slice(0, 10);
-      if (sections.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Top Sections'));
-        const barData = sections.map(s => ({ label: s.name, amount: s.size || 0 }));
-        wrap.appendChild(UI.barChart(barData));
-      }
-      return wrap;
-    }
-
-    if (name === 'loop_nesting') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Loops'), h('strong', { class: 'mono' }, formatNumber(d.total_loops || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Max Depth'), h('strong', { class: 'mono' }, String(d.global_max_depth || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Deep Nesting Threshold'), h('strong', { class: 'mono' }, String(d.deep_nesting_threshold || 3))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Deeply Nested Fns'), h('strong', { class: 'mono' }, formatNumber(d.deeply_nested_functions || 0))));
-      wrap.appendChild(metrics);
-      const fns = (Array.isArray(d.top_by_nesting) ? d.top_by_nesting : []).filter(f => f.name && !isCorruptedString(f.name));
-      if (fns.length) {
-        const barData = fns.slice(0, 8).map(f => ({ label: f.name, amount: f.loops || 0 }));
-        const chart = UI.barChart(barData);
-        if (chart) wrap.appendChild(chart);
-      }
-      return wrap;
-    }
-
-    if (name === 'diagnostic_delta') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Error Delta'), h('strong', { class: 'mono' }, String(d.error_delta || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Warning Delta'), h('strong', { class: 'mono' }, String(d.warning_delta || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Note Delta'), h('strong', { class: 'mono' }, String(d.note_delta || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'New Errors'), h('strong', { class: 'mono' }, String(d.new_errors || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'New Warnings'), h('strong', { class: 'mono' }, String(d.new_warnings || 0))));
-      wrap.appendChild(metrics);
-      const base = d.baseline || {};
-      const prim = d.primary || {};
-      if (base.errors != null || prim.errors != null) {
-        const items = [
-          { label: 'Errors', before: base.errors || 0, after: prim.errors || 0 },
-          { label: 'Warnings', before: base.warnings || 0, after: prim.warnings || 0 },
-          { label: 'Notes', before: base.notes || 0, after: prim.notes || 0 },
-        ];
-        const deltaBar = UI.deltaBar(items);
-        if (deltaBar) wrap.appendChild(deltaBar);
-      }
-      const newDiags = Array.isArray(d.new_diagnostics) ? d.new_diagnostics : [];
-      if (newDiags.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'New Diagnostics'));
-        wrap.appendChild(UI.findingList(newDiags.slice(0, 20)));
-      } else {
-        wrap.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginTop: '10px' } }, 'No new diagnostics detected between snapshots.'));
-      }
-      return wrap;
-    }
-
-    if (name === 'optimization_delta') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Delta'), h('strong', { class: 'mono' }, String(d.total_delta || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Primary Total'), h('strong', { class: 'mono' }, formatNumber(d.primary_total || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Baseline Total'), h('strong', { class: 'mono' }, formatNumber(d.baseline_total || 0))));
-      wrap.appendChild(metrics);
-      const byType = d.by_type_delta || {};
-      const cleanEntries = Object.entries(byType).filter(([k]) => !isCorruptedString(k));
-      if (cleanEntries.length) {
-        const items = cleanEntries.map(([label, v]) => ({
-          label: titleCase(label),
-          before: v?.baseline || 0,
-          after: v?.primary || 0,
-        }));
-        const deltaBar = UI.deltaBar(items);
-        if (deltaBar) wrap.appendChild(deltaBar);
-      }
-      const passes = Array.isArray(d.top_changed_passes) ? d.top_changed_passes.filter(p => !isCorruptedString(p.pass || '')) : [];
-      if (passes.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Top Changed Passes'));
-        wrap.appendChild(UI.dataTable(passes.slice(0, 10)));
-      } else {
-        wrap.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginTop: '10px' } }, 'No significant pass-level changes detected between snapshots.'));
-      }
-      return wrap;
-    }
-
-    if (name === 'header_depth') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Max Depth'), h('strong', { class: 'mono' }, String(d.max_depth || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Headers'), h('strong', { class: 'mono' }, formatNumber(d.total_headers || 0))));
-      wrap.appendChild(metrics);
-      const chains = Array.isArray(d.deepest_chains) ? d.deepest_chains : [];
-      if (chains.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Deepest Include Chains'));
-        wrap.appendChild(UI.dataTable(chains.slice(0, 10)));
-      }
-      const most = Array.isArray(d.most_included) ? d.most_included : [];
-      if (most.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Most Included Headers'));
-        wrap.appendChild(UI.dataTable(most.slice(0, 10)));
-      }
-      if (!chains.length && !most.length && !d.max_depth) {
-        wrap.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginTop: '10px' } }, 'No header dependency data found. Compile with -H to enable.'));
-      }
-      return wrap;
-    }
-
-    if (name === 'call_frequency') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Total Functions'), h('strong', { class: 'mono' }, formatNumber(d.total_functions || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Call Edges'), h('strong', { class: 'mono' }, formatNumber(d.total_call_edges || 0))));
-      wrap.appendChild(metrics);
-      const fanIn = (Array.isArray(d.top_callers_by_fan_in) ? d.top_callers_by_fan_in : []).filter(f => f.name && !isCorruptedString(f.name));
-      const fanOut = (Array.isArray(d.top_callees_by_fan_out) ? d.top_callees_by_fan_out : []).filter(f => f.name && !isCorruptedString(f.name));
-      const fanInHasData = fanIn.some(f => (f.incoming_calls || 0) > 0);
-      const fanOutHasData = fanOut.some(f => (f.outgoing_calls || 0) > 0);
-      if (fanIn.length && fanInHasData) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Most Called (Fan-In)'));
-        const barData = fanIn.slice(0, 8).map(f => ({ label: f.name, amount: f.incoming_calls || 0 }));
-        wrap.appendChild(UI.barChart(barData));
-      }
-      if (fanOut.length && fanOutHasData) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Highest Fan-Out'));
-        const barData = fanOut.slice(0, 8).map(f => ({ label: f.name, amount: f.outgoing_calls || 0 }));
-        wrap.appendChild(UI.barChart(barData));
-      }
-      const hubs = Array.isArray(d.hub_functions) ? d.hub_functions.filter(f => f.name && !isCorruptedString(f.name)) : [];
-      if (hubs.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Hub Functions'));
-        wrap.appendChild(UI.dataTable(hubs.slice(0, 8), { columns: ['name', 'incoming_calls', 'outgoing_calls'] }));
-      }
-      if (!fanInHasData && !fanOutHasData && fanOut.length) {
-        wrap.appendChild(h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '12px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' } }, 'Functions'));
-        wrap.appendChild(UI.dataTable(fanOut.slice(0, 10), { columns: ['name', 'outgoing_calls', 'incoming_calls'] }));
-      }
-      return wrap;
-    }
-
-    if (name === 'compilation_flow') {
-      const stages = Array.isArray(d.stages) ? d.stages : [];
-      const total = d.total_duration_ms || 0;
-      const slowest = d.slowest_event || {};
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' },
-        h('span', {}, 'Total Time'), h('strong', { class: 'mono' }, `${total} ms`)));
-      if (slowest.name) {
-        metrics.appendChild(h('div', { class: 'mini-metric' },
-          h('span', {}, 'Slowest Event'),
-          h('strong', { class: 'mono', style: { fontSize: '10px' } }, slowest.name)));
-        metrics.appendChild(h('div', { class: 'mini-metric' },
-          h('span', {}, 'Slowest Time'),
-          h('strong', { class: 'mono' }, `${Math.round((slowest.duration_us || 0) / 1000)} ms`)));
-      }
-      wrap.appendChild(metrics);
-      if (stages.length) {
-        const colors = { frontend: '#5B8DB8', optimizer: '#D4A574', codegen: '#9DB86E', other: '#C97DB8' };
-        // Stacked horizontal bar
-        const bar = h('div', { style: { display: 'flex', height: '28px', borderRadius: '4px', overflow: 'hidden', margin: '12px 0 4px' } });
-        stages.forEach(s => {
-          const pct = s.pct_of_total || 0;
-          if (pct <= 0) return;
-          const color = colors[s.stage] || '#9B7DB8';
-          const seg = h('div', {
-            style: { width: `${pct}%`, background: color, display: 'flex', alignItems: 'center',
-                     justifyContent: 'center', overflow: 'hidden', whiteSpace: 'nowrap' },
-            title: `${s.stage}: ${s.duration_ms} ms (${pct}%)`,
-          }, pct > 8 ? h('span', { style: { fontSize: '10px', color: '#fff', fontWeight: '600' } }, s.stage) : null);
-          bar.appendChild(seg);
-        });
-        wrap.appendChild(bar);
-        // Legend rows
-        const legend = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
-        stages.forEach(s => {
-          const color = colors[s.stage] || '#9B7DB8';
-          legend.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' } },
-            h('i', { style: { width: '10px', height: '10px', borderRadius: '2px', background: color, flexShrink: '0', display: 'inline-block' } }),
-            h('span', { style: { color: 'var(--fg2)', minWidth: '80px' } }, s.stage),
-            h('span', { class: 'mono' }, `${s.duration_ms} ms`),
-            h('span', { style: { color: 'var(--fg3)', marginLeft: '4px' } }, `${s.pct_of_total}%`)
-          ));
-        });
-        wrap.appendChild(legend);
-      }
-      return wrap;
-    }
-
-    if (name === 'metric_trends') {
-      const metrics = h('div', { class: 'mini-metrics' });
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Functions'), h('strong', { class: 'mono' }, formatNumber(d.functions || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Instructions'), h('strong', { class: 'mono' }, formatNumber(d.instructions || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Globals'), h('strong', { class: 'mono' }, formatNumber(d.globals || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Instr / Fn'), h('strong', { class: 'mono' }, String(d.instructions_per_function || 0))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Size Class'), h('strong', { class: 'mono' }, titleCase(d.size_class || 'unknown'))));
-      metrics.appendChild(h('div', { class: 'mini-metric' }, h('span', {}, 'Density'), h('strong', { class: 'mono' }, titleCase(d.density_class || 'unknown'))));
-      wrap.appendChild(metrics);
-      if (d.functions > 0 && d.instructions > 0) {
-        const donutData = [
-          { label: 'Functions', value: d.functions },
-          { label: 'Globals', value: d.globals || 0 },
-        ].filter(x => x.value > 0);
-        if (donutData.length > 1) {
-          const donut = UI.donutChart(donutData, { size: 90 });
-          if (donut) wrap.appendChild(donut);
-        }
-      }
-      const interps = Array.isArray(d.interpretations) ? d.interpretations : [];
-      if (interps.length) {
-        const list = h('div', { style: { marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' } });
-        interps.forEach(msg => {
-          list.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg2)', lineHeight: '1.5', padding: '6px 10px', background: 'var(--bg2)', borderRadius: 'var(--r)', borderLeft: '3px solid var(--accent)' } }, msg));
-        });
-        wrap.appendChild(list);
-      }
-      return wrap;
-    }
-
-    return null;
-  },
-};
-
-/* ============================================================
-   LLVM Advisor — Remarks Explorer View
-   ============================================================ */
-
 const RemarksView = {
   async render() {
     const snap = State.get('currentSnapshot');
@@ -5721,8 +4850,6 @@ const CodeExplorerView = {
       Router.register('/units', () => UnitsView.render());
       Router.register('/units/:id', params => UnitDetailView.render(params));
       Router.register('/compare', params => CompareView.render(params));
-      Router.register('/timeline', () => TimelineView.render());
-      Router.register('/insights', () => InsightsView.render());
       Router.register('/remarks', () => RemarksView.render());
       Router.register('/heatmap', () => HeatmapView.render());
       Router.register('/explorer', () => CodeExplorerView.render());
