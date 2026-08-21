@@ -73,7 +73,9 @@ RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
     if (!Rel)
       break;
 
-    if (Relocation::isInstructionReference(Rel->Type)) {
+    if (Function.getBinaryContext()
+            .getRelocationHandler()
+            .isInstructionReference(Rel->Type)) {
       assert(Rel->Value >= Function.getAddress() &&
              Rel->Value < Function.getAddress() + Function.getSize() &&
              "RISC-V instruction reference outside of function");
@@ -106,16 +108,16 @@ uint64_t RISCVMCSymbolizer::getGOTValue(const Relocation &Rel) const {
   if (It != InstructionReferences.end() && It->second.LowRelocation) {
     const Relocation *LoRel = It->second.LowRelocation;
     ErrorOr<uint64_t> HiContents = BC.getUnsignedValueAtAddress(HiAddress, 4);
-    ErrorOr<uint64_t> LoContents =
-        BC.getUnsignedValueAtAddress(Function.getAddress() + LoRel->Offset,
-                                     Relocation::getSizeForType(LoRel->Type));
+    ErrorOr<uint64_t> LoContents = BC.getUnsignedValueAtAddress(
+        Function.getAddress() + LoRel->Offset,
+        BC.getRelocationHandler().getSizeForType(LoRel->Type));
     assert(HiContents && LoContents &&
            "cannot read RISC-V GOT relocation pair");
 
-    return Relocation::extractValue(ELF::R_RISCV_PCREL_HI20, *HiContents,
-                                    HiAddress) +
-           Relocation::extractValue(LoRel->Type, *LoContents,
-                                    Function.getAddress() + LoRel->Offset);
+    return BC.getRelocationHandler().extractValue(ELF::R_RISCV_PCREL_HI20,
+                                                  *HiContents, HiAddress) +
+           BC.getRelocationHandler().extractValue(
+               LoRel->Type, *LoContents, Function.getAddress() + LoRel->Offset);
   }
 
   return Rel.Value;
@@ -201,7 +203,7 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   MCSymbol *Symbol = Rel->Symbol;
   uint64_t Addend = Rel->Addend;
 
-  if (Relocation::isInstructionReference(Rel->Type)) {
+  if (BC.getRelocationHandler().isInstructionReference(Rel->Type)) {
     if (!CreateNewSymbols)
       return false;
     auto [It, _] =
@@ -216,8 +218,8 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   // GOT high relocations name the object stored in the GOT, not the GOT entry
   // addressed by AUIPC. Preserve the actual entry address using a zero-based
   // symbol, as the RISC-V emitter reuses the input GOT.
-  if (Relocation::isGOT(Rel->Type)) {
-    assert(Relocation::isPCRelative(Rel->Type) &&
+  if (BC.getRelocationHandler().isGOT(Rel->Type)) {
+    assert(BC.getRelocationHandler().isPCRelative(Rel->Type) &&
            "GOT relocation must be PC-relative on RISC-V");
     Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
     Addend = getGOTValue(*Rel) + InstAddress;
