@@ -1663,7 +1663,8 @@ Value *SCEVExpander::FindValueInExprValueMap(
 Value *SCEVExpander::expand(SCEVUse S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
-  BasicBlock::iterator InsertPt = Builder.GetInsertPoint();
+  BasicBlock::iterator OrigInsertPt = Builder.GetInsertPoint();
+  BasicBlock::iterator InsertPt = OrigInsertPt;
 
   // We can move insertion point only if there is no div or rem operations
   // otherwise we are risky to move it over the check for zero denominator.
@@ -1722,14 +1723,23 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // Expand the expression into instructions.
   SmallVector<Instruction *> DropPoisonGeneratingInsts;
   Value *V = FindValueInExprValueMap(S, &*InsertPt, DropPoisonGeneratingInsts);
-  if (!V) {
-    V = visit(S);
-    V = fixupLCSSAFormFor(V);
-  } else {
+  BasicBlock::iterator CacheAt = InsertPt;
+  if (!V && InsertPt != OrigInsertPt && PostIncLoops.empty()) {
+    // Hoisting the insertion point can move it above a value that already
+    // computes S. Such a value is still usable: it only has to dominate the
+    // point we were asked to expand at, which is where the result is used.
+    V = FindValueInExprValueMap(S, &*OrigInsertPt, DropPoisonGeneratingInsts);
+    if (V)
+      CacheAt = OrigInsertPt;
+  }
+  if (V) {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
       dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
     }
+  } else {
+    V = visit(S);
+    V = fixupLCSSAFormFor(V);
   }
   // Remember the expanded value for this SCEV at this location.
   //
@@ -1737,7 +1747,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // the expression at this insertion point. If the mapped value happened to be
   // a postinc expansion, it could be reused by a non-postinc user, but only if
   // its insertion point was already at the head of the loop.
-  InsertedExpressions[std::make_pair(S, &*InsertPt)] = V;
+  InsertedExpressions[std::make_pair(S, &*CacheAt)] = V;
   return V;
 }
 
