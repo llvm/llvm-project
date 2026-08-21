@@ -13807,6 +13807,11 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+bool ARMTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                              EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
+}
+
 bool
 ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                  CombineLevel Level) const {

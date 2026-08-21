@@ -469,6 +469,8 @@ class VectorType;
     Align getABIAlignmentForCallingConv(Type *ArgTy,
                                         const DataLayout &DL) const override;
 
+    bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
+
     bool isDesirableToCommuteWithShift(const SDNode *N,
                                        CombineLevel Level) const override;
 
