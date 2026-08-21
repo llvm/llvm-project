@@ -179,6 +179,14 @@ TEST_F(HLSLSemanticSignaturePackingTest, CreatesSignatureFromConfig) {
 // Valid packing tests
 //===----------------------------------------------------------------------===//
 
+TEST_F(HLSLSemanticSignaturePackingTest, EmptySignature) {
+  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::Out, {});
+
+  for (PackingMethod Method : {PackingMethod::Stacked, PackingMethod::Indexed,
+                               PackingMethod::PrefixStable})
+    expectPacking(Method, Config, /*ExpectedRows=*/0, {});
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
   // Semantics accessed through dedicated intrinsics do not consume signature
   // rows and remain unallocated.
@@ -198,8 +206,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
         dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
 
   // Expected layout: no registers are used.
-  expectPacking(PackingMethod::Stacked, Config, /*ExpectedRows=*/0,
-                {Unallocated, Unallocated, Unallocated});
+  for (PackingMethod Method : {PackingMethod::Stacked, PackingMethod::Indexed,
+                               PackingMethod::PrefixStable})
+    expectPacking(Method, Config, /*ExpectedRows=*/0,
+                  {Unallocated, Unallocated, Unallocated});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
@@ -229,8 +239,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
 
-TEST_F(HLSLSemanticSignaturePackingTest, DoesNotCoPackElements) {
-  // Elements are never co-packed even when they would fit in one row.
+TEST_F(HLSLSemanticSignaturePackingTest, CoPackingDependsOnMethod) {
+  // Stacked packing gives each element a whole row, while prefix-stable packing
+  // co-packs the same elements into the components of one row.
 
   // struct VSIn {
   //   float A : A;
@@ -249,7 +260,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, DoesNotCoPackElements) {
        {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
 
-  // Expected layout:
+  // Stacked layout:
   // reg0: A.x | unused.yzw
   // reg1: B.x | unused.yzw
   // reg2: C.x | unused.yzw
@@ -259,6 +270,14 @@ TEST_F(HLSLSemanticSignaturePackingTest, DoesNotCoPackElements) {
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/2, /*Col=*/0},
                  {/*Row=*/3, /*Col=*/0}});
+
+  // Prefix-stable layout:
+  // reg0: A.x | B.y | C.z | D.w
+  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/1},
+                 {/*Row=*/0, /*Col=*/2},
+                 {/*Row=*/0, /*Col=*/3}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, StacksMultiRowElements) {
@@ -304,8 +323,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, ExactlyFillsSignature) {
 
   // Expected layout:
   // reg0-31: A[0-31].xyzw
-  expectPacking(PackingMethod::Stacked, Config,
-                /*ExpectedRows=*/MaxSignatureRows, {{/*Row=*/0, /*Col=*/0}});
+  for (PackingMethod Method :
+       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+    expectPacking(Method, Config, /*ExpectedRows=*/MaxSignatureRows,
+                  {{/*Row=*/0, /*Col=*/0}});
 }
 
 //===----------------------------------------------------------------------===//
@@ -328,9 +349,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSignatureOverflow) {
                                dxbc::PSV::InterpolationMode::Linear});
 
   // The last element is the one that no longer fits.
-  expectPackingError(PackingMethod::Stacked, Config,
-                     SignaturePackingError::SignatureOverflow,
-                     /*ExpectedElementIndex=*/MaxSignatureRows);
+  for (PackingMethod Method :
+       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+    expectPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
+                       /*ExpectedElementIndex=*/MaxSignatureRows);
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
@@ -345,9 +367,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
                       /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
                       dxbc::PSV::InterpolationMode::Linear}});
 
-  expectPackingError(PackingMethod::Stacked, Config,
-                     SignaturePackingError::SignatureOverflow,
-                     /*ExpectedElementIndex=*/0);
+  for (PackingMethod Method :
+       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+    expectPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
+                       /*ExpectedElementIndex=*/0);
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
@@ -365,9 +388,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
                       /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
                       dxbc::PSV::InterpolationMode::Linear}});
 
-  expectPackingError(PackingMethod::Stacked, Config,
-                     SignaturePackingError::SignatureOverflow,
-                     /*ExpectedElementIndex=*/1);
+  for (PackingMethod Method :
+       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+    expectPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
+                       /*ExpectedElementIndex=*/1);
 }
 
 //===----------------------------------------------------------------------===//
@@ -451,43 +475,6 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
 // Basic prefix-stable packing tests
 //===----------------------------------------------------------------------===//
 
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableEmptySignature) {
-  // A signature without any elements uses no registers.
-
-  // struct VSOut {};
-  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::Out,
-                    /*UseNative16BitTypes=*/false, {});
-
-  // Expected layout: no registers are used.
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/0, {});
-}
-
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableDeclarationOrder) {
-  // Elements are visited in declaration order and are co-packed into a
-  // register whenever the register has room left for them.
-
-  // struct VSOut {
-  //   float Fog      : FOG;
-  //   float Alpha    : COLOR0;
-  //   float2 Position : SV_Position;
-  // };
-  TestConfig Config(
-      Triple::EnvironmentType::Vertex, IOType::Out,
-      /*UseNative16BitTypes=*/false,
-      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
-        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
-       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
-        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
-       {dxbc::PSV::SemanticKind::Position, /*Rows=*/1, /*Cols=*/2,
-        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
-
-  // Expected layout:
-  // reg0: Fog.x | Alpha.y | Position.zw
-  expectPacking(
-      PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
-      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/0, /*Col=*/2}});
-}
-
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableWhenAppended) {
   // Appending an element to a signature never moves the elements declared
   // before it; the appended element is only packed into the space they left.
@@ -555,27 +542,6 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFillsAllRows) {
     EXPECT_EQ(Elements[I].StartRow, I) << "element " << I;
     EXPECT_EQ(Elements[I].StartCol, 0u) << "element " << I;
   }
-}
-
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsSignatureOverflow) {
-  // A signature that requires more than 32 rows cannot be packed.
-
-  // struct VSOut {
-  //   float4 A0  : A0;
-  //   ...
-  //   float4 A32 : A32;
-  // };
-  TestConfig Config(Triple::EnvironmentType::Vertex, IOType::Out,
-                    /*UseNative16BitTypes=*/false, {});
-  for (unsigned I = 0; I != MaxSignatureRows + 1; ++I)
-    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
-                               /*Cols=*/MaxSignatureCols,
-                               dxil::ElementType::F32,
-                               dxbc::PSV::InterpolationMode::Linear});
-  // The last element is the one that no longer fits.
-  expectPackingError(PackingMethod::PrefixStable, Config,
-                     SignaturePackingError::SignatureOverflow,
-                     /*ExpectedElementIndex=*/MaxSignatureRows);
 }
 
 //===----------------------------------------------------------------------===//
@@ -947,28 +913,6 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   expectPackingError(PackingMethod::PrefixStable, Config,
                      SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/MaxSignatureRows);
-}
-
-TEST_F(HLSLSemanticSignaturePackingTest,
-       PrefixStableSkipsNotAllocatedElements) {
-  // Semantics accessed through dedicated intrinsics remain unallocated and do
-  // not reserve signature rows.
-
-  // struct CSIn {
-  //   uint3 DispatchThreadID : SV_DispatchThreadID;
-  //   uint GroupIndex        : SV_GroupIndex;
-  // };
-  TestConfig Config(
-      Triple::EnvironmentType::Compute, IOType::In,
-      /*UseNative16BitTypes=*/false,
-      {{dxbc::PSV::SemanticKind::DispatchThreadID, /*Rows=*/1, /*Cols=*/3,
-        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined},
-       {dxbc::PSV::SemanticKind::GroupIndex, /*Rows=*/1, /*Cols=*/1,
-        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
-
-  // Expected layout: no registers are used.
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/0,
-                {Unallocated, Unallocated});
 }
 
 //===----------------------------------------------------------------------===//
