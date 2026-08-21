@@ -106,7 +106,6 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
-
 namespace {
 
 struct VGPRThresholdParser : public cl::parser<unsigned> {
