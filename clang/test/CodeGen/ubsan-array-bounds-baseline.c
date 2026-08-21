@@ -159,11 +159,11 @@ void c_complex_compound(int i) { ca[i] += cv; }
 void c_complex_incdec(int i) { ca[i]++; }
 
 // CHECK-LABEL: define {{.*}}@c_vec_elem(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_vec_elem(int i) { va[i].x = 1; }
 
 // CHECK-LABEL: define {{.*}}@c_vec_elem_arrow(
-// CHECK: icmp ule i64 {{.*}}, 4
+// CHECK: icmp ult i64 {{.*}}, 4
 void c_vec_elem_arrow(int i) { (&va[i])->x = 1; }
 
 // The component belongs to a temporary, not to an element; the

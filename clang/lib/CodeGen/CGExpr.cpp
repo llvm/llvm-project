@@ -5498,7 +5498,8 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     // it.
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
-    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
+    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo,
+                                           NotKnownNonNull, ObjectRequired);
     const auto *PT = E->getBase()->getType()->castAs<PointerType>();
     Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo, TBAAInfo);
     Base.getQuals().removeObjCGCAttr();
@@ -5506,7 +5507,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
     // emit the base as an lvalue.
     assert(E->getBase()->getType()->isVectorType());
-    Base = EmitLValue(E->getBase());
+    Base = EmitLValue(E->getBase(), NotKnownNonNull, ObjectRequired);
   } else {
     // Otherwise, the base is a normal rvalue (as in (V+V).x), emit it as such.
     assert(E->getBase()->getType()->isVectorType() &&
