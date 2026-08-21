@@ -1,18 +1,15 @@
 // Test that -ffp-contract=on fuses a*b+c / a*b-c into cir.fmuladd and that
 // -ffp-contract=off does not. The CIR-lowered and classic CodeGen LLVM IR
 // match here, so both feed the LLVM-* prefixes.
-//
-// TODO: drop -fno-clangir-call-conv-lowering once x86_64 calling-convention
-// lowering supports vector types (needed by fmuladd_vec).
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=on -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR-ON
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=off -emit-cir %s -o %t-off.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=off -emit-cir %s -o %t-off.cir
 // RUN: FileCheck --input-file=%t-off.cir %s -check-prefix=CIR-OFF
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=on -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM-ON
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=off -emit-llvm %s -o %t-off.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=off -emit-llvm %s -o %t-off.ll
 // RUN: FileCheck --input-file=%t-off.ll %s -check-prefix=LLVM-OFF
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=on -emit-llvm %s -o %t.ll
@@ -22,9 +19,9 @@
 
 // Under strict FP the fused op carries an fenv attribute and lowers to the
 // constrained fmuladd intrinsic.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-cir %s -o %t-strict.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-cir %s -o %t-strict.cir
 // RUN: FileCheck --input-file=%t-strict.cir %s -check-prefix=CIR-STRICT
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict.ll
 // RUN: FileCheck --input-file=%t-strict.ll %s -check-prefix=LLVM-STRICT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict-ogcg.ll
 // RUN: FileCheck --input-file=%t-strict-ogcg.ll %s -check-prefix=LLVM-STRICT

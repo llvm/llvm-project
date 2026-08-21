@@ -141,8 +141,8 @@ public:
         T->isVectorType())
       return false;
 
-    if (const auto *D = T->getAsEnumDecl())
-      return D->isComplete();
+    if (T->isEnumeralType())
+      return true;
 
     return classify(T) != std::nullopt;
   }

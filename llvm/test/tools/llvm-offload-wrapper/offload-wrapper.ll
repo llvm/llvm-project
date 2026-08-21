@@ -125,12 +125,12 @@
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=SYCL
 
 ;      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading"
-; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_reg, ptr null }]
-; SYCL-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_unreg, ptr null }]
+; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @sycl.descriptor_reg, ptr null }]
 
 ;      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 ; SYCL-NEXT: entry:
 ; SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   %0 = call i32 @atexit(ptr @sycl.descriptor_unreg)
 ; SYCL-NEXT:   ret void
 ; SYCL-NEXT: }
 

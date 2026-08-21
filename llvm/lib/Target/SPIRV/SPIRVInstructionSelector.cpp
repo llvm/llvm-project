@@ -1700,11 +1700,12 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .add(I.getOperand(SrcIdx))
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-        .addDef(CosResVReg)
-        .addUse(ResTypeReg)
-        .addUse(PointerVReg)
-        .constrainAllUses(TII, TRI, RBI);
+    if (!MRI->use_nodbg_empty(CosResVReg))
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+          .addDef(CosResVReg)
+          .addUse(ResTypeReg)
+          .addUse(PointerVReg)
+          .constrainAllUses(TII, TRI, RBI);
     return true;
   } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     // GLSL.std.450 has no combined sincos; emit separate Sin and Cos.
