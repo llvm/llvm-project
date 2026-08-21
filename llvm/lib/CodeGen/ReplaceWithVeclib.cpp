@@ -218,9 +218,11 @@ static bool hasVectorMapping(const TargetLibraryInfo &TLI, StringRef Name,
          TLI.getVectorMappingInfo(Name, EC, /*Masked=*/true);
 }
 
-bool llvm::hasIntrinsicVectorMapping(const TargetLibraryInfo &TLI,
-                                     Intrinsic::ID IID, Type *ScalarTy,
-                                     ElementCount EC, Module *M) {
+/// Returns true when \p TLI has a vector mapping for \p IID at the given
+/// element type and \p EC.
+static bool hasIntrinsicVectorMapping(const TargetLibraryInfo &TLI,
+                                      Intrinsic::ID IID, Type *ScalarTy,
+                                      ElementCount EC, Module *M) {
   std::string Name = Intrinsic::getName(IID, {ScalarTy}, M);
   return hasVectorMapping(TLI, Name, EC);
 }

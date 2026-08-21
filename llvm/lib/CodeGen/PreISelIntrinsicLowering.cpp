@@ -64,24 +64,20 @@ struct PreISelIntrinsicLowering {
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
-  /// If this is true, assume it's preferable to leave memory intrinsic calls
+  /// If this is true, assume it's preferably to leave memory intrinsic calls
   /// for replacement with a library call later. Otherwise this depends on
   /// TargetLoweringInfo availability of the corresponding function.
   const bool UseMemIntrinsicLibFunc;
-
-  /// If this is true, assume ReplaceWithVeclib will run later and leave vector
-  /// math intrinsics that have a vector library mapping for it to lower.
-  const bool UseVeclibCalls;
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
       const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
-      bool UseMemIntrinsicLibFunc_ = true, bool UseVeclibCalls_ = false)
+      bool UseMemIntrinsicLibFunc_ = true)
       : TM(TM_), ModuleLibcalls(ModuleLibcalls_), LookupTTI(LookupTTI_),
-        LookupTLI(LookupTLI_), UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_),
-        UseVeclibCalls(UseVeclibCalls_) {}
+        LookupTLI(LookupTLI_), UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {
+  }
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
@@ -805,14 +801,6 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!TM || !isa<ScalableVectorType>(Ty))
           return false;
-        // Avoid scalarizing if the vector library provides an implementation
-        // and ReplaceWithVeclib is run.
-        auto *VTy = cast<VectorType>(Ty);
-        if (UseVeclibCalls &&
-            hasIntrinsicVectorMapping(LookupTLI(*CI->getFunction()),
-                                      F.getIntrinsicID(), VTy->getElementType(),
-                                      VTy->getElementCount(), &M))
-          return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
@@ -880,9 +868,7 @@ class PreISelIntrinsicLoweringLegacyPass : public ModulePass {
 public:
   static char ID;
 
-  const bool UseVeclibCalls;
-  explicit PreISelIntrinsicLoweringLegacyPass(bool UseVeclibCalls_ = false)
-      : ModulePass(ID), UseVeclibCalls(UseVeclibCalls_) {}
+  PreISelIntrinsicLoweringLegacyPass() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -903,9 +889,7 @@ public:
     };
 
     const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI,
-                                      /*UseMemIntrinsicLibFunc=*/true,
-                                      UseVeclibCalls);
+    PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI);
     return Lowering.lowerIntrinsics(M);
   }
 };
@@ -926,8 +910,8 @@ INITIALIZE_PASS_END(PreISelIntrinsicLoweringLegacyPass,
                     "pre-isel-intrinsic-lowering",
                     "Pre-ISel Intrinsic Lowering", false, false)
 
-ModulePass *llvm::createPreISelIntrinsicLoweringPass(bool UseVeclibCalls) {
-  return new PreISelIntrinsicLoweringLegacyPass(UseVeclibCalls);
+ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
+  return new PreISelIntrinsicLoweringLegacyPass();
 }
 
 PreservedAnalyses
