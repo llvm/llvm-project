@@ -267,6 +267,15 @@ set(x86_80_BIT_SOURCES
 option(COMPILER_RT_USE_LIBC_MATH
       "Use LLVM libc math routines for floating-point builtins" OFF)
 
+# libc include root; point at an isolated subset (see libc-isolation/) to prove
+# the builtins build against that subset alone. Empty = the in-tree libc.
+set(COMPILER_RT_LIBC_SHARED_INCLUDE_ROOT "" CACHE PATH
+    "Include root for the libc-backed builtins (default: the LLVM-libc source tree)")
+
+# Where compiler-rt-export-libc-shared writes that subset (per the manifest).
+set(COMPILER_RT_LIBC_SHARED_EXPORT_DIR "" CACHE PATH
+    "Destination for the extracted LLVM-libc shared subset (see libc-isolation/)")
+
 # Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
 # <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
 macro(use_libc_builtin list_var name)
@@ -282,8 +291,25 @@ if(COMPILER_RT_USE_LIBC_MATH)
 
   get_target_property(_libc_include_dirs llvm-libc-common-utilities
                       INTERFACE_INCLUDE_DIRECTORIES)
+  set(_libc_root ${_libc_include_dirs})
+
+  if(COMPILER_RT_LIBC_SHARED_INCLUDE_ROOT)
+    set(_libc_include_dirs ${COMPILER_RT_LIBC_SHARED_INCLUDE_ROOT})
+  endif()
+
   include_directories(SYSTEM ${_libc_include_dirs})
   add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  if(COMPILER_RT_LIBC_SHARED_EXPORT_DIR)
+    add_custom_target(compiler-rt-export-libc-shared
+      COMMAND ${CMAKE_COMMAND}
+              -DLIBC_ROOT=${_libc_root}
+              -DDEST=${COMPILER_RT_LIBC_SHARED_EXPORT_DIR}
+              -DMANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/libc-isolation/libc-shared-manifest.txt
+              -P ${CMAKE_CURRENT_SOURCE_DIR}/libc-isolation/export-libc-shared.cmake
+      VERBATIM
+      COMMENT "Exporting LLVM-libc shared subset to ${COMPILER_RT_LIBC_SHARED_EXPORT_DIR}")
+  endif()
 
   use_libc_builtin(GENERIC_SOURCES    adddf3)
   use_libc_builtin(GENERIC_SOURCES    addsf3)
