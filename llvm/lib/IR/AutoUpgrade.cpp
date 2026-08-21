@@ -5397,9 +5397,15 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
   unsigned OldArgCount = CI->arg_size();
   unsigned NewArgCount = NewFn->arg_size();
 
+  if (OldArgCount < FirstDefault)
+    return false;
+
+  // More arguments than the new intrinsic accepts, cannot upgrade.
   if (OldArgCount > NewArgCount)
     return false;
 
+  // The call already passes the defaulted arguments explicitly; only the
+  // callee is still the old, shorter declaration, so retarget it.
   if (OldArgCount == NewArgCount) {
     if (CI->getFunctionType() != NewFn->getFunctionType())
       return false;
@@ -5407,9 +5413,8 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
     return true;
   }
 
-  if (OldArgCount < FirstDefault)
-    return false;
-
+  // OldArgCount < NewArgCount: Fill in each missing trailing default
+  // argument from the table.
   SmallVector<Value *, 8> NewArgs(CI->args());
 
   FunctionType *NewFT = NewFn->getFunctionType();
@@ -5418,11 +5423,13 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
            "missing argument outside the default range");
     Type *ParamTy = NewFT->getParamType(Idx);
 
+    // Only integer types are supported (i1, i8, i16, i32, i64).
     if (!ParamTy->isIntegerTy())
       return false;
     NewArgs.push_back(ConstantInt::get(ParamTy, Defaults[Idx - FirstDefault]));
   }
 
+  // Preserve operand bundles by creating the call with them.
   SmallVector<OperandBundleDef, 1> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = Builder.CreateCall(NewFn, NewArgs, OpBundles);
