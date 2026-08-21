@@ -572,6 +572,72 @@ TEST(raw_ostreamTest, writeToOutputFile) {
   checkFileData(Path, "HelloWorld");
 }
 
+TEST(raw_ostreamTest, writeToOutputErrorPreservesDestination) {
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  FileRemover Cleanup(Path);
+  {
+    raw_fd_ostream Out(FD, true);
+    Out << "Original";
+  }
+
+  std::string ErrorMessage =
+      toString(createFileError(Path, make_error_code(errc::invalid_argument)));
+  EXPECT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    static_cast<raw_fd_stream &>(Out).seek(
+                                        UINT64_MAX);
+                                    return Error::success();
+                                  }),
+                    FailedWithMessage(ErrorMessage));
+  checkFileData(Path, "Original");
+}
+
+TEST(raw_ostreamTest, writeToOutputReturnedStreamErrorPreservesDestination) {
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  FileRemover Cleanup(Path);
+  {
+    raw_fd_ostream Out(FD, true);
+    Out << "Original";
+  }
+
+  std::string ErrorMessage =
+      toString(createFileError(Path, make_error_code(errc::invalid_argument)));
+  EXPECT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    auto &Stream =
+                                        static_cast<raw_fd_stream &>(Out);
+                                    Stream.seek(UINT64_MAX);
+                                    return Stream.takeError();
+                                  }),
+                    FailedWithMessage(ErrorMessage));
+  checkFileData(Path, "Original");
+}
+
+TEST(raw_ostreamTest, writeToOutputCallbackErrorPreservesDestination) {
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  FileRemover Cleanup(Path);
+  {
+    raw_fd_ostream Out(FD, true);
+    Out << "Original";
+  }
+
+  EXPECT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "Replacement";
+                                    return createStringError(
+                                        errc::invalid_argument,
+                                        "callback failed");
+                                  }),
+                    FailedWithMessage("callback failed"));
+  checkFileData(Path, "Original");
+}
+
 #ifdef __MVS__
 TEST(raw_ostreamTest, writeToOutputFileEncoding) {
   // Create the temp file with that has ISO8859-1 encoding
