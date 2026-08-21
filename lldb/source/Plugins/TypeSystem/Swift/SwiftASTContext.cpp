@@ -3285,10 +3285,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     sdk_path_override = true;
   }
 
-  // Get the precise SDK from the symbol context.
+  ModuleSP exe_module_sp =
+      target_sp ? target_sp->GetExecutableModule() : ModuleSP();
+
   std::optional<XcodeSDK> sdk;
-  if (cu)
-    if (auto platform_sp = Platform::GetHostPlatform()) {
+  if (auto platform_sp = Platform::GetHostPlatform()) {
+    if (cu) {
       auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
       if (!sdk_or_err) {
         llvm::handleAllErrors(
@@ -3304,13 +3306,26 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
         LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
                    sdk->GetString().str().c_str());
       }
+    } else if (module_sp || exe_module_sp) {
+      // There is no CU, fall back to the SDK of a prevailing module (via either
+      // the symbol context, or the executable). This avoids using a default
+      // SDK, which can cause problems when when debugging a binary built
+      // against non-default SDK.
+      auto &module = *(module_sp ? module_sp : exe_module_sp);
+      if (auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(module)) {
+        sdk = sdk_or_err->first;
+        LLDB_LOG(GetLog(LLDBLog::Types), "Using SDK from module: {0} -- {1}",
+                 sdk->GetString(), module_sp->GetFileSpec().GetFilename());
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), sdk_or_err.takeError(),
+                       "Could not determine SDK from module: {0}");
+      }
     }
+  }
   // Derive the triple next.
 
   // First, prime the compiler with the options from the main executable:
   bool got_serialized_options = false;
-  ModuleSP exe_module_sp =
-      target_sp ? target_sp->GetExecutableModule() : ModuleSP();
 
   // If we're debugging a testsuite, then treat the main test bundle
   // as the executable.
@@ -3353,7 +3368,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       LOG_PRINTF(GetLog(LLDBLog::Types), "REPL: prefer target triple.");
       preferred_arch = target_arch;
       preferred_triple = target_triple;
-    } else if (!sdk_path_override && !sdk && target_arch) {
+    } else if (!sdk_path_override && !cu && target_arch) {
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "No Swift debug info: prefer target triple.");
       if (!target_arch.IsCompatibleMatch(module_arch))
