@@ -170,7 +170,8 @@ public:
   DarwinSDKInfo(
       std::string FilePath, llvm::Triple::OSType OS,
       llvm::Triple::EnvironmentType Environment, VersionTuple Version,
-      StringRef DisplayName, VersionTuple MaximumDeploymentTarget,
+      VersionTuple DefaultDeploymentTarget, StringRef DisplayName,
+      VersionTuple MaximumDeploymentTarget,
       PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
@@ -178,7 +179,8 @@ public:
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
       : FilePath(std::move(FilePath)), OS(OS), Environment(Environment),
-        Version(Version), DisplayName(DisplayName),
+        Version(Version), DefaultDeploymentTarget(DefaultDeploymentTarget),
+        DisplayName(DisplayName),
         MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
         VersionMappings(std::move(VersionMappings)) {
@@ -202,6 +204,13 @@ public:
   llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
 
   const llvm::VersionTuple &getVersion() const { return Version; }
+
+  /// Returns the value of the "DefaultDeploymentTarget" key from
+  /// SDKSettings.json, or "Version" when the SDK doesn't specify a
+  /// "DefaultDeploymentTarget".
+  const llvm::VersionTuple &getDefaultDeploymentTarget() const {
+    return DefaultDeploymentTarget;
+  }
 
   const StringRef getDisplayName() const { return DisplayName; }
 
@@ -240,6 +249,7 @@ private:
   llvm::Triple::OSType OS;
   llvm::Triple::EnvironmentType Environment;
   VersionTuple Version;
+  VersionTuple DefaultDeploymentTarget;
   std::string DisplayName;
   VersionTuple MaximumDeploymentTarget;
   PlatformInfoStorageType PlatformInfos;
