@@ -17,7 +17,9 @@
 #include <concepts>
 #include <functional>
 #include <ranges>
+#include <string>
 #include <tuple>
+#include <vector>
 
 constexpr bool test() {
   { // 2-range product: full enumeration in lexicographic order
@@ -100,6 +102,54 @@ constexpr bool test() {
     std::array d{1, 2, 3, 4};
     auto v = std::views::cartesian_product(a, b, c, d);
     assert(v.size() == 1u * 2u * 3u * 4u);
+  }
+
+  { // [range.cartesian.overview] 25.7.33.1.3 Example 1
+    struct ConstexprStringStream {
+      std::string str;
+
+      constexpr ConstexprStringStream& operator<<(int x) { return *this << char(x + 48); }
+      constexpr ConstexprStringStream& operator<<(char c) {
+        str += c;
+        return *this;
+      }
+    };
+
+    const std::vector<int> v{0, 1, 2};
+    ConstexprStringStream out;
+    for (auto&& [a, b, c] : std::ranges::views::cartesian_product(v, v, v)) {
+      out << a << ' ' << b << ' ' << c << '\n';
+    }
+
+    const std::string_view expected =
+        "0 0 0\n"
+        "0 0 1\n"
+        "0 0 2\n"
+        "0 1 0\n"
+        "0 1 1\n"
+        "0 1 2\n"
+        "0 2 0\n"
+        "0 2 1\n"
+        "0 2 2\n"
+        "1 0 0\n"
+        "1 0 1\n"
+        "1 0 2\n"
+        "1 1 0\n"
+        "1 1 1\n"
+        "1 1 2\n"
+        "1 2 0\n"
+        "1 2 1\n"
+        "1 2 2\n"
+        "2 0 0\n"
+        "2 0 1\n"
+        "2 0 2\n"
+        "2 1 0\n"
+        "2 1 1\n"
+        "2 1 2\n"
+        "2 2 0\n"
+        "2 2 1\n"
+        "2 2 2\n";
+    assert(out.str == expected);
   }
 
   return true;
