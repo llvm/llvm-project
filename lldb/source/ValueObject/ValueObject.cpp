@@ -3281,10 +3281,15 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObjectConstResult::Create(
               exe_ctx.GetBestExecutionContextScope(),
               Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+                  "invalid cast from float to integer"));
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
       }
     }
   }
