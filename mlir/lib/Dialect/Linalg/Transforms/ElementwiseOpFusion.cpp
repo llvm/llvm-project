@@ -566,9 +566,7 @@ public:
 
       // Rewriting a concat that has other consumers could increase the amount
       // of live computation instead of just exposing fusion opportunities.
-      if (llvm::any_of(concatOp.getResult().getUses(), [&](OpOperand &use) {
-            return use.getOwner() != genericOp.getOperation();
-          }))
+      if (!concatOp->hasOneUse())
         return rewriter.notifyMatchFailure(genericOp,
                                            "concat input has another consumer");
 
@@ -613,14 +611,15 @@ public:
     for (OpOperand *operand : nonConcatInputs) {
       Type operandType = operand->get().getType();
       // Scalars do not vary along an iteration-space dimension and can be
-      // reused in every partition. Other shaped inputs must be ranked tensors
-      // so that their indexing map can be checked below.
-      if (!isa<RankedTensorType>(operandType)) {
-        if (!isa<ShapedType>(operandType))
-          continue;
+      // reused in every partition.
+      if (isa<IntegerType, FloatType, IndexType, ComplexType>(operandType))
+        continue;
+
+      // Otherwise we want ranked tensors.
+      if (!isa<RankedTensorType>(operandType))
         return rewriter.notifyMatchFailure(
             genericOp, "non-concat shaped input is not a ranked tensor");
-      }
+
       if (genericOp.getMatchingIndexingMap(operand).getResultPosition(
               splitDimExpr))
         return rewriter.notifyMatchFailure(
