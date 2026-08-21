@@ -814,17 +814,14 @@ def SPESTWX       : XForm_8<31, 151, (outs), (ins spe4rc:$RST, (memrr $RA, $RB):
 let Predicates = [HasSPE] in {
 def SELECT_CC_SPE4 : PPCCustomInserterPseudo<(outs spe4rc:$dst),
                             (ins crrc:$cond, spe4rc:$T, spe4rc:$F,
-                            i32imm:$BROPC), "#SELECT_CC_SPE4",
-                            []>;
+                            i32imm:$BROPC)>;
 def SELECT_CC_SPE  : PPCCustomInserterPseudo<(outs sperc:$dst),
-                            (ins crrc:$cond, sperc:$T, sperc:$F, i32imm:$BROPC),
-                            "#SELECT_CC_SPE",
-                            []>;
+                            (ins crrc:$cond, sperc:$T, sperc:$F, i32imm:$BROPC)>;
 def SELECT_SPE4  : PPCCustomInserterPseudo<(outs spe4rc:$dst), (ins crbitrc:$cond,
-                          spe4rc:$T, spe4rc:$F), "#SELECT_SPE4",
+                          spe4rc:$T, spe4rc:$F),
                           [(set f32:$dst, (select i1:$cond, f32:$T, f32:$F))]>;
 def SELECT_SPE   : PPCCustomInserterPseudo<(outs sperc:$dst), (ins crbitrc:$cond,
-                          sperc:$T, sperc:$F), "#SELECT_SPE",
+                          sperc:$T, sperc:$F),
                           [(set f64:$dst, (select i1:$cond, f64:$T, f64:$F))]>;
 
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),
