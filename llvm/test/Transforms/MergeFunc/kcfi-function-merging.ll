@@ -36,9 +36,77 @@ entry:
   ret i32 %y
 }
 
+; Functions with matching KCFI type identifiers should still be merged.
+
+define internal i32 @same_a() unnamed_addr !kcfi_type !2 {
+; CHECK-LABEL: define internal i32 @same_a(
+; CHECK-SAME: ) unnamed_addr !kcfi_type [[META2:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  ret i32 0
+}
+
+define internal i32 @same_b() unnamed_addr !kcfi_type !2 {
+entry:
+  ret i32 0
+}
+
+define i32 @same_caller() {
+; CHECK-LABEL: define i32 @same_caller() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @same_a()
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @same_a()
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+entry:
+  %x = call i32 @same_a()
+  %y = call i32 @same_b()
+  ret i32 %y
+}
+
+; A missing KCFI type identifier must not match a present one.
+
+define internal i32 @with_a() unnamed_addr !kcfi_type !3 {
+; CHECK-LABEL: define internal i32 @with_a(
+; CHECK-SAME: ) unnamed_addr !kcfi_type [[META3:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  ret i32 0
+}
+
+define internal i32 @without_b() unnamed_addr {
+; CHECK-LABEL: define internal i32 @without_b() unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  ret i32 0
+}
+
+define i32 @mixed_caller() {
+; CHECK-LABEL: define i32 @mixed_caller() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @with_a()
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @without_b()
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+entry:
+  %x = call i32 @with_a()
+  %y = call i32 @without_b()
+  ret i32 %y
+}
+
 !0 = !{i32 1234}
 !1 = !{i32 6789}
+!2 = !{i32 2468}
+!3 = !{i32 9753}
 ;.
 ; CHECK: [[META0]] = !{i32 1234}
 ; CHECK: [[META1]] = !{i32 6789}
+; CHECK: [[META2]] = !{i32 2468}
+; CHECK: [[META3]] = !{i32 9753}
 ;.
