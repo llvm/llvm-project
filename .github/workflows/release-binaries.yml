@@ -248,7 +248,6 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         git config --global core.autocrlf false
-        Get-ChildItem -Path C:\ -Filter candle.exe -Recurse -ErrorAction SilentlyContinue
 
     - name: Checkout LLVM
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
