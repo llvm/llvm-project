@@ -31,7 +31,7 @@ static void oops() {}
 [shader("pixel")]
 // expected-note@+1 {{conflicting attribute is here}}
 [shader("vertex")]
-int doubledUp() : A {
+float doubledUp() : SV_Target {
   return 1;
 }
 

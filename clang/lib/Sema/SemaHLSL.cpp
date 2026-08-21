@@ -1080,15 +1080,19 @@ void SemaHLSL::checkSemanticAnnotation(
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
-  auto SemanticName = SemanticAttr->getSemanticName().upper();
-  if (SemanticName == "SV_DISPATCHTHREADID" ||
-      SemanticName == "SV_GROUPINDEX" || SemanticName == "SV_GROUPTHREADID" ||
-      SemanticName == "SV_GROUPID") {
+  llvm::dxbc::PSV::SemanticKind SemanticKind =
+      llvm::hlsl::getSemanticKind(SemanticAttr->getSemanticName());
+  llvm::hlsl::SemanticInterpretation Interpretation =
+      llvm::hlsl::getInterpretationKind(SemanticKind, ST, SC.CurrentIOType);
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Invalid)
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  llvm::hlsl::getAvailableStages(SemanticKind));
 
-    if (ST != llvm::Triple::Compute)
-      diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
-                                    {{llvm::Triple::Compute, IOType::In}});
-
+  switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::DispatchThreadID:
+  case llvm::dxbc::PSV::SemanticKind::GroupID:
+  case llvm::dxbc::PSV::SemanticKind::GroupIndex:
+  case llvm::dxbc::PSV::SemanticKind::GroupThreadID:
     if (SemanticAttr->getSemanticIndex() != 0) {
       std::string PrettyName =
           "'" + SemanticAttr->getSemanticName().str() + "'";
@@ -1096,33 +1100,10 @@ void SemaHLSL::checkSemanticAnnotation(
            diag::err_hlsl_semantic_indexing_not_supported)
           << PrettyName;
     }
-    return;
+    break;
+  default:
+    break;
   }
-
-  if (SemanticName == "SV_POSITION") {
-    // SV_Position can be an input or output in vertex shaders,
-    // but only an input in pixel shaders.
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
-                                  {{llvm::Triple::Vertex, IOType::InOut},
-                                   {llvm::Triple::Pixel, IOType::In}});
-    return;
-  }
-  if (SemanticName == "SV_VERTEXID") {
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
-                                  {{llvm::Triple::Vertex, IOType::In}});
-    return;
-  }
-
-  if (SemanticName == "SV_TARGET") {
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
-                                  {{llvm::Triple::Pixel, IOType::Out}});
-    return;
-  }
-
-  // FIXME: catch-all for non-implemented system semantics reaching this
-  // location.
-  if (SemanticAttr->getAttrName()->getName().starts_with_insensitive("SV_"))
-    llvm_unreachable("Unknown SemanticAttr");
 }
 
 void SemaHLSL::diagnoseAttrStageMismatch(
@@ -1141,9 +1122,21 @@ void SemaHLSL::diagnoseAttrStageMismatch(
 
 void SemaHLSL::diagnoseSemanticStageMismatch(
     const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
-    std::initializer_list<SemanticStageInfo> Allowed) {
+    ArrayRef<SemanticStageInfo> Allowed) {
+  SmallVector<SemanticStageInfo, 8> CombinedAllowed;
+  for (const SemanticStageInfo &Case : Allowed) {
+    auto It = llvm::find_if(CombinedAllowed, [&](SemanticStageInfo Info) {
+      return Info.Stage == Case.Stage;
+    });
+    if (It == CombinedAllowed.end()) {
+      CombinedAllowed.push_back(Case);
+      continue;
+    }
+    It->AllowedIOTypesMask =
+        static_cast<IOType>(It->AllowedIOTypesMask | Case.AllowedIOTypesMask);
+  }
 
-  for (auto &Case : Allowed) {
+  for (auto &Case : CombinedAllowed) {
     if (Case.Stage != Stage)
       continue;
 
@@ -1152,7 +1145,8 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
 
     SmallVector<std::string, 8> ValidCases;
     llvm::transform(
-        Allowed, std::back_inserter(ValidCases), [](SemanticStageInfo Case) {
+        CombinedAllowed, std::back_inserter(ValidCases),
+        [](SemanticStageInfo Case) {
           SmallVector<std::string, 2> ValidType;
           if (Case.AllowedIOTypesMask & IOType::In)
             ValidType.push_back("input");
@@ -1178,14 +1172,15 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
 
   SmallVector<StringRef, 8> StageStrings;
   llvm::transform(
-      Allowed, std::back_inserter(StageStrings), [](SemanticStageInfo Case) {
+      CombinedAllowed, std::back_inserter(StageStrings),
+      [](SemanticStageInfo Case) {
         return StringRef(
             HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage));
       });
 
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
       << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
-      << (Allowed.size() != 1) << join(StageStrings, ", ");
+      << (CombinedAllowed.size() != 1) << join(StageStrings, ", ");
 }
 
 template <CastKind Kind>

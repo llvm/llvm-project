@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -333,7 +334,7 @@ private:
   void diagnoseSemanticStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       llvm::hlsl::IOType CurrentIOType,
-      std::initializer_list<llvm::hlsl::SemanticStageInfo> AllowedStages);
+      llvm::ArrayRef<llvm::hlsl::SemanticStageInfo> AllowedStages);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
