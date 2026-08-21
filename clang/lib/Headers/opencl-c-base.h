@@ -185,7 +185,16 @@ typedef double double16 __attribute__((ext_vector_type(16)));
 #define NAN as_float(INT_MAX)
 
 #define FP_ILOGB0    INT_MIN
+
+/**
+ * The OpenCL C spec allows the implementation to choose the value of the
+ * FP_ILOGBNAN macro between INT_MIN and INT_MAX.
+ */
+#ifdef __OPENCL_FP_ILOGBNAN_MIN
+#define FP_ILOGBNAN  INT_MIN
+#else
 #define FP_ILOGBNAN  INT_MAX
+#endif
 
 #define FLT_DIG 6
 #define FLT_MANT_DIG 24

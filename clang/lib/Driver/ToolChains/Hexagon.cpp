@@ -365,11 +365,14 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     };
 
     if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib, options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
-    else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
-                          options::OPT_r))
+                     options::OPT_nostdlib, options::OPT_r)) {
+      if (IsStatic && IsPIE)
+        CmdArgs.push_back(Args.MakeArgString(StartFile("rcrt1.o")));
+      else
+        CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
+    } else if (Args.hasArg(options::OPT_shared) &&
+               !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                            options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(StartFile("crti.o")));
 
     if (!MLSuffix.empty()) {
@@ -890,6 +893,23 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
       CC1Args.push_back(Feature);
     }
   }
+
+  // Select the shadow call stack pointer register.  It has to hold a value
+  // across arbitrary calls, so only the callee-saved registers r16-r27 are
+  // allowed (Hexagon ABI, "Register usage across calls").
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_mhexagon_scs_reg)) {
+    StringRef Val(A->getValue());
+    unsigned RegNo = 0;
+    if (!Val.consume_front("r") || Val.getAsInteger(10, RegNo) || RegNo < 16 ||
+        RegNo > 27) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getSpelling() << A->getValue();
+    } else {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back(DriverArgs.MakeArgString("+scs-reg-r" + Twine(RegNo)));
+    }
+  }
+
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");

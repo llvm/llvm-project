@@ -23,6 +23,7 @@
 #include "Thumb1FrameLowering.h"
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -88,15 +89,17 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
+                           FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
                            bool MinSize, DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
+      FloatABIType(FloatABI), ABI(ABI),
       FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
-                : !isThumb()   ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
+                : !isThumb() ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                              : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
@@ -197,6 +200,82 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
         Info.setLibcallImpl(LC.Op, LC.Impl);
     }
   }
+
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } AEABISelected[] = {
+      // Double-precision arithmetic.
+      {RTLIB::ADD_F64, RTLIB::impl___aeabi_dadd},
+      {RTLIB::DIV_F64, RTLIB::impl___aeabi_ddiv},
+      {RTLIB::MUL_F64, RTLIB::impl___aeabi_dmul},
+      {RTLIB::SUB_F64, RTLIB::impl___aeabi_dsub},
+      // Double-precision comparisons.
+      {RTLIB::OEQ_F64, RTLIB::impl___aeabi_dcmpeq},
+      {RTLIB::OLT_F64, RTLIB::impl___aeabi_dcmplt},
+      {RTLIB::OLE_F64, RTLIB::impl___aeabi_dcmple},
+      {RTLIB::OGE_F64, RTLIB::impl___aeabi_dcmpge},
+      {RTLIB::OGT_F64, RTLIB::impl___aeabi_dcmpgt},
+      {RTLIB::UO_F64, RTLIB::impl___aeabi_dcmpun},
+      // Single-precision arithmetic.
+      {RTLIB::ADD_F32, RTLIB::impl___aeabi_fadd},
+      {RTLIB::DIV_F32, RTLIB::impl___aeabi_fdiv},
+      {RTLIB::MUL_F32, RTLIB::impl___aeabi_fmul},
+      {RTLIB::SUB_F32, RTLIB::impl___aeabi_fsub},
+      // Single-precision comparisons.
+      {RTLIB::OEQ_F32, RTLIB::impl___aeabi_fcmpeq},
+      {RTLIB::OLT_F32, RTLIB::impl___aeabi_fcmplt},
+      {RTLIB::OLE_F32, RTLIB::impl___aeabi_fcmple},
+      {RTLIB::OGE_F32, RTLIB::impl___aeabi_fcmpge},
+      {RTLIB::OGT_F32, RTLIB::impl___aeabi_fcmpgt},
+      {RTLIB::UO_F32, RTLIB::impl___aeabi_fcmpun},
+      // Floating-point to integer conversions.
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___aeabi_d2iz},
+      {RTLIB::FPTOUINT_F64_I32, RTLIB::impl___aeabi_d2uiz},
+      {RTLIB::FPTOSINT_F64_I64, RTLIB::impl___aeabi_d2lz},
+      {RTLIB::FPTOUINT_F64_I64, RTLIB::impl___aeabi_d2ulz},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___aeabi_f2iz},
+      {RTLIB::FPTOUINT_F32_I32, RTLIB::impl___aeabi_f2uiz},
+      {RTLIB::FPTOSINT_F32_I64, RTLIB::impl___aeabi_f2lz},
+      {RTLIB::FPTOUINT_F32_I64, RTLIB::impl___aeabi_f2ulz},
+      // Integer to floating-point conversions.
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___aeabi_i2d},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___aeabi_ui2d},
+      {RTLIB::SINTTOFP_I64_F64, RTLIB::impl___aeabi_l2d},
+      {RTLIB::UINTTOFP_I64_F64, RTLIB::impl___aeabi_ul2d},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___aeabi_i2f},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___aeabi_ui2f},
+      {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___aeabi_l2f},
+      {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___aeabi_ul2f},
+      // Long long helpers.
+      {RTLIB::MUL_I64, RTLIB::impl___aeabi_lmul},
+      {RTLIB::SHL_I64, RTLIB::impl___aeabi_llsl},
+      {RTLIB::SRL_I64, RTLIB::impl___aeabi_llsr},
+      {RTLIB::SRA_I64, RTLIB::impl___aeabi_lasr},
+      // Integer division.
+      {RTLIB::SDIV_I32, RTLIB::impl___aeabi_idiv},
+      {RTLIB::UDIV_I32, RTLIB::impl___aeabi_uidiv},
+  };
+
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Info.getRuntimeLibcallsInfo();
+  for (const auto &LC : AEABISelected) {
+    if (RTLCI.isAvailable(LC.Impl))
+      Info.setLibcallImpl(LC.Op, LC.Impl);
+  }
+
+  // AEABI provides an ordered-equal compare (__aeabi_{f,d}cmpeq) but no
+  // not-equal compare. Clear the not-equal libcalls so UNE will lower as !OEQ
+  // using the AEABI compare, rather than emitting the generic not-equal helper
+  // which would otherwise be preferred.
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq)) {
+    Info.setLibcallImpl(RTLIB::UNE_F32, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F32, RTLIB::Unsupported);
+  }
+
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq)) {
+    Info.setLibcallImpl(RTLIB::UNE_F64, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F64, RTLIB::Unsupported);
+  }
 }
 
 bool ARMSubtarget::isXRaySupported() const {
@@ -255,9 +334,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (TM.isAAPCS_ABI())
+  if (isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (TM.isAAPCS16_ABI())
+  if (isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -397,12 +476,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         (!GV->isDSOLocal() || GV->isWeakForLinker());
-}
-
-unsigned ARMSubtarget::getMispredictionPenalty() const {
-  return SchedModel.MispredictPenalty;
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
@@ -497,7 +571,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
     return 2;
 
   // Allocate low registers first, so we can select more 16-bit instructions.
-  // We also (in ignoreCSRForAllocationOrder) override  the default behaviour
+  // We also (in getCSRAllocationOrderMask) override  the default behaviour
   // with regards to callee-saved registers, because pushing extra registers is
   // much cheaper (in terms of code size) than using high registers. After
   // that, we allocate r12 (doesn't need to be saved), lr (saving it means we
@@ -511,15 +585,19 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
   return 1;
 }
 
-bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               MCRegister PhysReg) const {
+void ARMSubtarget::getCSRAllocationOrderMask(const MachineFunction &MF,
+                                             BitVector &Mask) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
   // their cost per use. When optForMinSize, we prefer the low regs even if
   // they are CSR because usually push/pop can be folded into existing ones.
-  return isThumb2() && MF.getFunction().hasMinSize() &&
-         ARM::GPRRegClass.contains(PhysReg);
+  if (!isThumb2() || !MF.getFunction().hasMinSize())
+    return;
+
+  Mask.resize(getRegisterInfo()->getNumRegs());
+  for (MCPhysReg Reg : ARM::GPRRegClass)
+    Mask.set(Reg);
 }
 
 ARMSubtarget::PushPopSplitVariation

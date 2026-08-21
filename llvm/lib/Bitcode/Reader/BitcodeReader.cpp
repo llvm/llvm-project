@@ -2176,6 +2176,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
     return Attribute::NoFree;
+  case bitc::ATTR_KIND_NOFREEOBJ:
+    return Attribute::NoFreeObj;
   case bitc::ATTR_KIND_NO_IMPLICIT_FLOAT:
     return Attribute::NoImplicitFloat;
   case bitc::ATTR_KIND_NO_INLINE:
@@ -6454,19 +6456,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_LOADATOMIC: {
-       // LOADATOMIC: [opty, op, align, vol, ordering, ssid]
+      // LOADATOMIC: [opty, op, align, vol, ordering, ssid, elementwise?]
       unsigned OpNum = 0;
       Value *Op;
       unsigned OpTypeID;
       if (getValueTypePair(Record, OpNum, NextValueNo, Op, OpTypeID, CurBB) ||
-          (OpNum + 4 != Record.size() && OpNum + 5 != Record.size()))
+          (OpNum + 4 != Record.size() && OpNum + 5 != Record.size() &&
+           OpNum + 6 != Record.size()))
         return error("Invalid load atomic record");
 
       if (!isa<PointerType>(Op->getType()))
         return error("Load operand is not a pointer type");
 
       Type *Ty = nullptr;
-      if (OpNum + 5 == Record.size()) {
+      if (Record.size() >= OpNum + 5) {
         ResTypeID = Record[OpNum++];
         Ty = getTypeByID(ResTypeID);
       } else {
@@ -6488,13 +6491,18 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid load atomic record");
       SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+      bool IsElementwise = Record.size() > OpNum + 4 && Record[OpNum + 4];
 
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
       if (!Align)
         return error("Alignment missing from atomic load");
-      I = new LoadInst(Ty, Op, "", Record[OpNum + 1], *Align, Ordering, SSID);
+      I = new LoadInst(
+          Ty, Op, "",
+          LoadStoreInstProperties{/*IsVolatile=*/Record[OpNum + 1] != 0, *Align,
+                                  Ordering, SSID, IsElementwise},
+          /*InsertBefore=*/nullptr);
       InstructionList.push_back(I);
       break;
     }
@@ -6535,7 +6543,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
     case bitc::FUNC_CODE_INST_STOREATOMIC:
     case bitc::FUNC_CODE_INST_STOREATOMIC_OLD: {
-      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, ssid]
+      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, ssid,
+      // elementwise?]
       unsigned OpNum = 0;
       Value *Val, *Ptr;
       unsigned PtrTypeID, ValTypeID;
@@ -6552,7 +6561,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid store atomic record");
       }
 
-      if (OpNum + 4 != Record.size())
+      if (OpNum + 4 != Record.size() && OpNum + 5 != Record.size())
         return error("Invalid store atomic record");
 
       if (Error Err = typeCheckLoadStoreInst(Val->getType(), Ptr->getType()))
@@ -6571,7 +6580,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return Err;
       if (!Align)
         return error("Alignment missing from atomic store");
-      I = new StoreInst(Val, Ptr, Record[OpNum + 1], *Align, Ordering, SSID);
+
+      bool IsElementwise = Record.size() > OpNum + 4 && Record[OpNum + 4];
+
+      I = new StoreInst(
+          Val, Ptr,
+          LoadStoreInstProperties{/*IsVolatile=*/Record[OpNum + 1] != 0, *Align,
+                                  Ordering, SSID, IsElementwise},
+          /*InsertBefore=*/nullptr);
       InstructionList.push_back(I);
       break;
     }

@@ -866,6 +866,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
     return bitc::ATTR_KIND_NOFREE;
+  case Attribute::NoFreeObj:
+    return bitc::ATTR_KIND_NOFREEOBJ;
   case Attribute::NoImplicitFloat:
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
@@ -3568,25 +3570,31 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     break;
   }
 
-  case Instruction::Load:
-    if (cast<LoadInst>(I).isAtomic()) {
+  case Instruction::Load: {
+    const auto &LI = cast<LoadInst>(I);
+    if (LI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_LOADATOMIC;
-      pushValueAndType(I.getOperand(0), InstID, Vals);
+      pushValueAndType(LI.getOperand(0), InstID, Vals);
     } else {
       Code = bitc::FUNC_CODE_INST_LOAD;
-      if (!pushValueAndType(I.getOperand(0), InstID, Vals)) // ptr
+      if (!pushValueAndType(LI.getOperand(0), InstID, Vals)) // ptr
         AbbrevToUse = FUNCTION_INST_LOAD_ABBREV;
     }
-    Vals.push_back(VE.getTypeID(I.getType()));
-    Vals.push_back(getEncodedAlign(cast<LoadInst>(I).getAlign()));
-    Vals.push_back(cast<LoadInst>(I).isVolatile());
-    if (cast<LoadInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<LoadInst>(I).getOrdering()));
-      Vals.push_back(getEncodedSyncScopeID(cast<LoadInst>(I).getSyncScopeID()));
+    Vals.push_back(VE.getTypeID(LI.getType()));
+    Vals.push_back(getEncodedAlign(LI.getAlign()));
+    Vals.push_back(LI.isVolatile());
+    if (LI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(LI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(LI.getSyncScopeID()));
+      if (LI.isElementwise())
+        Vals.push_back(1);
     }
     break;
-  case Instruction::Store:
-    if (cast<StoreInst>(I).isAtomic()) {
+  }
+
+  case Instruction::Store: {
+    const auto &SI = cast<StoreInst>(I);
+    if (SI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_STOREATOMIC;
     } else {
       Code = bitc::FUNC_CODE_INST_STORE;
@@ -3596,14 +3604,17 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       AbbrevToUse = 0;
     if (pushValueAndType(I.getOperand(0), InstID, Vals)) // valty + val
       AbbrevToUse = 0;
-    Vals.push_back(getEncodedAlign(cast<StoreInst>(I).getAlign()));
-    Vals.push_back(cast<StoreInst>(I).isVolatile());
-    if (cast<StoreInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<StoreInst>(I).getOrdering()));
-      Vals.push_back(
-          getEncodedSyncScopeID(cast<StoreInst>(I).getSyncScopeID()));
+    Vals.push_back(getEncodedAlign(SI.getAlign()));
+    Vals.push_back(SI.isVolatile());
+    if (SI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(SI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(SI.getSyncScopeID()));
+      if (SI.isElementwise())
+        Vals.push_back(1);
     }
     break;
+  }
+
   case Instruction::AtomicCmpXchg:
     Code = bitc::FUNC_CODE_INST_CMPXCHG;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr

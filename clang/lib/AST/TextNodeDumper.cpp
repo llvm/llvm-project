@@ -19,10 +19,10 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
@@ -372,7 +372,10 @@ void TextNodeDumper::Visit(const OMPClause *C) {
   }
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
-    StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
+    OpenMPClauseKind CKind = C->getClauseKind();
+    StringRef ClauseName(CKind == llvm::omp::Clause::OMPC_update_depend_objects
+                             ? StringRef("UpdateDependObjects")
+                             : llvm::omp::getOpenMPClauseName(CKind));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
   }
@@ -756,6 +759,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     }
     OS << ", Null=" << Value.isNullPointer()
        << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", OnePastTheEnd=" << Value.isLValueOnePastTheEnd()
        << ", HasPath=" << Value.hasLValuePath();
     if (Value.hasLValuePath()) {
       OS << ", PathLength=" << Value.getLValuePath().size();
@@ -1638,6 +1642,13 @@ void clang::TextNodeDumper::VisitDependentScopeDeclRefExpr(
   dumpNestedNameSpecifier(Node->getQualifier());
 }
 
+void clang::TextNodeDumper::VisitDependentTemplateIdExpr(
+    const DependentTemplateIdExpr *Node) {
+  OS << (Node->isConceptReference() ? " concept" : " variable template");
+  OS << ' ';
+  dumpBareTemplateName(Node->getTemplateName());
+}
+
 void TextNodeDumper::VisitUnresolvedLookupExpr(
     const UnresolvedLookupExpr *Node) {
   OS << " (";
@@ -2244,7 +2255,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -3043,6 +3054,18 @@ void TextNodeDumper::VisitExplicitInstantiationDecl(
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
+  if (D->isPackExpansion())
+    OS << "...";
+}
+
+void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(D);
+    return;
+  }
+
+  dumpBareTemplateName(D->getFriendTemplateName());
   if (D->isPackExpansion())
     OS << "...";
 }

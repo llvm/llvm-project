@@ -65,12 +65,26 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
     Support
   LINK_LIBS
     lldbInterpreterInterfaces
+    lldbBreakpoint
     lldbCommands
     lldbCore
     lldbDataFormatters
     lldbHost
+    lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbInterpreterInterfaces
+    lldbBreakpoint
+    lldbCommands
+    lldbCore
+    lldbDataFormatters
+    lldbHost
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbValueObject
   )
 
 add_dependencies(lldbInterpreter

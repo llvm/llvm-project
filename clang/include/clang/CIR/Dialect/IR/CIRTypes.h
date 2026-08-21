@@ -23,6 +23,11 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+#include "llvm/ADT/SmallVector.h"
+
+namespace llvm {
+struct fltSemantics;
+} // namespace llvm
 
 namespace cir {
 
@@ -33,6 +38,22 @@ struct UnionTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
+/// Whether a member of this kind holds data for argument passing.
+inline bool holdsDataForABI(RecordMemberKind kind) {
+  return kind == RecordMemberKind::Data || kind == RecordMemberKind::BitField;
+}
+
+/// Whether a member of this kind is a bit-field access unit holding data.  The
+/// compiler chooses an access unit's width, so the member can be narrower than
+/// the declared type of the bit-fields it holds.  A true answer does not mean
+/// the member holds a bit-field: a union's base subobject takes this mark when
+/// any variant is an access unit, whatever its own storage type came from.  A
+/// unit holding only unnamed bit-fields is `empty` instead, and is told apart
+/// from the rest of `empty` by occupying bytes.
+inline bool isBitFieldAccessUnit(RecordMemberKind kind) {
+  return kind == RecordMemberKind::BitField;
+}
+
 /// Returns true if the type is a CIR sized type.
 ///
 /// Types are sized if they implement SizedTypeInterface and
@@ -41,6 +62,12 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// Unsized types are those that do not have a size, such as
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
+
+/// Returns the CIR floating-point type for the given semantics, or a null
+/// type if CIR has no type for it (e.g. PPCDoubleDouble or a Float8 format).
+/// Mirrors llvm::Type::getFloatingPointTy.
+cir::FPTypeInterface getFloatingPointType(const llvm::fltSemantics &sem,
+                                          mlir::MLIRContext *ctx);
 
 //===----------------------------------------------------------------------===//
 // AddressSpace helpers
@@ -112,18 +139,32 @@ public:
   bool isComplete() const { return !isIncomplete(); }
   bool getPacked() const;
   bool getPadded() const;
+  llvm::ArrayRef<RecordMemberKind> getMemberKinds() const;
 
   bool isClass() const;
   bool isStruct() const;
   bool isUnion() const { return mlir::isa<UnionType>(*this); }
+
+  /// Whether no member holds data.  Vacuously true for a complete record with
+  /// no members, and false for an incomplete one, whose members are not known
+  /// yet.  A union's tail-padding slot is not a member and does not count.
+  bool isEmptyForABI() const;
+
+  /// One `Data` kind per member.  Takes the member list rather than a count so
+  /// the length cannot drift from the record it describes.
+  static llvm::SmallVector<RecordMemberKind>
+  getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
 
   size_t getNumElements() const { return getMembers().size(); }
   mlir::Type getElementType(size_t idx) const { return getMembers()[idx]; }
   std::string getKindAsStr() const;
   std::string getPrefixedName() const;
 
-  void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
-                mlir::Type padding = {});
+  /// \p padding is union-only.  A struct carries its padding as a member
+  /// marked pad.
+  void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                mlir::Type padding,
+                llvm::ArrayRef<RecordMemberKind> memberKinds);
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                             unsigned idx) const;
   bool isLayoutIdentical(const RecordType &other);

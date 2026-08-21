@@ -24,6 +24,16 @@ TEST(UriParserTest, LongPath) {
             URI::Parse("x://y/abc/def/xyz"));
 }
 
+TEST(UriParserTest, WindowsDriveLetterPath) {
+  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, "/C:/Users/a/sock"}),
+            URI::Parse("unix-connect:///C:/Users/a/sock"));
+}
+
+TEST(UriParserTest, WindowsUNCPath) {
+  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, "//server/share/sock"}),
+            URI::Parse("unix-connect:////server/share/sock"));
+}
+
 TEST(UriParserTest, TypicalPortPathIPv4) {
   EXPECT_EQ((URI{"connect", "192.168.100.132", 5432, "/"}),
             URI::Parse("connect://192.168.100.132:5432/"));

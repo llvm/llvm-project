@@ -10,6 +10,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DLOCATION_TYPE=int3 -DZEROS=0 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2D -DLOCATION_DIM=3 -DCOORD_DIM=2 -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=2 -DRW=1
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DLOCATION_TYPE=int3 -DZEROS=0 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2D -DLOCATION_DIM=3 -DCOORD_DIM=2 -DCOORD_MASK="<i32 0, i32 1>" -DARRAYED=0 -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 -DFORMAT24=24 -DFORMAT25=25
 
+// RWTexture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOCATION_TYPE=int4 -DZEROS=" 0, 0" -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2DArray -DLOCATION_DIM=4 -DCOORD_DIM=3 -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DDXIL_TY=7 -DRW=1
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOCATION_TYPE=int4 -DZEROS=" 0, 0" -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2DArray -DLOCATION_DIM=4 -DCOORD_DIM=3 -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DARRAYED=1 -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 -DFORMAT24=24 -DFORMAT25=25
+
 TEXTURE<float4> t;
 
 // CHECK: define hidden {{.*}} <4 x float> @test_load(int vector[2])
@@ -32,8 +36,8 @@ float4 test_load(int2 loc : LOC) : SV_Target {
 // CHECK: %[[LOCATION_VAL:.*]] = load <[[LOCATION_DIM]] x i32>, ptr %[[LOCATION_ADDR]]
 // CHECK: %[[COORD:.*]] = shufflevector <[[LOCATION_DIM]] x i32> %[[LOCATION_VAL]], <[[LOCATION_DIM]] x i32> poison, <[[COORD_DIM]] x i32> [[COORD_MASK]]
 // CHECK: %[[LOD:.*]] = extractelement <[[LOCATION_DIM]] x i32> %[[LOCATION_VAL]], i64 [[COORD_DIM]]
-// DXIL: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> zeroinitializer)
 // CHECK: ret <4 x float> %[[RES]]
 
 // CHECK: define hidden {{.*}} <4 x float> @test_load_offset(int vector[2])
@@ -59,8 +63,8 @@ float4 test_load_offset(int2 loc : LOC) : SV_Target {
 // CHECK: %[[COORD:.*]] = shufflevector <[[LOCATION_DIM]] x i32> %[[LOCATION_VAL]], <[[LOCATION_DIM]] x i32> poison, <[[COORD_DIM]] x i32> [[COORD_MASK]]
 // CHECK: %[[LOD:.*]] = extractelement <[[LOCATION_DIM]] x i32> %[[LOCATION_VAL]], i64 [[COORD_DIM]]
 // CHECK: %[[OFFSET_VAL:.*]] = load <2 x i32>, ptr %[[OFFSET_ADDR]]
-// DXIL: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> %[[OFFSET_VAL]])
-// SPIRV: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> %[[OFFSET_VAL]])
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> %[[OFFSET_VAL]])
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <2 x i32> %[[OFFSET_VAL]])
 // CHECK: ret <4 x float> %[[RES]]
 
 
@@ -71,8 +75,8 @@ TEXTURE<float> t_float;
 
 // CHECK: define hidden {{.*}} float @test_load_float(int vector[2])
 // CHECK: define linkonce_odr hidden {{.*}} float @hlsl::[[TEXTURE]]<float>::Load(int vector[[[LOCATION_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_{{.*}}("dx.Texture", float, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call {{.*}} float @llvm.spv.resource.load.level.f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT3]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_{{.*}}("dx.Texture", float, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.load.level.f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT3]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
 // CHECK: ret float %[[RES]]
 float test_load_float(int2 loc : LOC) {
   return t_float.Load(LOCATION_TYPE(loc, ZEROS));
@@ -86,8 +90,8 @@ float test_load_offset_float(int2 loc : LOC) {
 }
 
 // CHECK: define linkonce_odr hidden {{.*}} float @hlsl::[[TEXTURE]]<float>::Load(int vector[[[LOCATION_DIM]]], int vector[2])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]], <2 x i32> {{.*}} %[[OFFSET:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_{{.*}}("dx.Texture", float, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
-// SPIRV: %[[RES:.*]] = call {{.*}} float @llvm.spv.resource.load.level.f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT3]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_{{.*}}("dx.Texture", float, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.load.level.f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT3]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
 // CHECK: ret float %[[RES]]
 
 TEXTURE<float2> t_float2;
@@ -100,8 +104,8 @@ float2 test_load_float2(int2 loc : LOC) {
 }
 
 // CHECK: define linkonce_odr hidden {{.*}} <2 x float> @hlsl::[[TEXTURE]]<float vector[2]>::Load(int vector[[[LOCATION_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} <2 x float> @llvm.dx.resource.load.level.v2f32.tdx.Texture_v2f32_{{.*}}("dx.Texture", <2 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call {{.*}} <2 x float> @llvm.spv.resource.load.level.v2f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT6]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.dx.resource.load.level.v2f32.tdx.Texture_v2f32_{{.*}}("dx.Texture", <2 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.spv.resource.load.level.v2f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT6]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
 // CHECK: ret <2 x float> %[[RES]]
 
 // CHECK: define hidden {{.*}} <2 x float> @test_load_offset_float2(int vector[2])
@@ -112,8 +116,8 @@ float2 test_load_offset_float2(int2 loc : LOC) {
 }
 
 // CHECK: define linkonce_odr hidden {{.*}} <2 x float> @hlsl::[[TEXTURE]]<float vector[2]>::Load(int vector[[[LOCATION_DIM]]], int vector[2])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]], <2 x i32> {{.*}} %[[OFFSET:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} <2 x float> @llvm.dx.resource.load.level.v2f32.tdx.Texture_v2f32_{{.*}}("dx.Texture", <2 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
-// SPIRV: %[[RES:.*]] = call {{.*}} <2 x float> @llvm.spv.resource.load.level.v2f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT6]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.dx.resource.load.level.v2f32.tdx.Texture_v2f32_{{.*}}("dx.Texture", <2 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.spv.resource.load.level.v2f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT6]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
 // CHECK: ret <2 x float> %[[RES]]
 
 TEXTURE<float3> t_float3;
@@ -126,8 +130,8 @@ float3 test_load_float3(int2 loc : LOC) {
 }
 
 // CHECK: define linkonce_odr hidden {{.*}} <3 x float> @hlsl::[[TEXTURE]]<float vector[3]>::Load(int vector[[[LOCATION_DIM]]])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} <3 x float> @llvm.dx.resource.load.level.v3f32.tdx.Texture_v3f32_{{.*}}("dx.Texture", <3 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call {{.*}} <3 x float> @llvm.spv.resource.load.level.v3f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.dx.resource.load.level.v3f32.tdx.Texture_v3f32_{{.*}}("dx.Texture", <3 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.spv.resource.load.level.v3f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
 // CHECK: ret <3 x float> %[[RES]]
 
 // CHECK: define hidden {{.*}} <3 x float> @test_load_offset_float3(int vector[2])
@@ -138,8 +142,8 @@ float3 test_load_offset_float3(int2 loc : LOC) {
 }
 
 // CHECK: define linkonce_odr hidden {{.*}} <3 x float> @hlsl::[[TEXTURE]]<float vector[3]>::Load(int vector[[[LOCATION_DIM]]], int vector[2])(ptr {{.*}} %[[THIS:.*]], <[[LOCATION_DIM]] x i32> {{.*}} %[[LOCATION:.*]], <2 x i32> {{.*}} %[[OFFSET:.*]])
-// DXIL: %[[RES:.*]] = call {{.*}} <3 x float> @llvm.dx.resource.load.level.v3f32.tdx.Texture_v3f32_{{.*}}("dx.Texture", <3 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
-// SPIRV: %[[RES:.*]] = call {{.*}} <3 x float> @llvm.spv.resource.load.level.v3f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.dx.resource.load.level.v3f32.tdx.Texture_v3f32_{{.*}}("dx.Texture", <3 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.spv.resource.load.level.v3f32.tspirv.Image_f32_{{.*}}("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], 0) %{{.*}}, <[[COORD_DIM]] x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> %{{.*}})
 // CHECK: ret <3 x float> %[[RES]]
 
 TEXTURE<int> t_int;

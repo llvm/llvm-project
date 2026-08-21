@@ -38,9 +38,9 @@ void test_basic_new() {
 // CHECK:   cir.return
 
 // LLVM: define{{.*}} void @_Z14test_basic_newv
-// LLVM:   %[[PS_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PN_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PD_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[PS_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[PN_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[PD_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[NEW_S:.*]] = call{{.*}} ptr @_Znwm(i64 noundef 8)
 // LLVM:   store ptr %[[NEW_S]], ptr %[[PS_ADDR]], align 8
 // LLVM:   %[[NEW_INT:.*]] = call{{.*}} ptr @_Znwm(i64 noundef 4)
@@ -84,8 +84,8 @@ void test_new_with_init() {
 // CHECK:   cir.return
 
 // LLVM: define{{.*}} void @_Z18test_new_with_initv
-// LLVM:   %[[PN_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PD_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[PN_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[PD_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[NEW_INT:.*]] = call{{.*}} ptr @_Znwm(i64 noundef 4)
 // LLVM:   store i32 2, ptr %[[NEW_INT]], align 4
 // LLVM:   store ptr %[[NEW_INT]], ptr %[[PN_ADDR]], align 8
@@ -135,8 +135,8 @@ void test_new_with_ctor() {
 // CHECK:   cir.return
 
 // LLVM: define{{.*}} void @_Z18test_new_with_ctorv
-// LLVM:   %[[PS2_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PS2_2_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[PS2_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[PS2_2_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[NEW_S2:.*]] = call{{.*}} ptr @_Znwm(i64 noundef 8)
 // LLVM:   call{{.*}} void @_ZN2S2C1Ev(ptr {{.*}} %[[NEW_S2]])
 // LLVM:   store ptr %[[NEW_S2]], ptr %[[PS2_ADDR]], align 8
@@ -170,7 +170,7 @@ void test_new_with_complex_type() {
 // CHECK:   cir.store{{.*}} %[[COMPLEX_PTR]], %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>
 
 // LLVM: define{{.*}} void @_Z26test_new_with_complex_typev
-// LLVM:   %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[A_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[NEW_COMPLEX:.*]] = call noundef nonnull ptr @_Znwm(i64 noundef 8)
 // LLVM:   store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[NEW_COMPLEX]], align 8
 // LLVM:   store ptr %[[NEW_COMPLEX]], ptr %[[A_ADDR]], align 8
@@ -198,7 +198,7 @@ void t_new_constant_size() {
 // CHECK:  }
 
 // LLVM: define{{.*}} void @_Z19t_new_constant_sizev
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[CALL:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 128)
 // LLVM:   store ptr %[[CALL]], ptr %[[P_ADDR]], align 8
 
@@ -233,7 +233,7 @@ void t_constant_size_nontrivial() {
 // CHECK:  }
 
 // LLVM: @_Z26t_constant_size_nontrivialv()
-// LLVM:   %[[ALLOCA:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[ALLOCA:.*]] = alloca ptr, align 8
 // LLVM:   %[[COOKIE_PTR:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 11)
 // LLVM:   store i64 3, ptr %[[COOKIE_PTR]], align 8
 // LLVM:   %[[ALLOCATED_PTR:.*]] = getelementptr i8, ptr %[[COOKIE_PTR]], i64 8
@@ -273,7 +273,7 @@ void t_constant_size_nontrivial2() {
 // CHECK:  }
 
 // LLVM: @_Z27t_constant_size_nontrivial2v()
-// LLVM:   %[[ALLOCA:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[ALLOCA:.*]] = alloca ptr, align 8
 // LLVM:   %[[COOKIE_PTR:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 20)
 // LLVM:   store i64 3, ptr %[[COOKIE_PTR]], align 8
 // LLVM:   %[[ALLOCATED_PTR:.*]] = getelementptr i8, ptr %[[COOKIE_PTR]], i64 8
@@ -307,7 +307,7 @@ void t_align16_nontrivial() {
 // CHECK:  }
 
 // LLVM: @_Z20t_align16_nontrivialv()
-// LLVM:   %[[ALLOCA:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[ALLOCA:.*]] = alloca ptr, align 8
 // LLVM:   %[[RAW_PTR:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 48)
 // LLVM:   %[[COOKIE_PTR:.*]] = getelementptr i8, ptr %[[RAW_PTR]], i64 8
 // LLVM:   store i64 2, ptr %[[COOKIE_PTR]], align 8
@@ -336,7 +336,7 @@ void t_new_multidim_constant_size() {
 // CHECK:  }
 
 // LLVM: define{{.*}} void @_Z28t_new_multidim_constant_sizev
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[CALL:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 192)
 // LLVM:   store ptr %[[CALL]], ptr %[[P_ADDR]], align 8
 
@@ -773,11 +773,11 @@ void test_array_new_with_ctor_init() {
 // CHECK:    cir.return
 
 // LLVM: define{{.*}} void @_Z29test_array_new_with_ctor_initv
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RAW_PTR:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 3)
 // LLVM:   %[[BEGIN:.*]] = getelementptr %class.F, ptr %[[RAW_PTR]], i32 0
 // LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.F, ptr %[[BEGIN]], i64 3
-// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, i64 1, align 1
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 1
 // LLVM:   store ptr %[[BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
 // LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8
@@ -1163,7 +1163,7 @@ void test_array_new_with_ctor_partial_init_list() {
 // CHECK:    cir.return
 
 // LLVM: define{{.*}} void @_Z42test_array_new_with_ctor_partial_init_listv
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RAW_PTR:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 8)
 // LLVM:   call void @_ZN1GC1Ei(ptr noundef nonnull align 1 dereferenceable(1) %[[RAW_PTR]], i32 noundef 1)
 // LLVM:   %[[SECOND:.*]] = getelementptr %class.G, ptr %[[RAW_PTR]], i64 1
@@ -1171,7 +1171,7 @@ void test_array_new_with_ctor_partial_init_list() {
 // LLVM:   %[[THIRD:.*]] = getelementptr %class.G, ptr %[[SECOND]], i64 1
 // LLVM:   %[[ARRAY_BEGIN:.*]] = getelementptr %class.G, ptr %[[THIRD]], i32 0
 // LLVM:   %[[ARRAY_END:.*]] = getelementptr %class.G, ptr %[[ARRAY_BEGIN]], i64 6
-// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, i64 1, align 1
+// LLVM:   %[[IDX_ADDR:.*]] = alloca ptr, align 1
 // LLVM:   store ptr %[[ARRAY_BEGIN]], ptr %[[IDX_ADDR]], align 8
 // LLVM:   br label
 // LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[IDX_ADDR]], align 8

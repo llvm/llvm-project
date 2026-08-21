@@ -452,4 +452,26 @@ define void @volatile_load_from_constant_global() {
   ret void
 }
 
+define i64 @load_elementwise_bitcast(ptr %p) {
+; CHECK-LABEL: @load_elementwise_bitcast(
+; CHECK-NEXT:    [[V:%.*]] = load atomic elementwise <2 x i32>, ptr [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x i32> [[V]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %v = load atomic elementwise <2 x i32>, ptr %p unordered, align 8
+  %r = bitcast <2 x i32> %v to i64
+  ret i64 %r
+}
+
+define void @store_elementwise_bitcast(ptr %p, i64 %v) {
+; CHECK-LABEL: @store_elementwise_bitcast(
+; CHECK-NEXT:    [[R:%.*]] = bitcast i64 [[V:%.*]] to <2 x i32>
+; CHECK-NEXT:    store atomic elementwise <2 x i32> [[R]], ptr [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    ret void
+;
+  %r = bitcast i64 %v to <2 x i32>
+  store atomic elementwise <2 x i32> %r, ptr %p unordered, align 8
+  ret void
+}
+
 attributes #0 = { null_pointer_is_valid }

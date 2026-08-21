@@ -585,6 +585,7 @@ def Vector_InterleaveOp :
     }
   }];
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
@@ -2289,7 +2290,7 @@ def Vector_ExpandLoadOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
@@ -2327,8 +2328,6 @@ def Vector_ExpandLoadOp :
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
@@ -2381,7 +2380,7 @@ def Vector_CompressStoreOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
@@ -2418,8 +2417,6 @@ def Vector_CompressStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
@@ -2496,6 +2493,9 @@ def Vector_ShapeCastOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    // Return true if this Op is effectively a vector.broadcast (i.e. the input
+    // and output shapes satisfy the vector.broadcast constraints).
+    bool isBroadcastLike();
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;

@@ -595,23 +595,6 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   }
 }
 
-/// Check \p Plan's live-in and replace them with constants, if they can be
-/// simplified via SCEV.
-static void simplifyLiveInsWithSCEV(VPlan &Plan,
-                                    PredicatedScalarEvolution &PSE) {
-  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
-    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
-    if (auto *C = dyn_cast<SCEVConstant>(Expr))
-      return Plan.getOrAddLiveIn(C->getValue());
-    return nullptr;
-  };
-
-  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
-    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
-      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
-  }
-}
-
 /// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 
@@ -792,13 +775,14 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
       HoistPoint = R;
   }
-  assert(all_of(FOR->users(),
-                [&VPDT, HoistPoint](VPUser *U) {
-                  auto *R = cast<VPRecipeBase>(U);
-                  return HoistPoint == R ||
-                         VPDT.properlyDominates(HoistPoint, R);
-                }) &&
-         "HoistPoint must dominate all users of FOR");
+  // Dominance is only a partial order, so the users of FOR may not have a
+  // single user dominating all others. Bail out in that case.
+  if (!HoistPoint || HoistPoint->isPhi() ||
+      any_of(FOR->users(), [&VPDT, HoistPoint](VPUser *U) {
+        auto *R = cast<VPRecipeBase>(U);
+        return HoistPoint != R && !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   auto NeedsHoisting = [HoistPoint, &VPDT,
                         &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
@@ -846,6 +830,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       }
     }
   }
+
+  // Moving a candidate to HoistPoint keeps it dominating its other users only
+  // if HoistPoint dominates the candidate's current position.
+  if (any_of(HoistCandidates, [&VPDT, HoistPoint](VPRecipeBase *R) {
+        return !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   // Order recipes to hoist by dominance so earlier instructions are processed
   // first.
@@ -1208,12 +1199,11 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-/// Check if all loads in the loop are dereferenceable. Iterates over the
-/// loop body blocks reachable from \p HeaderVPBB. Returns false if any
-/// non-dereferenceable load is found.
-static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
-                                       PredicatedScalarEvolution &PSE,
-                                       DominatorTree &DT, AssumptionCache *AC) {
+bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
+                                                 Loop *TheLoop,
+                                                 PredicatedScalarEvolution &PSE,
+                                                 DominatorTree &DT,
+                                                 AssumptionCache *AC) {
   ScalarEvolution &SE = *PSE.getSE();
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
@@ -1252,45 +1242,17 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
   return true;
 }
 
-bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
-                                       Loop *TheLoop,
-                                       PredicatedScalarEvolution &PSE,
-                                       DominatorTree &DT, AssumptionCache *AC) {
+void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
-  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-
-  // TODO: We would like to detect uncountable exits and stores within loops
-  //       with such exits from the VPlan alone. Exit detection can be moved
-  //       here from handleUncountableEarlyExits, but we need to improve
-  //       detection of recipes which may write to memory.
-  if (Style != UncountableExitStyle::NoUncountableExit) {
-    // Dereferenceability is checked separately for uncountable exit loops with
-    // stores, as only the loads contributing to the exit condition need to
-    // be checked.
-    if (Style == UncountableExitStyle::ReadOnly &&
-        !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
-      return false;
-    // TODO: Check target preference for style.
-    return handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
-                                       TheLoop, PSE, DT, AC, Style);
-  }
-
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-
-      // Remove phi operands for the early exiting block.
-      for (VPRecipeBase &R : EB->phis())
-        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      EarlyExitingVPBB->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
-    }
+  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // Remove phi operands for the early exiting block.
+    for (VPRecipeBase &R : EB->phis())
+      cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
+    EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
   }
-  return true;
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
@@ -1757,7 +1719,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
-        DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
+        DerivedIV->moveAfter(MiddleBuilder.getRecipeAtInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
       }
@@ -2041,7 +2003,7 @@ static bool handleFirstArgMinOrMax(
         InductionDescriptor::IK_IntInduction,
         nullptr, // No FPBinOp for integer induction
         WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
-    DerivedIVRecipe->insertBefore(&*Builder.getInsertPoint());
+    DerivedIVRecipe->insertBefore(Builder.getRecipeAtInsertPoint());
     FinalCanIV = DerivedIVRecipe;
   }
 
@@ -2247,4 +2209,24 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
+}
+
+void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPValue *HeaderMask = LoopRegion->getHeaderMask();
+  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+
+  VPBuilder Builder(Plan.getVectorPreheader());
+  auto *AliasMask = Builder.createNaryOp(
+      VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
+      DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
+
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  Builder = VPBuilder(Header, Header->getFirstNonPhi());
+
+  // Update all existing users of the header mask to "HeaderMask & AliasMask".
+  auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
+  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
+    return &U != ClampedHeaderMask;
+  });
 }

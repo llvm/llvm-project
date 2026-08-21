@@ -1115,6 +1115,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
+    FDecl->setDSOLocal(F->isDSOLocal());
     Visibility = GlobalValue::HiddenVisibility;
 
     // Update aliases pointing to this function to also include the ".cfi" suffix,
@@ -1129,6 +1130,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
         A->setName(AliasName);
+        AliasDecl->setDSOLocal(A->isDSOLocal());
       }
     }
   }
@@ -1829,6 +1831,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
                               CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
+      FAlias->setDSOLocal(F->isDSOLocal());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
@@ -2274,8 +2277,18 @@ bool LowerTypeTestsModule::lower() {
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
           F->setMetadata(
-              LLVMContext::MD_unique_id,
+              LLVMContext::MD_guid,
               MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+          if (ExportSummary) {
+            GlobalValue::GUID GUID =
+                cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+            if (auto VI = ExportSummary->getValueInfo(GUID))
+              F->setDSOLocal(
+                  VI.isDSOLocal(ExportSummary->withDSOLocalPropagation()));
+          }
         }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
@@ -2284,12 +2297,12 @@ bool LowerTypeTestsModule::lower() {
         // following the code path below to replace the type metadata.
         if (F->hasAvailableExternallyLinkage()) {
           // Maintain !guid metadata.
-          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_unique_id);
+          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_guid);
           F->setLinkage(GlobalValue::ExternalLinkage);
           F->deleteBody();
           F->setComdat(nullptr);
           F->clearMetadata();
-          F->setMetadata(LLVMContext::MD_unique_id, OrigGUIDMD);
+          F->setMetadata(LLVMContext::MD_guid, OrigGUIDMD);
         }
 
         // Update the linkage for extern_weak declarations when a definition
@@ -2456,7 +2469,11 @@ bool LowerTypeTestsModule::lower() {
           report_fatal_error(
               "Expected branch funnel operand to be global value");
 
-        GlobalTypeMember *GTM = GlobalTypeMembers[Base];
+        auto It = GlobalTypeMembers.find(Base);
+        if (It == GlobalTypeMembers.end())
+          reportFatalUsageError("Expected branch funnel operand to be a "
+                                "defined global value with type metadata");
+        GlobalTypeMember *GTM = It->second;
         Targets.push_back(GTM);
         GlobalClassesTy::member_iterator NewSet =
             GlobalClasses.findLeader(GlobalClasses.insert(GTM));
@@ -2545,6 +2562,7 @@ bool LowerTypeTestsModule::lower() {
     auto *AliasGA = GlobalAlias::create("", Target);
     AliasGA->setVisibility(A.Alias->getVisibility());
     AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->setDSOLocal(A.Alias->isDSOLocal());
     AliasGA->takeName(A.Alias);
     A.Alias->replaceAllUsesWith(AliasGA);
     A.Alias->eraseFromParent();

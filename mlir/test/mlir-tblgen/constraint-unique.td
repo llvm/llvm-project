@@ -17,7 +17,7 @@ def OtherType : Type<ATypePred, "another type">;
 
 def AnAttrPred : CPred<"attrPred($_self, $_op)">;
 def AnAttr : Attr<AnAttrPred, "an attribute (got {{reformat($_self)}})">;
-def OtherAttr : Attr<AnAttrPred, "another attribute">;
+def OtherAttr : Attr<AnAttrPred, "another attribute {{reformat($_self)}}">;
 
 def ASuccessorPred : CPred<"successorPred($_self, $_op)">;
 def ASuccessor : Successor<ASuccessorPred, "a successor">;
@@ -81,7 +81,7 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
-// CHECK-NEXT:       << "' failed to satisfy constraint: another attribute";
+// CHECK-NEXT:       << "' failed to satisfy constraint: another attribute " << reformat(attr) << "";
 
 /// Test that a successor contraint was generated.
 // CHECK:    static ::llvm::LogicalResult [[$A_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](

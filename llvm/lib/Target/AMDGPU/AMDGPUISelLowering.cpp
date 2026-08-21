@@ -648,14 +648,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setMaxLargeFPConvertBitWidthSupported(64);
 }
 
-bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  const auto Flags = Op.getNode()->getFlags();
-  if (Flags.hasNoSignedZeros())
-    return true;
-
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // Target Information
 //===----------------------------------------------------------------------===//
@@ -2059,28 +2051,28 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
 
-  SDValue jq = DAG.getConstant(1, DL, IntVT);
-
-  if (Sign) {
-    // char|short jq = ia ^ ib;
-    jq = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
-
-    // jq = jq >> (bitsize - 2)
-    jq = DAG.getNode(ISD::SRA, DL, VT, jq,
-                     DAG.getConstant(BitSize - 2, DL, VT));
-
-    // jq = jq | 0x1
-    jq = DAG.getNode(ISD::OR, DL, VT, jq, DAG.getConstant(1, DL, VT));
-  }
-
   // int ia = (int)LHS;
   SDValue ia = LHS;
 
   // int ib, (int)RHS;
   SDValue ib = RHS;
 
-  // float fa = (float)ia;
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
   SDValue fa = DAG.getNode(ToFp, DL, FltVT, ia);
+  SDValue faAsInt = DAG.getNode(ISD::BITCAST, DL, MVT::i32, fa);
+  SDValue faIncremented = DAG.getNode(ISD::ADD, DL, MVT::i32, faAsInt,
+                                      DAG.getConstant(1, DL, MVT::i32));
+  fa = DAG.getNode(ISD::BITCAST, DL, FltVT, faIncremented);
 
   // float fb = (float)ib;
   SDValue fb = DAG.getNode(ToFp, DL, FltVT, ib);
@@ -2091,59 +2083,12 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   // fq = trunc(fq);
   fq = DAG.getNode(ISD::FTRUNC, DL, FltVT, fq);
 
-  // float fqneg = -fq;
-  SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
-
-  MachineFunction &MF = DAG.getMachineFunction();
-
-  bool UseFmadFtz = false;
-  if (Subtarget->isGCN()) {
-    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    UseFmadFtz =
-        MFI->getMode().FP32Denormals != DenormalMode::getPreserveSign();
-  }
-
-  // float fr = mad(fqneg, fb, fa);
-  unsigned OpCode = !Subtarget->hasMadMacF32Insts() ? (unsigned)ISD::FMA
-                    : UseFmadFtz ? (unsigned)AMDGPUISD::FMAD_FTZ
-                                 : (unsigned)ISD::FMAD;
-  SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
-
   // int iq = (int)fq;
-  SDValue iq = DAG.getNode(ToInt, DL, IntVT, fq);
-
-  // fr = fabs(fr);
-  fr = DAG.getNode(ISD::FABS, DL, FltVT, fr);
-
-  // fb = fabs(fb);
-  fb = DAG.getNode(ISD::FABS, DL, FltVT, fb);
-
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-
-  // int cv = fr >= fb;
-  SDValue cv = DAG.getSetCC(DL, SetCCVT, fr, fb, ISD::SETOGE);
-
-  // jq = (cv ? jq : 0);
-  jq = DAG.getNode(ISD::SELECT, DL, VT, cv, jq, DAG.getConstant(0, DL, VT));
-
-  // dst = iq + jq;
-  SDValue Div = DAG.getNode(ISD::ADD, DL, VT, iq, jq);
+  SDValue Div = DAG.getNode(ToInt, DL, IntVT, fq);
 
   // Rem needs compensation, it's easier to recompute it
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
-
-  // Truncate to number of bits this divide really is.
-  if (Sign) {
-    SDValue InRegSize
-      = DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), DivBits));
-    Div = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Div, InRegSize);
-    Rem = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Rem, InRegSize);
-  } else {
-    SDValue TruncMask = DAG.getConstant((UINT64_C(1) << DivBits) - 1, DL, VT);
-    Div = DAG.getNode(ISD::AND, DL, VT, Div, TruncMask);
-    Rem = DAG.getNode(ISD::AND, DL, VT, Rem, TruncMask);
-  }
 
   return DAG.getMergeValues({ Div, Rem }, DL);
 }
@@ -5277,7 +5222,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5325,7 +5270,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -5574,10 +5519,11 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
-  // XXX - Should this flush denormals?
-  const APFloat &Val = CFP->getValueAPF();
-  APFloat One = APFloat::getOne(Val.getSemantics());
-  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
+  std::optional<APFloat> Result = AMDGPU::evaluateRcp(CFP->getValueAPF());
+  if (!Result)
+    return SDValue();
+
+  return DCI.DAG.getConstantFP(*Result, SDLoc(N), N->getValueType(0));
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
@@ -5743,14 +5689,11 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (OffsetVal == 0) {
       // This is already sign / zero extended, so try to fold away extra BFEs.
-      unsigned SignBits =  Signed ? (32 - WidthVal + 1) : (32 - WidthVal);
-
-      unsigned OpSignBits = DAG.ComputeNumSignBits(BitsFrom);
-      if (OpSignBits >= SignBits)
-        return BitsFrom;
-
       EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), WidthVal);
       if (Signed) {
+        if (DAG.ComputeNumSignBits(BitsFrom) >= 32 - WidthVal + 1)
+          return BitsFrom;
+
         // This is a sign_extend_inreg. Replace it to take advantage of existing
         // DAG Combines. If not eliminated, we will match back to BFE during
         // selection.
@@ -5760,6 +5703,10 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i32, BitsFrom,
                            DAG.getValueType(SmallVT));
       }
+
+      if (DAG.MaskedValueIsZero(BitsFrom,
+                                APInt::getHighBitsSet(32, 32 - WidthVal)))
+        return BitsFrom;
 
       return DAG.getZeroExtendInReg(BitsFrom, DL, SmallVT);
     }
@@ -6330,14 +6277,9 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY: {
-    if (SNaN)
-      return true;
-
-    // TODO: Can check no nans on one of the operands for each one, but which
-    // one?
-    return false;
-  }
+  case AMDGPUISD::FMAX_LEGACY:
+    return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::CVT_PKRTZ_F16_F32: {
     if (SNaN)

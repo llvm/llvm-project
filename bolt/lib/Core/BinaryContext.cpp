@@ -18,7 +18,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -31,9 +33,11 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
@@ -91,6 +95,13 @@ static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
                          cl::ZeroOrMore, cl::cat(BoltCategory));
+
+static cl::opt<bool> DropDWOPageCache(
+    "drop-dwo-page-cache",
+    cl::desc("Treat .dwo files as streaming input: reclaim their page-cache "
+             "pages as soon as BOLT is done reading each one. Keeps the "
+             "file-backed footprint of large split-DWARF inputs bounded."),
+    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -782,6 +793,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Ignore the owning function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -790,7 +804,16 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents) {
+        this->errs()
+            << "BOLT-WARNING: unable to analyze jump table in function "
+            << *Frag << "; ignoring the function\n";
+        Frag->setIgnored();
+      }
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
@@ -1185,12 +1208,13 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
                         Section, Flags);
     GAI = BinaryDataMap.emplace(Address, BD).first;
-    GlobalSymbols[Name] = BD;
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[Symbol->getName()] = BD;
     updateObjectNesting(GAI);
   } else {
     BD = GAI->second;
     if (!BD->hasName(Name)) {
-      GlobalSymbols[Name] = BD;
+      GlobalSymbols[Symbol->getName()] = BD;
       BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
@@ -1315,8 +1339,10 @@ void BinaryContext::generateSymbolHashes() {
       }
       continue;
     }
-    BD.Symbols.insert(BD.Symbols.begin(), Ctx->getOrCreateSymbol(NewName));
-    GlobalSymbols[NewName] = &BD;
+    MCSymbol *NewSymbol = Ctx->getOrCreateSymbol(NewName);
+    BD.Symbols.insert(BD.Symbols.begin(), NewSymbol);
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[NewSymbol->getName()] = &BD;
   }
   if (NumCollisions) {
     this->errs() << "BOLT-WARNING: " << NumCollisions
@@ -1726,18 +1752,123 @@ BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
   return AllFunctions;
 }
 
-std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
-  auto Iter = DWOCUs.find(DWOId);
-  if (Iter == DWOCUs.end())
-    return std::nullopt;
-
-  return Iter->second;
+/// Return the path of the file backing \p DWOCU's DWARF context, or "" .
+static StringRef getDWOFilePath(const DWARFUnit *DWOCU) {
+  if (!DWOCU)
+    return StringRef();
+  return DWOCU->getContext().getDWARFObj().getFileName();
 }
 
-DWARFContext *BinaryContext::getDWOContext() const {
-  if (DWOCUs.empty())
-    return nullptr;
-  return &DWOCUs.begin()->second->getContext();
+/// Reclaim the page-cache pages of the still-mapped .dwo backing \p DWOCU.
+static void pageOutDWOMapping(const DWARFUnit *DWOCU) {
+  if (!opts::DropDWOPageCache || !DWOCU)
+    return;
+  const object::ObjectFile *File = DWOCU->getContext().getDWARFObj().getFile();
+  if (!File)
+    return;
+  // mmap-backed MemoryBuffers are page-aligned; the malloc-backed fallback
+  // used for small files is not, and pageOutMemory() ignores it.
+  MemoryBufferRef Buf = File->getMemoryBufferRef();
+  pageOutMemory(Buf.getBufferStart(), Buf.getBufferSize());
+}
+
+/// Compute the absolute path of the .dwo/.dwp file backing \p SkeletonCU,
+/// honoring --comp-dir-override and relative-path fallbacks. If
+/// \p FellBackToRelative is non-null, it is set to true when the compilation
+/// directory was missing and the relative path was used instead. If
+/// \p DWONameOut is non-null, it receives the raw DW_AT_dwo_name.
+static SmallString<128> getDWOAbsolutePath(DWARFUnit &SkeletonCU,
+                                           bool *FellBackToRelative = nullptr,
+                                           std::string *DWONameOut = nullptr) {
+  std::string DWOName =
+      dwarf::toString(SkeletonCU.getUnitDIE().find(
+                          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+                      "");
+  SmallString<128> AbsolutePath(DWOName);
+
+  std::string DWOCompDir;
+  if (!opts::CompDirOverride.empty()) {
+    DWOCompDir = opts::CompDirOverride;
+  } else {
+    DWOCompDir = SkeletonCU.getCompilationDir();
+    if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+      DWOCompDir = ".";
+      if (FellBackToRelative)
+        *FellBackToRelative = true;
+    }
+  }
+  // Prevent failures when DWOName is already an absolute path.
+  sys::path::make_absolute(DWOCompDir, AbsolutePath);
+  if (DWONameOut)
+    *DWONameOut = std::move(DWOName);
+  return AbsolutePath;
+}
+
+std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
+  auto Iter = DWOIdToSkeletonCU.find(DWOId);
+  if (Iter == DWOIdToSkeletonCU.end())
+    return std::nullopt;
+  DWARFUnit &SkeletonCU = *Iter->second;
+
+  // The skeleton unit owns and caches its DWO context, so it is the cache:
+  // parseDWO() is a no-op once the context is open, and only then do we need
+  // the .dwo path -- computing it stats the filesystem, so skip that on the
+  // hot path.
+  SmallString<128> AbsolutePath;
+  if (!SkeletonCU.getDWO())
+    AbsolutePath = getDWOAbsolutePath(SkeletonCU);
+
+  DWARFUnit *DWOCU =
+      SkeletonCU
+          .getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+          .getDwarfUnit();
+  // On failure getNonSkeletonUnitDIE() falls back to the skeleton's own DIE.
+  if (!DWOCU || !DWOCU->isDWOUnit())
+    return std::nullopt;
+  return DWOCU;
+}
+
+void BinaryContext::releaseDWOCU(uint64_t DWOId) {
+  // With a .dwp package every split CU aliases one shared DWARFContext
+  if (UsesDWP)
+    return;
+  auto Iter = DWOIdToSkeletonCU.find(DWOId);
+  if (Iter == DWOIdToSkeletonCU.end())
+    return;
+  DWARFUnit *DWOCU = Iter->second->getDWO();
+  if (!DWOCU)
+    return;
+  const std::string Path = getDWOFilePath(DWOCU).str();
+  Iter->second->clearDWO();
+  // Only effective now that the last mapping of the file is gone.
+  if (opts::DropDWOPageCache)
+    dropFileFromPageCache(Path);
+}
+
+void BinaryContext::releaseAllDWOContexts() {
+  // Release via the skeleton map so we free every DWO context regardless of how
+  // it was opened (preprocessDWODebugInfo, the line-table name loop, or
+  // collectDebugScopeBoundaries, which opens CUs directly via
+  // getNonSkeletonUnitDIE).
+  std::vector<std::string> Paths;
+  if (opts::DropDWOPageCache) {
+    Paths.reserve(UsesDWP ? 1 : DWOIdToSkeletonCU.size());
+    for (auto &KV : DWOIdToSkeletonCU) {
+      DWARFUnit *DWOCU = KV.second->getDWO();
+      if (!DWOCU)
+        continue;
+      StringRef Path = getDWOFilePath(DWOCU);
+      if (!Path.empty())
+        Paths.emplace_back(Path.str());
+      if (UsesDWP)
+        break;
+    }
+  }
+  for (auto &KV : DWOIdToSkeletonCU)
+    KV.second->clearDWO();
+  // Only effective now that the last mapping of each file is gone.
+  for (const std::string &Path : Paths)
+    dropFileFromPageCache(Path);
 }
 
 bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
@@ -1760,40 +1891,49 @@ void BinaryContext::preprocessDWODebugInfo() {
     DWARFUnit *const DwarfUnit = CU.get();
     if (!isValidDwarfUnit(*DwarfUnit))
       continue;
-    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
-      std::string DWOName = dwarf::toString(
-          DwarfUnit->getUnitDIE().find(
-              {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-          "");
-      SmallString<16> AbsolutePath(DWOName);
-      std::string DWOCompDir = DwarfUnit->getCompilationDir();
-      if (!opts::CompDirOverride.empty()) {
-        DWOCompDir = opts::CompDirOverride;
-      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
-        DWOCompDir = ".";
-        this->outs()
-            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
-            << DWOName
-            << " does not exist. Relative path will be used to process .dwo "
-               "files.\n";
-      }
-      // Prevent failures when DWOName is already an absolute path.
-      sys::path::make_absolute(DWOCompDir, AbsolutePath);
-      DWARFUnit *DWOCU =
-          DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
-      if (!DWOCU->isDWOUnit()) {
-        this->outs()
-            << "BOLT-WARNING: Debug Fission: DWO debug information for "
-            << DWOName
-            << " was not retrieved and won't be updated. Please check "
-               "relative path or use '--comp-dir-override' to specify the base "
-               "location.\n";
-        continue;
-      }
-      DWOCUs[*DWOId] = DWOCU;
+    std::optional<uint64_t> DWOId = DwarfUnit->getDWOId();
+    if (!DWOId)
+      continue;
+    std::string DWOName;
+    bool FellBackToRelative = false;
+    SmallString<128> AbsolutePath =
+        getDWOAbsolutePath(*DwarfUnit, &FellBackToRelative, &DWOName);
+    if (FellBackToRelative)
+      this->outs()
+          << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+          << DWOName
+          << " does not exist. Relative path will be used to process .dwo "
+             "files.\n";
+    // Extract only the .dwo CU DIE here: we just need the isDWOUnit()/DWOId
+    // checks. The full DIE vector is never read off this cached array -- every
+    // consumer streams the DIEs on demand with
+    // DWARFDebugInfoEntry::extractFast (DIEBuilder::constructFromUnit /
+    // collectReferencedTypeSignatures).
+    DWARFUnit *DWOCU =
+        DwarfUnit
+            ->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+            .getDwarfUnit();
+    if (!DWOCU->isDWOUnit()) {
+      this->outs()
+          << "BOLT-WARNING: Debug Fission: DWO debug information for "
+          << DWOName
+          << " was not retrieved and won't be updated. Please check "
+             "relative path or use '--comp-dir-override' to specify the base "
+             "location.\n";
+      continue;
     }
+    // Detect a .dwp package on the first split CU we manage to open.
+    if (DWOIdToSkeletonCU.empty())
+      UsesDWP = !DWOCU->getContext().getCUIndex().getRows().empty();
+    // Remember the skeleton CU so its DWO context can be (re-)opened lazily by
+    // getDWOCU() after it is released (see releaseAllDWOContexts).
+    DWOIdToSkeletonCU[*DWOId] = DwarfUnit;
+    // In this loop we're touching a large number of pages, in streaming fashion
+    // -- so keep OS file cache usage under control.
+    if (!UsesDWP)
+      pageOutDWOMapping(DWOCU);
   }
-  if (!DWOCUs.empty())
+  if (!DWOIdToSkeletonCU.empty())
     this->outs() << "BOLT-INFO: processing split DWARF\n";
 }
 
@@ -1898,6 +2038,7 @@ void BinaryContext::preprocessDebugInfo() {
         LineTable->Prologue.FileNames;
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
+    BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
@@ -1905,8 +2046,8 @@ void BinaryContext::preprocessDebugInfo() {
       const char *Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
-        auto Iter = DWOCUs.find(*DWOID);
-        if (Iter == DWOCUs.end()) {
+        std::optional<DWARFUnit *> DWOCU = getDWOCU(*DWOID);
+        if (!DWOCU) {
           const char *DWOName =
               dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_dwo_name),
                               "<missing DW_AT_dwo_name>");
@@ -1915,8 +2056,8 @@ void BinaryContext::preprocessDebugInfo() {
           NumMissingDWOs++;
           continue;
         }
-        Name = dwarf::toString(
-            Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
+        Name = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
+                               nullptr);
       }
       BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
                                   std::nullopt);
@@ -2009,38 +2150,16 @@ void BinaryContext::collectDebugScopeBoundaries() {
       continue;
     DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
 
-    // For split DWARF, preprocessDWODebugInfo already fully extracts the .dwo's
-    // DIE array.
-    if (DIEUnit->isDWOUnit()) {
-      for (const DWARFDebugInfoEntry &Entry : DIEUnit->dies())
-        processScopeDie(DWARFDie(DIEUnit, &Entry));
-      continue;
-    }
-    // Walk the unit's DIEs by streaming them one at a time. Track nesting depth
-    // with a counter: a DIE with children descends a level (++), a null entry
-    // (sibling-chain terminator) ascends (--), the unit-end offset limits the
-    // walk. This is done to avoid recording all DIEs in a vector like
-    // DWARFUnit's extractDIEsToVector() does, since that is more work than
-    // needed if we just want to lookup specific tags.
-    DWARFDataExtractor DebugInfoData = DIEUnit->getDebugInfoExtractor();
-    uint64_t DIEOffset = DIEUnit->getOffset() + DIEUnit->getHeaderSize();
-    const uint64_t NextCUOffset = DIEUnit->getNextUnitOffset();
-    DWARFDebugInfoEntry DIEEntry;
-    int32_t CurrentDepth = 1;
-    while (CurrentDepth > 0 && DIEOffset < NextCUOffset &&
-           DIEEntry.extractFast(*DIEUnit, &DIEOffset, DebugInfoData,
-                                NextCUOffset, 0)) {
-      const DWARFAbbreviationDeclaration *Abbrev =
-          DIEEntry.getAbbreviationDeclarationPtr();
-      if (!Abbrev) {
-        // End of the current sibling chain.
-        --CurrentDepth;
-        continue;
-      }
-      processScopeDie(DWARFDie(DIEUnit, &DIEEntry));
-      if (Abbrev->hasChildren())
-        ++CurrentDepth;
-    }
+    // Stream the unit's DIEs one at a time rather than recording them all in a
+    // vector (as DWARFUnit's extractDIEsToVector() does): only DIE tags/ranges
+    // are inspected, so the tree structure is not needed.
+    forEachDIEInUnit(*DIEUnit, processScopeDie);
+
+    // Done streaming this .dwo's DIEs. Release it right away and give the
+    // opportunity for any used page cache to also be reclaimed by OS, if
+    // --drop-dwo-page-cache is in effect.
+    if (std::optional<uint64_t> DWOId = CU->getDWOId())
+      releaseDWOCU(*DWOId);
   }
 }
 
@@ -2651,8 +2770,8 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
 
-  if (!getOutputBinaryFunctions().empty())
-    getOutputBinaryFunctions().push_back(BF);
+  if (!OutputFunctions.empty())
+    OutputFunctions.push_back(BF);
 
   return BF;
 }
@@ -2692,6 +2811,12 @@ BinaryContext::createInstructionPatch(uint64_t Address,
     PBF->setAnonymous(true);
 
   return PBF;
+}
+
+BinaryFunction *
+BinaryContext::createThunkBinaryFunction(const std::string &Name) {
+  static NameResolver NR;
+  return createInjectedBinaryFunction(NR.uniquify(Name));
 }
 
 std::pair<size_t, size_t>

@@ -10,8 +10,7 @@ declare <2 x i8> @llvm.vp.sub.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 ; Constant folding should just work.
 define <2 x i32> @constant_vp_add(<2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @constant_vp_add(
-; CHECK-NEXT:    [[Q:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> splat (i32 3), <2 x i32> splat (i32 7), <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[Q]]
+; CHECK-NEXT:    ret <2 x i32> splat (i32 10)
 ;
   %Q = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> <i32 3, i32 3>, <2 x i32> <i32 7, i32 7>, <2 x i1> %mask, i32 %evl)
   ret <2 x i32> %Q
@@ -20,9 +19,7 @@ define <2 x i32> @constant_vp_add(<2 x i1> %mask, i32 %evl) {
 ; Simplifying pure VP intrinsic patterns.
 define <2 x i32> @common_sub_operand(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @common_sub_operand(
-; CHECK-NEXT:    [[Z:%.*]] = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[Q:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> [[Z]], <2 x i32> [[Y]], <2 x i1> [[MASK]], i32 [[EVL]])
-; CHECK-NEXT:    ret <2 x i32> [[Q]]
+; CHECK-NEXT:    ret <2 x i32> [[Q:%.*]]
 ;
   ; %Z = sub i32 %X, %Y, vp(%mask, %evl)
   %Z = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask, i32 %evl)
@@ -34,9 +31,7 @@ define <2 x i32> @common_sub_operand(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask,
 ; Mixing regular SIMD with vp intrinsics (vp add match root).
 define <2 x i32> @common_sub_operand_vproot(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @common_sub_operand_vproot(
-; CHECK-NEXT:    [[Z:%.*]] = sub <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> [[Z]], <2 x i32> [[Y]], <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[Q]]
+; CHECK-NEXT:    ret <2 x i32> [[Q:%.*]]
 ;
   %Z = sub <2 x i32> %X, %Y
   ; %Q = add i32 %Z, %Y, vp(%mask, %evl)
@@ -47,9 +42,7 @@ define <2 x i32> @common_sub_operand_vproot(<2 x i32> %X, <2 x i32> %Y, <2 x i1>
 ; Mixing regular SIMD with vp intrinsics (vp inside pattern, regular instruction root).
 define <2 x i32> @common_sub_operand_vpinner(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @common_sub_operand_vpinner(
-; CHECK-NEXT:    [[Z:%.*]] = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[Q:%.*]] = add <2 x i32> [[Z]], [[Y]]
-; CHECK-NEXT:    ret <2 x i32> [[Q]]
+; CHECK-NEXT:    ret <2 x i32> [[Q:%.*]]
 ;
   ; %Z = sub i32 %X, %Y, vp(%mask, %evl)
   %Z = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> %X, <2 x i32> %Y, <2 x i1> %mask, i32 %evl)
@@ -59,9 +52,7 @@ define <2 x i32> @common_sub_operand_vpinner(<2 x i32> %X, <2 x i32> %Y, <2 x i1
 
 define <2 x i32> @negated_operand(<2 x i32> %x, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @negated_operand(
-; CHECK-NEXT:    [[NEGX:%.*]] = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[X:%.*]], <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> [[NEGX]], <2 x i32> [[X]], <2 x i1> [[MASK]], i32 [[EVL]])
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   ; %negx = sub i32 0, %x
   %negx = call <2 x i32> @llvm.vp.sub.v2i32(<2 x i32> zeroinitializer, <2 x i32> %x, <2 x i1> %mask, i32 %evl)
@@ -77,10 +68,7 @@ define <2 x i8> @knownnegation(<2 x i8> %x, <2 x i8> %y, <2 x i1> %mask, i32 %ev
 ;
   ; %xy = sub i8 %x, %y
 ; CHECK-LABEL: @knownnegation(
-; CHECK-NEXT:    [[XY:%.*]] = call <2 x i8> @llvm.vp.sub.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[YX:%.*]] = call <2 x i8> @llvm.vp.sub.v2i8(<2 x i8> [[Y]], <2 x i8> [[X]], <2 x i1> [[MASK]], i32 [[EVL]])
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.vp.add.v2i8(<2 x i8> [[XY]], <2 x i8> [[YX]], <2 x i1> [[MASK]], i32 [[EVL]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %xy = call <2 x i8> @llvm.vp.sub.v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i1> %mask, i32 %evl)
   ; %yx = sub i8 %y, %x

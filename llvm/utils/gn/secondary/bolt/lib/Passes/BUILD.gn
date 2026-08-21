@@ -17,6 +17,7 @@ static_library("Passes") {
     "AllocCombiner.cpp",
     "AsmDump.cpp",
     "BinaryPasses.cpp",
+    "BranchLivenessUtils.cpp",
     "CMOVConversion.cpp",
     "CacheMetrics.cpp",
     "DataflowAnalysis.cpp",

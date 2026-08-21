@@ -150,6 +150,7 @@ void FactsGenerator::run() {
                              EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
+  FactMgr.computePersistentOrigins(Cfg);
 }
 
 /// Simulates LValueToRValue conversion by peeling the outer lvalue origin
@@ -232,8 +233,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  handleFunctionCall(CCE, CCE->getConstructor(),
-                     {CCE->getArgs(), CCE->getNumArgs()},
+  auto [FD, Args] = getFunctionCallInfo(CCE);
+  handleFunctionCall(CCE, FD, Args,
                      /*IsGslConstruction=*/false);
 }
 
@@ -255,21 +256,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    // The argument is the implicit object itself.
-    handleFunctionCall(MCE, MCE->getMethodDecl(),
-                       {MCE->getImplicitObjectArgument()},
+    auto [FD, Args] = getFunctionCallInfo(MCE);
+    handleFunctionCall(MCE, FD, Args,
                        /*IsGslConstruction=*/true);
     return;
   }
-  if (const CXXMethodDecl *Method = MCE->getMethodDecl()) {
-    // Construct the argument list, with the implicit 'this' object as the
-    // first argument.
-    llvm::SmallVector<const Expr *, 4> Args;
-    Args.push_back(MCE->getImplicitObjectArgument());
-    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
-
-    handleFunctionCall(MCE, Method, Args, /*IsGslConstruction=*/false);
-  }
+  auto [FD, Args] = getFunctionCallInfo(MCE);
+  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -289,8 +282,8 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  handleFunctionCall(CE, CE->getDirectCallee(),
-                     {CE->getArgs(), CE->getNumArgs()});
+  auto [FD, Args] = getFunctionCallInfo(CE);
+  handleFunctionCall(CE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -637,12 +630,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
-  // For `static operator()`, the first argument is the object argument,
-  // remove it from the argument list to avoid off-by-one errors.
-  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
-    Args = Args.slice(1);
-  handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
+  auto [FD, Args] = getFunctionCallInfo(OCE);
+  handleFunctionCall(OCE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -696,6 +685,20 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
 }
 
 void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
+  for (const LambdaCapture &C : LE->captures()) {
+    if (C.capturesThis())
+      FactMgr.setThisCapturedByLambda();
+    else if (C.capturesVariable() && C.getCapturedVar()->isInitCapture()) {
+      const Expr *Init = cast<VarDecl>(C.getCapturedVar())->getInit();
+      if (!Init)
+        continue;
+      if (const auto *ME = dyn_cast<MemberExpr>(Init->IgnoreParenImpCasts())) {
+        if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+          FactMgr.addCapturedField(FD);
+      }
+    }
+  }
+
   // The lambda gets a single merged origin that aggregates all captured
   // pointer-like origins. Currently we only need to detect whether the lambda
   // outlives any capture.
@@ -901,18 +904,21 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    handleFunctionCall(CCE, CCE->getConstructor(),
-                       {CCE->getArgs(), CCE->getNumArgs()},
+    auto [FD, Args] = getFunctionCallInfo(CCE);
+    handleFunctionCall(CCE, FD, Args,
                        /*IsGslConstruction=*/true);
   }
 }
 
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
-  unsigned IsInstance = 0;
+  unsigned ImplicitObjectArgOffset = 0;
+  // Constructors are excluded because Args has no object argument for them,
+  // even though isImplicitObjectMemberFunction() is true.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    IsInstance = 1;
+      MD && !isa<CXXConstructorDecl>(FD) &&
+      MD->isImplicitObjectMemberFunction()) {
+    ImplicitObjectArgOffset = 1;
     // std::unique_ptr::release() transfers ownership.
     // Treat it as a move to prevent false-positive warnings when the unique_ptr
     // destructor runs after ownership has been transferred.
@@ -925,10 +931,15 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
     }
   }
 
-  // Skip 'this' arg as it cannot be moved.
-  for (unsigned I = IsInstance;
-       I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
-    const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+  // Skip implicit 'this' arg as it cannot be moved.
+  for (unsigned I = ImplicitObjectArgOffset;
+       I < Args.size() && I < FD->getNumParams() + ImplicitObjectArgOffset;
+       ++I) {
+    const ParmVarDecl *PVD = FD->getParamDecl(I - ImplicitObjectArgOffset);
+    // In principle, explicit object parameters can be moved, but skip marking
+    // them as moved for consistency with implicit 'this'.
+    if (PVD->isExplicitObjectParameter())
+      continue;
     if (!PVD->getType()->isRValueReferenceType())
       continue;
     // Skip lifetime annotated r-value reference parameters. Lifetime annotation
@@ -1022,28 +1033,34 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool IsInstance =
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getArgCaptureBy = [FD,
-                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
-    const ParmVarDecl *PVD = nullptr;
+  auto getParamDeclAt = [FD, IsInstance](unsigned I) -> const ParmVarDecl * {
     if (IsInstance) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
-        PVD = FD->getParamDecl(I - 1);
+        return FD->getParamDecl(I - 1);
     } else {
       if (I < FD->getNumParams())
-        PVD = FD->getParamDecl(I);
+        return FD->getParamDecl(I);
     }
-    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
+    return nullptr;
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    const ParmVarDecl *PVD = getParamDeclAt(I);
+    if (!PVD)
+      continue;
+    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
-    if (!CapturedOriginList)
-      continue;
+    // For references to pointer-like types, peel the outer origin (the pointer
+    // object itself) so that we capture the underlying data (the inner origin).
+    if (QualType ParamType = PVD->getType();
+        (ParamType->isReferenceType() &&
+         isPointerLikeType(ParamType->getPointeeType())) &&
+        CapturedOriginList->getLength() > 1)
+      CapturedOriginList = CapturedOriginList->peelOuterOrigin();
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
@@ -1099,29 +1116,6 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto IsArgLifetimeBound = [FD, &Args](unsigned I) -> bool {
-    const ParmVarDecl *PVD = nullptr;
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-      if (I == 0)
-        // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(
-                   *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
-      if ((I - 1) < Method->getNumParams())
-        // For explicit arguments, find the corresponding parameter
-        // declaration.
-        PVD = Method->getParamDecl(I - 1);
-    } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-      return true;
-    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-      return true;
-    } else if (I < FD->getNumParams()) {
-      // For free functions or static methods.
-      PVD = FD->getParamDecl(I);
-    }
-    return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
-  };
   auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (!Method || !Method->isInstance())
@@ -1138,6 +1132,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
+    bool ShouldTrackArg = getTrackedArgInfo(FD, Args, I).has_value();
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
@@ -1153,7 +1148,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
         KillSrc = false;
-      } else if (IsArgLifetimeBound(I)) {
+      } else if (ShouldTrackArg) {
         // Only flow the outer origin here. For lifetimebound args in
         // gsl::Pointer construction, we do not have enough information to
         // safely match inner origins, so the source and
@@ -1173,7 +1168,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
           CallList->getOuterOriginID(),
           ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
       KillSrc = false;
-    } else if (IsArgLifetimeBound(I)) {
+    } else if (ShouldTrackArg) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.
@@ -1240,9 +1235,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(cast<CXXMethodDecl>(FD)),
-        /*IssuingExpr=*/nullptr);
+    const Loan *L =
+        FactMgr.getLoanMgr().createPlaceholderLoan(cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
@@ -1250,8 +1244,7 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     OriginList *List = getOriginsList(*PVD);
     if (!List)
       continue;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(PVD), /*IssuingExpr=*/nullptr);
+    const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(PVD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

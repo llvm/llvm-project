@@ -8,6 +8,7 @@ set(ORC_RT_HEADERS
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/BootstrapInfo.h
+    orc-rt/CCallback.h
     orc-rt/Compiler.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
@@ -19,6 +20,7 @@ set(ORC_RT_HEADERS
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
+    orc-rt/Proxy.h
     orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
     orc-rt/SPSAllocAction.h
@@ -31,6 +33,7 @@ set(ORC_RT_HEADERS
     orc-rt/SimplePackedSerialization.h
     orc-rt/SimpleSymbolTable.h
     orc-rt/StandaloneMachOUnwindInfoRegistrar.h
+    orc-rt/StringPool.h
     orc-rt/TaskGroup.h
     orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h
@@ -41,6 +44,7 @@ set(ORC_RT_HEADERS
     orc-rt/span.h
     orc-rt/sps-ci/AllSPSCI.h
     orc-rt/sps-ci/CallSPSCI.h
+    orc-rt/sps-ci/GDBJITRegistrarSPSCI.h
     orc-rt/sps-ci/MemoryAccessSPSCI.h
     orc-rt/sps-ci/NativeDylibManagerSPSCI.h
     orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h

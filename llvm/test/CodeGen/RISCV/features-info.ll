@@ -24,7 +24,13 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
+; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
+; CHECK-NEXT:   experimental-smijt               - 'Smijt' (Interrupt Jump Table at Machine Level).
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
+; CHECK-NEXT:   experimental-sscsps              - 'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level).
+; CHECK-NEXT:   experimental-ssehv               - 'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level).
+; CHECK-NEXT:   experimental-ssijt               - 'Ssijt' (Interrupt Jump Table at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
@@ -32,7 +38,7 @@
 ; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
 ; CHECK-NEXT:   experimental-zibi                - 'Zibi' (Branch with Immediate).
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
-; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
+; CHECK-NEXT:   experimental-zilx                - 'Zilx' (Indexed Integer Load Instructions).
 ; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
 ; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers).
@@ -72,6 +78,12 @@
 ; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-xqci-mov-longlogical      - Enable MOV + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-alu           - Enable MOVIMM + ALU operations macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-jump          - Enable MOVIMM + Jump macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-ldst          - Enable MOVIMM + long Load/Store macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-longlogical   - Enable MOVIMM + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-mul           - Enable MOVIMM + multiply macrofusion.
 ; CHECK-NEXT:   fusion-zexth                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
 ; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
@@ -148,7 +160,6 @@
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
 ; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
-; CHECK-NEXT:   short-forward-branch-imm         - Enable short forward branch optimization for branches with immediates.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
@@ -323,6 +334,7 @@
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).
+; CHECK-NEXT:   zicfiss                          - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   zicntr                           - 'Zicntr' (Base Counters and Timers).
 ; CHECK-NEXT:   zicond                           - 'Zicond' (Integer Conditional Operations).
 ; CHECK-NEXT:   zicsr                            - 'Zicsr' (CSRs).

@@ -667,9 +667,10 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
-    // there.
-    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
+    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
+    // small code model allows a 4GB span of text + data, which might not fit
+    // in the 32-bit offsets relative lookup tables generate.
+    if (TargetTriple.isAArch64())
       return false;
 
     return true;
@@ -680,6 +681,21 @@ public:
     EVT VT = TLI->getValueType(DL, Ty);
     return TLI->isTypeLegal(VT) &&
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
+  }
+
+  bool haveFastClmul(IntegerType *Ty) const override {
+    // FIXME: clmul should really be Promote for any bitwidth under the largest
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    const DataLayout &DL = thisT()->DL;
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
+
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, IndexTy);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
   }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
@@ -843,6 +859,10 @@ public:
     return BaseT::simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
   }
 
   std::optional<unsigned>
@@ -2138,14 +2158,9 @@ public:
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandCttzElements(ArgType))
-        return getTypeLegalizationCost(RetTy).first;
-
       // TODO: The costs below reflect the expansion code in
-      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
-      // favour of compile time.
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
 
       // Find the smallest "sensible" element type to use for the expansion.
       bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
@@ -2552,14 +2567,8 @@ public:
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
       unsigned SearchSize = NeedleTy->getNumElements();
 
-      // If we're not expanding the intrinsic then we assume this is cheap to
-      // implement.
-      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
-      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
-        return getTypeLegalizationCost(RetTy).first;
-
       // Approximate the cost based on the expansion code in
-      // SelectionDAGBuilder.
+      // TargetLowering::expandVectorMatch.
       InstructionCost Cost = 0;
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
                                           CostKind, 1, nullptr, nullptr);
