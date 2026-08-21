@@ -175,6 +175,24 @@ public:
   Align getAlignment() const { return Alignment; }
 };
 
+/// Represents a hint about the context in which a vector instruction or
+/// intrinsic is used.
+///
+/// On some targets, inserts/extracts can cheaply be folded into loads/stores.
+/// Similarly, vp.merge can also be folded into binary ops on some targets.
+///
+/// This enum allows the vectorizer to give getVectorInstrCost and
+/// getIntrinsicInstrCost an idea of how the values are used.
+///
+/// See \c getVectorInstrContextHint to compute a VectorInstrContext from an
+/// insert/extract Instruction*.
+enum class VectorInstrContext : uint8_t {
+  None,  ///< The instruction is not folded.
+  Load,  ///< The value being inserted comes from a load (InsertElement only).
+  Store, ///< The extracted value is stored (ExtractElement only).
+  BinaryOp, ///< One of the operands is a binary op.
+};
+
 class IntrinsicCostAttributes {
   const IntrinsicInst *II = nullptr;
   Type *RetTy = nullptr;
@@ -185,6 +203,7 @@ class IntrinsicCostAttributes {
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   InstructionCost ScalarizationCost = InstructionCost::getInvalid();
+  VectorInstrContext VIC = VectorInstrContext::None;
 
 public:
   LLVM_ABI IntrinsicCostAttributes(
@@ -204,13 +223,15 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
       ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
       const IntrinsicInst *I = nullptr,
-      InstructionCost ScalarCost = InstructionCost::getInvalid());
+      InstructionCost ScalarCost = InstructionCost::getInvalid(),
+      VectorInstrContext VIC = VectorInstrContext::None);
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
   Type *getReturnType() const { return RetTy; }
   FastMathFlags getFlags() const { return FMF; }
   InstructionCost getScalarizationCost() const { return ScalarizationCost; }
+  VectorInstrContext getVectorInstrContext() const { return VIC; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
 
@@ -409,10 +430,10 @@ public:
   /// chain of loads or stores within same block) operations set when lowered.
   /// \p AccessTy is the type of the loads/stores that will ultimately use the
   /// \p Ptrs.
-  LLVM_ABI InstructionCost getPointersChainCost(
-      ArrayRef<const Value *> Ptrs, const Value *Base,
-      const PointersChainInfo &Info, Type *AccessTy,
-      TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
+                       const PointersChainInfo &Info, Type *AccessTy,
+                       const TargetCostKind CostKind) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -665,11 +686,6 @@ public:
     /// OptSizeThreshold, but used for partial/runtime unrolling (set to
     /// UINT_MAX to disable).
     unsigned PartialOptSizeThreshold;
-    /// A forced unrolling factor (the number of concatenated bodies of the
-    /// original loop in the unrolled loop body). When set to 0, the unrolling
-    /// transformation will select an unrolling factor based on the current cost
-    /// threshold and other factors.
-    unsigned Count;
     /// Default unroll count for loops with run-time trip count.
     unsigned DefaultUnrollRuntimeCount;
     // Set the maximum unrolling factor. The unrolling factor may be selected
@@ -1025,6 +1041,10 @@ public:
   /// containing this constant value for the target.
   LLVM_ABI bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
+  /// Return the minimum bit width to use for integer switch lookup table
+  /// elements on this target.
+  LLVM_ABI unsigned getMinimumLookupTableEntryBitWidth() const;
+
   /// Return true if lookup tables should be turned into relative lookup tables.
   LLVM_ABI bool shouldBuildRelLookupTables() const;
 
@@ -1052,20 +1072,7 @@ public:
   isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
                                                    int RetIdx) const;
 
-  /// Represents a hint about the context in which an insert/extract is used.
-  ///
-  /// On some targets, inserts/extracts can cheaply be folded into loads/stores.
-  ///
-  /// This enum allows the vectorizer to give getVectorInstrCost an idea of how
-  /// inserts/extracts are used
-  ///
-  /// See \c getVectorInstrContextHint to compute a VectorInstrContext from an
-  /// insert/extract Instruction*.
-  enum class VectorInstrContext : uint8_t {
-    None,  ///< The insert/extract is not used with a load/store.
-    Load,  ///< The value being inserted comes from a load (InsertElement only).
-    Store, ///< The extracted value is stored (ExtractElement only).
-  };
+  using VectorInstrContext = llvm::VectorInstrContext;
 
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
@@ -1180,6 +1187,10 @@ public:
 
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
+
+  /// Return true if the hardware has a fast carry-less multiplication
+  /// instruction.
+  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
 
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.
@@ -1494,8 +1505,11 @@ public:
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
-  /// and the number of execution units in the CPU.
-  LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF) const;
+  /// and the number of execution units in the CPU. HasUnorderedReductions
+  /// specifies whether (unordered) reductions are present in the loop being
+  /// vectorized.
+  LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF,
+                                           bool HasUnorderedReductions) const;
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
@@ -1930,8 +1944,7 @@ public:
   /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
-  /// \p IsEpilogue is true if the decision is for the epilogue loop.
-  LLVM_ABI bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const;
+  LLVM_ABI bool preferFixedOverScalableIfEqualCost() const;
 
   /// \returns True if target prefers SLP vectorizer with altermate opcode
   /// vectorization, false - otherwise.

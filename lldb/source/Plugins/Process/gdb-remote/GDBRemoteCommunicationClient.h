@@ -152,6 +152,9 @@ public:
   int SetSTDOUT(const FileSpec &file_spec);
   int SetSTDERR(const FileSpec &file_spec);
 
+  /// Send the dimensions of the user's stdio terminal window to the server.
+  int SetSTDIOWindowSize(uint16_t cols, uint16_t rows);
+
   /// Sets the disable ASLR flag to \a enable for a process that will
   /// be launched with the 'A' packet.
   ///
@@ -355,6 +358,11 @@ public:
   bool GetMultiBreakpointSupported();
 
   bool GetAcceleratorPluginsSupported();
+
+  /// Whether the WebAssembly stub can be told which module instance to read
+  /// from, which it advertises with "qWasmInstance+" in its qSupported
+  /// response.
+  bool GetWasmInstanceSupported();
 
   /// Send the "jAcceleratorPluginInitialize" packet and return the actions
   /// requested by each accelerator plugin installed in lldb-server. The packet
@@ -611,6 +619,7 @@ protected:
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
   LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
+  LazyBool m_supports_wasm_instance = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

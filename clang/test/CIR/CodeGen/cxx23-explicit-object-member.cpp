@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
@@ -34,7 +36,7 @@ int call_with_member(Adder a) {
 
 // CIR-LABEL: cir.func{{.*}} @_ZNH5AdderclERKS_i(%arg0: !cir.ptr<!rec_Adder>
 // CIR-SAME:                                     %arg1: !s32i
-// CIR:         %[[SELF_SLOT:.+]] = cir.alloca !cir.ptr<!rec_Adder>, {{.*}}["self"
+// CIR:         %[[SELF_SLOT:.+]] = cir.alloca "self" {{.*}} : !cir.ptr<!cir.ptr<!rec_Adder>>
 // CIR:         %[[SELF_PTR:.+]] = cir.load{{.*}} %[[SELF_SLOT]] : !cir.ptr<!cir.ptr<!rec_Adder>>, !cir.ptr<!rec_Adder>
 // CIR:         %[[BASE_PTR:.+]] = cir.get_member %[[SELF_PTR]][0] {name = "base"} : !cir.ptr<!rec_Adder> -> !cir.ptr<!s32i>
 // CIR:         %[[BASE:.+]] = cir.load{{.*}} %[[BASE_PTR]] : !cir.ptr<!s32i>, !s32i

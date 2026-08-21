@@ -31,6 +31,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -40,25 +41,15 @@ using namespace llvm;
 
 namespace {
 
-class RISCVVectorPeephole : public MachineFunctionPass {
+class RISCVVectorPeepholeImpl {
 public:
-  static char ID;
+  bool run(MachineFunction &MF);
+
+private:
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
   const RISCVSubtarget *ST;
-  RISCVVectorPeephole() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setIsSSA();
-  }
-
-  StringRef getPassName() const override {
-    return "RISC-V Vector Peephole Optimization";
-  }
-
-private:
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
@@ -78,17 +69,39 @@ private:
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
 };
 
+class RISCVVectorPeepholeLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVVectorPeepholeLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  StringRef getPassName() const override {
+    return "RISC-V Vector Peephole Optimization";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // namespace
 
-char RISCVVectorPeephole::ID = 0;
+char RISCVVectorPeepholeLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
-                false)
+INITIALIZE_PASS(RISCVVectorPeepholeLegacy, DEBUG_TYPE, "RISC-V Fold Masks",
+                false, false)
 
 /// Given \p User that has an input operand with EEW=SEW, which uses the dest
 /// operand of \p Src with an unknown EEW, return true if their EEWs match.
-bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
-                                     const MachineInstr &Src) const {
+bool RISCVVectorPeepholeImpl::hasSameEEW(const MachineInstr &User,
+                                         const MachineInstr &Src) const {
   unsigned UserLog2SEW =
       User.getOperand(RISCVII::getSEWOpNum(User.getDesc())).getImm();
   unsigned SrcLog2SEW =
@@ -100,19 +113,21 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
 
 /// Check if an operand is an immediate or a materialized ADDI $x0, imm.
 std::optional<unsigned>
-RISCVVectorPeephole::getConstant(const MachineOperand &VL) const {
+RISCVVectorPeepholeImpl::getConstant(const MachineOperand &VL) const {
   if (VL.isImm())
     return VL.getImm();
 
+  if (!VL.getReg().isVirtual())
+    return std::nullopt;
   MachineInstr *Def = MRI->getVRegDef(VL.getReg());
-  if (!Def || Def->getOpcode() != RISCV::ADDI ||
+  if (!Def || Def->getOpcode() != RISCV::ADDI || !Def->getOperand(1).isReg() ||
       Def->getOperand(1).getReg() != RISCV::X0)
     return std::nullopt;
   return Def->getOperand(2).getImm();
 }
 
 /// Convert AVLs that are known to be VLMAX to the VLMAX sentinel.
-bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
+bool RISCVVectorPeepholeImpl::convertToVLMAX(MachineInstr &MI) const {
   if (!RISCVII::hasVLOp(MI.getDesc().TSFlags) ||
       !RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return false;
@@ -173,7 +188,7 @@ bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVectorPeephole::isAllOnesMask(const MachineInstr *MaskDef) const {
+bool RISCVVectorPeepholeImpl::isAllOnesMask(const MachineInstr *MaskDef) const {
   while (MaskDef->isCopy() && MaskDef->getOperand(1).getReg().isVirtual())
     MaskDef = MRI->getVRegDef(MaskDef->getOperand(1).getReg());
 
@@ -204,7 +219,7 @@ bool RISCVVectorPeephole::isAllOnesMask(const MachineInstr *MaskDef) const {
 ///
 /// %x = VL1RE8_V %ptr
 /// VS1R_V %v, %ptr
-bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
+bool RISCVVectorPeepholeImpl::convertToWholeRegister(MachineInstr &MI) const {
 #define CASE_WHOLE_REGISTER_LMUL_SEW(lmul, sew)                                \
   case RISCV::PseudoVLE##sew##_V_M##lmul:                                      \
     NewOpc = RISCV::VL##lmul##RE##sew##_V;                                     \
@@ -268,7 +283,8 @@ static unsigned getVMV_V_VOpcodeForVMERGE_VVM(const MachineInstr &MI) {
 /// %x = PseudoVMERGE_VVM %passthru, %false, %true, %allones, sew, vl
 /// ->
 /// %x = PseudoVMV_V_V %passthru, %true, vl, sew, tu_mu
-bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
+bool RISCVVectorPeepholeImpl::convertAllOnesVMergeToVMv(
+    MachineInstr &MI) const {
   unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
   if (!NewOpc)
     return false;
@@ -291,7 +307,7 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
 
 // If \p Reg is defined by one or more COPYs of virtual registers, traverses
 // the chain and returns the root non-COPY source.
-Register RISCVVectorPeephole::lookThruCopies(
+Register RISCVVectorPeepholeImpl::lookThruCopies(
     Register Reg, bool OneUseOnly,
     SmallVectorImpl<MachineInstr *> *Copies) const {
   while (MachineInstr *Def = MRI->getUniqueVRegDef(Reg)) {
@@ -318,7 +334,7 @@ Register RISCVVectorPeephole::lookThruCopies(
 /// ->
 /// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
 /// %x = PseudoVMV_V_V %passthru, %true, vl2, sew, tu_mu
-bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
+bool RISCVVectorPeepholeImpl::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
   if (!NewOpc)
     return false;
@@ -393,7 +409,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   return true;
 }
 
-bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
+bool RISCVVectorPeepholeImpl::convertToUnmasked(MachineInstr &MI) const {
   const RISCV::RISCVMaskedPseudoInfo *I =
       RISCV::getMaskedPseudoInfo(MI.getOpcode());
   if (!I)
@@ -448,9 +464,11 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
 }
 
 /// Given A and B are in the same MBB, returns true if A comes before B.
-static bool dominates(MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
+static bool strictlyDominates(MachineBasicBlock::const_iterator A,
+                              MachineBasicBlock::const_iterator B) {
   assert(A->getParent() == B->getParent());
+  if (A == B)
+    return false;
   const MachineBasicBlock *MBB = A->getParent();
   auto MBBEnd = MBB->end();
   if (B == MBBEnd)
@@ -466,8 +484,8 @@ static bool dominates(MachineBasicBlock::const_iterator A,
 /// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
 /// does. Returns false if any def doesn't dominate and we can't move Use. Each
 /// def must be in the same block as Use.
-bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
-                                          MachineInstr &Use) const {
+bool RISCVVectorPeepholeImpl::ensureDominates(
+    ArrayRef<const MachineOperand *> Defs, MachineInstr &Use) const {
   MachineInstr *Dest = &Use;
 
   for (const MachineOperand *MO : Defs) {
@@ -476,7 +494,8 @@ bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
       continue;
 
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
-    if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
+    if (Def->getParent() == Dest->getParent() &&
+        !strictlyDominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
         return false;
       Dest = Def->getNextNode();
@@ -490,7 +509,7 @@ bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
 }
 
 /// If a PseudoVMV_V_V's passthru is undef then we can replace it with its input
-bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
+bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
     return false;
   if (MI.getOperand(1).getReg().isValid())
@@ -532,7 +551,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
 /// ->
 ///
 /// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, vl1, sew, policy
-bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
+bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
     return false;
 
@@ -632,7 +651,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
 ///
 /// The resulting policy is the effective policy the vmerge would have had,
 /// i.e. whether or not it's passthru operand was implicit-def.
-bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
+bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMERGE_VVM)
     return false;
 
@@ -777,10 +796,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVVectorPeepholeImpl::run(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())
@@ -813,6 +829,25 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVVectorPeepholePass() {
-  return new RISCVVectorPeephole();
+bool RISCVVectorPeepholeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return RISCVVectorPeepholeImpl().run(MF);
+}
+
+PreservedAnalyses
+RISCVVectorPeepholePass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVVectorPeepholeImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
+}
+
+FunctionPass *llvm::createRISCVVectorPeepholeLegacyPass() {
+  return new RISCVVectorPeepholeLegacy();
 }

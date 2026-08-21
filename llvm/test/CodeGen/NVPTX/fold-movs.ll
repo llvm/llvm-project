@@ -17,19 +17,19 @@ define void @writevec(<8 x float> %v1, <8 x float> %v2, ptr addrspace(1) %p) {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [writevec_param_0];
-; CHECK-F32X2-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [writevec_param_0+16];
-; CHECK-F32X2-NEXT:    ld.param.v4.b32 {%r9, %r10, %r11, %r12}, [writevec_param_1+16];
+; CHECK-F32X2-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [writevec_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [writevec_param_0+16];
+; CHECK-F32X2-NEXT:    ld.param::func.v4.b32 {%r9, %r10, %r11, %r12}, [writevec_param_1+16];
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r13, %r8, %r12;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r14, %r7, %r11;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r15, %r6, %r10;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r16, %r5, %r9;
-; CHECK-F32X2-NEXT:    ld.param.v4.b32 {%r17, %r18, %r19, %r20}, [writevec_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.v4.b32 {%r17, %r18, %r19, %r20}, [writevec_param_1];
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r21, %r4, %r20;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r22, %r3, %r19;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r23, %r2, %r18;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r24, %r1, %r17;
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [writevec_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [writevec_param_2];
 ; CHECK-F32X2-NEXT:    st.global.v8.b32 [%rd1], {%r24, %r23, %r22, %r21, %r16, %r15, %r14, %r13};
 ; CHECK-F32X2-NEXT:    ret;
   %v = fdiv <8 x float> %v1, %v2

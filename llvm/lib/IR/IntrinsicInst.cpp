@@ -559,38 +559,6 @@ VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
   return std::nullopt;
 }
 
-Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
-  switch (IROPC) {
-  default:
-    break;
-
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
-#define VP_PROPERTY_FUNCTIONAL_OPC(OPC) case Instruction::OPC:
-#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return Intrinsic::not_intrinsic;
-}
-
-constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
-  if (::isVPIntrinsic(Id))
-    return Id;
-
-  switch (Id) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
-#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
-#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return Intrinsic::not_intrinsic;
-}
-
-Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
-  return ::getForIntrinsic(Id);
-}
-
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   using namespace PatternMatch;
 
@@ -867,10 +835,16 @@ Value *GCRelocateInst::getBasePtr() const {
   auto Statepoint = getStatepoint();
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
-
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getBasePtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getBasePtrIndex());
+  }
+  if (getBasePtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getBasePtrIndex());
 }
 
@@ -879,9 +853,16 @@ Value *GCRelocateInst::getDerivedPtr() const {
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
 
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getDerivedPtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
+  }
+  if (getDerivedPtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getDerivedPtrIndex());
 }
 

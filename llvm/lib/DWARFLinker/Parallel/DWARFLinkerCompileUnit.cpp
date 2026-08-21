@@ -51,8 +51,7 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
-    Language = dwarf::toUnsigned(Val, 0);
+  Language = CUDie.getLanguage();
 
   if (!GlobalData.getOptions().NoODR && Language.has_value() &&
       isODRLanguage(*Language))
@@ -930,7 +929,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macros))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacro()) {
+            getContainingFile().Dwarf->getDebugMacro()) {
       emitMacroTableImpl(Table, *MacroAttr, true);
     }
   }
@@ -939,7 +938,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macro_info))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacinfo()) {
+            getContainingFile().Dwarf->getDebugMacinfo()) {
       emitMacroTableImpl(Table, *MacroAttr, false);
     }
   }
@@ -1399,7 +1398,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   if (InputDieEntry->getTag() == dwarf::DW_TAG_subprogram) {
     // Get relocation adjustment value for the current function.
     FuncAddressAdjustment =
-        getContaingFile().Addresses->getSubprogramRelocAdjustment(
+        getContainingFile().Addresses->getSubprogramRelocAdjustment(
             getDIE(InputDieEntry), false);
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_label) {
     // Get relocation adjustment value for the current label.
@@ -1413,7 +1412,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_variable) {
     // Get relocation adjustment value for the current variable.
     std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
-        getContaingFile().Addresses->getVariableRelocAdjustment(
+        getContainingFile().Addresses->getVariableRelocAdjustment(
             getDIE(InputDieEntry), false);
 
     HasLocationExpressionAddress = LocExprAddrAndRelocAdjustment.first;
@@ -1571,7 +1570,7 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
 
 Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   const DWARFDebugLine::LineTable *InputLineTable =
-      getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
+      getContainingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
   if (InputLineTable == nullptr) {
     if (getOrigUnit().getUnitDIE().find(dwarf::DW_AT_stmt_list))
       warn("cann't load line table.");
@@ -1840,10 +1839,11 @@ CompileUnit::getDirAndFilenameFromLineTable(
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
+  std::lock_guard<std::mutex> Guard(FileNamesMutex);
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
   if (FileData != FileNames.end())
-    return std::make_pair(StringRef(FileData->second.first),
-                          StringRef(FileData->second.second));
+    return {{StringRef(FileData->second->first),
+             StringRef(FileData->second->second)}};
 
   if (const DWARFDebugLine::LineTable *LineTable =
           getOrigUnit().getContext().getLineTableForUnit(&getOrigUnit())) {
@@ -1862,12 +1862,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
         FileNamesCache::iterator FileData =
             FileNames
-                .insert(std::make_pair(
-                    FileIdx,
-                    std::make_pair(std::string(""), std::move(FileName))))
+                .insert({FileIdx,
+                         std::make_unique<std::pair<std::string, std::string>>(
+                             std::string(""), std::move(FileName))})
                 .first;
-        return std::make_pair(StringRef(FileData->second.first),
-                              StringRef(FileData->second.second));
+        return {{StringRef(FileData->second->first),
+                 StringRef(FileData->second->second)}};
       }
 
       SmallString<256> FilePath;
@@ -1913,12 +1913,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       FileNamesCache::iterator FileData =
           FileNames
-              .insert(
-                  std::make_pair(FileIdx, std::make_pair(std::string(FilePath),
-                                                         std::move(FileName))))
+              .insert({FileIdx,
+                       std::make_unique<std::pair<std::string, std::string>>(
+                           std::string(FilePath), std::move(FileName))})
               .first;
-      return std::make_pair(StringRef(FileData->second.first),
-                            StringRef(FileData->second.second));
+      return {{StringRef(FileData->second->first),
+               StringRef(FileData->second->second)}};
     }
   }
 
@@ -2006,7 +2006,8 @@ void CompileUnit::verifyDependencies() {
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {
   static dwarf::Attribute ODRAttributes[] = {
       dwarf::DW_AT_type, dwarf::DW_AT_specification,
-      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import};
+      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import,
+      dwarf::DW_AT_LLVM_alloc_type};
 
   return ODRAttributes;
 }

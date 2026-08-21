@@ -310,6 +310,24 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
   return success;
 }
 
+bool SBValue::CanSetValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return CanSet().Success();
+}
+
+lldb::SBError SBValue::CanSet() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return SBError(Status::FromErrorStringWithFormat(
+        "Could not get value: %s", locker.GetError().AsCString()));
+
+  return SBError(Status::FromError(value_sp->CanSetValue()));
+}
+
 lldb::SBTypeFormat SBValue::GetTypeFormat() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -380,6 +398,33 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
     }
   }
   return synthetic;
+}
+
+void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
+  if (value_sp) {
+    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
+  }
+}
+
+lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
+  if (!frontend)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  return lldb::SBScriptObject(frontend->GetImplementation(),
+                              eScriptLanguageDefault);
 }
 
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
@@ -961,9 +1006,9 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
-      && (m_opaque_sp->GetRootSP()
-          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() &&
+                       (m_opaque_sp->GetRootSP() &&
+                        !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError() = Status::FromErrorString("No value");
     return ValueObjectSP();
   }
@@ -1093,7 +1138,6 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp) {
@@ -1105,7 +1149,8 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   ExecutionContext exe_ctx(target_sp.get());
 
   StackFrame *frame = exe_ctx.GetFramePtr();

@@ -109,6 +109,14 @@ func.func @load_nd_vc_4(%src: memref<24x32xf32>) {
 }
 
 // -----
+func.func @subgroup_load_nd_9(%src: memref<4x8x16xf16>) {
+  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // expected-error@+1 {{Result shape [4, 8, 8] is not consistent with tensor descriptor}}
+  %2 = xegpu.load_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x8xf16>
+  return
+}
+
+// -----
 func.func @subgroup_load_nd_offset_1(%src: memref<4x8x16xf16>, %x : index) {
   %1 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<16xf16>
 // expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
@@ -165,6 +173,15 @@ func.func @store_nd_vc_3(%dst: memref<24x32xf16>) {
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
   // expected-error@+1 {{array length is not supported by store_nd}}
   xegpu.store_nd %1, %2[0, 0]: vector<2x24x32xf16>, !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
+  return
+}
+
+// -----
+func.func @store_nd_vc_4(%dst: memref<8x24x32xf16>) {
+  %1 = arith.constant dense<1.0>: vector<8x24x16xf16>
+  %2 = xegpu.create_nd_tdesc %dst : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
+  // expected-error@+1 {{Value shape [8, 24, 16] is not consistent with tensor descriptor}}
+  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x16xf16>, !xegpu.tensor_desc<8x24x32xf16>
   return
 }
 
@@ -589,15 +606,15 @@ func.func @slice_attr_repeat_dim() {
 
 // -----
 func.func @create_mem_desc_non_slm() {
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
-  // expected-error@+1 {{operand #0 must be reside in share memory and statically 1d shaped memref }}
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 1>
+  // expected-error@+1 {{operand #0 must be reside in share memory and statically shaped memref }}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 1> -> !xegpu.mem_desc<16x64xf16>
   return
 }
 
 // -----
 func.func @create_mem_desc_mismatch_sizes() {
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   // expected-error@+1 {{failed to verify that all of {source, mem_desc} have same size in bits}}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x32xf16>
   return
@@ -673,6 +690,13 @@ func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf3
 func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
   // expected-error@+1 {{op input type must be wider than result type}}
   %1 = xegpu.truncf %a : vector<8x16xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @lane_shuffle_single_element(%a: vector<1xi32>) {
+  // expected-error@+1 {{op requires a source vector with at least 2 elements}}
+  %1 = xegpu.lane_shuffle %a pack : vector<1xi32>
   return
 }
 
@@ -770,5 +794,30 @@ func.func @dpas_mx_scale_a_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
 func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>, %scale_b_val: vector<2x16xf8E8M0FNU>) {
   // expected-error@+1 {{ScaleB shape is not distributable with the layout}}
   %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @contiguity_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{contiguity = 1 (must be >= 2)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 1 : i64}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+func.func @contiguity_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{contiguity = 4 (must divide the innermost offsets dim 6)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
+      : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
+  return
+}
+
+// -----
+func.func @create_mem_desc_non_contiguous() {
+  %m = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
+  %m_sub = memref.subview %m[0, 0][16, 32][1, 1] : memref<32x64xf16, 3> to memref<16x32xf16, strided<[64, 1]>, 3>
+  // expected-error@+1 {{source memref must be contiguous.}}
+  %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x32xf16, strided<[64, 1]>, 3> -> !xegpu.mem_desc<16x32xf16>
   return
 }

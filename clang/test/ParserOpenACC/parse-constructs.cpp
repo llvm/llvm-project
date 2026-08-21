@@ -58,3 +58,10 @@ void foo() {
   auto y = [](){};
 #pragma acc routine (x) seq
 }
+
+struct GH214195 {
+  void foo() {
+#pragma acc cache(bar })
+    // expected-error@-1{{use of undeclared identifier 'bar'}}
+  }
+};

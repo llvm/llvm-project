@@ -117,6 +117,7 @@ check_cxx_compiler_flag("-Werror;-mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
 check_cxx_compiler_flag("-Werror;-ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
 check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
+check_c_compiler_flag(-nostdlibinc          COMPILER_RT_HAS_NOSTDLIBINC_FLAG)
 check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
 check_c_compiler_flag("-Xclang;-mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 
@@ -444,7 +445,7 @@ if(APPLE)
 
   if(COMPILER_RT_ENABLE_IOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS ios)
-    set(DARWIN_ios_MIN_VER 9.0)
+    set(DARWIN_ios_MIN_VER 15.0)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
     set(DARWIN_ios_SANITIZER_MIN_VER_FLAG
       ${DARWIN_ios_MIN_VER_FLAG}=${DARWIN_ios_MIN_VER})
@@ -454,7 +455,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_WATCHOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS watchos)
-    set(DARWIN_watchos_MIN_VER 2.0)
+    set(DARWIN_watchos_MIN_VER 8.0)
     set(DARWIN_watchos_MIN_VER_FLAG -mwatchos-version-min)
     set(DARWIN_watchos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_MIN_VER})
@@ -464,7 +465,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_TVOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS tvos)
-    set(DARWIN_tvos_MIN_VER 9.0)
+    set(DARWIN_tvos_MIN_VER 15.0)
     set(DARWIN_tvos_MIN_VER_FLAG -mtvos-version-min)
     set(DARWIN_tvos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_tvos_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
@@ -490,7 +491,7 @@ if(APPLE)
     set(ORC_SUPPORTED_OS osx)
   endif()
 
-  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 11.0)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
 
   string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
@@ -895,7 +896,7 @@ endif()
 
 if (UBSAN_SUPPORTED_ARCH AND
     (OS_NAME MATCHES "Linux|FreeBSD|NetBSD|Android|Darwin|SunOS" OR
-     "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64"))
+     COMPILER_RT_GPU_BUILD))
   set(COMPILER_RT_HAS_UBSAN_MINIMAL TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN_MINIMAL FALSE)

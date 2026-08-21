@@ -188,6 +188,9 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;
   OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
+  /// Request the fused distr_static_chunk + static_chunkone runtime schedule
+  /// in `for_static_init`. The outer `distribute_static_init` is skipped.
+  bool UseFusedDistChunkSchedule = false;
 };
 
 /// OpenMP modifiers for 'reduction' clause.
@@ -259,10 +262,22 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+enum OpenMPNumTeamsClauseModifier {
+#define OPENMP_NUMTEAMS_MODIFIER(Name) OMPC_NUMTEAMS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTEAMS_unknown
+};
+
 enum OpenMPNumThreadsClauseModifier {
 #define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_NUMTHREADS_unknown
+};
+
+enum OpenMPThreadLimitClauseModifier {
+#define OPENMP_THREADLIMIT_MODIFIER(Name) OMPC_THREADLIMIT_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_THREADLIMIT_unknown
 };
 
 /// OpenMP dependence types for 'doacross' clause.
@@ -292,12 +307,22 @@ static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
 
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
+/// One entry of a prefer_type list. Each pref-spec carries an optional fr()
+/// foreign-runtime-id expression and zero or more attr() ext-string-literal
+/// expressions. Fr is nullptr for attr-only specs.
+struct OMPInteropPref final {
+  OMPInteropPref(Expr *Fr, llvm::SmallVector<Expr *, 2> Attrs)
+      : Fr(Fr), Attrs(std::move(Attrs)) {}
+  Expr *Fr = nullptr;
+  llvm::SmallVector<Expr *, 2> Attrs;
+};
 struct OMPInteropInfo final {
   OMPInteropInfo(bool IsTarget = false, bool IsTargetSync = false)
       : IsTarget(IsTarget), IsTargetSync(IsTargetSync) {}
   bool IsTarget;
   bool IsTargetSync;
-  llvm::SmallVector<Expr *, 4> PreferTypes;
+  bool HasPreferAttrs = false;
+  llvm::SmallVector<OMPInteropPref, 4> Prefs;
 };
 
 OpenMPDefaultClauseVariableCategory

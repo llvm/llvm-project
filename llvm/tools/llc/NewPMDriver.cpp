@@ -128,6 +128,17 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+
+  MAM.registerPass([&] {
+    const TargetOptions &Options = Target->Options;
+    return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
+                                  Options.MCOptions.ABIName, Options.VecLib);
+  });
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -136,19 +147,6 @@ int llvm::compileModuleWithNewPM(
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
   SI.registerCallbacks(PIC, &MAM);
-
-  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-
-  MAM.registerPass([&] {
-    const TargetOptions &Options = Target->Options;
-    return RuntimeLibraryAnalysis(
-        M->getTargetTriple(), Target->Options.ExceptionModel,
-        Target->Options.FloatABIType, Target->Options.EABIVersion,
-        Options.MCOptions.ABIName, Target->Options.VecLib);
-  });
-  MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
   FunctionPassManager FPM;
@@ -186,7 +184,8 @@ int llvm::compileModuleWithNewPM(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << PipelineStr << '\n';
+    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    outs() << '\n';
     return 0;
   }
 

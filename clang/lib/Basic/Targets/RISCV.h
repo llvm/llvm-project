@@ -51,7 +51,7 @@ public:
     HasStrictFP = true;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;
@@ -116,10 +116,6 @@ public:
   bool hasBFloat16Type() const override { return true; }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;

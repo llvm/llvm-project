@@ -21,7 +21,7 @@ end:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z24test_goto_within_cleanupb
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_StructWithDestructor, !cir.ptr<!rec_StructWithDestructor>, ["a"]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {
@@ -40,7 +40,7 @@ end:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         %[[COND_ADDR:.*]] = alloca i8
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %[[COND_ADDR]]
@@ -87,7 +87,7 @@ skip:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z29test_goto_jump_into_nested_opbb
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_StructWithDestructor, !cir.ptr<!rec_StructWithDestructor>, ["a"]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {
@@ -111,7 +111,7 @@ skip:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef %{{.*}}, i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         %[[COND1_ADDR:.*]] = alloca i8
 // LLVM:         %[[COND2_ADDR:.*]] = alloca i8
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor

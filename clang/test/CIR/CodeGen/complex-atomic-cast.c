@@ -10,13 +10,13 @@ void complex_to_atomic_complex() {
   _Atomic _Complex int b = a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 8
 // LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: store { i32, i32 } %[[TMP_A]], ptr %[[B_ADDR]], align 8
 
@@ -36,9 +36,9 @@ void atomic_complex_to_complex() {
   _Complex int b = a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["atomic-temp"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[A_U64I:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!u64i>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} atomic(seq_cst) %[[A_U64I]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[ATOMIC_TMP_U64I:.*]] = cir.cast bitcast %[[ATOMIC_TMP_ADDR]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!u64i>
@@ -46,9 +46,9 @@ void atomic_complex_to_complex() {
 // CIR: %[[TMP_ATOMIC:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[TMP_ATOMIC]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { i32, i32 }, align 8
 // LLVM: %[[TMP_A:.*]] = load atomic i64, ptr %[[A_ADDR]] seq_cst, align 8
 // LLVM: store i64 %[[TMP_A]], ptr %[[ATOMIC_TMP_ADDR]], align 8
 // LLVM: %[[TMP_ATOMIC:.*]] = load { i32, i32 }, ptr %[[ATOMIC_TMP_ADDR]], align 8
@@ -72,13 +72,13 @@ void explicit_cast_scalar_to_atomic_complex() {
   _Atomic _Complex float a = (_Atomic _Complex float)2.0f;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_2F:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_2F]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store {{.*}} %[[COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 8
 // LLVM: store { float, float } { float 2.000000e+00, float 0.000000e+00 }, ptr %[[A_ADDR]], align 8
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 8
@@ -92,9 +92,9 @@ void explicit_cast_atomic_complex_to_complex() {
   _Complex int b = (_Complex int)a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["atomic-temp"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_2F:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_2F]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
@@ -111,9 +111,9 @@ void explicit_cast_atomic_complex_to_complex() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[ATOMIC_TMP_REAL_I32]], %[[ATOMIC_TMP_IMAG_I32]] : !s32i -> !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { float, float }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { float, float }, align 8
 // LLVM: store { float, float } { float 2.000000e+00, float 0.000000e+00 }, ptr %[[A_ADDR]], align 8
 // LLVM: %[[TMP_A:.*]] = load atomic i64, ptr %[[A_ADDR]] seq_cst, align 8
 // LLVM: store i64 %[[TMP_A]], ptr %[[ATOMIC_TMP_ADDR]], align 8
@@ -151,9 +151,9 @@ void explicit_cast_atomic_complex_to_atomic_complex() {
   _Atomic _Complex int b = (_Atomic _Complex int)a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["atomic-temp"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a"  {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_2F:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_2F]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
@@ -170,9 +170,9 @@ void explicit_cast_atomic_complex_to_atomic_complex() {
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[ATOMIC_TMP_REAL_I32]], %[[ATOMIC_TMP_IMAG_I32]] : !s32i -> !cir.complex<!s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 8
-// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { float, float }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 8
+// LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { float, float }, align 8
 // LLVM: store { float, float } { float 2.000000e+00, float 0.000000e+00 }, ptr %[[A_ADDR]], align 8
 // LLVM: %[[TMP_A:.*]] = load atomic i64, ptr %[[A_ADDR]] seq_cst, align 8
 // LLVM: store i64 %[[TMP_A]], ptr %[[ATOMIC_TMP_ADDR]], align 8

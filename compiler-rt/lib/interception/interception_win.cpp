@@ -679,11 +679,13 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 2;
 
     case 0x3980:  // 80 39 XX : cmp BYTE PTR [rcx], XX
+    case 0x3a80:  // 80 3A XX : cmp BYTE PTR [rdx], XX
     case 0x4D8B:  // 8B 4D XX : mov XX(%ebp), ecx
     case 0x558B:  // 8B 55 XX : mov XX(%ebp), edx
     case 0x758B:  // 8B 75 XX : mov XX(%ebp), esp
     case 0xE483:  // 83 E4 XX : and esp, XX
     case 0xEC83:  // 83 EC XX : sub esp, XX
+    case 0x458D:  // 8D 45 XX : lea eax, [ebp + XX]
     case 0xC1F6:  // F6 C1 XX : test cl, XX
       return 3;
 
@@ -702,6 +704,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 4;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
+  }
+
+  switch (*(u32*)(address)) {
+    case 0xc0ef0f66:  // 66 0f ef c0 : pxor xmm0, xmm0
+      return 4;
   }
 
   switch (0x000000FF & *(u32 *)address) {
@@ -770,6 +777,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
         *rel_offset = 2;
       FALLTHROUGH;
     case 0xB841:  // 41 B8 XX XX XX XX : mov r8d, XX XX XX XX
+    case 0xB941:  // 41 B9 XX XX XX XX : mov r9d, XX XX XX XX
       return 6;
 
     case 0x7E81:  // 81 7E YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
@@ -843,6 +851,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd23345:    // 45 33 d2 : xor r10d, r10d
     case 0xdb3345:    // 45 33 db : xor r11d, r11d
     case 0xc08445:    // 45 84 c0 : test r8b,r8b
+    case 0xc98445:    // 45 84 c9 : test r9b,r9b
     case 0xd28445:    // 45 84 d2 : test r10b,r10b
     case 0xdb8548:    // 48 85 db : test rbx, rbx
     case 0xdb854d:    // 4d 85 db : test r11, r11

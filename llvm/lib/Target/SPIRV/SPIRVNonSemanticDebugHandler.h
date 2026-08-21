@@ -21,6 +21,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -32,6 +33,7 @@
 
 namespace llvm {
 
+class GlobalVariable;
 class SPIRVSubtarget;
 
 /// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
@@ -39,36 +41,90 @@ class SPIRVSubtarget;
 /// the module contains debug info (llvm.dbg.cu).
 ///
 /// Call sequence:
-///   beginModule()                    -- collect compile-unit metadata.
-///   prepareModuleOutput()            -- add extension + ext inst set to MAI.
-///   emitNonSemanticDebugStrings()    -- OpString for NSDI strings (sec. 7).
-///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
-///                                       DebugCompilationUnit, DebugTypeBasic,
-///                                       DebugTypePointer, DebugTypeFunction.
-///   beginFunctionImpl()              -- no-op (no per-function DI yet).
-///   endFunctionImpl()                -- no-op.
+/// - beginModule() collects compile-unit metadata.
+/// - prepareModuleOutput() adds the extension and ext-inst set to MAI.
+/// - emitNonSemanticDebugStrings() emits NSDI OpStrings in section 7.
+/// - emitNonSemanticGlobalDebugInfo() emits module-scope NSDI and sets
+///   GlobalNSDIEnabled.
+/// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state.
+/// - endInstruction() emits DebugFunctionDefinition after the last function-
+///   level OpVariable; SPIRVAsmPrinter calls notifyEntryLabelEmitted() after
+///   the synthesized entry OpLabel when there are no OpVariables.
+/// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  static constexpr unsigned NSSet = static_cast<unsigned>(
+      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
+
   struct CompileUnitInfo {
+    const DICompileUnit *TheCU = nullptr;
     SmallString<128> FilePath;
     unsigned SpirvSourceLanguage = 0; // NonSemantic.Shader.DebugInfo.100 source
                                       // language code (section 4.3)
   };
-  // TODO: When per-function NSDI emission is implemented, augment
-  // CompileUnitInfo with the originating DICompileUnit pointer so that
-  // Parent operands on DebugFunction and similar instructions can resolve
-  // the compile unit's result register.
   SmallVector<CompileUnitInfo> CompileUnits;
   int64_t DwarfVersion = 0;
 
   // DI types partitioned from DebugInfoFinder.types() in beginModule()
-  // (basics, pointers, subroutine types NSDI v1 may emit).
+  // (basics, pointers, vectors, subroutine types NSDI v1 may emit).
   SmallVector<const DIBasicType *> BasicTypes;
   SmallVector<const DIDerivedType *> PointerTypes;
   SmallVector<const DISubroutineType *> SubroutineTypes;
+  // DICompositeType nodes with DW_TAG_array_type and DINode::FlagVector,
+  // partitioned from DebugInfoFinder.types() in beginModule().
+  SmallVector<const DICompositeType *> VectorTypes;
+  // DICompositeType nodes with DW_TAG_array_type that are not vectors,
+  // partitioned in beginModule().
+  SmallVector<const DICompositeType *> ArrayTypes;
+  // DICompositeType nodes with DW_TAG_structure_type, DW_TAG_class_type, or
+  // DW_TAG_union_type, partitioned in beginModule() for DebugTypeComposite.
+  SmallVector<const DICompositeType *> CompositeTypes;
+  // DIDerivedType nodes with DW_TAG_typedef, partitioned in beginModule() for
+  // DebugTypedef emission.
+  SmallVector<const DIDerivedType *> TypedefTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
   DenseMap<const DIType *, MCRegister> DebugTypeRegs;
+
+  // DISubprogram nodes that are declarations only (!isDefinition()), collected
+  // in beginModule() for DebugFunctionDeclaration emission.
+  SmallVector<const DISubprogram *> SubprogramDeclarations;
+
+  // DISubprogram nodes that are definitions, collected in beginModule() for
+  // DebugFunction emission.
+  SmallVector<const DISubprogram *> SubprogramDefinitions;
+
+  // Distinct DILocations from instruction !dbg attachments and debug program
+  // records (#dbg_declare, #dbg_value, #dbg_assign, #dbg_label).
+  SetVector<const DILocation *> UniqueDebugLocations;
+
+  struct GlobalVariableDebugInfo {
+    const DIExpression *Expr = nullptr;
+    const GlobalVariable *LLVMGV = nullptr;
+  };
+  DenseMap<const DIGlobalVariable *, GlobalVariableDebugInfo>
+      GlobalVariableDebugInfoMap;
+
+  // DebugFunctionDeclaration result id per emitted declaration DISubprogram
+  // (only entries where emission succeeded).
+  DenseMap<const DISubprogram *, MCRegister> DebugFunctionDeclarationRegs;
+
+  // DebugFunction result id per emitted definition DISubprogram (only entries
+  // where emission succeeded).
+  DenseMap<const DISubprogram *, MCRegister> DebugFunctionRegs;
+
+  // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
+  // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
+  // \c getDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
+  // \c DebugSource without recomputing path text.
+  DenseMap<const DIScope *, MCRegister> ScopeToPathOpStringReg;
+
+  // DebugCompilationUnit result id per DICompileUnit (for Parent operands).
+  DenseMap<const DICompileUnit *, MCRegister> CUToCompilationUnitDbgReg;
+
+  // DebugSource result id keyed by path \c OpString id (\c MCRegister::id()),
+  // deduplicating when the same file string is reused.
+  DenseMap<unsigned, MCRegister> DebugSourceRegByFileStr;
 
   // Maps OpString contents to result id. Populated only by emitOpStringIfNew()
   // during section 7; section 10 uses getCachedOpStringReg() (lookup only).
@@ -80,6 +136,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // emitNonSemanticGlobalDebugInfo().
   bool NonSemanticOpStringsSectionEmitted = false;
 #endif
+
+  MCRegister CachedEmptyStringReg;
 
   MCRegister CachedDebugInfoNoneReg;
 
@@ -102,6 +160,20 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // change.
   bool GlobalDIEmitted = false;
 
+  // True when emitNonSemanticGlobalDebugInfo() completed module-scope NSDI
+  // emission for this module.
+  bool GlobalNSDIEnabled = false;
+
+  SPIRV::ModuleAnalysisInfo *CurrentMAI = nullptr;
+
+  const MachineFunction *CurrentMF = nullptr;
+
+  const MachineInstr *LastFunctionOpVariable = nullptr;
+
+  bool DebugFunctionDefinitionEmitted = false;
+
+  const MachineInstr *LastLineMI = nullptr;
+
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
 
@@ -113,8 +185,9 @@ public:
   /// into the debug section (section 7 of the SPIR-V module layout). Must be
   /// called from SPIRVAsmPrinter::outputDebugSourceAndStrings(), after
   /// prepareModuleOutput() has registered the ext inst set. Registers are
-  /// stored in OpStringContentCache; emitNonSemanticGlobalDebugInfo() resolves
-  /// them via getCachedOpStringReg().
+  /// stored in \c OpStringContentCache and \c ScopeToPathOpStringReg;
+  /// \c emitNonSemanticGlobalDebugInfo() resolves them via
+  /// \c getCachedOpStringReg() and path maps.
   void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Add SPV_KHR_non_semantic_info extension and
@@ -125,11 +198,16 @@ public:
                            SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit module-scope NSDI instructions (DebugSource, DebugCompilationUnit,
-  /// DebugTypeBasic, DebugTypePointer, DebugTypeFunction). Called by
+  /// DebugTypeBasic, DebugTypePointer, DebugTypeFunction,
+  /// DebugFunctionDeclaration, DebugFunction). Called by
   /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
   /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
   /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
+  /// Sets \c GlobalNSDIEnabled when module-scope NSDI emission completes.
   void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Called after the synthesized entry \c OpLabel has been emitted.
+  void notifyEntryLabelEmitted(const MachineFunction &MF);
 
 protected:
   // All module-level output is driven by emitNonSemanticGlobalDebugInfo(),
@@ -140,33 +218,58 @@ protected:
   // DebugHandlerBase stores MMI as a pointer copy from Asm->MMI at construction
   // time (DebugHandlerBase.cpp: `MMI(Asm->MMI)`). The handler is constructed
   // before AsmPrinter::doInitialization() runs, so Asm->MMI is null at that
-  // point and MMI remains null for this handler's entire lifetime. The
-  // base-class beginInstruction/endInstruction dereference MMI to create temp
-  // symbols for label tracking and would crash. Override them as no-ops.
-  // When per-function NSDI is implemented, use Asm->OutStreamer->getContext()
-  // for MCContext access rather than MMI->getContext().
-  void beginInstruction(const MachineInstr *MI) override {}
-  void endInstruction() override {}
+  // point and MMI remains null for this handler's entire lifetime. Do not call
+  // the base-class beginInstruction/endInstruction — they dereference MMI to
+  // create temp symbols for label tracking and would crash.
+  // Future local NSDI that needs MCContext must use
+  // Asm->OutStreamer->getContext() rather than MMI->getContext().
+  void beginInstruction(const MachineInstr *MI) override;
+  void endInstruction() override;
 
-  // TODO: Emit DebugFunction and DebugFunctionDefinition here once per-function
-  // NSDI emission is implemented. DebugHandlerBase::beginFunction() populates
-  // LScopes and DbgValues, which are needed for DebugLine emission. Do not
-  // override beginFunction() until that work is in place.
-  void beginFunctionImpl(const MachineFunction *MF) override {}
-  // TODO: Add per-function cleanup when DebugFunction emission is in place.
-  void endFunctionImpl(const MachineFunction *MF) override {}
+  // Override beginFunctionImpl(), not beginFunction():
+  // DebugHandlerBase::beginFunction() populates LScopes and DbgValues needed
+  // for future DebugLine emission.
+  void beginFunctionImpl(const MachineFunction *MF) override;
+  void endFunctionImpl(const MachineFunction *MF) override;
 
 private:
+  void emitDebugFunctionDefinition(MCRegister DebugFunctionReg,
+                                   MCRegister OpFunctionReg,
+                                   SPIRV::ModuleAnalysisInfo &MAI);
+
+  void resetPerFunctionDebugState();
+
+  void emitDebugLineForInstruction(const MachineInstr *MI);
+  void preparePerFunctionDebug(const MachineFunction *MF);
+  void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
+
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Section 7 only: emit OpString and cache it if not already present. Must
-  /// not be called after NonSemanticOpStringsSectionEmitted is set.
-  void emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+  /// not be called after NonSemanticOpStringsSectionEmitted is set. Returns
+  /// the path (or string) \c OpString result id.
+  MCRegister emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Section 10 only: lookup OpString id from cache; asserts if missing or if
   /// section 7 did not complete.
   MCRegister getCachedOpStringReg(StringRef S);
+
+  /// Section 7 only: emit the path \c OpString for \p Scope and cache it under
+  /// \p Scope. Returns the \c OpString result id. A \p Scope already seen
+  /// returns the cached id without rebuilding the path. A null \p Scope maps to
+  /// the empty path and is cached like any other, though section 10 reads it
+  /// through \c getCachedScopePathOpStringReg, which handles null separately.
+  MCRegister emitAndCacheScopePathOpStringReg(const DIScope *Scope,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Section 10 only: lookup path \c OpString id for \p Scope from
+  /// \c ScopeToPathOpStringReg; asserts if missing or invalid. When
+  /// \p UseEmptyPathIfNullScope is true and \p Scope is null, returns
+  /// \c CachedEmptyStringReg instead.
+  MCRegister
+  getCachedScopePathOpStringReg(const DIScope *Scope,
+                                bool UseEmptyPathIfNullScope = false);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
@@ -216,6 +319,126 @@ private:
                                          MCRegister ExtInstSetReg,
                                          SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Emit \c DebugFunctionDeclaration for a \c DISubprogram that is not a
+  /// definition (\p SP must satisfy \c !isDefinition()).
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p SP is null, is a definition, has no \c
+  /// DISubroutineType type, the signature type was not emitted in \c
+  /// DebugTypeRegs, no path
+  /// \c OpString was recorded for \p SP in section 7, or
+  /// \c resolveDebugFunctionParent returns no id for the \c Parent
+  /// operand.
+  std::optional<MCRegister>
+  emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
+                               MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                               SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugFunction for a defining \c DISubprogram (\p SP must satisfy
+  /// \c isDefinition()).
+  std::optional<MCRegister> emitDebugFunction(const DISubprogram *SP,
+                                              MCRegister VoidTypeReg,
+                                              MCRegister I32TypeReg,
+                                              MCRegister ExtInstSetReg,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugGlobalVariable for the source global variable \p GV.
+  ///
+  /// (\c SPIRVDebug::Operand::GlobalVariable): Name, Type, Source, Line,
+  /// Column, Parent, Linkage Name, Variable, Flags, and an optional Static
+  /// Member Declaration. Line, Column, and Flags are emitted as \c OpConstant
+  /// ids as required for non-semantic debug info.
+  ///
+  /// \c DebugInfoNone is used for two operands when LLVM has no value to
+  /// supply:
+  /// \c Type when \p GV is a declaration with no DI type (e.g. \c extern void;
+  /// valid IR, \c isDefinition: false); \c Variable when no \c
+  /// llvm::GlobalVariable in this module carries \p GV in its \c !dbg metadata.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if a non-null \p GV type was not emitted in \c
+  /// DebugTypeRegs, or \p GV has a static data member declaration that was not
+  /// emitted in \c DebugTypeRegs.
+  std::optional<MCRegister> emitDebugGlobalVariable(
+      const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
+      MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Resolve the \c Parent operand for \c DebugGlobalVariable.
+  MCRegister resolveGlobalVariableParent(const DIGlobalVariable *GV) const;
+
+  /// Emit \c DebugExpression for \p Expr. Unimplemented: defined as a no-op
+  /// (\returns \c std::nullopt, emits nothing) so \c emitDebugGlobalVariable
+  /// can complete Variable-operand resolution for the opcodes we support today.
+  std::optional<MCRegister> emitDebugExpression(const DIExpression *Expr,
+                                                MCRegister VoidTypeReg,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeVector for the vector composite type \p VT.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p VT has no \c DIBasicType base type, if the base type
+  /// has not been emitted yet, if \p VT has more than one \c DISubrange
+  /// element, or if the component count is not a compile-time constant.
+  std::optional<MCRegister> emitDebugTypeVector(const DICompositeType *VT,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeArray for the array composite type \p AT.
+  ///
+  /// Emits the element (base) type id followed by one Component Count per
+  /// \c DISubrange, in DWARF subrange order. A count that is not a
+  /// compile-time constant is emitted as 0, matching \c OpTypeRuntimeArray. A
+  /// matrix arrives here as a multi-subrange array and is emitted with one
+  /// count per dimension.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p AT's element type has not been emitted into
+  /// \c DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypeArray(const DICompositeType *AT,
+                                               MCRegister ExtInstSetReg,
+                                               SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeMember for the data member \p M (a \c DIDerivedType with
+  /// \c DW_TAG_member). Operands: Name, Type, Source, Line, Column, Offset,
+  /// Size, Flags. NonSemantic \c DebugTypeMember carries no Parent operand: the
+  /// enclosing \c DebugTypeComposite references its members, not the reverse.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p M's type has not been emitted into \c DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypeMember(const DIDerivedType *M,
+                                                MCRegister VoidTypeReg,
+                                                MCRegister I32TypeReg,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, listing
+  /// the already-emitted \p MemberRegs in its Members operand. A forward
+  /// declaration emits \c DebugInfoNone for Size and no members.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if the Parent scope cannot be resolved.
+  std::optional<MCRegister> emitDebugTypeComposite(
+      const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
+      MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypedef for the typedef derived type \p TD (a \c
+  /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
+  /// Line, Column, Parent. Parent is the enclosing type when \c TD->getScope()
+  /// is an emitted \c DIType, otherwise the first module \c
+  /// DebugCompilationUnit.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p TD's base type has not been emitted into \c
+  /// DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypedef(const DIDerivedType *TD,
+                                             MCRegister VoidTypeReg,
+                                             MCRegister I32TypeReg,
+                                             MCRegister ExtInstSetReg,
+                                             SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
   /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
@@ -234,6 +457,39 @@ private:
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.
   static unsigned toNSDISrcLang(unsigned DwarfSrcLang);
+
+  /// Build a full path from debug \p Scope for OpString / DebugSource, matching
+  /// SPIRV-LLVM-Translator \c getFullPath (OCLUtil.h): \c DIScope::getFilename,
+  /// \c getDirectory, and \c sys::path::Style::native. Works for any \c DIScope
+  /// that carries file path fields (e.g. \c DIFile, \c DISubprogram,
+  /// \c DICompileUnit). Returns an empty path when \p Scope is null.
+  SmallString<128> getDebugFullPath(const DIScope *Scope) const;
+
+  /// Return an existing \c DebugSource id for file path \c OpString \p
+  /// FileStrReg or emit \c DebugSource and cache it (keyed by \p FileStrReg
+  /// id).
+  MCRegister getOrEmitDebugSourceForFileStrReg(MCRegister FileStrReg,
+                                               MCRegister VoidTypeReg,
+                                               MCRegister ExtInstSetReg,
+                                               SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration and
+  /// \c DebugFunction: an emitted debug type id when \c SP->getScope() is a
+  /// \c DIType in \c DebugTypeRegs, otherwise \c DebugCompilationUnit for
+  /// \c SP->getUnit() (or the first module CU when \c unit: is absent).
+  /// \returns \c std::nullopt when the scope requires a parent we cannot supply
+  /// (non-file scope that is not a mapped \c DIType) or the CU has no emitted
+  /// id.
+  std::optional<MCRegister>
+  resolveDebugFunctionParent(const DISubprogram *SP) const;
+
+  /// Resolve the \c Parent operand for a type instruction (\c
+  /// DebugTypeComposite) from its \p Scope: an emitted debug type id when \p
+  /// Scope is a \c DIType in \c DebugTypeRegs (a type nested in another type),
+  /// otherwise the first module \c DebugCompilationUnit.
+  /// \returns \c std::nullopt when \p Scope is a \c DIType that has not been
+  /// emitted, or when there is no compile unit.
+  std::optional<MCRegister> resolveTypeScopeParent(const DIScope *Scope) const;
 };
 
 } // namespace llvm

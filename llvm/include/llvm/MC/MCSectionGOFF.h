@@ -19,8 +19,6 @@
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -54,7 +52,6 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   mutable unsigned Emitted : 1;
 
   friend class MCContext;
-  friend class MCAsmInfoGOFF;
   friend class MCSymbolGOFF;
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
@@ -98,6 +95,17 @@ public:
     assert(isED() && "Not a ED section");
     return EDAttributes;
   }
+
+  // Returns the ESD alignment value for the ED section, computed from the
+  // MCSection alignment. Only defined for ED sections.
+  GOFF::ESDAlignment getEDAlignment() const {
+    assert(isED() && "Not a ED section");
+    uint8_t Log = Log2(getAlign());
+    if (Log > GOFF::ESD_ALIGN_4Kpage)
+      reportFatalUsageError("Unsupported alignment");
+    return static_cast<GOFF::ESDAlignment>(Log);
+  }
+
   GOFF::PRAttr getPRAttributes() const {
     assert(isPR() && "Not a PR section");
     return PRAttributes;
@@ -115,6 +123,9 @@ public:
   }
 
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
+
+  bool isEmitted() const { return Emitted; }
+  void setEmitted() const { Emitted = true; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
 

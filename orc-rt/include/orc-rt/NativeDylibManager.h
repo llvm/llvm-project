@@ -17,6 +17,8 @@
 #include "orc-rt/Service.h"
 #include "orc-rt/sps-ci/NativeDylibManagerSPSCI.h"
 
+#include <optional>
+
 namespace orc_rt {
 
 class Session;
@@ -56,6 +58,9 @@ public:
   ///
   /// Returns an Expected handle. On success, registers a Session shutdown
   /// callback to unload the library.
+  ///
+  /// As a special case, an empty Path returns the process's global lookup
+  /// handle.
   using OnLoadCompleteFn = move_only_function<void(Expected<void *>)>;
   void load(OnLoadCompleteFn &&OnComplete, std::string Path);
 

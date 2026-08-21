@@ -11,23 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Error.h"
+#include "orc-rt/StringExtras.h"
 
 #include <dlfcn.h>
 
 namespace {
 
+inline void *hostOSGetGlobalLookupHandle() { return RTLD_DEFAULT; }
+
 orc_rt::Expected<void *> hostOSLoadLibrary(const std::string &Path) {
+  assert(!Path.empty() && "hostOSLoadLibray doesn't support empty paths");
   void *H = dlopen(Path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-  if (H == nullptr) {
-    std::ostringstream ErrMsg;
-    ErrMsg << "error loading ";
-    if (!Path.empty())
-      ErrMsg << "\"" << Path << "\"";
-    else
-      ErrMsg << "process symbols";
-    ErrMsg << ": " << dlerror();
-    return orc_rt::make_error<orc_rt::StringError>(ErrMsg.str());
-  }
+  if (H == nullptr)
+    return orc_rt::make_error<orc_rt::StringError>(
+        (orc_rt::StringOutputStream()
+         << "error loading \"" << Path << "\": " << dlerror())
+            .str());
 
   return H;
 }
@@ -35,7 +34,7 @@ orc_rt::Expected<void *> hostOSLoadLibrary(const std::string &Path) {
 orc_rt::Error hostOSUnloadLibrary(void *Handle) {
   if (dlclose(Handle) != 0)
     return orc_rt::make_error<orc_rt::StringError>(
-        (std::ostringstream()
+        (orc_rt::StringOutputStream()
          << "error unloading " << Handle << ": " << dlerror())
             .str());
   return orc_rt::Error::success();
@@ -50,7 +49,17 @@ hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
   // symbol isn't in the library" via per-iteration dlerror() checks.
   dlerror();
   for (const auto &Name : Names) {
-    if (void *Addr = dlsym(Handle, Name.c_str()))
+#if defined(__APPLE__)
+    if (Name.empty() || Name[0] != '_') {
+      Result.push_back(std::nullopt);
+      continue;
+    }
+    const char *LookupName = Name.c_str() + 1;
+#else
+    const char *LookupName = Name.c_str();
+#endif // defined(__APPLE__)
+
+    if (void *Addr = dlsym(Handle, LookupName))
       Result.push_back(Addr);
     else if (dlerror() == nullptr)
       Result.push_back(nullptr);
@@ -60,4 +69,4 @@ hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
   return Result;
 }
 
-} // anonymous namespace
+} // namespace

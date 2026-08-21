@@ -415,6 +415,28 @@ public:
   bool IsImpossibleToSatisfy(const NamedDecl *ND) const;
   //@}
 };
+
+// Traverse declarations of the function (in a deterministic order,
+// for consistency) to find one which has parameter names.
+// For simplicity, consider a redecl to have parameter names
+// if at least one parameter has a name.
+const FunctionDecl *BetterSignature(const FunctionDecl *Function,
+                                    unsigned Start) {
+  auto ParaCount = Function->getNumParams();
+  // Note that `redecls()` traverses in a circular order from the current decl,
+  // so for consistency we have to first get the first declaration.
+  for (auto *Redecl : Function->getFirstDecl()->redecls()) {
+    // The callers will expect to be able to use the same index from the initial
+    // function on the redeclaration. While we do not expect this to happen,
+    // this is a failsafe.
+    if (Redecl->getNumParams() < ParaCount)
+      continue;
+    for (unsigned P = Start, N = Redecl->getNumParams(); P != N; ++P)
+      if (Redecl->getParamDecl(P)->getIdentifier())
+        return Redecl;
+  }
+  return Function;
+}
 } // namespace
 
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
@@ -2625,9 +2647,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
 
     // "return expression ;" or "return ;", depending on the return type.
     QualType ReturnType;
-    if (const auto *Function = dyn_cast<FunctionDecl>(SemaRef.CurContext))
-      ReturnType = Function->getReturnType();
-    else if (const auto *Method = dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
+    if (const auto *Function = dyn_cast<FunctionDecl>(SemaRef.CurContext)) {
+      if (!Function->getType().isNull())
+        ReturnType = Function->getReturnType();
+    } else if (const auto *Method =
+                   dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
       ReturnType = Method->getReturnType();
     else if (SemaRef.getCurBlock() &&
              !SemaRef.getCurBlock()->ReturnType.isNull())
@@ -3318,8 +3342,10 @@ static void AddFunctionParameterChunks(
   bool FirstParameter = true;
   bool AsInformativeChunk = !(FunctionCanBeCall || IsInDeclarationContext);
 
+  const FunctionDecl *BetterSignatureDecl = BetterSignature(Function, Start);
+
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
-    const ParmVarDecl *Param = Function->getParamDecl(P);
+    const ParmVarDecl *Param = BetterSignatureDecl->getParamDecl(P);
 
     if (Param->hasDefaultArg() && !InOptional && !IsInDeclarationContext &&
         !AsInformativeChunk) {
@@ -4176,6 +4202,8 @@ static void AddOverloadParameterChunks(
   bool FirstParameter = true;
   unsigned NumParams =
       Function ? Function->getNumParams() : Prototype->getNumParams();
+  const FunctionDecl *BetterSignatureDecl =
+      Function ? BetterSignature(Function, Start) : nullptr;
 
   for (unsigned P = Start; P != NumParams; ++P) {
     if (Function && Function->getParamDecl(P)->hasDefaultArg() && !InOptional) {
@@ -4212,8 +4240,8 @@ static void AddOverloadParameterChunks(
     std::string Placeholder;
     assert(P < Prototype->getNumParams());
     if (Function || PrototypeLoc) {
-      const ParmVarDecl *Param =
-          Function ? Function->getParamDecl(P) : PrototypeLoc.getParam(P);
+      const ParmVarDecl *Param = Function ? BetterSignatureDecl->getParamDecl(P)
+                                          : PrototypeLoc.getParam(P);
       Placeholder = FormatFunctionParameter(Policy, Param);
       if (Param->hasDefaultArg())
         Placeholder += GetDefaultValueString(Param, Context.getSourceManager(),
@@ -4469,6 +4497,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::StaticAssert:
     return CXCursor_StaticAssert;
   case Decl::Friend:
+  case Decl::FriendTemplate:
     return CXCursor_FriendDecl;
   case Decl::TranslationUnit:
     return CXCursor_TranslationUnit;
@@ -5687,7 +5716,7 @@ private:
       // For simplicity:
       // - we don't attempt to substitute int for A
       // - when T is used in other ways (like CD<T*>) we ignore it
-      ConceptDecl *CD = CSE->getNamedConcept();
+      ConceptDecl *CD = CSE->getConceptDecl();
       TemplateParameterList *Params = CD->getTemplateParameters();
       unsigned Index = 0;
       for (const auto &Arg : CSE->getTemplateArguments()) {
@@ -5920,7 +5949,7 @@ private:
   static QualType deduceType(const TypeConstraint &T) {
     // Assume a same_as<T> return type constraint is std::same_as or equivalent.
     // In this case the return type is T.
-    DeclarationName DN = T.getNamedConcept()->getDeclName();
+    DeclarationName DN = T.getNamedConcept().getAsTemplateDecl()->getDeclName();
     if (DN.isIdentifier() && DN.getAsIdentifierInfo()->isStr("same_as"))
       if (const auto *Args = T.getTemplateArgsAsWritten())
         if (Args->getNumTemplateArgs() == 1) {

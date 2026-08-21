@@ -99,8 +99,17 @@ module __fortran_builtins
     __builtin_ieee_other = &
       __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
+  type, private :: __builtin_dummy_team_descriptor_type
+    ! this type is a placeholder for the opaque PRIF type
+    integer(kind=int64), private :: __placeholder = -1
+  end type
+
   type, public :: __builtin_team_type
-    integer(kind=int64), private :: __id = -1
+    type(__builtin_dummy_team_descriptor_type), pointer, private :: info => null()
+  end type
+
+  type, public, bind(C) :: __builtin_prif_coarray_handle_type
+    type(__builtin_c_ptr), private :: info
   end type
 
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
