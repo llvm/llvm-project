@@ -4674,9 +4674,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
             << Spec << Spec->getType();
         return true;
       }
-      // Otherwise, the specialization was declared at a point where its type
-      // was not needed, so its initializer has not been instantiated yet; the
-      // type will be deduced when the definition is instantiated.
+      // Not yet deduced; the type is completed when the definition is
+      // instantiated.
     }
     // If we already have a variable template specialization, return it.
     return Spec;
