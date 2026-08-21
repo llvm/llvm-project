@@ -106,11 +106,6 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
-static cl::opt<bool> EnableMFMAChainSplitting(
-    "amdgpu-enable-mfma-chain-splitting", cl::Hidden,
-    cl::desc("Use binary search to find optimal chain subset for MFMA->AGPR "
-             "conversion"),
-    cl::init(true));
 
 namespace {
 
@@ -1435,6 +1430,72 @@ identifyAccChains(ArrayRef<MachineInstr *> Cands, const SIInstrInfo *TII) {
   return Chains;
 }
 
+int64_t RewriteMFMAFormStage::evaluateChainProbe(
+    int N, ArrayRef<SmallVector<unsigned, 8>> Chains,
+    ArrayRef<MachineInstr *> AllCands) {
+  SmallPtrSet<MachineInstr *, 32> ProbeFilter;
+  for (int I = 0; I < N; ++I) {
+    for (unsigned Idx : Chains[I])
+      ProbeFilter.insert(AllCands[Idx]);
+  }
+
+  std::vector<std::pair<MachineInstr *, unsigned>> RC;
+  DenseMap<MachineBasicBlock *, std::set<Register>> CU;
+  SmallPtrSet<MachineInstr *, 8> CD;
+  Src2NeedsVGPRCache.clear();
+
+  if (!initHeuristics(RC, CU, CD, ProbeFilter))
+    return std::numeric_limits<int64_t>::max();
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA probe N=" << N << ":\n");
+  return getRewriteCost(RC, CU, CD);
+}
+
+int RewriteMFMAFormStage::findBestChainCount(
+    ArrayRef<SmallVector<unsigned, 8>> Chains,
+    ArrayRef<MachineInstr *> AllCands) {
+  // Start by evaluating all chains.
+  int64_t AllCost = evaluateChainProbe(Chains.size(), Chains, AllCands);
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Chains.size()
+                    << " Cost=" << AllCost << "\n");
+
+  int BestN = AllCost <= 0 ? Chains.size() : 0;
+
+  // Binary search for a good number of chains to convert. Chains are
+  // sorted by length, so we prefer converting the longest ones first as
+  // they provide the most VGPR relief per bridge copy. Converting too
+  // few chains may leave VGPRs over the limit; converting too many may
+  // push AGPRs over the limit. The search tries to find the best
+  // balance. Note: this does not guarantee a globally optimal
+  // solution as that would require evaluating all 2^K subsets of
+  // individual MFMAs. This is an approximation that works well when
+  // longer chains are more profitable. The search tracks the best
+  // cost seen across all probes to handle non-monotonicity.
+  int64_t BestCost = AllCost;
+  int Lo = 1, Hi = (int)Chains.size() - 1;
+
+  while (Lo <= Hi) {
+    int Mid = (Lo + Hi) / 2;
+    int64_t Cost = evaluateChainProbe(Mid, Chains, AllCands);
+
+    LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Mid << " Cost=" << Cost
+                      << "\n");
+
+    if (Cost < BestCost) {
+      BestCost = Cost;
+      BestN = Mid;
+    }
+
+    if (Cost <= 0)
+      Lo = Mid + 1;
+    else
+      Hi = Mid - 1;
+  }
+
+  return BestN;
+}
+
 bool RewriteMFMAFormStage::initGCNSchedStage() {
   // We only need to run this pass if the architecture supports AGPRs.
   // Additionally, we don't use AGPRs at occupancy levels above 1 so there
@@ -1459,10 +1520,12 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
 
   // Collect all convertible MFMAs.
   SmallVector<MachineInstr *, 32> AllCands;
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       if (isRewriteCandidate(&MI))
         AllCands.push_back(&MI);
+    }
+  }
 
   if (AllCands.empty())
     return false;
@@ -1482,65 +1545,7 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   llvm::sort(Chains,
              [](const auto &A, const auto &B) { return A.size() > B.size(); });
 
-  // Evaluate the cost of converting the first N sorted chains to AGPR form.
-  auto EvaluateProbe = [&](int N) -> int64_t {
-    SmallPtrSet<MachineInstr *, 32> ProbeFilter;
-    for (int I = 0; I < N; ++I)
-      for (unsigned Idx : Chains[I])
-        ProbeFilter.insert(AllCands[Idx]);
-
-    std::vector<std::pair<MachineInstr *, unsigned>> RC;
-    DenseMap<MachineBasicBlock *, std::set<Register>> CU;
-    SmallPtrSet<MachineInstr *, 8> CD;
-    Src2NeedsVGPRCache.clear();
-
-    if (!initHeuristics(RC, CU, CD, ProbeFilter))
-      return std::numeric_limits<int64_t>::max();
-
-    LLVM_DEBUG(dbgs() << "RewriteMFMA probe N=" << N << ":\n");
-    return getRewriteCost(RC, CU, CD);
-  };
-
-  // Start by evaluating all chains.
-  int64_t AllCost = EvaluateProbe(Chains.size());
-
-  LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Chains.size()
-                    << " Cost=" << AllCost << "\n");
-
-  int BestN = AllCost <= 0 ? Chains.size() : 0;
-
-  if (EnableMFMAChainSplitting && Chains.size() > 1) {
-    // Binary search for a good number of chains to convert. Chains are
-    // sorted by length, so we prefer converting the longest ones first as
-    // they provide the most VGPR relief per bridge copy. Converting too
-    // few chains may leave VGPRs over the limit; converting too many may
-    // push AGPRs over the limit. The search tries to find the best
-    // balance. Note: this does not guarantee a globally optimal
-    // solution as that would require evaluating all 2^K subsets of
-    // individual MFMAs. This is an approximation that works well when
-    // longer chains are more profitable. The search tracks the best
-    // cost seen across all probes to handle non-monotonicity.
-    int64_t BestCost = AllCost;
-    int Lo = 1, Hi = (int)Chains.size() - 1;
-
-    while (Lo <= Hi) {
-      int Mid = (Lo + Hi) / 2;
-      int64_t Cost = EvaluateProbe(Mid);
-
-      LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Mid << " Cost=" << Cost
-                        << "\n");
-
-      if (Cost < BestCost) {
-        BestCost = Cost;
-        BestN = Mid;
-      }
-
-      if (Cost <= 0)
-        Lo = Mid + 1;
-      else
-        Hi = Mid - 1;
-    }
-  }
+  int BestN = findBestChainCount(Chains, AllCands);
 
   LLVM_DEBUG(dbgs() << "RewriteMFMA: best N=" << BestN << "\n");
 
