@@ -1,8 +1,64 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2D -DCOORD_TYPE=uint2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 -DDXIL_HANDLE=dx.Texture -DDXIL_TY=2 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2D -DCOORD_TYPE=uint2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DMS=0 -DSAMPLED=1 -DIMG_FMT=0
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2DArray -DCOORD_TYPE=uint3 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 -DDXIL_HANDLE=dx.Texture -DDXIL_TY=7 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2DArray -DCOORD_TYPE=uint3 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 --check-prefixes=CHECK,SPIRV -DARRAYED=1 -DMS=0 -DSAMPLED=1 -DIMG_FMT=0
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=uint2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 \
+// RUN:   -DDXIL_HANDLE=dx.Texture -DDXIL_TY=2 -DRW=0
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=uint2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DMS=0 -DSAMPLED=1 \
+// RUN:   -DIMG_FMT=0 -DSPV_DIM=1
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=uint3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 \
+// RUN:   -DDXIL_HANDLE=dx.Texture -DDXIL_TY=7 -DRW=0
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=uint3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=1 -DMS=0 -DSAMPLED=1 \
+// RUN:   -DIMG_FMT=0 -DSPV_DIM=1
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2DMS -DCOORD_TYPE=uint2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DMS -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 \
+// RUN:   -DDXIL_HANDLE=dx.MSTexture -DDXIL_TY=3 -DRW=0
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \
+// RUN:   -DTEXTURE=Texture2DMS -DCOORD_TYPE=uint2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DMS -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DMS=1 -DSAMPLED=1 \
+// RUN:   -DIMG_FMT=0 -DSPV_DIM=1
 
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//   COORD_DIM          sample location components (DIM plus the array slice)
+//   ROV_OR_COUNT       the overloaded second dx handle operand: IsROV for
+//                      dx.Texture, the sample count for dx.MSTexture
+//   DXIL_HANDLE        DXIL resource handle type (dx.Texture or dx.MSTexture)
+//   DXIL_TY            dx.Texture resource-kind operand
+//   RW                 dx.Texture UAV operand
+//   ARRAYED            spirv.Image Arrayed operand
+//   MS                 spirv.Image MS (multisampled) operand
+//   SAMPLED            spirv.Image Sampled operand
+//   IMG_FMT            spirv.Image Image Format operand
+//   SPV_DIM            spirv.Image Dim operand
+//
 // Texture2DMS reuses the same operator[] codegen; only the resource handle type
 // differs (dx.MSTexture / a multisampled spirv.Image). It reads sample 0.
 //
@@ -11,8 +67,6 @@
 // texture below (none are ROVs, and Texture2DMS<T> defaults to a runtime
 // sample count), but a ROV or an explicit Texture2DMS<T, N> would need its own
 // value here.
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2DMS -DCOORD_TYPE=uint2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DMS -DCOORD_DIM=2 --check-prefixes=CHECK,DXIL -DROV_OR_COUNT=0 -DDXIL_HANDLE=dx.MSTexture -DDXIL_TY=3 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -Wno-sign-conversion -DTEXTURE=Texture2DMS -DCOORD_TYPE=uint2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DMS -DCOORD_DIM=2 --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DMS=1 -DSAMPLED=1 -DIMG_FMT=0
 
 TEXTURE<float4> Tex : register(t0);
 TEXTURE<float> Tex2 : register(t1);
@@ -52,10 +106,10 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[THIS1]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("[[DXIL_HANDLE]]", <4 x float>, [[RW]], [[ROV_OR_COUNT]], 0, [[DXIL_TY]]), ptr %[[HANDLE_PTR]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]), ptr %[[HANDLE_PTR]]
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]), ptr %[[HANDLE_PTR]]
 // CHECK: %[[INDEX_VAL:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[INDEX_ADDR]]
 // DXIL: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.{{.*}}(target("[[DXIL_HANDLE]]", <4 x float>, [[RW]], [[ROV_OR_COUNT]], 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
-// SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
+// SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
 // CHECK: ret ptr {{.*}}%[[PTR]]
 
 // CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float{{(, [0-9]+)?}}>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
@@ -66,10 +120,10 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]].0", ptr %[[THIS1]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("[[DXIL_HANDLE]]", float, [[RW]], [[ROV_OR_COUNT]], 0, [[DXIL_TY]]), ptr %[[HANDLE_PTR]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]), ptr %[[HANDLE_PTR]]
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]), ptr %[[HANDLE_PTR]]
 // CHECK: %[[INDEX_VAL:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[INDEX_ADDR]]
 // DXIL: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.{{.*}}(target("[[DXIL_HANDLE]]", float, [[RW]], [[ROV_OR_COUNT]], 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
-// SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
+// SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], [[MS]], [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
 // CHECK: ret ptr {{.*}}%[[PTR]]
 
 // CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]{{(, [0-9]+)?}}>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])

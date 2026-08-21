@@ -1,13 +1,47 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 --check-prefixes=CHECK
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DARRAYED=0 --check-prefixes=SPIRV
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 -DRW=0 --check-prefixes=CHECK
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DARRAYED=1 --check-prefixes=SPIRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D \
+// RUN:   -DCOORD_TYPE=float2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
+// RUN:   --check-prefixes=CHECK -DDIM=2
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D \
+// RUN:   -DCOORD_TYPE=float2 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DARRAYED=0 \
+// RUN:   --check-prefixes=SPIRV -DSPV_DIM=1 -DDIM=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 \
+// RUN:   -DRW=0 --check-prefixes=CHECK -DDIM=2
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DARRAYED=1 \
+// RUN:   --check-prefixes=SPIRV -DSPV_DIM=1 -DDIM=2
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//   COORD_DIM          sample location components (DIM plus the array slice)
+//   DXIL_TY            dx.Texture resource-kind operand
+//   RW                 dx.Texture UAV operand
+//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
+//                      location)
+//   ARRAYED            spirv.Image Arrayed operand
+//   SPV_DIM            spirv.Image Dim operand
 
 TEXTURE<> default_template : register(t1, space2);
 TEXTURE implicit_template : register(t0, space1);
 
 // CHECK: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
-// SPIRV: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// SPIRV: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
 
 // CHECK: @{{.*}}default_template = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}
 // CHECK: @{{.*}}implicit_template = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}
