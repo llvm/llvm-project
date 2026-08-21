@@ -3464,7 +3464,9 @@ void Verifier::visitFunction(const Function &F) {
     if (hasDIScopeCycle(Scope))
       return;
 
-    DISubprogram *SP = Scope->getSubprogram();
+    DISubprogram *SP = getSubprogram(Scope);
+    CheckDI(SP, "DILocalScope scope chain must terminate at a DISubprogram", DL,
+            Scope);
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case
