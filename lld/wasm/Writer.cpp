@@ -1077,13 +1077,10 @@ void Writer::allocateCommonSymbols() {
     return;
 
   std::vector<CommonSymbol *> commons;
-  for (Symbol *sym : symtab->symbols()) {
-    if (auto *c = dyn_cast<CommonSymbol>(sym)) {
-      if (c->isLive()) {
+  for (Symbol *sym : symtab->symbols())
+    if (auto *c = dyn_cast<CommonSymbol>(sym))
+      if (c->isLive())
         commons.push_back(c);
-      }
-    }
-  }
 
   if (commons.empty())
     return;
@@ -1864,7 +1861,6 @@ void Writer::run() {
 
   log("-- allocateCommonSymbols");
   allocateCommonSymbols();
-
   log("-- createOutputSegments");
   createOutputSegments();
   log("-- createSyntheticSections");

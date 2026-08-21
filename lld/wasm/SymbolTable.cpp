@@ -338,12 +338,12 @@ static bool shouldReplace(const Symbol *existing, InputFile *newFile,
   // If existing symbol is common, it can be overridden by a strong definition.
   if (existing->isCommon()) {
     if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
-      LLVM_DEBUG(
-          dbgs() << "existing common symbol takes precedence over new weak\n");
+      LLVM_DEBUG(dbgs() << "existing common symbol " << existing->getName()
+                        << " takes precedence over new weak\n");
       return false;
     }
-    LLVM_DEBUG(
-        dbgs() << "replacing existing common symbol with strong definition\n");
+    LLVM_DEBUG(dbgs() << "replacing existing common symbol "
+                      << existing->getName() << " with strong definition\n");
     return true;
   }
 

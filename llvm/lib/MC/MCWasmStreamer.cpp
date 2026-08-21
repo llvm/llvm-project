@@ -133,8 +133,7 @@ void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
   auto *Symbol = static_cast<MCSymbolWasm *>(S);
   getAssembler().registerSymbol(*Symbol);
 
-  if (!Symbol->isExternal())
-    Symbol->setExternal(true);
+  Symbol->setExternal(true);
 
   Symbol->setType(wasm::WASM_SYMBOL_TYPE_DATA);
 

@@ -63,7 +63,7 @@ std::string toString(wasm::Symbol::Kind kind) {
   case wasm::Symbol::UndefinedTagKind:
     return "UndefinedTag";
   case wasm::Symbol::CommonKind:
-    return "CommonSymbol";
+    return "CommonKind";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   case wasm::Symbol::SectionKind:

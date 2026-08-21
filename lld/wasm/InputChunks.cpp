@@ -67,14 +67,14 @@ uint32_t InputChunk::getSize() const {
   if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this))
     return ms->builder.getSize();
 
+  if (const auto *sis = dyn_cast<SyntheticInputSegment>(this))
+    return sis->getSize();
+
   if (const auto *f = dyn_cast<InputFunction>(this)) {
     if (ctx.arg.compressRelocations && f->file) {
       return f->getCompressedSize();
     }
   }
-
-  if (const auto *sis = dyn_cast<SyntheticInputSegment>(this))
-    return sis->getSize();
 
   return data().size();
 }
