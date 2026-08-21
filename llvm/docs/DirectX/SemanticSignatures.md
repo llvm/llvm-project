@@ -251,3 +251,27 @@ reg1: A[1].xyz | B[0][1].w
 reg2: A[2].xyz | D.w
 reg3: C.xy     | unused.zw
 ```
+
+### Optimized Packing
+
+Optimized packing partitions eligible elements into groups and packs the groups
+in this order:
+
+1. Four-column arbitrary and system-value elements.
+2. Multi-row tessellation factors, which are restricted to the last column.
+3. Arbitrary elements.
+4. System-value elements, including single-row tessellation factors.
+5. `SV_ClipDistance` and `SV_CullDistance` elements.
+6. System-generated-value elements.
+
+Within each group, elements are ordered first by the numeric value of their
+interpolation mode, then by decreasing row count, then by decreasing column
+count, and finally by increasing signature ID. Component bit width is not a
+sort key; it remains a compatibility constraint when elements are placed in a
+row.
+
+The sorted elements are then placed using the prefix-stable packing algorithm.
+This is a greedy optimized ordering rather than an exhaustive search for a
+minimum-row layout. Reordering can reduce the number of rows occupied, but
+means that appending an element may change locations assigned to existing
+elements.

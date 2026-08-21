@@ -499,3 +499,12 @@ Error llvm::hlsl::packSignaturePrefixStable(
 
   return Error::success();
 }
+
+Error llvm::hlsl::packSignatureOptimized(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy,
+    bool UseNative16BitTypes) {
+  // TODO: Sort Elements for optimal packing.
+  return packSignaturePrefixStable(Elements, ShaderStage, IOTy,
+                                   UseNative16BitTypes);
+}
