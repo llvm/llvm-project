@@ -24,6 +24,9 @@ void SignaturePackingError::log(raw_ostream &OS) const {
   case SignatureOverflow:
     OS << "signature elements do not fit in 32 rows";
     break;
+  case ClipCullOverflow:
+    OS << "clip/cull elements do not fit in two rows";
+    break;
   }
   OS << " (element " << ElementIndex << ")";
 }
@@ -92,5 +95,11 @@ Error llvm::hlsl::packSignatureIndexed(
     Element.StartCol = 0;
   }
 
+  return Error::success();
+}
+
+Error llvm::hlsl::packSignaturePrefixStable(
+    MutableArrayRef<SemanticSignatureElement>, Triple::EnvironmentType, IOType,
+    bool) {
   return Error::success();
 }
