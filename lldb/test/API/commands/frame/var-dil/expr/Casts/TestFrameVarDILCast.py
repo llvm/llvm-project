@@ -1,5 +1,5 @@
 """
-Make sure 'frame var' using DIL parser/evaultor works for C-Style casts.
+Make sure 'frame var' using DIL parser/evaluator works for C-Style casts.
 """
 
 import lldb

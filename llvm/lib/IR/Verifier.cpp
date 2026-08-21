@@ -7290,64 +7290,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
-  if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
-    auto *RetTy = cast<VectorType>(VPCast->getType());
-    auto *ValTy = cast<VectorType>(VPCast->getOperand(0)->getType());
-    Check(RetTy->getElementCount() == ValTy->getElementCount(),
-          "VP cast intrinsic first argument and result vector lengths must be "
-          "equal",
-          *VPCast);
-
-    switch (VPCast->getIntrinsicID()) {
-    case Intrinsic::vp_trunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.trunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_zext:
-    case Intrinsic::vp_sext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.zext or llvm.vp.sext intrinsic the bit size of first "
-            "argument must be smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fptrunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.fptrunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fpext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.fpext intrinsic the bit size of first argument must be "
-            "smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    default:
-      break;
-    }
-  }
-
   switch (VPI.getIntrinsicID()) {
-  case Intrinsic::vp_fcmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isFPPredicate(Pred),
-          "invalid predicate for VP FP comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_icmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isIntPredicate(Pred),
-          "invalid predicate for VP integer comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_is_fpclass: {
-    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
-    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
-          "unsupported bits for llvm.vp.is.fpclass test mask");
-    break;
-  }
   case Intrinsic::experimental_vp_splice: {
     VectorType *VecTy = cast<VectorType>(VPI.getType());
     int64_t Idx = cast<ConstantInt>(VPI.getArgOperand(2))->getSExtValue();

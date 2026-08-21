@@ -425,10 +425,17 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment, SQ, /*IgnoreFree=*/false,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               const SCEV *DerefBytesSCEV = SE.getSCEV(RK.IRArgValue);
+               Type *WiderTy = SE.getWiderType(AccessSizeSCEV->getType(),
+                                               DerefBytesSCEV->getType());
+               const SCEV *AccessSizeExt =
+                   SE.getNoopOrZeroExtend(AccessSizeSCEV, WiderTy);
+               const SCEV *DerefBytesExt =
+                   SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
-                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }

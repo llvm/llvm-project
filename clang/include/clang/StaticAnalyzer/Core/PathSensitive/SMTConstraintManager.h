@@ -22,6 +22,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 typedef llvm::ImmutableSet<
@@ -234,8 +235,8 @@ public:
     llvm::SmallVector<SymbolRef> WorkList;
     llvm::BitVector RetainedConstraints(Constraints.size());
 
-    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
-      for (auto Symbol : Constraints[Idx].first->symbols()) {
+    for (auto [Idx, Entry] : llvm::enumerate(Constraints)) {
+      for (auto Symbol : Entry.first->symbols()) {
         if (SymReaper.isLive(Symbol) && TraversedSymbols.insert(Symbol).second)
           WorkList.push_back(Symbol);
         ConstraintsBySym[Symbol].push_back(Idx);
@@ -257,9 +258,9 @@ public:
       }
     }
 
-    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
+    for (auto [Idx, Entry] : llvm::enumerate(Constraints)) {
       if (!RetainedConstraints.test(Idx))
-        CZ = CZFactory.remove(CZ, Constraints[Idx]);
+        CZ = CZFactory.remove(CZ, Entry);
     }
 
     return State->set<ConstraintSMT>(CZ);

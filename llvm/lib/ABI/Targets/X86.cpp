@@ -111,7 +111,6 @@ private:
   ArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
-  const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
@@ -594,18 +593,6 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
   Lo = Memory;
   Hi = NoClass;
-}
-
-const Type *
-X86_64TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
-  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion() && RT->isTransparentUnion()) {
-      auto Fields = RT->getFields();
-      assert(!Fields.empty() && "transparent union cannot be empty");
-      return Fields.front().FieldType;
-    }
-  }
-  return Ty;
 }
 
 ArgInfo

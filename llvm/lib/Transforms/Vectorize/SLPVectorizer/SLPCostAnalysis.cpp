@@ -24,8 +24,8 @@ namespace llvm::slpvectorizer {
 
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
-                               ArrayRef<int> Mask, TTI::TargetCostKind CostKind,
-                               int Index, VectorType *SubTp,
+                               const TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
                                ArrayRef<const Value *> Args) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
@@ -41,7 +41,7 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
-                                TTI::TCK_RecipThroughput, Index, Tp);
+                                CostKind, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
                             Args);
@@ -49,7 +49,7 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
 
 std::pair<InstructionCost, InstructionCost>
 getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
-            Value *BasePtr, unsigned Opcode, TTI::TargetCostKind CostKind,
+            Value *BasePtr, unsigned Opcode, const TTI::TargetCostKind CostKind,
             Type *ScalarTy, VectorType *VecTy) {
   InstructionCost ScalarCost = 0;
   InstructionCost VecCost = 0;
@@ -130,7 +130,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 
 InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
                                    Align Alignment, unsigned AddressSpace,
-                                   TTI::TargetCostKind CostKind) {
+                                   const TTI::TargetCostKind CostKind) {
   Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
   return 2 * TTI.getMemIntrinsicInstrCost(
                  MemIntrinsicCostAttributes(Intrinsic::masked_load, VecTy,

@@ -372,6 +372,7 @@ readability/*
 | {doc}`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>` | Yes |
 | {doc}`performance-unnecessary-value-param <performance/unnecessary-value-param>` | Yes |
 | {doc}`performance-use-std-move <performance/use-std-move>` | Yes |
+| {doc}`portability-avoid-pragma-comment <portability/avoid-pragma-comment>` |  |
 | {doc}`portability-avoid-pragma-once <portability/avoid-pragma-once>` |  |
 | {doc}`portability-no-assembler <portability/no-assembler>` |  |
 | {doc}`portability-restrict-system-includes <portability/restrict-system-includes>` | Yes |

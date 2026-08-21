@@ -1106,8 +1106,10 @@ public:
   /// Returns true if the set flags are valid for \p Opcode.
   LLVM_ABI_FOR_TEST bool flagsValidForOpcode(unsigned Opcode) const;
 
-  /// Returns true if \p Opcode has its required flags set.
-  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode) const;
+  /// Returns true if \p Opcode with scalar result type \p ResultTy has its
+  /// required flags set.
+  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode,
+                                                   Type *ResultTy) const;
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1843,7 +1845,7 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
-    assert(hasRequiredFlagsForOpcode(Opcode) &&
+    assert(hasRequiredFlagsForOpcode(Opcode, getScalarType()) &&
            "Opcode requires specific flags to be set");
   }
 
@@ -1903,7 +1905,7 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
-    assert(hasRequiredFlagsForOpcode(Opcode) &&
+    assert(hasRequiredFlagsForOpcode(Opcode, ResultTy) &&
            "Opcode requires specific flags to be set");
     setUnderlyingValue(CI);
   }
@@ -2980,6 +2982,8 @@ public:
                     return getMask(I)->getScalarType()->isIntegerTy(1);
                   }) &&
            "masks must be a bool");
+    assert(hasRequiredFlagsForOpcode(Instruction::PHI, getScalarType()) &&
+           "blends require the flags of the phi they replace");
     setUnderlyingValue(Phi);
   }
 

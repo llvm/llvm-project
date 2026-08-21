@@ -61,6 +61,18 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
   }
 }
 
+static bool isPureCIRType(mlir::Type ty) {
+  if (!ty)
+    return true;
+  return !ty.walk([](mlir::Type t) {
+              if (!t)
+                return mlir::WalkResult::advance();
+              return mlir::isa<cir::CIRDialect>(t.getDialect())
+                         ? mlir::WalkResult::advance()
+                         : mlir::WalkResult::interrupt();
+            }).wasInterrupted();
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
@@ -1242,6 +1254,18 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
+
+  // The calling convention lowering pass expects all types in a function
+  // signature to be CIR types.
+  for (mlir::Type type : argTypes) {
+    if (!isPureCIRType(type))
+      return emitError()
+             << "expected all types in the function signature to be CIR types";
+  }
+  if (!isPureCIRType(returnType))
+    return emitError()
+           << "expected all types in the function signature to be CIR types";
+
   return mlir::success();
 }
 

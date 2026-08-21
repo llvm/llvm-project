@@ -6411,8 +6411,7 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
-      case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass: {
+      case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
                 cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
@@ -6482,7 +6481,6 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
       case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass:
         return true;
       default:
         return false;

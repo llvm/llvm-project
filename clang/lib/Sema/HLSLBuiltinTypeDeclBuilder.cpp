@@ -432,8 +432,8 @@ TemplateParameterListBuilder::constructConceptSpecializationExpr(
 
   // In the concept reference, ATALI is what adds the extra
   // TemplateArgument node underneath CSE
-  ConceptReference *CR =
-      ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD, CD, ATALI);
+  ConceptReference *CR = ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD,
+                                                  TemplateName(CD), ATALI);
 
   ConceptSpecializationExpr *CSE =
       ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);
@@ -1738,6 +1738,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   // original-value parameter for each entry.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
+  addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
+                                        "__builtin_hlsl_interlocked_min");
+  addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedOr", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_or");
   addByteAddressBufferInterlockedMethod("InterlockedXor", AST.UnsignedIntTy,
@@ -1753,6 +1757,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_add");
+    addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
+                                          "__builtin_hlsl_interlocked_min");
+    addByteAddressBufferInterlockedMethod("InterlockedMin64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedOr64", AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_or");
     addByteAddressBufferInterlockedMethod("InterlockedXor64",

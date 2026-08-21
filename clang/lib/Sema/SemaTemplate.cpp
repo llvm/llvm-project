@@ -1296,12 +1296,13 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
   if (ImmediatelyDeclaredConstraint.isInvalid())
     return true;
 
-  auto *CL = ConceptReference::Create(Context, /*NNS=*/NS,
-                                      /*TemplateKWLoc=*/SourceLocation{},
-                                      /*ConceptNameInfo=*/NameInfo,
-                                      /*FoundDecl=*/FoundDecl,
-                                      /*NamedConcept=*/NamedConcept,
-                                      /*ArgsWritten=*/ArgsAsWritten);
+  auto *CL =
+      ConceptReference::Create(Context, /*NNS=*/NS,
+                               /*TemplateKWLoc=*/SourceLocation{},
+                               /*ConceptNameInfo=*/NameInfo,
+                               /*FoundDecl=*/FoundDecl,
+                               /*NamedConcept=*/TemplateName(NamedConcept),
+                               /*ArgsWritten=*/ArgsAsWritten);
   ConstrainedParameter->setTypeConstraint(
       CL, ImmediatelyDeclaredConstraint.get(), std::nullopt);
   return false;
@@ -1330,9 +1331,9 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
     return true;
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
-      TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(),
-      TL.getRAngleLoc(), BuildDecltypeType(Ref),
-      OrigConstrainedParm->getLocation(),
+      TL.getNamedConcept().getAsTemplateDecl(),
+      /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(), TL.getRAngleLoc(),
+      BuildDecltypeType(Ref), OrigConstrainedParm->getLocation(),
       [&](TemplateArgumentListInfo &ConstraintArgs) {
         for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
           ConstraintArgs.addArgument(TL.getArgLoc(I));
@@ -4913,7 +4914,7 @@ ExprResult Sema::CheckConceptTemplateId(
   auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
-      TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
+      TemplateKWLoc, ConceptNameInfo, FoundDecl, TemplateName(NamedConcept),
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
 
   bool Error = false;

@@ -69,6 +69,65 @@ unreachable:
   unreachable
 }
 
+
+define void @constant_foldable() #0 personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: define void @constant_foldable(
+; CHECK-SAME: ) #[[ATTR0]] personality ptr @__CxxFrameHandler3 {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    invoke void @_CxxThrowException(ptr null, ptr null)
+; CHECK-NEXT:            to label %[[UNREACHABLE:.*]] unwind label %[[CATCH_DISPATCH:.*]]
+; CHECK:       [[CATCH_DISPATCH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %[[CATCH:.*]]] unwind to caller
+; CHECK:       [[CATCH]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x double> @llvm.floor.v16f64(<16 x double> splat (double 1.000000e+00)) [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    store double 1.000000e+00, ptr @sink, align 8
+; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT:.*]]
+; CHECK:       [[TRY_CONT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[UNREACHABLE]]:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  invoke void @_CxxThrowException(ptr null, ptr null)
+  to label %unreachable unwind label %catch.dispatch
+
+catch.dispatch:
+  %0 = catchswitch within none [label %catch] unwind to caller
+
+catch:
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null]
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %catch ], [ %inc, %loop ]
+  %call = call double @floor(double 1.0) #1 [ "funclet"(token %1) ]
+  %inc = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %inc, 1024
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  store double %call, ptr @sink
+  catchret from %1 to label %try.cont
+
+try.cont:
+  ret void
+
+unreachable:
+  unreachable
+}
+
 declare x86_stdcallcc void @_CxxThrowException(ptr, ptr)
 
 declare i32 @__CxxFrameHandler3(...)

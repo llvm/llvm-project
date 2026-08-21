@@ -615,14 +615,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
-  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
-  // will be communicated via the -Xlinker option.
-  if (ActiveOffloadKindMask & OFK_SYCL) {
+  // clang-sycl-linker.
+  if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
-    CmdArgs.append(
-        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
-    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
-  }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});

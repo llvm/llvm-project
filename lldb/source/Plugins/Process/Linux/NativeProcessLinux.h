@@ -99,8 +99,8 @@ public:
   Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
                                               uint32_t permissions) override;

@@ -244,7 +244,6 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
 }
 
 bool EvaluationResult::checkDynamicAllocations(InterpState &S,
-                                               const Context &Ctx,
                                                const Pointer &Ptr,
                                                SourceInfo Info) {
   if (!Ptr.isBlockPointer())

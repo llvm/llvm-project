@@ -2798,6 +2798,10 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE64));
   EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE32));
 
+  EXPECT_TRUE(AMDGPU::getFeatureBitset(AMDGPU::GK_GFX802)
+                  .test(AMDGPU::FEAT_SGPR_INIT_BUG));
+  EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_SGPR_INIT_BUG));
+
   // An unknown kind yields an empty bitset.
   EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
 

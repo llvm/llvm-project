@@ -2117,6 +2117,14 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
+  // Packed Multiply High Accumulate.
+  def int_riscv_pmhacc    : RVPTernaryIntrinsic;
+  def int_riscv_pmhracc   : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccu   : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],

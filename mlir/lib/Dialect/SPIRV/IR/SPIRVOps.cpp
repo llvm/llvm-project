@@ -109,7 +109,7 @@ LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
     return success();
 
   auto getDecorationAttr = [op](spirv::Decoration decoration) {
-    return op->getAttr(spirv::getDecorationString(decoration));
+    return op->getDiscardableAttr(spirv::getDecorationString(decoration));
   };
 
   bool hasAliasedPtr =
@@ -132,13 +132,17 @@ LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
 
 void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().populateInherentAttrs(op, attrs);
+
   // Print optional descriptor binding
   auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::DescriptorSet));
   auto bindingName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::Binding));
-  auto descriptorSet = op->getAttrOfType<IntegerAttr>(descriptorSetName);
-  auto binding = op->getAttrOfType<IntegerAttr>(bindingName);
+  auto descriptorSet =
+      dyn_cast_or_null<IntegerAttr>(attrs.get(descriptorSetName));
+  auto binding = dyn_cast_or_null<IntegerAttr>(attrs.get(bindingName));
   if (descriptorSet && binding) {
     elidedAttrs.push_back(descriptorSetName);
     elidedAttrs.push_back(bindingName);
@@ -149,12 +153,12 @@ void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
   // Print BuiltIn attribute if present
   auto builtInName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::BuiltIn));
-  if (auto builtin = op->getAttrOfType<StringAttr>(builtInName)) {
+  if (auto builtin = dyn_cast_or_null<StringAttr>(attrs.get(builtInName))) {
     printer << " " << builtInName << "(\"" << builtin.getValue() << "\")";
     elidedAttrs.push_back(builtInName);
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDict(attrs, elidedAttrs);
 }
 
 static ParseResult parseOneResultSameOperandTypeOp(OpAsmParser &parser,
@@ -200,7 +204,7 @@ static void printOneResultOp(Operation *op, OpAsmPrinter &p) {
 
   p << ' ';
   p.printOperands(op->getOperands());
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue());
   // Now we can output only one type for all operands and the result.
   p << " : " << resultType;
 }
@@ -330,7 +334,7 @@ static ParseResult parseArithmeticExtendedBinaryOp(OpAsmParser &parser,
 static void printArithmeticExtendedBinaryOp(Operation *op,
                                             OpAsmPrinter &printer) {
   printer << ' ';
-  printer.printOptionalAttrDict(op->getAttrs());
+  printer.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue());
   printer.printOperands(op->getOperands());
   printer << " : " << op->getResultTypes().front();
 }
@@ -1498,8 +1502,7 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
-  if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
-          this->getInitializerAttrName())) {
+  if (FlatSymbolRefAttr init = getInitializerAttr()) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), init.getAttr());
     // TODO: Currently only variable initialization with specialization
@@ -1753,7 +1756,8 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
     elidedAttrs.push_back(spirv::ModuleOp::getVCETripleAttrName());
   }
 
-  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
   printer << ' ';
   printer.printRegion(getRegion());
 }
@@ -1889,13 +1893,15 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
 void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ';
   printer.printSymbolName(getSymName());
-  if (auto specID = (*this)->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID =
+          (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
     printer << ' ' << kSpecIdAttrName << '(' << specID.getInt() << ')';
   printer << " = " << getDefaultValue();
 }
 
 LogicalResult spirv::SpecConstantOp::verify() {
-  if (auto specID = (*this)->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID =
+          (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
     if (specID.getValue().isNegative())
       return emitOpError("SpecId cannot be negative");
 

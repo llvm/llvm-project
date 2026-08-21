@@ -4723,7 +4723,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 }
 
 void Sema::CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc) {
-  if (TemplateDecl *Decl = AutoT->getTypeConstraintConcept()) {
+  if (TemplateDecl *Decl =
+          AutoT->getTypeConstraintConcept().getAsTemplateDecl()) {
     DiagnoseUseOfDecl(Decl, Loc);
   }
 }
@@ -15751,7 +15752,7 @@ std::optional<std::pair<
     auto *ME = cast<MemberExpr>(E);
     auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!FD || FD->getType()->isReferenceType() ||
-        FD->getParent()->isInvalidDecl())
+        !ASTContext::hasLayout(FD->getParent()))
       break;
     std::optional<std::pair<CharUnits, CharUnits>> P;
     if (ME->isArrow())

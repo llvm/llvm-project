@@ -155,4 +155,10 @@
 #define SI_ASYNCNL (-60) // Async name lookup completion
 #define SI_KERNEL 128    // Sent by the kernel
 
+// `sigev_notify` values for `struct sigevent`.
+#define SIGEV_SIGNAL 0
+#define SIGEV_NONE 1
+#define SIGEV_THREAD 2
+#define SIGEV_THREAD_ID 4
+
 #endif // LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H

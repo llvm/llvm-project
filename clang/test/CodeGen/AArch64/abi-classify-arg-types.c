@@ -70,3 +70,26 @@ void arg_void_ptr(void* pv) {}
 typedef float fx2x2_t __attribute__((matrix_type(2, 2)));
 void arg_matrix(fx2x2_t m) {}
 // CHECK: define{{.*}} void @arg_matrix(<4 x float> noundef %{{.*}})
+
+// Transparent unions are passed as their first field.
+typedef union {
+  int i;
+  float f;
+} tu_int_t __attribute__((transparent_union));
+void arg_transparent_union_int(tu_int_t tu) {}
+// CHECK: define{{.*}} void @arg_transparent_union_int(i32 %{{.*}})
+
+typedef union {
+  char c;
+  signed char sc;
+} tu_char_t __attribute__((transparent_union));
+void arg_transparent_union_char(tu_char_t tu) {}
+// AAPCS: define{{.*}} void @arg_transparent_union_char(i8 %{{.*}})
+// DARWIN: define{{.*}} void @arg_transparent_union_char(i8 noundef signext %{{.*}})
+
+typedef union {
+  void *p;
+  int *ip;
+} tu_ptr_t __attribute__((transparent_union));
+void arg_transparent_union_ptr(tu_ptr_t tu) {}
+// CHECK: define{{.*}} void @arg_transparent_union_ptr(ptr %{{.*}})

@@ -44,7 +44,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
       }
 
       if (!filteredAttrs.empty()) {
-        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
+        p << " <" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
       }
     }
 
@@ -1306,7 +1306,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
   }];
   let arguments = (ins StaticSharedMemRefOf<[XeGPU_ScalarType]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` qualified(type($mem_desc))";
   let hasVerifier = 1;
 }
 
@@ -1321,7 +1321,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+    prop-dict attr-dict `:` type(operands) `->` type(results)
   }];
 
   let description = [{
@@ -1399,7 +1399,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-                          prop-dict attr-dict `` `:` type(operands)}];
+                          prop-dict attr-dict `:` type(operands)}];
   let description = [{
     This operation stores a `data` fragment into the shared local memory region
     specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.

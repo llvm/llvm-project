@@ -181,7 +181,7 @@ gpu.module @test_distribution {
     %3 = vector.shape_cast %2 : vector<256xf32> to vector<256x1xf32>
     %4 = vector.broadcast %3 : vector<256x1xf32>to vector<256x128xf32>
     %9 = xegpu.create_nd_tdesc %arg0 : memref<4096x128xf32> -> !xegpu.tensor_desc<256x128xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
-    xegpu.store_nd %4, %9[%block_id_x, 0] <{layout =#xegpu.layout<sg_layout = [32, 1], sg_data = [8, 128], inst_data = [8, 16]>}>: vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+    xegpu.store_nd %4, %9[%block_id_x, 0] <{layout =#xegpu.layout<sg_layout = [32, 1], sg_data = [8, 128], inst_data = [8, 16]>}> : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
     gpu.return
   }
 

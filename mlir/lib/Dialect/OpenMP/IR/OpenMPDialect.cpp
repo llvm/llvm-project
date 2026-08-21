@@ -4828,6 +4828,31 @@ LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
 }
 
+LogicalResult CriticalOp::verify() {
+  SymbolRefAttr currentName = getNameAttr();
+
+  CriticalOp parentCritical = (*this)->getParentOfType<CriticalOp>();
+
+  while (parentCritical) {
+    SymbolRefAttr parentName = parentCritical.getNameAttr();
+
+    if (currentName == parentName) {
+      if (currentName) {
+        return emitOpError() << "cannot be nested inside another omp.critical "
+                                "region with the same name ("
+                             << currentName << ")";
+      } else {
+        return emitOpError() << "cannot be nested inside another unnamed "
+                                "omp.critical region";
+      }
+    }
+
+    parentCritical = parentCritical->getParentOfType<CriticalOp>();
+  }
+
+  return success();
+}
+
 LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getNameAttr()) {
     SymbolRefAttr symbolRef = getNameAttr();

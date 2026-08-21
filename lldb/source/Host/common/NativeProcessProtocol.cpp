@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <iterator>
 #include <optional>
 
 using namespace lldb;
@@ -396,7 +397,7 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
     // We found a valid breakpoint opcode at this address, now restore the
     // saved opcode.
     size_t bytes_written = 0;
-    error = WriteMemory(addr, saved.data(), saved.size(), bytes_written);
+    error = DoWriteMemory(addr, saved.data(), saved.size(), bytes_written);
     if (error.Fail() || bytes_written < saved.size()) {
       return Status::FromErrorStringWithFormat(
           "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
@@ -454,8 +455,8 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
 
   // Write a software breakpoint in place of the original opcode.
   size_t bytes_written = 0;
-  error = WriteMemory(addr, expected_trap->data(), expected_trap->size(),
-                      bytes_written);
+  error = DoWriteMemory(addr, expected_trap->data(), expected_trap->size(),
+                        bytes_written);
   if (error.Fail())
     return error.ToError();
 
@@ -647,6 +648,88 @@ Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
     return RemoveHardwareBreakpoint(addr);
   else
     return RemoveSoftwareBreakpoint(addr);
+}
+
+Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
+                                          size_t size, size_t &bytes_written) {
+  Status error;
+  bytes_written = 0;
+
+  if (!size)
+    return error;
+
+  if (m_software_breakpoints.empty())
+    return DoWriteMemory(addr, buf, size, bytes_written);
+
+  // Find first breakpoint that starts >= addr.
+  std::map<lldb::addr_t, SoftwareBreakpoint>::iterator bkpt =
+      m_software_breakpoints.lower_bound(addr);
+
+  // it points to the first breakpoint starting at >= addr, but the one
+  // immediately before it may extend over addr, or begin exactly at addr.
+  if (bkpt != m_software_breakpoints.begin())
+    bkpt = std::prev(bkpt);
+
+  const uint8_t *byte_buf = static_cast<const uint8_t *>(buf);
+  for (; bkpt != m_software_breakpoints.end(); ++bkpt) {
+    auto &[sbp_addr, sbp_data] = *bkpt;
+    // If the address is before a breakpoint site, write up to the site, or to
+    // the end of the write. Whichever comes first.
+    if (addr < sbp_addr) {
+      const size_t to_write =
+          std::min(static_cast<addr_t>(size), sbp_addr - addr);
+      size_t part_bytes_written = 0;
+      error = DoWriteMemory(addr, byte_buf, to_write, part_bytes_written);
+      bytes_written += part_bytes_written;
+
+      if (error.Fail() || part_bytes_written < to_write) {
+        return Status::FromErrorStringWithFormat(
+            "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+            addr, to_write, part_bytes_written);
+      }
+
+      byte_buf += to_write;
+      addr += to_write;
+      size -= to_write;
+
+      if (!size)
+        break;
+    }
+
+    // If the address is within a breakpoint site, update the saved opcodes
+    // for that site.
+    if ((addr >= sbp_addr) &&
+        (addr < (sbp_addr + sbp_data.saved_opcodes.size()))) {
+      // Instead of writing this chunk, update the saved bytes in the
+      // breakpoint.
+      const size_t idx = addr - sbp_addr;
+      const size_t to_write =
+          std::min(size, sbp_data.saved_opcodes.size() - idx);
+      for (size_t copied = 0; copied < to_write;
+           ++bytes_written, ++byte_buf, ++addr, --size, ++copied)
+        sbp_data.saved_opcodes[idx + copied] = *byte_buf;
+    }
+
+    if (!size)
+      break;
+  }
+
+  // If the write range extends beyond the last breakpoint site, write the
+  // remaining data.
+  if (size) {
+    // Write the remaining part after the last breakpoint, or the whole range
+    // in the case that there were no breakpoints.
+    size_t part_bytes_written = 0;
+    error = DoWriteMemory(addr, byte_buf, size, part_bytes_written);
+    bytes_written += part_bytes_written;
+    if (error.Fail() || part_bytes_written < size) {
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+          addr, size, part_bytes_written);
+    }
+  }
+
+  return Status();
 }
 
 Status

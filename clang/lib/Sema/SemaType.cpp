@@ -1344,7 +1344,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       }
     }
     Result = S.Context.getAutoType(DeducedKind::Undeduced, QualType(), AutoKW,
-                                   TypeConstraintConcept, TemplateArgs);
+                                   TemplateName(TypeConstraintConcept),
+                                   TemplateArgs);
     break;
   }
 
@@ -3084,15 +3085,15 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
   // Create the TemplateTypeParmDecl here to retrieve the corresponding
   // template parameter type. Template parameters are temporarily added
   // to the TU until the associated TemplateDecl is created.
-  TemplateTypeParmDecl *InventedTemplateParam =
-      TemplateTypeParmDecl::Create(
-          S.Context, S.Context.getTranslationUnitDecl(),
-          /*KeyLoc=*/D.getDeclSpec().getTypeSpecTypeLoc(),
-          /*NameLoc=*/D.getIdentifierLoc(),
-          TemplateParameterDepth, AutoParameterPosition,
-          S.InventAbbreviatedTemplateParameterTypeName(
-              D.getIdentifier(), AutoParameterPosition), false,
-          IsParameterPack, /*HasTypeConstraint=*/Auto->isConstrained());
+  TemplateTypeParmDecl *InventedTemplateParam = TemplateTypeParmDecl::Create(
+      S.Context, S.Context.getTranslationUnitDecl(),
+      /*KeyLoc=*/D.getDeclSpec().getTypeSpecTypeLoc(),
+      /*NameLoc=*/D.getIdentifierLoc(), TemplateParameterDepth,
+      AutoParameterPosition,
+      S.InventAbbreviatedTemplateParameterTypeName(D.getIdentifier(),
+                                                   AutoParameterPosition),
+      false, IsParameterPack,
+      /*HasTypeConstraint=*/Auto->isConstrained());
   InventedTemplateParam->setImplicit();
   Info.TemplateParams.push_back(InventedTemplateParam);
 
@@ -3115,7 +3116,8 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       if (!Invalid) {
         S.AttachTypeConstraint(
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
-            AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
+            AutoLoc.getNamedConcept().getAsTemplateDecl(),
+            /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -6138,9 +6140,12 @@ namespace {
                                            TemplateId->NumArgs);
         SemaRef.translateTemplateArguments(TemplateArgsPtr, TemplateArgsInfo);
       }
-      DeclarationNameInfo DNI = DeclarationNameInfo(
-          TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
-          TemplateId->TemplateNameLoc);
+      DeclarationNameInfo DNI =
+          DeclarationNameInfo(TL.getTypePtr()
+                                  ->getTypeConstraintConcept()
+                                  .getAsTemplateDecl()
+                                  ->getDeclName(),
+                              TemplateId->TemplateNameLoc);
 
       NamedDecl *FoundDecl;
       if (auto TN = TemplateId->Template.get();

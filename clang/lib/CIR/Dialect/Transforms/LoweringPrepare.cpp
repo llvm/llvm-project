@@ -366,7 +366,7 @@ struct LoweringPreparePass
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
     cir::GlobalOp handle = getOrCreateRuntimeVariable(
-        builder, "__dso_handle", global.getLoc(), builder.getI8Type(),
+        builder, "__dso_handle", global.getLoc(), builder.getUIntNTy(8),
         cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
 
     // If this is a simple call to a destructor, get the called function.

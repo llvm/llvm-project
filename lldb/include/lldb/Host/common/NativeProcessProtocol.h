@@ -27,9 +27,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <map>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 
 namespace lldb_private {
@@ -134,8 +134,10 @@ public:
   ReadCStringFromMemory(lldb::addr_t addr, char *buffer, size_t max_size,
                         size_t &total_bytes_read);
 
-  virtual Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                             size_t &bytes_written) = 0;
+  /// Write memory while not overwriting breakpoints in memory. The breakpoints'
+  /// saved bytes are updated with what would have been written.
+  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                     size_t &bytes_written);
 
   virtual llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
                                                       uint32_t permissions) {
@@ -457,7 +459,9 @@ protected:
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };
 
-  std::unordered_map<lldb::addr_t, SoftwareBreakpoint> m_software_breakpoints;
+  // Using std::map so that breakpoints are sorted in ascending address order.
+  // WriteMemory relies on this.
+  std::map<lldb::addr_t, SoftwareBreakpoint> m_software_breakpoints;
   lldb::pid_t m_pid;
 
   std::vector<std::unique_ptr<NativeThreadProtocol>> m_threads;
@@ -481,6 +485,13 @@ protected:
 
   // Extensions enabled per the last SetEnabledExtensions() call.
   Extension m_enabled_extensions;
+
+  // Write to memory, with no awareness of software breakpoint sites. Used to
+  // implement WriteMemory. May be called directly for use cases that should
+  // ignore software breakpoint sites, for example adding or removing those
+  // breakpoints.
+  virtual Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                               size_t &bytes_written) = 0;
 
   // lldb_private::Host calls should be used to launch a process for debugging,
   // and then the process should be attached to. When attaching to a process

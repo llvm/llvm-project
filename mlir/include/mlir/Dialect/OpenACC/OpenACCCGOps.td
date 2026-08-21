@@ -118,7 +118,8 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
     decisions (such as generate an atomic update). E.g.
 
     ```
-      acc.reduction_combine %src into %dest <addi> : memref<i32>
+      acc.reduction_combine %src into %dest <addi>
+          par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
 
     Might lower to something similar to
@@ -140,11 +141,28 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
 
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
                        OpenACC_AnyPointerOrMappableType:$srcMemref,
-                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   
   let assemblyFormat = [{
-    $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
+    $srcMemref `into` $destMemref $reductionOperator
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    `:` type($destMemref) attr-dict
   }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -171,8 +189,8 @@ def OpenACC_ReductionAccumulateOp
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_accumulate %partial to %private <add>
         par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
-    acc.reduction_combine %private into %shared <add> : memref<i32>
-        {acc.par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_combine %private into %shared <add>
+        par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
   }];
   let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,

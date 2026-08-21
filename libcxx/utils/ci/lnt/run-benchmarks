@@ -70,7 +70,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         prog='run-benchmarks',
         description='Benchmark libc++ at the given commit and produce a LNT JSON report.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.')
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
     parser.add_argument('--benchmark-commit', type=str, required=True,
         help='The SHA representing the version of the library to benchmark.')
     parser.add_argument('--test-suite-commit', type=str, required=True,
@@ -136,7 +136,7 @@ def main(argv):
     if args.build_dir is not None and args.build_dir.exists():
         sys.exit(f'error: build directory {args.build_dir} already exists; not overwriting it')
     if shutil.which('lnt') is None:
-        sys.exit('error: cannot find `lnt`; install libcxx/utils/requirements.txt')
+        sys.exit('error: cannot find `lnt`; install libcxx/utils/ci/lnt/requirements.txt')
 
     with contextlib.ExitStack() as stack:
         # The build artifacts are kept in --build-dir when it is given, and stored in a temporary directory

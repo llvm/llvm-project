@@ -1013,6 +1013,7 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
       if (TemplateParam->hasTypeConstraint())
         Fragments.append(TemplateParam->getTypeConstraint()
                              ->getNamedConcept()
+                             .getAsTemplateDecl()
                              ->getName()
                              .str(),
                          DeclarationFragments::FragmentKind::TypeIdentifier);

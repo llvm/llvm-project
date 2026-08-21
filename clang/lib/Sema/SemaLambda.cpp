@@ -1120,6 +1120,9 @@ void Sema::CompleteLambdaCallOperator(
   }
 
   buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);
+
+  // Not built by ActOnFunctionDeclarator, so tag it here.
+  addImplicitCallingConvAbiTag(Method);
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,

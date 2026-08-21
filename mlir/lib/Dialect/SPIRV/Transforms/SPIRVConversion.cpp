@@ -868,9 +868,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
   // Look through all global variables in the given `body` block and check if
   // there is a spirv.GlobalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
-            spirv::SPIRVDialect::getAttributeName(
-                spirv::Decoration::BuiltIn))) {
+    if (StringAttr builtinAttr = varOp.getBuiltInAttr()) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
       if (varBuiltIn == builtin) {
         return varOp;
@@ -1023,11 +1021,19 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
 
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    cast<SymbolOpInterface>(newFuncOp.getOperation())
+        .setVisibility(
+            cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
     // Copy over all attributes other than the function name and type.
-    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+        newFuncOp->setDiscardableAttr(namedAttr.getName(),
+                                      namedAttr.getValue());
     }
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -1289,11 +1295,13 @@ static void addNoWrapDecorations(Operation *op,
                                  spirv::LinearizedIndexNoWrapFlags flags,
                                  OpBuilder &builder) {
   if (flags.noSignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
+        builder.getUnitAttr());
   if (flags.noUnsignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
+        builder.getUnitAttr());
 }
 
 static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,

@@ -1,5 +1,5 @@
 # RUN: llvm-profdata merge --sample --extbinary --use-md5 --split-layout \
-# RUN:   --sample-profile-write-eytzinger-name-tables %s -o %t.xfdo
+# RUN:   --md5-indexed-tables %s -o %t.xfdo
 # RUN: llvm-profdata show --sample --show-sec-info-only %t.xfdo > %t.secinfo
 # RUN: FileCheck %s -input-file %t.secinfo
 # RUN: llvm-profdata merge --sample --text %t.xfdo -o %t.text

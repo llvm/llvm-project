@@ -270,7 +270,7 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 
 // Do not add the RegBankSelect pass, as we only ever need virtual registers.
 bool SPIRVPassConfig::addRegBankSelect() {
-  disablePass(&RegBankSelect::ID);
+  disablePass(&RegBankSelectLegacy::ID);
   return false;
 }
 

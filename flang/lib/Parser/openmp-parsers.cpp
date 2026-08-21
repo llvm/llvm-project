@@ -843,6 +843,10 @@ TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
 TYPE_PARSER(construct<OmpAccessGroup>( //
     "CGROUP" >> pure(OmpAccessGroup::Value::Cgroup)))
 
+TYPE_PARSER(construct<OmpAdjustOp>( //
+    "NOTHING" >> pure(OmpAdjustOp::Value::Nothing) ||
+    "NEED_DEVICE_PTR" >> pure(OmpAdjustOp::Value::Need_Device_Ptr)))
+
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpAlignModifier>( //
@@ -1068,6 +1072,9 @@ TYPE_PARSER(construct<OmpxHoldModifier>( //
 
 // This could be auto-generated.
 TYPE_PARSER(
+    sourced(construct<OmpAdjustArgsClause::Modifier>(Parser<OmpAdjustOp>{})))
+
+TYPE_PARSER(
     sourced(construct<OmpAffinityClause::Modifier>(Parser<OmpIterator>{})))
 
 TYPE_PARSER(
@@ -1083,10 +1090,13 @@ TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
 TYPE_PARSER(sourced(
     construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
-TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
+TYPE_PARSER(
+    sourced(construct<OmpDoacross::Modifier>(Parser<OmpDependenceType>{})))
+
+TYPE_PARSER(sourced( //
     construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
     construct<OmpDependClause::TaskDep::Modifier>(
-        Parser<OmpTaskDependenceType>{})))))
+        Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER( //
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
@@ -1217,11 +1227,6 @@ TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
 TYPE_PARSER(construct<OmpAppendArgsClause::OmpAppendOp>(
     "INTEROP" >> parenthesized(nonemptyList(Parser<OmpInteropType>{}))))
 
-TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
-    "NOTHING" >> pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Nothing) ||
-    "NEED_DEVICE_PTR" >>
-        pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
-
 TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
 
 TYPE_PARSER(sourced(construct<OmpLoopModifier>(
@@ -1269,7 +1274,7 @@ static inline MOBClause makeMobClause(
 }
 
 TYPE_PARSER(construct<OmpAdjustArgsClause>(
-    (Parser<OmpAdjustArgsClause::OmpAdjustOp>{} / ":"),
+    maybe(nonemptyList(Parser<OmpAdjustArgsClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
 // [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
@@ -1428,9 +1433,10 @@ TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
 TYPE_PARSER(construct<OmpDoacross>(
-    construct<OmpDoacross>(construct<OmpDoacross::Sink>(
-        "SINK"_tok >> ":"_tok >> Parser<OmpIterationVector>{})) ||
-    construct<OmpDoacross>(construct<OmpDoacross::Source>("SOURCE"_tok))))
+    // Don't parse the modifier list as "maybe", or otherwise the parser will
+    // always succeed (never allowing TaskDep in OmpDependClause).
+    nonemptyList(Parser<OmpDoacross::Modifier>{}),
+    maybe(":"_tok >> Parser<OmpIterationVector>{})))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(

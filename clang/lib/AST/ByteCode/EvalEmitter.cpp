@@ -254,7 +254,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(S, CodePtr(), Ptr);
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -324,7 +324,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
