@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PBQP/Graph.h"
 #include "llvm/CodeGen/PBQP/Math.h"
@@ -128,6 +129,11 @@ public:
 
   /// Perform register allocation
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  /// Shared implementation used by the legacy and new pass managers.
+  bool run(MachineFunction &MF, LiveIntervals &LIS,
+           MachineBlockFrequencyInfo &MBFI, LiveStacks &LiveStks,
+           MachineDominatorTree &MDT, MachineLoopInfo &Loops, VirtRegMap &VRM);
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoPHIs();
@@ -781,25 +787,26 @@ void RegAllocPBQP::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
 }
 
 bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
-  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  MachineBlockFrequencyInfo &MBFI =
-      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  return run(MF, getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
+             getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
+             getAnalysis<LiveStacksWrapperLegacy>().getLS(),
+             getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
+             getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
+             getAnalysis<VirtRegMapWrapperLegacy>().getVRM());
+}
 
-  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-
-  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-
-  PBQPVirtRegAuxInfo VRAI(
-      MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
+bool RegAllocPBQP::run(MachineFunction &MF, LiveIntervals &LIS,
+                       MachineBlockFrequencyInfo &MBFI, LiveStacks &LiveStks,
+                       MachineDominatorTree &MDT, MachineLoopInfo &Loops,
+                       VirtRegMap &VRM) {
+  PBQPVirtRegAuxInfo VRAI(MF, LIS, VRM, Loops, MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
   // FIXME: we create DefaultVRAI here to match existing behavior pre-passing
   // the VRAI through the spiller to the live range editor. However, it probably
   // makes more sense to pass the PBQP VRAI. The existing behavior had
   // LiveRangeEdit make its own VirtRegAuxInfo object.
-  VirtRegAuxInfo DefaultVRAI(
-      MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
+  VirtRegAuxInfo DefaultVRAI(MF, LIS, VRM, Loops, MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
       createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
@@ -876,6 +883,28 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << VRM << "\n");
 
   return true;
+}
+
+PreservedAnalyses RAPBQPPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  RegAllocPBQP Impl;
+  bool Changed = Impl.run(MF, MFAM.getResult<LiveIntervalsAnalysis>(MF),
+                          MFAM.getResult<MachineBlockFrequencyAnalysis>(MF),
+                          MFAM.getResult<LiveStacksAnalysis>(MF),
+                          MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                          MFAM.getResult<MachineLoopAnalysis>(MF),
+                          MFAM.getResult<VirtRegMapAnalysis>(MF));
+  if (!Changed)
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveStacksAnalysis>();
+  PA.preserve<VirtRegMapAnalysis>();
+  return PA;
 }
 
 /// Create Printable object for node and register info.

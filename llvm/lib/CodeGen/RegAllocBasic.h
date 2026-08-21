@@ -24,6 +24,15 @@
 
 namespace llvm {
 
+class LiveIntervals;
+class LiveRegMatrix;
+class LiveStacks;
+class MachineBlockFrequencyInfo;
+class MachineDominatorTree;
+class MachineLoopInfo;
+class ProfileSummaryInfo;
+class VirtRegMap;
+
 struct CompSpillWeight {
   bool operator()(const LiveInterval *A, const LiveInterval *B) const {
     // Compare by weight first, then use register number as a stable tie-breaker
@@ -85,6 +94,12 @@ public:
 
   /// Perform register allocation.
   bool runOnMachineFunction(MachineFunction &mf) override;
+
+  /// Shared implementation used by the legacy and new pass managers.
+  bool run(MachineFunction &MF, VirtRegMap &VRM, LiveIntervals &LIS,
+           LiveRegMatrix &LRM, LiveStacks &LSS,
+           MachineBlockFrequencyInfo &MBFI, MachineDominatorTree &MDT,
+           MachineLoopInfo &Loops, ProfileSummaryInfo *PSI);
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(

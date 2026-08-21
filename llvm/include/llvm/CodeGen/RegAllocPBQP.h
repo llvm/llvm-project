@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PBQP/CostAllocator.h"
 #include "llvm/CodeGen/PBQP/Graph.h"
 #include "llvm/CodeGen/PBQP/Math.h"
@@ -530,6 +531,20 @@ inline Solution solve(PBQPRAGraph& G) {
 /// Create a PBQP register allocator instance.
 LLVM_ABI FunctionPass *
 createPBQPRegisterAllocator(char *customPassID = nullptr);
+
+class RAPBQPPass : public RequiredPassInfoMixin<RAPBQPPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
 
 } // end namespace llvm
 

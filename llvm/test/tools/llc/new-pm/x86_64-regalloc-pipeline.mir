@@ -1,6 +1,10 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=fast -print-pipeline-passes %s -o - 2>&1 | FileCheck %s
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=greedy -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=basic -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-BASIC
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=pbqp -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-PBQP
 
 # CHECK: regallocfast
 # CHECK-GREEDY: greedy<all>
+# CHECK-BASIC: ra-basic
+# CHECK-PBQP: ra-pbqp

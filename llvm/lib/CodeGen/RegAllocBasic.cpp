@@ -24,8 +24,11 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocBasic.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -218,24 +221,29 @@ MCRegister RABasic::selectOrSplit(const LiveInterval &VirtReg,
 }
 
 bool RABasic::runOnMachineFunction(MachineFunction &mf) {
+  return run(mf, getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
+             getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
+             getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM(),
+             getAnalysis<LiveStacksWrapperLegacy>().getLS(),
+             getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
+             getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
+             getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
+             &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
+}
+
+bool RABasic::run(MachineFunction &mf, VirtRegMap &VRMRef, LiveIntervals &LISRef,
+                  LiveRegMatrix &LRMRef, LiveStacks &LSS,
+                  MachineBlockFrequencyInfo &MBFI, MachineDominatorTree &MDT,
+                  MachineLoopInfo &Loops, ProfileSummaryInfo *PSI) {
   LLVM_DEBUG(dbgs() << "********** BASIC REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
-  auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-
-  RegAllocBase::init(getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
-                     getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
-                     getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM());
-  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM,
-                      getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,
-                      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
+  RegAllocBase::init(VRMRef, LISRef, LRMRef);
+  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM, Loops, MBFI, PSI);
   VRAI.calculateSpillWeightsAndHints();
 
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, LiveStks, MDT, MBFI}, *MF, *VRM, VRAI));
+  SpillerInstance.reset(createInlineSpiller({*LIS, LSS, MDT, MBFI}, *MF, *VRM, VRAI));
 
   allocatePhysRegs();
   postOptimization();
@@ -245,6 +253,36 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   releaseMemory();
   return true;
+}
+
+PreservedAnalyses RABasicPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  auto &MAMProxy = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(
+      *MF.getFunction().getParent());
+
+  RABasic Impl;
+  bool Changed =
+      Impl.run(MF, MFAM.getResult<VirtRegMapAnalysis>(MF),
+               MFAM.getResult<LiveIntervalsAnalysis>(MF),
+               MFAM.getResult<LiveRegMatrixAnalysis>(MF),
+               MFAM.getResult<LiveStacksAnalysis>(MF),
+               MFAM.getResult<MachineBlockFrequencyAnalysis>(MF),
+               MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+               MFAM.getResult<MachineLoopAnalysis>(MF), PSI);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveDebugVariablesAnalysis>();
+  PA.preserve<LiveStacksAnalysis>();
+  PA.preserve<VirtRegMapAnalysis>();
+  PA.preserve<LiveRegMatrixAnalysis>();
+  return PA;
 }
 
 FunctionPass* llvm::createBasicRegisterAllocator() {

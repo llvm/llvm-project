@@ -72,8 +72,10 @@
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocBasic.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
+#include "llvm/CodeGen/RegAllocPBQP.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
@@ -1181,6 +1183,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
       break;
     case RegAllocType::Greedy:
       addMachineFunctionPass(RAGreedyPass(), PMW);
+      break;
+    case RegAllocType::Basic:
+      addMachineFunctionPass(RABasicPass(), PMW);
+      break;
+    case RegAllocType::PBQP:
+      addMachineFunctionPass(RAPBQPPass(), PMW);
       break;
     default:
       reportFatalUsageError("register allocator not supported yet");
