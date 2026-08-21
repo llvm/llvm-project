@@ -11,6 +11,7 @@
 // This file verifies every boundary condition of those routing decisions.
 
 // RUN: fir-opt %s -convert-hlfir-to-fir | FileCheck %s
+// RUN: fir-opt %s -convert-hlfir-to-fir -use-fortran-assign-only | FileCheck %s --check-prefix=FALLBACK
 
 // ---------------------------------------------------------------------------
 // POSITIVE CASES: should route to _FortranAAssignSimple
@@ -27,6 +28,12 @@ func.func @alloc_i32_array(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>
 // CHECK-LABEL: func.func @alloc_i32_array(
 // CHECK:       fir.call @_FortranAAssignSimple(
 // CHECK-NOT:   fir.call @_FortranAAssign(
+//
+// With -use-fortran-assign-only, the allocatable path must fall back
+// to _FortranAAssign even for trivial types.
+// FALLBACK-LABEL: func.func @alloc_i32_array(
+// FALLBACK:       fir.call @_FortranAAssign(
+// FALLBACK-NOT:   fir.call @_FortranAAssignSimple(
 
 // ---------------------------------------------------------------------------
 
@@ -101,6 +108,12 @@ func.func @nonalloc_i32_array(%arg0: !fir.box<!fir.array<?xi32>>,
 // CHECK-LABEL: func.func @nonalloc_i32_array(
 // CHECK:       fir.call @_FortranAAssignSimple(
 // CHECK-NOT:   fir.call @_FortranAAssign(
+//
+// With -use-fortran-assign-only, the non-allocatable array path must
+// also fall back to _FortranAAssign.
+// FALLBACK-LABEL: func.func @nonalloc_i32_array(
+// FALLBACK:       fir.call @_FortranAAssign(
+// FALLBACK-NOT:   fir.call @_FortranAAssignSimple(
 
 // ---------------------------------------------------------------------------
 
