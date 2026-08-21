@@ -38,6 +38,8 @@ STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
 STATISTIC(NumCmpsInPreEmit,
           "Number of compares eliminated in pre-emit peephole");
+STATISTIC(NumRotateInstrFoldInPreEmit,
+          "Number of folding Rotate instructions in pre-emit peephole");
 
 static cl::opt<bool>
 EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
@@ -512,6 +514,13 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             LLVM_DEBUG(dbgs() << "Optimize compare by using record form: ");
             LLVM_DEBUG(MI.dump());
             InstrsToErase.push_back(&MI);
+          }
+          MachineInstr *ToErase = nullptr;
+          if (TII->simplifyRotateAndMaskInstr(MI, ToErase)) {
+            Changed = true;
+            NumRotateInstrFoldInPreEmit++;
+            if (ToErase)
+              InstrsToErase.push_back(ToErase);
           }
         }
 
