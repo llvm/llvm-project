@@ -589,8 +589,8 @@ struct VectorShuffleOpConvert final
     // When at least one of the operands or the result becomes a scalar after
     // type conversion for SPIR-V, extract all the required elements and
     // construct the result vector.
-    Type scalarType = oldV1Type.getElementType();
-    auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc(), scalarType](
+    auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc(),
+                            scalarType = oldV1Type.getElementType()](
                                Value scalarOrVec, int32_t idx) -> Value {
       if (idx == vector::ShuffleOp::kPoisonIndex)
         return spirv::UndefOp::create(rewriter, loc, scalarType);
