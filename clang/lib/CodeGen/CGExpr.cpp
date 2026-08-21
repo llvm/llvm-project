@@ -1612,6 +1612,12 @@ EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
   }
 
   // TODO: conditional operators, comma.
+  //
+  // Req is dropped for those two shapes, since EmitScalarExpr below cannot carry
+  // it; implementing the TODO would fix that too. Only the pointer-valued
+  // spellings are affected: `(c ? a[i] : a[0]) = 1` and `(1, a[i]) = 1` are
+  // glvalues in C++ and stay in the lvalue emitter.
+  // See clang/test/CodeGen/ubsan-array-bounds-pointer-shapes.c.
 
   // Otherwise, use the alignment of the type.
   return CGF.makeNaturalAddressForPointer(
