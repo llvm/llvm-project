@@ -388,14 +388,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
 
-  if (isOverloaded &&
-      llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
-        return DV.has_value();
-      }))
-    PrintFatalError(TheDef->getLoc(),
-                    "default argument values are not supported for "
-                    "overloaded intrinsics");
-
   unsigned NumParams = IS.ParamTys.size();
   bool SeenDefault = false;
   for (unsigned i = 0; i < NumParams; ++i) {

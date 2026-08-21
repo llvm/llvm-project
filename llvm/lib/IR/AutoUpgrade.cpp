@@ -1468,18 +1468,21 @@ static bool convertIntrinsicValidType(StringRef Name,
 }
 
 static bool getDefaultArgUpgradeInfo(Function *F, Intrinsic::ID IID,
+                                     SmallVectorImpl<Type *> &OverloadTys,
                                      unsigned &FullArgCount) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return false;
-
-  if (Intrinsic::isOverloaded(IID))
     return false;
 
   FullArgCount = FirstDefault + Defaults.size();
 
   // Only trailing default arguments can be missing.
   if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
+    return false;
+
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
     return false;
 
   return true;
@@ -1489,11 +1492,12 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
 
   unsigned FullArgCount;
-  if (!getDefaultArgUpgradeInfo(F, IID, FullArgCount))
+  SmallVector<Type *, 4> OverloadTys;
+  if (!getDefaultArgUpgradeInfo(F, IID, OverloadTys, FullArgCount))
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
   assert(NewFn->arg_size() == FullArgCount &&
          "default argument table does not match intrinsic signature");
   return true;
