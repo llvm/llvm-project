@@ -17,6 +17,7 @@ add_llvm_unittest(LLVMFrontendTests
   HLSLBindingTest.cpp
   HLSLRootSignatureDumpTest.cpp
   HLSLSemanticSignatureMetadataTest.cpp
+  HLSLSemanticSignaturePackingTest.cpp
   OpenACCTest.cpp
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp
