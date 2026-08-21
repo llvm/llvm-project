@@ -106,9 +106,6 @@ public:
   /// sycl::is_device_copyable<Ty>
   bool checkExplicitDeviceCopyable(QualType Ty, SourceLocation Loc);
 
-  // TODO: perhaps a good idea to add a normal checkDeviceCopyable as well, and
-  // not just checking if something's explicitly device-copyable.
-
   /// Returns true if sycl-device-copyable diagnostics has not been downgraded
   /// from an error via -Wsycl-device-copyable or -Wno-sycl-device-copyable.
   /// 'Loc' is needed in case pragmas are used to set -Wsycl-device-copyable or

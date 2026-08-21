@@ -808,19 +808,13 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
-  struct DiagDetails {
-    QualType Type;
-    SourceLocation Loc;
-  };
-
-  // Return diagnostics info for an 'ObjectAccess' stored on ObjectAccessPath
-  DiagDetails getObjectAccessDiagDetails(ObjectAccess o) {
-    if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
-      return {PVD->getType(), PVD->getLocation()};
-    if (auto *FD = dyn_cast<const FieldDecl *>(o))
-      return {FD->getType(), FD->getLocation()};
-    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
-      return {BS->getType(), BS->getBaseTypeLoc()};
+  SourceLocation getObjectAccessLoc(ObjectAccess O) {
+    if (auto *PVD = dyn_cast<const ParmVarDecl *>(O))
+      return PVD->getLocation();
+    if (auto *FD = dyn_cast<const FieldDecl *>(O))
+      return FD->getLocation();
+    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(O))
+      return BS->getBaseTypeLoc();
     llvm_unreachable("Unexpected type in ObjectAccess");
   }
 
@@ -924,15 +918,14 @@ public:
 
   bool checkDeviceCopyable(QualType Ty) {
     auto DirectParent = ObjectAccessPath.back();
-    DiagDetails Detail = getObjectAccessDiagDetails(DirectParent);
+    SourceLocation Loc = getObjectAccessLoc(DirectParent);
     // Since references are allowed as direct kernel parameters, we need to
     // explicitly check the referenced type:
     QualType Type = Ty;
     if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent))
       Type = Ty->getPointeeType();
 
-    bool MarkedCopyable =
-        SemaSYCLRef.checkExplicitDeviceCopyable(Type, Detail.Loc);
+    bool MarkedCopyable = SemaSYCLRef.checkExplicitDeviceCopyable(Type, Loc);
 
     CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
     // Set all lambdas as copyable: Future traversal deeper into the lambda
@@ -945,7 +938,7 @@ public:
     // -Wpendantic-sycl.
     DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
     bool CheckSMFs = !Diags.isIgnored(
-        diag::warn_sycl_device_copyable_smf_not_public, Detail.Loc);
+        diag::warn_sycl_device_copyable_smf_not_public, Loc);
 
     // Checking SYCL 2020 3.13.1, when explicitly declaring certain class types
     // as device copyable:
@@ -1023,13 +1016,12 @@ public:
     }
 
     if (!MarkedCopyable) {
-      SemaSYCLRef.Diag(Detail.Loc,
-                       diag::warn_sycl_kernel_param_not_device_copyable)
+      SemaSYCLRef.Diag(Loc, diag::warn_sycl_kernel_param_not_device_copyable)
           << Type;
       emitObjectAccessPathNotes();
 
       // Continue traversal if not enforcing device-copyability.
-      if (!SemaSYCLRef.isEnforcingDeviceCopyable(Detail.Loc))
+      if (!SemaSYCLRef.isEnforcingDeviceCopyable(Loc))
         return true;
       // Otherwise, do not continue if enforcing device-copyability.
       IsValid = false;
