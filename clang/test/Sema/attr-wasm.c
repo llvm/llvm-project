@@ -29,8 +29,9 @@ void module_z(void) __attribute__((import_module("bar"))); //expected-warning {{
 void both(void) __attribute__((import_name("foo"), import_module("bar")));
 
 // export_name tests
-void export_a(void) __attribute__((export_name)); //expected-error {{'export_name' attribute takes one argument}}
-void export_b(void) __attribute__((export_name("foo", "bar"))); //expected-error {{'export_name' attribute takes one argument}}
+void export_a(void) __attribute__((export_name));
+extern int export_a_var __attribute__((export_name));
+void export_b(void) __attribute__((export_name("foo", "bar"))); //expected-error {{'export_name' attribute takes no more than 1 argument}}
 
 void export_c(void) __attribute__((export_name("foo"))); //expected-note {{previous attribute is here}}
 void export_c(void) __attribute__((export_name("bar"))); //expected-warning {{export name (bar) does not match the export name (foo) of the previous declaration}}
@@ -44,3 +45,7 @@ extern int name_z_var __attribute__((import_name("bar"))); //expected-warning {{
 
 extern int module_z_var __attribute__((import_module("foo"))); //expected-note {{previous attribute is here}}
 extern int module_z_var __attribute__((import_module("bar"))); //expected-warning {{import module (bar) does not match the import module (foo) of the previous declaration}}
+
+// Explicit 'used' on non-definition still warns, while 'export_name' (implicit 'used') does not
+extern int explicit_used_var __attribute__((used)); //expected-warning {{'used' attribute ignored on a non-definition declaration}}
+

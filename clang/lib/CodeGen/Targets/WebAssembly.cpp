@@ -70,27 +70,22 @@ public:
                 << "import attribute cannot be applied to a definition";
             return;
           }
-          llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-          if (ModuleAttr) {
-            Global->setMetadata(
-                "wasm.import.module",
-                llvm::MDNode::get(
-                    Ctx,
-                    llvm::MDString::get(Ctx, ModuleAttr->getImportModule())));
+          if (Global->getAddressSpace() == 0) {
+            auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation()
+                                      : NameAttr->getLocation();
+            CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
+                << "import attribute cannot be applied to a non-wasm-variable global";
+            return;
           }
-          if (NameAttr) {
-            Global->setMetadata(
-                "wasm.import.name",
-                llvm::MDNode::get(
-                    Ctx, llvm::MDString::get(Ctx, NameAttr->getImportName())));
-          }
+          if (ModuleAttr)
+            Global->addAttribute("wasm-import-module",
+                                 ModuleAttr->getImportModule());
+          if (NameAttr)
+            Global->addAttribute("wasm-import-name",
+                                 NameAttr->getImportName());
         }
         if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
-          llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-          Global->setMetadata(
-              "wasm.export.name",
-              llvm::MDNode::get(
-                  Ctx, llvm::MDString::get(Ctx, Attr->getExportName())));
+          Global->addAttribute("wasm-export-name", Attr->getExportName());
         }
       }
       return;

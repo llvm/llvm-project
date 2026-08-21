@@ -6,6 +6,6 @@ extern const int __attribute__((address_space(1))) imported_g
 
 int get_import(void) { return imported_g; }
 
-// CHECK: @imported_g = external addrspace(1) constant i32, align 4, !wasm.import.module ![[MD_MOD:[0-9]+]], !wasm.import.name ![[MD_NAME:[0-9]+]]
-// CHECK: ![[MD_MOD]] = !{!"js"}
-// CHECK: ![[MD_NAME]] = !{!"global_g"}
+// CHECK: @imported_g = external addrspace(1) constant i32, align 4 #0
+// CHECK: attributes #0 = { "wasm-import-module"="js" "wasm-import-name"="global_g" }
+

@@ -185,18 +185,6 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   return WasmSym;
 }
 
-static StringRef getWasmMetadata(const GlobalVariable &GV, StringRef Key) {
-  MDNode *MD = GV.getMetadata(Key);
-  if (!MD || MD->getNumOperands() == 0)
-    return {};
-
-  auto *Name = dyn_cast<MDString>(MD->getOperand(0));
-  if (!Name)
-    return {};
-
-  return Name->getString();
-}
-
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->hasCommonLinkage()) {
     OutContext.reportError(SMLoc(),
@@ -205,16 +193,28 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     return;
   }
 
-  if (!GV->isDeclaration()) {
-    if (!getWasmMetadata(*GV, "wasm.import.module").empty() ||
-        !getWasmMetadata(*GV, "wasm.import.name").empty()) {
+  if (GV->hasAttribute("wasm-import-module") ||
+      GV->hasAttribute("wasm-import-name")) {
+    if (!GV->isDeclaration()) {
       OutContext.reportError(SMLoc(), "definition of global '" + GV->getName() +
-                                          "' cannot have import metadata");
+                                          "' cannot have import attribute");
+      return;
+    }
+    if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+      OutContext.reportError(
+          SMLoc(), "imported global '" + GV->getName() +
+                       "' must be in a wasm variable address space");
       return;
     }
   }
 
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+    if (GV->hasAttribute("wasm-export-name")) {
+      auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));
+      StringRef Name = GV->getAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(OutContext.allocateString(Name));
+      getTargetStreamer()->emitExportName(Sym, Name);
+    }
     AsmPrinter::emitGlobalVariable(GV);
     return;
   }
@@ -240,13 +240,15 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   emitSymbolType(Sym);
   if (GV->isDeclaration()) {
-    StringRef ImportModule = getWasmMetadata(*GV, "wasm.import.module");
-    if (!ImportModule.empty()) {
+    if (GV->hasAttribute("wasm-import-module")) {
+      StringRef ImportModule =
+          GV->getAttribute("wasm-import-module").getValueAsString();
       Sym->setImportModule(OutContext.allocateString(ImportModule));
       getTargetStreamer()->emitImportModule(Sym, ImportModule);
     }
-    StringRef ImportName = getWasmMetadata(*GV, "wasm.import.name");
-    if (!ImportName.empty()) {
+    if (GV->hasAttribute("wasm-import-name")) {
+      StringRef ImportName =
+          GV->getAttribute("wasm-import-name").getValueAsString();
       Sym->setImportName(OutContext.allocateString(ImportName));
       getTargetStreamer()->emitImportName(Sym, ImportName);
     }
@@ -255,8 +257,9 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
     OutStreamer->emitLabel(Sym);
-    StringRef ExportName = getWasmMetadata(*GV, "wasm.export.name");
-    if (!ExportName.empty()) {
+    if (GV->hasAttribute("wasm-export-name")) {
+      StringRef ExportName =
+          GV->getAttribute("wasm-export-name").getValueAsString();
       Sym->setExportName(OutContext.allocateString(ExportName));
       getTargetStreamer()->emitExportName(Sym, ExportName);
     }

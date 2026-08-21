@@ -384,24 +384,13 @@ SemaWasm::mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL) {
 
 WebAssemblyExportNameAttr *
 SemaWasm::mergeExportNameAttr(Decl *D, const WebAssemblyExportNameAttr &AL) {
-  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (const auto *ExistingAttr = FD->getAttr<WebAssemblyExportNameAttr>()) {
-      if (ExistingAttr->getExportName() == AL.getExportName())
-        return nullptr;
-      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
-          << 2 << ExistingAttr->getExportName() << AL.getExportName();
-      Diag(AL.getLoc(), diag::note_previous_attribute);
+  if (const auto *ExistingAttr = D->getAttr<WebAssemblyExportNameAttr>()) {
+    if (ExistingAttr->getExportName() == AL.getExportName())
       return nullptr;
-    }
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-    if (const auto *ExistingAttr = VD->getAttr<WebAssemblyExportNameAttr>()) {
-      if (ExistingAttr->getExportName() == AL.getExportName())
-        return nullptr;
-      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
-          << 2 << ExistingAttr->getExportName() << AL.getExportName();
-      Diag(AL.getLoc(), diag::note_previous_attribute);
-      return nullptr;
-    }
+    Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+        << 2 << ExistingAttr->getExportName() << AL.getExportName();
+    Diag(AL.getLoc(), diag::note_previous_attribute);
+    return nullptr;
   }
   return ::new (getASTContext())
       WebAssemblyExportNameAttr(getASTContext(), AL, AL.getExportName());
@@ -457,17 +446,15 @@ void SemaWasm::handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL) {
 void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
 
-  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->isThisDeclarationADefinition()) {
-      Diag(D->getLocation(), diag::err_alias_is_definition) << FD << 0;
-      return;
-    }
-  }
-
   StringRef Str;
-  SourceLocation ArgLoc;
-  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
+  if (AL.getNumArgs() == 0) {
+    if (auto *ND = dyn_cast<NamedDecl>(D))
+      Str = ND->getName();
+  } else {
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
+      return;
+  }
 
   D->addAttr(::new (Context) WebAssemblyExportNameAttr(Context, AL, Str));
   D->addAttr(UsedAttr::CreateImplicit(Context));
