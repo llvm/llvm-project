@@ -843,10 +843,13 @@ collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
             S.NarrowShift + Amt->getZExtValue() < BW &&
             S.Shift + S.NarrowShift + Amt->getZExtValue() < WideBW) {
           ChainInsts.push_back(BO);
-          // Lossless shls need no mask.
-          if (BO->hasNoUnsignedWrap() && S.NarrowBW == 0)
+          if (BO->hasNoUnsignedWrap() && S.NarrowBW == 0) {
             S.Shift += Amt->getZExtValue();
-          else {
+            // Lossless shls shift out only known-zero bits; record them as
+            // the mask so matching lanes can form a splat.
+            S.NarrowBW = BW;
+            S.NarrowMask = APInt::getLowBitsSet(BW, BW - Amt->getZExtValue());
+          } else {
             if (S.NarrowBW == 0) {
               S.NarrowBW = BW;
               S.NarrowMask = APInt::getAllOnes(BW);

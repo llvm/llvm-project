@@ -10,17 +10,16 @@
 
 #include "NativeRegisterContextLinux_loongarch64.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
-
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>

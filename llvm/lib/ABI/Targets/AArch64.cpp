@@ -92,6 +92,8 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 ArgInfo AArch64TargetInfo::classifyArgumentType(
     const Type *Ty, bool IsVariadicFn, bool IsNamedArg,
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
   // TODO: Handle variadic functins here when Windows Arm64 EC is supported.
 
   if (Ty->isVector()) {

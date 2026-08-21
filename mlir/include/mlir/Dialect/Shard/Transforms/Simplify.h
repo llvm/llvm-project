@@ -82,10 +82,7 @@ void populateAllReduceEndomorphismSimplifyPatterns(RewritePatternSet &patterns,
 
     auto refAllReduceOp = llvm::dyn_cast<AllReduceOp>(referenceOp.value());
     auto refType = cast<ShapedType>(refAllReduceOp.getResult().getType());
-    return refAllReduceOp.getGridAttr() == allReduceOp.getGridAttr() &&
-           refAllReduceOp.getGridAxesAttr() == allReduceOp.getGridAxesAttr() &&
-           refAllReduceOp.getReductionAttr() ==
-               allReduceOp.getReductionAttr() &&
+    return refAllReduceOp.getProperties() == allReduceOp.getProperties() &&
            refAllReduceOp->getDiscardableAttrDictionary() ==
                allReduceOp->getDiscardableAttrDictionary() &&
            inType.getElementType() == refType.getElementType();

@@ -11,7 +11,6 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
-#include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -114,14 +113,13 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
-  // TODO: RISCVVectorPeepholePass
-  // TODO: RISCVFoldMemOffsetPass
+  addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
+  addMachineFunctionPass(RISCVFoldMemOffsetPass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 
-  if (TM.getTargetTriple().isRISCV64()) {
-    // TODO: RISCVOptWInstrsPass
-  }
+  if (TM.getTargetTriple().isRISCV64())
+    addMachineFunctionPass(RISCVOptWInstrsPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {

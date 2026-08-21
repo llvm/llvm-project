@@ -340,8 +340,9 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
 /// Narrow reduction leaf: the value, the shift applied after widening and
 /// the mask applied in the narrow type before widening, clearing the bits
 /// the absorbed narrow shls shift out and applying the absorbed narrow
-/// and-masks. All-ones mask means nothing was absorbed and no 'and' is
-/// needed.
+/// and-masks. Lossless narrow shls contribute their known-zero bits to the
+/// mask so matching lanes can form a splat. All-ones mask means nothing
+/// was absorbed and no 'and' is needed.
 struct NarrowedLeafInfo {
   NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
       : V(V), Shift(Shift), Mask(std::move(Mask)) {}

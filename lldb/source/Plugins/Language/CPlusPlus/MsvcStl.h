@@ -81,6 +81,9 @@ MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
 bool IsMsvcStlVector(ValueObject &valobj);
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::list and std::forward_list
 bool IsMsvcStlList(ValueObject &valobj);
@@ -141,6 +144,20 @@ bool IsMsvcStlSpan(ValueObject &valobj);
 SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::bitset<>
+bool IsMsvcStlBitset(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::expected<>
+bool IsMsvcStlExpected(ValueObject &valobj);
+bool MsvcStlExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private
