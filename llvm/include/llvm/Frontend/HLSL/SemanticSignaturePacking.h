@@ -109,9 +109,14 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
 /// packs them with the prefix-stable packing algorithm.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
-LLVM_ABI Error packSignatureOptimized(
-    MutableArrayRef<SemanticSignatureElement> Elements,
-    Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
+///
+/// Returns one past the highest allocated row, or zero if no elements were
+/// allocated. For geometry outputs this is the maximum extent of any stream,
+/// not the sum of their extents.
+LLVM_ABI Expected<unsigned>
+packSignatureOptimized(MutableArrayRef<SemanticSignatureElement> Elements,
+                       Triple::EnvironmentType ShaderStage, IOType IOTy,
+                       bool UseNative16BitTypes);
 
 } // namespace llvm::hlsl
 
