@@ -97,6 +97,28 @@ _Bool check_isnan(float x) {
   return __builtin_isnan(x);
 }
 
+// CHECK-LABEL: define dso_local noundef i1 @check_isnanf(
+// CHECK-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X]], /* (nan) */ i32 3) #[[ATTR5]]
+// CHECK-NEXT:    ret i1 [[TMP0]]
+//
+_Bool check_isnanf(float x) {
+#pragma STDC FENV_ACCESS ON
+  return __builtin_isnanf(x);
+}
+
+// CHECK-LABEL: define dso_local noundef i1 @check_isnanl(
+// CHECK-SAME: fp128 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f128(fp128 [[X]], /* (nan) */ i32 3) #[[ATTR5]]
+// CHECK-NEXT:    ret i1 [[TMP0]]
+//
+_Bool check_isnanl(long double x) {
+#pragma STDC FENV_ACCESS ON
+  return __builtin_isnanl(x);
+}
+
 // CHECK-LABEL: define dso_local noundef i1 @check_isinf(
 // CHECK-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

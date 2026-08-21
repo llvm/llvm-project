@@ -4835,6 +4835,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_fmax(S, OpPC, Frame, /*IsNumBuiltin=*/true);
 
   case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_isnanf:
+  case Builtin::BI__builtin_isnanl:
     return interp__builtin_isnan(S, OpPC, Frame, Call);
 
   case Builtin::BI__builtin_issignaling:

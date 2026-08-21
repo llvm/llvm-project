@@ -4171,7 +4171,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateZExt(LHS, ConvertType(E->getType())));
   }
 
-  case Builtin::BI__builtin_isnan: {
+  case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_isnanf:
+  case Builtin::BI__builtin_isnanl: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
     Value *V = EmitScalarExpr(E->getArg(0));
     if (Value *Result = tryUseTestFPKind(*this, BuiltinID, V))

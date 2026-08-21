@@ -3207,6 +3207,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_isinf:
   case Builtin::BI__builtin_isinf_sign:
   case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_isnanf:
+  case Builtin::BI__builtin_isnanl:
   case Builtin::BI__builtin_issignaling:
   case Builtin::BI__builtin_isnormal:
   case Builtin::BI__builtin_issubnormal:
@@ -6426,6 +6428,8 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
         << 0 << 0 << TheCall->getSourceRange();
 
   if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
+                               BuiltinID == Builtin::BI__builtin_isnanf ||
+                               BuiltinID == Builtin::BI__builtin_isnanl ||
                                BuiltinID == Builtin::BI__builtin_isunordered))
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << TheCall->getSourceRange();

@@ -337,6 +337,27 @@ void test22(void) {
   (void)__builtin_signbitl(1.0);
   (void)__builtin_signbitl(1.0f);
   (void)__builtin_signbitl(1.0L);
+
+  (void)__builtin_isnan(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_isnan(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_isnan(1); // expected-error {{floating point classification requires argument of floating point type (passed in 'int')}}
+  (void)__builtin_isnan(1.0);
+  (void)__builtin_isnan(1.0f);
+  (void)__builtin_isnan(1.0L);
+
+  (void)__builtin_isnanf(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_isnanf(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_isnanf(1);
+  (void)__builtin_isnanf(1.0);
+  (void)__builtin_isnanf(1.0f);
+  (void)__builtin_isnanf(1.0L);
+
+  (void)__builtin_isnanl(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_isnanl(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}
+  (void)__builtin_isnanl(1);
+  (void)__builtin_isnanl(1.0);
+  (void)__builtin_isnanl(1.0f);
+  (void)__builtin_isnanl(1.0L);
 }
 
 #define memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))

@@ -28,6 +28,18 @@ int test_isnan_float(float f) {
   return __builtin_isnan(f);
 }
 
+// CHECK-LABEL: @test_isnanf(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 15) #[[ATTR2]]
+// CHECK-NEXT:    ret i32 [[TMP1]]
+//
+int test_isnanf(float f) {
+  return __builtin_isnanf(f);
+}
+
 // CHECK-LABEL: @test_isnan_double(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
@@ -51,6 +63,19 @@ int test_isnan_double(double d) {
 //
 int test_isnan_long_double(long double ld) {
   return __builtin_isnan(ld);
+}
+
+// CHECK-LABEL: @test_isnanl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 8
+// CHECK-NEXT:    [[LD:%.*]] = load fp128, ptr [[TMP0:%.*]], align 8
+// CHECK-NEXT:    store fp128 [[LD]], ptr [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 15) #[[ATTR2]]
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+int test_isnanl(long double ld) {
+  return __builtin_isnanl(ld);
 }
 
 // CHECK-LABEL: @test_isinf_float(

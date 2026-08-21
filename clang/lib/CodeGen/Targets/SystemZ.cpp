@@ -116,6 +116,8 @@ public:
       unsigned TDCBits = 0;
       switch (BuiltinID) {
       case Builtin::BI__builtin_isnan:
+      case Builtin::BI__builtin_isnanf:
+      case Builtin::BI__builtin_isnanl:
         TDCBits = 0xf;
         break;
       case Builtin::BIfinite:

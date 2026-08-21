@@ -110,6 +110,46 @@ char isnan_neg    [!__builtin_isnan(-1.0) ? 1 : -1];
 char isnan_inf_neg[!__builtin_isnan(-__builtin_inf()) ? 1 : -1];
 char isnan_nan    [__builtin_isnan(__builtin_nan("")) ? 1 : -1];
 char isnan_snan   [__builtin_isnan(__builtin_nans("")) ? 1 : -1];
+char isnan_negnan [__builtin_isnan(-__builtin_nan("")) ? 1 : -1];
+char isnan_negsnan[__builtin_isnan(-__builtin_nans("")) ? 1 : -1];
+char isnan_nan_payload [__builtin_isnan(__builtin_nan("0x123")) ? 1 : -1];
+char isnan_snan_payload[__builtin_isnan(__builtin_nans("0x123")) ? 1 : -1];
+char isnan_negnan_payload [__builtin_isnan(-__builtin_nan("0x123")) ? 1 : -1];
+char isnan_negsnan_payload[__builtin_isnan(-__builtin_nans("0x123")) ? 1 : -1];
+
+char isnanf_inf_pos[!__builtin_isnanf(__builtin_inff()) ? 1 : -1];
+char isnanf_pos    [!__builtin_isnanf(1.0f) ? 1 : -1];
+char isnanf_normf  [!__builtin_isnanf(1e-37f) ? 1 : -1];
+char isnanf_denormf[!__builtin_isnanf(1e-38f) ? 1 : -1];
+char isnanf_zero   [!__builtin_isnanf(0.0f) ? 1 : -1];
+char isnanf_negzero[!__builtin_isnanf(-0.0f) ? 1 : -1];
+char isnanf_neg    [!__builtin_isnanf(-1.0f) ? 1 : -1];
+char isnanf_inf_neg[!__builtin_isnanf(-__builtin_inff()) ? 1 : -1];
+char isnanf_nan    [__builtin_isnanf(__builtin_nanf("")) ? 1 : -1];
+char isnanf_snan   [__builtin_isnanf(__builtin_nansf("")) ? 1 : -1];
+char isnanf_negnan [__builtin_isnanf(-__builtin_nanf("")) ? 1 : -1];
+char isnanf_negsnan[__builtin_isnanf(-__builtin_nansf("")) ? 1 : -1];
+char isnanf_nan_payload [__builtin_isnanf(__builtin_nanf("0x123")) ? 1 : -1];
+char isnanf_snan_payload[__builtin_isnanf(__builtin_nansf("0x123")) ? 1 : -1];
+char isnanf_negnan_payload [__builtin_isnanf(-__builtin_nanf("0x123")) ? 1 : -1];
+char isnanf_negsnan_payload[__builtin_isnanf(-__builtin_nansf("0x123")) ? 1 : -1];
+
+char isnanl_inf_pos[!__builtin_isnanl(__builtin_infl()) ? 1 : -1];
+char isnanl_pos    [!__builtin_isnanl(1.0L) ? 1 : -1];
+char isnanl_norm   [!__builtin_isnanl(1e-307L) ? 1 : -1];
+char isnanl_denorm [!__builtin_isnanl(1e-308L) ? 1 : -1];
+char isnanl_zero   [!__builtin_isnanl(0.0L) ? 1 : -1];
+char isnanl_negzero[!__builtin_isnanl(-0.0L) ? 1 : -1];
+char isnanl_neg    [!__builtin_isnanl(-1.0L) ? 1 : -1];
+char isnanl_inf_neg[!__builtin_isnanl(-__builtin_infl()) ? 1 : -1];
+char isnanl_nan    [__builtin_isnanl(__builtin_nanl("")) ? 1 : -1];
+char isnanl_snan   [__builtin_isnanl(__builtin_nansl("")) ? 1 : -1];
+char isnanl_negnan [__builtin_isnanl(-__builtin_nanl("")) ? 1 : -1];
+char isnanl_negsnan[__builtin_isnanl(-__builtin_nansl("")) ? 1 : -1];
+char isnanl_nan_payload [__builtin_isnanl(__builtin_nanl("0x123")) ? 1 : -1];
+char isnanl_snan_payload[__builtin_isnanl(__builtin_nansl("0x123")) ? 1 : -1];
+char isnanl_negnan_payload [__builtin_isnanl(-__builtin_nanl("0x123")) ? 1 : -1];
+char isnanl_negsnan_payload[__builtin_isnanl(-__builtin_nansl("0x123")) ? 1 : -1];
 
 char isnormal_inf_pos[!__builtin_isnormal(__builtin_inf()) ? 1 : -1];
 char isnormal_pos    [__builtin_isnormal(1.0) ? 1 : -1];
@@ -214,6 +254,22 @@ __extension__ _Static_assert(
   !__builtin_signbit(1.0q) && __builtin_signbit(-1.0q) && !__builtin_signbit(0.0q) && __builtin_signbit(-0.0q) &&
 #endif
   1, ""
+);
+
+__extension__ _Static_assert(
+  __builtin_isnan(__builtin_nan("")) && __builtin_isnan(-__builtin_nan("")) &&
+  __builtin_isnan(__builtin_nans("")) && __builtin_isnan(-__builtin_nans("")) &&
+  __builtin_isnan(__builtin_nan("0x123")) && __builtin_isnan(-__builtin_nan("0x123")) &&
+  __builtin_isnan(__builtin_nans("0x123")) && __builtin_isnan(-__builtin_nans("0x123")) &&
+  __builtin_isnanf(__builtin_nanf("")) && __builtin_isnanf(-__builtin_nanf("")) &&
+  __builtin_isnanf(__builtin_nansf("")) && __builtin_isnanf(-__builtin_nansf("")) &&
+  __builtin_isnanf(__builtin_nanf("0x123")) && __builtin_isnanf(-__builtin_nanf("0x123")) &&
+  __builtin_isnanf(__builtin_nansf("0x123")) && __builtin_isnanf(-__builtin_nansf("0x123")) &&
+  __builtin_isnanl(__builtin_nanl("")) && __builtin_isnanl(-__builtin_nanl("")) &&
+  __builtin_isnanl(__builtin_nansl("")) && __builtin_isnanl(-__builtin_nansl("")) &&
+  __builtin_isnanl(__builtin_nanl("0x123")) && __builtin_isnanl(-__builtin_nanl("0x123")) &&
+  __builtin_isnanl(__builtin_nansl("0x123")) && __builtin_isnanl(-__builtin_nansl("0x123")),
+  ""
 );
 
 #define LESS(X, Y) \

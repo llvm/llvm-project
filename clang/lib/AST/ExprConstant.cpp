@@ -17376,7 +17376,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isFinite() ? 1 : 0, E);
   }
 
-  case Builtin::BI__builtin_isnan: {
+  case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_isnanf:
+  case Builtin::BI__builtin_isnanl: {
     APFloat Val(0.0);
     return EvaluateFloat(E->getArg(0), Val, Info) &&
            Success(Val.isNaN() ? 1 : 0, E);

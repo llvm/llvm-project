@@ -1604,7 +1604,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   //  isnan, isinf, isfinite and some others defined by the C standard. It tests
   //  if the floating-point value, specified by the first argument, falls into
   //  any of data classes, specified by the second argument.
-  case Builtin::BI__builtin_isnan: {
+  case Builtin::BI__builtin_isnan:
+  case Builtin::BI__builtin_isnanf:
+  case Builtin::BI__builtin_isnanl: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());

@@ -71,6 +71,8 @@ int main(void) {
   P(isinf, (1.));
   P(isinf_sign, (1.));
   P(isnan, (1.));
+  P(isnanf, (1.f));
+  P(isnanl, (1.L));
   P(isfinite, (1.));
   P(iszero, (1.));
   P(issubnormal, (1.));

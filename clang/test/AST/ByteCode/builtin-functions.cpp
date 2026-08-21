@@ -258,6 +258,32 @@ namespace nan {
                                              // expected-note {{read of dereferenced one-past-the-end pointer}}
   static_assert(!__builtin_issignaling(__builtin_nan("")), "");
   static_assert(__builtin_issignaling(__builtin_nans("")), "");
+  static_assert(__builtin_isnan(__builtin_nan("")), "");
+  static_assert(__builtin_isnan(-__builtin_nan("")), "");
+  static_assert(__builtin_isnan(__builtin_nans("")), "");
+  static_assert(__builtin_isnan(-__builtin_nans("")), "");
+  static_assert(__builtin_isnan(__builtin_nan("0x123")), "");
+  static_assert(__builtin_isnan(-__builtin_nan("0x123")), "");
+  static_assert(__builtin_isnan(__builtin_nans("0x123")), "");
+  static_assert(__builtin_isnan(-__builtin_nans("0x123")), "");
+
+  static_assert(__builtin_isnanf(__builtin_nanf("")), "");
+  static_assert(__builtin_isnanf(-__builtin_nanf("")), "");
+  static_assert(__builtin_isnanf(__builtin_nansf("")), "");
+  static_assert(__builtin_isnanf(-__builtin_nansf("")), "");
+  static_assert(__builtin_isnanf(__builtin_nanf("0x123")), "");
+  static_assert(__builtin_isnanf(-__builtin_nanf("0x123")), "");
+  static_assert(__builtin_isnanf(__builtin_nansf("0x123")), "");
+  static_assert(__builtin_isnanf(-__builtin_nansf("0x123")), "");
+
+  static_assert(__builtin_isnanl(__builtin_nanl("")), "");
+  static_assert(__builtin_isnanl(-__builtin_nanl("")), "");
+  static_assert(__builtin_isnanl(__builtin_nansl("")), "");
+  static_assert(__builtin_isnanl(-__builtin_nansl("")), "");
+  static_assert(__builtin_isnanl(__builtin_nanl("0x123")), "");
+  static_assert(__builtin_isnanl(-__builtin_nanl("0x123")), "");
+  static_assert(__builtin_isnanl(__builtin_nansl("0x123")), "");
+  static_assert(__builtin_isnanl(-__builtin_nansl("0x123")), "");
 }
 
 namespace fmin {
@@ -1240,8 +1266,12 @@ namespace FunctionStart {
 namespace BuiltinInImplicitCtor {
   constexpr struct {
     int a = __builtin_isnan(1.0);
+    int b = __builtin_isnanf(1.0f);
+    int c = __builtin_isnanl(1.0L);
   } Foo;
   static_assert(Foo.a == 0, "");
+  static_assert(Foo.b == 0, "");
+  static_assert(Foo.c == 0, "");
 }
 
 typedef double vector4double __attribute__((__vector_size__(32)));

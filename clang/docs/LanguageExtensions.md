@@ -6765,6 +6765,8 @@ The following builtin intrinsics can be used in constant expressions:
 - `__builtin_isinf_sign`
 - `__builtin_isfinite`
 - `__builtin_isnan`
+- `__builtin_isnanf`
+- `__builtin_isnanl`
 - `__builtin_isnormal`
 - `__builtin_nan`
 - `__builtin_nans`
