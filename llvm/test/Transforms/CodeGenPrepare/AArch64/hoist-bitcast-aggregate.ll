@@ -27,3 +27,29 @@ reduction:
 exit:
   ret <2 x i32> zeroinitializer
 }
+
+define <4 x i32> @test_aggregate_src_128({ i128, i128 } %agg) {
+; CHECK-LABEL: define <4 x i32> @test_aggregate_src_128(
+; CHECK-SAME: { i128, i128 } [[AGG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i128, i128 } [[AGG]], 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[VAL]] to <4 x i32>
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i128 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[ISZERO]], label %[[EXIT:.*]], label %[[REDUCTION:.*]]
+; CHECK:       [[REDUCTION]]:
+; CHECK-NEXT:    ret <4 x i32> [[BC]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
+;
+entry:
+  %val = extractvalue { i128, i128 } %agg, 0
+  %iszero = icmp eq i128 %val, 0
+  br i1 %iszero, label %exit, label %reduction
+
+reduction:
+  %bc = bitcast i128 %val to <4 x i32>
+  ret <4 x i32> %bc
+
+exit:
+  ret <4 x i32> zeroinitializer
+}
