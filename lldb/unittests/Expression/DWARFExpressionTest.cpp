@@ -883,6 +883,20 @@ TEST(DWARFExpression, DW_OP_addr_index_address_size) {
   }
 }
 
+TEST(DWARFExpression, DW_OP_GNU_const_index_address_size) {
+  // DW_OP_GNU_const_index pushes a generic value, so it is canonicalized to
+  // the target address size: on this 32-bit target, 0x2a + 0xffffffff + 1
+  // wraps back to 0x2a.
+  MockDwarfDelegate unit(/*version=*/5,
+                         /*debug_addr=*/{{0, 0x11}, {1, 0x2a}});
+  auto result =
+      Evaluate({DW_OP_GNU_const_index, 0x01, DW_OP_const4u, 0xff, 0xff, 0xff,
+                0xff, DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
 TEST(DWARFExpression, DW_OP_addr_big_endian) {
   // Same operand bytes, big-endian extractor: the address must be read in
   // target byte order.
