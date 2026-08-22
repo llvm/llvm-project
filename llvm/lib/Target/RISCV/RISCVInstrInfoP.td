@@ -1871,6 +1871,16 @@ def riscv_pmulsu_h_b00
     : RVSDNode<"PMULSU_H_B00", SDT_RISCVPackedWideningMulByHalves>;
 def riscv_pmulsu_w_h00
     : RVSDNode<"PMULSU_W_H00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmul_h_b00
+    : RVSDNode<"PMUL_H_B00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmul_h_b11
+    : RVSDNode<"PMUL_H_B11", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulu_h_b00
+    : RVSDNode<"PMULU_H_B00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulu_h_b11
+    : RVSDNode<"PMULU_H_B11", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulsu_h_b11
+    : RVSDNode<"PMULSU_H_B11", SDT_RISCVPackedWideningMulByHalves>;
 
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
@@ -2878,17 +2888,18 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (riscv_pmulsu_w_h00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMULSU_W_H00 GPR:$rs1, GPR:$rs2)>;
 
-  // 8-bit multiply high patterns
-  // FIXME custom lower
-  def : Pat<(v8i8 (mulhs GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def : Pat<(v8i8 (mulhu GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMULU_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMULU_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def : Pat<(v8i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMULSU_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMULSU_H_B11 GPR:$rs1, GPR:$rs2))>;
+  // 8-bit multiply high patterns. The mulhs/mulhu/mulhsu themselves are
+  // custom-lowered to riscv_pmul(u|su)_h_b00/b11 + riscv_ppairo.
+  def : Pat<(v4i16 (riscv_pmul_h_b00 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMUL_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pmul_h_b11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMUL_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pmulu_h_b00 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMULU_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pmulu_h_b11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMULU_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pmulsu_h_b11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
