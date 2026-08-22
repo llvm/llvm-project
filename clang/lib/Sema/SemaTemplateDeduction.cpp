@@ -55,6 +55,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
@@ -4489,6 +4490,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
 
+  llvm::TimeTraceScope TimeScope("DeduceTemplateArguments", [&] {
+    return FunctionTemplate->getLocation().printToString(SourceMgr);
+  });
+
   FunctionDecl *Function = FunctionTemplate->getTemplatedDecl();
   unsigned NumParams = Function->getNumParams();
   bool HasExplicitObject = false;
@@ -4771,6 +4776,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     bool IsAddressOfFunction) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
+
+  llvm::TimeTraceScope TimeScope("DeduceTemplateArguments", [&] {
+    return FunctionTemplate->getLocation().printToString(SourceMgr);
+  });
 
   FunctionDecl *Function = FunctionTemplate->getTemplatedDecl();
   TemplateParameterList *TemplateParams
