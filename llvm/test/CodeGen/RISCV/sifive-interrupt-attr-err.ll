@@ -5,7 +5,7 @@
 
 ;; Test that these report regular errors.
 
-; CHECK: error: <unknown>:0:0: in function preemptible void (): 'SiFive-CLIC-preemptible' interrupt kinds cannot have a frame pointer; consider compiling with '-fomit-frame-pointer'
+; CHECK: error: <unknown>:0:0: in function preemptible void (): 'SiFive-CLIC-preemptible' interrupt functions cannot have a frame pointer
 
 define void @preemptible() "interrupt"="SiFive-CLIC-preemptible" "frame-pointer"="all" {
   ret void

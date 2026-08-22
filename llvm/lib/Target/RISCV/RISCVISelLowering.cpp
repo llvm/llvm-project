@@ -26240,8 +26240,9 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
       Func.getContext().diagnose(DiagnosticInfoUnsupported{
-          Func, "'SiFive-CLIC-preemptible' interrupt kinds cannot have a frame "
-                "pointer; consider compiling with '-fomit-frame-pointer'"});
+          Func,
+          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
+          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
