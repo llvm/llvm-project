@@ -69,9 +69,9 @@ jobs:
     permissions:
       contents: read
     outputs:
-      man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
+      man-page-digest: ${{ steps.digests.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
-      doxygen-digest: ${{ steps.man-page-digest.outputs.doxygen-digest }}
+      doxygen-digest: ${{ steps.digests.outputs.doxygen-digest }}
       doxygen-artifact-id: ${{ steps.doxygen-artifact-upload.outputs.artifact-id }}
     steps:
       - name: Checkout LLVM
@@ -118,7 +118,7 @@ jobs:
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
       - name: Generate sha256 digest for tarballs
-        id: man-page-digest
+        id: digests
         shell: bash
         env:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
