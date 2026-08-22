@@ -136,6 +136,14 @@ static cl::opt<bool>
     UnrollRuntime("unroll-runtime", cl::Hidden,
                   cl::desc("Unroll loops with run-time trip counts"));
 
+static cl::opt<unsigned> UnrollMaxNestLoops(
+    "unroll-max-nest-loops", cl::init(128), cl::Hidden,
+    cl::desc("Do not runtime-unroll, partially unroll, or peel a loop whose "
+             "outermost nest contains more than this many loops; each such "
+             "transform forces a whole-nest SCEV invalidation, which is "
+             "quadratic in compile time and rarely worthwhile (0 = no "
+             "limit)."));
+
 static cl::opt<unsigned> UnrollMaxUpperBound(
     "unroll-max-upperbound", cl::init(8), cl::Hidden,
     cl::desc(
@@ -1769,6 +1777,21 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   SmallPriorityWorklist<Loop *, 4> Worklist;
   appendLoopsToWorklist(LI, Worklist);
 
+  // Precompute, per top-level loop, the number of loops in its nest. LI here
+  // already reflects the loop simplification done above, and Worklist was just
+  // populated from the same LI, so every candidate's outermost loop is a key
+  // in this map. Runtime/partial unrolling and peeling of a loop in a very
+  // large nest each force a whole-nest SCEV invalidation, so transforming
+  // across such a nest is quadratic in compile time. None of these transforms
+  // enqueue new loops (remainder/peeled bodies are never added to the
+  // worklist), and a nest that shrinks later only makes the cap more
+  // conservative. Caching the count here avoids an O(nest) recomputation for
+  // every candidate loop.
+  DenseMap<const Loop *, unsigned> TopLevelNestSize;
+  if (UnrollMaxNestLoops)
+    for (const Loop *TopL : LI)
+      TopLevelNestSize[TopL] = TopL->getLoopsInPreorder().size();
+
   while (!Worklist.empty()) {
     // Because the LoopInfo stores the loops in RPO, we walk the worklist
     // from back to front so that we work forward across the CFG, which
@@ -1785,6 +1808,29 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     std::optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
       LocalAllowPeeling = false;
+
+    // Suppress heuristic runtime/partial unrolling and peeling for loops in a
+    // pathologically large nest, where each such transform forces a whole-nest
+    // SCEV invalidation (quadratic compile time). Explicit unroll pragmas still
+    // win: gatherUnrollingPreferences applies these overrides before
+    // computeUnrollCount re-enables unrolling for pragma-marked loops.
+    std::optional<bool> LocalAllowRuntime = UnrollOpts.AllowRuntime;
+    std::optional<bool> LocalAllowPartial = UnrollOpts.AllowPartial;
+    if (UnrollMaxNestLoops) {
+      auto NestIt = TopLevelNestSize.find(L.getOutermostLoop());
+      if (NestIt != TopLevelNestSize.end() &&
+          NestIt->second > UnrollMaxNestLoops) {
+        LocalAllowRuntime = false;
+        LocalAllowPartial = false;
+        LocalAllowPeeling = false;
+        LLVM_DEBUG(dbgs().indent(1)
+                   << "Disabling runtime/partial unroll and peeling: "
+                      "outermost nest has "
+                   << NestIt->second << " loops (> " << UnrollMaxNestLoops
+                   << ").\n");
+      }
+    }
+
     std::string LoopName = std::string(L.getName());
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
@@ -1793,8 +1839,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
                         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel,
                         /*OnlyFullUnroll*/ false, UnrollOpts.OnlyWhenForced,
                         UnrollOpts.ForgetSCEV, UnrollOpts.PrepareForLTO,
-                        /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
-                        UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound,
+                        /*Threshold*/ std::nullopt, LocalAllowPartial,
+                        LocalAllowRuntime, UnrollOpts.AllowUpperBound,
                         LocalAllowPeeling, UnrollOpts.AllowProfileBasedPeeling,
                         UnrollOpts.FullUnrollMaxCount, UI, &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;
