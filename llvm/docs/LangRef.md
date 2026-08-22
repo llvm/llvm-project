@@ -12888,8 +12888,8 @@ is a {ref}`poison value <poisonvalues>`.
 
 ```llvm
 %X = fptoui double 123.0 to i32      ; yields i32:123
-%Y = fptoui float 1.0E+300 to i1     ; yields undefined:1
-%Z = fptoui float 1.04E+17 to i8     ; yields undefined:1
+%Y = fptoui float 1.0E+300 to i1     ; yields i1:poison
+%Z = fptoui float 1.04E+17 to i8     ; yields i8:poison
 ```
 
 #### '`fptosi .. to`' Instruction
@@ -12923,8 +12923,8 @@ is a {ref}`poison value <poisonvalues>`.
 
 ```llvm
 %X = fptosi double -123.0 to i32      ; yields i32:-123
-%Y = fptosi float 1.0E-247 to i1      ; yields undefined:1
-%Z = fptosi float 1.04E+17 to i8      ; yields undefined:1
+%Y = fptosi float 1.0E-247 to i1      ; yields i1:poison
+%Z = fptosi float 1.04E+17 to i8      ; yields i8:poison
 ```
 
 (i_uitofp)=
