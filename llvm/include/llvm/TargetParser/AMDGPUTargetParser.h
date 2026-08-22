@@ -202,11 +202,8 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
-/// Number of SIMDs in the functional block a work-group is mapped onto.
-constexpr unsigned FullSIMDs = 4;
-
-/// \returns Number of SIMDs a work-group's waves run on: \p FullSIMDs in
-/// full-SIMD mode, half of that on hardware that can split the block.
+/// \returns Number of SIMDs a work-group's waves run on for the target and
+/// full-SIMD mode setting.
 LLVM_ABI unsigned getWorkGroupSIMDs(GPUKind AK, bool FullSIMDMode);
 LLVM_ABI unsigned getWorkGroupSIMDs(Triple::SubArchType SubArch,
                                     bool FullSIMDMode);

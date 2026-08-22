@@ -598,8 +598,7 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     raw_svector_ostream BaseNameOS(BaseName);
     emitBaseName(BaseNameOS, R);
     OS << Names.GetOrAddStringOffset(BaseName) << ", "
-       << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
-       << getFeatureValue(R, "HalfSIMDs", 4) << "},\n";
+       << getFeatureValue(R, "MaxWavesPerEU", 10) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
