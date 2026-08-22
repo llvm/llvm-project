@@ -17,9 +17,14 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXDWARFDEBUG_H
 
 #include "../../CodeGen/AsmPrinter/DwarfCompileUnit.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
+class DIFile;
+class Module;
 
 /// NVPTX-specific DwarfDebug implementation.
 ///
@@ -60,6 +65,30 @@ protected:
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
   bool shouldAttachCompileUnitRanges() const override;
   bool shouldEmitDwarfPubSections() const override { return false; }
+
+public:
+  /// Build the .nv_intermediate_source_section PTX text from \p M module
+  /// metadata. Returns the section as a string so the caller can emit it
+  /// after .file directives have been flushed (empty if there is nothing to
+  /// emit).
+  std::string buildIntermediateSourceSection(Module &M);
+
+private:
+  /// Emit secondary .loc_intermediate directives for the intermediate IR
+  /// locations carried by a tuple-shaped DebugLoc.
+  void recordIntermediateLoc(const DebugLoc &DL, unsigned Flags);
+
+  /// Return the MD5-hashed basename used for an intermediate source file's
+  /// secondary .file directive, memoized in IntermediateFilenameMD5Cache.
+  SmallString<32> getIntermediateLocBasename(StringRef IRFileName);
+
+  /// Map from intermediate DIFile to DWARF file number, populated during
+  /// intermediate .loc emission and consumed by buildIntermediateSourceSection.
+  DenseMap<const DIFile *, unsigned> FileToFileNum;
+
+  /// Cache of MD5-hashed filenames for secondary intermediate line-table
+  /// .file directives, keyed by original IR filename.
+  StringMap<SmallString<32>> IntermediateFilenameMD5Cache;
 };
 
 } // end namespace llvm

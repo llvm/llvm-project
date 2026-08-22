@@ -203,6 +203,36 @@ void LLParser::dropUnknownMetadataReferences() {
   }
 }
 
+/// Shape-strict predicate for a debug-location metadata node attached during
+/// parsing. Accepts either a bare \a DILocation, or the nested
+/// intermediate-location tuple
+///   !{ DILocation primary, !{ MDString, DILocation } intermediate... }
+/// where operand 0 is the primary location and each remaining operand is an
+/// intermediate sub-tuple (mirrors getIntermediateLoc()/print(), which walk
+/// the operands and allow more than one intermediate). Anything else (e.g.
+/// empty !{}, old-style !{i32 line, ...}) is rejected so upstream's parse-time
+/// garbage rejection still holds.
+static bool isValidDebugLocNode(const MDNode *N) {
+  if (isa<DILocation>(N))
+    return true;
+  auto *T = dyn_cast<MDTuple>(N);
+  if (!T || T->getNumOperands() < 2)
+    return false;
+  // Operand 0 is the primary DILocation.
+  if (!isa_and_nonnull<DILocation>(T->getOperand(0)))
+    return false;
+  // Every remaining operand must be a well-formed { MDString, DILocation }
+  // intermediate sub-tuple.
+  for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I) {
+    auto *Inner = dyn_cast_or_null<MDTuple>(T->getOperand(I));
+    if (!Inner || Inner->getNumOperands() != 2 ||
+        !isa_and_nonnull<MDString>(Inner->getOperand(0)) ||
+        !isa_and_nonnull<DILocation>(Inner->getOperand(1)))
+      return false;
+  }
+  return true;
+}
+
 /// validateEndOfModule - Do final validity and basic correctness checks at the
 /// end of the module.
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
@@ -339,17 +369,19 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined metadata '!" +
                      Twine(ForwardRefMDNodes.begin()->first) + "'");
 
-  // Set debug locations.
+  // Set debug locations. Accept either a bare DILocation or the
+  // intermediate-location tuple shape via isValidDebugLocNode(); anything
+  // else is rejected at parse time, preserving upstream's garbage rejection.
   for (auto [Loc, DR, MD] : PendingDbgRecords) {
-    if (auto *DI = dyn_cast<DILocation>(MD))
-      DR->setDebugLoc(DebugLoc(DI));
+    if (isValidDebugLocNode(MD))
+      DR->setDebugLoc(DebugLoc(MD));
     else
       return error(Loc, "invalid debug location");
   }
   PendingDbgRecords.clear();
   for (auto [Loc, I, MD] : PendingDbgInsts) {
-    if (auto *DI = dyn_cast<DILocation>(MD))
-      I->setDebugLoc(DebugLoc(DI));
+    if (isValidDebugLocNode(MD))
+      I->setDebugLoc(DebugLoc(MD));
     else
       return error(Loc, "invalid !dbg metadata");
   }

@@ -494,9 +494,15 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
         // Don't enumerate the location directly -- it has a special record
         // type -- but enumerate its operands.
-        if (DILocation *L = I.getDebugLoc())
+        DebugLoc DL = I.getDebugLoc();
+        if (DILocation *L = DL.get())
           for (const Metadata *Op : L->operands())
             EnumerateMetadata(&F, Op);
+        if (DILocation *IntL = DL.getIntermediateLoc())
+          for (const Metadata *Op : IntL->operands())
+            EnumerateMetadata(&F, Op);
+        if (MDString *IntKind = DL.getIntermediateLocKind())
+          EnumerateMetadata(&F, IntKind);
       }
   }
   for (const GlobalIFunc &GIF : M.ifuncs()) {

@@ -12,6 +12,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1509,6 +1510,243 @@ TEST(DIBuilder, DynamicOffsetAndSize) {
 
   EXPECT_EQ(Field->getRawOffsetInBits(), Expr);
   EXPECT_EQ(Field->getRawSizeInBits(), Len);
+}
+
+// Tests for DebugLoc with intermediate location support.
+
+TEST(DebugLocTest, IntermediateLocBasics) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *IntSP = DIB.createFunction(
+      CU, "foo_tileir", "", IntF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  // Create source and intermediate locations.
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *IntLoc = DILocation::get(Ctx, 100, 1, IntSP);
+
+  // Test construction with both locations using MDTuple pattern.
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD = MDTuple::get(Ctx, {IntKind, IntLoc});
+  DebugLoc DL(MDTuple::get(Ctx, {SourceLoc, IntMD}));
+  EXPECT_TRUE((bool)DL);
+  EXPECT_EQ(DL.get(), SourceLoc);
+  EXPECT_EQ(DL.getIntermediateLoc(), IntLoc);
+  EXPECT_EQ(DL.getLine(), 10u);
+  EXPECT_EQ(DL.getCol(), 5u);
+  EXPECT_EQ(DL.getIntermediateLoc()->getLine(), 100u);
+  EXPECT_EQ(DL.getIntermediateLoc()->getColumn(), 1u);
+  EXPECT_EQ(DL.getIntermediateLocKind()->getString(), "TileIR");
+}
+
+TEST(DebugLocTest, IntermediateLocWithAndWithout) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *IntSP = DIB.createFunction(
+      CU, "foo_tileir", "", IntF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *IntLoc = DILocation::get(Ctx, 100, 1, IntSP);
+
+  // Create with source only - no intermediate location.
+  DebugLoc DLSourceOnly(SourceLoc);
+  EXPECT_EQ(DLSourceOnly.getIntermediateLoc(), nullptr);
+  EXPECT_EQ(DLSourceOnly.getIntermediateLocKind(), nullptr);
+  EXPECT_EQ(DLSourceOnly.get(), SourceLoc);
+
+  // Create with both source and intermediate location.
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD = MDTuple::get(Ctx, {IntKind, IntLoc});
+  DebugLoc DLWithInt(MDTuple::get(Ctx, {SourceLoc, IntMD}));
+  EXPECT_EQ(DLWithInt.getIntermediateLoc(), IntLoc);
+  EXPECT_EQ(DLWithInt.getIntermediateLocKind()->getString(), "TileIR");
+}
+
+TEST(DebugLocTest, IntermediateLocEquality) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *IntSP = DIB.createFunction(
+      CU, "foo_tileir", "", IntF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *IntLoc1 = DILocation::get(Ctx, 100, 1, IntSP);
+  DILocation *IntLoc2 = DILocation::get(Ctx, 200, 2, IntSP);
+
+  // Create DebugLocs with intermediate locations using MDTuple pattern.
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD1 = MDTuple::get(Ctx, {IntKind, IntLoc1});
+  auto *IntMD2 = MDTuple::get(Ctx, {IntKind, IntLoc2});
+
+  DebugLoc DL1(MDTuple::get(Ctx, {SourceLoc, IntMD1}));
+  DebugLoc DL2(MDTuple::get(Ctx, {SourceLoc, IntMD1}));
+  DebugLoc DL3(MDTuple::get(Ctx, {SourceLoc, IntMD2}));
+  DebugLoc DL4(SourceLoc);
+
+  EXPECT_EQ(DL1, DL2);
+  EXPECT_NE(DL1, DL3); // Different intermediate location
+  EXPECT_NE(DL1, DL4); // One has intermediate, one doesn't
+}
+
+TEST(DebugLocTest, MergedLocationWithIntermediate) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *IntSP = DIB.createFunction(
+      CU, "foo_tileir", "", IntF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  DILocation *SourceLoc1 = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *SourceLoc2 = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *IntLoc1 = DILocation::get(Ctx, 100, 1, IntSP);
+  DILocation *IntLoc2 = DILocation::get(Ctx, 100, 1, IntSP);
+
+  // Create DebugLocs with intermediate locations using MDTuple pattern.
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD1 = MDTuple::get(Ctx, {IntKind, IntLoc1});
+  auto *IntMD2 = MDTuple::get(Ctx, {IntKind, IntLoc2});
+
+  DebugLoc DL1(MDTuple::get(Ctx, {SourceLoc1, IntMD1}));
+  DebugLoc DL2(MDTuple::get(Ctx, {SourceLoc2, IntMD2}));
+
+  // Merge identical locations - should preserve intermediate.
+  DebugLoc Merged = DebugLoc::getMergedLocation(DL1, DL2);
+  EXPECT_TRUE((bool)Merged);
+  EXPECT_NE(Merged.getIntermediateLoc(), nullptr);
+  EXPECT_EQ(Merged.getLine(), 10u);
+  EXPECT_EQ(Merged.getIntermediateLoc()->getLine(), 100u);
+}
+
+TEST(DebugLocTest, MergedLocationPartialIntermediate) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *IntSP = DIB.createFunction(
+      CU, "foo_tileir", "", IntF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 5, SP);
+  DILocation *IntLoc = DILocation::get(Ctx, 100, 1, IntSP);
+
+  // Create DebugLoc with intermediate location using MDTuple pattern.
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD = MDTuple::get(Ctx, {IntKind, IntLoc});
+
+  DebugLoc DL1(MDTuple::get(Ctx, {SourceLoc, IntMD}));
+  DebugLoc DL2(SourceLoc); // No intermediate
+
+  // Merge - when one has intermediate, preserve it.
+  DebugLoc Merged = DebugLoc::getMergedLocation(DL1, DL2);
+  EXPECT_TRUE((bool)Merged);
+  EXPECT_EQ(Merged.getIntermediateLoc(), IntLoc);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST(DebugLocTest, AppendIntermediateDebugLocWithoutPrimary) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
+  Function *Fn = Function::Create(FTy, Function::ExternalLinkage, "fn", *M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Fn);
+  IRBuilder<> Builder(BB);
+  Instruction *Ret = Builder.CreateRetVoid();
+
+  DILocation *IntLoc = DILocation::get(Ctx, 100, 1, SP);
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD = MDTuple::get(Ctx, {IntKind, IntLoc});
+
+  EXPECT_DEATH(Ret->appendIntermediateDebugLoc(IntMD),
+               "Cannot append intermediate loc without a primary debug "
+               "location");
+}
+#endif // defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+
+TEST(DebugLocTest, PrintIntermediateLocWithInlinedAt) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *SrcF = DIB.createFile("caller.py", "/src");
+  DIFile *IntF = DIB.createFile("callee.tileir", "/ir");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", SrcF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeSP = DIB.createFunction(
+      CU, "callee", "", SrcF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DILexicalBlockFile *IntScope =
+      DILexicalBlockFile::get(Ctx, CalleeSP, IntF, 0);
+
+  DILocation *CallSiteLoc = DILocation::get(Ctx, 50, 1, CallerSP);
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 3, CalleeSP, CallSiteLoc);
+  DILocation *IntCallSiteLoc = DILocation::get(Ctx, 200, 1, CallerSP);
+  DILocation *IntLoc = DILocation::get(Ctx, 100, 5, IntScope, IntCallSiteLoc);
+
+  MDString *IntKind = MDString::get(Ctx, "TileIR");
+  auto *IntMD = MDTuple::get(Ctx, {IntKind, IntLoc});
+  DebugLoc DL(MDTuple::get(Ctx, {SourceLoc, IntMD}));
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DL.print(OS);
+
+  // Source location with inlinedAt chain.
+  EXPECT_NE(Result.find("caller.py:10:3"), std::string::npos) << Result;
+  EXPECT_NE(Result.find("@["), std::string::npos) << Result;
+  EXPECT_NE(Result.find("caller.py:50:1"), std::string::npos) << Result;
+
+  // Intermediate location with its own inlinedAt chain.
+  EXPECT_NE(Result.find("TileIR:"), std::string::npos) << Result;
+  EXPECT_NE(Result.find("callee.tileir:100:5"), std::string::npos) << Result;
+  EXPECT_NE(Result.find("caller.py:200:1"), std::string::npos) << Result;
 }
 
 } // end namespace

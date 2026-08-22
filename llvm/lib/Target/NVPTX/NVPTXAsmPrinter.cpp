@@ -1356,6 +1356,13 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     GlobalsEmitted = true;
   }
 
+  // Build the intermediate source section text while the DwarfDebug is still
+  // alive (AsmPrinter::doFinalization destroys it). It is emitted after the
+  // .file directives below so ptxas can resolve .sourceFileName references.
+  std::string IntermediateSrcSection;
+  if (auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug()))
+    IntermediateSrcSection = NVDD->buildIntermediateSourceSection(M);
+
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
 
@@ -1372,6 +1379,9 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   // Output last DWARF .file directives, if any.
   TS->outputDwarfFileDirectives();
+
+  if (!IntermediateSrcSection.empty())
+    OutStreamer->emitRawText(IntermediateSrcSection);
 
   return ret;
 }
