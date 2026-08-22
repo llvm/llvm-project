@@ -874,7 +874,7 @@ def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
   // Returns true if it is a single dword load or naturally aligned multi-dword load.
   LoadSDNode *Ld = cast<LoadSDNode>(N);
-  unsigned Size = Ld->getMemoryVT().getStoreSize();
+  TypeSize Size = Ld->getMemoryVT().getStoreSize();
   return Size <= 4 || Ld->getAlign().value() >= Size;
 }]> {
   let GISelPredicateCode = [{

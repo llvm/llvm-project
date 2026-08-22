@@ -4404,11 +4404,11 @@ defm : BFMPatterns <i32, DivergentBinFrag<shl>, DivergentBinFrag<add>, V_BFM_B32
 // Bitfield extract patterns
 
 def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
-  return isMask_32(Imm);
+  return isMask_32(static_cast<uint32_t>(Imm));
 }]>;
 
 def IMMZeroBasedBitfieldMask16 : ImmLeaf <i16, [{
-  return isUInt<16>(Imm) && isMask_32(Imm);
+  return isUInt<16>(Imm) && isMask_32(static_cast<uint32_t>(Imm));
 }]>;
 
 def IMMCountTrailingOnes : SDNodeXForm<imm, [{
