@@ -113,7 +113,9 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
       unless(hasArgument(
-          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
+          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
+        optionally(hasArgument(0, ignoringParenCasts(declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr"))))))
+      );
 
   Finder->addMatcher( SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
