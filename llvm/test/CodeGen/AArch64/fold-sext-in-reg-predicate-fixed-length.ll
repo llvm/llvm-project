@@ -50,23 +50,12 @@ entry:
 define void @active_lane_mask_doubleLenVector_i16_mstore_vscaleX2(ptr %p, i64 %n) vscale_range(2,2) {
 ; CHECK-LABEL: active_lane_mask_doubleLenVector_i16_mstore_vscaleX2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    whilelo p0.b, xzr, x1
-; CHECK-NEXT:    whilelo p1.b, x8, x1
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    lsl z0.h, z0.h, #15
-; CHECK-NEXT:    lsl z1.h, z1.h, #15
-; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    asr z1.h, z1.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #123 // =0x7b
-; CHECK-NEXT:    cmpne p2.h, p0/z, z1.h, #0
-; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
-; CHECK-NEXT:    st1h { z0.h }, p2, [x0, #1, mul vl]
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    whilelo p0.h, xzr, x1
+; CHECK-NEXT:    whilelo p1.h, x8, x1
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1(i64 0, i64 %n)
@@ -77,25 +66,12 @@ entry:
 define void @active_lane_mask_doubleLenVector_i32_mstore_vscaleX2(ptr %p, i64 %n) vscale_range(2,2) {
 ; CHECK-LABEL: active_lane_mask_doubleLenVector_i32_mstore_vscaleX2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8 // =0x8
-; CHECK-NEXT:    whilelo p0.b, xzr, x1
-; CHECK-NEXT:    whilelo p1.b, x8, x1
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    lsl z0.s, z0.s, #31
-; CHECK-NEXT:    lsl z1.s, z1.s, #31
-; CHECK-NEXT:    asr z0.s, z0.s, #31
-; CHECK-NEXT:    asr z1.s, z1.s, #31
-; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    mov z0.s, #123 // =0x7b
-; CHECK-NEXT:    cmpne p2.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
-; CHECK-NEXT:    st1w { z0.s }, p2, [x0, #1, mul vl]
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    whilelo p0.s, xzr, x1
+; CHECK-NEXT:    whilelo p1.s, x8, x1
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1(i64 0, i64 %n)

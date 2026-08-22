@@ -4999,6 +4999,28 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(SrcOp)) {
         APInt T = C->getAPIntValue().trunc(VTBits);
         Tmp2 = T.getNumSignBits();
+      } else if (SrcOp.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                 SrcOp.getOperand(0).getScalarValueSizeInBits() >= VTBits) {
+        // EXTRACT_VECTOR_ELT can extend the value with high bits undefined. If
+        // this BUILD_VECTOR truncates those undefined bits we can just look
+        // through the SrcOp and query the vector directly.
+        SDValue InVec = SrcOp.getOperand(0);
+        EVT InVecVT = InVec.getValueType();
+        // Not yet implemented for scalable vectors.
+        if (InVecVT.isScalableVector())
+          return 1;
+
+        const unsigned NumSrcElts = InVecVT.getVectorNumElements();
+        APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+        auto *ConstEltNo = dyn_cast<ConstantSDNode>(SrcOp.getOperand(1));
+        if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+          DemandedSrcElts =
+              APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+        Tmp2 = ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+        unsigned ExtraBits = InVec.getScalarValueSizeInBits() - VTBits;
+        if (ExtraBits)
+          Tmp2 = (Tmp2 > ExtraBits ? Tmp2 - ExtraBits : 1);
       } else {
         Tmp2 = ComputeNumSignBits(SrcOp, Depth + 1);
 
