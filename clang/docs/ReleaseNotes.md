@@ -438,6 +438,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
+- Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -478,6 +479,9 @@ features cannot lower the translation-unit ABI level;
   template was instantiated after the global module fragment was closed,
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
+
+- Fixed a crash when module directive export module foo not following a 
+  semicolon and there are no rest pp-tokens in current module file. (#GH187771)
   
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
