@@ -1662,13 +1662,17 @@ Experimental extensions
     zvzip                0.1
     smcsps               0.20
     smehv                0.20
+    smidctrl             0.20
     smijt                0.20
     smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
     sscsps               0.20
     ssehv                0.20
+    ssidctrl             0.20
     ssijt                0.20
     ssip                 0.20
+    ssnip                0.20
     svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1

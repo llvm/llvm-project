@@ -191,6 +191,48 @@ csrrs t1, sip, zero
 # uimm12
 csrrs t2, 0x144, zero
 
+# sistatus
+# name
+# CHECK-INST: csrrs t1, sistatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x14]
+# CHECK-INST-ALIAS: csrr t1, sistatus
+# uimm12
+# CHECK-INST: csrrs t2, sistatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x14]
+# CHECK-INST-ALIAS: csrr t2, sistatus
+# name
+csrrs t1, sistatus, zero
+# uimm12
+csrrs t2, 0x146, zero
+
+# sithreshold
+# name
+# CHECK-INST: csrrs t1, sithreshold, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x14]
+# CHECK-INST-ALIAS: csrr t1, sithreshold
+# uimm12
+# CHECK-INST: csrrs t2, sithreshold, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x14]
+# CHECK-INST-ALIAS: csrr t2, sithreshold
+# name
+csrrs t1, sithreshold, zero
+# uimm12
+csrrs t2, 0x147, zero
+
+# stopsi
+# name
+# CHECK-INST: csrrs t1, stopsi, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x14]
+# CHECK-INST-ALIAS: csrr t1, stopsi
+# uimm12
+# CHECK-INST: csrrs t2, stopsi, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x14]
+# CHECK-INST-ALIAS: csrr t2, stopsi
+# name
+csrrs t1, stopsi, zero
+# uimm12
+csrrs t2, 0x148, zero
+
 # sspcs
 # name
 # CHECK-INST: csrrs t1, sspcs, zero
