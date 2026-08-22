@@ -111,7 +111,7 @@ FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
 class RISCVExpandPseudoPass
-    : public OptionalPassInfoMixin<RISCVExpandPseudoPass> {
+    : public RequiredPassInfoMixin<RISCVExpandPseudoPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
