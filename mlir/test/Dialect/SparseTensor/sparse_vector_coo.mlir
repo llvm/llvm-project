@@ -27,9 +27,9 @@
 // CHECK:           %[[VALUES_0:.*]] = sparse_tensor.values %[[ARG0]] : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xi64>
 // CHECK:           %[[TO_BUFFER_0:.*]] = bufferization.to_buffer %[[EMPTY_0]] : tensor<8x8xi64> to memref<8x8xi64>
 // CHECK:           linalg.fill ins(%[[CONSTANT_4]] : i64) outs(%[[TO_BUFFER_0]] : memref<8x8xi64>)
-// CHECK:           %[[POSITIONS_0:.*]] = sparse_tensor.positions %[[ARG0]] {level = 0 : index} : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex>
-// CHECK:           %[[COORDINATES_0:.*]] = sparse_tensor.coordinates %[[ARG0]] {level = 0 : index} : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex, strided<[?], offset: ?>>
-// CHECK:           %[[COORDINATES_1:.*]] = sparse_tensor.coordinates %[[ARG0]] {level = 1 : index} : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[POSITIONS_0:.*]] = sparse_tensor.positions %[[ARG0]] level = 0 : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex>
+// CHECK:           %[[COORDINATES_0:.*]] = sparse_tensor.coordinates %[[ARG0]] level = 0 : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[COORDINATES_1:.*]] = sparse_tensor.coordinates %[[ARG0]] level = 1 : tensor<8x8xi64, #[[$ATTR_0]]> to memref<?xindex, strided<[?], offset: ?>>
 // CHECK:           %[[LOAD_0:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_3]]] : memref<?xindex>
 // CHECK:           %[[LOAD_1:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_2]]] : memref<?xindex>
 // CHECK:           %[[WHILE_0:.*]] = scf.while (%[[VAL_0:.*]] = %[[LOAD_0]]) : (index) -> index {

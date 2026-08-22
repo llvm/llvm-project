@@ -3,7 +3,10 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = assignment_expression ;
+expression = conditional_expression ;
+
+conditional_expression = assignment_expression
+                       | assignment_expression "?" expression ":" expression ;
 
 assignment_expression = logical_or_expression
                       | logical_or_expression assignment_operator assignment_expression ;
@@ -20,7 +23,15 @@ inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} 
 
 exclusive_or_expression = and_expression {"^" and_expression} ;
 
-and_expression = shift_expression {"&" shift_expression} ;
+and_expression = equality_expression {"&" equality_expression} ;
+
+equality_expression = relational_expression {"==" relational_expression}
+                    | relational_expression {"!=" relational_expression} ;
+
+relational_expression = shift_expression {"<" shift_expression}
+                      | shift_expression {">" shift_expression}
+                      | shift_expression {"<=" shift_expression}
+                      | shift_expression {">=" shift_expression} ;
 
 shift_expression = additive_expression {"<<" additive_expression}
                  | additive_expression {">>" additive_expression} ;

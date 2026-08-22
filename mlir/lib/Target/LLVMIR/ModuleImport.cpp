@@ -196,12 +196,28 @@ Attribute ModuleImport::convertMetadataToAttrImpl(
       if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(global))
         return MDGlobalValueAttr::get(context, symbolRef);
     }
-    auto *ci = dyn_cast<llvm::ConstantInt>(constant);
-    if (!ci)
-      return {};
-    auto intType = IntegerType::get(context, ci->getBitWidth());
-    return MDConstantAttr::get(context,
-                               IntegerAttr::get(intType, ci->getValue()));
+    if (auto *ci = dyn_cast<llvm::ConstantInt>(constant)) {
+      auto intType = IntegerType::get(context, ci->getBitWidth());
+      return MDConstantAttr::get(context,
+                                 IntegerAttr::get(intType, ci->getValue()));
+    }
+    if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant))
+      return MDNullAttr::get(context,
+                             nullPtr->getType()->getPointerAddressSpace());
+    if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
+      // Only `addrspacecast` is modelled; other constant expressions have no
+      // metadata-attribute counterpart.
+      if (constExpr->getOpcode() != llvm::Instruction::AddrSpaceCast)
+        return {};
+      Attribute argAttr = convertMetadataToAttrImpl(
+          llvm::ConstantAsMetadata::get(constExpr->getOperand(0)), path,
+          attrMap);
+      if (!argAttr)
+        return {};
+      return MDAddrSpaceCastAttr::get(
+          context, argAttr, constExpr->getType()->getPointerAddressSpace());
+    }
+    return {};
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
     // Metadata attributes cannot preserve distinctness, so bail out.
@@ -3275,18 +3291,45 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
-  // Convert non-debug metadata by using the dialect interface.
+  // Convert non-debug metadata by using the dialect interface. Metadata without
+  // a kind-specific conversion is preserved in the generic function metadata
+  // carrier.
   SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
   func->getAllMetadata(allMetadata);
+  SmallVector<StringRef> metadataNames;
+  llvmModule->getMDKindNames(metadataNames);
+  SmallVector<Attribute> functionMetadata;
   for (auto &[kind, node] : allMetadata) {
-    if (!iface.isConvertibleMetadata(kind))
+    if (kind == llvm::LLVMContext::MD_dbg)
       continue;
-    if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
+
+    llvm::MDNode *metadataNode = node;
+    auto emitUnhandledFunctionMetadataWarning = [&]() {
       emitWarning(funcOp.getLoc())
-          << "unhandled function metadata: " << diagMD(node, llvmModule.get())
-          << " on " << diag(*func);
+          << "unhandled function metadata: "
+          << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
+    };
+
+    if (iface.isConvertibleMetadata(kind)) {
+      if (succeeded(iface.setMetadataAttrs(builder, kind, metadataNode, funcOp,
+                                           *this)))
+        continue;
+      emitUnhandledFunctionMetadataWarning();
+      continue;
     }
+
+    Attribute nodeAttr = convertMetadataToAttr(metadataNode);
+    auto mdNodeAttr = dyn_cast_if_present<LLVM::MDNodeAttr>(nodeAttr);
+    if (!mdNodeAttr || kind >= metadataNames.size()) {
+      emitUnhandledFunctionMetadataWarning();
+      continue;
+    }
+
+    functionMetadata.push_back(LLVM::FunctionMetadataAttr::get(
+        context, builder.getStringAttr(metadataNames[kind]), mdNodeAttr));
   }
+  if (!functionMetadata.empty())
+    funcOp.setFunctionMetadataAttr(builder.getArrayAttr(functionMetadata));
 
   if (func->isDeclaration())
     return success();

@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -180,33 +181,6 @@ static StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
   llvm_unreachable("Unhandled SamplerFeedbackType");
 }
 
-static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
-  // TODO: Handle unorm, snorm, and packed.
-  Ty = Ty->getScalarType();
-
-  if (Ty->isIntegerTy()) {
-    switch (Ty->getIntegerBitWidth()) {
-    case 16:
-      return IsSigned ? ElementType::I16 : ElementType::U16;
-    case 32:
-      return IsSigned ? ElementType::I32 : ElementType::U32;
-    case 64:
-      return IsSigned ? ElementType::I64 : ElementType::U64;
-    case 1:
-    default:
-      return ElementType::Invalid;
-    }
-  } else if (Ty->isFloatTy()) {
-    return ElementType::F32;
-  } else if (Ty->isDoubleTy()) {
-    return ElementType::F64;
-  } else if (Ty->isHalfTy()) {
-    return ElementType::F16;
-  }
-
-  return ElementType::Invalid;
-}
-
 static dxil::ElementType toDXILStorageType(dxil::ElementType ET) {
   if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64 ||
       ET == dxil::ElementType::I64 || ET == dxil::ElementType::SNormF64 ||
@@ -271,7 +245,7 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   }
 
   StringRef ElementName;
-  ElementType ET = toDXILElementType(ContainedType, IsSigned);
+  ElementType ET = hlsl::getDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
     ElementName = getElementTypeNameForTemplate(ET);
   } else {
@@ -577,7 +551,7 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
   assert(isTyped() && "Not typed");
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
-  dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+  dxil::ElementType ET = hlsl::getDXILElementType(ElTy, IsSigned);
   dxil::ElementType DXILStorageTy = toDXILStorageType(ET);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
@@ -876,7 +850,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   // We need to assign a unique ID to each resource that is created
   // from a heap. The ID must be unique for each unique Index value so
   // we can differentiate between resources instances of the same type.
-  DenseMap<Value *, uint32_t> IndexToHeapResID;
+  SmallDenseMap<Value *, uint32_t, 8> IndexToHeapResID;
   uint32_t NextHeapResID = 0;
 
   for (Function &F : M.functions()) {

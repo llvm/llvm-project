@@ -11,10 +11,17 @@
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
-!rec_Ov = !cir.struct<"Ov" padded {data !s32i, data !cir.array<!u8i x 12>}>
-!rec_E = !cir.struct<"E" padded {data !u8i}>
+!rec_Ov = !cir.struct<"Ov" {data !s32i, pad !cir.array<!u8i x 12>}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
+!rec_PadByte = !cir.struct<"PadByte" {data !u8i, pad !cir.array<!u8i x 3>}>
+!rec_PadByte2 = !cir.struct<"PadByte2" {data !u8i, pad !u8i}>
+!rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_UEmptyOnly = !cir.union<"UEmptyOnly" {data !rec_E}>
+!rec_UEmptyOver = !cir.union<"UEmptyOver" {data !rec_EOver, data !s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
-!rec_AtomicWrapper = !cir.struct<padded {data !rec_S1, pad !cir.array<!s8i x 2>}>
+!rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -93,15 +100,54 @@ module attributes {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"Ov" padded
+  // CHECK: not yet implemented for type '!cir.struct<"Ov" {data !cir.int<s, 32>, pad
 
-  // An empty C++ class is laid out as a single padded byte, so it is rejected
-  // by the padded check; its Ignore classification is deferred.
-  cir.func @take_empty(%arg0: !rec_E) {
+  // `struct { unsigned char c; } __attribute__((aligned(4)))` is padded
+  // throughout, but it carries data, so it stays rejected.
+  cir.func @take_padded_byte(%arg0: !rec_PadByte) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"E" padded
+  // CHECK: not yet implemented for type '!cir.struct<"PadByte" {data
+
+  // The same at `aligned(2)`, where the padding is a scalar rather than an
+  // array.
+  cir.func @take_padded_byte2(%arg0: !rec_PadByte2) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"PadByte2" {data
+
+  // A union holds padding in a slot of its own, so its lone byte member is
+  // data.  Rejected by the union rule (no member spans the declared size), not
+  // the empty-class one.
+  cir.func @take_padded_byte_union(%arg0: !rec_UPadByte) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UPadByte"
+
+  // A union with an empty member coerces wider than classic, so it is left NYI
+  // rather than accepted along with the empty class itself.
+  cir.func @take_union_empty_over(%arg0: !rec_UEmptyOver) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyOver"
+
+  // Deferred with it, though this one holds no data at all.
+  cir.func @take_union_empty_only(%arg0: !rec_UEmptyOnly) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyOnly"
+
+  // An array of empty records supplies no bytes the union coercion can read.
+  cir.func @take_union_arr_empty(%arg0: !rec_UArrEmpty) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UArrEmpty"
 
   // CIRGen wraps an atomic whose value is narrower than its lock-free size in
   // an anonymous record with a trailing pad member, which the padded check
@@ -110,7 +156,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<padded {{.*}}pad !cir.array<!cir.int<s, 8> x 2>}>'
+  // CHECK: not yet implemented for type '!cir.struct<{{.*}}pad !cir.array<!cir.int<s, 8> x 2>}>'
 
   // A scalable vector has no size the eightbyte rules can read.
   cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {

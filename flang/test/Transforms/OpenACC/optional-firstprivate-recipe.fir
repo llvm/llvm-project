@@ -35,5 +35,5 @@ func.func @test_optional_firstprivate_f32(%arg0: !fir.ref<f32> {fir.bindc_name =
 // CHECK: }
 
 // bindc_name on the arg does not always flow into acc.firstprivate's name=; minimal FIR gets name = "".
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe(@firstprivatization_optional_ref_f32) -> !fir.ref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe(@firstprivatization_optional_ref_f32) implicit(true) name("") -> !fir.ref<f32>
 // CHECK: acc.parallel firstprivate(

@@ -440,13 +440,13 @@ public:
     return std::get<ResourceBinding>(BindingOrHeapID);
   }
 
-  uint32_t getSize() const {
-    return hasBinding() ? std::get<ResourceBinding>(BindingOrHeapID).Size : 1;
-  }
-
   uint32_t getHeapID() const {
     assert(!hasBinding() && "Resource does not have a heap ID");
     return std::get<uint32_t>(BindingOrHeapID);
+  }
+
+  uint32_t getSize() const {
+    return hasBinding() ? std::get<ResourceBinding>(BindingOrHeapID).Size : 1;
   }
 
   TargetExtType *getHandleTy() const { return HandleTy; }

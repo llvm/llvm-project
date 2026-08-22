@@ -337,14 +337,18 @@ struct CUFDataTransferOpConversion
     }
 
     auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+      // val can be a block argument and therefore has no defining operation.
+      mlir::Operation *defOp = val.getDefiningOp();
+      if (!defOp)
+        return val;
+      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(defOp)) {
         // Materialize the box to memory to be able to call the runtime.
         mlir::Value box = builder.createTemporary(loc, val.getType());
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
       if (mlir::isa<fir::BaseBoxType>(val.getType()))
-        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(defOp))
           return loadOp.getMemref();
       return val;
     };
