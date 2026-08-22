@@ -134,7 +134,7 @@ void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 extern char &RISCVInsertVSETVLIID;
 
 class RISCVPostRAExpandPseudoPass
-    : public OptionalPassInfoMixin<RISCVPostRAExpandPseudoPass> {
+    : public RequiredPassInfoMixin<RISCVPostRAExpandPseudoPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
