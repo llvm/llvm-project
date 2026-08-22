@@ -181,11 +181,11 @@ template <typename T> constexpr T fwidth_impl(T input) {
 }
 
 template <typename T> constexpr T degrees_impl(T Val) {
-  return Val * (T)(180.L / Pi);
+  return Val * (elem_type_t<T>)(180.L / Pi);
 }
 
 template <typename T> constexpr T radians_impl(T Val) {
-  return Val * (T)(Pi / 180.L);
+  return Val * (elem_type_t<T>)(Pi / 180.L);
 }
 
 } // namespace __detail

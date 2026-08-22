@@ -702,7 +702,6 @@ def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
 }];
   let ParamNames = ["x"];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 // Returns the cross product of two floating-point, 3D vectors.
 def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
@@ -1399,7 +1398,6 @@ def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
 }];
   let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Calculates a fast, approximate, per-component reciprocal ie 1 / x.
