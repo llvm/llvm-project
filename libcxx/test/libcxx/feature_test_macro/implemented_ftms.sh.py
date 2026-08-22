@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
                 "c++26": "202102L",
                 "c++29": "202102L",
             },
-            '__cpp_lib_view_interface': {},
+            "__cpp_lib_view_interface": {},
             "__cpp_lib_zz_missing_FTM_in_older_standard": {},
         }
 
