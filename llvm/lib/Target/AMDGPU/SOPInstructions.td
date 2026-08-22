@@ -2012,45 +2012,6 @@ let SubtargetPredicate = isGFX11Plus in
 // Bits 19, 20, and 21 cover non-FP exceptions and differ between
 // gfx9/10/11, so we ignore them here.
 
-// TODO: Would it be cheaper to emit multiple s_getreg_b32 calls for
-// the ranges and combine the results?
-
-defvar fp_round_mask = !add(!shl(1, 4), -1);
-defvar fp_denorm_mask = !shl(!add(!shl(1, 4), -1), 4);
-defvar dx10_clamp_mask = !shl(1, 8);
-defvar ieee_mode_mask = !shl(1, 9);
-
-// Covers fp_round, fp_denorm, dx10_clamp, and IEEE bit.
-defvar fpmode_mask =
-  !or(fp_round_mask, fp_denorm_mask, dx10_clamp_mask, ieee_mode_mask);
-
-defvar fp_excp_en_mask = !shl(!add(!shl(1, 7), -1), 12);
-defvar fp16_ovfl = !shl(1, 23);
-defvar fpmode_mask_gfx6plus = !or(fpmode_mask, fp_excp_en_mask);
-defvar fpmode_mask_gfx9plus = !or(fpmode_mask_gfx6plus, fp16_ovfl);
-
-class GetFPModePat<int fpmode_mask> : GCNPat<
-  (i32 get_fpmode),
-  (S_AND_B32 (i32 fpmode_mask),
-             (S_GETREG_B32 getHwRegImm<
-                HWREG.MODE, 0,
-                !add(!logtwo(fpmode_mask), 1)>.ret))
->;
-
-// TODO: Might be worth moving to custom lowering so the and is
-// exposed to demanded bits optimizations. Most users probably only
-// care about the rounding or denorm mode bits. We also can reduce the
-// demanded read from the getreg immediate.
-let SubtargetPredicate = isGFX9Plus in {
-// Last bit = FP16_OVFL
-def : GetFPModePat<fpmode_mask_gfx9plus>;
-}
-
-// Last bit = EXCP_EN.int_div0
-let SubtargetPredicate = isNotGFX9Plus in {
-def : GetFPModePat<fpmode_mask_gfx6plus>;
-}
-
 let SubtargetPredicate = HasPopsExitingWaveID in
 def : GCNPat<
   (int_amdgcn_pops_exiting_wave_id),

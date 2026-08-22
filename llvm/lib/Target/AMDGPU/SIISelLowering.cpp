@@ -1042,7 +1042,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // TODO: Could move this to custom lowering, could benefit from combines on
   // extract of relevant bits.
-  setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
+  setOperationAction(ISD::GET_FPMODE, MVT::i32, Custom);
 
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
@@ -5085,6 +5085,35 @@ SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, SetTrapReg, SetModeReg);
 }
 
+SDValue SITargetLowering::lowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+
+  unsigned Width;
+  uint32_t FPMask;
+  if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9) {
+    Width = 24;
+    FPMask = 0x87F3FF;
+  } else {
+    Width = 19;
+    FPMask = 0x7F3FF;
+  }
+
+  uint32_t ModeHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, Width);
+  SDValue ModeHwRegImm = DAG.getTargetConstant(ModeHwReg, SL, MVT::i32);
+
+  SDVTList VTList = DAG.getVTList(MVT::i32, MVT::Other);
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, SL, MVT::i32);
+  SDValue GetModeReg = DAG.getNode(ISD::INTRINSIC_W_CHAIN, SL, VTList,
+                                   Op.getOperand(0), IntrinID, ModeHwRegImm);
+
+  SDValue Mask = DAG.getConstant(FPMask, SL, MVT::i32);
+  SDValue Result = DAG.getNode(ISD::AND, SL, MVT::i32, GetModeReg, Mask);
+
+  return DAG.getMergeValues({Result, GetModeReg.getValue(1)}, SL);
+}
+
 Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                              const MachineFunction &MF) const {
   const Function &Fn = MF.getFunction();
@@ -7826,6 +7855,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerROTR(Op, DAG);
   case ISD::INLINEASM:
     return LowerINLINEASM(Op, DAG);
+  case ISD::GET_FPMODE:
+    return lowerGET_FPMODE(Op, DAG);
   }
   return SDValue();
 }
@@ -14931,6 +14962,45 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
           SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(LHS), VT, Ext,
                                     DAG.getConstant(NB, SDLoc(CRHS), MVT::i32));
           return Shl;
+        }
+      }
+    }
+
+    if (CRHS && LHS.getOpcode() == ISD::INTRINSIC_W_CHAIN && LHS.hasOneUse()) {
+      unsigned IntrinID = LHS.getConstantOperandVal(1);
+      if (IntrinID == Intrinsic::amdgcn_s_getreg) {
+        uint32_t Simm16 = LHS.getConstantOperandVal(2);
+        auto [HwRegId, RegOffset, RegSize] =
+            AMDGPU::Hwreg::HwregEncoding::decode(Simm16);
+
+        if (HwRegId == AMDGPU::Hwreg::ID_MODE) {
+          uint64_t Mask = CRHS->getZExtValue();
+          APInt NeededInRead = APInt(32, Mask);
+
+          unsigned Lo = NeededInRead.countr_zero();
+          unsigned Hi = 32 - NeededInRead.countLeadingZeros() - 1;
+
+          APInt Contiguous = APInt::getBitsSet(32, Lo, Hi + 1);
+          if (NeededInRead == Contiguous) {
+            unsigned NewWidth = Hi + 1;
+
+            if (NewWidth < RegSize) {
+              SDLoc DL(N);
+              uint32_t NewSimm16 = AMDGPU::Hwreg::HwregEncoding::encode(
+                  AMDGPU::Hwreg::ID_MODE, RegOffset, NewWidth);
+              SDValue NewImm = DAG.getTargetConstant(NewSimm16, DL, MVT::i32);
+
+              SDValue NewIntrin = SDValue(
+                  DAG.UpdateNodeOperands(LHS.getNode(), LHS.getOperand(0),
+                                         LHS.getOperand(1), NewImm),
+                  0);
+
+              if (Lo == 0)
+                return NewIntrin;
+              return DAG.getNode(ISD::AND, DL, VT, NewIntrin,
+                                 DAG.getConstant(Mask, DL, VT));
+            }
+          }
         }
       }
     }
