@@ -53541,8 +53541,8 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // X + (overflow_from_OF ? 1 : 0) --> adox X, 0
     // NOTE: For i8/i16, ADOX32's OF output does not match the original iN
     // overflow. This is safe because this ADOX replaces an ISD::ADD, so its OF
-    // output is natively dead. Future transforms must be careful not to consume
-    // it.
+    // output is natively dead. Its ANY_EXTEND operands ensure future transforms
+    // cannot mathematically prove the OF output is useful, preventing misuse.
     EVT AdoxVT = (VT == MVT::i8 || VT == MVT::i16) ? MVT::i32 : VT;
     SDValue AdoxX = DAG.getAnyExtOrTrunc(X, DL, AdoxVT);
     SDValue Adox =
