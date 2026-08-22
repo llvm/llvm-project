@@ -24,8 +24,7 @@ define void @insert_store_across_synchronization(ptr %q, i32 %s) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 16
 ; CHECK-NEXT:    call void @may_synchronize()
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> [[V]], i32 [[S:%.*]],
-; CHECK-SAME:    i32 1
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> [[V]], i32 [[S:%.*]], i32 1
 ; CHECK-NEXT:    store <4 x i32> [[VECINS]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -39,9 +38,9 @@ entry:
 
 define void @insert_store2(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store2(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -54,9 +53,9 @@ define void @insert_store2(ptr %q, i16 zeroext %s) {
 
 define void @insert_store2_duplicate_different_values(ptr %p, i16 %a, i16 %b) {
 ; CHECK-LABEL: @insert_store2_duplicate_different_values(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[A:%.*]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[B:%.*]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -69,11 +68,11 @@ define void @insert_store2_duplicate_different_values(ptr %p, i16 %a, i16 %b) {
 
 define void @insert_store3(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store3(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 5
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 5
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;

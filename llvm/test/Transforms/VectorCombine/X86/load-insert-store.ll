@@ -11,9 +11,9 @@ declare void @llvm.assume(i1)
 ; microarchitecture level that this transform is expected to support.
 define void @insert_store2(ptr %p, i16 %x, i16 %y) {
 ; CHECK-LABEL: @insert_store2(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i32 0, i32 6
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[X:%.*]], ptr [[GEP0]], align 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 7
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[Y:%.*]], ptr [[GEP1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -26,9 +26,9 @@ define void @insert_store2(ptr %p, i16 %x, i16 %y) {
 
 define void @insert_store2_same_value(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store2_same_value(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -41,9 +41,9 @@ define void @insert_store2_same_value(ptr %q, i16 zeroext %s) {
 
 define void @insert_store2_duplicate_different_values(ptr %p, i16 %a, i16 %b) {
 ; CHECK-LABEL: @insert_store2_duplicate_different_values(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[A:%.*]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[B:%.*]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -56,11 +56,11 @@ define void @insert_store2_duplicate_different_values(ptr %p, i16 %a, i16 %b) {
 
 define void @insert_store3(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store3(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 5
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 5
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -103,9 +103,10 @@ define void @insert_store_multi_nonconst_index_freeze(ptr %p, i8 %s, i8 %x, i8 %
 ; CHECK-LABEL: @insert_store_multi_nonconst_index_freeze(
 ; CHECK-NEXT:    [[S_FROZEN:%.*]] = freeze i8 [[S:%.*]]
 ; CHECK-NEXT:    [[IDX:%.*]] = and i8 [[S_FROZEN]], 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x i8>, ptr [[P:%.*]], i8 0, i8 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i8 [[IDX]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x i8>, ptr [[P:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[X:%.*]], ptr [[GEP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr [[P]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr [[P]], i64 0, i64 2
 ; CHECK-NEXT:    store i8 [[Y:%.*]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -119,9 +120,9 @@ define void @insert_store_multi_nonconst_index_freeze(ptr %p, i8 %s, i8 %x, i8 %
 
 define void @insert_store_gap(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_gap(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 5
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -134,11 +135,11 @@ define void @insert_store_gap(ptr %q, i16 zeroext %s) {
 
 define void @insert_store_reverse(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_reverse(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 7
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 6
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 5
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 5
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -153,9 +154,9 @@ define void @insert_store_reverse(ptr %q, i16 zeroext %s) {
 ; Keep the program order of stores when two inserts select the same element.
 define void @insert_store_duplicate(ptr %p, i16 %x, i16 %y) {
 ; CHECK-LABEL: @insert_store_duplicate(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[X:%.*]], ptr [[GEP0]], align 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 3
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[Y:%.*]], ptr [[GEP1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -168,9 +169,9 @@ define void @insert_store_duplicate(ptr %p, i16 %x, i16 %y) {
 
 define void @insert_store_duplicate_same_value(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_duplicate_same_value(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -183,9 +184,9 @@ define void @insert_store_duplicate_same_value(ptr %q, i16 zeroext %s) {
 
 define void @insert_store_i32(ptr %q, i32 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i32(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q]], i64 0, i64 3
 ; CHECK-NEXT:    store i32 [[S]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -198,9 +199,9 @@ define void @insert_store_i32(ptr %q, i32 zeroext %s) {
 
 define void @insert_store_i8(ptr %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i8(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 8
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 8
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q]], i32 0, i32 9
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q]], i64 0, i64 9
 ; CHECK-NEXT:    store i8 [[S]], ptr [[TMP1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -214,7 +215,7 @@ define void @insert_store_i8(ptr %q, i8 zeroext %s) {
 define void @insert_store_alignment(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_alignment(
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[TMP0]], i32 0, i32 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[TMP0]], i64 0, i64 4
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -227,9 +228,9 @@ define void @insert_store_alignment(ptr %q, i16 zeroext %s) {
 
 define void @insert_store_size(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_size(
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i16>, ptr [[Q:%.*]], i32 0, i32 8
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i16>, ptr [[Q:%.*]], i64 0, i64 8
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i16>, ptr [[Q]], i32 0, i32 12
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i16>, ptr [[Q]], i64 0, i64 12
 ; CHECK-NEXT:    store i16 [[S]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -280,9 +281,11 @@ define void @insert_store_nonconst_large_alignment2(ptr %q, i32 zeroext %s, i32 
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i32 0, i32 [[IDX1]]
+; CHECK-NEXT:    [[IDX1_GEPIDX:%.*]] = zext i32 [[IDX1]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i64 0, i64 [[IDX1_GEPIDX]]
 ; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q]], i32 0, i32 [[IDX2]]
+; CHECK-NEXT:    [[IDX2_GEPIDX:%.*]] = zext i32 [[IDX2]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q]], i64 0, i64 [[IDX2_GEPIDX]]
 ; CHECK-NEXT:    store i32 [[S]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -303,9 +306,11 @@ define void @insert_store_nonconst_align_maximum_8_2(ptr %q, i64 %s, i32 %idx1, 
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX1]]
+; CHECK-NEXT:    [[IDX1_GEPIDX:%.*]] = zext i32 [[IDX1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX1_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i32 0, i32 [[IDX2]]
+; CHECK-NEXT:    [[IDX2_GEPIDX:%.*]] = zext i32 [[IDX2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i64 0, i64 [[IDX2_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -326,9 +331,11 @@ define void @insert_store_nonconst_align_maximum_4_2(ptr %q, i64 %s, i32 %idx1, 
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX1]]
+; CHECK-NEXT:    [[IDX1_GEPIDX:%.*]] = zext i32 [[IDX1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX1_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i32 0, i32 [[IDX2]]
+; CHECK-NEXT:    [[IDX2_GEPIDX:%.*]] = zext i32 [[IDX2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i64 0, i64 [[IDX2_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -349,9 +356,11 @@ define void @insert_store_nonconst_align_larger_2(ptr %q, i64 %s, i32 %idx1, i32
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX1]]
+; CHECK-NEXT:    [[IDX1_GEPIDX:%.*]] = zext i32 [[IDX1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX1_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i32 0, i32 [[IDX2]]
+; CHECK-NEXT:    [[IDX2_GEPIDX:%.*]] = zext i32 [[IDX2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q]], i64 0, i64 [[IDX2_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -372,9 +381,11 @@ define void @insert_store_dynamic_indices_may_alias(ptr %p, i16 %a, i16 %b, i32 
 ; CHECK-NEXT:    [[CJ:%.*]] = icmp ult i32 [[J:%.*]], 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CI]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CJ]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i32 0, i32 [[I]]
+; CHECK-NEXT:    [[I_GEPIDX:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 [[I_GEPIDX]]
 ; CHECK-NEXT:    store i16 [[A:%.*]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 [[J]]
+; CHECK-NEXT:    [[J_GEPIDX:%.*]] = zext i32 [[J]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i64 0, i64 [[J_GEPIDX]]
 ; CHECK-NEXT:    store i16 [[B:%.*]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -396,7 +407,8 @@ define void @crash_counter_exam(ptr %p, i32 %x, i32 %arg) {
 ; CHECK-NEXT:    [[IDX:%.*]] = freeze i32 [[ARG:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
