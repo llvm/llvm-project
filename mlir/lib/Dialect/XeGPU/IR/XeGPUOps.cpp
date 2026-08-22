@@ -259,7 +259,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult CreateNdDescOp::verify() {
   auto srcMemrefTy = dyn_cast<MemRefType>(getSourceType());
   size_t rank = srcMemrefTy ? srcMemrefTy.getRank() : getMixedSizes().size();
-  bool invalidRank = false;
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -288,16 +287,12 @@ LogicalResult CreateNdDescOp::verify() {
     if (getMixedStrides().empty() || getMixedSizes().empty())
       return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
-    invalidRank = getMixedSizes().size() != getMixedStrides().size();
+    if (getMixedSizes().size() != getMixedStrides().size())
+      return emitOpError("Expecting the rank of shape and strides to match.");
   } else if (srcMemrefTy && hasExplicitShapeStrides) {
     return emitOpError("shape and strides should not be specified for a memref "
                        "source; they are inferred from the memref.");
   }
-
-  if (invalidRank)
-    return emitOpError(
-        "Expecting the rank of shape, strides, and source (if source "
-        "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)

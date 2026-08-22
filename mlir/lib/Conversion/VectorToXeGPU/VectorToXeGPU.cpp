@@ -126,18 +126,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
-                                                Location loc,
-                                                xegpu::TensorDescType descType,
-                                                TypedValue<MemRefType> src) {
-  [[maybe_unused]] MemRefType srcTy = src.getType();
-  assert(srcTy.isStrided() && "Expected strided memref type");
-
-  // Keep the memref as the source instead of collapsing it to an i64 base: it
-  // carries the (possibly dynamic) offset/shape/strides the lowering recovers.
-  return xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
-}
-
 // Adjusts the strides of a memref according to a given permutation map for
 // vector operations.
 //
@@ -608,7 +596,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
           getAsOpFoldResult(readOp.getIndices()), loadedVecTy.getRank());
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+      xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
       Operation *loadedOp =
@@ -710,7 +698,7 @@ struct TransferWriteLowering
           xegpu::MemorySpace::Global);
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+      xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
       auto storeOp = xegpu::StoreNdOp::create(
@@ -828,7 +816,7 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
         boundaryCheck, xegpu::MemorySpace::Global);
 
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+    xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
         rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
     auto loadNdOp =
         xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
@@ -873,7 +861,7 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+    xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
         rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
     auto storeNdOp =

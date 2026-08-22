@@ -272,9 +272,7 @@ class CreateNdDescToXeVMPattern
                   std::to_string(maxNdTdescLeadingDims) +
                   " leading dims (rank <= " + std::to_string(maxNdTdescRank) +
                   ").");
-    // The flattened-plane view needs every leading stride to be a whole number
-    // of rows. Static strides are checked here; dynamic ones are assumed to
-    // divide evenly (limitation 1 above).
+    // Limitation 1 above; dynamic strides are assumed to divide evenly.
     if (rank > 2) {
       SmallVector<std::optional<int64_t>> constStrides(rank, std::nullopt);
       if (memrefTy) {
