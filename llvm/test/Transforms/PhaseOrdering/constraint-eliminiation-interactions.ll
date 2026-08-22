@@ -162,6 +162,7 @@ else:
   ret i64 %res
 }
 
+; TODO: We should be able to preserve shl nuw.
 define void @shl_flags(i32 %n) {
 ; CHECK-LABEL: define void @shl_flags(
 ; CHECK-SAME: i32 [[N:%.*]]) local_unnamed_addr {

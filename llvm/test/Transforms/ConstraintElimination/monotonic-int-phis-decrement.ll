@@ -375,6 +375,86 @@ exit:
   ret void
 }
 
+; Same as above, but the loop is guarded by %b <=s %start, which guarantees the
+; loop exits before the decrement wraps in the signed sense.
+define void @add_rec_decreasing_no_wrap_flags_signed_precond(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_no_wrap_flags_signed_precond(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sle i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP_HEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[U:%.*]] = icmp ule i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[U]])
+; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %precond = icmp sle i8 %b, %start
+  br i1 %precond, label %loop.header, label %exit
+
+loop.header:
+  %k.0 = phi i8 [ %start, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.latch
+
+loop.latch:
+  %s = icmp sle i8 %k.0, %start
+  call void @use(i1 %s)
+  %u = icmp ule i8 %k.0, %start
+  call void @use(i1 %u)
+  %k.dec = add i8 %k.0, -1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; Same as above, but the step is a `sub` and thus not visible as `add %k.0, C`
+; in the IR; the direction of the induction comes from SCEV only.
+define void @add_rec_decreasing_sub_step_signed_precond(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_sub_step_signed_precond(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sle i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP_HEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[K_DEC]] = sub i8 [[K_0]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %precond = icmp sle i8 %b, %start
+  br i1 %precond, label %loop.header, label %exit
+
+loop.header:
+  %k.0 = phi i8 [ %start, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.latch
+
+loop.latch:
+  %s = icmp sle i8 %k.0, %start
+  call void @use(i1 %s)
+  %k.dec = sub i8 %k.0, 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
 ; The decrement has no wrap flags in the IR, but SCEV can infer nsw for the
 ; induction from the guarded backedge.
 define void @add_rec_decreasing_nsw_from_scev(i8 %b) {
