@@ -71,6 +71,7 @@
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1495,6 +1496,386 @@ bool StraightLineStrengthReduce::basisTooFarInSameBlock(
   return (InstIdx - LastUseIdx) > SLSRBasisDistanceThreshold;
 }
 
+namespace {
+
+// TODO: Currently, I am considering (Basis, Cand) pair that are both in the same BB.
+//       The restriction may not be needed. 
+class RPFilter {
+public:
+  using Candidate = StraightLineStrengthReduce::Candidate;
+
+  RPFilter(const Function *F,
+           DenseMap<Instruction *, Candidate *> &PickedCandidateMap,
+           const TargetTransformInfo *TTI)
+      : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
+  void run() {
+    buildBBToNumCandsAndBasises(PickedCandidateMap);
+    // TODO: 16 is an arbitrary threshold.
+    if (MaxNumBasisesInBB > 16)
+      buildBBToLiveness(*F); // Do liveness analysis.
+
+    for (auto &BB : *F) {
+#if 0
+      unsigned RP = maxPressureInBlock(BB, BBToLiveness[&BB].LiveIn,
+                                       BBToLiveness[&BB].LiveOut);
+      unsigned RPBackward = maxPressureInBlockBackward(BB, BBToLiveness[&BB].LiveIn,
+                                      BBToLiveness[&BB].LiveOut);
+      DEBUG_WITH_TYPE("slsr-rp", {
+        dbgs() << "MaxRP:" << BB.getName() << ":" << RP << "," << RPBackward << "\n";
+      });
+#else
+      unsigned RPBackward = maxPressureInBlockBackward(BB, BBToLiveness[&BB].LiveIn,
+        BBToLiveness[&BB].LiveOut);
+      dbgs() << "MaxRPBackward:" << BB.getName() << ":" << RPBackward << "\n";
+#endif
+
+    }
+  }
+
+private:
+  const Function *F;
+  DenseMap<Instruction *, Candidate *> &PickedCandidateMap;
+  const TargetTransformInfo *TTI;
+
+  DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>>
+      BBToNumCandsAndBasises;
+  unsigned MaxNumBasisesInBB = 0;
+
+  using ValueSet = SmallPtrSet<const Value *, 32>;
+  struct BlockLiveness {
+    ValueSet LiveIn;
+    ValueSet LiveOut;
+  };
+
+  DenseMap<const BasicBlock *, BlockLiveness> BBToLiveness;
+
+  std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
+      const BasicBlock *BB,
+      const DenseMap<Instruction *, Candidate *> &PickedCandidateMap) {
+    unsigned NumCands = 0;
+    SmallPtrSet<const Candidate *, 8> UniqueBasises;
+    for (const Instruction &Inst : *BB) {
+      auto It = PickedCandidateMap.find(&Inst);
+      if (It != PickedCandidateMap.end()) {
+        NumCands++;
+        assert(It->second->Basis);
+        UniqueBasises.insert(It->second->Basis);
+      }
+    }
+    MaxNumBasisesInBB = std::max(MaxNumBasisesInBB, UniqueBasises.size());
+    DEBUG_WITH_TYPE("slsr-rp", {
+      dbgs() << "BB: " << BB->getName() << " NumCands: " << NumCands
+             << " UniqueBasises: " << UniqueBasises.size() << "\n";
+    });
+    return {NumCands, UniqueBasises.size()};
+  }
+
+  void buildBBToNumCandsAndBasises(
+      const DenseMap<Instruction *, Candidate *> &PickedCandidateMap) {
+    for (auto &InstCand : PickedCandidateMap) {
+      const BasicBlock *BB = InstCand.first->getParent();
+      auto [It, Inserted] = BBToNumCandsAndBasises.try_emplace(BB);
+      if (Inserted)
+        It->second = countCandsAndBasisesInBB(It->first, PickedCandidateMap);
+    }
+  }
+
+  static bool isRegisterLike(const Value *V) {
+    return isa<Instruction>(V) || isa<Argument>(V);
+  }
+
+  unsigned regWeight(const Value *V) const {
+    const DataLayout &DL = F->getDataLayout();
+    Type *Ty = V->getType();
+    if (Ty->isVoidTy() || Ty->isTokenTy())
+      return 0;
+#if 0
+    // Aggregates legalize to a flat sequence of scalars; approximate rather
+    // than calling getRegUsageForType, which is llvm_unreachable on them.
+    if (!VectorType::isValidElementType(Ty->getScalarType()))
+      return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+    return TTI->getRegUsageForType(Ty);
+#else
+    // TTI's getRegUsageForType can be used for types that are
+    // validElementType(Ty->getScalarType()). However, even the valid vector
+    // type should be multiplited by get{Min}NumElements() to handle
+    // {ScalarVectorType}, FixedVectorType. Overall, getTypeSizeInBits(Ty)
+    // handing all those cases should be sufficient for heuristic.
+    return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+#endif
+  }
+
+  void buildBBToLiveness(const Function &F) {
+    DenseMap<const BasicBlock *, ValueSet> UpExposed, Defs;
+    DenseMap<std::pair<const BasicBlock *, const BasicBlock *>, ValueSet>
+        PhiEdges;
+
+    // Fill in per-block information
+    for (const BasicBlock &BB : F) {
+      ValueSet &UE = UpExposed[&BB];
+      ValueSet &D = Defs[&BB];
+
+      for (const Instruction &I : BB) {
+        if (const auto *PN = dyn_cast<PHINode>(&I)) {
+          for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i)
+            if (isRegisterLike(PN->getIncomingValue(i)))
+              PhiEdges[{PN->getIncomingBlock(i), &BB}].insert(
+                  PN->getIncomingValue(i));
+        } else {
+          for (const Value *Op : I.operand_values())
+            if (isRegisterLike(Op) && !D.contains(Op))
+              UE.insert(Op);
+        }
+
+        if (!I.getType()->isVoidTy())
+          D.insert(&I);
+      }
+      DEBUG_WITH_TYPE("slsr-rp", {
+        dbgs() << "BB-fill: " << BB.getName()
+               << " UpExposed: " << UpExposed[&BB].size();
+        dbgs() << " Defs: " << Defs[&BB].size() << "\n";
+      });
+    }
+
+    // Block Live-in/out fixed-point loop
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (const BasicBlock *BB : post_order(&F.getEntryBlock())) {
+        ValueSet Out;
+        for (const BasicBlock *S : successors(BB)) {
+          // Out = Out + BBToLiveness[S].LiveIn
+          for (const Value *V : BBToLiveness[S].LiveIn)
+            Out.insert(V);
+          auto It = PhiEdges.find({BB, S});
+          if (It != PhiEdges.end())
+            // Out = Out + It->second
+            for (const Value *V : It->second)
+              Out.insert(V);
+        }
+        ValueSet In = UpExposed[BB];
+        // live-throughs are live-ins
+        for (const Value *V : Out)
+          if (!Defs[BB].contains(V))
+            In.insert(V);
+
+        if (In.size() != BBToLiveness[BB].LiveIn.size() ||
+            Out.size() != BBToLiveness[BB].LiveOut.size())
+          Changed = true;
+
+        DEBUG_WITH_TYPE("slsr-rp", {
+          dbgs() << "BB-update: " << BB->getName() << " In: " << In.size()
+                 << " Out: " << Out.size() << "\n";
+        });
+
+        BBToLiveness[BB].LiveIn = std::move(In);
+        BBToLiveness[BB].LiveOut = std::move(Out);
+      }
+    }
+
+    DEBUG_WITH_TYPE("slsr-rp", {
+      dbgs() << "-- Liveness of BBs -- \n";
+      for (const BasicBlock &BB : F) {
+        dbgs() << BB.getName() << ": ";
+        dbgs() << BBToLiveness[&BB].LiveIn.size() << ", ";
+        dbgs() << BBToLiveness[&BB].LiveOut.size() << "\n";
+      }
+    });
+  }
+
+  bool isDebugBlock(const BasicBlock &BB) const {
+    return BB.getName() == "for.cond.cleanup";
+  }
+
+  unsigned maxPressureInBlock(const BasicBlock &BB, const ValueSet &LiveIn,
+                              const ValueSet &LiveOut) const {
+
+#if 1
+    bool IsDebugBlock = isDebugBlock(BB);
+    unsigned StoreCount = 0;
+#endif
+
+    SmallVector<const Instruction *, 128> Order;
+    DenseMap<const Instruction *, unsigned> Idx;
+    for (const Instruction &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
+      Idx[&I] = Order.size();
+      Order.push_back(&I);
+    }
+
+    DenseMap<const Value *, unsigned> LastUse;
+    for (const Instruction &I : BB) {
+      if (I.isDebugOrPseudoInst() || isa<PHINode>(&I))
+        continue;
+      for (const Value *Op : I.operand_values())
+        if (isRegisterLike(Op))
+          LastUse[Op] = Idx[&I];
+    }
+    const unsigned End = Order.size();
+    for (const Value *V : LiveOut)
+      LastUse[V] = End; // survives the block; never retires here
+
+    ValueSet Open;
+    for (const Value *V : LiveIn)
+      Open.insert(V);
+
+    unsigned MaxW = 0;
+    for (unsigned i = 0; i != End; ++i) {
+      if (isa<StoreInst>(Order[i])) {
+        StoreCount++;
+      }
+      if (!Order[i]->getType()->isVoidTy())
+        Open.insert(Order[i]);
+
+      unsigned W = 0;
+      for (const Value *V : Open) {
+        auto RW = regWeight(V);
+        W += RW;
+        if (IsDebugBlock && StoreCount == 32) {
+          dbgs() << "regweight: " << "i: " << i << " value: " << *V
+                 << " RW: " << RW << ", ";
+          // dbgs() << "W: " << W << "\n";
+        }
+
+        // W += regWeight(V);
+      }
+      MaxW = std::max(MaxW, W);
+
+      SmallVector<const Value *, 8> Dead;
+      for (const Value *V : Open) {
+        auto It = LastUse.find(V);
+        if (It == LastUse.end() || It->second <= i)
+          Dead.push_back(V);
+      }
+      for (const Value *V : Dead)
+        Open.erase(V);
+
+      if (IsDebugBlock && StoreCount == 32) {
+        dbgs() << "W: " << W << " MaxW: " << MaxW << "\n";
+      }
+    }
+    return MaxW;
+  }
+
+  // Return true if I is a candidate and its basis is in the same bb, false otherwise. 
+  bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR, DenseSet<const Value*> &SeenLastUse) const {
+    auto It = PickedCandidateMap.find(I);
+    if (It == PickedCandidateMap.end())
+      return false;
+
+    // I is a Candidate 
+    const Instruction *Basis = It->second->Basis->Ins;
+    if (Basis->getParent() == I->getParent()) {
+      LiveSetWithSLSR.insert(Basis);
+      // I and its Basis are in the same bb. 
+
+      SeenLastUse.insert(Basis);
+      return true;
+    }
+
+    return false;
+  }
+
+  // TODO: Remove
+  void updateLiveSetWithSLSR(ValueSet &LiveSetWithSLSR, 
+                             const DenseSet<const Value*> &SeenLastUse, 
+                             const Instruction &I, const Value *Op) const {
+    // LiveSet += {Cand.Basis} <-- Done already
+    // LiveSet -= {Op} if this is the last use of Op (i.e. SeenLastUse.contains(Op))
+    if (SeenLastUse.contains(Op))
+      LiveSetWithSLSR.erase(Op);
+
+  }
+
+  unsigned maxPressureInBlockBackward(const BasicBlock &BB,
+                                      const ValueSet &LiveIn,
+                                      const ValueSet &LiveOut) const {
+
+    // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
+    //       Could be a better-fitting data structure.                                          
+    ValueSet LiveSet = LiveOut;
+    unsigned MaxW = 0;
+    for (const Value *V : LiveSet) 
+      MaxW += regWeight(V);
+
+    // Initial LiveSetWithSLSR is the same as LiveOut.
+    // SLSR changes 
+    // Basis = ..
+    // ..
+    // Cand = f(op1, op2, ..) 
+    //
+    // to
+    // Basis = ..
+    // Cand = f(Basis, Delta, // possibly some of the original operands ..)
+    //
+    // We consider here only the case both Cand and Basis are in the same BB.
+    // Therefore, if an original operand of Cand is a liveout, it means it was used
+    // outside the BB, and will stay so. 
+    // Likewise, if a Basis is a liveout, it means it was used outside the BB,
+    // and will stay so. SLSR does not delete existing defs or create new defs.
+    ValueSet LiveSetWithSLSR = LiveOut;
+    unsigned MaxWWithSLSR = MaxW;
+
+    // This is required for calculating LiveSetWithSLSR without updating IR.
+    // IR is still in the original form.
+    // Intialize it with LiveOut. LiveOuts are never removed from LiveSetWithSLSR.
+    DenseSet<const Value *> SeenLastUse(LiveOut.begin(), LiveOut.end());
+      
+    // Scan BB backward 
+    for (const Instruction &I : reverse(BB)) {
+      if (I.isDebugOrPseudoInst() || isa<PHINode>(&I))
+        continue;
+
+      bool IsCand = insertBasisIfCand(&I, LiveSetWithSLSR, SeenLastUse);
+      for (const Value *Op : I.operand_values())
+        if (isRegisterLike(Op)) {
+          LiveSet.insert(Op);
+          if (IsCand && !SeenLastUse.contains(Op)) {
+            // Op is the last use. It will be replaced by Basis, so it isremoved from LiveSetWithSLSR.
+            // As a heuristic, we don't dicern which Op of I is replaced by Basis. 
+            // When IsCand is true, there is only reg-like one Op in practice.
+            // TODO: Can further restrict by Candidate's type and DeltaKind.
+            LiveSetWithSLSR.erase(Op);
+            dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op << " in inst " << I << "\n";
+          } else {
+            LiveSetWithSLSR.insert(Op);
+          }
+          // Op's insertion happens only if Op was not there before.
+          // This logic works as BB is scanned backward.
+          SeenLastUse.insert(Op);
+        }
+
+      // Compute RP reaching for this instruction.
+      unsigned W = 0;
+      for (const Value *V : LiveSet) {
+        // TODO: Cache regWeight(V)
+        auto RW = regWeight(V);
+        W += RW;
+      }
+      MaxW = std::max(MaxW, W);
+      W = 0;
+      for (const Value *V : LiveSetWithSLSR) {
+        // TODO: Cache regWeight(V)
+        auto RW = regWeight(V);
+        W += RW;
+      }
+      MaxWWithSLSR = std::max(MaxWWithSLSR, W);
+
+      // Remove the def (Instruction) from LiveSet for the next upward instruction.
+      if (!I.getType()->isVoidTy()) {
+        LiveSet.erase(&I);
+        LiveSetWithSLSR.erase(&I);
+      }
+    }
+
+    dbgs() << "MaxWWithSLSR: " << MaxWWithSLSR << "\n";
+
+    return MaxW;
+  }
+};
+} // end of anonymous namespace
+
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
   // Traverse the dominator tree in the depth-first order. This order makes sure
@@ -1510,6 +1891,25 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     addDependency(C, C.Basis);
   }
   sortCandidateInstructions();
+
+  ////////////////////////////////////////////////////
+  DenseMap<Instruction *, Candidate *> PickedCandidateMap;
+  for (Instruction *I : SortedCandidateInsts)
+    if (Candidate *C = pickRewriteCandidate(I))
+      PickedCandidateMap[I] = C;
+
+  RPFilter RPFilter(&F, PickedCandidateMap, TTI);
+  RPFilter.run();
+
+#if 0
+  DenseMap<const BasicBlock*, unsigned> BBToNumCands;
+  for (auto &InstCand : PickedCandidateMap) {
+    const BasicBlock *BB= InstCand.first->getParent();
+    auto [It, Inserted] = BBToNumCands.try_emplace(BB);
+    if (Inserted)
+      It->second = countCandsInBB(It->first, PickedCandidateMap);
+  }
+#endif
 
   // From SortedCandidateInsts, remove some candidates that are likely to
   // increase register pressure. The candidate's Inst is the source of
