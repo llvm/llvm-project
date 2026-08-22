@@ -79,7 +79,7 @@ _warningFlags = [
     "-flax-vector-conversions=none",
 ]
 
-_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26", "c++29"]
+_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26", "c++2d"]
 
 
 def getStdFlag(cfg, std):
