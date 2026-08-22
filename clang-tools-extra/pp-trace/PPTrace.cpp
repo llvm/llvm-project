@@ -129,7 +129,7 @@ int main(int argc, const char **argv) {
   using namespace clang::pp_trace;
   InitLLVM X(argc, argv);
   auto OptionsParser = clang::tooling::CommonOptionsParser::create(
-      argc, argv, Cat, llvm::cl::ZeroOrMore);
+      argc, argv, Cat, llvm::cl::OneOrMore);
   if (!OptionsParser)
     error(toString(OptionsParser.takeError()));
   // Parse the IgnoreCallbacks list into strings.
