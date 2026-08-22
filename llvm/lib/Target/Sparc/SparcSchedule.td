@@ -11,9 +11,13 @@
 
 def IIC_iu_or_fpu_instr : InstrItinClass;
 def IIC_iu_instr : InstrItinClass;
+def IIC_ld : InstrItinClass;
+def IIC_fpu_ld : InstrItinClass;
+def IIC_fpu_ldd : InstrItinClass;
 def IIC_fpu_normal_instr : InstrItinClass;
 def IIC_fpu_fast_instr : InstrItinClass;
-def IIC_jmp_or_call : InstrItinClass;
+def IIC_jmp : InstrItinClass;
+def IIC_call : InstrItinClass;
 def IIC_ldd : InstrItinClass;
 def IIC_st : InstrItinClass;
 def IIC_std : InstrItinClass;
@@ -21,7 +25,7 @@ def IIC_iu_smul : InstrItinClass;
 def IIC_iu_umul : InstrItinClass;
 def IIC_iu_div : InstrItinClass;
 def IIC_ticc : InstrItinClass;
-def IIC_ldstub : InstrItinClass;
+def IIC_atomic : InstrItinClass;
 def IIC_fpu_muls : InstrItinClass;
 def IIC_fpu_muld : InstrItinClass;
 def IIC_fpu_divs : InstrItinClass;
@@ -33,6 +37,11 @@ def IIC_fpu_movs : InstrItinClass;
 def IIC_fpu_negs : InstrItinClass;
 def IIC_smac_umac : InstrItinClass;
 def IIC_fpu_stod : InstrItinClass;
+def IIC_fpu_cmp : InstrItinClass;
+def IIC_branch : InstrItinClass;
+def IIC_fp_branch : InstrItinClass;
+def IIC_fpu_st : InstrItinClass;
+def IIC_fpu_std : InstrItinClass;
 
 def LEONIU : FuncUnit; // integer unit
 def LEONFPU : FuncUnit; // floating-point unit
@@ -43,9 +52,13 @@ def LEON2Itineraries : ProcessorItineraries<
 [LEONIU, LEONFPU], [], [
   InstrItinData<IIC_iu_or_fpu_instr, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_iu_instr, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_ld, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ld, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_normal_instr, [InstrStage<1, [LEONFPU]>], [7, 1]>,
   InstrItinData<IIC_fpu_fast_instr, [InstrStage<1, [LEONFPU]>], [7, 1]>,
-  InstrItinData<IIC_jmp_or_call, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
+  InstrItinData<IIC_jmp, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
+  InstrItinData<IIC_call, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_st, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_std, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
@@ -53,7 +66,7 @@ def LEON2Itineraries : ProcessorItineraries<
   InstrItinData<IIC_iu_umul, [InstrStage<1, [LEONIU]>], [5, 1]>,
   InstrItinData<IIC_iu_div, [InstrStage<1, [LEONIU]>], [35, 1]>,
   InstrItinData<IIC_ticc, [InstrStage<1, [LEONIU, LEONFPU]>], [4, 1]>,
-  InstrItinData<IIC_ldstub, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_atomic, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_fpu_muls, [InstrStage<1, [LEONFPU]>], [16, 1]>,
   InstrItinData<IIC_fpu_muld, [InstrStage<1, [LEONFPU]>], [21, 1]>,
   InstrItinData<IIC_fpu_divs, [InstrStage<1, [LEONFPU]>], [20, 1]>,
@@ -63,16 +76,25 @@ def LEON2Itineraries : ProcessorItineraries<
   InstrItinData<IIC_fpu_abs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_movs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_negs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
-  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [2, 1]>
+  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [2, 1]>,
+  InstrItinData<IIC_fpu_cmp, [InstrStage<1, [LEONFPU]>], [7, 1]>,
+  InstrItinData<IIC_branch, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_fp_branch, [InstrStage<1, [LEONFPU]>], [7, 1]>,
+  InstrItinData<IIC_fpu_st, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
+  InstrItinData<IIC_fpu_std, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>
 ]>;
 
 def LEON3Itineraries : ProcessorItineraries<
 [LEONIU, LEONFPU], [], [
   InstrItinData<IIC_iu_or_fpu_instr, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_iu_instr, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_ld, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ld, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_normal_instr, [InstrStage<1, [LEONFPU]>], [7, 1]>,
   InstrItinData<IIC_fpu_fast_instr, [InstrStage<1, [LEONFPU]>], [4, 1]>,
-  InstrItinData<IIC_jmp_or_call, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_jmp, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_call, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_st, [InstrStage<1, [LEONIU, LEONFPU]>], [4, 1]>,
   InstrItinData<IIC_std, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>,
@@ -81,7 +103,7 @@ def LEON3Itineraries : ProcessorItineraries<
   InstrItinData<IIC_iu_div, [InstrStage<1, [LEONIU]>], [35, 1]>,
   InstrItinData<IIC_smac_umac, [InstrStage<1, [LEONIU]>], [2, 1]>,
   InstrItinData<IIC_ticc, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>,
-  InstrItinData<IIC_ldstub, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_atomic, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_fpu_muls, [InstrStage<1, [LEONFPU]>], [4, 1]>,
   InstrItinData<IIC_fpu_muld, [InstrStage<1, [LEONFPU]>], [4, 1]>,
   InstrItinData<IIC_fpu_divs, [InstrStage<1, [LEONFPU]>], [16, 1]>,
@@ -91,16 +113,25 @@ def LEON3Itineraries : ProcessorItineraries<
   InstrItinData<IIC_fpu_abs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_movs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_negs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
-  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [4, 1]>
+  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [4, 1]>,
+  InstrItinData<IIC_fpu_cmp, [InstrStage<1, [LEONFPU]>], [4, 1]>,
+  InstrItinData<IIC_branch, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_fp_branch, [InstrStage<1, [LEONFPU]>], [7, 1]>,
+  InstrItinData<IIC_fpu_st, [InstrStage<1, [LEONIU, LEONFPU]>], [4, 1]>,
+  InstrItinData<IIC_fpu_std, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>
 ]>;
 
 def LEON4Itineraries : ProcessorItineraries<
 [LEONIU, LEONFPU], [], [
   InstrItinData<IIC_iu_or_fpu_instr, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_iu_instr, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_ld, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ld, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_fpu_normal_instr, [InstrStage<1, [LEONFPU]>], [7, 1]>,
   InstrItinData<IIC_fpu_fast_instr, [InstrStage<1, [LEONFPU]>], [4, 1]>,
-  InstrItinData<IIC_jmp_or_call, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_jmp, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_call, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_ldd, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_st, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
   InstrItinData<IIC_std, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
@@ -109,7 +140,7 @@ def LEON4Itineraries : ProcessorItineraries<
   InstrItinData<IIC_iu_div, [InstrStage<1, [LEONIU]>], [35, 1]>,
   InstrItinData<IIC_smac_umac, [InstrStage<1, [LEONIU]>], [2, 1]>,
   InstrItinData<IIC_ticc, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>,
-  InstrItinData<IIC_ldstub, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
+  InstrItinData<IIC_atomic, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_fpu_muls, [InstrStage<1, [LEONFPU]>], [4, 1]>,
   InstrItinData<IIC_fpu_muld, [InstrStage<1, [LEONFPU]>], [4, 1]>,
   InstrItinData<IIC_fpu_divs, [InstrStage<1, [LEONFPU]>], [16, 1]>,
@@ -119,5 +150,10 @@ def LEON4Itineraries : ProcessorItineraries<
   InstrItinData<IIC_fpu_abs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_movs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
   InstrItinData<IIC_fpu_negs, [InstrStage<1, [LEONFPU]>], [2, 1]>,
-  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [4, 1]>
+  InstrItinData<IIC_fpu_stod, [InstrStage<1, [LEONFPU]>], [4, 1]>,
+  InstrItinData<IIC_fpu_cmp, [InstrStage<1, [LEONFPU]>], [4, 1]>,
+  InstrItinData<IIC_branch, [InstrStage<1, [LEONIU]>], [1, 1]>,
+  InstrItinData<IIC_fp_branch, [InstrStage<1, [LEONFPU]>], [7, 1]>,
+  InstrItinData<IIC_fpu_st, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>,
+  InstrItinData<IIC_fpu_std, [InstrStage<1, [LEONIU, LEONFPU]>], [1, 1]>
 ]>;
