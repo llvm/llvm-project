@@ -891,6 +891,7 @@ FunctionPass *createRISCVPreRAExpandPseudoLegacyPass() {
 PreservedAnalyses
 RISCVPreRAExpandPseudoPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   bool Changed = RISCVPreRAExpandPseudoImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

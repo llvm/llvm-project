@@ -114,7 +114,7 @@ FunctionPass *createRISCVExpandPseudoPass();
 void initializeRISCVExpandPseudoPass(PassRegistry &);
 
 class RISCVPreRAExpandPseudoPass
-    : public OptionalPassInfoMixin<RISCVPreRAExpandPseudoPass> {
+    : public RequiredPassInfoMixin<RISCVPreRAExpandPseudoPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
