@@ -313,8 +313,9 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords) {
-  const MIMGInfo *Info =
-      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords);
+  const MIMGInfo *Info = getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding,
+                                             static_cast<uint8_t>(VDataDwords),
+                                             static_cast<uint8_t>(VAddrDwords));
   return Info ? Info->Opcode : -1;
 }
 
@@ -325,9 +326,9 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
 
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
-  const MIMGInfo *NewInfo =
-      getMIMGOpcodeHelper(OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
-                          NewChannels, OrigInfo->VAddrDwords);
+  const MIMGInfo *NewInfo = getMIMGOpcodeHelper(
+      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
+      static_cast<uint8_t>(NewChannels), OrigInfo->VAddrDwords);
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
@@ -487,8 +488,8 @@ int getMTBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMTBUFOpcode(unsigned BaseOpc, unsigned Elements) {
-  const MTBUFInfo *Info =
-      getMTBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
+  const MTBUFInfo *Info = getMTBUFInfoFromBaseOpcodeAndElements(
+      BaseOpc, static_cast<uint8_t>(Elements));
   return Info ? Info->Opcode : -1;
 }
 
@@ -518,8 +519,8 @@ int getMUBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMUBUFOpcode(unsigned BaseOpc, unsigned Elements) {
-  const MUBUFInfo *Info =
-      getMUBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
+  const MUBUFInfo *Info = getMUBUFInfoFromBaseOpcodeAndElements(
+      BaseOpc, static_cast<uint8_t>(Elements));
   return Info ? Info->Opcode : -1;
 }
 
@@ -701,7 +702,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     return {false, false};
   unsigned Key =
       (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
-  const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
+  const VOPDXYInfo *XYInfo = getVOPDXYInfo(static_cast<uint16_t>(Key));
   if (!XYInfo)
     return {false, false};
   return {XYInfo->IsX, XYInfo->IsY};
@@ -888,16 +889,17 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
   OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
-  const VOPDInfo *Info =
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(
+      static_cast<uint8_t>(OpX), static_cast<uint8_t>(OpY),
+      static_cast<uint8_t>(EncodingFamily), VOPD3);
   return Info ? Info->Opcode : -1;
 }
 
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
-  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(static_cast<uint8_t>(Info->OpX));
+  const auto *OpY = getVOPDBaseFromComponent(static_cast<uint8_t>(Info->OpY));
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -1990,7 +1992,7 @@ static int encodeCustomOperandVal(const CustomOperandVal &Op,
                                   int64_t InputVal) {
   if (InputVal < 0 || InputVal > Op.Max)
     return OPR_VAL_INVALID;
-  return Op.encode(InputVal);
+  return Op.encode(static_cast<unsigned>(InputVal));
 }
 
 static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
@@ -2416,7 +2418,7 @@ bool msgSupportsStream(int64_t MsgId, int64_t OpId,
 
 void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI) {
-  MsgId = Val & getMsgIdMask(STI);
+  MsgId = static_cast<uint16_t>(Val & getMsgIdMask(STI));
   if (isGFX11Plus(STI)) {
     OpId = 0;
     StreamId = 0;
@@ -2464,7 +2466,8 @@ bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI) {
 //===----------------------------------------------------------------------===//
 
 unsigned getInitialPSInputAddr(const Function &F) {
-  return F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0);
+  return static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0));
 }
 
 bool getHasColorExport(const Function &F) {
@@ -2479,8 +2482,8 @@ bool getHasDepthExport(const Function &F) {
 }
 
 unsigned getDynamicVGPRBlockSize(const Function &F) {
-  unsigned BlockSize =
-      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0);
+  unsigned BlockSize = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0));
 
   if (BlockSize == 16 || BlockSize == 32)
     return BlockSize;
@@ -3568,17 +3571,17 @@ convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
 std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
                                                    bool HasSetregVGPRMSBFixup) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
-  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
-                                    MI.getOperand(1).getImm(),
-                                    HasSetregVGPRMSBFixup);
+  return convertSetRegImmToVgprMSBs(
+      static_cast<unsigned>(MI.getOperand(0).getImm()),
+      static_cast<unsigned>(MI.getOperand(1).getImm()), HasSetregVGPRMSBFixup);
 }
 
 std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
                                                    bool HasSetregVGPRMSBFixup) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12);
-  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
-                                    MI.getOperand(1).getImm(),
-                                    HasSetregVGPRMSBFixup);
+  return convertSetRegImmToVgprMSBs(
+      static_cast<unsigned>(MI.getOperand(0).getImm()),
+      static_cast<unsigned>(MI.getOperand(1).getImm()), HasSetregVGPRMSBFixup);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
