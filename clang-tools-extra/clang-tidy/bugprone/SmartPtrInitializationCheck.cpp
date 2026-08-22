@@ -89,7 +89,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
       optionally(hasArgument(0, ignoringParenCasts(declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr"))))))
-        ).bind("sharedPtrInit");
+        );
         // TODO: need test with parens
 
   // Matcher for reset() calls
@@ -132,26 +132,14 @@ void SmartPtrInitializationCheck::check(
   assert(PointerArg && Record);
 
   if (RawPtrVar) {
-    const auto *SharedPtrInit = Result.Nodes.getNodeAs<CXXConstructExpr>("sharedPtrInit");
-    assert( SharedPtrInit);
-
     // Сохраняем информацию о сыром указателе и его инициализациях
     // Используем пару (функция, сырой указатель) как ключ
-    auto Key = RawPtrVar;
-
-    auto It = SharedPtrInitMap.find(Key);
-    if (It == SharedPtrInitMap.end()) {
-        SmallVector<const CXXConstructExpr *, 2> Inits;
-        Inits.push_back(SharedPtrInit);
-        SharedPtrInitMap[Key] = std::move(Inits);
-    } else {
-        It->second.push_back(SharedPtrInit);
-    }
+    const auto Key = RawPtrVar;
+    const unsigned InitsCount = ++SharedPtrInitMap[Key];
 
     // Проверяем, не использовался ли этот сырой указатель для инициализации
     // нескольких shared_ptr в одной функции
-    auto &Inits = SharedPtrInitMap[Key];
-    if (Inits.size() <= 1) {
+    if (InitsCount <= 1) {
         return;
     }
   }
