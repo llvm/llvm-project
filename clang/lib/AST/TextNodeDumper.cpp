@@ -1456,7 +1456,7 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   OS << ')';
 }
 
-void TextNodeDumper::dumpLV(const NamedDecl *ND) {
+void TextNodeDumper::dumpLinkageAndVisibility(const NamedDecl *ND) {
   switch (ND->getFormalLinkage()) {
   case Linkage::None:
     // A lot of declarations have no linkage, so we only dump linkage if there
@@ -2405,7 +2405,7 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
 
   const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
   if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpLV(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2427,7 +2427,7 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     dumpPointer(Instance);
   }
 
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2439,7 +2439,7 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
     OS << " definition";
 
   if (!D->isImplicit() && !D->getDescribedTemplate()) {
-    dumpLV(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2540,7 +2540,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   }
 
   if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
-    dumpLV(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2644,7 +2644,7 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   }
 
   if (!D->getDescribedVarTemplate()) {
-    dumpLV(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2763,7 +2763,7 @@ void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
   if (!D->isFirstDecl())
     dumpDeclRef(D->getFirstDecl(), "original");
 
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -2782,14 +2782,14 @@ void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
 
   const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
   if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpLV(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
     const TypeAliasTemplateDecl *D) {
   dumpName(D);
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
@@ -2950,17 +2950,17 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpName(D);
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -3271,7 +3271,7 @@ void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
 
 void TextNodeDumper::VisitConceptDecl(const ConceptDecl *D) {
   dumpName(D);
-  dumpLV(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
