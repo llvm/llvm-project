@@ -120,8 +120,18 @@ public:
 FunctionPass *createRISCVExpandPseudoLegacyPass();
 void initializeRISCVExpandPseudoLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPreRAExpandPseudoPass();
-void initializeRISCVPreRAExpandPseudoPass(PassRegistry &);
+class RISCVPreRAExpandPseudoPass
+    : public OptionalPassInfoMixin<RISCVPreRAExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createRISCVPreRAExpandPseudoLegacyPass();
+void initializeRISCVPreRAExpandPseudoLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVExpandAtomicPseudoPass();
 void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);

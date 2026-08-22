@@ -66,6 +66,7 @@ static_library("CPlusPlus") {
     "MsvcStl.cpp",
     "MsvcStlAtomic.cpp",
     "MsvcStlDeque.cpp",
+    "MsvcStlExpected.cpp",
     "MsvcStlSmartPointer.cpp",
     "MsvcStlSpan.cpp",
     "MsvcStlTree.cpp",
