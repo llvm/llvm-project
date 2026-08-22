@@ -10,7 +10,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--disable-pgo]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -40,6 +40,7 @@ set arm64=
 set skip-checkout=
 set local-python=
 set force-msvc=
+set disable-pgo=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -353,7 +354,9 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-call :do_generate_profile || exit /b 1
+if "%disable-pgo%" != "true" (
+  call :do_generate_profile || exit /b 1
+)
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
