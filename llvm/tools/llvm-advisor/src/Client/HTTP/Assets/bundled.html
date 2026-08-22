@@ -1106,39 +1106,10 @@ const isCorruptedString = (s) => {
 };
 
 const capabilityFriendlyNames = {
-  'llvm.ir.summary': 'IR Summary',
-  'llvm.ir.function_stats': 'IR Function Stats',
-  'llvm.ir.view': 'IR View',
-  'llvm.ir.diff': 'IR Diff',
-  'llvm.ir.passes.list': 'Pass Pipeline',
-  'clang.diag.summary': 'Diagnostics',
-  'clang.template_stats': 'Template Stats',
-  'clang.static_analysis': 'Static Analysis',
   'llvm.remarks.summary': 'Optimization Remarks',
   'llvm.remarks.detail': 'Remark Details',
-  'llvm.remarks.size_diff': 'Remark Size Diff',
-  'llvm.obj.summary': 'Binary Summary',
-  'llvm.obj.sections': 'Binary Sections',
-  'llvm.obj.symbols': 'Binary Symbols',
-  'llvm.debug.detail': 'Debug Info',
-  'llvm.debug.summary': 'Debug Summary',
-  'llvm.cfg': 'Control Flow Graph',
-  'llvm.dom_tree': 'Dominator Tree',
-  'llvm.call_graph': 'Call Graph',
-  'llvm.loop_info': 'Loop Info',
-  'llvm.selection_dag': 'Selection DAG',
-  'llvm.machine_ir': 'Machine IR',
-  'llvm.asm.view': 'Assembly',
-  'llvm.mca.report': 'Machine Code Analyzer',
-  'llvm.exegesis': 'Instruction Benchmarks',
-  'llvm.lto.summary': 'LTO Summary',
-  'llvm.lto.function_stats': 'LTO Function Stats',
-  'llvm.cgdata': 'CG Data',
-  'lld.mapfile': 'Linker Map',
-  'lld.mapfile.diff': 'Linker Map Diff',
-  'offload.binary.inspect': 'Offload Binary',
-  'runtime.correlate': 'Runtime Correlation',
-  'runtime.summary': 'Runtime Summary',
+  'llvm.remarks.relational': 'Relational Remarks',
+  'llvm.remarks.hotspot': 'Remark Hotspots',
   'build.compile_commands': 'Compile Commands',
 };
 
@@ -1275,26 +1246,15 @@ const ignoredMetricKeys = new Set([
 const CapabilityData = {
   category(capability) {
     const id = String(capability || '');
+    if (id.startsWith('llvm.remarks.')) return 'Remarks';
     if (id.startsWith('build.')) return 'Build';
-    if (id.startsWith('clang.')) return 'Clang';
-    if (id.startsWith('llvm.ir.') || id === 'llvm.inlining.tree' || id.startsWith('llvm.remarks.') || id.startsWith('llvm.pass.')) return 'IR';
-    if (id.startsWith('llvm.obj.') || id.startsWith('llvm.debug.') || id === 'llvm.cgdata' || id.startsWith('lld.mapfile')) return 'Binary';
-    if (id.startsWith('llvm.cfg') || id.startsWith('llvm.dom_tree') || id.startsWith('llvm.call_graph') || id.startsWith('llvm.loop_info') || id.startsWith('llvm.selection_dag') || id.startsWith('llvm.machine_ir') || id.startsWith('llvm.asm.') || id.startsWith('llvm.mca.') || id === 'llvm.exegesis') return 'Inspection';
-    if (id.startsWith('llvm.lto.')) return 'LTO';
-    if (id.startsWith('offload.')) return 'Offload';
-    if (id.startsWith('runtime.')) return 'Runtime';
     return 'Other';
   },
 
   shouldQueryCapability(spec, scope = 'unit') {
     const id = spec?.id || spec?.capability_id || '';
     if (!id) return false;
-    if (id === 'llvm.exegesis') return false;
-    if (id === 'clang.template_stats' || id === 'clang.static_analysis') return false;
-    if (id.startsWith('runtime.')) return false;
-    if (id === 'llvm.ir.diff' || id === 'llvm.remarks.size_diff' || id === 'lld.mapfile.diff')
-      return scope === 'compare';
-    return true;
+    return id.startsWith('llvm.remarks.');
   },
 
   isAvailable(value) {
@@ -1388,13 +1348,7 @@ const CapabilityData = {
   aggregate(unitResults) {
     const agg = {
       units: 0,
-      instructions: 0,
-      functions: 0,
-      warnings: 0,
-      errors: 0,
       remarks: 0,
-      sections: 0,
-      symbols: 0,
       unavailable: 0,
       metrics: {},
       capabilityCoverage: new Map(),
@@ -1437,10 +1391,7 @@ const CapabilityData = {
         agg.familyCoverage.set(family, familyEntry);
 
         const v = result.value;
-        const trackExplicitly = new Set([
-          'instructions', 'instruction_count', 'functions', 'function_count',
-          'warnings', 'errors', 'remarks', 'remark_count',
-        ]);
+        const trackExplicitly = new Set(['remarks', 'remark_count']);
         if (result.available) {
           Object.entries(result.metrics || {}).forEach(([key, raw]) => {
             if (typeof raw !== 'number' || !Number.isFinite(raw)) return;
@@ -1453,49 +1404,16 @@ const CapabilityData = {
             }
           });
         }
-        if (result.capability === 'llvm.ir.summary') {
-          const inst = Number(v.instructions || v.instruction_count || 0);
-          const fns = Number(v.functions || v.function_count || 0);
-          agg.instructions += inst;
-          agg.functions += fns;
-          row.instructions = inst || row.instructions || 0;
-          row.functions = fns || row.functions || 0;
-        }
-        if (result.capability === 'llvm.ir.function_stats') {
-          const total = Array.isArray(v.functions) ? v.functions.reduce((s, f) => s + Number(f.instructions || f.instruction_count || 0), 0) : 0;
-          row.instructions = row.instructions || total;
-          agg.instructions += row.instructions && !(v.instructions || v.instruction_count) ? 0 : Number(v.instructions || v.instruction_count || 0);
-        }
-        if (result.capability === 'clang.diag.summary') {
-          agg.warnings += Number(v.warnings || 0);
-          agg.errors += Number(v.errors || 0);
-          row.warnings = Number(v.warnings || 0);
-          row.errors = Number(v.errors || 0);
-        }
         if (result.capability === 'llvm.remarks.summary') {
           const cnt = Number(v.count || v.remark_count || 0);
           agg.remarks += cnt;
           row.remarks = cnt;
         }
-        if (result.capability === 'llvm.obj.summary') {
-          agg.sections += Number(v.sections || 0);
-          agg.symbols += Number(v.symbols || v.symbol_count || 0);
-          row.sections = Number(v.sections || 0);
-          row.symbols = Number(v.symbols || v.symbol_count || 0);
-        }
       });
       rows.push(row);
     });
     agg.rows = rows;
-    // Override metrics with correctly-tracked per-capability values to avoid
-    // double-counting (e.g. 'functions' from IR vs debug/AST capabilities).
-    if (agg.instructions) agg.metrics.instructions = agg.instructions;
-    if (agg.functions) agg.metrics.functions = agg.functions;
     if (agg.remarks) agg.metrics.remarks = agg.remarks;
-    if (agg.warnings) agg.metrics.warnings = agg.warnings;
-    if (agg.errors) agg.metrics.errors = agg.errors;
-    delete agg.metrics.instruction_count;
-    delete agg.metrics.function_count;
     delete agg.metrics.remark_count;
     agg.capabilities = Array.from(agg.capabilityCoverage.values()).sort((a, b) =>
       a.family === b.family ? a.capability.localeCompare(b.capability) : a.family.localeCompare(b.family)
@@ -2995,7 +2913,7 @@ const UnitsView = {
     }
     const [res, metrics] = await Promise.all([
       API.units(snap.id),
-      API.querySnapshot(snap.id, ['llvm.ir.summary', 'clang.diag.summary', 'llvm.obj.summary', 'llvm.remarks.summary']),
+      API.querySnapshot(snap.id, ['llvm.remarks.summary', 'llvm.remarks.detail']),
     ]);
     const units = Array.isArray(res.data) ? res.data : [];
     const byId = new Map();

@@ -93,7 +93,7 @@ const UnitsView = {
     }
     const [res, metrics] = await Promise.all([
       API.units(snap.id),
-      API.querySnapshot(snap.id, ['llvm.ir.summary', 'clang.diag.summary', 'llvm.obj.summary', 'llvm.remarks.summary']),
+      API.querySnapshot(snap.id, ['llvm.remarks.summary', 'llvm.remarks.detail']),
     ]);
     const units = Array.isArray(res.data) ? res.data : [];
     const byId = new Map();
