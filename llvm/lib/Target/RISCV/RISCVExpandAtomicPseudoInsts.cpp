@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that expands atomic pseudo instructions into
-// target instructions. This pass should be run at the last possible moment,
+// This file contains one of the several passes that expand pseudo instructions
+// into target instructions. This pass is run at the last possible moment,
 // avoiding the possibility for other passes to break the requirements for
 // forward progress in the LR/SC block.
 //
@@ -15,7 +15,7 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
+#include "RISCVSubtarget.h"
 
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

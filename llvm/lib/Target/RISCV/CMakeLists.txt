@@ -60,6 +60,7 @@ add_llvm_target(RISCVCodeGen
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
   RISCVPostRAExpandPseudoInsts.cpp
+  RISCVPreRAExpandPseudoInsts.cpp
   RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
   RISCVQCRelaxMarking.cpp
