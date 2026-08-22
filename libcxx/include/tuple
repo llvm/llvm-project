@@ -655,14 +655,14 @@ public:
   template <class... _Up,
             __enable_if_t< _And< _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> >::value,
                            int> = 0>
-    requires(__has_danglings<_Up...>())
+    requires(__constructs_dangling_reference<_Up...>())
   tuple(_Up&&...) = delete;
 
   template <class _Alloc,
             class... _Up,
             __enable_if_t< _And< _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> >::value,
                            int> = 0>
-    requires(__has_danglings<_Up...>())
+    requires(__constructs_dangling_reference<_Up...>())
   tuple(allocator_arg_t, const _Alloc&, _Up&&...) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
