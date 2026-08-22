@@ -20,6 +20,7 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace LegalityPredicates;
 
 WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
     const WebAssemblySubtarget &ST) {
@@ -66,6 +67,16 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalForCartesianProduct({i32}, {i32, i64})
+      .widenScalarToNextPow2(1)
+      .clampScalar(0, s32, s32)
+      .clampScalar(1, s32, s64);
+
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
+
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
   getActionDefinitionsBuilder({G_ANYEXT, G_SEXT, G_ZEXT})
       .legalFor({{i64, i32}})
       .clampScalar(0, s64, s64)
@@ -76,10 +87,17 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s32)
       .clampScalar(1, s64, s64);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .customFor(ST.hasSignExt(), {i32, i64})
-      .clampScalar(0, s32, s64)
-      .lower();
+  {
+    LegalizeRuleSet &Builder = getActionDefinitionsBuilder(G_SEXT_INREG);
+
+    if (ST.hasSignExt())
+      Builder.legalIf(
+          all(typeInSet(0, {i32, i64}),
+              LegalityPredicates::any(immInSet(0, {8, 16}),
+                                      all(typeIs(0, i64), immIs(0, 32)))));
+
+    Builder.clampScalar(0, s32, s64).lower();
+  }
 
   getActionDefinitionsBuilder({G_FCONSTANT, G_FABS, G_FNEG, G_FCEIL, G_FFLOOR,
                                G_INTRINSIC_TRUNC, G_FNEARBYINT, G_FRINT,
@@ -103,27 +121,45 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s32)
       .clampScalar(1, s64, s64);
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder(G_BITCAST)
+      .legalFor({{i32, f32}, {f32, i32}, {i64, f64}, {f64, i64}})
+      .clampScalar(0, s32, s64)
+      .clampScalar(1, s32, s64);
+
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+      .legalForCartesianProduct({i32, i64}, {f32, f64})
+      .clampScalar(0, s32, s64)
+      .minScalar(1, s32);
+
+  // TODO: once comparison ops are in place
+  /*if (ST.hasNontrappingFPToInt()) {
+    getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+        .legalForCartesianProduct({i32, i64}, {f32, f64})
+        .clampScalar(0, s32, s64)
+        .minScalar(1, s32);
+  } else {
+    getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+        .lowerForCartesianProduct({i32, i64}, {f32, f64})
+        .clampScalar(0, s32, s64)
+        .minScalar(1, s32);
+  }*/
+
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+      .legalForCartesianProduct({f32, f64}, {i32, i64})
+      .minScalar(0, s32)
+      .clampScalar(1, s32, s64);
+
+  getActionDefinitionsBuilder(G_SELECT)
+      .legalForCartesianProduct({i32, i64, f32, f64}, {i32})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
+      .clampScalar(1, s32, s32);
 }
 
 bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_SEXT_INREG: {
-    assert(MI.getOperand(2).isImm() && "Expected immediate");
-
-    // Mark only 8/16/32-bit SEXT_INREG as legal
-    auto [DstType, SrcType] = MI.getFirst2LLTs();
-    auto ExtFromWidth = MI.getOperand(2).getImm();
-
-    if (ExtFromWidth == 8 || ExtFromWidth == 16 ||
-        (DstType.getScalarSizeInBits() == 64 && ExtFromWidth == 32)) {
-      return true;
-    }
-
-    return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
-  }
   default:
     break;
   }

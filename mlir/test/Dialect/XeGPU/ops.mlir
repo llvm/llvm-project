@@ -103,7 +103,7 @@ gpu.func @prefetch_nd(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.create_nd_tdesc %src : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   // CHECK: xegpu.prefetch_nd %[[R0]][0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
-  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<8x16xf16>
+  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
   gpu.return
 }
 
@@ -112,7 +112,7 @@ gpu.func @prefetch_nd_2(%src: memref<48x64xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<48x64xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.create_nd_tdesc %src : memref<48x64xf16> -> !xegpu.tensor_desc<8x16xf16>
   // CHECK: xegpu.prefetch_nd %[[R0]][0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
-  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<8x16xf16>
+  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
   gpu.return
 }
 
@@ -121,7 +121,7 @@ gpu.func @prefetch_nd_offset_1(%src: memref<48x64xf16>, %x : index, %y : index) 
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<48x64xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.create_nd_tdesc %src : memref<48x64xf16> -> !xegpu.tensor_desc<8x16xf16>
   // CHECK: xegpu.prefetch_nd %[[R0]][%arg1, %arg2] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
-  xegpu.prefetch_nd %1[%x, %y] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<8x16xf16>
+  xegpu.prefetch_nd %1[%x, %y] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf16>
   gpu.return
 }
 
@@ -298,7 +298,7 @@ gpu.func @subgroup_store_nd(%dst: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]][0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
-  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
+  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
   gpu.return
 }
 
@@ -309,7 +309,7 @@ gpu.func @simt_store_nd(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0 : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   %2 = xegpu.create_nd_tdesc %src : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]][0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<48xf16>, !xegpu.tensor_desc<24x32xf16>
-  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<48xf16>, !xegpu.tensor_desc<24x32xf16>
+  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<48xf16>, !xegpu.tensor_desc<24x32xf16>
   gpu.return
 }
 
@@ -320,7 +320,7 @@ gpu.func @subgroup_store_nd_2(%dst: memref<24x32xf16>, %x : index) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]][%arg1] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<32xf16>, !xegpu.tensor_desc<32xf16>
-  xegpu.store_nd %1, %2[%x] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<32xf16>, !xegpu.tensor_desc<32xf16>
+  xegpu.store_nd %1, %2[%x] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<32xf16>, !xegpu.tensor_desc<32xf16>
   gpu.return
 }
 
@@ -331,7 +331,7 @@ gpu.func @subgroup_store_nd_offset_1(%dst: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]][0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<32xf16>, !xegpu.tensor_desc<32xf16>
-  xegpu.store_nd %1, %2[0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<32xf16>, !xegpu.tensor_desc<32xf16>
+  xegpu.store_nd %1, %2[0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<32xf16>, !xegpu.tensor_desc<32xf16>
   gpu.return
 }
 
@@ -342,7 +342,7 @@ gpu.func @simt_store_nd_2(%src: memref<24x32xf16>) {
   // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0 : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   %2 = xegpu.create_nd_tdesc %src : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]][0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<2xf16>, !xegpu.tensor_desc<32xf16>
-  xegpu.store_nd %1, %2[0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<2xf16>, !xegpu.tensor_desc<32xf16>
+  xegpu.store_nd %1, %2[0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<2xf16>, !xegpu.tensor_desc<32xf16>
   gpu.return
 }
 
@@ -452,12 +452,29 @@ gpu.func @subgroup_store_offset_1(%dest: memref<?xf16>) {
   gpu.return
 }
 
+// CHECK: gpu.func @load_contiguity(%[[arg0:.*]]: i64, %[[arg1:.*]]: vector<16xindex>, %[[arg2:.*]]: vector<16xi1>) {
+gpu.func @load_contiguity(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // A user-provided `contiguity` round-trips through the optional op attribute.
+  // CHECK: xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{contiguity = 4 : i64}> : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  gpu.return
+}
+
+// CHECK: gpu.func @store_contiguity(%[[arg0:.*]]: vector<16xf32>, %[[arg1:.*]]: i64, %[[arg2:.*]]: vector<16xindex>, %[[arg3:.*]]: vector<16xi1>) {
+gpu.func @store_contiguity(%val: vector<16xf32>, %dest: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] <{contiguity = 4 : i64}> : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
+  xegpu.store %val, %dest[%offset], %mask <{contiguity = 4 : i64}>
+      : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
+  gpu.return
+}
+
 // CHECK: gpu.func @prefetch_offset(%[[arg0:.*]]: ui64) {
 gpu.func @prefetch_offset(%src: ui64) {
   //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // CHECK: xegpu.prefetch %[[arg0]][%cst] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, offset_align_byte = 2 : i64}> : ui64, vector<4xindex>
-  xegpu.prefetch %src[%0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, offset_align_byte = 2}>: ui64, vector<4xindex>
+  xegpu.prefetch %src[%0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, offset_align_byte = 2}> : ui64, vector<4xindex>
   gpu.return
 }
 
@@ -523,39 +540,48 @@ gpu.func @fence() {
 
 // CHECK-LABEL: gpu.func @create_mem_desc({{.*}}) {
 gpu.func @create_mem_desc() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16>
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_with_stride({{.*}}) {
 gpu.func @create_mem_desc_with_stride() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_from_2d_memref({{.*}}) {
 gpu.func @create_mem_desc_from_2d_memref() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<16x64xf16, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<16x64xf16, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<16x64xf16, 3> -> !xegpu.mem_desc<16x64xf16>
-  %m = memref.alloca() {alignment = 1024} : memref<16x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<16x64xf16, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<16x64xf16, 3> -> !xegpu.mem_desc<16x64xf16>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_with_stride_from_2d_memref({{.*}}) {
 gpu.func @create_mem_desc_with_stride_from_2d_memref() {
-  //CHECK: %[[ALLOC:.+]] = memref.alloca() {alignment = 1024 : i64} : memref<32x64xf16, 3>
+  //CHECK: %[[ALLOC:.+]] = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
   //CHECK: %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][16, 0] [16, 64] [1, 1] : memref<32x64xf16, 3> to memref<16x64xf16, strided<[64, 1], offset: 1024>, 3>
   //CHECK: %{{.+}} = xegpu.create_mem_desc %[[SUBVIEW]] : memref<16x64xf16, strided<[64, 1], offset: 1024>, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
-  %m = memref.alloca() {alignment = 1024} : memref<32x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
   %m_sub = memref.subview %m[16, 0][16, 64][1,1] : memref<32x64xf16, 3> to memref<16x64xf16, strided<[64, 1], offset: 1024>, 3>
   %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x64xf16, strided<[64, 1], offset: 1024>, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mem_desc_from_3d_memref({{.*}}) {
+gpu.func @create_mem_desc_from_3d_memref() {
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<1x16x64xf16, 3>
+  //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
+  %m = memref.alloca() alignment = 1024 : memref<1x16x64xf16, 3>
+  %mem_desc = xegpu.create_mem_desc %m : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
   gpu.return
 }
 
@@ -582,8 +608,8 @@ gpu.func @simt_load_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
 
 // CHECK: gpu.func @simt_load_matrix_subgroup_block_io(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>)
 gpu.func @simt_load_matrix_subgroup_block_io(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>) {
-  // CHECK: xegpu.load_matrix [[ARG0]][8, 16] <{subgroup_block_io}>: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>> -> vector<8xf16>
-  %data = xegpu.load_matrix %arg0[8, 16] <{subgroup_block_io}>: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>> -> vector<8xf16>
+  // CHECK: xegpu.load_matrix [[ARG0]][8, 16] <{subgroup_block_io}> : !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>> -> vector<8xf16>
+  %data = xegpu.load_matrix %arg0[8, 16] <{subgroup_block_io}> : !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>> -> vector<8xf16>
   gpu.return
 }
 
@@ -617,8 +643,8 @@ gpu.func @simt_store_matrix(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<1xf
 
 // CHECK: gpu.func @simt_store_matrix_subgroup_block_io(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>, %arg1: vector<8xf16>)
 gpu.func @simt_store_matrix_subgroup_block_io(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>, %arg1: vector<8xf16>) {
-  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 16] <{subgroup_block_io}>: vector<8xf16>, !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>
-  xegpu.store_matrix %arg1, %arg0[8, 16] <{subgroup_block_io}>: vector<8xf16>, !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>
+  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 16] <{subgroup_block_io}> : vector<8xf16>, !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>
+  xegpu.store_matrix %arg1, %arg0[8, 16] <{subgroup_block_io}> : vector<8xf16>, !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<block = [16, 16]>>
   gpu.return
 }
 
@@ -645,15 +671,15 @@ gpu.func @store_matrix_1d(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<16xf16>)
 
 // CHECK-LABEL: gpu.func @load_matrix_1d_block_io
 gpu.func @load_matrix_1d_block_io(%arg0: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>) {
-  // CHECK: xegpu.load_matrix %{{.+}}[0] <{subgroup_block_io}>: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
-  %data = xegpu.load_matrix %arg0[0] <{subgroup_block_io}>: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
+  // CHECK: xegpu.load_matrix %{{.+}}[0] <{subgroup_block_io}> : !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
+  %data = xegpu.load_matrix %arg0[0] <{subgroup_block_io}> : !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @store_matrix_1d_block_io
 gpu.func @store_matrix_1d_block_io(%arg0: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>, %arg1: vector<16xf16>) {
-  // CHECK: xegpu.store_matrix %{{.+}}, %{{.+}}[0] <{subgroup_block_io}>: vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
-  xegpu.store_matrix %arg1, %arg0[0] <{subgroup_block_io}>: vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
+  // CHECK: xegpu.store_matrix %{{.+}}, %{{.+}}[0] <{subgroup_block_io}> : vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
+  xegpu.store_matrix %arg1, %arg0[0] <{subgroup_block_io}> : vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
   gpu.return
 }
 
@@ -668,6 +694,48 @@ gpu.func @simt_load_matrix_1d(%arg0: !xegpu.mem_desc<64xf16>) {
 gpu.func @truncf(%a: vector<8x16xf16>) {
   // CHECK: %{{.+}} = xegpu.truncf %{{.+}} : vector<8x16xf16> -> vector<8x16xf8E5M2>
   %1 = xegpu.truncf %a : vector<8x16xf16> -> vector<8x16xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f4
+gpu.func @lane_shuffle_pack_f4(%a: vector<4xf4E2M1FN>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xf4E2M1FN>
+  %1 = xegpu.lane_shuffle %a pack : vector<4xf4E2M1FN>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f4
+gpu.func @lane_shuffle_unpack_f4(%a: vector<4xf4E2M1FN>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xf4E2M1FN>
+  %1 = xegpu.lane_shuffle %a unpack : vector<4xf4E2M1FN>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f8
+gpu.func @lane_shuffle_pack_f8(%a: vector<4xf8E5M2>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xf8E5M2>
+  %1 = xegpu.lane_shuffle %a pack : vector<4xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f8
+gpu.func @lane_shuffle_unpack_f8(%a: vector<4xf8E5M2>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xf8E5M2>
+  %1 = xegpu.lane_shuffle %a unpack : vector<4xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f16
+gpu.func @lane_shuffle_pack_f16(%a: vector<2xf16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<2xf16>
+  %1 = xegpu.lane_shuffle %a pack : vector<2xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f16
+gpu.func @lane_shuffle_unpack_f16(%a: vector<2xf16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<2xf16>
+  %1 = xegpu.lane_shuffle %a unpack : vector<2xf16>
   gpu.return
 }
 

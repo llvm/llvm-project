@@ -83,9 +83,6 @@ static cl::opt<bool> DisableMachineLICM("disable-machine-licm", cl::Hidden,
     cl::desc("Disable Machine LICM"));
 static cl::opt<bool> DisableMachineCSE("disable-machine-cse", cl::Hidden,
     cl::desc("Disable Machine Common Subexpression Elimination"));
-static cl::opt<cl::boolOrDefault> OptimizeRegAlloc(
-    "optimize-regalloc", cl::Hidden,
-    cl::desc("Enable optimized register allocation compilation path."));
 static cl::opt<bool> DisablePostRAMachineLICM("disable-postra-machine-licm",
     cl::Hidden,
     cl::desc("Disable Machine LICM"));
@@ -499,42 +496,41 @@ void TargetPassConfig::setStartStopPasses() {
 CGPassBuilderOption llvm::getCGPassBuilderOption() {
   CGPassBuilderOption Opt;
 
-#define SET_OPTION(Option)                                                     \
+#define SET_OPTION_IF_PRESENT(Option)                                          \
   if (Option.getNumOccurrences())                                              \
     Opt.Option = Option;
 
+  SET_OPTION_IF_PRESENT(EnableGlobalISelAbort)
+  SET_OPTION_IF_PRESENT(EnableIPRA)
+
+#define SET_OPTION(Option) Opt.Option = Option;
+
   SET_OPTION(EnableFastISelOption)
-  SET_OPTION(EnableGlobalISelAbort)
   SET_OPTION(EnableGlobalISelOption)
-  SET_OPTION(EnableIPRA)
-  SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)
   SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-
-#define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
-
-  SET_BOOLEAN_OPTION(EarlyLiveIntervals)
-  SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
-  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
-  SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
-  SET_BOOLEAN_OPTION(EnableMachineOutliner)
-  SET_BOOLEAN_OPTION(MISchedPostRA)
-  SET_BOOLEAN_OPTION(DisableLSR)
-  SET_BOOLEAN_OPTION(DisableConstantHoisting)
-  SET_BOOLEAN_OPTION(DisableCGP)
-  SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
-  SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintISelInput)
-  SET_BOOLEAN_OPTION(PrintRegUsage)
-  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
-  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
-  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
-  SET_BOOLEAN_OPTION(DisableCFIFixup)
-  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
+  SET_OPTION(EarlyLiveIntervals)
+  SET_OPTION(EnableBlockPlacementStats)
+  SET_OPTION(EnableGlobalMergeFunc)
+  SET_OPTION(EnableImplicitNullChecks)
+  SET_OPTION(EnableMachineOutliner)
+  SET_OPTION(MISchedPostRA)
+  SET_OPTION(DisableLSR)
+  SET_OPTION(DisableConstantHoisting)
+  SET_OPTION(DisableCGP)
+  SET_OPTION(DisablePartialLibcallInlining)
+  SET_OPTION(DisableSelectOptimize)
+  SET_OPTION(PrintISelInput)
+  SET_OPTION(PrintRegUsage)
+  SET_OPTION(DebugifyAndStripAll)
+  SET_OPTION(DebugifyCheckAndStripAll)
+  SET_OPTION(DisableRAFSProfileLoader)
+  SET_OPTION(DisableCFIFixup)
+  SET_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
@@ -543,7 +539,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \
@@ -802,9 +798,9 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  bool Verify = VerifyMachineCode == cl::BOU_TRUE;
+  bool Verify = VerifyMachineCode == cl::boolOrDefault::BOU_TRUE;
 #ifdef EXPENSIVE_CHECKS
-  if (VerifyMachineCode == cl::BOU_UNSET)
+  if (VerifyMachineCode == cl::boolOrDefault::BOU_UNSET)
     Verify = TM->isMachineVerifierClean();
 #endif
   if (Verify)
@@ -820,22 +816,22 @@ void TargetPassConfig::addStripDebugPass() {
 }
 
 void TargetPassConfig::addCheckDebugPass() {
-  PM->add(createCheckDebugMachineModulePass());
+  PM->add(createCheckDebugMachineModuleLegacyPass());
 }
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
   if (AllowDebugify && DebugifyIsSafe &&
-      (DebugifyAndStripAll == cl::BOU_TRUE ||
-       DebugifyCheckAndStripAll == cl::BOU_TRUE))
+      (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE ||
+       DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE))
     addDebugifyPass();
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
   if (DebugifyIsSafe) {
-    if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
+    if (DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE) {
       addCheckDebugPass();
       addStripDebugPass();
-    } else if (DebugifyAndStripAll == cl::BOU_TRUE)
+    } else if (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE)
       addStripDebugPass();
   }
   addVerifyPass(Banner);
@@ -994,17 +990,17 @@ void TargetPassConfig::addISelPrepare() {
 
 bool TargetPassConfig::addCoreISelPasses() {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
-  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
+  TM->setO0WantsFastISel(EnableFastISelOption != cl::boolOrDefault::BOU_FALSE);
 
   // Determine an instruction selector.
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
   SelectorType Selector;
 
-  if (EnableFastISelOption == cl::BOU_TRUE)
+  if (EnableFastISelOption == cl::boolOrDefault::BOU_TRUE)
     Selector = SelectorType::FastISel;
-  else if (EnableGlobalISelOption == cl::BOU_TRUE ||
+  else if (EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE ||
            (TM->Options.EnableGlobalISel &&
-            EnableGlobalISelOption != cl::BOU_FALSE))
+            EnableGlobalISelOption != cl::boolOrDefault::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
   else if (TM->getOptLevel() == CodeGenOptLevel::None &&
            TM->getO0WantsFastISel())
@@ -1288,8 +1284,8 @@ void TargetPassConfig::addMachinePasses() {
     // The static data splitter pass is a machine function pass. and
     // static data annotator pass is a module-wide pass. See the file comment
     // in StaticDataAnnotator.cpp for the motivation.
-    addPass(createStaticDataSplitterPass());
-    addPass(createStaticDataAnnotatorPass());
+    addPass(createStaticDataSplitterLegacyPass());
+    addPass(createStaticDataAnnotatorLegacyPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
@@ -1313,7 +1309,7 @@ void TargetPassConfig::addMachinePasses() {
   addPostBBSections();
 
   if (!DisableCFIFixup && TM->Options.EnableCFIFixup)
-    addPass(createCFIFixup());
+    addPass(createCFIFixupLegacy());
 
   PM->add(createStackFrameLayoutAnalysisPass());
 
@@ -1366,16 +1362,6 @@ void TargetPassConfig::addMachineSSAOptimization() {
 /// Register Allocation Pass Configuration
 //===---------------------------------------------------------------------===//
 
-bool TargetPassConfig::getOptimizeRegAlloc() const {
-  switch (OptimizeRegAlloc) {
-  case cl::BOU_UNSET:
-    return getOptLevel() != CodeGenOptLevel::None;
-  case cl::BOU_TRUE:  return true;
-  case cl::BOU_FALSE: return false;
-  }
-  llvm_unreachable("Invalid optimize-regalloc state");
-}
-
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
 static llvm::once_flag InitializeDefaultRegisterAllocatorFlag;
@@ -1388,6 +1374,18 @@ defaultRegAlloc("default",
 static void initializeDefaultRegisterAllocatorOnce() {
   if (!RegisterRegAlloc::getDefault())
     RegisterRegAlloc::setDefault(RegAlloc);
+}
+
+bool TargetPassConfig::getOptimizeRegAlloc() const {
+  // An explicit -regalloc choice implies its pipeline: only the fast
+  // allocator uses the unoptimized one.
+  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
+                  initializeDefaultRegisterAllocatorOnce);
+  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
+  if (Ctor != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator)
+    return Ctor !=
+           (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator;
+  return getOptLevel() != CodeGenOptLevel::None;
 }
 
 /// Instantiate the default register allocator pass for this target for either
@@ -1415,10 +1413,8 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
-  // Initialize the global default.
-  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
-                  initializeDefaultRegisterAllocatorOnce);
-
+  // getOptimizeRegAlloc, called before the pipeline branches, has initialized
+  // the global default.
   RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
@@ -1594,10 +1590,6 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
-}
-
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {

@@ -14,5 +14,7 @@
       }
     }
   ],
-  "data": []
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
 }

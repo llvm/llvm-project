@@ -49,8 +49,6 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
-  static const FeatureBitset InlineInverseFeatures;
-
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
 
@@ -74,7 +72,7 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {},
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
@@ -173,7 +171,8 @@ public:
     return VF.getKnownMinValue() * ST->getVScaleForTuning();
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool prefersVectorizedAddressing() const override;
 
@@ -209,7 +208,7 @@ public:
                                  const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
@@ -219,20 +218,20 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
       TTI::VectorInstrContext VIC =
           TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getVectorInstrCost(const Instruction &I, Type *Val,
+  getVectorInstrCost(const Instruction &I, Type *Ty,
                      TTI::TargetCostKind CostKind, unsigned Index,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Ty,
                                    TTI::TargetCostKind CostKind,
                                    unsigned Index) const override;
 
@@ -298,10 +297,8 @@ public:
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() && ST->hasBF16())
-      return true;
-
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() || Ty->isFloatTy() ||
+        Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
@@ -315,10 +312,11 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
-        DataType->getPrimitiveSizeInBits() != 128)
-      return false; // Fall back to scalarization of masked operations.
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
+      unsigned Bits = DataType->getPrimitiveSizeInBits();
+      if (Bits != 64 && Bits != 128)
+        return false; // Fall back to scalarization of masked operations.
+    }
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
@@ -456,6 +454,8 @@ public:
 
   unsigned getGISelRematGlobalCost() const override { return 2; }
 
+  InstructionCost getBranchMispredictPenalty() const override;
+
   unsigned getMinTripCountTailFoldingThreshold() const override {
     return ST->hasSVE() ? 5 : 0;
   }
@@ -465,7 +465,7 @@ public:
                         : TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
+  bool preferFixedOverScalableIfEqualCost() const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 

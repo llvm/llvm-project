@@ -25,6 +25,8 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
@@ -113,6 +115,7 @@ REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
 REGISTER_ENUM_TYPE(CConv);
 REGISTER_ENUM_TYPE(TailCallKind);
+REGISTER_ENUM_TYPE(ThreadLocalMode);
 REGISTER_ENUM_TYPE(Visibility);
 } // namespace
 
@@ -1122,13 +1125,47 @@ void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   return setOperand(0, cast<Value>(callee));
 }
 
+/// Return the number of leading callee operands of `callOp` that the operation
+/// consumes instead of passing them to the callee.
+template <typename OpTy>
+static unsigned getNumConsumedCalleeOperands(OpTy callOp) {
+  // The first operand is the callee if no callee attribute is present.
+  if (callOp.getCallee().has_value())
+    return 0;
+  return 1;
+}
+
+/// Return the operands of `callOp` that are passed to the callee, including the
+/// variadic arguments in case of a call to a variadic callee.
+template <typename OpTy>
+static Operation::operand_range getOperandsPassedToCallee(OpTy callOp) {
+  return callOp.getCalleeOperands().drop_front(
+      getNumConsumedCalleeOperands(callOp));
+}
+
+/// Return the operands of `callOp` that correspond to the declared parameters
+/// of the callee, i.e., its `CallOpInterface` argument operands.
+///
+/// The variadic arguments of a call to a variadic callee are *not* included:
+/// they do not correspond to any argument of the callee. The callee does not
+/// receive them as block arguments but reads them with `llvm.intr.vastart` and
+/// friends, so in terms of `CallOpInterface` they are consumed operands rather
+/// than forwarded ones.
+template <typename OpTy>
+static Operation::operand_range getArgOperandsImpl(OpTy callOp) {
+  Operation::operand_range operands = getOperandsPassedToCallee(callOp);
+  if (std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType())
+    return operands.take_front(varCalleeType->getNumParams());
+  return operands;
+}
+
 Operation::operand_range CallOp::getArgOperands() {
-  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getArgOperandsImpl(*this);
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
-                             getCalleeOperands().size());
+  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
+                             getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1160,6 +1197,11 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
 /// the `callOp` argument and result types.
 template <typename OpTy>
 static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+  // An indirect call stores the callee in its first callee operand.
+  if (!callOp.getCallee().has_value() && callOp.getCalleeOperands().empty())
+    return callOp.emitOpError(
+        "must have either a `callee` attribute or at least an operand");
+
   std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
   if (!varCalleeType)
     return success();
@@ -1169,15 +1211,19 @@ static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
     return callOp.emitOpError(
         "expected var_callee_type to be a variadic function type");
 
+  // Note: `getArgOperands` is derived from `var_callee_type`, so the raw callee
+  // operands are used here instead.
+  Operation::operand_range passedOperands = getOperandsPassedToCallee(callOp);
+
   // Verify the variadic callee type has at most as many parameters as the call
   // has argument operands.
-  if (varCalleeType->getNumParams() > callOp.getArgOperands().size())
+  if (varCalleeType->getNumParams() > passedOperands.size())
     return callOp.emitOpError("expected var_callee_type to have at most ")
-           << callOp.getArgOperands().size() << " parameters";
+           << passedOperands.size() << " parameters";
 
   // Verify the variadic callee type matches the call argument types.
   for (auto [paramType, operand] :
-       llvm::zip(varCalleeType->getParams(), callOp.getArgOperands()))
+       llvm::zip(varCalleeType->getParams(), passedOperands))
     if (paramType != operand.getType())
       return callOp.emitOpError()
              << "var_callee_type parameter type mismatch: " << paramType
@@ -1227,20 +1273,17 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // or indirect call.
   Type fnType;
 
-  bool isIndirect = false;
-
   // If this is an indirect call, the callee attribute is missing.
   FlatSymbolRefAttr calleeName = getCalleeAttr();
   if (!calleeName) {
-    isIndirect = true;
-    if (!getNumOperands())
-      return emitOpError(
-          "must have either a `callee` attribute or at least an operand");
+    // Note: `verifyCallOpVarCalleeType` has already checked that there is a
+    // callee operand.
     auto ptrType = llvm::dyn_cast<LLVMPointerType>(getOperand(0).getType());
     if (!ptrType)
       return emitOpError("indirect call expects a pointer as callee: ")
              << getOperand(0).getType();
 
+    // Nothing else to verify: an indirect callee cannot be resolved.
     return success();
   } else {
     Operation *callee =
@@ -1274,27 +1317,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (funcType.isVarArg() && !getVarCalleeType())
     return emitOpError() << "missing var_callee_type attribute for vararg call";
 
-  // Verify that the operand and result types match the callee.
-
-  if (!funcType.isVarArg() &&
-      funcType.getNumParams() != (getCalleeOperands().size() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getCalleeOperands().size() - isIndirect)
-                         << ") for callee (expecting: "
-                         << funcType.getNumParams() << ")";
-
-  if (funcType.getNumParams() > (getCalleeOperands().size() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getCalleeOperands().size() - isIndirect)
-                         << ") for varargs callee (expecting at least: "
-                         << funcType.getNumParams() << ")";
-
-  for (unsigned i = 0, e = funcType.getNumParams(); i != e; ++i)
-    if (getOperand(i + isIndirect).getType() != funcType.getParamType(i))
-      return emitOpError() << "operand type mismatch for operand " << i << ": "
-                           << getOperand(i + isIndirect).getType()
-                           << " != " << funcType.getParamType(i);
-
+  // Verify the result types. These checks are more specific than what
+  // `verifyCallOpInterface` can report, so they are run first.
   if (getNumResults() == 0 &&
       !llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
     return emitOpError() << "expected function call to produce a value";
@@ -1312,7 +1336,14 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError() << "result type mismatch: " << getResult().getType()
                          << " != " << funcType.getReturnType();
 
-  return success();
+  // Verify that the operand types match the callee. Note that this does not
+  // need to special-case a variadic callee: the variadic arguments are not
+  // argument operands.
+  SmallVector<Type, 1> calleeResultTypes;
+  if (!llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
+    calleeResultTypes.push_back(funcType.getReturnType());
+  return call_interface_impl::verifyCallOpInterface(*this, funcType.getParams(),
+                                                    calleeResultTypes);
 }
 
 void CallOp::print(OpAsmPrinter &p) {
@@ -1567,7 +1598,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1576,8 +1608,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
-        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr, {}, {},
-        normal, unwind);
+        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
+        /*default_func_attrs=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1587,7 +1619,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1615,12 +1648,12 @@ void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {
-  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getArgOperandsImpl(*this);
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
-                             getCalleeOperands().size());
+  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
+                             getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -2369,12 +2402,15 @@ LogicalResult ComdatOp::verifyRegions() {
 void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
-                     bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
-                     ArrayRef<NamedAttribute> attrs,
+                     bool dsoLocal, ThreadLocalMode threadModel,
+                     SymbolRefAttr comdat, ArrayRef<NamedAttribute> attrs,
                      ArrayRef<Attribute> dbgExprs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
+  result.addAttribute(
+      getTlsModeAttrName(result.name),
+      ThreadLocalModeAttr::get(builder.getContext(), threadModel));
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
                         builder.getUnitAttr());
@@ -2382,9 +2418,6 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
     result.addAttribute(getValueAttrName(result.name), value);
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
-                        builder.getUnitAttr());
-  if (threadLocal)
-    result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
   if (comdat)
     result.addAttribute(getComdatAttrName(result.name), comdat);
@@ -2416,8 +2449,15 @@ static void printCommonGlobalAndAlias(OpAsmPrinter &p, OpType op) {
   StringRef visibility = stringifyVisibility(op.getVisibility_());
   if (!visibility.empty())
     p << visibility << ' ';
-  if (op.getThreadLocal_())
-    p << "thread_local ";
+
+  if (ThreadLocalMode mode = op.getTlsMode();
+      mode != ThreadLocalMode::NotThreadLocal) {
+    p << "thread_local";
+    if (mode != ThreadLocalMode::GeneralDynamic)
+      p << '(' << mode << ')';
+    p << ' ';
+  }
+
   if (auto unnamedAddr = op.getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
@@ -2444,7 +2484,7 @@ void GlobalOp::print(OpAsmPrinter &p) {
                           {SymbolTable::getSymbolAttrName(),
                            getGlobalTypeAttrName(), getConstantAttrName(),
                            getValueAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
                            getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
@@ -2508,9 +2548,25 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
                               parser, LLVM::Visibility::Default)));
 
-  if (succeeded(parser.parseOptionalKeyword("thread_local")))
-    result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
+  if (succeeded(parser.parseOptionalKeyword("thread_local"))) {
+    ThreadLocalMode threadModel = ThreadLocalMode::GeneralDynamic;
+
+    if (succeeded(parser.parseOptionalLParen())) {
+      SMLoc kwLoc;
+      if (parser.getCurrentLocation(&kwLoc))
+        return failure();
+      threadModel = parseOptionalLLVMKeyword<ThreadLocalMode>(
+          parser, ThreadLocalMode::NotThreadLocal);
+      if (threadModel == ThreadLocalMode::NotThreadLocal) {
+        parser.emitError(kwLoc, "invalid value for thread_local");
+        return failure();
+      }
+      if (parser.parseRParen())
+        return failure();
+    }
+    result.addAttribute(OpType::getTlsModeAttrName(result.name),
+                        ThreadLocalModeAttr::get(ctx, threadModel));
+  }
 
   // Parse optional UnnamedAddr, default to None.
   result.addAttribute(OpType::getUnnamedAddrAttrName(result.name),
@@ -2523,7 +2579,8 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
 
 // operation ::= `llvm.mlir.global` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
-//               `thread_local`? `constant`? `@` identifier
+//               (`thread_local` (`(` tls-mode `)`)? )?
+//               `constant`? `@` identifier
 //               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
 //               attribute-list? (`:` type)? region?
 //
@@ -2761,15 +2818,16 @@ LogicalResult GlobalDtorsOp::verify() {
 
 void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
                     Linkage linkage, StringRef name, bool dsoLocal,
-                    bool threadLocal, ArrayRef<NamedAttribute> attrs) {
+                    ThreadLocalMode threadModel,
+                    ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
+  result.addAttribute(
+      getTlsModeAttrName(result.name),
+      ThreadLocalModeAttr::get(builder.getContext(), threadModel));
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
-                        builder.getUnitAttr());
-  if (threadLocal)
-    result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
 
   result.addAttribute(getLinkageAttrName(result.name),
@@ -2786,7 +2844,7 @@ void AliasOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {SymbolTable::getSymbolAttrName(),
                            getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
                            getVisibility_AttrName()});
 
   // Print the trailing type.
@@ -2797,8 +2855,8 @@ void AliasOp::print(OpAsmPrinter &p) {
 
 // operation ::= `llvm.mlir.alias` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
-//               `thread_local`? `@` identifier
-//               `(` attribute? `)`
+//               (`thread_local` (`(` tls-mode `)`)? )?
+//               `@` identifier `(` attribute? `)`
 //               attribute-list? `:` type region
 //
 ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -3043,7 +3101,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        builder.getI64IntegerAttr(functionEntryCount.value()));
+                        FunctionEntryCountAttr::get(
+                            builder.getContext(), *functionEntryCount,
+                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -3867,10 +3927,16 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
-  auto resultType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getResult().getType()));
-  auto sourceType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getArg().getType()));
+  Type srcElemType = extractVectorElementType(getArg().getType());
+  Type dstElemType = extractVectorElementType(getResult().getType());
+
+  // TODO: 'bitcast' requires result and operand type to be identical in size.
+  // Byte types may be cast from/to any type pointer constraints.
+  if (isa<LLVMByteType>(srcElemType) || isa<LLVMByteType>(dstElemType))
+    return success();
+
+  auto resultType = llvm::dyn_cast<LLVMPointerType>(dstElemType);
+  auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
 
   // If one of the types is a pointer (or vector of pointers), then
   // both source and result type have to be pointers.
@@ -4171,9 +4237,23 @@ LogicalResult ModuleFlagsOp::verify() {
   if (Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
-  for (Attribute flag : getFlags())
-    if (!isa<ModuleFlagAttr>(flag))
+
+  llvm::DenseSet<StringAttr> seenNonRequireKeys;
+  for (Attribute flag : getFlags()) {
+    auto moduleFlag = dyn_cast<ModuleFlagAttrInterface>(flag);
+    if (!moduleFlag)
       return emitOpError("expected a module flag attribute");
+    if (failed(LLVM::detail::verifyModuleFlagValue(
+            moduleFlag.getModuleFlagKey(), moduleFlag.getModuleFlagValue(),
+            [&] { return emitOpError(); })))
+      return failure();
+    if (moduleFlag.getModuleFlagBehavior() == ModFlagBehavior::Require)
+      continue;
+    StringAttr key = moduleFlag.getModuleFlagKey();
+    if (!seenNonRequireKeys.insert(key).second)
+      return emitOpError("expected module flag key '")
+             << key.getValue() << "' to be unique for non-require flags";
+  }
   return success();
 }
 
@@ -4710,7 +4790,7 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
-  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDGlobalValueAttr,
           LLVM::MDNodeAttr>(value))
     if (isa<LLVM::LLVMMetadataType>(type))
       return LLVM::MetadataAsValueOp::create(builder, loc, type, value);

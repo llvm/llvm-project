@@ -28,12 +28,14 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -45,6 +47,7 @@ namespace {
 
 class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
+  function_ref<const TargetTransformInfo &(Function &)> GetTTI;
   bool substituteIntrinsicCalls(Function *F);
   bool substituteAbortKHRCalls(Function *F);
   bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
@@ -52,7 +55,10 @@ class SPIRVPrepareFunctionsImpl {
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
-  SPIRVPrepareFunctionsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
+  SPIRVPrepareFunctionsImpl(
+      const SPIRVTargetMachine &TM,
+      function_ref<const TargetTransformInfo &(Function &)> GetTTI)
+      : TM(TM), GetTTI(GetTTI) {}
   bool runOnModule(Module &M);
 };
 
@@ -65,7 +71,14 @@ public:
       : ModulePass(ID), TM(TM) {}
 
   bool runOnModule(Module &M) override {
-    return SPIRVPrepareFunctionsImpl(TM).runOnModule(M);
+    auto GetTTI = [this](Function &F) -> const TargetTransformInfo & {
+      return getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    };
+    return SPIRVPrepareFunctionsImpl(TM, GetTTI).runOnModule(M);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
@@ -82,8 +95,11 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
-                "SPIRV prepare functions", false, false)
+INITIALIZE_PASS_BEGIN(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
+                      "SPIRV prepare functions", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
+                    "SPIRV prepare functions", false, false)
 
 static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
@@ -118,6 +134,22 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
 
+  // An intrinsic with a metadata argument has no SPIR-V lowering and can't be
+  // turned into a function.
+  if (any_of(Intrinsic->args(), IsaPred<MetadataAsValue>)) {
+    const Function *F = Intrinsic->getFunction();
+    F->getContext().diagnose(DiagnosticInfoUnsupported(
+        *F,
+        "cannot lower the intrinsic '" +
+            Intrinsic->getCalledFunction()->getName() +
+            "' that takes a metadata argument",
+        Intrinsic->getDebugLoc()));
+    if (!Intrinsic->getType()->isVoidTy())
+      Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
+    Intrinsic->eraseFromParent();
+    return true;
+  }
+
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
   if (Intrinsic->isVolatile())
@@ -128,14 +160,12 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     Intrinsic->setCalledFunction(F);
     return true;
   }
-  // TODO copy arguments attributes: nocapture writeonly.
   FunctionCallee FC =
       M->getOrInsertFunction(FuncName, Intrinsic->getFunctionType());
   auto IntrinsicID = Intrinsic->getIntrinsicID();
   Intrinsic->setCalledFunction(FC);
-
-  F = dyn_cast<Function>(FC.getCallee());
-  assert(F && "Callee must be a function");
+  F = cast<Function>(FC.getCallee());
+  F->setAttributes(Intrinsic->getAttributes());
 
   switch (IntrinsicID) {
   case Intrinsic::memset: {
@@ -160,8 +190,8 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
   case Intrinsic::bswap: {
     BasicBlock *EntryBB = BasicBlock::Create(M->getContext(), "entry", F);
     IRBuilder<> IRB(EntryBB);
-    auto *BSwap = IRB.CreateIntrinsic(Intrinsic::bswap, Intrinsic->getType(),
-                                      F->getArg(0));
+    CallInst *BSwap = IRB.CreateIntrinsicWithoutFolding(
+        Intrinsic::bswap, Intrinsic->getType(), F->getArg(0));
     IRB.CreateRet(BSwap);
     IntrinsicLowering IL(M->getDataLayout());
     IL.LowerIntrinsicCall(BSwap);
@@ -437,10 +467,13 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
+  if (F->isDeclaration())
+    return false;
+
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(*F);
+  const TargetTransformInfo &TTI = GetTTI(*F);
   for (BasicBlock &BB : *F) {
     for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -502,6 +535,14 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       default:
+        // Drop assume-like intrinsics that have no SPIR-V representation.
+        if (II->isAssumeLikeIntrinsic()) {
+          if (!II->getType()->isVoidTy())
+            II->replaceAllUsesWith(PoisonValue::get(II->getType()));
+          II->eraseFromParent();
+          Changed = true;
+          break;
+        }
         if (TM.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
@@ -589,20 +630,21 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
                     Returns);
   NewF->takeName(F);
+  NewF->setComdat(F->getComdat());
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (auto *U : make_early_inc_range(F->users())) {
-    if (CallInst *CI;
-        (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
-      CI->mutateFunctionType(NewF->getFunctionType());
-    if (auto *C = dyn_cast<Constant>(U))
-      C->handleOperandChange(F, NewF);
-    else
-      U->replaceUsesOfWith(F, NewF);
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+      CB->mutateFunctionType(NewF->getFunctionType());
   }
+  // NewF keeps F's address space, so their pointer types match and
+  // RAUW is safe despite the differing signatures.
+  assert(F->getType() == NewF->getType() &&
+         "RAUW requires F and NewF to share the same pointer type");
+  F->replaceAllUsesWith(NewF);
 
   // register the mutation
   if (RetType != F->getReturnType())
@@ -654,20 +696,18 @@ bool SPIRVPrepareFunctionsImpl::substituteAbortKHRCalls(Function *F) {
   if (!isAbortKHRBuiltin(*F))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
     if (CI->arg_size() != 1)
       continue;
-    Calls.push_back(CI);
+    rewriteAbortKHRCall(CI);
+    Changed = true;
   }
 
-  for (CallInst *CI : Calls)
-    rewriteAbortKHRCall(CI);
-
-  return !Calls.empty();
+  return Changed;
 }
 
 // When the SPV_KHR_abort extension is enabled, `llvm.trap` and
@@ -693,16 +733,11 @@ bool SPIRVPrepareFunctionsImpl::terminateBlocksAfterTrap(Module &M,
   if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
-    Calls.push_back(CI);
-  }
-
-  bool Changed = false;
-  for (CallInst *CI : Calls) {
     Instruction *Next = CI->getNextNode();
     if (!Next || isa<UnreachableInst>(Next))
       continue;
@@ -753,6 +788,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
+  unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
     SmallVector<std::pair<int, Type *>> ChangedTypes;
     SmallVector<Type *> NewArgTypes;
@@ -774,11 +810,13 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     NewFnTy = FunctionType::get(RetTy, NewArgTypes,
                                 CB->getFunctionType()->isVarArg());
 
-    if (!CB->hasName())
-      CB->setName("spv.mutated_callsite." + F->getName());
-    else
-      CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
-                  CB->getName());
+    // Keyed via instruction metadata, not a name.
+    std::string Key =
+        ("spv.mutated_callsite." + F->getName() + "." + Twine(MutatedCallIdx++))
+            .str();
+    CB->setMetadata(
+        "spv.mutated_callsite",
+        MDNode::get(F->getContext(), MDString::get(F->getContext(), Key)));
 
     std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
@@ -792,7 +830,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-        std::move(ChangedTypes), CB->getName(), Constraints);
+        std::move(ChangedTypes), Key, Constraints);
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
@@ -839,6 +877,7 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     }
   }
 
+  std::vector<Function *> FuncsWorklist;
   for (Function &F : M) {
     // MachineFunctionPass skips available_externally; strip + tag so AuxData
     // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
@@ -851,11 +890,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
-  }
-
-  std::vector<Function *> FuncsWorklist;
-  for (auto &F : M)
     FuncsWorklist.push_back(&F);
+  }
 
   for (auto *F : FuncsWorklist) {
     Function *NewF = removeAggregateTypesFromSignature(F);
@@ -870,7 +906,12 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
 
 PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  return SPIRVPrepareFunctionsImpl(TM).runOnModule(M)
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+  return SPIRVPrepareFunctionsImpl(TM, GetTTI).runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }

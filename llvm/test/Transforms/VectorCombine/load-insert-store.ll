@@ -5,7 +5,7 @@
 define void @insert_store(ptr %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -16,10 +16,30 @@ entry:
   ret void
 }
 
+declare void @may_synchronize() memory(none)
+
+define void @insert_store_across_synchronization(ptr %q, i32 %s) {
+; CHECK-LABEL: @insert_store_across_synchronization(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    call void @may_synchronize()
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> [[V]], i32 [[S:%.*]],
+; CHECK-SAME:    i32 1
+; CHECK-NEXT:    store <4 x i32> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v = load <4 x i32>, ptr %q, align 16
+  call void @may_synchronize()
+  %vecins = insertelement <4 x i32> %v, i32 %s, i32 1
+  store <4 x i32> %vecins, ptr %q, align 16
+  ret void
+}
+
 define void @insert_store_i16_align1(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i16_align1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[Q:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -49,7 +69,7 @@ entry:
 define void @insert_store_vscale(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_vscale(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 8 x i16>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 8 x i16>, ptr [[Q:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i16 [[S:%.*]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -177,7 +197,8 @@ define void @insert_store_nonconst_large_alignment(ptr %q, i32 zeroext %s, i32 %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -194,7 +215,8 @@ define void @insert_store_nonconst_align_maximum_8(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_align_maximum_8(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -210,7 +232,8 @@ define void @insert_store_nonconst_align_maximum_4(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_align_maximum_4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -226,7 +249,8 @@ define void @insert_store_nonconst_align_larger(ptr %q, i64 %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_align_larger(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i64 [[S:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -243,7 +267,8 @@ define void @insert_store_nonconst_index_known_valid_by_assume(ptr %q, i8 zeroex
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -263,7 +288,8 @@ define void @insert_store_vscale_nonconst_index_known_valid_by_assume(ptr %q, i8
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -345,7 +371,8 @@ define void @insert_store_nonconst_index_known_noundef_and_valid_by_and(ptr %q, 
 ; CHECK-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -363,7 +390,8 @@ define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(p
 ; CHECK-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -380,7 +408,8 @@ define void @insert_store_nonconst_index_base_frozen_and_valid_by_and(ptr %q, i8
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX_FROZEN]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -417,7 +446,8 @@ define void @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(pt
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX_FROZEN]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -486,7 +516,8 @@ define void @insert_store_nonconst_index_known_noundef_and_valid_by_urem(ptr %q,
 ; CHECK-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_urem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -504,7 +535,8 @@ define void @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(
 ; CHECK-LABEL: @insert_store_vscale_nonconst_index_known_noundef_and_valid_by_urem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -521,7 +553,8 @@ define void @insert_store_nonconst_index_base_frozen_and_valid_by_urem(ptr %q, i
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX_FROZEN]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -558,7 +591,8 @@ define void @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(p
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX_FROZEN]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[IDX_CLAMPED_GEPIDX:%.*]] = zext i32 [[IDX_CLAMPED]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 [[IDX_CLAMPED_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -626,7 +660,7 @@ entry:
 define void @insert_store_ptr_strip(ptr %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store_ptr_strip(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    store i8 [[S:%.*]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -683,7 +717,7 @@ define void @insert_store_mem_modify(ptr %p, ptr %q, ptr noalias %r, i8 %s, i32 
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <16 x i8> [[LD]], i8 [[S:%.*]], i32 3
 ; CHECK-NEXT:    store <16 x i8> [[INS]], ptr [[P]], align 16
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[R:%.*]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[Q]], i64 0, i64 7
 ; CHECK-NEXT:    store i8 [[S]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[LD3:%.*]] = load <4 x i32>, ptr [[P]], align 16
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[P]], align 16
@@ -713,6 +747,26 @@ entry:
   ret void
 }
 
+; Non-constant index makes the access "safe with freeze", but memory is
+; modified between the load and store, so the fold must bail out without
+; leaving the pending ToFreeze value set.
+define void @insert_store_mem_modify_nonconst_index(ptr %p, i8 %s) {
+; CHECK-LABEL: @insert_store_mem_modify_nonconst_index(
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x i8>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[S:%.*]], 1
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[LD]], i8 0, i8 [[A]]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store <2 x i8> [[INS]], ptr [[P]], align 2
+; CHECK-NEXT:    ret void
+;
+  %ld = load <2 x i8>, ptr %p
+  %a = and i8 %s, 1
+  %ins = insertelement <2 x i8> %ld, i8 0, i8 %a
+  store i32 0, ptr %p
+  store <2 x i8> %ins, ptr %p
+  ret void
+}
+
 ; Check cases when calls may modify memory
 define void @insert_store_with_call(ptr %p, ptr %q, i8 %s) {
 ; CHECK-LABEL: @insert_store_with_call(
@@ -723,7 +777,7 @@ define void @insert_store_with_call(ptr %p, ptr %q, i8 %s) {
 ; CHECK-NEXT:    store <16 x i8> [[INS]], ptr [[P]], align 16
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    call void @nowrite(ptr [[P]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i32 0, i32 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 7
 ; CHECK-NEXT:    store i8 [[S]], ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -742,7 +796,7 @@ entry:
 
 declare void @foo()
 declare void @maywrite(ptr)
-declare void @nowrite(ptr) readonly
+declare void @nowrite(ptr) readonly nofree
 
 ; To test if number of instructions in-between exceeds the limit (default 30),
 ; the combine will quit.
@@ -823,6 +877,18 @@ bb:
   %i36 = insertelement <16 x i8> %i4, i8 %arg3, i32 3
   store <16 x i8> %i36, ptr %arg2, align 16
   ret i32 %i35
+}
+
+define void @PR214650(ptr %q, i32 %s) {
+; CHECK-LABEL: @PR214650(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, ptr [[Q:%.*]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ld = load <8 x i32>, ptr %q, align 32
+  %v1 = insertelement <8 x i32> %ld, i32 %s, i1 true
+  store <8 x i32> %v1, ptr %q, align 32
+  ret void
 }
 
 declare i32 @bar(i32, i1) readonly

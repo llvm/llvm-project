@@ -34,17 +34,12 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
 ///           (vXf32 X) (vXf32 Y)))
 ///
 bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(MI).getIntrinsicID() != Intrinsic::spv_length)
+  if (!mi_match(MI, MRI, m_GIntrinsic<Intrinsic::spv_length>()))
     return false;
 
   // First operand of MI is `G_INTRINSIC` so start at operand 2.
   Register SubReg = MI.getOperand(2).getReg();
-  MachineInstr *SubInstr = MRI.getVRegDef(SubReg);
-  if (SubInstr->getOpcode() != TargetOpcode::G_FSUB)
-    return false;
-
-  return true;
+  return mi_match(SubReg, MRI, m_GFSub(m_Reg(), m_Reg()));
 }
 
 void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
@@ -99,9 +94,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
     return false;
 
   // Check if FCMP is a comparison between a dot product and 0.
-  MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot) {
+  if (!mi_match(DotReg, MRI, m_GIntrinsic<Intrinsic::spv_fdot>())) {
     Register DotOperand1, DotOperand2;
     // Check for scalar dot product.
     if (!mi_match(DotReg, MRI,
@@ -129,10 +122,9 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
   if (!mi_match(TrueReg, MRI, m_GFNeg(m_SpecificReg(FalseReg))) &&
       !mi_match(FalseReg, MRI, m_GFNeg(m_SpecificReg(TrueReg)))) {
     std::optional<FPValueAndVReg> MulConstant;
-    MachineInstr *TrueInstr = MRI.getVRegDef(TrueReg);
-    MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
-    if (TrueInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
-        FalseInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+    GBuildVector *TrueInstr, *FalseInstr;
+    if (mi_match(TrueReg, MRI, m_GBuildVector(TrueInstr)) &&
+        mi_match(FalseReg, MRI, m_GBuildVector(FalseInstr)) &&
         TrueInstr->getNumOperands() == FalseInstr->getNumOperands()) {
       for (unsigned I = 1; I < TrueInstr->getNumOperands(); ++I)
         if (!AreNegatedConstantsOrSplats(TrueInstr->getOperand(I).getReg(),
@@ -150,7 +142,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
                mi_match(FalseReg, MRI,
                         m_GFMul(m_GFCstOrSplat(MulConstant),
                                 m_SpecificReg(TrueReg)))) {
-      if (!MulConstant || !MulConstant->Value.isExactlyValue(-1.0))
+      if (!MulConstant || !MulConstant->Value.isMinusOne())
         return false;
     } else if (!AreNegatedConstantsOrSplats(TrueReg, FalseReg))
       return false;
@@ -182,7 +174,6 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   if (TrueInstr->getOpcode() == TargetOpcode::G_FNEG ||
       TrueInstr->getOpcode() == TargetOpcode::G_FMUL)
     std::swap(TrueReg, FalseReg);
-  MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
 
   Register ResultReg = MI.getOperand(0).getReg();
   Builder.setInstrAndDebugLoc(MI);
@@ -191,32 +182,7 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
       .addUse(DotOperand1)  // I
       .addUse(DotOperand2); // Ng
 
-  SPIRVGlobalRegistry *GR =
-      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
-  auto RemoveAllUses = [&](Register Reg) {
-    SmallVector<MachineInstr *, 4> UsesToErase;
-    for (auto &UseMI : MRI.use_instructions(Reg))
-      UsesToErase.push_back(&UseMI);
-
-    // calling eraseFromParent to early invalidates the iterator.
-    for (auto *MIToErase : UsesToErase)
-      MIToErase->eraseFromParent();
-  };
-
-  RemoveAllUses(CondReg); // remove all uses of FCMP Result
-  GR->invalidateMachineInstr(CondInstr);
-  CondInstr->eraseFromParent(); // remove FCMP instruction
-  RemoveAllUses(DotReg);        // remove all uses of spv_fdot/G_FMUL Result
-  GR->invalidateMachineInstr(DotInstr);
-  DotInstr->eraseFromParent(); // remove spv_fdot/G_FMUL instruction
-  RemoveAllUses(FalseReg);
-  GR->invalidateMachineInstr(FalseInstr);
-  FalseInstr->eraseFromParent();
-}
-
-bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_transpose;
+  MI.eraseFromParent();
 }
 
 void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
@@ -243,11 +209,6 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.buildShuffleVector(ResReg, InReg, InReg, Mask);
   MI.eraseFromParent();
-}
-
-bool SPIRVCombinerHelper::matchMatrixMultiply(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_multiply;
 }
 
 SmallVector<Register, 4>
@@ -334,11 +295,9 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
   return DotRes;
 }
 
-SmallVector<Register, 16>
-SPIRVCombinerHelper::computeDotProducts(const SmallVector<Register, 4> &RowsA,
-                                        const SmallVector<Register, 4> &ColsB,
-                                        SPIRVTypeInst SpvVecType,
-                                        SPIRVGlobalRegistry *GR) const {
+SmallVector<Register, 16> SPIRVCombinerHelper::computeDotProducts(
+    ArrayRef<Register> RowsA, ArrayRef<Register> ColsB,
+    SPIRVTypeInst SpvVecType, SPIRVGlobalRegistry *GR) const {
   SmallVector<Register, 16> ResultScalars;
   for (uint32_t J = 0; J < ColsB.size(); ++J) {
     for (uint32_t I = 0; I < RowsA.size(); ++I) {

@@ -21,16 +21,39 @@ add_object_library(
   HDRS
     time_utils.h
   DEPENDS
-    libc.include.time
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.optional
-    libc.src.errno.errno
     .time_constants
-    libc.hdr.types.time_t
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.hdr.stdint_proxy
+    libc.hdr.types.time_t
+    libc.include.time
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
+)
+
+add_subdirectory(strftime_core) #TODO: Move to top
+
+add_header_library(
+  asctime_utils
+  HDRS
+    asctime_utils.h
+  DEPENDS
+    .time_constants
+    .time_utils
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.printf_core.writer
+    libc.src.time.strftime_core.strftime_main
 )
 
 add_entrypoint_object(
@@ -40,10 +63,12 @@ add_entrypoint_object(
   HDRS
     asctime.h
   DEPENDS
-    .time_utils
+    .asctime_utils
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -53,10 +78,12 @@ add_entrypoint_object(
   HDRS
     asctime_r.h
   DEPENDS
-    .time_utils
+    .asctime_utils
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -66,10 +93,13 @@ add_entrypoint_object(
   HDRS
     ctime.h
   DEPENDS
+    .asctime_utils
     .time_utils
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -79,10 +109,13 @@ add_entrypoint_object(
   HDRS
     ctime_r.h
   DEPENDS
+    .asctime_utils
     .time_utils
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -95,6 +128,8 @@ add_entrypoint_object(
     .time_utils
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -107,6 +142,8 @@ add_entrypoint_object(
     .time_utils
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -131,6 +168,8 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -144,6 +183,8 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -159,9 +200,8 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.__support.macros.null_check
 )
-
-add_subdirectory(strftime_core) #TODO: Move to top
 
 add_entrypoint_object(
   strftime
@@ -172,8 +212,9 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
+    libc.src.__support.macros.null_check
+    libc.src.__support.printf_core.writer
 )
 
 add_entrypoint_object(
@@ -186,8 +227,21 @@ add_entrypoint_object(
     libc.hdr.types.locale_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
+    libc.src.__support.macros.null_check
+    libc.src.__support.printf_core.writer
+)
+
+add_entrypoint_object(
+  strptime
+  SRCS
+    strptime.cpp
+  HDRS
+    strptime.h
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -233,13 +287,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  gettimeofday
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.gettimeofday
-)
-
-add_entrypoint_object(
   clock_getres
   ALIAS
   DEPENDS
@@ -251,5 +298,19 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.clock_settime
+)
+
+add_entrypoint_object(
+  timer_create
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_create
+)
+
+add_entrypoint_object(
+  timer_delete
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_delete
 )
 

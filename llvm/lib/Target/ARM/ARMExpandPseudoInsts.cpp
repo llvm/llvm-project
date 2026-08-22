@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -58,6 +59,11 @@ namespace {
 
     StringRef getPassName() const override {
       return ARM_EXPAND_PSEUDO_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -1841,6 +1847,15 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
   }
 }
 
+static unsigned getCmpOpcode(bool IsThumb, Register LHS, Register RHS) {
+  if (!IsThumb)
+    return ARM::CMPrr;
+  if (ARM::tGPRRegClass.contains(LHS) &&
+      ARM::tGPRRegClass.contains(RHS))
+    return ARM::tCMPr;
+  return ARM::tCMPhir;
+}
+
 /// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
 /// possible. This only gets used at -O0 so we don't care about efficiency of
 /// the generated code.
@@ -1901,7 +1916,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
     MIB.addImm(0); // a 32-bit Thumb ldrex (only) allows an offset.
   MIB.add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  unsigned CMPrr = getCmpOpcode(IsThumb, Dest.getReg(), DesiredReg);
   BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
@@ -2021,16 +2036,18 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrLo = getCmpOpcode(IsThumb, DestLo, DesiredLo);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrLo))
       .addReg(DestLo, getKillRegState(Dest.isDead()))
       .addReg(DesiredLo)
       .add(predOps(ARMCC::AL));
 
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrHi = getCmpOpcode(IsThumb, DestHi, DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrHi))
       .addReg(DestHi, getKillRegState(Dest.isDead()))
       .addReg(DesiredHi)
-      .addImm(ARMCC::EQ).addReg(ARM::CPSR, RegState::Kill);
+      .addImm(ARMCC::EQ)
+      .addReg(ARM::CPSR, RegState::Kill);
 
   unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
   BuildMI(LoadCmpBB, DL, TII->get(Bcc))

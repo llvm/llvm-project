@@ -2,9 +2,6 @@
 
 This article is intended to take someone in the state of “I want to write documentation and get it added to LLVM’s docs” and help them start writing documentation as fast as possible and with as little nonsense as possible.
 
-```{contents}
-:local:
-```
 
 ## Overview
 
@@ -23,7 +20,7 @@ See the {ref}`migration <markdown_migration_guidelines>` section for more inform
 
 This article is located in `docs/SphinxQuickstartTemplate.md`.
 To use it as a template, make a copy and open it in a text editor.
-You can then write your docs, and open a [GitHub PR](project:GitHub.rst) to request a review.
+You can then write your docs, and open a [GitHub PR](project:GitHub.md) to request a review.
 
 To view the Markdown source file for this article, click **Show Source** on the right sidebar.
 
@@ -163,11 +160,34 @@ without any syntax highlighting like this:
 ```
 
 
+## Sphinx Directives
+
+Sphinx directives that contain rich, formatted Markdown content should use
+[colon fences][colon_fence] instead of backtick fences. This keeps directive
+containers visually distinct from code blocks while still allowing normal
+Markdown markup inside the directive.
+
+:::{note}
+Use colon fences for rich directives such as `{note}`, `{warning}`, `{option}`,
+and similar content blocks.
+:::
+
+Prefer triple backtick fences for code regions and literal examples:
+
+```cpp
+int value = 0;
+```
+
+Keep `{eval-rst}` blocks fenced with backticks, because their contents are
+reStructuredText rather than Markdown.
+
+[colon_fence]: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#syntax-colon-fence
+
 ## Generating the documentation
 
 You can generate the HTML documentation from the sources locally if you want to
 see what they would look like. In addition to the normal
-[build tools](project:GettingStarted.rst)
+[build tools](project:GettingStarted.md)
 you need to install [Sphinx] and the necessary extensions
 using the following command inside the `llvm-project` checkout:
 

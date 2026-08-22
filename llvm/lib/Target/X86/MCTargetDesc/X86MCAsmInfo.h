@@ -28,7 +28,6 @@ class X86MCAsmInfoDarwin : public MCAsmInfoDarwin {
 public:
   explicit X86MCAsmInfoDarwin(const Triple &Triple,
                               const MCTargetOptions &Options);
-  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct X86_64MCAsmInfoDarwin : public X86MCAsmInfoDarwin {
@@ -45,7 +44,6 @@ class X86ELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit X86ELFMCAsmInfo(const Triple &Triple,
                            const MCTargetOptions &Options);
-  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
@@ -54,7 +52,6 @@ class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
 public:
   explicit X86MCAsmInfoMicrosoft(const Triple &Triple,
                                  const MCTargetOptions &Options);
-  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
@@ -71,7 +68,6 @@ class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
 public:
   explicit X86MCAsmInfoGNUCOFF(const Triple &Triple,
                                const MCTargetOptions &Options);
-  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 namespace X86 {

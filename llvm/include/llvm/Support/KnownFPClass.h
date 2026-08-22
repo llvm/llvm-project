@@ -20,6 +20,7 @@
 
 namespace llvm {
 class APFloat;
+class APInt;
 struct fltSemantics;
 struct KnownBits;
 
@@ -267,7 +268,7 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
-    Known.propagateNaN(Src);
+    Known.propagateNonNaN(Src);
     return Known;
   }
 
@@ -379,16 +380,34 @@ struct KnownFPClass {
     return Known;
   }
 
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &Src) {
+    if (Src.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    if (LHS.isKnownNever(fcSNan) && RHS.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
-  void propagateNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+  void propagateNonNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+    propagateNonSNaN(Src);
     if (Src.isKnownNever(fcNan)) {
       knownNot(fcNan);
       if (PreserveSign)
         SignBit = Src.SignBit;
-    } else if (Src.isKnownNever(fcSNan))
-      knownNot(fcSNan);
+    }
+  }
+
+  void propagateNonNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    propagateNonSNaN(LHS, RHS);
+    if (LHS.isKnownNeverNaN() && RHS.isKnownNeverNaN())
+      knownNot(fcNan);
   }
 
   // Propagate knowledge for operations whose result sign is the xor of the
@@ -448,10 +467,17 @@ struct KnownFPClass {
   static LLVM_ABI KnownFPClass frexp_mant(
       const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Propagate known class for ldexp
+  /// Propagate known class for ldexp, assuming the exponent is known to be
+  /// within [\p ConstantRangeMin, \p ConstantRangeMax]
+  ///
+  // TODO: This really ought to use ConstantRange, but it's in IR not Support.
   static LLVM_ABI KnownFPClass
-  ldexp(const KnownFPClass &Src, const KnownBits &N, const fltSemantics &Flt,
+  ldexp(const KnownFPClass &Src, const APInt &ConstantRangeMin,
+        const APInt &ConstantRangeMax, const fltSemantics &Flt,
         DenormalMode Mode = DenormalMode::getDynamic());
+  static LLVM_ABI KnownFPClass ldexp(
+      const KnownFPClass &Src, const KnownBits &ExpBits,
+      const fltSemantics &Flt, DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for powi
   static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,

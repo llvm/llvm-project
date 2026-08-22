@@ -53,6 +53,7 @@ protected:
   bool moveNext(MachineBasicBlock::iterator &I);
   bool isFloat(MachineBasicBlock::iterator I);
   bool isDivSqrt(MachineBasicBlock::iterator I);
+  bool isAtomic(MachineBasicBlock::iterator I);
   void insertNop(MachineBasicBlock::iterator I);
 
 public:

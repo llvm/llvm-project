@@ -35,6 +35,7 @@ void test_set() {
   struct KeyDerived : KeyBase {};
 
   C c; // ODR use it, which should be OK
+  (void)c;
 }
 
 template <template <typename...> class Container>
@@ -47,6 +48,7 @@ void test_map() {
   (void)dummy;
   struct KeyDerived : KeyBase {};
   C c;
+  (void)c;
 }
 
 void f() {

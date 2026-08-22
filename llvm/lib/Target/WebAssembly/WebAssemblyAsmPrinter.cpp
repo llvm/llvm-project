@@ -33,14 +33,20 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -180,13 +186,6 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->hasCommonLinkage()) {
-    OutContext.reportError(SMLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               getSymbol(GV)->getName());
-    return;
-  }
-
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;
@@ -331,6 +330,39 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     auto Sym = static_cast<MCSymbolWasm *>(It.getValue().Symbol);
     if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
+  }
+
+  // We handle `__funcref_call_table` specially here.
+  //
+  // Unlike most table symbols, which are attached to a `GlobalVariable`
+  // this one is a directly created, freestanding MCSymbol, much like
+  // `__indirect_function_table`. However, given that the table is always
+  // identical (single element, default initialized), we declare it
+  // weak in each object, and define it here rather than in the linker.
+  //
+  // TODO: consider moving this definition elsewhere, or doing away with
+  // the table entirely (in favor of `call_ref` exclusively).
+  {
+    StringRef Name = "__funcref_call_table";
+    auto *Sym = static_cast<MCSymbolWasm *>(OutContext.lookupSymbol(Name));
+    if (Sym) {
+      if (!Sym->isFunctionTable())
+        OutContext.reportError(SMLoc(), "symbol is not a wasm funcref table");
+
+      // symbol is declared weak in `getOrCreateFuncrefCallTableSymbol`
+      assert(Sym->isWeak());
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+
+      // Make sure we haven't already emitted it for whatever reason.
+      assert(!Sym->isDefined());
+
+      // Actually define the symbol.
+      // Confusingly enough, `emitLabel` is what "defines" a MCSymbol.
+      // Provides it a fragment, so that it `!isUndefined`
+      OutStreamer->emitLabel(Sym);
+      // No initializer needed. Default ref.null is good
+      OutStreamer->addBlankLine();
+    }
   }
 
   DenseSet<MCSymbol *> InvokeSymbols;
@@ -532,16 +564,21 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
     EmittedFeatures.push_back(Entry);
   };
 
-  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-    EmitFeature(KV.Key);
+  // If we never compiled a single function, Subtarget is null.
+  if (!Subtarget) {
+    Subtarget = static_cast<WebAssemblyTargetMachine &>(TM).getSubtargetImpl(
+        std::string(TM.getTargetCPU()),
+        std::string(TM.getTargetFeatureString()));
+  }
+  for (const SubtargetFeatureKV &KV : Subtarget->getAllProcessorFeatures()) {
+    EmitFeature(KV.key());
   }
   // This pseudo-feature tells the linker whether shared memory would be safe
   EmitFeature("shared-mem");
 
   // This is an "architecture", not a "feature", but we emit it as such for
   // the benefit of tools like Binaryen and consistency with other producers.
-  // FIXME: Subtarget is null here, so can't Subtarget->hasAddr64() ?
-  if (M.getDataLayout().getPointerSize() == 8) {
+  if (Subtarget->hasAddr64()) {
     // Can't use EmitFeature since "wasm-feature-memory64" is not a module
     // flag.
     EmittedFeatures.push_back({wasm::WASM_FEATURE_PREFIX_USED, "memory64"});
@@ -777,4 +814,34 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterBeginPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterEndPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

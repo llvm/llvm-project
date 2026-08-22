@@ -465,6 +465,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMULO:
   case ISD::UMULO:
   case ISD::CONVERT_FROM_ARBITRARY_FP:
+  case ISD::CONVERT_TO_ARBITRARY_FP:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
   case ISD::FMODF:
@@ -488,6 +489,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
   case ISD::MASKED_SREM:
+  case ISD::VECTOR_MATCH:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1200,6 +1202,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::PEXT:
+    Results.push_back(TLI.expandPEXT(Node, DAG));
+    return;
+  case ISD::PDEP:
+    Results.push_back(TLI.expandPDEP(Node, DAG));
+    return;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
@@ -1271,17 +1279,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
+  case ISD::SMULFIXSAT:
+  case ISD::UMULFIXSAT:
     if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
-    break;
-  case ISD::SMULFIXSAT:
-  case ISD::UMULFIXSAT:
-    // FIXME: We do not expand SMULFIXSAT/UMULFIXSAT here yet, not sure exactly
-    // why. Maybe it results in worse codegen compared to the unroll for some
-    // targets? This should probably be investigated. And if we still prefer to
-    // unroll an explanation could be helpful.
     break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
@@ -1321,6 +1324,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
+    return;
+  case ISD::VECTOR_MATCH:
+    Results.push_back(TLI.expandVectorMatch(Node, DAG));
     return;
   case ISD::SREM:
   case ISD::UREM:
@@ -1416,6 +1422,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    if (SDValue Expanded = TLI.expandCONVERT_TO_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
+      Results.push_back(DAG.getPOISON(Node->getValueType(0)));
+    return;
   case ISD::CONVERT_FROM_ARBITRARY_FP:
     if (SDValue Expanded = TLI.expandCONVERT_FROM_ARBITRARY_FP(Node, DAG))
       Results.push_back(Expanded);
@@ -1819,14 +1831,14 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
-  // Implement VP_SREM/UREM in terms of VP_SDIV/VP_UDIV, VP_MUL, VP_SUB.
+  // Implement VP_SREM/UREM in terms of VP_SDIV/VP_UDIV, MUL, SUB.
   EVT VT = Node->getValueType(0);
 
   unsigned DivOpc = Node->getOpcode() == ISD::VP_SREM ? ISD::VP_SDIV : ISD::VP_UDIV;
 
   if (!TLI.isOperationLegalOrCustom(DivOpc, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::VP_MUL, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::VP_SUB, VT))
+      !TLI.isOperationLegalOrCustom(ISD::MUL, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::SUB, VT))
     return SDValue();
 
   SDLoc DL(Node);
@@ -1838,8 +1850,8 @@ SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
 
   // X % Y -> X-X/Y*Y
   SDValue Div = DAG.getNode(DivOpc, DL, VT, Dividend, Divisor, Mask, EVL);
-  SDValue Mul = DAG.getNode(ISD::VP_MUL, DL, VT, Divisor, Div, Mask, EVL);
-  return DAG.getNode(ISD::VP_SUB, DL, VT, Dividend, Mul, Mask, EVL);
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Divisor, Div);
+  return DAG.getNode(ISD::SUB, DL, VT, Dividend, Mul);
 }
 
 SDValue VectorLegalizer::ExpandVP_FNEG(SDNode *Node) {

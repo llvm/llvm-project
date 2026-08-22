@@ -60,15 +60,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
-  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is completely removed.
   DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -739,6 +734,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      HasNoWWMPoolSGPRSpillFallback(MFI.hasNoWWMPoolSGPRSpillFallback()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
       NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
@@ -798,12 +794,17 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  HasNoWWMPoolSGPRSpillFallback = YamlMFI.HasNoWWMPoolSGPRSpillFallback;
   NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
   MinNumAGPRs = YamlMFI.MinNumAGPRs;
+  // This can also be set by the function attribute, MFI has higher precedence
+  // though.
+  if (YamlMFI.DynamicVGPRBlockSize != std::nullopt)
+    DynamicVGPRBlockSize = *YamlMFI.DynamicVGPRBlockSize;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 

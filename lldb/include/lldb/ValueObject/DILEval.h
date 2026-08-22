@@ -24,7 +24,7 @@ namespace lldb_private::dil {
 /// the relevant information about that object (for DIL parsing and
 /// evaluating).
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
-                                     std::shared_ptr<StackFrame> frame_sp,
+                                     StackFrame &stack_frame,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
@@ -32,7 +32,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// create and return an IdentifierInfo object containing all the relevant
 /// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
-                                           std::shared_ptr<StackFrame> frame_sp,
+                                           StackFrame &stack_frame,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
@@ -44,8 +44,8 @@ lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-              std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, uint32_t options);
+              StackFrame &stack_frame, lldb::DynamicValueType use_dynamic,
+              uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -73,6 +73,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) override;
 
   /// Perform usual unary conversions on a value. At the moment this
   /// includes array-to-pointer and integral promotion for eligible types.
@@ -106,6 +109,13 @@ private:
                                                        lldb::ValueObjectSP rhs,
                                                        CompilerType result_type,
                                                        uint32_t location);
+  llvm::Error ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
+                                 lldb::ValueObjectSP &rhs, bool lhs_is_literal,
+                                 bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                     lldb::ValueObjectSP rhs, bool lhs_is_literal,
+                     bool rhs_is_literal, uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                       lldb::ValueObjectSP rhs, uint32_t location);
@@ -126,9 +136,12 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                        lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateLogical(const BinaryOpNode &node);
   llvm::Expected<CompilerType>
-  PickIntegerType(lldb::TypeSystemSP type_system,
-                  std::shared_ptr<ExecutionContextScope> ctx,
+  PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);
 
   llvm::Expected<lldb::ValueObjectSP>
@@ -155,7 +168,7 @@ private:
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
-  std::shared_ptr<StackFrame> m_exe_ctx_scope;
+  StackFrame &m_stack_frame;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
   bool m_check_ptr_vs_member;

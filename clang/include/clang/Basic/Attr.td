@@ -477,7 +477,7 @@ class TargetArch<list<string> arches> : TargetSpec {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
-def TargetAMDGPU : TargetArch<["amdgcn", "r600"]>;
+def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -512,7 +512,7 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 // environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
 // a host target in MSVC environment on Windows.
 def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
-                                              "aarch64", "amdgcn", "nvptx",
+                                              "aarch64", "amdgpu", "nvptx",
                                               "nvptx64", "spirv", "spirv32",
                                               "spirv64"]> {
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
@@ -1039,7 +1039,7 @@ def Annotate : InheritableParamOrStmtAttr {
   }];
   let PragmaAttributeSupport = 1;
   let AcceptsExprPack = 1;
-  let Documentation = [Undocumented];
+  let Documentation = [AnnotateDocs];
 }
 
 def AnnotateType : TypeAttr {
@@ -1497,6 +1497,7 @@ def Common : InheritableAttr {
 
 def Const : InheritableAttr {
   let Spellings = [GCC<"const">, GCC<"__const">];
+  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
@@ -1652,10 +1653,7 @@ def CUDALaunchBounds : InheritableAttr {
               ExprArgument<"MaxBlocks", 1>];
   let LangOpts = [CUDA];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
-  // An AST node is created for this attribute, but is not used by other parts
-  // of the compiler. However, this node needs to exist in the AST because
-  // non-LLVM backends may be relying on the attribute's presence.
-  let Documentation = [Undocumented];
+  let Documentation = [LaunchBoundsDocs];
 }
 
 def CUDAShared : InheritableAttr {
@@ -2129,16 +2127,26 @@ def ExplicitInit : InheritableAttr {
 }
 
 def LifetimeBound : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetimebound", 0>];
+  let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 0>];
+  let Spellings = [Clang<"lifetime_capture_by">,
+                   Clang<"lifetime_capture_by_this">,
+                   Clang<"lifetime_capture_by_global">,
+                   Clang<"lifetime_capture_by_unknown">];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];
+  let Accessors = [Accessor<"isThis", [Clang<"lifetime_capture_by_this">]>,
+                   Accessor<"isGlobal", [Clang<"lifetime_capture_by_global">]>,
+                   Accessor<"isUnknown", [Clang<"lifetime_capture_by_unknown">]>,
+                   Accessor<"isStandaloneSpecial",
+                            [Clang<"lifetime_capture_by_this">,
+                             Clang<"lifetime_capture_by_global">,
+                             Clang<"lifetime_capture_by_unknown">]>];
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
@@ -2391,7 +2399,6 @@ def NoConvergent : InheritableAttr {
   let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
-  let LangOpts = [CUDA];
   let Documentation = [NoConvergentDocs];
   let SimpleHandler = 1;
 }
@@ -2412,6 +2419,8 @@ def NoInline : DeclOrStmtAttr {
                              "functions and statements">;
   let SimpleHandler = 1;
 }
+
+def : MutualExclusions<[AlwaysInline, NoInline]>;
 
 def NoOutline : DeclOrStmtAttr {
   let Spellings = [Clang<"no_outline">];
@@ -2520,6 +2529,19 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
   let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
+def AMDGPUNamedBarrierWrapper : InheritableAttr {
+  let Spellings = [];
+  let Args = [];
+  let Documentation = [InternalOnly];
+  let SemaHandler = 0;
+}
+
+def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
+  let Spellings = [Clang<"amdgpu_av">];
+  let Args = [StringArgument<"Mode">];
+  let Documentation = [AMDGPUAvailableVisibleDocs];
 }
 
 def BPFPreserveAccessIndex : InheritableAttr,
@@ -2675,7 +2697,7 @@ def CountedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [CountedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -2698,7 +2720,7 @@ def SizedBy : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByDocs];
   let LangOpts = [COnly];
 }
 
@@ -2708,7 +2730,7 @@ def SizedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -3158,6 +3180,7 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
 
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
+  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
@@ -3169,6 +3192,17 @@ def Regparm : TypeAttr {
   // Represented as part of the enclosing function type.
   let ASTNode = 0;
 }
+
+// FIXME: The following Swift interop attributes currently only support
+// the GNU __attribute__ syntax and lack a CXX11/C23 [[]] spelling.
+//
+// A Clang vendor namespace spelling (e.g., [[clang::swift_name]]) or a
+// Swift vendor namespace spelling (e.g., [[swift::name]]) were both
+// considered, but it was decided not to commit to either prematurely.
+// Doing so deserves more attention -- among other things, one would
+// want to avoid name stuttering (e.g., [[swift::swift_name]]).
+//
+// See https://github.com/llvm/llvm-project/pull/183484
 
 def SwiftType : Attr {
   // This attribute has no spellings as it is only ever created implicitly
@@ -4687,7 +4721,7 @@ def HLSLControlFlowHint: StmtAttr {
   let Subjects = SubjectList<[IfStmt, SwitchStmt],
                               ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLControlFlowHintDocs];
 }
 
 def CapturedRecord : InheritableAttr {
@@ -5178,12 +5212,6 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
-def HLSLROV : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
@@ -5192,7 +5220,7 @@ def HLSLResourceClass : TypeAttr {
       /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
       ["SRV", "UAV", "CBuffer", "Sampler"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceClassDocs];
 }
 
 def HLSLResourceDimension : TypeAttr {
@@ -5203,26 +5231,44 @@ def HLSLResourceDimension : TypeAttr {
       /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
       ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceDimensionDocs];
 }
 
 def HLSLContainedType : TypeAttr {
   let Spellings = [CXX11<"hlsl", "contained_type">];
   let LangOpts = [HLSL];
   let Args = [TypeArgument<"Type", /*opt=*/0>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLContainedTypeDocs];
 }
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLRawBufferDocs];
+}
+
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsArrayDocs];
+}
+
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsMultiSampledDocs];
+}
+
+def HLSLIsROV : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_rov">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsROVDocs];
 }
 
 def HLSLIsCounter : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLIsCounterDocs];
 }
 
 def HLSLGroupSharedAddressSpace : TypeAttr {
@@ -5299,7 +5345,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
-// layout of a matrix-typed declaration. 
+// layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
   let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];
@@ -5477,7 +5523,7 @@ def OverflowBehavior : TypeAttr {
   let Args = [IdentifierArgument<"BehaviorKind">];
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
-  let Documentation = [Undocumented];
+  let Documentation = [OverflowBehaviorDocs];
 }
 
 def Personality : InheritableAttr {

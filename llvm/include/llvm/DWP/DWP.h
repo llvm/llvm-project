@@ -89,11 +89,16 @@ class LLVM_ABI DWPWriter {
 
     bool empty() const { return Chunks.empty() && Buffer.empty(); }
 
-    void writeTo(raw_ostream &OS) const {
+    void writeTo(raw_ostream &OS) {
       for (auto &C : Chunks)
         OS.write(C.data(), C.size());
       if (!Buffer.empty())
         OS.write(Buffer.data(), Buffer.size());
+
+      // Clear buffers to save some memory.
+      Chunks = {};
+      Buffer = {};
+      OwnedBuffers = {};
     }
   };
 
@@ -102,6 +107,7 @@ class LLVM_ABI DWPWriter {
   uint16_t ELFMachine = 0;
   uint8_t ELFOSABI = 0;
   bool IsWASM = false;
+  bool IsLittleEndian = true;
 
 public:
   DWPWriter() = default;
@@ -109,6 +115,7 @@ public:
   void setMachine(uint16_t Machine) { ELFMachine = Machine; }
   void setOSABI(uint8_t OSABI) { ELFOSABI = OSABI; }
   void setIsWASM(bool V) { IsWASM = V; }
+  void setIsLittleEndian(bool V) { IsLittleEndian = V; }
 
   SmallVectorImpl<char> &getSectionBuffer(DWPSectionId Id) {
     return Sections[Id].Buffer;
@@ -128,9 +135,16 @@ public:
 
   void emitIntValue(uint64_t Value, unsigned Size) {
     auto &Buf = Sections[CurrentSection].Buffer;
-    for (unsigned I = 0; I < Size; ++I) {
-      Buf.push_back(static_cast<char>(Value & 0xff));
-      Value >>= 8;
+    if (IsLittleEndian) {
+      for (unsigned I = 0; I < Size; ++I) {
+        Buf.push_back(static_cast<char>(Value & 0xff));
+        Value >>= 8;
+      }
+    } else {
+      for (unsigned I = 0; I < Size; ++I) {
+        Buf.push_back(
+            static_cast<char>((Value >> (8 * (Size - 1 - I))) & 0xff));
+      }
     }
   }
 
@@ -161,6 +175,8 @@ public:
 
     return Pair.first->second;
   }
+
+  void clear() { Pool = DenseMap<StringRef, uint64_t>(); }
 };
 
 struct UnitIndexEntry {
@@ -216,7 +232,7 @@ LLVM_ABI Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
 typedef std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLengths;
 
 LLVM_ABI Expected<InfoSectionUnitHeader>
-parseInfoSectionUnitHeader(StringRef Info);
+parseInfoSectionUnitHeader(StringRef Info, bool IsLittleEndian);
 
 } // namespace llvm
 #endif // LLVM_DWP_DWP_H

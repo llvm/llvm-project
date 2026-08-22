@@ -12,6 +12,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFStreamer.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
@@ -76,123 +77,6 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
   Str.clear();
 }
 
-void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
-                                            uint32_t Subsection) {
-  MAI->printSwitchToSection(*Section, Subsection,
-                            getContext().getTargetTriple(), OS);
-  MCStreamer::changeSection(Section, Subsection);
-  EmitEOL();
-}
-
-void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
-                                              std::optional<int64_t> Value,
-                                              unsigned ValueSize,
-                                              unsigned MaxBytesToEmit) {
-  if (!isPowerOf2_64(ByteAlignment))
-    report_fatal_error("Only power-of-two alignments are supported ");
-
-  OS << " DS 0";
-  switch (ValueSize) {
-  default:
-    llvm_unreachable("Invalid size for machine code value!");
-  case 1:
-    OS << "B";
-    break;
-  case 2:
-    OS << "H";
-    break;
-  case 4:
-    OS << "F";
-    break;
-  case 8:
-    OS << "D";
-    break;
-  case 16:
-    OS << "Q";
-    break;
-  }
-
-  EmitEOL();
-}
-
-void SystemZHLASMAsmStreamer::AddComment(const Twine &T, bool EOL) {
-  if (!IsVerboseAsm)
-    return;
-
-  T.toVector(CommentToEmit);
-
-  if (EOL)
-    CommentToEmit.push_back('\n'); // Place comment in a new line.
-}
-
-void SystemZHLASMAsmStreamer::EmitComment() {
-  if (CommentToEmit.empty() && CommentStream.GetNumBytesInBuffer() == 0)
-    return;
-
-  StringRef Comments = CommentToEmit;
-
-  assert(Comments.back() == '\n' && "Comment array not newline terminated");
-  do {
-    // Emit a line of comments, but not exceeding 80 characters.
-    size_t Position = std::min(InstLimit - 2, Comments.find('\n'));
-    FOS << MAI->getCommentString() << ' ' << Comments.substr(0, Position)
-        << '\n';
-
-    if (Comments[Position] == '\n')
-      Position++;
-    Comments = Comments.substr(Position);
-  } while (!Comments.empty());
-
-  CommentToEmit.clear();
-}
-
-void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
-                                                   int64_t Fill,
-                                                   uint8_t FillLen,
-                                                   unsigned MaxBytesToEmit) {
-  emitAlignmentDS(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
-}
-
-void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
-                                                const MCSubtargetInfo *STI,
-                                                unsigned MaxBytesToEmit) {
-  // Emit with a text fill value.
-  if (MAI->getTextAlignFillValue())
-    emitAlignmentDS(Alignment.value(), MAI->getTextAlignFillValue(), 1,
-                    MaxBytesToEmit);
-  else
-    emitAlignmentDS(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
-}
-
-void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
-  assert(getCurrentSectionOnly() &&
-         "Cannot emit contents before setting section!");
-  if (Data.empty())
-    return;
-
-  OS << " DC ";
-  size_t Len = Data.size();
-  SmallVector<uint8_t> Chars;
-  Chars.resize(Len);
-  OS << "XL" << Len;
-  uint32_t Index = 0;
-  for (uint8_t C : Data) {
-    Chars[Index] = C;
-    Index++;
-  }
-
-  OS << '\'' << toHex(Chars) << '\'';
-
-  EmitEOL();
-}
-
-void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
-                                              const MCSubtargetInfo &STI) {
-
-  InstPrinter->printInst(&Inst, 0, "", STI, OS);
-  EmitEOL();
-}
-
 static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
                       bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
                       GOFF::ESDExecutable Executable,
@@ -238,6 +122,337 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
     }
     OS << ')';
   }
+}
+
+static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
+                      GOFF::ESDAlignment Alignment,
+                      GOFF::ESDLoadingBehavior LoadBehavior,
+                      GOFF::ESDExecutable Executable, bool IsReadOnly,
+                      uint32_t SortKey, uint8_t FillByteValue,
+                      StringRef PartName) {
+  OS << Name << " CATTR ";
+  OS << "ALIGN(" << static_cast<unsigned>(Alignment) << "),"
+     << "FILL(" << static_cast<unsigned>(FillByteValue) << ")";
+  switch (LoadBehavior) {
+  case GOFF::ESD_LB_Deferred:
+    OS << ",DEFLOAD";
+    break;
+  case GOFF::ESD_LB_NoLoad:
+    OS << ",NOLOAD";
+    break;
+  default:
+    break;
+  }
+  switch (Executable) {
+  case GOFF::ESD_EXE_CODE:
+    OS << ",EXECUTABLE";
+    break;
+  case GOFF::ESD_EXE_DATA:
+    OS << ",NOTEXECUTABLE";
+    break;
+  default:
+    break;
+  }
+  if (IsReadOnly)
+    OS << ",READONLY";
+  if (Rmode != GOFF::ESD_RMODE_None) {
+    OS << ',';
+    OS << "RMODE(";
+    switch (Rmode) {
+    case GOFF::ESD_RMODE_None:
+      llvm_unreachable("");
+    case GOFF::ESD_RMODE_24:
+      OS << "24";
+      break;
+    case GOFF::ESD_RMODE_31:
+      OS << "31";
+      break;
+    case GOFF::ESD_RMODE_64:
+      OS << "64";
+      break;
+    }
+    OS << ')';
+  }
+  if (SortKey)
+    OS << ",PRIORITY(" << SortKey << ")";
+  if (!PartName.empty())
+    OS << ",PART(" << PartName << ")";
+  OS << '\n';
+}
+
+void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
+                                            uint32_t Subsection) {
+  auto &Sec = *static_cast<MCSectionGOFF *>(Section);
+  auto EmitExternalName = [&Sec, this]() {
+    if (Sec.hasExternalName())
+      OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
+  };
+  switch (Sec.getSymbolType()) {
+  case GOFF::ESD_ST_SectionDefinition: {
+    OS << Sec.getName() << " CSECT\n";
+    Sec.setEmitted();
+    EmitExternalName();
+    break;
+  }
+  case GOFF::ESD_ST_ElementDefinition: {
+    changeSection(Sec.getParent(), Subsection);
+    if (!Sec.isEmitted()) {
+      GOFF::EDAttr ED = Sec.getEDAttributes();
+      emitCATTR(OS, Sec.getName(), ED.Rmode, Sec.getEDAlignment(),
+                ED.LoadBehavior, GOFF::ESD_EXE_Unspecified, ED.IsReadOnly, 0,
+                ED.FillByteValue, StringRef());
+      if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
+        if (BeginSym->getADA()) {
+          emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
+                    /*IsIndirectReference=*/false, GOFF::ESD_LT_XPLink,
+                    GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Section);
+          OS << '\n';
+        }
+      }
+      Sec.setEmitted();
+      EmitExternalName();
+    } else
+      OS << Sec.getName() << " CATTR\n";
+    break;
+  }
+  case GOFF::ESD_ST_PartReference: {
+    MCSectionGOFF *ED = Sec.getParent();
+    changeSection(ED->getParent(), Subsection);
+    if (!Sec.isEmitted()) {
+      GOFF::EDAttr EDAttr = ED->getEDAttributes();
+      GOFF::PRAttr PRAttr = Sec.getPRAttributes();
+      emitCATTR(OS, ED->getName(), EDAttr.Rmode, ED->getEDAlignment(),
+                EDAttr.LoadBehavior, PRAttr.Executable, EDAttr.IsReadOnly,
+                PRAttr.SortKey, EDAttr.FillByteValue, Sec.getName());
+      MCSectionGOFF *ADA =
+          Sec.getBeginSymbol() != nullptr
+              ? static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())->getADA()
+              : nullptr;
+      emitXATTR(OS, Sec.getName(), ADA, /*IsIndirectReference=*/false,
+                PRAttr.Linkage, PRAttr.Executable, PRAttr.BindingScope);
+      OS << '\n';
+      ED->setEmitted();
+      Sec.setEmitted();
+      EmitExternalName();
+    } else
+      OS << ED->getName() << " CATTR PART(" << Sec.getName() << ")\n";
+    break;
+  }
+  default:
+    llvm_unreachable("Wrong section type");
+  }
+  MCStreamer::changeSection(Section, Subsection);
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
+                                              std::optional<int64_t> Value,
+                                              unsigned ValueSize,
+                                              unsigned MaxBytesToEmit) {
+  if (!isPowerOf2_64(ByteAlignment))
+    report_fatal_error("Only power-of-two alignments are supported ");
+
+  OS << " DS 0";
+  switch (ValueSize) {
+  default:
+    llvm_unreachable("Invalid size for machine code value!");
+  case 1:
+    OS << "B";
+    break;
+  case 2:
+    OS << "H";
+    break;
+  case 4:
+    OS << "F";
+    break;
+  case 8:
+    OS << "D";
+    break;
+  case 16:
+    OS << "Q";
+    break;
+  }
+
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
+  OS << MAI->getCommentString() << T;
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::AddComment(const Twine &T, bool EOL) {
+  if (!IsVerboseAsm)
+    return;
+
+  T.toVector(CommentToEmit);
+
+  if (EOL)
+    CommentToEmit.push_back('\n'); // Place comment in a new line.
+}
+
+void SystemZHLASMAsmStreamer::EmitComment() {
+  if (CommentToEmit.empty() && CommentStream.GetNumBytesInBuffer() == 0)
+    return;
+
+  StringRef Comments = CommentToEmit;
+
+  assert(Comments.back() == '\n' && "Comment array not newline terminated");
+  do {
+    // Emit a line of comments, but not exceeding 80 characters.
+    size_t Position = std::min(InstLimit - 2, Comments.find('\n'));
+    FOS << MAI->getCommentString() << ' ' << Comments.substr(0, Position)
+        << '\n';
+
+    if (Comments[Position] == '\n')
+      Position++;
+    Comments = Comments.substr(Position);
+  } while (!Comments.empty());
+
+  CommentToEmit.clear();
+}
+
+void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
+                                                   int64_t Fill,
+                                                   uint8_t FillLen,
+                                                   unsigned MaxBytesToEmit) {
+  emitAlignmentDS(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
+}
+
+void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
+                                                const MCSubtargetInfo &STI,
+                                                unsigned MaxBytesToEmit) {
+  // Emit with a text fill value.
+  if (MAI->getTextAlignFillValue())
+    emitAlignmentDS(Alignment.value(), MAI->getTextAlignFillValue(), 1,
+                    MaxBytesToEmit);
+  else
+    emitAlignmentDS(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
+}
+
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+  assert(getCurrentSectionOnly() &&
+         "Cannot emit contents before setting section!");
+  if (Data.empty())
+    return;
+
+  OS << " DC ";
+  size_t Len = Data.size();
+  SmallVector<uint8_t> Chars;
+  Chars.resize(Len);
+  OS << "XL" << Len;
+  uint32_t Index = 0;
+  for (uint8_t C : Data) {
+    Chars[Index] = C;
+    Index++;
+  }
+
+  OS << '\'' << toHex(Chars) << '\'';
+
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
+  SmallString<256> Code;
+  SmallVector<MCFixup, 4> Fixups;
+
+  // If we have no code emitter, don't emit code.
+  if (!getAssembler().getEmitterPtr())
+    return;
+
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // If we are showing fixups, create symbolic markers in the encoded
+  // representation. We do this by making a per-bit map to the fixup item index,
+  // then trying to display it as nicely as possible.
+  SmallVector<uint8_t, 64> FixupMap;
+  FixupMap.resize(Code.size() * 8);
+  for (unsigned I = 0, E = Code.size() * 8; I != E; ++I)
+    FixupMap[I] = 0;
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    MCFixupKindInfo Info =
+        getAssembler().getBackend().getFixupKindInfo(F.getKind());
+    for (unsigned J = 0; J != Info.TargetSize; ++J) {
+      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + J;
+      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
+      FixupMap[Index] = 1 + I;
+    }
+  }
+
+  OS << "encoding: [";
+  for (unsigned I = 0, E = Code.size(); I != E; ++I) {
+    if (I)
+      OS << ',';
+
+    // See if all bits are the same map entry.
+    uint8_t MapEntry = FixupMap[I * 8 + 0];
+    for (unsigned J = 1; J != 8; ++J) {
+      if (FixupMap[I * 8 + J] == MapEntry)
+        continue;
+
+      MapEntry = uint8_t(~0U);
+      break;
+    }
+
+    if (MapEntry != uint8_t(~0U)) {
+      if (MapEntry == 0) {
+        OS << format("0x%02x", uint8_t(Code[I]));
+      } else {
+        if (Code[I]) {
+          // FIXME: Some of the 8 bits require fix up.
+          OS << format("0x%02x", uint8_t(Code[I])) << '\''
+             << char('A' + MapEntry - 1) << '\'';
+        } else
+          OS << char('A' + MapEntry - 1);
+      }
+    } else {
+      // Otherwise, write out in binary.
+      OS << "0b";
+      for (unsigned J = 8; J--;) {
+        unsigned Bit = (Code[I] >> J) & 1;
+        unsigned FixupBit = I * 8 + (7 - J);
+        if (uint8_t MapEntry = FixupMap[FixupBit]) {
+          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
+          OS << char('A' + MapEntry - 1);
+        } else
+          OS << Bit;
+      }
+    }
+  }
+  OS << "]\n";
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    OS << "  fixup " << char('A' + I) << " - "
+       << "offset: " << F.getOffset() << ", value: ";
+    MAI->printExpr(OS, *F.getValue());
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
+    OS << "\n";
+  }
+}
+
+void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
+                                              const MCSubtargetInfo &STI) {
+  // Show the encoding in a comment if we have a code emitter.
+  addEncodingComment(Inst, STI);
+  EmitEOL();
+
+  InstPrinter->printInst(&Inst, 0, "", STI, OS);
+  EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {

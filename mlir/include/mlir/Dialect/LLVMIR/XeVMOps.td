@@ -37,6 +37,7 @@ def XeVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
@@ -53,7 +54,7 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
             ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
       Attribute propAttr = getPropertiesAsAttr(ctx, prop);
       if (propAttr)
-        p << "<" << propAttr << ">";
+        p << " <" << propAttr << ">";
     }
 
     static ::mlir::ParseResult parseProperties(::mlir::OpAsmParser &parser,
@@ -648,6 +649,51 @@ def XeVM_TruncfOp
   let hasVerifier = 1;
 }
 
+def XeVM_ExtfSrcElemTypes
+    : I32EnumAttr<"ExtfSrcElemTypes",
+                  "Source element type for xevm.extf",
+                  [XeVM_ET_BF8, XeVM_ET_F8, XeVM_ET_E2M1]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_ExtfSrcElemTypeAttr : XeVM_Attr<"ExtfSrcElemType", "ext_src_etype"> {
+  let parameters = (ins "xevm::ExtfSrcElemTypes":$etype);
+  let assemblyFormat = "`src_etype` `=` $etype";
+}
+
+def XeVM_ExtfDstElemTypes
+    : I32EnumAttr<
+          "ExtfDstElemTypes",
+          "Destination element type for xevm.extf", [XeVM_ET_F16, XeVM_ET_BF16]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_ExtfDstElemTypeAttr : XeVM_Attr<"ExtfDstElemType", "ext_dst_etype"> {
+  let parameters = (ins "xevm::ExtfDstElemTypes":$etype);
+  let assemblyFormat = "`dst_etype` `=` $etype";
+}
+
+def XeVM_ExtfOp
+    : XeVM_Op<"extf">,
+      Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
+                              BF16]>:$dst)>,
+      Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
+                                I<4>]>:$src,
+          XeVM_ExtfSrcElemTypeAttr:$src_etype,
+          XeVM_ExtfDstElemTypeAttr:$dst_etype)> {
+  let summary = "Floating point extension from f8/bf8/f4 to f16/bf16";
+  let description = [{
+    The `xevm.extf` operation extends a floating point value from
+    f8/bf8/f4 format to f16/bf16 format. It is the inverse of `xevm.truncf`.
+  }];
+
+  let assemblyFormat = [{
+    $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def XeVM_MMAMxOp
     : XeVM_Op<"mma_mx">,
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
@@ -690,6 +736,91 @@ def XeVM_MMAMxOp
       `shape` `=` $shape `,`
       `types` `=` $types
     `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeVM_BitcastShuffleElemType : AnyTypeOf<[I8, I16, I32, I64]>;
+
+def XeVM_BitcastShuffleOp
+    : XeVM_Op<"bitcast_shuffle">,
+      Results<(outs AnyTypeOf<
+          [XeVM_BitcastShuffleElemType,
+           FixedVectorOfRankAndType<[1],
+                                    [XeVM_BitcastShuffleElemType]>]>:$res)>,
+      Arguments<(ins AnyTypeOf<
+          [XeVM_BitcastShuffleElemType,
+           FixedVectorOfRankAndType<[1],
+                                    [XeVM_BitcastShuffleElemType]>]>:$src)> {
+
+  let summary = "Subgroup bit-preserving conversion and shuffle";
+
+  let description = [{
+    The `xevm.bitcast_shuffle` operation performs a bit-preserving type
+    conversion and shuffle of `src` among the invocations in a subgroup. It is
+    a cooperative operation: all invocations in the subgroup participate. This
+    operation may execute more efficiently than a traditional bitcast.
+
+    Exactly one of `src` and `res` is a 1D vector and the other is a scalar, so
+    the operation comes in two forms:
+
+    * a *pack*, taking a vector and returning a scalar, which gathers the
+      components spread across the subgroup into one value per invocation;
+    * an *unpack*, taking a scalar and returning a vector, which is its exact
+      inverse.
+
+    The total number of bits of `res` must equal the total number of bits of
+    `src`. Only the integer types `i8`, `i16`, `i32` and `i64` are accepted, on
+    either side. The operation is bit-preserving and so does not depend on how
+    the bits are interpreted; a producer holding floating point data is expected
+    to bitcast it to a same-width integer type beforehand and to bitcast the
+    result back. This keeps the set of overloads the operation lowers to small,
+    and it is why sub-byte types such as f4 and i4 are excluded as well: the
+    shuffle is performed at byte granularity. Note that the packed side is a
+    single value of one of the supported scalar types, which bounds the vector
+    side at 64 bits in total.
+
+    The bitcast and shuffle is performed as follows. Take the first component of
+    `src` for each invocation in the subgroup and concatenate those components
+    together, ordered by subgroup local invocation ID. Then repeat for the next
+    component of `src` of each invocation, until all of `src` has been
+    concatenated. A scalar `src` counts as having a single component. This forms
+    an `M * N` bit number, where `M` is the size in bits of `src` and `N` is the
+    subgroup size.
+
+    Now take the first `C` bits of the concatenated number and assign them to
+    the first component of `res` of the first invocation in the subgroup, where
+    `C` is the size in bits of each component of `res` when it is a vector type,
+    or the size in bits of `res` when it is a scalar type. Assign the next `C`
+    bits to the first component of `res` of the next invocation, and so on,
+    ordered by subgroup local invocation ID. Once `C` bits have been assigned to
+    the first component of all invocations in the subgroup, repeat for the
+    second component of `res`, and so on, until all bits have been assigned.
+
+    A pack followed by an unpack back to the original type, or the other way
+    round, yields the original source data.
+
+    Example:
+    ```mlir
+      // pack
+      %scalar = xevm.bitcast_shuffle %vec : (vector<4xi16>) -> i64
+      // unpack
+      %vec2 = xevm.bitcast_shuffle %scalar : (i64) -> vector<4xi16>
+    ```
+
+    Shuffling a `vector<4xbf16>` fragment, for example, is expressed by
+    bitcasting to and from `vector<4xi16>` around the operation:
+
+    ```mlir
+      %bits = llvm.bitcast %frag : vector<4xbf16> to vector<4xi16>
+      %packed = xevm.bitcast_shuffle %bits : (vector<4xi16>) -> i64
+      %res = llvm.bitcast %packed : i64 to vector<4xbf16>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;

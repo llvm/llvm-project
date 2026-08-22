@@ -25,8 +25,8 @@ int f19(void) {
 // CIR:   cir.return %[[RES]] : !s32i
 
 // LLVM: define dso_local i32 @f19()
-// LLVM:   %[[VAR1:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca i32, i64 1
+// LLVM:   %[[VAR1:.+]] = alloca i32, 
+// LLVM:   %[[VAR2:.+]] = alloca i32, 
 // LLVM:   br label %[[LBL3:.+]]
 // LLVM: [[LBL3]]:
 // LLVM:     store i32 4, ptr %[[VAR2]]
@@ -103,13 +103,13 @@ int nested(void) {
 // CIR:   cir.return %[[FINAL_RES]] : !s32i
 
 // LLVM: define dso_local i32 @nested()
-// LLVM:   %[[VAR1:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR3:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR4:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR5:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR6:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR7:.+]] = alloca i32, i64 1
+// LLVM:   %[[VAR1:.+]] = alloca i32, 
+// LLVM:   %[[VAR2:.+]] = alloca i32, 
+// LLVM:   %[[VAR3:.+]] = alloca i32, 
+// LLVM:   %[[VAR4:.+]] = alloca i32, 
+// LLVM:   %[[VAR5:.+]] = alloca i32, 
+// LLVM:   %[[VAR6:.+]] = alloca i32, 
+// LLVM:   %[[VAR7:.+]] = alloca i32, 
 // LLVM:   br label %[[LBL8:.+]]
 // LLVM: [[LBL8]]:
 // LLVM:     store i32 123, ptr %[[VAR7]]
@@ -204,8 +204,8 @@ void test2() { ({int x = 3; x; }); }
 // CIR: %{{.+}} = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 
 // LLVM: define dso_local void @test2()
-// LLVM:   %[[X:.+]] = alloca i32, i64 1
-// LLVM:   %[[TMP:.+]] = alloca i32, i64 1
+// LLVM:   %[[X:.+]] = alloca i32, 
+// LLVM:   %[[TMP:.+]] = alloca i32, 
 // LLVM:   br label %[[LBL3:.+]]
 // LLVM: [[LBL3]]:
 // LLVM:     store i32 3, ptr %[[X]]
@@ -236,7 +236,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:     %[[S:.+]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:     %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
 // CIR:     cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
-// CIR:     cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>
+// CIR:     cir.copy %[[S]] align(4) to %[[REF_TMP0]] align(4) : !cir.ptr<!rec_S>
 // CIR:   }
 // CIR:   %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:   %[[XVAL:.+]] = cir.load {{.*}} %[[GEP_X_TMP]] : !cir.ptr<!s32i>, !s32i
@@ -245,14 +245,14 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:   cir.return %[[RES]] : !s32i
 
 // LLVM: define dso_local i32 @test3()
-// LLVM:   %[[VAR1:.+]] = alloca %struct.S, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca i32, i64 1
-// LLVM:   %[[VAR3:.+]] = alloca %struct.S, i64 1
-// LLVM:   %[[VAR4:.+]] = alloca %struct.S, i64 1
+// LLVM:   %[[VAR1:.+]] = alloca %struct.S, 
+// LLVM:   %[[VAR2:.+]] = alloca i32, 
+// LLVM:   %[[VAR3:.+]] = alloca %struct.S, 
+// LLVM:   %[[VAR4:.+]] = alloca %struct.S, 
 // LLVM:   br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
-// LLVM:     call void @llvm.memcpy{{.*}}(ptr %[[VAR1]], ptr @[[TEST3_S]], i64 4, i1 false)
-// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr %[[VAR3]], ptr %[[VAR1]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy{{.*}}(ptr align 4 %[[VAR1]], ptr align 4 @[[TEST3_S]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAR3]], ptr align 4 %[[VAR1]], i64 4, i1 false)
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
 // LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0

@@ -44,7 +44,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
       }
 
       if (!filteredAttrs.empty()) {
-        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
+        p << " <" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
       }
     }
 
@@ -773,7 +773,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout,
+      OptionalAttr<I64Attr>:$contiguity);
   let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -903,7 +904,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout,
+      OptionalAttr<I64Attr>:$contiguity);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -1225,8 +1227,9 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
       Arguments:
       - `source`: The input vector whose data is to be redistributed. The source and
       result types must match.
-      - `input_layout`: The layout attribute describing the current distribution of `source`
-      across subgroups and/or lanes.
+      - `input_layout`: [optional] The layout attribute describing the current distribution
+      of `source` across subgroups and/or lanes. When omitted, it defaults to `target_layout`,
+      i.e. the source is assumed to already be in the target distribution.
       - `target_layout`: The layout attribute describing the desired distribution of the result
       across subgroups and/or lanes.
 
@@ -1239,7 +1242,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
         ```
     }];
     let arguments = (ins XeGPU_VectorOrScalarType: $source,
-                         DistributeLayoutAttr: $input_layout,
+                         OptionalAttr<DistributeLayoutAttr>: $input_layout,
                          DistributeLayoutAttr: $target_layout);
     let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
@@ -1252,6 +1255,13 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
 
       void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
         setTargetLayoutAttr(anchorLayout);
+      }
+
+      /// Returns `input_layout` if set, otherwise `target_layout`.
+      xegpu::DistributeLayoutAttr getEffectiveInputLayout() {
+        if (auto layout = getInputLayoutAttr())
+          return layout;
+        return getTargetLayoutAttr();
       }
 
     }];
@@ -1275,7 +1285,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : 1D or 2D statically shaped memref, representing the raw SLM buffer. The provided memref must be contiguous.
+     - `source` : a statically shaped memref of any rank, representing the raw SLM buffer. The provided memref must be contiguous.
 
     Results:
      - `mem_desc` : the memory descriptor (1D or higher).
@@ -1294,9 +1304,10 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     ```
 
   }];
-  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
+  let arguments = (ins StaticSharedMemRefOf<[XeGPU_ScalarType]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` qualified(type($mem_desc))";
+  let hasVerifier = 1;
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
@@ -1310,7 +1321,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+    prop-dict attr-dict `:` type(operands) `->` type(results)
   }];
 
   let description = [{
@@ -1388,7 +1399,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-                          prop-dict attr-dict `` `:` type(operands)}];
+                          prop-dict attr-dict `:` type(operands)}];
   let description = [{
     This operation stores a `data` fragment into the shared local memory region
     specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
@@ -1487,6 +1498,78 @@ def XeGPU_TruncfOp
   }];
 
   let hasVerifier = 1;
+}
+
+def XeGPU_LaneShuffleOp
+    : XeGPU_Op<"lane_shuffle", [Pure, AllTypesMatch<["source", "result"]>]> {
+  let summary = "Re-distributes a subgroup's fragments across its lanes.";
+
+  let description = [{
+    `xegpu.lane_shuffle` is a lane-level operation. The `source` operand is the
+    fragment (a 1D vector) held by one lane, and the `result` is the fragment
+    that lane holds afterwards. It re-distributes the elements across the lanes
+    of the subgroup without changing their type, so `source` and `result` have
+    the same type.
+
+    Let `S` be the subgroup size and `N` the number of elements per lane, so the
+    subgroup collectively holds `S * N` elements. Number these elements by their
+    logical position `0 .. S*N-1`. The `mode` selects which of the two
+    orientations of the `S x N` (lane, element) index grid the operation maps
+    between:
+
+    * `pack`: element `j` of lane `i` holds logical position `j * S + i` before
+      the operation and `i * N + j` after it. A lane's elements end up at
+      consecutive logical positions.
+    * `unpack`: the reverse mapping. A lane's elements end up strided by `S`.
+
+    The two modes are exact inverses, so shuffling one way and then the other
+    yields the original fragments.
+
+    For example, consider `vector<2xi16>` with a subgroup size of 8, denoting a
+    lane's fragment as `<a,b>`. In `pack` mode:
+
+    ```
+    lane:       0      1      2      3      4      5      6      7
+    source:   <0,8>  <1,9>  <2,10> <3,11> <4,12> <5,13> <6,14> <7,15>
+    result:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
+    ```
+
+    In general each lane's result elements come from `N` different lanes'
+    `source` fragments -- that is the cross-lane shuffle.
+
+    This operation implements the `xegpu.convert_layout` semantics at the lane
+    level, for the case where the `lane_layout` is the same but the `lane_data`
+    is different.
+
+    The operation assumes a full subgroup (the subgroup size equals the maximum
+    subgroup size) and that all lanes execute the same dynamic instance of the
+    operation; otherwise the behavior is undefined.
+
+    Arguments:
+    - `source`: The 1D vector fragment held by one lane.
+    - `mode`: The direction of the shuffle, either `pack` or `unpack`.
+  }];
+
+  let arguments = (ins XeGPU_LaneShuffleType:$source,
+                       XeGPU_LaneShuffleModeAttr:$mode);
+  let results = (outs XeGPU_LaneShuffleType:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getSourceType() {
+      return llvm::cast<VectorType>(getSource().getType());
+    }
+
+    VectorType getResultType() {
+      return llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source $mode attr-dict `:` type($source)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,

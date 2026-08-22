@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Rematerializer.h"
@@ -103,6 +104,33 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
+namespace {
+
+struct VGPRThresholdParser : public cl::parser<unsigned> {
+  VGPRThresholdParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value > 100)
+      return O.error("'" + Arg + "' value must be in the range [0, 100]!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt(
+    "amdgpu-vgpr-threshold-percent", cl::Hidden,
+    cl::desc("Percent of VGPR limits that we should use as RP threshold "
+             "during scheduling. We have two limits relevant to scheduling: "
+             "Critical (avoid decreasing occupancy), Excess (avoid spilling). "
+             "This flag scales both limits back by an equal percent: (0 = use "
+             " default calculation, 1-100 = use percentage), default: 0"),
+    cl::init(0));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -154,12 +182,27 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   }
+  // Apply VGPR excess threshold percentage if specified.
+  if (VGPRThresholdPercentOpt > 0) {
+    [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
+    [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
+    VGPRExcessLimit = (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
+    VGPRCriticalLimit =
+        (VGPRThresholdPercentOpt * VGPRCriticalLimit + 99) / 100;
+    LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
+                      << VGPRThresholdPercentOpt << "%, VGPRExcessLimit: "
+                      << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
+                      << ". VGPRCriticalLimit: " << OriginalVGPRCriticalLimit
+                      << " -> " << VGPRCriticalLimit << '\n');
+  } else {
+    VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
+    VGPRCriticalLimit -=
+        std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+  }
 
   // Subtract error margin and bias from register limits and avoid overflow.
   SGPRCriticalLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRCriticalLimit);
-  VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
-  VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
@@ -258,11 +301,10 @@ unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
   }
 
   // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPU currently installs GCNHazardRecognizer for MI scheduling only in
-  // the post-RA configuration without vreg liveness.
-  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
-      Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
+  // AMDGPUCoExecSchedStrategy installs a GCNHazardRecognizer in both
+  // pre-RA (PreRA mode) and post-RA configurations.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
     Stall = std::max(Stall, HR->getHazardWaitStates(MI));
   }
 
@@ -1318,7 +1360,7 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
   for (MachineOperand &UseMO :
@@ -1501,33 +1543,54 @@ bool PreRARematStage::initGCNSchedStage() {
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
-    // Single user only.
-    unsigned NumUsers = 0;
-    for (const auto &[_, RegionUses] : CandReg.Uses)
-      NumUsers += RegionUses.size();
-    if (NumUsers != 1)
+    // All users must be in a single region.
+    if (CandReg.Uses.size() != 1)
+      continue;
+    const auto [UseRegion, Users] = *CandReg.Uses.begin();
+
+    // Rematerialization moves the defining instruction into the region of its
+    // use, which may sit under different control dependencies (e.g., across a
+    // change of EXEC). Convergent operations must not be made control-dependent
+    // on additional values, so they cannot be safely relocated this way. This
+    // mirrors the check MachineSink performs before sinking an instruction.
+    if (any_of(CandReg.Defs,
+               [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
       continue;
 
     // We further filter the registers that we can rematerialize based on our
-    // current tracking capabilities in the stage. The user cannot itself be
+    // current tracking capabilities in the stage. Users cannot themselves be
     // marked rematerializable, and no register operand of the defining MI can
-    // be marked rematerializable.
-    MachineInstr *UseMI = *CandReg.Uses.begin()->getSecond().begin();
-    const MachineOperand &UseMO = UseMI->getOperand(0);
-    if (UseMO.isReg() && MarkedRegs.contains(UseMO.getReg()))
+    // be marked rematerializable. We also do not rematerialize an instruction
+    // if it uses registers that aren't available at its use. This ensures that
+    // we are not extending any live range while rematerializing.
+    if (llvm::any_of(Users, [&MarkedRegs](const MachineInstr *UserMI) {
+          assert(UserMI->getNumOperands() > 0 &&
+                 "user must have at least one operand");
+          const MachineOperand &UseMO = UserMI->getOperand(0);
+          return UseMO.isReg() && MarkedRegs.contains(UseMO.getReg());
+        }))
       continue;
-    if (llvm::any_of(CandReg.DefMI->all_uses(),
-                     [&MarkedRegs](const MachineOperand &MO) {
-                       return MarkedRegs.contains(MO.getReg());
+    MachineInstr *FirstUseMI =
+        CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
+    assert(FirstUseMI && "there must be a user in the region");
+    SlotIndex FirstUseIdx =
+        DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
+    SlotIndex RefIdx =
+        DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
+    if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
+          const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+          Register DepDefReg = DepReg.getDefReg();
+          return MarkedRegs.contains(DepDefReg) ||
+                 !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
+                                               {FirstUseIdx});
+        }))
+      continue;
+    if (llvm::any_of(Remater.getUnrematableDeps(RegIdx),
+                     [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
+                       const auto &[Reg, Mask] = RegAndMask;
+                       return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
+                                                            {FirstUseIdx});
                      }))
-      continue;
-
-    // Do not rematerialize an instruction if it uses registers that aren't
-    // available at its use. This ensures that we are not extending any live
-    // range while rematerializing.
-    SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
-    if (!VirtRegAuxInfo::allUsesAvailableAt(CandReg.DefMI, UseIdx, *DAG.LIS,
-                                            DAG.MRI, *DAG.TII))
       continue;
 
     MarkedRegs.insert(CandReg.getDefReg());
@@ -1594,29 +1657,34 @@ bool PreRARematStage::initGCNSchedStage() {
 #ifdef EXPENSIVE_CHECKS
       // All uses are known to be available / live at the remat point. Thus,
       // the uses should already be live in to the using region.
-      for (MachineOperand &MO : Reg.DefMI->operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-          continue;
+      for (const MachineInstr *DefMI : Reg.Defs) {
+        for (const MachineOperand &MO : DefMI->operands()) {
+          // Exclude the defined register. We are rematerializing all
+          // instructions defining it so we don't care that its value is
+          // available at the remat point.
+          if (!MO.isReg() || !MO.getReg() || !MO.readsReg() || MO.isDef())
+            continue;
 
-        Register UseReg = MO.getReg();
-        if (!UseReg.isVirtual())
-          continue;
+          Register UseReg = MO.getReg();
+          if (!UseReg.isVirtual())
+            continue;
 
-        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
-        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
-        if (LI.hasSubRanges() && MO.getSubReg())
-          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+          LiveInterval &LI = DAG.LIS->getInterval(UseReg);
+          LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+          if (LI.hasSubRanges() && MO.getSubReg())
+            LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        const unsigned UseRegion = Reg.Uses.begin()->first;
-        LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
-        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-        // If this register has lanes not covered by the LiveIns, be sure they
-        // do not map to any subrange. ref:
-        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-        if (UncoveredLanes.any()) {
-          assert(LI.hasSubRanges());
-          for (LiveInterval::SubRange &SR : LI.subranges())
-            assert((SR.LaneMask & UncoveredLanes).none());
+          const unsigned UseRegion = Reg.Uses.begin()->first;
+          LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
+          LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+          // If this register has lanes not covered by the LiveIns, be sure they
+          // do not map to any subrange. ref:
+          // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+          if (UncoveredLanes.any()) {
+            assert(LI.hasSubRanges());
+            for (LiveInterval::SubRange &SR : LI.subranges())
+              assert((SR.LaneMask & UncoveredLanes).none());
+          }
         }
       }
 #endif
@@ -2073,10 +2141,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureBefore.getVGPRNum(false));
+        ST, PressureBefore.getVGPRNum(false),
+        DAG.MFI.getDynamicVGPRBlockSize());
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
+        ST, PressureAfter.getVGPRNum(false), DAG.MFI.getDynamicVGPRBlockSize());
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2233,8 +2301,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
     RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
     if (DAG.ShouldTrackLaneMasks) {
       // Adjust liveness and add missing dead+read-undef flags.
-      SlotIndex SlotIdx = DAG.LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, SlotIdx, MI);
+      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, *MI);
     } else {
       // Adjust for missing dead-def flags.
       RegOpers.detectDeadDefs(*MI, *DAG.LIS);
@@ -2248,18 +2315,39 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-/// Returns true when \p RD will already be in AGPR-form after the rewrite, so
-/// no bridge copy is needed at this reaching definition.
-static bool isReachingDefAGPRForm(MachineInstr *RD,
-                                  const DenseSet<Register> &CandSrc2Regs,
-                                  const SIInstrInfo &TII) {
+/// Returns true if reaching def \p RD will be in AGPR form after the rewrite
+/// and so needs no bridge copy: a candidate MFMA in \p RewriteSet, an
+/// AV_MOV_*_IMM_PSEUDO, or a copy from a candidate src2 reg in \p CandSrc2Regs.
+/// A non-candidate MFMA stays in VGPR form and still needs a bridge.
+static bool isReachingDefAGPRForm(
+    MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
+    const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
-    return true;
+    return RewriteSet.contains(RD);
   if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
       RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
     return true;
   if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
     return true;
+  return false;
+}
+
+bool RewriteMFMAFormStage::hasUseRequiringVGPR(
+    ArrayRef<SlotIndex> Src2ReachingDefs,
+    const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
+  for (SlotIndex RDIdx : Src2ReachingDefs) {
+    const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+    SmallVector<MachineOperand *, 8> ReachingUses;
+    findReachingUses(RD, DAG.LIS, ReachingUses);
+    for (const MachineOperand *UseMO : ReachingUses) {
+      const MachineInstr *UseMI = UseMO->getParent();
+      if (UseMI->isCopy())
+        continue;
+      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
+        continue;
+      return true;
+    }
+  }
   return false;
 }
 
@@ -2289,7 +2377,7 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
-  if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
+  if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
@@ -2327,7 +2415,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       if (!isRewriteCandidate(&MI))
         continue;
 
-      int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+      int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
@@ -2338,9 +2426,15 @@ bool RewriteMFMAFormStage::initHeuristics(
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
+        // If src2 has a use that must remain VGPR, it cannot be reclassified to
+        // AGPR.
+        bool Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
+        Src2NeedsVGPRCache[&MI] = Src2NeedsVGPR;
+
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (isReachingDefAGPRForm(RD, CandSrc2Regs, *TII))
+          if (!Src2NeedsVGPR &&
+              isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
             continue;
           CopyForDef.insert(RD);
         }
@@ -2581,7 +2675,7 @@ bool RewriteMFMAFormStage::rewrite(
   }
 
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+    int ReplacementOp = AMDGPU::getAGPRFormOp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
     MI->setDesc(TII->get(ReplacementOp));
@@ -2598,9 +2692,14 @@ bool RewriteMFMAFormStage::rewrite(
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
       SmallSetVector<MachineInstr *, 8> Src2DefsReplace;
 
+      // If src2 has a use that must remain VGPR, it cannot be reclassified to
+      // AGPR.
+      bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
+
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (isReachingDefAGPRForm(RD, RewriteSrc2Regs, *TII))
+        if (!Src2NeedsVGPR &&
+            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
           continue;
 
         Src2DefsReplace.insert(RD);
@@ -2736,6 +2835,9 @@ bool RewriteMFMAFormStage::rewrite(
     }
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
+    // One AGPR→VGPR copy per dst register, shared by all same-block uses.
+    Register SameBlockCopyReg;
+    MachineInstr *EarliestSameBlockUse = nullptr;
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
@@ -2745,22 +2847,31 @@ bool RewriteMFMAFormStage::rewrite(
         continue;
       }
 
-      // Special case, the use is in the same block as the MFMA. Insert the copy
-      // just before the use.
-      const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-      Register NewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      // Lazily create the copy register on first same-block use.
+      if (!SameBlockCopyReg.isValid()) {
+        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
+        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+        SameBlockCopyReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      }
+
+      // Track the earliest use for copy insertion point.
       MachineInstr *UseInst = RU->getParent();
+      if (!EarliestSameBlockUse ||
+          SlotIndex::isEarlierInstr(
+              DAG.LIS->getInstructionIndex(*UseInst),
+              DAG.LIS->getInstructionIndex(*EarliestSameBlockUse)))
+        EarliestSameBlockUse = UseInst;
+      RU->setReg(SameBlockCopyReg);
+    }
+
+    // Insert the copy before the earliest same-block use.
+    if (SameBlockCopyReg.isValid()) {
       MachineInstrBuilder VGPRCopy =
-          BuildMI(*UseInst->getParent(), UseInst->getIterator(),
-                  UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, {}, 0)
+          BuildMI(*EarliestSameBlockUse->getParent(),
+                  EarliestSameBlockUse->getIterator(), DebugLoc(),
+                  TII->get(TargetOpcode::COPY), SameBlockCopyReg)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-      // Since we know this use has only one reaching def, we can replace the
-      // use reg.
-      RU->setReg(NewUseReg);
-      // Track the copy source operand for r eplacement.
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
@@ -2912,9 +3023,10 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 
 PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     MachineFunction &MF, const GCNScheduleDAGMILive &DAG) {
-  assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
   const unsigned NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();
@@ -3020,8 +3132,8 @@ void PreRARematStage::ScoredRemat::rematerialize(
     Rematerializer &Remater) const {
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
   Rematerializer::DependencyReuseInfo DRI;
-  for (const Rematerializer::Reg::Dependency &Dep : Reg.Dependencies)
-    DRI.reuse(Dep.RegIdx);
+  for (RegisterIdx DepRegIdx : Reg.Dependencies)
+    DRI.reuse(DepRegIdx);
   unsigned UseRegion = Reg.Uses.begin()->first;
   Remater.rematerializeToRegion(RegIdx, UseRegion, DRI);
 }

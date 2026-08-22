@@ -37,30 +37,29 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
   if (!SQ.CxtI)
     return false;
-  /// Look through assumes to see if both dereferencability and alignment can
-  /// be proven by an assume if needed.
-  RetainedKnowledge AlignRK;
-  RetainedKnowledge DerefRK;
+  // Look through assumes to see if both dereferenceability and alignment can
+  // be proven by an assume if needed.
   bool PtrCanBeFreed = Ptr->canBeFreed() && !IgnoreFree;
   bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
+  bool IsDerefable = false;
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
         if (!isValidAssumeForContext(Assume, SQ.CxtI, SQ.DT))
           return false;
-        if (RK.AttrKind == Attribute::Alignment)
-          AlignRK = std::max(AlignRK, RK);
-
-        // Dereferenceable information from assumptions is only valid if the
-        // value cannot be freed between the assumption and use.
-        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
-            RK.AttrKind == Attribute::Dereferenceable)
-          DerefRK = std::max(DerefRK, RK);
-        IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
-        if (IsAligned && DerefRK && CheckSize(DerefRK))
-          return true; // We have found what we needed so we stop looking
-        return false;  // Other assumes may have better information. so
-                       // keep looking
+        if (RK.AttrKind == Attribute::Alignment) {
+          IsAligned |= RK.ArgValue >= Alignment.value();
+        } else {
+          assert(RK.AttrKind == Attribute::Dereferenceable);
+          // Dereferenceable information from assumptions is only valid if the
+          // value cannot be freed between the assumption and use.
+          if (!IsDerefable &&
+              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
+              CheckSize(RK))
+            IsDerefable = true;
+        }
+        // Stop looking if we have proven both necessary facts.
+        return IsAligned && IsDerefable;
       });
 }
 
@@ -127,7 +126,7 @@ static bool isDereferenceableAndAlignedPointer(
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
     if (!Size.ule(V->getPointerDereferenceableBytes(SQ.DL, CheckForNonNull,
-                                                    CheckForFreed)))
+                                                    &CheckForFreed)))
       return false;
     if (CheckForNonNull && !isKnownNonZero(V, SQ))
       return false;
@@ -265,6 +264,11 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
                                     const SimplifyQuery &SQ, bool IgnoreFree) {
   return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ, IgnoreFree);
+}
+
+bool llvm::isDereferenceablePointer(const Value *V, const APInt &Size,
+                                    const SimplifyQuery &Q, bool IgnoreFree) {
+  return isDereferenceableAndAlignedPointer(V, Align(1), Size, Q, IgnoreFree);
 }
 
 /// Test if A and B will obviously have the same value.
@@ -421,10 +425,17 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment, SQ, /*IgnoreFree=*/false,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               const SCEV *DerefBytesSCEV = SE.getSCEV(RK.IRArgValue);
+               Type *WiderTy = SE.getWiderType(AccessSizeSCEV->getType(),
+                                               DerefBytesSCEV->getType());
+               const SCEV *AccessSizeExt =
+                   SE.getNoopOrZeroExtend(AccessSizeSCEV, WiderTy);
+               const SCEV *DerefBytesExt =
+                   SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
-                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
@@ -813,7 +824,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
+static bool isPointerUseReplaceable(const Use &U, bool HasNonAddressBits) {
   unsigned Limit = 40;
   SmallVector<const User *> Worklist({U.getUser()});
   SmallPtrSet<const User *, 8> Visited;
@@ -848,8 +859,15 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   if (isa<ConstantPointerNull>(From) &&
       From->getType()->getPointerAddressSpace() == 0)
     return true;
+  // Allow replacement with dereferenceable constants. This is not strictly
+  // correct, but required for vtable assumptions.
+  auto IsBasedOnConstantGlobal = [](const Value *V) {
+    auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(V));
+    return GV && GV->isConstant();
+  };
   if (isa<Constant>(To) && To->getType()->isPointerTy() &&
-      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL) &&
+      IsBasedOnConstantGlobal(To))
     return true;
   return getUnderlyingObjectAggressive(From) ==
          getUnderlyingObjectAggressive(To);
@@ -872,7 +890,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
 
   bool HasNonAddressBits =
       DL.getAddressSizeInBits(Ty) != DL.getPointerTypeSizeInBits(Ty);
-  return isPointerUseReplacable(U, HasNonAddressBits);
+  return isPointerUseReplaceable(U, HasNonAddressBits);
 }
 
 bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,

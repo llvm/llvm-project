@@ -91,29 +91,20 @@ features = [
         ),
         actions=[AddLinkFlag("-latomic")],
     ),
-    Feature(
-        name="has-64-bit-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { char storage[64/8]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
-          """,
-        ),
-    ),
-    Feature(
-        name="has-1024-bit-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { char storage[1024/8]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
-          """,
-        ),
+    *(
+        Feature(
+            name=f"has-{n}-bit-atomics",
+            when=lambda cfg, n=n: sourceBuilds(
+                cfg,
+                f"""
+                #include <atomic>
+                struct Large {{ char storage[{n}/8]; }};
+                std::atomic<Large> x;
+                int main(int, char**) {{ (void)x.load(); (void)x.is_lock_free(); return 0; }}
+                """,
+            ),
+        )
+        for n in [64, 128, 1024]
     ),
     # Tests that require 64-bit architecture
     Feature(
@@ -131,17 +122,25 @@ features = [
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
         name="win32-broken-utf8-wchar-ctype",
-        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
-        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
-        and "_WIN32" in compilerMacros(cfg)
-        and not programSucceeds(
+        when=lambda cfg: "_WIN32" in compilerMacros(cfg)
+        and programSucceeds(
             cfg,
             """
-            #include <locale.h>
+            #if __has_include(<locale.h>)
+            # include <locale.h>
+            #endif
+            #include <stdlib.h>
             #include <wctype.h>
+
+            #include "test_macros.h"
+
             int main(int, char**) {
+            #ifndef TEST_HAS_NO_LOCALIZATION
               setlocale(LC_ALL, "en_US.UTF-8");
-              return towlower(L'\\xDA') != L'\\xFA';
+              return towlower(L'\\xDA') == L'\\xFA' ? EXIT_FAILURE : EXIT_SUCCESS;
+            #else
+              return EXIT_FAILURE; // no localization: assume bug not present
+            #endif
             }
           """,
         ),
@@ -217,7 +216,6 @@ features = [
         # This is not allowed per C11 7.1.2 Standard headers/6
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
-        or "__FreeBSD__" in compilerMacros(cfg)
         or ("_WIN32" in compilerMacros(cfg) and not _mingwSupportsModules(cfg))
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.

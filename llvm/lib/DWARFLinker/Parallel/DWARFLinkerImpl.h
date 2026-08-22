@@ -89,6 +89,9 @@ public:
     GlobalData.Options.Threads = NumThreads;
   }
 
+  /// Use the specified thread pool to link the object files.
+  void setThreadPool(ThreadPoolInterface *Pool) override { ThreadPool = Pool; }
+
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
     assert(!llvm::is_contained(GlobalData.getOptions().AccelTables, Kind));
@@ -155,18 +158,6 @@ protected:
   struct LinkContext : public OutputSections {
     using UnitListTy = SmallVector<std::unique_ptr<CompileUnit>>;
 
-    /// Keep information for referenced clang module: already loaded DWARF info
-    /// of the clang module and a CompileUnit of the module.
-    struct RefModuleUnit {
-      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit);
-      RefModuleUnit(RefModuleUnit &&Other);
-      RefModuleUnit(const RefModuleUnit &) = delete;
-
-      DWARFFile &File;
-      std::unique_ptr<CompileUnit> Unit;
-    };
-    using ModuleUnitListTy = SmallVector<RefModuleUnit>;
-
     /// Object file descriptor.
     DWARFFile &InputDWARFFile;
 
@@ -174,7 +165,7 @@ protected:
     UnitListTy CompileUnits;
 
     /// Set of Compile Units for modules.
-    ModuleUnitListTy ModulesCompileUnits;
+    UnitListTy ModulesCompileUnits;
 
     /// Index of this object file in the link order (used for deterministic
     /// type DIE allocation).
@@ -228,9 +219,6 @@ protected:
                           const std::string &PCMFile,
                           CompileUnitHandlerTy OnCUDieLoaded,
                           unsigned Indent = 0);
-
-    /// Add Compile Unit corresponding to the module.
-    void addModulesCompileUnit(RefModuleUnit &&Unit);
 
     /// Computes the total size of the debug info.
     uint64_t getInputDebugInfoSize() const {
@@ -403,9 +391,9 @@ protected:
   /// Unique ID for compile unit.
   std::atomic<size_t> UniqueUnitID;
 
-  /// Mapping the PCM filename to the DwoId.
+  /// Mapping the PCM filename to the DwoId. Only ever touched from
+  /// addObjectFile(), which runs serially, so it needs no synchronization.
   StringMap<uint64_t> ClangModules;
-  std::mutex ClangModulesMutex;
 
   /// Type unit.
   std::unique_ptr<TypeUnit> ArtificialTypeUnit;
@@ -432,8 +420,8 @@ protected:
   /// Hanler for output sections.
   SectionHandlerTy SectionHandler = nullptr;
 
-  /// Overall compile units number.
-  uint64_t OverallNumberOfCU = 0;
+  /// Thread pool that links the object files, or null to use a private pool.
+  ThreadPoolInterface *ThreadPool = nullptr;
   /// @}
 };
 
