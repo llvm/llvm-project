@@ -3343,6 +3343,24 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
       return getTrue(ITy);
   }
 
+  // If X - Y does not unsigned underflow, then X - Y <=u X. Use a known
+  // upper bound for X to simplify the comparison.
+  if (ICmpInst::isUnsigned(Pred) &&
+      LBO->getOpcode() == Instruction::Sub && MaxRecurse) {
+    Value *X = LBO->getOperand(0), *Y = LBO->getOperand(1);
+    if (Q.IIQ.hasNoUnsignedWrap(LBO) ||
+        isICmpTrue(ICmpInst::ICMP_ULE, Y, X, Q, MaxRecurse - 1)) {
+      CmpPredicate BoundPred = Pred;
+      bool Result = true;
+      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+        BoundPred = ICmpInst::getInversePredicate(Pred);
+        Result = false;
+      }
+      if (isICmpTrue(BoundPred, X, RHS, Q, MaxRecurse - 1))
+        return ConstantInt::getBool(ITy, Result);
+    }
+  }
+
   // (sub C, X) == X, C is odd  --> false
   // (sub C, X) != X, C is odd  --> true
   if (match(LBO, m_Sub(m_APIntAllowPoison(C), m_Specific(RHS))) &&
