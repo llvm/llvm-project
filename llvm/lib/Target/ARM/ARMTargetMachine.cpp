@@ -514,7 +514,7 @@ bool ARMPassConfig::addRegBankSelect() {
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 

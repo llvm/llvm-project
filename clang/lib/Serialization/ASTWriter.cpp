@@ -540,7 +540,7 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
   AddSourceLocation(CR->getTemplateKWLoc());
   AddDeclarationNameInfo(CR->getConceptNameInfo());
   AddDeclRef(CR->getFoundDecl());
-  AddDeclRef(CR->getNamedConcept());
+  AddTemplateName(CR->getNamedConcept());
   push_back(CR->getTemplateArgsAsWritten() != nullptr);
   if (CR->getTemplateArgsAsWritten())
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());

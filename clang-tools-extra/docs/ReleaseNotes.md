@@ -108,6 +108,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`portability-avoid-pragma-comment
+  <clang-tidy/checks/portability/avoid-pragma-comment>` check.
+
+  Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
+  using the build system for improved portability.
+
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
 
@@ -121,6 +127,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
+
+- Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
+  the pointer points to an incomplete (forward-declared) type.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
@@ -148,6 +158,10 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Fixed a crash in {doc}`modernize-raw-string-literal
+  <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
+  literals created for raw user-defined literal operators, such as `12_w`.
+
 - Improved {doc}`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
   rewrite the return value when the constructed type has a
@@ -155,11 +169,12 @@ infrastructure are described first, followed by tool-specific sections.
   different constructor.
 
 - Improved {doc}`performance-inefficient-algorithm
-  <clang-tidy/checks/performance/inefficient-algorithm>` check by copying the
-  searched-for value as written rather than stripping its parentheses, which
-  could produce an invalid fix such as `s.find()` when the value came from a
-  macro. No fix is offered when the value covers only part of a macro
-  expansion.
+  <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
+  produce a fix with the container or the searched-for value missing, such as
+  `.find(43)` or `s.find()`, when either comes from a macro. The value is
+  copied as written rather than with its parentheses stripped, and no fix is
+  offered when an argument covers only part of a macro expansion, as it then
+  has no source text of its own.
 
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding

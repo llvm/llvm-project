@@ -144,7 +144,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install -r libcxx/utils/requirements.txt
+          pip install -r libcxx/utils/ci/lnt/requirements.txt
 
       - name: Run the benchmarks
         env:

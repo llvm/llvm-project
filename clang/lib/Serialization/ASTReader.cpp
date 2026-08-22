@@ -7667,7 +7667,7 @@ ConceptReference *ASTRecordReader::readConceptReference() {
   auto TemplateKWLoc = readSourceLocation();
   auto ConceptNameLoc = readDeclarationNameInfo();
   auto FoundDecl = readDeclAs<NamedDecl>();
-  auto NamedConcept = readDeclAs<ConceptDecl>();
+  auto NamedConcept = readTemplateName();
   auto *CR = ConceptReference::Create(
       getContext(), NNS, TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       (readBool() ? readASTTemplateArgumentListInfo() : nullptr));

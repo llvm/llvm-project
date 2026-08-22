@@ -400,6 +400,7 @@ def uimm64 : RISCVUImmOp<64>;
 def simm12 : RISCVSImmLeafOp<12>;
 
 class Simm12LoOp : RISCVSImmLeafOp<12> {
+  let DecoderMethod = "decodeSImm12LoOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -455,6 +456,7 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
+  let DecoderMethod = "decodeUImm20Operand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -2415,6 +2417,7 @@ include "RISCVInstrInfoZilx.td"
 
 // Privileged
 include "RISCVInstrInfoSmcsps.td"
+include "RISCVInstrInfoSmip.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
