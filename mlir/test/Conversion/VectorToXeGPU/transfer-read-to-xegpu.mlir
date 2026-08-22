@@ -276,11 +276,7 @@ gpu.func @load_dynamic_source3(%source: memref<?x?x?x?x?xf32>,
 }
 
 // -----
-// A dynamic high-D read whose vector rank equals the memref rank keeps the
-// *whole* memref as the create_nd source on the nd path: no rank-collapsing
-// memref.subview is emitted and the leading (batch) offsets (here the non-unit
-// 2x4 dims) stay on the load_nd. They are folded into the base pointer later,
-// at XeVM lowering, once blocking has unrolled them to unit tiles.
+// Equal vector and memref rank: the whole memref stays the create_nd source.
 gpu.module @xevm_module {
 gpu.func @load_high_dim_dyn(%source: memref<?x?x8x16xf16>,
     %i: index, %j: index, %k: index, %l: index) -> vector<2x4x8x16xf16> {

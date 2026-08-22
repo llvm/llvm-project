@@ -137,11 +137,6 @@ public:
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    // The memory region is unchanged. A memref source carries its own
-    // (possibly dynamic) shape/strides, so use the bare-memref builder rather
-    // than getMixedSizes/getMixedStrides (which cannot represent a dynamic
-    // memref dim, and for which explicit shape/strides on a memref are no
-    // longer allowed); an integer source still needs its explicit operands.
     Value newOp;
     if (isa<MemRefType>(source.getType()))
       newOp =

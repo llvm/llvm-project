@@ -361,12 +361,7 @@ gpu.module @test {
   }
 
 //-----
-  // Unrolling a >2D (batched) nd descriptor keeps the whole memref as the
-  // create_nd source -- no memref.subview -- and yields a single unit-leading
-  // tdesc that is reused across the batch tiles. The leading (batch) offset
-  // stays on each unrolled load/store and is incremented per tile (it is *not*
-  // zeroed and baked into a subview base). inst_data [1, 8, 16] unrolls the
-  // size-4 batch dim into 4 tiles.
+  // Unrolling a >2D nd desc keeps the whole memref as create_nd source.
   // CHECK-LABEL: gpu.func @load_store_nd_3d
   // CHECK-SAME: [[arg0:%.+]]: memref<4x8x16xf32>, [[z:%.+]]: index
   // CHECK-NOT: memref.subview

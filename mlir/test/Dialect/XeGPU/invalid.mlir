@@ -9,8 +9,7 @@ func.func @create_nd_tdesc_1(%src: memref<24xf32>) {
 
 // -----
 
-// A memref source is authoritative for its own shape/strides, so specifying
-// them explicitly is deprecated and rejected. Use the bare form instead.
+// Explicit shape/strides on a memref source is deprecated and rejected.
 func.func @create_nd_tdesc_memref_explicit_shape(%src: memref<?x?xf16>,
     %h: index, %w: index) {
   %c1 = arith.constant 1 : index

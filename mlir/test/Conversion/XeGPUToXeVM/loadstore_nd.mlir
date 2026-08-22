@@ -92,49 +92,43 @@ gpu.module @load_store_check {
         gpu.return
     }
 
-    // A >2D (batched) load_nd / store_nd folds the leading (batch) offsets into
-    // the base pointer -- base += (sum_d offset[d] * leadingStride[d]) *
-    // elemByteSize -- while the 2D-block surface stays the innermost matrix. For
-    // a dynamic-shape source the sizes/strides are recovered via
-    // extract_strided_metadata: the leading (batch) element stride is carried in
-    // payload slot 5, folding batch index %z contributes %z * stride#0 * 4 bytes
-    // to the base, and the surface is the innermost sizes#2 x sizes#1 matrix.
+    // Batched (>2D): the batch offset becomes a row offset; base ptr unchanged.
     // CHECK-LABEL: gpu.func @load_store_batch_dyn(
     // CHECK-SAME:  %[[SRC:.+]]: memref<?x?x?xf32>, %[[DST:.+]]: memref<?x?x?xf32>, %[[Z:.+]]: index
     gpu.func @load_store_batch_dyn(%src: memref<?x?x?xf32>, %dst: memref<?x?x?xf32>,
                                    %z: index) kernel {
         %c0 = arith.constant 0 : index
         // CHECK-DAG: %[[C4I32:.+]] = arith.constant 4 : i32
-        // CHECK-DAG: %[[C4I64:.+]] = arith.constant 4 : i64
 
-        // Load: recover shape/strides, encode the leading stride into slot 5, and
-        // fold the batch index into the base pointer.
+        // In-plane offset is 0, so canonicalize folds the add away.
         // CHECK: %{{.+}}, %{{.+}}, %[[LSZ:.+]]:3, %[[LSTR:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
+        // CHECK: %[[LH:.+]] = arith.index_cast %[[LSZ]]#1 : index to i32
+        // CHECK: %[[LBATCH:.+]] = arith.index_cast %[[LSZ]]#0 : index to i32
+        // CHECK: %[[LFLAT_H:.+]] = arith.muli %[[LH]], %[[LBATCH]] : i32
+        // CHECK: %[[LPITCH:.+]] = arith.index_cast %[[LSTR]]#1 : index to i32
         // CHECK: %[[LSTRIDE:.+]] = arith.index_cast %[[LSTR]]#0 : index to i32
-        // CHECK: vector.insert %[[LSTRIDE]], %{{.+}} [5] : i32 into vector<8xi32>
+        // CHECK: %[[LROWS:.+]] = arith.divui %[[LSTRIDE]], %[[LPITCH]] : i32
         // CHECK: %[[LBASE:.+]] = vector.extract %{{.+}}[0] : i64 from vector<4xi64>
-        // CHECK: %[[LZ:.+]] = arith.index_cast %[[Z]] : index to i64
-        // CHECK: %[[LSE:.+]] = arith.extui %[[LSTRIDE]] : i32 to i64
-        // CHECK: %[[LMUL:.+]] = arith.muli %[[LZ]], %[[LSE]] : i64
-        // CHECK: %[[LOFF:.+]] = arith.muli %[[LMUL]], %[[C4I64]] : i64
-        // CHECK: %[[LADDR:.+]] = arith.addi %[[LBASE]], %[[LOFF]] : i64
-        // CHECK: %[[LPTR:.+]] = llvm.inttoptr %[[LADDR]] : i64 to !llvm.ptr<1>
-        // CHECK: xevm.blockload2d %[[LPTR]]{{.*}}tile_height = 8 : i32, tile_width = 16 : i32
+        // CHECK: %[[LZ:.+]] = arith.index_cast %[[Z]] : index to i32
+        // CHECK: %[[LY:.+]] = arith.muli %[[LZ]], %[[LROWS]] : i32
+        // CHECK: %[[LPTR:.+]] = llvm.inttoptr %[[LBASE]] : i64 to !llvm.ptr<1>
+        // CHECK: xevm.blockload2d %[[LPTR]], %{{.+}}, %[[LFLAT_H]], %{{.+}}, %{{.+}}, %[[LY]]{{.*}}tile_height = 8 : i32, tile_width = 16 : i32
         %st = xegpu.create_nd_tdesc %src : memref<?x?x?xf32> -> !xegpu.tensor_desc<1x8x16xf32>
         %v = xegpu.load_nd %st[%z, %c0, %c0] : !xegpu.tensor_desc<1x8x16xf32> -> vector<8xf32>
 
-        // Store: same batch fold on the base.
+        // Store: same handling.
         // CHECK: %{{.+}}, %{{.+}}, %[[SSZ:.+]]:3, %[[SSTR:.+]]:3 = memref.extract_strided_metadata %[[DST]]
+        // CHECK: %[[SH:.+]] = arith.index_cast %[[SSZ]]#1 : index to i32
+        // CHECK: %[[SBATCH:.+]] = arith.index_cast %[[SSZ]]#0 : index to i32
+        // CHECK: %[[SFLAT_H:.+]] = arith.muli %[[SH]], %[[SBATCH]] : i32
+        // CHECK: %[[SPITCH:.+]] = arith.index_cast %[[SSTR]]#1 : index to i32
         // CHECK: %[[SSTRIDE:.+]] = arith.index_cast %[[SSTR]]#0 : index to i32
-        // CHECK: vector.insert %[[SSTRIDE]], %{{.+}} [5] : i32 into vector<8xi32>
+        // CHECK: %[[SROWS:.+]] = arith.divui %[[SSTRIDE]], %[[SPITCH]] : i32
         // CHECK: %[[SBASE:.+]] = vector.extract %{{.+}}[0] : i64 from vector<4xi64>
-        // CHECK: %[[SZ:.+]] = arith.index_cast %[[Z]] : index to i64
-        // CHECK: %[[SSE:.+]] = arith.extui %[[SSTRIDE]] : i32 to i64
-        // CHECK: %[[SMUL:.+]] = arith.muli %[[SZ]], %[[SSE]] : i64
-        // CHECK: %[[SOFF:.+]] = arith.muli %[[SMUL]], %[[C4I64]] : i64
-        // CHECK: %[[SADDR:.+]] = arith.addi %[[SBASE]], %[[SOFF]] : i64
-        // CHECK: %[[SPTR:.+]] = llvm.inttoptr %[[SADDR]] : i64 to !llvm.ptr<1>
-        // CHECK: xevm.blockstore2d %[[SPTR]]{{.*}}tile_height = 8 : i32, tile_width = 16 : i32
+        // CHECK: %[[SZ:.+]] = arith.index_cast %[[Z]] : index to i32
+        // CHECK: %[[SY:.+]] = arith.muli %[[SZ]], %[[SROWS]] : i32
+        // CHECK: %[[SPTR:.+]] = llvm.inttoptr %[[SBASE]] : i64 to !llvm.ptr<1>
+        // CHECK: xevm.blockstore2d %[[SPTR]], %{{.+}}, %[[SFLAT_H]], %{{.+}}, %{{.+}}, %[[SY]]{{.*}}tile_height = 8 : i32, tile_width = 16 : i32
         %dt = xegpu.create_nd_tdesc %dst : memref<?x?x?xf32> -> !xegpu.tensor_desc<1x8x16xf32>
         xegpu.store_nd %v, %dt[%z, %c0, %c0] : vector<8xf32>, !xegpu.tensor_desc<1x8x16xf32>
         gpu.return

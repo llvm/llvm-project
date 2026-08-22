@@ -57,8 +57,7 @@ gpu.module @test_kernel {
 
 // -----
 
-// A 2D-block op transfers the innermost 2 dims only, so a non-unit leading dim
-// must be rejected rather than lowered to a load of the wrong shape.
+// A non-unit leading dim cannot be lowered to a 2D-block op.
 
 gpu.module @test_kernel {
   gpu.func @load_nd_non_unit_batch(%src: memref<4x8x16xf32>, %z: index) kernel {
@@ -78,6 +77,30 @@ gpu.module @test_kernel {
   gpu.func @create_nd_tdesc_rank_too_large(%src: memref<2x2x2x2x8x16xf32>) kernel {
     // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
     %t = xegpu.create_nd_tdesc %src : memref<2x2x2x2x8x16xf32> -> !xegpu.tensor_desc<1x1x1x1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A memref with gaps between planes has no exact flattened-plane view.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap(%src: memref<2x8x16xf32, strided<[200, 16, 1]>>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x8x16xf32, strided<[200, 16, 1]>> -> !xegpu.tensor_desc<1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Same check applies to an integer source, whose strides are explicit.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap_ptr(%ptr: i64) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %ptr, shape: [2, 8, 16], strides: [200, 16, 1] : i64 -> !xegpu.tensor_desc<1x8x16xf32>
     gpu.return
   }
 }

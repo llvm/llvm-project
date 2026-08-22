@@ -44,10 +44,7 @@ using namespace mlir;
 
 namespace {
 
-/// Get the 2D lane data from a tensor desc type if it exists. The transpose
-/// optimization acts on the innermost 2 dims; a >2D descriptor is accepted only
-/// when its leading (batch) dims are unit, in which case the inner 2 dims are
-/// returned.
+/// Get the 2D lane data from a tensor desc type if it exists.
 static std::optional<SmallVector<int64_t>>
 getMaybeLaneData(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
@@ -56,9 +53,7 @@ getMaybeLaneData(xegpu::TensorDescType tdescType) {
   return xegpu::getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
 }
 
-/// Get the 2D lane layout from a tensor desc type if it exists. As with
-/// getMaybeLaneData, a >2D descriptor with unit leading dims yields its
-/// inner 2.
+/// Get the 2D lane layout from a tensor desc type if it exists.
 static std::optional<SmallVector<int64_t>>
 getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
@@ -219,8 +214,9 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
   auto shapeRatio = computeShapeRatio(data.getType().getShape(),
                                       supportedShape)
                         .value(); // `ratio` must be defined if we reach here.
-  // The transpose reshapes only the innermost 2 dims; any leading (batch) dims
-  // are unit, so their offsets pass through unchanged and they are not tiled.
+  // The loop below only walks the last 2 entries of `shapeRatio`; leading
+  // (batch) dims are unit, so their ratio is 1 and their offsets pass through
+  // unchanged.
   int64_t suppDim0 = supportedShape[rank - 2];
   int64_t suppDim1 = supportedShape[rank - 1];
   for (int64_t h = 0; h < shapeRatio[rank - 2]; ++h) {
@@ -294,8 +290,6 @@ public:
     Value source = createNdOp.getSource();
     auto memrefType = dyn_cast<MemRefType>(source.getType());
 
-    // getMixedSizes/getMixedStrides cannot represent a dynamic memref dim, so
-    // recover those from runtime metadata.
     bool dynamicMemref =
         memrefType && !xegpu::hasStaticShapeAndStrides(memrefType);
     SmallVector<OpFoldResult> mixedSizes;
@@ -324,11 +318,7 @@ public:
     modifiedShape.back() = divideByConstant(
         rewriter, loc, convertToValue(rewriter, loc, modifiedShape.back()),
         innerLaneData);
-    // Repacking narrow elements into wider ones (f16 -> i32) reinterprets the
-    // innermost dim, so every stride except the innermost (which stays 1) must
-    // be divided by innerLaneData to count the wider element -- the pitch and,
-    // for a >2D descriptor, the leading (batch) strides (the XeVM fold reads
-    // the latter back in repacked-element units).
+    // Repacking to a wider element rescales every stride but the innermost.
     assert(mixedStrides.size() >= 2 &&
            "Expected at least 2 strides for CreateNdDescOp");
     SmallVector<OpFoldResult> modifiedStrides(mixedStrides);
@@ -337,9 +327,6 @@ public:
           rewriter, loc, convertToValue(rewriter, loc, modifiedStrides[i]),
           innerLaneData);
 
-    // The repacked shape/strides differ from the memref's own layout, so a
-    // memref source must be lowered to an i64 base pointer -- specifying
-    // explicit shape/strides on a memref create_nd is not allowed.
     if (memrefType) {
       Value baseIdx;
       if (dynamicMemref) {

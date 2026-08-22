@@ -506,15 +506,7 @@ gpu.module @xevm_test {
 }
 
 // -----
-// The transpose optimization also fires for a >2D descriptor whose leading
-// (batch) dims are unit: it operates on the innermost two dims, repacking
-// f16->i32 for the HW transpose load. The leading unit dims are preserved on
-// the descriptor/result, lane_data is rank-matched to all ones, and every
-// non-innermost stride is divided by the pack factor (2) so the later XeVM
-// batch fold uses repacked-element units. For a dynamic-shape source the
-// sizes/strides are recovered via extract_strided_metadata; the dynamic
-// leading (batch) stride is divided by the pack factor with arith.shrui, while
-// the static inner strides fold to constants (4096 -> 2048, 64 -> 32).
+// Transpose optimization on a >2D descriptor with unit leading dims.
 // CHECK-LABEL: gpu.func @transpose_4d(
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<?x?x64x64xf16>) -> vector<1x1x16x16xf16> {
 // CHECK-DAG:     %[[C2048:.*]] = arith.constant 2048 : index

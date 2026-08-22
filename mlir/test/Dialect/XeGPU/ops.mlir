@@ -81,8 +81,7 @@ gpu.func @test_create_nd_tdesc_8(%src: ui64, %w : index, %h : index, %x : index,
 // CHECK-LABEL: func @test_create_nd_tdesc_9({{.*}})
 
 gpu.func @test_create_nd_tdesc_9(%src: memref<?x?xf16>, %w : index, %h : index, %x : index, %y : index) {
-  // A dynamic-shape memref uses the bare form; its shape/strides are inferred
-  // from the memref (explicit shape/strides for a memref source is deprecated).
+  // A dynamic-shape memref uses the bare form; shape/strides come from it.
   // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
   %1 = xegpu.create_nd_tdesc %src : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
 

@@ -212,9 +212,6 @@ LogicalResult CreateMemDescOp::verify() {
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source) {
-  // A dynamic-shape memref is allowed: its (possibly dynamic) shape/strides are
-  // carried by the memref value itself and recovered at lowering time via
-  // memref metadata, so no explicit shape/stride operands are attached here.
   build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
@@ -260,10 +257,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  // getMixedSizes()/getMixedStrides() cannot represent a *bare dynamic* memref
-  // (a dynamic dim has no SSA operand and no const attr), so derive the rank
-  // from the memref type for a memref source; only an integer source needs the
-  // shape/stride operands (checked below).
   auto srcMemrefTy = dyn_cast<MemRefType>(getSourceType());
   size_t rank = srcMemrefTy ? srcMemrefTy.getRank() : getMixedSizes().size();
   bool invalidRank = false;
@@ -297,10 +290,6 @@ LogicalResult CreateNdDescOp::verify() {
                          "integer source.");
     invalidRank = getMixedSizes().size() != getMixedStrides().size();
   } else if (srcMemrefTy && hasExplicitShapeStrides) {
-    // Deprecated: a memref source carries its own shape/strides (recovered at
-    // lowering time, including for dynamic dims), so specifying them
-    // explicitly is redundant and no longer supported. Use the bare form:
-    //   xegpu.create_nd_tdesc %memref : memref<...> -> !xegpu.tensor_desc<...>
     return emitOpError("shape and strides should not be specified for a memref "
                        "source; they are inferred from the memref.");
   }

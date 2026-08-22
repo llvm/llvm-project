@@ -92,10 +92,7 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 }
 
 // -----
-// A dynamic high-D write whose vector rank equals the memref rank keeps the
-// *whole* memref as the create_nd source on the nd path: no rank-collapsing
-// memref.subview is emitted and the leading (batch) offsets stay on the
-// store_nd (they are folded into the base pointer later, at XeVM lowering).
+// Equal vector and memref rank: the whole memref stays the create_nd source.
 gpu.module @xevm_module {
 gpu.func @store_high_dim_dyn(%vec: vector<1x1x8x16xf16>, %source: memref<?x?x8x16xf16>,
     %i: index, %j: index, %k: index, %l: index) {

@@ -60,9 +60,7 @@ gpu.func @load_nd_transpose() {
   gpu.return
 }
 
-// A >2D load with unit leading dims is treated as its innermost 2D tile: the
-// packed attribute is still set when the inner lane_data marks a packed
-// (VNNI) B operand.
+// >2D load with unit leading dims: packed set from the inner lane_data.
 // CHECK-LABEL: gpu.func @load_nd_packed_4d
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] <{packed}> : !xegpu.tensor_desc<1x1x16x16xf16> -> vector<16xf16>
@@ -75,8 +73,7 @@ gpu.func @load_nd_packed_4d() {
   gpu.return
 }
 
-// A >2D load with unit leading dims is likewise transposed on its innermost 2D
-// tile when the inner lane layout requires it.
+// >2D load with unit leading dims: transposed on the inner 2D tile.
 // CHECK-LABEL: gpu.func @load_nd_transpose_4d
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<1x1x16x8xf32> -> vector<8xf32>

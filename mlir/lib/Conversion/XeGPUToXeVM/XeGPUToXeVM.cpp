@@ -55,9 +55,9 @@ enum class NdTdescOffset : uint32_t {
   BaseShapeW = 2,     // Base shape width (i32)
   BaseShapeH = 3,     // Base shape height (i32)
   BasePitch = 4,      // Base pitch/stride of dim rank-2 (i32)
-  LeadingStride0 = 5, // Element strides of the leading (batch) dims of a >2D
-  LeadingStride1 = 6, // descriptor (i32); folded into the base pointer by the
-  LeadingStride2 = 7, // load/store lowering. Left at 0 for 2D descriptors.
+  LeadingStride0 = 5, // Row strides of the leading (batch) dims of a >2D
+  LeadingStride1 = 6, // descriptor (i32); added into offset_h by the load/store
+  LeadingStride2 = 7, // lowering. Left at 0 for 2D descriptors.
 };
 
 // Spare payload slots above, and the resulting max lowerable descriptor rank.
@@ -212,6 +212,31 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 // emulated
 //
 
+//
+// High-D (>2D) nd descriptors are lowered by viewing the source as a single
+// flattened 2D plane: `base_height` is the product of all dims but the
+// innermost, so the 2D-block surface covers every leading (batch) plane at
+// once, and a batch position becomes a row offset into it. Leaving `base_ptr`
+// at the true base means an out-of-range batch index lands past `base_height`,
+// where the HW boundary check handles it, instead of aiming the surface at
+// unmapped memory. Encoding the leading strides as row counts (`stride[d] /
+// stride[R-2]`) also makes them dimensionless, so they survive element-type
+// repacking (e.g. the f16 -> i32 transpose repack) without a unit conversion.
+//
+// Limitations of the flattened-plane view:
+//  1. Each leading stride must be a whole number of rows. A source with gaps
+//     between planes (`stride[d] % stride[R-2] != 0`) is not lowered. This can
+//     only be checked when the strides are static; for dynamic strides the
+//     divisibility is assumed.
+//  2. `base_height` grows to the product of the leading dims, so a source with
+//     a large batch x head x sequence extent can exceed the HW 2D-block
+//     surface height.
+//  3. Plane boundaries are invisible to the boundary check: a tile whose rows
+//     run past `size[R-2]` reads the next plane's rows instead of the zero
+//     padding a per-plane surface would return. This only matters when
+//     `size[R-2]` is not a multiple of the tile height.
+//
+
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -247,6 +272,34 @@ class CreateNdDescToXeVMPattern
                   std::to_string(maxNdTdescLeadingDims) +
                   " leading dims (rank <= " + std::to_string(maxNdTdescRank) +
                   ").");
+    // The flattened-plane view needs every leading stride to be a whole number
+    // of rows. Static strides are checked here; dynamic ones are assumed to
+    // divide evenly (limitation 1 above).
+    if (rank > 2) {
+      SmallVector<std::optional<int64_t>> constStrides(rank, std::nullopt);
+      if (memrefTy) {
+        SmallVector<int64_t> staticStrides;
+        int64_t staticOffset;
+        if (succeeded(
+                memrefTy.getStridesAndOffset(staticStrides, staticOffset)))
+          for (int64_t d = 0; d < rank; ++d)
+            if (!ShapedType::isDynamic(staticStrides[d]))
+              constStrides[d] = staticStrides[d];
+      } else {
+        SmallVector<OpFoldResult> mixed = op.getMixedStrides();
+        for (int64_t d = 0; d < rank; ++d)
+          constStrides[d] = getConstantIntValue(mixed[d]);
+      }
+      if (std::optional<int64_t> pitch = constStrides[rank - 2]) {
+        for (int64_t d = 0; d < rank - 2; ++d) {
+          std::optional<int64_t> leading = constStrides[d];
+          if (leading && (*pitch == 0 || *leading % *pitch != 0))
+            return rewriter.notifyMatchFailure(
+                op, "Expected each leading (batch) stride to be a multiple of "
+                    "the row stride; the source has gaps between planes.");
+        }
+      }
+    }
 
     Type payloadElemTy = rewriter.getI32Type();
     Type i64Ty = rewriter.getI64Type();
@@ -264,8 +317,6 @@ class CreateNdDescToXeVMPattern
       return success();
     }
 
-    // getMixedSizes/getMixedStrides cannot represent a dynamic memref dim, so
-    // recover those from runtime metadata.
     SmallVector<OpFoldResult> mixedSizes;
     SmallVector<OpFoldResult> mixedStrides;
     if (memrefTy && !xegpu::hasStaticShapeAndStrides(memrefTy)) {
@@ -298,7 +349,13 @@ class CreateNdDescToXeVMPattern
     };
     // The descriptor's innermost 2 dims are the 2D tile (H, W).
     Value baseShapeW = createOffset(mixedSizes, rank - 1);
+    // Height of the flattened plane: every leading (batch) plane is stacked
+    // into the surface, so the boundary check covers an out-of-range batch.
+    // For rank 2 this is just size[0].
     Value baseShapeH = createOffset(mixedSizes, rank - 2);
+    for (int64_t d = 0; d < rank - 2; ++d)
+      baseShapeH = arith::MulIOp::create(rewriter, loc, baseShapeH,
+                                         createOffset(mixedSizes, d));
     // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
     Value basePitch = createOffset(mixedStrides, rank - 2);
     // Populate payload.
@@ -317,12 +374,24 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
-    // Leading (batch) strides go into the spare payload slots; the load/store/
-    // prefetch lowering folds the batch offsets into the base pointer with it.
+    // Leading (batch) strides go into the spare payload slots as a number of
+    // rows; the load/store/prefetch lowering turns the batch offsets into a row
+    // offset with them. Row units keep them independent of the element type, so
+    // an element-type repack cannot put them out of step with the pitch.
     for (int64_t d = 0; d < rank - 2; ++d) {
-      Value leadingStride = createOffset(mixedStrides, d);
+      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
+      std::optional<int64_t> pitch =
+          getConstantIntValue(mixedStrides[rank - 2]);
+      Value leadingRowStride;
+      if (leading && pitch && *pitch != 0) {
+        leadingRowStride = arith::ConstantIntOp::create(
+            rewriter, loc, payloadElemTy, *leading / *pitch);
+      } else {
+        leadingRowStride = arith::DivUIOp::create(
+            rewriter, loc, createOffset(mixedStrides, d), basePitch);
+      }
       payload = vector::InsertOp::create(
-          rewriter, loc, leadingStride, payload,
+          rewriter, loc, leadingRowStride, payload,
           static_cast<int>(NdTdescOffset::LeadingStride0) + d);
     }
     rewriter.replaceOp(op, payload);
@@ -350,8 +419,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     if (opOffsetsSize != tileRank)
       return rewriter.notifyMatchFailure(
           op, "Expected offset rank to match descriptor rank.");
-    // A 2D-block op transfers the innermost 2 dims only, so a leading dim must
-    // be a unit tile whose offset can be folded into the base pointer.
     if (tileRank > 2 && llvm::any_of(tdescTy.getShape().drop_back(2),
                                      [](int64_t d) { return d != 1; }))
       return rewriter.notifyMatchFailure(
@@ -434,8 +501,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       Value basePitch = vector::ExtractOp::create(
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
 
-      // x = innermost offset; y = second-to-last offset. These address the 2D
-      // tile within the innermost-matrix surface.
       Value offsetW = getValueOrCreateConstantIntOp(rewriter, loc,
                                                     mixedOffsets[tileRank - 1]);
       offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
@@ -444,35 +509,22 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                                                     mixedOffsets[tileRank - 2]);
       offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetH);
-      // Fold the leading (batch) offsets into the base pointer:
-      //   basePtr += (sum_d offset[d] * leadingStride[d]) * elemBytes
-      // using the batch strides encoded at create time. This keeps the 2D-block
-      // surface at the innermost matrix, avoiding the HW surface-size limits.
-      if (tileRank > 2) {
-        Type i64Ty = rewriter.getI64Type();
-        Value batchElemOffset;
-        for (int64_t d = 0; d < tileRank - 2; ++d) {
-          Value off =
-              getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[d]);
-          off = getValueOrCreateCastToIndexLike(rewriter, loc, i64Ty, off);
-          Value strideI32 = vector::ExtractOp::create(
-              rewriter, loc, tdesc,
-              static_cast<int>(NdTdescOffset::LeadingStride0) + d);
-          Value stride =
-              arith::ExtUIOp::create(rewriter, loc, i64Ty, strideI32);
-          Value term = arith::MulIOp::create(rewriter, loc, off, stride);
-          batchElemOffset =
-              batchElemOffset
-                  ? arith::AddIOp::create(rewriter, loc, batchElemOffset, term)
-                        .getResult()
-                  : term;
-        }
-        Value elemByteSizeI64 =
-            arith::ConstantIntOp::create(rewriter, loc, i64Ty, elemBitSize / 8);
-        Value batchByteOffset = arith::MulIOp::create(
-            rewriter, loc, batchElemOffset, elemByteSizeI64);
-        basePtr =
-            arith::AddIOp::create(rewriter, loc, basePtr, batchByteOffset);
+      // Turn the leading (batch) offsets into a row offset into the flattened
+      // plane, using the row-unit batch strides encoded at create time:
+      //   offsetH += sum_d offset[d] * leadingRowStride[d]
+      // The base pointer stays at the true base, so an out-of-range batch index
+      // is caught by the HW boundary check instead of moving the surface to
+      // unmapped memory.
+      for (int64_t d = 0; d < tileRank - 2; ++d) {
+        Value off =
+            getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[d]);
+        off = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                              rewriter.getI32Type(), off);
+        Value rowStride = vector::ExtractOp::create(
+            rewriter, loc, tdesc,
+            static_cast<int>(NdTdescOffset::LeadingStride0) + d);
+        Value term = arith::MulIOp::create(rewriter, loc, off, rowStride);
+        offsetH = arith::AddIOp::create(rewriter, loc, offsetH, term);
       }
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =

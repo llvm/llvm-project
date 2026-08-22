@@ -133,10 +133,8 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   [[maybe_unused]] MemRefType srcTy = src.getType();
   assert(srcTy.isStrided() && "Expected strided memref type");
 
-  // Keep the memref itself as the source (static or dynamic) rather than
-  // collapsing it to an i64 base address. The memref value carries the base
-  // pointer *and* the (possibly dynamic) offset/shape/strides, which the XeGPU
-  // -> XeVM lowering recovers via memref metadata.
+  // Keep the memref as the source instead of collapsing it to an i64 base: it
+  // carries the (possibly dynamic) offset/shape/strides the lowering recovers.
   return xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
 }
 
