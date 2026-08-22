@@ -87,6 +87,7 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     riscv-post-ra-expand-pseudo
 ; CHECK-NEXT:     kcfi
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement

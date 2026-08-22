@@ -145,7 +145,7 @@ void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  // TODO: RISCVPostRAExpandPseudoPass
+  addMachineFunctionPass(RISCVPostRAExpandPseudoPass(), PMW);
 
   addMachineFunctionPass(MachineKCFIPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
