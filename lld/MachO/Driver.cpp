@@ -1984,7 +1984,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       warn("-umbrella used, but not creating dylib");
     config->umbrella = arg->getValue();
   }
-  config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
+  if (const Arg *arg =
+          args.getLastArg(OPT_object_path_lto, OPT_lto_obj_path_eq)) {
+    config->ltoObjPath = arg->getValue();
+    config->ltoObjPathIsFile = arg->getOption().matches(OPT_lto_obj_path_eq);
+  }
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);

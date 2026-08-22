@@ -11,6 +11,18 @@
 ; RUN: llvm-nm %t4/0.x86_64.lto.o 2>&1 | FileCheck --check-prefix=NM %s
 ; RUN: llvm-readobj -h %t4/0.x86_64.lto.o | FileCheck %s
 
+;; --lto-obj-path writes the regular LTO object to an exact file path.
+; RUN: rm -f %t-exact.o*
+; RUN: %lld --thinlto-index-only=%t/linked-objects.txt \
+; RUN:     --lto-obj-path=%t-exact.o \
+; RUN:     -dylib %t1.o %t2.o -o /dev/null
+; RUN: llvm-readobj -h %t-exact.o | FileCheck %s
+; RUN: llvm-nm %t-exact.o 2>&1 | FileCheck --check-prefix=NM %s
+
+;; Additional native objects use numeric suffixes, as in ELF and WebAssembly.
+; RUN: %lld --lto-obj-path=%t-exact.o -dylib %t1.o %t2.o -o %t-exact
+; RUN: ls %t-exact.o %t-exact.o1 %t-exact.o2
+
 ;; Ensure lld emits empty combined module if specific obj-path.
 ; RUN: rm -fr %t.dir/objpath && mkdir -p %t.dir/objpath
 ; RUN: %lld -object_path_lto %t4.o -dylib %t1.o %t2.o -o %t.dir/objpath/a.out -save-temps
