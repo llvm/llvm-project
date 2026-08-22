@@ -56,6 +56,10 @@ struct KernelSigevent {
     sigev_notify = sev.sigev_notify;
     for (unsigned i = 0; i < __SIGEV_PAD_SIZE; ++i)
       _sigev_un._pad[i] = 0;
+    // Linux kernel treats SIGEV_THREAD_ID as a bitwise mask, while the
+    // remaining POSIX values as distinct enums:
+    // https://github.com/torvalds/linux/blob/master/kernel/time/posix-timers.c#L405
+    // https://github.com/torvalds/linux/blob/master/kernel/time/posix-timers.c#L525
     if ((sev.sigev_notify & SIGEV_THREAD_ID) != 0) {
       _sigev_un._tid = sev.sigev_notify_thread_id;
     } else if (sev.sigev_notify == SIGEV_THREAD) {
