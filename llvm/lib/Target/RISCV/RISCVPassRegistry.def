@@ -33,6 +33,7 @@ FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("riscv-asm-printer", RISCVAsmPrinterPass())
+MACHINE_FUNCTION_PASS("riscv-expand-pseudo", RISCVExpandPseudoPass())
 MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
