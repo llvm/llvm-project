@@ -1482,7 +1482,8 @@ void TextNodeDumper::dumpLV(const NamedDecl *ND) {
   //        or LinkageComputer::computeTypeLinkageInfo needs to deal with
   //        the lack of contained type.
   if (const auto *VD = dyn_cast<VarDecl>(ND)) {
-    if (const auto* Ty = dyn_cast<HLSLAttributedResourceType>(VD->getType()); Ty && Ty->getContainedType().isNull()) {
+    if (const auto *Ty = dyn_cast<HLSLAttributedResourceType>(VD->getType());
+        Ty && Ty->getContainedType().isNull()) {
       return;
     }
   }
@@ -1497,7 +1498,7 @@ void TextNodeDumper::dumpLV(const NamedDecl *ND) {
     break;
   case Visibility::ProtectedVisibility:
     OS << " protected-visibility";
-    break; 
+    break;
   }
 }
 
