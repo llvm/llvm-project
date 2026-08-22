@@ -375,9 +375,9 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
     Arg[".type_name"] = Arg.getDocument()->getNode(TypeName, /*Copy=*/true);
   auto Size = DL.getTypeAllocSize(Ty);
   Arg[".size"] = Arg.getDocument()->getNode(Size);
-  Offset = alignTo(Offset, Alignment);
+  Offset = static_cast<unsigned>(alignTo(Offset, Alignment));
   Arg[".offset"] = Arg.getDocument()->getNode(Offset);
-  Offset += Size;
+  Offset += static_cast<unsigned>(Size);
   Arg[".value_kind"] = Arg.getDocument()->getNode(ValueKind, /*Copy=*/true);
   if (PointeeAlign)
     Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
@@ -424,7 +424,8 @@ void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
   auto &DL = M->getDataLayout();
   auto *Int64Ty = Type::getInt64Ty(Func.getContext());
 
-  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
+  Offset = static_cast<unsigned>(
+      alignTo(Offset, ST.getAlignmentForImplicitArgPtr()));
 
   if (HiddenArgNumBytes >= 8)
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_x", Offset,
@@ -633,7 +634,8 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   auto *Int32Ty = Type::getInt32Ty(Func.getContext());
   auto *Int16Ty = Type::getInt16Ty(Func.getContext());
 
-  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
+  Offset = static_cast<unsigned>(
+      alignTo(Offset, ST.getAlignmentForImplicitArgPtr()));
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset, Args);

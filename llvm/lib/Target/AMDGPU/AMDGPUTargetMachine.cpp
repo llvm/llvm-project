@@ -2134,10 +2134,10 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     // Create a diagnostic for a the register string literal.
     const MemoryBuffer &Buffer =
         *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
-    Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
-                         RegName.Value.size(), SourceMgr::DK_Error,
-                         "incorrect register class for field", RegName.Value,
-                         {}, {});
+    Error = SMDiagnostic(
+        *PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
+        static_cast<int>(RegName.Value.size()), SourceMgr::DK_Error,
+        "incorrect register class for field", RegName.Value, {}, {});
     SourceRange = RegName.SourceRange;
     return true;
   };
