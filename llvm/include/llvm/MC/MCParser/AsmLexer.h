@@ -202,6 +202,9 @@ public:
 
   const MCAsmInfo &getMAI() const { return MAI; }
 
+  static bool isIdentifierChar(char C, bool AllowAt = true,
+                               bool AllowHash = false);
+
 private:
   bool isAtStartOfComment(const char *Ptr);
   bool isAtStatementSeparator(const char *Ptr);
