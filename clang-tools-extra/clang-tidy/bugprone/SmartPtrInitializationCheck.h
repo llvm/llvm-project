@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace clang::tidy::bugprone {
 
