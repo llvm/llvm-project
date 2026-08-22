@@ -184,7 +184,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVQCRelaxMarkingPass
   }
 
-  // TODO: RISCVExpandAtomicPseudoPass
+  addMachineFunctionPass(RISCVExpandAtomicPseudoPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle.
   addMachineFunctionPass(
