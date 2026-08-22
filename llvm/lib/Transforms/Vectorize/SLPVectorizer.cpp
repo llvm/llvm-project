@@ -686,7 +686,7 @@ public:
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
           const DataLayout *DL, OptimizationRemarkEmitter *ORE)
       : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt),
-        AC(AC), DB(DB), DL(DL), ORE(ORE),
+        AC(AC), DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
         Builder(Se->getContext(), TargetFolder(*DL)) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
@@ -5552,8 +5552,8 @@ private:
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
   /// Cached cost-model mode for this function.
-  /// Only use RecipThroughput currently.
-  const TargetTransformInfo::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  /// If -Os/-Oz, use CodeSize. Otherwise use RecipThroughput.
+  const TargetTransformInfo::TargetCostKind CostKind;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
@@ -19788,8 +19788,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
-      getRootNode().getVectorFactor() == 2 && SLPCostThreshold == 0 &&
+  if (CostKind != TTI::TCK_CodeSize && SLPInstCountCheck &&
+      TTI->preferSLPInstCountCheck() && getRootNode().getVectorFactor() == 2 &&
+      SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(getRootNodeScalars().front()->getType()))) {
     // Loop containing the tree root; null for flat code or disabled

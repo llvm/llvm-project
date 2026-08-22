@@ -886,4 +886,9 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
                             /*Depth=*/0, MaxDepth, Leaves, ChainInsts);
 }
 
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
+  assert(F && "Expected function.");
+  return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+}
+
 } // namespace llvm::slpvectorizer
