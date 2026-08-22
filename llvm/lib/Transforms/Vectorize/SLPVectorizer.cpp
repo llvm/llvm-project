@@ -13653,7 +13653,18 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind);
+                                       const TTI::TargetCostKind CostKind,
+                                       unsigned FMulOpIdx = 0);
+
+/// \returns the operand of \p I that is a one-use fmul, 0 if there is none.
+static unsigned getFMulOperandIdx(const Instruction *I) {
+  for (unsigned Idx : seq<unsigned>(0, I->getNumOperands())) {
+    auto *Op = dyn_cast<Instruction>(I->getOperand(Idx));
+    if (Op && Op->getOpcode() == Instruction::FMul && Op->hasOneUse())
+      return Idx;
+  }
+  return 0;
+}
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -13734,7 +13745,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
                      I->getOpcode() != Instruction::FSub))
             continue;
           if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI, *TLI,
-                              CostKind)
+                              CostKind, getFMulOperandIdx(I))
                   .isValid()) {
             assert(Count > 0 && "Underflow in scalar inst count (fma)");
             --Count;
@@ -14457,7 +14468,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind) {
+                                       const TTI::TargetCostKind CostKind,
+                                       unsigned FMulOpIdx) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -14489,13 +14501,15 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
 
-  InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
+  if (FMulOpIdx >= Operands.size())
+    return InstructionCost::getInvalid();
+  InstructionsState OpS = getSameOpcode(Operands[FMulOpIdx], TLI);
   if (!OpS.valid())
     return InstructionCost::getInvalid();
 
   if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
     return InstructionCost::getInvalid();
-  if (!CheckForContractable(Operands.front(), OpS))
+  if (!CheckForContractable(Operands[FMulOpIdx], OpS))
     return InstructionCost::getInvalid();
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
@@ -14536,7 +14550,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
         {I->getOperand(0), I->getOperand(1)});
   }
   unsigned NumOps = 0;
-  for (auto [V, Op] : zip(VL, Operands.front())) {
+  for (auto [V, Op] : zip(VL, Operands[FMulOpIdx])) {
     if (S.isCopyableElement(V))
       continue;
     auto *I = dyn_cast<Instruction>(Op);
@@ -17068,9 +17082,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return IntrinsicCost;
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
-                                         Instruction *VI) {
+                                         Instruction *VI,
+                                         unsigned FMulOpIdx = 0) {
     InstructionCost Cost =
-        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, CostKind);
+        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, CostKind, FMulOpIdx);
     return Cost;
   };
   switch (ShuffleOrOp) {
@@ -17708,7 +17723,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (auto *I = dyn_cast<Instruction>(UniqueValues[Idx]);
           I && (ShuffleOrOp == Instruction::FAdd ||
                 ShuffleOrOp == Instruction::FSub)) {
-        InstructionCost IntrinsicCost = GetFMulAddCost(E->getOperations(), I);
+        InstructionCost IntrinsicCost =
+            GetFMulAddCost(E->getOperations(), I, getFMulOperandIdx(I));
         if (IntrinsicCost.isValid())
           ScalarCost = IntrinsicCost;
       }
@@ -33062,7 +33078,7 @@ bool SLPVectorizerPass::tryToVectorize(
       (I->getOpcode() == Instruction::FAdd ||
        I->getOpcode() == Instruction::FSub) &&
       canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
-                      R.getCostKind())
+                      R.getCostKind(), getFMulOperandIdx(I))
           .isValid()) {
     FMACandidates.insert(I);
     return false;
@@ -34338,7 +34354,8 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
           S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind())
+          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind(),
+                          U->getOperand(1) == &I ? 1 : 0)
               .isValid())
         continue;
     }
