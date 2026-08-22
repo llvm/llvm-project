@@ -108,6 +108,21 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
+  if (!Call)
+    return;
+
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  if (!AC)
+    return;
+
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+  if (!FD)
+    return;
+
+  Args = AC->arguments();
+}
+
 std::optional<LifetimeBoundParamInfo>
 getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
                   unsigned I) {
@@ -150,19 +165,15 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
-  if (!AC)
+  FunctionCallInfo CallInfo(Call);
+  if (!CallInfo.FD)
     return std::nullopt;
 
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!FD)
-    return std::nullopt;
-
-  llvm::SmallVector<const Expr *, 4> Args = AC->arguments();
-  for (unsigned I = 0; I < Args.size(); ++I)
-    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
+  for (unsigned I = 0; I < CallInfo.Args.size(); ++I)
+    if (CallInfo.Args[I]->IgnoreParenImpCasts() ==
+        Source->IgnoreParenImpCasts())
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
-              getTrackedArgInfo(FD, Args, I))
+              getTrackedArgInfo(CallInfo.FD, CallInfo.Args, I))
         return ParamInfo;
 
   return std::nullopt;

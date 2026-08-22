@@ -19,7 +19,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
-#include "clang/Analysis/AnyCall.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1083,13 +1082,11 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
-  if (!AC)
+  FunctionCallInfo CallInfo(Call);
+  if (!CallInfo.FD)
     return;
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!FD)
-    return;
-  llvm::SmallVector<const Expr *, 4> Args = AC->arguments();
+  const FunctionDecl *FD = CallInfo.FD;
+  llvm::ArrayRef<const Expr *> Args = CallInfo.Args;
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);

@@ -168,12 +168,12 @@ public:
   /// argument lists, such as allocators and destructors. For instance member
   /// calls, the implicit object argument is included as argument 0.
   llvm::SmallVector<const Expr *, 4> arguments() const {
-    llvm::SmallVector<const Expr *, 4> Args;
     if (!E)
-      return Args;
+      return {};
 
     switch (K) {
     case Function: {
+      llvm::SmallVector<const Expr *, 4> Args;
       const auto *CE = cast<CallExpr>(E);
       if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
         Args.push_back(MCE->getImplicitObjectArgument());
@@ -189,27 +189,34 @@ public:
     }
     case Block: {
       const auto *CE = cast<CallExpr>(E);
-      Args.append(CE->arg_begin(), CE->arg_end());
-      return Args;
+      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(),
+                                                CE->arg_end());
     }
     case ObjCMethod: {
       const auto *ME = cast<ObjCMessageExpr>(E);
-      Args.append(ME->arg_begin(), ME->arg_end());
-      return Args;
+      return llvm::SmallVector<const Expr *, 4>(ME->arg_begin(),
+                                                ME->arg_end());
     }
     case Constructor: {
       const auto *CE = cast<CXXConstructExpr>(E);
-      Args.append(CE->arg_begin(), CE->arg_end());
-      return Args;
+      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(),
+                                                CE->arg_end());
     }
     case Destructor:
     case InheritedConstructor:
     case Allocator:
     case Deallocator:
-      return Args;
+      return {};
     }
     llvm_unreachable("Unknown AnyCall::Kind");
   }
+
+  // These methods materialize the normalized argument list on each call, which
+  // can be expensive if used repeatedly. Prefer caching `arguments()` locally
+  // when accessing multiple arguments.
+  size_t arg_size() const { return arguments().size(); }
+  bool arg_empty() const { return arguments().empty(); }
+  const Expr *getArg(unsigned I) const { return arguments()[I]; }
 
   QualType getReturnType(ASTContext &Ctx) const {
     switch (K) {

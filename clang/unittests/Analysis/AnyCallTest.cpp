@@ -39,19 +39,24 @@ void expectIntegerArguments(const AnyCall &Call,
                             std::initializer_list<int> Expected) {
   llvm::SmallVector<const Expr *, 4> Args = Call.arguments();
   ASSERT_EQ(Args.size(), Expected.size());
+  EXPECT_EQ(Call.arg_size(), Expected.size());
   EXPECT_FALSE(Args.empty());
+  EXPECT_FALSE(Call.arg_empty());
 
   unsigned Index = 0;
   for (int ExpectedValue : Expected) {
     const auto *Arg = asIntegerLiteral(Args[Index]);
     ASSERT_NE(Arg, nullptr);
     EXPECT_EQ(Arg->getValue(), ExpectedValue);
+    EXPECT_EQ(Arg, Call.getArg(Index));
     ++Index;
   }
 }
 
 void expectNoArguments(const AnyCall &Call) {
   EXPECT_TRUE(Call.arguments().empty());
+  EXPECT_TRUE(Call.arg_empty());
+  EXPECT_EQ(Call.arg_size(), 0u);
 }
 
 TEST(AnyCallTest, ExposesFunctionParametersAndArguments) {
