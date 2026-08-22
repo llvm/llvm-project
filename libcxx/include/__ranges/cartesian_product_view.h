@@ -392,29 +392,29 @@ private:
     if (__x == 0)
       return;
 
-    auto& __v          = std::get<_Np>(__parent_->__bases_);
-    auto& __it         = std::get<_Np>(__current_);
-    const auto __sz    = static_cast<difference_type>(ranges::size(__v));
-    const auto __first = ranges::begin(__v);
+    auto& __it = std::get<_Np>(__current_);
 
-    // An empty base makes the whole product empty, so a non-zero advance from a valid iterator is already
-    // undefined; `__sz` is therefore positive here.
-    const auto __idx = static_cast<difference_type>(std::distance(__first, __it));
-    __x += __idx;
-
-    difference_type __mod;
     if constexpr (_Np > 0) {
+      auto& __v          = std::get<_Np>(__parent_->__bases_);
+      const auto __sz    = static_cast<difference_type>(ranges::size(__v));
+      const auto __first = ranges::begin(__v);
+
+      // An empty base makes the whole product empty, so a non-zero advance from a valid iterator is already
+      // undefined; `__sz` is therefore positive here.
+      const auto __idx = static_cast<difference_type>(std::distance(__first, __it));
+      __x += __idx;
+
       difference_type __div = __x / __sz;
-      __mod                 = __x % __sz;
+      difference_type __mod = __x % __sz;
       if (__mod < 0) {
         __mod += __sz;
         __div--;
       }
       __advance<_Np - 1>(__div);
+      __it = std::next(__first, __mod);
     } else {
-      __mod = (__x >= 0 && __x < __sz) ? __x : __sz;
+      __it += __x;
     }
-    __it = std::next(__first, __mod);
   }
 
   template <auto _Np = sizeof...(_Vs)>
