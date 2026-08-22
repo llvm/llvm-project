@@ -233,9 +233,9 @@ static unsigned canModifyToInlineImmOp32(const SIInstrInfo *TII,
 void SIShrinkInstructions::copyExtraImplicitOps(MachineInstr &NewMI,
                                                 MachineInstr &MI) const {
   MachineFunction &MF = *MI.getMF();
-  for (unsigned i = MI.getDesc().getNumOperands() +
-                    MI.getDesc().implicit_uses().size() +
-                    MI.getDesc().implicit_defs().size(),
+  for (unsigned i = static_cast<unsigned>(MI.getDesc().getNumOperands() +
+                                          MI.getDesc().implicit_uses().size() +
+                                          MI.getDesc().implicit_defs().size()),
                 e = MI.getNumOperands();
        i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
@@ -277,7 +277,7 @@ bool SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
       if (!HasUImm) {
         SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ?
           AMDGPU::S_CMPK_EQ_I32 : AMDGPU::S_CMPK_LG_I32;
-        Src1.setImm(SignExtend32(Src1.getImm(), 32));
+        Src1.setImm(SignExtend32(static_cast<uint32_t>(Src1.getImm()), 32));
       }
 
       MI.setDesc(TII->get(SOPKOpc));
@@ -359,7 +359,8 @@ bool SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   for (unsigned Idx = 0; Idx < EndVAddr; ++Idx) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI->getHWRegIndex(Op.getReg());
-    unsigned Dwords = TRI->getRegSizeInBits(Op.getReg(), *MRI) / 32;
+    unsigned Dwords =
+        static_cast<unsigned>(TRI->getRegSizeInBits(Op.getReg(), *MRI) / 32);
     assert(Dwords > 0 && "Un-implemented for less than 32 bit regs");
 
     if (Idx == 0) {
@@ -384,8 +385,10 @@ bool SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   // enabled
   int TFEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
   int LWEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::lwe);
-  unsigned TFEVal = (TFEIdx == -1) ? 0 : MI.getOperand(TFEIdx).getImm();
-  unsigned LWEVal = (LWEIdx == -1) ? 0 : MI.getOperand(LWEIdx).getImm();
+  unsigned TFEVal = static_cast<unsigned>(
+      (TFEIdx == -1) ? 0 : MI.getOperand(TFEIdx).getImm());
+  unsigned LWEVal = static_cast<unsigned>(
+      (LWEIdx == -1) ? 0 : MI.getOperand(LWEIdx).getImm());
   int ToUntie = -1;
   if (TFEVal || LWEVal) {
     // TFE/LWE is enabled so we need to deal with an implicit tied operand
@@ -556,7 +559,8 @@ ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   MachineOperand *SrcImm = Src1;
 
   if (!SrcImm->isImm() ||
-      AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST->hasInv2PiInlineImm()))
+      AMDGPU::isInlinableLiteral32(static_cast<int32_t>(SrcImm->getImm()),
+                                   ST->hasInv2PiInlineImm()))
     return ChangeKind::None;
 
   uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
@@ -662,9 +666,9 @@ SIShrinkInstructions::getSubRegForIndex(Register Reg, unsigned Sub,
 
 void SIShrinkInstructions::dropInstructionKeepingImpDefs(
     MachineInstr &MI) const {
-  for (unsigned i = MI.getDesc().getNumOperands() +
-                    MI.getDesc().implicit_uses().size() +
-                    MI.getDesc().implicit_defs().size(),
+  for (unsigned i = static_cast<unsigned>(MI.getDesc().getNumOperands() +
+                                          MI.getDesc().implicit_uses().size() +
+                                          MI.getDesc().implicit_defs().size()),
                 e = MI.getNumOperands();
        i != e; ++i) {
     const MachineOperand &Op = MI.getOperand(i);

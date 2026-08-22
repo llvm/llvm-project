@@ -485,7 +485,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
         Imm = &MO;
     }
     if (Imm)
-      Inits[Imm->getImm()].push_front(&MI);
+      Inits[static_cast<unsigned>(Imm->getImm())].push_front(&MI);
     else
       Clobbers.push_back(&MI);
   }
@@ -891,7 +891,7 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
 
   const TargetRegisterClass *SrcRC =
       MRI->getRegClass(MaybeVGPRConstMO.getReg());
-  unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
+  unsigned MoveSize = static_cast<unsigned>(TRI->getRegSizeInBits(*SrcRC));
   unsigned MoveOp =
       MoveSize == 64 ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::S_MOV_B32;
   BuildMI(*BlockToInsertTo, PointToInsertTo, DL, TII->get(MoveOp), DstReg)
@@ -972,7 +972,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
   const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
-                   TRI->getRegSizeInBits(*DstRC));
+                   static_cast<unsigned>(TRI->getRegSizeInBits(*DstRC)));
   SmallVector<MachineInstr *, 8> AnalysisWorklist;
   // Needed because the SSA is not a tree but a graph and may have
   // forks and joins. We should not then go same way twice.
@@ -1061,11 +1061,11 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
                                SiblingCopy->getOperand(1).getSubReg()));
     }
   }
-  Info->SiblingPenalty = SrcRegs.size();
+  Info->SiblingPenalty = static_cast<unsigned>(SrcRegs.size());
 
   unsigned Penalty =
       Info->NumSVCopies + Info->SiblingPenalty + Info->NumReadfirstlanes;
-  unsigned Profit = Info->SChain.size();
+  unsigned Profit = static_cast<unsigned>(Info->SChain.size());
   Info->Score = Penalty > Profit ? 0 : Profit - Penalty;
   Info->NeedToBeConvertedToVALU = Info->Score < 3;
   return Info->NeedToBeConvertedToVALU;
@@ -1167,7 +1167,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
     } else {
       auto Result = BuildMI(*MBB, MI, MI->getDebugLoc(),
                             TII->get(AMDGPU::REG_SEQUENCE), DstReg);
-      int N = TRI->getRegSizeInBits(*SrcRC) / 32;
+      int N = static_cast<int>(TRI->getRegSizeInBits(*SrcRC) / 32);
       for (int i = 0; i < N; i++) {
         Register PartialSrc = TII->buildExtractSubReg(
             Result, *MRI, MI->getOperand(1), SrcRC,

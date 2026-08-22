@@ -805,7 +805,7 @@ public:
   static bool isDualSourceBlendEXP(const MachineInstr &MI) {
     if (!isEXP(MI))
       return false;
-    unsigned Target = MI.getOperand(0).getImm();
+    unsigned Target = static_cast<unsigned>(MI.getOperand(0).getImm());
     return Target == AMDGPU::Exp::ET_DUAL_SRC_BLEND0 ||
            Target == AMDGPU::Exp::ET_DUAL_SRC_BLEND1;
   }
@@ -940,7 +940,7 @@ public:
   }
 
   bool isVOP3PMix(const MachineInstr &MI) const {
-    return isVOP3PMix(MI.getOpcode());
+    return isVOP3PMix(static_cast<uint16_t>(MI.getOpcode()));
   }
 
   bool isVOP3PMix(uint16_t Opcode) const {
@@ -1333,8 +1333,9 @@ public:
       unsigned Size = getOpSize(MI, OpIdx);
       assert(Size == 8 || Size == 4);
 
-      uint8_t OpType = (Size == 8) ?
-        AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
+      uint8_t OpType =
+          static_cast<uint8_t>((Size == 8) ? AMDGPU::OPERAND_REG_IMM_INT64
+                                           : AMDGPU::OPERAND_REG_IMM_INT32);
       return isInlineConstant(ImmVal, OpType);
     }
 
@@ -1437,7 +1438,8 @@ public:
       return 4;
     }
 
-    return RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8;
+    return static_cast<unsigned>(
+        RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8);
   }
 
   /// This form should usually be preferred since it handles operands
@@ -1449,7 +1451,8 @@ public:
         return RI.getSubRegIdxSize(SubReg) / 8;
       }
     }
-    return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
+    return static_cast<unsigned>(RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) /
+                                 8);
   }
 
   /// Legalize the \p OpIndex operand of this instruction by inserting

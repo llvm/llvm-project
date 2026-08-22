@@ -742,7 +742,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
       AMDGPU::OpName RsrcName =
           TII.isMIMG(Opc) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
       int RsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcName);
-      Result.NumVAddrs = RsrcIdx - VAddr0Idx;
+      Result.NumVAddrs = static_cast<unsigned char>(RsrcIdx - VAddr0Idx);
     } else {
       Result.VAddr = true;
     }
@@ -872,7 +872,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   case S_BUFFER_LOAD_IMM:
   case S_BUFFER_LOAD_SGPR_IMM:
   case S_LOAD_IMM:
-    EltSize = AMDGPU::convertSMRDOffsetUnits(*LSO.STM, 4);
+    EltSize =
+        static_cast<unsigned>(AMDGPU::convertSMRDOffsetUnits(*LSO.STM, 4));
     break;
   default:
     EltSize = 4;
@@ -880,18 +881,20 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   }
 
   if (InstClass == MIMG) {
-    DMask = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::dmask)->getImm();
+    DMask = static_cast<unsigned>(
+        LSO.TII->getNamedOperand(*I, AMDGPU::OpName::dmask)->getImm());
     // Offset is not considered for MIMG instructions.
     Offset = 0;
   } else {
     int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
-    Offset = I->getOperand(OffsetIdx).getImm();
+    Offset = static_cast<unsigned>(I->getOperand(OffsetIdx).getImm());
   }
 
   if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
-    Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
+    Format = static_cast<unsigned>(
+        LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm());
     const AMDGPU::GcnBufferFormatInfo *Info =
-        AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
+        AMDGPU::getGcnBufferFormatInfo(static_cast<uint8_t>(Format), *LSO.STM);
     EltSize = Info->BitsPerComp / 8;
   }
 
@@ -900,7 +903,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   if ((InstClass == DS_READ) || (InstClass == DS_WRITE)) {
     Offset &= 0xffff;
   } else if (InstClass != MIMG) {
-    CPol = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::cpol)->getImm();
+    CPol = static_cast<unsigned>(
+        LSO.TII->getNamedOperand(*I, AMDGPU::OpName::cpol)->getImm());
   }
 
   AddressRegs Regs = getRegs(Opc, *LSO.TII);
@@ -991,7 +995,8 @@ SILoadStoreOptimizer::combineKnownAdjacentMMOs(const CombineInfo &CI,
   const MachineMemOperand *MMOa = *CI.I->memoperands_begin();
   const MachineMemOperand *MMOb = *Paired.I->memoperands_begin();
 
-  unsigned Size = MMOa->getSize().getValue() + MMOb->getSize().getValue();
+  unsigned Size = static_cast<unsigned>(MMOa->getSize().getValue() +
+                                        MMOb->getSize().getValue());
 
   // A base pointer for the combined operation is the same as the leading
   // operation's pointer.
@@ -1054,14 +1059,16 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
     return 0;
 
   const llvm::AMDGPU::GcnBufferFormatInfo *OldFormatInfo =
-      llvm::AMDGPU::getGcnBufferFormatInfo(OldFormat, STI);
+      llvm::AMDGPU::getGcnBufferFormatInfo(static_cast<uint8_t>(OldFormat),
+                                           STI);
   if (!OldFormatInfo)
     return 0;
 
   const llvm::AMDGPU::GcnBufferFormatInfo *NewFormatInfo =
-      llvm::AMDGPU::getGcnBufferFormatInfo(OldFormatInfo->BitsPerComp,
-                                           ComponentCount,
-                                           OldFormatInfo->NumFormat, STI);
+      llvm::AMDGPU::getGcnBufferFormatInfo(
+          static_cast<uint8_t>(OldFormatInfo->BitsPerComp),
+          static_cast<uint8_t>(ComponentCount),
+          static_cast<uint8_t>(OldFormatInfo->NumFormat), STI);
 
   if (!NewFormatInfo)
     return 0;
@@ -1100,9 +1107,11 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
 
     const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
-        llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
+        llvm::AMDGPU::getGcnBufferFormatInfo(static_cast<uint8_t>(CI.Format),
+                                             STI);
     const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
-        llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
+        llvm::AMDGPU::getGcnBufferFormatInfo(
+            static_cast<uint8_t>(Paired.Format), STI);
 
     if (Info0->BitsPerComp != Info1->BitsPerComp ||
         Info0->NumFormat != Info1->NumFormat)
@@ -2521,7 +2530,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.BaseOffs = Dist;
       if (TLI->isLegalFlatAddressingMode(AM, AS) &&
           (uint32_t)std::abs(Dist) > MaxDist) {
-        MaxDist = std::abs(Dist);
+        MaxDist = static_cast<uint32_t>(std::abs(Dist));
 
         AnchorAddr = MAddrNext;
         AnchorInst = &MINext;
@@ -2558,7 +2567,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     // Instead of moving up, just re-compute anchor-instruction's base address.
     Register Base = computeBase(MI, AnchorAddr);
 
-    int32_t OffsetDiff = MAddr.Offset - AnchorAddr.Offset;
+    int32_t OffsetDiff = static_cast<int32_t>(MAddr.Offset - AnchorAddr.Offset);
     updateBaseAndOffset(MI, Base, OffsetDiff);
     updateAsyncLDSAddress(MI, OffsetDiff);
     LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
@@ -2573,7 +2582,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
           (!IsOffsetU16 || isUInt<16>(AM.BaseOffs))) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
-        int32_t OtherOffsetDiff = OtherOffset - AnchorAddr.Offset;
+        int32_t OtherOffsetDiff =
+            static_cast<int32_t>(OtherOffset - AnchorAddr.Offset);
         updateBaseAndOffset(*OtherMI, Base, OtherOffsetDiff);
         updateAsyncLDSAddress(*OtherMI, OtherOffsetDiff);
         LLVM_DEBUG(dbgs() << "     After promotion: "; OtherMI->dump());
@@ -2599,8 +2609,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
           (!IsOffsetU16 || isUInt<16>(Dist))) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset << ")";
                    OtherMI->dump());
-        updateBaseAndOffset(*OtherMI, Base, Dist);
-        updateAsyncLDSAddress(*OtherMI, Dist);
+        updateBaseAndOffset(*OtherMI, Base, static_cast<int32_t>(Dist));
+        updateAsyncLDSAddress(*OtherMI, static_cast<int32_t>(Dist));
         LLVM_DEBUG(dbgs() << "     After promotion: "; OtherMI->dump());
         AnyPromoted = true;
       }
@@ -2677,7 +2687,8 @@ SILoadStoreOptimizer::collectMergeableInsts(
 
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
-      if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
+      if (!AMDGPU::getGcnBufferFormatInfo(static_cast<uint8_t>(Fmt->getImm()),
+                                          *STM)) {
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
       }

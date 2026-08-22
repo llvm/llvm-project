@@ -614,8 +614,8 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   const MachineOperand *Src0MO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   if (Src0MO && Src0MO->isReg()) {
     Register SrcReg0 = Src0MO->getReg();
-    unsigned Src0Mods =
-        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
+    unsigned Src0Mods = static_cast<unsigned>(
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm());
     Register HiSrc0Reg = (Src0Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg0, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg0, AMDGPU::sub0);
@@ -628,8 +628,8 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   const MachineOperand *Src1MO = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (Src1MO && Src1MO->isReg()) {
     Register SrcReg1 = Src1MO->getReg();
-    unsigned Src1Mods =
-        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
+    unsigned Src1Mods = static_cast<unsigned>(
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm());
     Register HiSrc1Reg = (Src1Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg1, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg1, AMDGPU::sub0);
@@ -644,8 +644,8 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
         TII->getNamedOperand(MI, AMDGPU::OpName::src2);
     if (Src2MO && Src2MO->isReg()) {
       Register SrcReg2 = Src2MO->getReg();
-      unsigned Src2Mods =
-          TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm();
+      unsigned Src2Mods = static_cast<unsigned>(
+          TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm());
       Register HiSrc2Reg = (Src2Mods & SISrcMods::OP_SEL_1)
                                ? TRI->getSubReg(SrcReg2, AMDGPU::sub1)
                                : TRI->getSubReg(SrcReg2, AMDGPU::sub0);
@@ -829,10 +829,10 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
                                      : TRI->getSubReg(DstReg, AMDGPU::sub0);
 
   int64_t ClampVal = TII->getNamedOperand(I, AMDGPU::OpName::clamp)->getImm();
-  unsigned Src0Mods =
-      TII->getNamedOperand(I, AMDGPU::OpName::src0_modifiers)->getImm();
-  unsigned Src1Mods =
-      TII->getNamedOperand(I, AMDGPU::OpName::src1_modifiers)->getImm();
+  unsigned Src0Mods = static_cast<unsigned>(
+      TII->getNamedOperand(I, AMDGPU::OpName::src0_modifiers)->getImm());
+  unsigned Src1Mods = static_cast<unsigned>(
+      TII->getNamedOperand(I, AMDGPU::OpName::src1_modifiers)->getImm());
 
   MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   NewMI.addDef(UnpackedDstReg); // vdst
@@ -842,8 +842,8 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     const MachineOperand *SrcMO2 =
         TII->getNamedOperand(I, AMDGPU::OpName::src2);
-    unsigned Src2Mods =
-        TII->getNamedOperand(I, AMDGPU::OpName::src2_modifiers)->getImm();
+    unsigned Src2Mods = static_cast<unsigned>(
+        TII->getNamedOperand(I, AMDGPU::OpName::src2_modifiers)->getImm());
     addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO2);
   }
   NewMI.addImm(ClampVal); // clamp

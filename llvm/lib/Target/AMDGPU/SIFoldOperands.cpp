@@ -516,7 +516,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   // If the literal can be inlined as-is, apply it and short-circuit the
   // tests below. The main motivation for this is to avoid unintuitive
   // uses of opsel.
-  if (AMDGPU::isInlinableLiteralV216(ImmVal, OpType)) {
+  if (AMDGPU::isInlinableLiteralV216(static_cast<uint32_t>(ImmVal), OpType)) {
     Old.ChangeToImmediate(ImmVal);
     return true;
   }
@@ -538,7 +538,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   assert(ModName != AMDGPU::OpName::NUM_OPERAND_NAMES);
   int ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModName);
   MachineOperand &Mod = MI->getOperand(ModIdx);
-  unsigned ModVal = Mod.getImm();
+  unsigned ModVal = static_cast<unsigned>(Mod.getImm());
 
   uint16_t ImmLo =
       static_cast<uint16_t>(ImmVal >> (ModVal & SISrcMods::OP_SEL_0 ? 16 : 0));
@@ -1081,7 +1081,8 @@ const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
     MachineOperand &SrcOp = RegSeq.getOperand(I);
     if (SrcOp.getReg().isPhysical())
       return nullptr;
-    unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
+    unsigned SubRegIdx =
+        static_cast<unsigned>(RegSeq.getOperand(I + 1).getImm());
 
     // Only accept reg_sequence with uniform reg class inputs for simplicity.
     const TargetRegisterClass *OpRC = getRegOpRC(*MRI, *TRI, SrcOp);
@@ -1131,7 +1132,7 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
   bool TryToMatchSplat64 = false;
 
   std::optional<int64_t> Imm;
-  for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
+  for (unsigned I = 0, E = static_cast<unsigned>(Defs.size()); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
     if (!Op->isImm()) {
       if (Op->isReg()) {
@@ -1169,7 +1170,7 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
   // Fallback to recognizing 64-bit splats broken into 32-bit pieces
   // (i.e. recognize every other other element is 0 for 64-bit immediates)
   int64_t SplatVal64;
-  for (unsigned I = 0, E = Defs.size(); I != E; I += 2) {
+  for (unsigned I = 0, E = static_cast<unsigned>(Defs.size()); I != E; I += 2) {
     const MachineOperand *Op0 = Defs[I].first;
     const MachineOperand *Op1 = Defs[I + 1].first;
 
@@ -1188,7 +1189,8 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
     if (TRI->getSubRegIdxSize(SubReg0) != 32)
       return {};
 
-    int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
+    int64_t MergedVal = Make_64(static_cast<uint32_t>(Op1->getImm()),
+                                static_cast<uint32_t>(Op0->getImm()));
     if (I == 0)
       SplatVal64 = MergedVal;
     else if (SplatVal64 != MergedVal)
@@ -1307,7 +1309,8 @@ bool SIFoldOperandsImpl::foldOperand(
   // uses of REG_SEQUENCE.
   if (UseMI->isRegSequence()) {
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
-    unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
+    unsigned RegSeqDstSubReg =
+        static_cast<unsigned>(UseMI->getOperand(UseOpIdx + 1).getImm());
 
     int64_t SplatVal;
     const TargetRegisterClass *SplatRC;
@@ -1374,8 +1377,8 @@ bool SIFoldOperandsImpl::foldOperand(
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
-      unsigned CPol =
-          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      unsigned CPol = static_cast<unsigned>(
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm());
       if ((CPol & AMDGPU::CPol::SCAL) &&
           !AMDGPU::supportsScaleOffset(*TII, NewOpc))
         return Changed;
@@ -1728,7 +1731,8 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   // xor k0, k1 -> v_mov_b32 (k0 ^ k1)
   if (Src0Imm && Src1Imm) {
     int32_t NewImm;
-    if (!evalBinaryInstruction(Opc, NewImm, *Src0Imm, *Src1Imm))
+    if (!evalBinaryInstruction(Opc, NewImm, static_cast<uint32_t>(*Src0Imm),
+                               static_cast<uint32_t>(*Src1Imm)))
       return false;
 
     bool IsSGPR = TRI->isSGPRReg(*MRI, MI->getOperand(0).getReg());
@@ -2048,7 +2052,8 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   for (unsigned I = 1; I != NumRegSeqOperands; I += 2) {
     MachineOperand &RegOp = RegSeq->getOperand(I);
-    unsigned SubRegIdx = RegSeq->getOperand(I + 1).getImm();
+    unsigned SubRegIdx =
+        static_cast<unsigned>(RegSeq->getOperand(I + 1).getImm());
 
     if (RegOp.getSubReg()) {
       // TODO: Handle subregister compose
@@ -2301,10 +2306,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
     if (TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
       return nullptr;
 
-    unsigned Src0Mods
-      = TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
-    unsigned Src1Mods
-      = TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
+    unsigned Src0Mods = static_cast<unsigned>(
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm());
+    unsigned Src1Mods = static_cast<unsigned>(
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm());
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
@@ -2662,7 +2667,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
   if (Op->getSubReg())
     return false;
 
-  unsigned OpIdx = Op - &UseMI->getOperand(0);
+  unsigned OpIdx = static_cast<unsigned>(Op - &UseMI->getOperand(0));
   const MCInstrDesc &InstDesc = UseMI->getDesc();
   const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))

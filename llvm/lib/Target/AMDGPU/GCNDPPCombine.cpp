@@ -582,7 +582,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
   assert(DppCtrl && DppCtrl->isImm());
-  unsigned DppCtrlVal = DppCtrl->getImm();
+  unsigned DppCtrlVal = static_cast<unsigned>(DppCtrl->getImm());
   if ((MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
        MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp)) {
     if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP)) {
@@ -696,7 +696,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       unsigned OpNo, E = OrigMI.getNumOperands();
       for (OpNo = 1; OpNo < E; OpNo += 2) {
         if (OrigMI.getOperand(OpNo).getReg() == DPPMovReg) {
-          FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
+          FwdSubReg =
+              static_cast<unsigned>(OrigMI.getOperand(OpNo + 1).getImm());
           break;
         }
       }
