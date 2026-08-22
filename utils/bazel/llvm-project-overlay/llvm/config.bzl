@@ -110,6 +110,7 @@ win32_defines = [
     # LLVM features
     r'LTDL_SHLIB_EXT=\".dll\"',
     r'LLVM_PLUGIN_EXT=\".dll\"',
+    "LLVM_ENABLE_THREADS=1",
 ] + fenv_defines
 
 # TODO: We should switch to platforms-based config settings to make this easier
