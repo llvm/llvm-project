@@ -63,10 +63,16 @@ while.end:                                        ; preds = %while.cond
 define i32 @merge0(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: define i32 @merge0
 ; CHECK-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) {
-; CHECK-NEXT:  j2:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C3]], i32 2, i32 3
+; CHECK-NEXT:    br i1 [[C1]], label [[IF1:%.*]], label [[ELSE1:%.*]]
+; CHECK:       if1:
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C2]], i32 0, i32 1
-; CHECK-NEXT:    [[PHI2:%.*]] = select i1 [[C1]], i32 [[DOT]], i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br label [[J2:%.*]]
+; CHECK:       else1:
+; CHECK-NEXT:    br i1 [[C3]], label [[J1:%.*]], label [[J2]]
+; CHECK:       j1:
+; CHECK-NEXT:    br label [[J2]]
+; CHECK:       j2:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 3, [[ELSE1]] ], [ [[DOT]], [[IF1]] ], [ 2, [[J1]] ]
 ; CHECK-NEXT:    ret i32 [[PHI2]]
 ;
   br i1 %c1, label %if1, label %else1
@@ -106,12 +112,13 @@ define i8 @merge1(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C1_NOT]], i1 true, i1 [[C2_NOT]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C1_NOT]], i8 0, i8 3
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BRMERGE]], i8 [[DOTMUX]], i8 4
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[BB:%.*]], label [[SUCC]]
 ; CHECK:       case2:
 ; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       BB:
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ], [ [[DOTMUX]], [[BB]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -162,12 +169,13 @@ define i8 @merge1_unfoldable_one_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C1_NOT]], i1 true, i1 [[C2_NOT]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C1_NOT]], i8 0, i8 3
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BRMERGE]], i8 [[DOTMUX]], i8 4
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[BB:%.*]], label [[SUCC]]
 ; CHECK:       case2:
 ; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       BB:
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ], [ [[DOTMUX]], [[BB]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -219,13 +227,14 @@ define i8 @merge1_unfoldable_two_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C1_NOT]], i1 true, i1 [[C2_NOT]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C1_NOT]], i8 0, i8 3
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[BRMERGE]], i8 [[DOTMUX]], i8 4
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[BB:%.*]], label [[SUCC]]
 ; CHECK:       case1:
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       BB:
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[ENTRY:%.*]] ], [ [[DOTMUX]], [[BB]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -283,10 +292,11 @@ define i8 @merge1_unfoldable_all_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       CommonPred:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i8 4, i8 3
+; CHECK-NEXT:    br i1 [[C2]], label [[SUCC]], label [[BB:%.*]]
+; CHECK:       BB:
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[COMMONPRED]] ], [ 0, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[COMMONPRED]] ], [ 0, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ 3, [[BB]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:

@@ -3126,6 +3126,18 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
                                            unsigned &SpeculatedInstructions,
                                            InstructionCost &Cost,
                                            const TargetTransformInfo &TTI) {
+  // If ThenBB is an empty BB, then the transformation's only goal
+  // is to simply phi nodes down the road. If the phi nodes cannot be
+  // simplified because they have other ancestors, then it is pointless
+  // to generate select instructions.
+  if (ThenBB->getFirstNonPHIOrDbgOrLifetime()->isTerminator()) {
+    for (BasicBlock *Pred : predecessors(EndBB)) {
+      if (Pred != BB && Pred != ThenBB) {
+        return false;
+      }
+    }
+  }
+
   TargetTransformInfo::TargetCostKind CostKind =
     BB->getParent()->hasMinSize()
     ? TargetTransformInfo::TCK_CodeSize

@@ -114,10 +114,11 @@ define i1 @test3(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP2_1]], i1 true, i1 [[CMP2_2]]
 ; CHECK-NEXT:    [[CMP2_3:%.*]] = icmp sgt i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[CMP2_3]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND1]], i1 false, i1 true
+; CHECK-NEXT:    br i1 [[OR_COND1]], label [[CLEANUP]], label [[FOR_COND3:%.*]]
+; CHECK:       for.cond.3:
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ false, [[FOR_COND]] ], [ true, [[FOR_COND3]] ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

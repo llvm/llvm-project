@@ -5,11 +5,12 @@ define i8 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
-; CHECK:       loop2:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT:%.*]], [[LOOP2]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[PHI2]], 0
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[COND]], i8 0, i8 [[PHI2]]
+; CHECK:       loop:
 ; CHECK-NEXT:    br label [[LOOP2]]
+; CHECK:       loop2:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, [[LOOP2]] ], [ 0, [[ENTRY:%.*]] ], [ [[PHI2]], [[LOOP:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[PHI2]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP2]], label [[LOOP]]
 ;
 entry:
   br label %loop

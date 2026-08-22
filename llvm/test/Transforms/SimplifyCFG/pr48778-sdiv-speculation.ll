@@ -8,11 +8,12 @@ define i32 @test(i1 %cmp) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 -2147483648, -1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[DIV]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP2]], i32 1, i32 0
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[END:%.*]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[SPEC_SELECT]], [[IF]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 1, [[END]] ], [ 0, [[IF]] ], [ 0, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       end:
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %cmp, label %if, label %else
 

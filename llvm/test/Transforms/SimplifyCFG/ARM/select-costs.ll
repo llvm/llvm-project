@@ -17,13 +17,13 @@ define i32 @multiple_spec_select_costs(ptr %a, ptr %idx, i8 %in) {
 ; V8M:       sw.bb92:
 ; V8M-NEXT:    [[C_OFF_I150:%.*]] = add i8 [[IN]], -48
 ; V8M-NEXT:    [[UGT_9:%.*]] = icmp ugt i8 [[C_OFF_I150]], 9
-; V8M-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[UGT_9]], i1 false, i1 true
-; V8M-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[UGT_9]], i32 1, i32 7
+; V8M-NEXT:    br i1 [[UGT_9]], label [[FOR_INC_PREHEADER]], label [[SELECT_UNFOLD198:%.*]]
+; V8M:       select.unfold198:
 ; V8M-NEXT:    br label [[FOR_INC_PREHEADER]]
 ; V8M:       for.inc.preheader:
-; V8M-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[GEP_A_2]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ]
-; V8M-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[SPEC_SELECT]], [[SW_BB92]] ]
-; V8M-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[SPEC_SELECT1]], [[SW_BB92]] ]
+; V8M-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[INCDEC_PTR109_C4]], [[SELECT_UNFOLD198]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ], [ [[GEP_A_2]], [[ENTRY:%.*]] ]
+; V8M-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[SELECT_UNFOLD198]] ], [ false, [[SW_BB92]] ], [ false, [[ENTRY]] ]
+; V8M-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 7, [[SELECT_UNFOLD198]] ], [ 1, [[SW_BB92]] ], [ 1, [[ENTRY]] ]
 ; V8M-NEXT:    br label [[FOR_INC:%.*]]
 ; V8M:       for.inc:
 ; V8M-NEXT:    [[STR_PH_1:%.*]] = phi ptr [ [[INCDEC_PTR109:%.*]], [[FOR_BODY:%.*]] ], [ [[STR_PH_0]], [[FOR_INC_PREHEADER]] ]
@@ -47,13 +47,13 @@ define i32 @multiple_spec_select_costs(ptr %a, ptr %idx, i8 %in) {
 ; V8A:       sw.bb92:
 ; V8A-NEXT:    [[C_OFF_I150:%.*]] = add i8 [[IN]], -48
 ; V8A-NEXT:    [[UGT_9:%.*]] = icmp ugt i8 [[C_OFF_I150]], 9
-; V8A-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[UGT_9]], i1 false, i1 true
-; V8A-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[UGT_9]], i32 1, i32 7
+; V8A-NEXT:    br i1 [[UGT_9]], label [[FOR_INC_PREHEADER]], label [[SELECT_UNFOLD198:%.*]]
+; V8A:       select.unfold198:
 ; V8A-NEXT:    br label [[FOR_INC_PREHEADER]]
 ; V8A:       for.inc.preheader:
-; V8A-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[GEP_A_2]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ]
-; V8A-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[SPEC_SELECT]], [[SW_BB92]] ]
-; V8A-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[SPEC_SELECT1]], [[SW_BB92]] ]
+; V8A-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[INCDEC_PTR109_C4]], [[SELECT_UNFOLD198]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ], [ [[GEP_A_2]], [[ENTRY:%.*]] ]
+; V8A-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[SELECT_UNFOLD198]] ], [ false, [[SW_BB92]] ], [ false, [[ENTRY]] ]
+; V8A-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 7, [[SELECT_UNFOLD198]] ], [ 1, [[SW_BB92]] ], [ 1, [[ENTRY]] ]
 ; V8A-NEXT:    br label [[FOR_INC:%.*]]
 ; V8A:       for.inc:
 ; V8A-NEXT:    [[STR_PH_1:%.*]] = phi ptr [ [[INCDEC_PTR109:%.*]], [[FOR_BODY:%.*]] ], [ [[STR_PH_0]], [[FOR_INC_PREHEADER]] ]
@@ -144,13 +144,13 @@ define i32 @multiple_spec_select_costs_minsize(ptr %a, ptr %idx, i8 %in) #0 {
 ; V8A:       sw.bb92:
 ; V8A-NEXT:    [[C_OFF_I150:%.*]] = add i8 [[IN]], -48
 ; V8A-NEXT:    [[UGT_9:%.*]] = icmp ugt i8 [[C_OFF_I150]], 9
-; V8A-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[UGT_9]], i1 false, i1 true
-; V8A-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[UGT_9]], i32 1, i32 7
+; V8A-NEXT:    br i1 [[UGT_9]], label [[FOR_INC_PREHEADER]], label [[SELECT_UNFOLD198:%.*]]
+; V8A:       select.unfold198:
 ; V8A-NEXT:    br label [[FOR_INC_PREHEADER]]
 ; V8A:       for.inc.preheader:
-; V8A-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[GEP_A_2]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ]
-; V8A-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[SPEC_SELECT]], [[SW_BB92]] ]
-; V8A-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[SPEC_SELECT1]], [[SW_BB92]] ]
+; V8A-NEXT:    [[STR_PH_0:%.*]] = phi ptr [ [[INCDEC_PTR109_C4]], [[SELECT_UNFOLD198]] ], [ [[INCDEC_PTR109_C4]], [[SW_BB92]] ], [ [[GEP_A_2]], [[ENTRY:%.*]] ]
+; V8A-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[SELECT_UNFOLD198]] ], [ false, [[SW_BB92]] ], [ false, [[ENTRY]] ]
+; V8A-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 7, [[SELECT_UNFOLD198]] ], [ 1, [[SW_BB92]] ], [ 1, [[ENTRY]] ]
 ; V8A-NEXT:    br label [[FOR_INC:%.*]]
 ; V8A:       for.inc:
 ; V8A-NEXT:    [[STR_PH_1:%.*]] = phi ptr [ [[INCDEC_PTR109:%.*]], [[FOR_BODY:%.*]] ], [ [[STR_PH_0]], [[FOR_INC_PREHEADER]] ]

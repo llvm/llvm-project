@@ -14,10 +14,11 @@ define i32 @test(i1 %a, i1 %b) {
 ; CHECK-NEXT:    br i1 [[C]], label [[M:%.*]], label [[P:%.*]]
 ; CHECK:       P:
 ; CHECK-NEXT:    [[D:%.*]] = call i1 @foo()
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 2, i32 1
+; CHECK-NEXT:    br i1 [[D]], label [[M]], label [[Q:%.*]]
+; CHECK:       Q:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       M:
-; CHECK-NEXT:    [[W:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[SPEC_SELECT]], [[P]] ]
+; CHECK-NEXT:    [[W:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ 1, [[Q]] ], [ 2, [[P]] ]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[W]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -37,4 +38,3 @@ M:
   %R = add i32 %W, 1
   ret i32 %R
 }
-
