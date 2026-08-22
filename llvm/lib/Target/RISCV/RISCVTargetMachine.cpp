@@ -130,7 +130,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVGatherScatterLoweringLegacyPass(*PR);
   initializeRISCVCodeGenPrepareLegacyPass(*PR);
   initializeRISCVZacasABIFixLegacyPass(*PR);
-  initializeRISCVPostRAExpandPseudoPass(*PR);
+  initializeRISCVPostRAExpandPseudoLegacyPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsLegacyPass(*PR);
   initializeRISCVFoldMemOffsetLegacyPass(*PR);
@@ -555,7 +555,7 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
 }
 
 void RISCVPassConfig::addPreSched2() {
-  addPass(createRISCVPostRAExpandPseudoPass());
+  addPass(createRISCVPostRAExpandPseudoLegacyPass());
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
