@@ -2964,6 +2964,10 @@ def err_for_range_decl_must_be_var : Error<
 def err_for_range_storage_class : Error<
   "%select{loop|expansion}0 variable %1 may not be declared %select{'extern'|'static'|"
   "'__private_extern__'|'auto'|'register'|'constexpr'|'thread_local'}2">;
+def err_for_range_constexpr_loop_var : Error<
+  "constexpr variable %0 must be initialized by a constant expression; "
+  "a range-based for loop variable is initialized on each iteration from the "
+  "loop's iterator, whose value is not known at compile time">;
 def err_type_defined_in_for_range : Error<
   "types may not be defined in a for range declaration">;
 def err_for_range_deduction_failure : Error<
