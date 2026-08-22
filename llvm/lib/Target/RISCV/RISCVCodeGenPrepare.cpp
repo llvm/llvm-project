@@ -433,8 +433,8 @@ bool RISCVCodeGenPrepareLegacy::runOnFunction(Function &F) {
   return RVCGP.run();
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME,
-                      false, false)
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
                     false)
