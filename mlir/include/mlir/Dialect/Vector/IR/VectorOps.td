@@ -585,6 +585,7 @@ def Vector_InterleaveOp :
     }
   }];
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
@@ -1074,13 +1075,15 @@ def Vector_InsertStridedSliceOp :
 
     ```mlir
     %2 = vector.insert_strided_slice %0, %1
-        {offsets = [0, 0, 2], strides = [1, 1]}:
+        offsets = [0, 0, 2], strides = [1, 1] :
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
 
   let assemblyFormat = [{
-    $valueToStore `,` $dest attr-dict `:` type($valueToStore) `into` type($dest)
+    $valueToStore `,` $dest
+    `offsets` `=` $offsets `,` `strides` `=` $strides attr-dict
+    `:` type($valueToStore) `into` type($dest)
   }];
 
   let builders = [
@@ -1216,7 +1219,7 @@ def Vector_ExtractStridedSliceOp :
 
     ```mlir
     %1 = vector.extract_strided_slice %0
-        {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
+        offsets = [0, 2], sizes = [2, 4], strides = [1, 1] :
       vector<4x8x16xf32> to vector<2x4x16xf32>
 
     // TODO: Evolve to a range form syntax similar to:
@@ -1244,7 +1247,10 @@ def Vector_ExtractStridedSliceOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type(results)";
+  let assemblyFormat = [{
+    $source `offsets` `=` $offsets `,` `sizes` `=` $sizes `,`
+    `strides` `=` $strides attr-dict `:` type($source) `to` type(results)
+  }];
 }
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
@@ -1784,8 +1790,14 @@ def Vector_LoadOp : Vector_Op<"load", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat =
-      "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($result)
+  }];
 }
 
 // Promises IndexedAccessOpInterface.
@@ -1895,8 +1907,14 @@ def Vector_StoreOp : Vector_Op<"store", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
-                       "`:` type($base) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $valueToStore `,` $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($valueToStore)
+  }];
 }
 
 // Promises IndexedAccessOpInterface.
@@ -1946,6 +1964,9 @@ def Vector_MaskedLoadOp :
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -1965,8 +1986,12 @@ def Vector_MaskedLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -2041,6 +2066,9 @@ def Vector_MaskedStoreOp :
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2057,9 +2085,11 @@ def Vector_MaskedStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore "
-      "attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -2135,6 +2165,9 @@ def Vector_GatherOp :
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2163,7 +2196,8 @@ def Vector_GatherOp :
 
   let assemblyFormat =
     "$base `[` $offsets `]` `[` $indices `]` `,` "
-    "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
+    "$mask `,` $pass_thru (`alignment` `=` $alignment^)? "
+    "attr-dict `:` type($base) `,` "
     "type($indices)  `,` type($mask) `,` type($pass_thru) "
     "`into` type($result)";
   let hasCanonicalizer = 1;
@@ -2228,6 +2262,9 @@ def Vector_ScatterOp
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2251,10 +2288,12 @@ def Vector_ScatterOp
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
-  let assemblyFormat = "$base `[` $offsets `]` `[` $indices `]` `,` "
-                       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-                       "type($indices)  `,` type($mask) `,` "
-                       "type($valueToStore) (`->` type($result)^)?";
+  let assemblyFormat = [{
+    $base `[` $offsets `]` `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($indices)  `,` type($mask) `,`
+    type($valueToStore) (`->` type($result)^)?
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2277,7 +2316,7 @@ def Vector_ExpandLoadOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
@@ -2316,8 +2355,6 @@ def Vector_ExpandLoadOp :
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
 
-    Note, at the moment this Op is only available for fixed-width vectors.
-
     Examples:
 
     ```mlir
@@ -2342,8 +2379,12 @@ def Vector_ExpandLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2369,7 +2410,7 @@ def Vector_CompressStoreOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
@@ -2407,8 +2448,6 @@ def Vector_CompressStoreOp :
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
 
-    Note, at the moment this Op is only available for fixed-width vectors.
-
     Examples:
 
     ```mlir
@@ -2430,9 +2469,11 @@ def Vector_CompressStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore attr-dict `:` "
-      "type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let builders = [
@@ -2484,6 +2525,9 @@ def Vector_ShapeCastOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    // Return true if this Op is effectively a vector.broadcast (i.e. the input
+    // and output shapes satisfy the vector.broadcast constraints).
+    bool isBroadcastLike();
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
@@ -2996,7 +3040,7 @@ def Vector_ScanOp :
     Example:
 
     ```mlir
-    %1:2 = vector.scan <add>, %0, %acc {inclusive = false, reduction_dim = 1 : i64} :
+    %1:2 = vector.scan <add>, %0, %acc reduction_dim = 1, inclusive = false :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
@@ -3015,9 +3059,11 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getInitialValue().getType());
     }
   }];
-  let assemblyFormat =
-    "$kind `,` $source `,` $initial_value attr-dict `:` "
-    "type($source) `,` type($initial_value) ";
+  let assemblyFormat = [{
+    $kind `,` $source `,` $initial_value
+    `reduction_dim` `=` $reduction_dim `,` `inclusive` `=` $inclusive
+    attr-dict `:` type($source) `,` type($initial_value)
+  }];
   let hasVerifier = 1;
 }
 

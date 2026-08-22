@@ -85,7 +85,6 @@ func.func @_QQmain() {
 // PASSES-NEXT:   ConvertHLFIRtoFIR
 // PASSES-NEXT:   LowerWorkshare
 // PASSES-NEXT:   LowerWorkdistribute
-// PASSES-NEXT:   HostOpFilteringPass
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
@@ -94,7 +93,6 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   ArrayValueCopy
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   CharacterConversion
@@ -112,6 +110,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   CudaHeapAllocPromotion
 // PASSES-NEXT:   MemoryAllocationOpt
 
 // PASSES-NEXT: Inliner
@@ -121,6 +120,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: PolymorphicOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT: SelectOpsConversion
 // PASSES-NEXT: AssumedRankOpConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   OptimizeArrayRepacking
@@ -183,8 +184,14 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:  FunctionAttr
 // PASSES-NEXT:  LowerNontemporalPass
+// PASSES-NEXT: MarkDeclareTargetPass
+// PASSES-NEXT: UnimplementedDeviceCheckPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: EmitMIFGlobalCtors
+// PASSES-NEXT: MarkDeclareTargetPass
+// PASSES-NEXT: FunctionFilteringPass
+// PASSES-NEXT: HostOpFilteringPass
 // PASSES-NEXT: 'llvm.func' Pipeline
 // PASSES-NEXT:  StackToSharedPass
 // PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass

@@ -43,6 +43,18 @@ TEST(PolicyTest, PrivateState) {
   EXPECT_TRUE(p.capabilities.can_run_all_threads);
   EXPECT_TRUE(p.capabilities.can_try_all_threads);
   EXPECT_TRUE(p.capabilities.can_run_breakpoint_actions);
+  EXPECT_TRUE(p.capabilities.can_load_frame_providers);
+  EXPECT_TRUE(p.capabilities.can_run_frame_recognizers);
+}
+
+TEST(PolicyTest, PrivateStateRunningExpression) {
+  Policy p = Policy::CreatePrivateState(
+      Policy::PrivateStatePurpose::RunningExpression);
+  EXPECT_EQ(p.view, Policy::View::Private);
+  EXPECT_TRUE(p.capabilities.can_evaluate_expressions);
+  EXPECT_TRUE(p.capabilities.can_run_all_threads);
+  EXPECT_TRUE(p.capabilities.can_try_all_threads);
+  EXPECT_TRUE(p.capabilities.can_run_breakpoint_actions);
   EXPECT_FALSE(p.capabilities.can_load_frame_providers);
   EXPECT_FALSE(p.capabilities.can_run_frame_recognizers);
 }
@@ -58,6 +70,16 @@ TEST(PolicyTest, PublicStateRunningExpression) {
   EXPECT_TRUE(p.capabilities.can_run_frame_recognizers);
 }
 
+TEST(PolicyTest, ScriptedExtensionCall) {
+  Policy p = Policy::CreateScriptedExtensionCall();
+  EXPECT_TRUE(p.capabilities.can_bypass_target_api_mutex);
+
+  PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
+  Policy nested = Policy::CreateScriptedExtensionCall();
+  EXPECT_EQ(nested.view, Policy::View::Private);
+  EXPECT_TRUE(nested.capabilities.can_bypass_target_api_mutex);
+}
+
 TEST(PolicyTest, StackDefaultIsPublicState) {
   Policy current = PolicyStack::Get().Current();
   EXPECT_EQ(current.view, Policy::View::Public);
@@ -67,7 +89,8 @@ TEST(PolicyTest, StackDefaultIsPublicState) {
 
 TEST(PolicyTest, StackPushPop) {
   {
-    PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
+    PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState(
+        Policy::PrivateStatePurpose::RunningExpression);
     EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
     EXPECT_FALSE(
         PolicyStack::Get().Current().capabilities.can_load_frame_providers);
@@ -92,7 +115,8 @@ TEST(PolicyTest, GuardRAII) {
   EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Public);
 
   {
-    PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
+    PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState(
+        Policy::PrivateStatePurpose::RunningExpression);
     EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
     EXPECT_FALSE(
         PolicyStack::Get().Current().capabilities.can_load_frame_providers);
@@ -131,7 +155,8 @@ TEST(PolicyTest, DumpPublicState) {
   EXPECT_EQ(s.GetString(),
             "policy: view=public, capabilities={"
             "eval_expr=true run_all=true try_all=true "
-            "bp_actions=true frame_providers=true frame_recognizers=true}");
+            "bp_actions=true frame_providers=true frame_recognizers=true "
+            "bypass_api_mutex=false}");
 }
 
 TEST(PolicyTest, DumpPrivateState) {
@@ -140,7 +165,8 @@ TEST(PolicyTest, DumpPrivateState) {
   EXPECT_EQ(s.GetString(),
             "policy: view=private, capabilities={"
             "eval_expr=true run_all=true try_all=true "
-            "bp_actions=true frame_providers=false frame_recognizers=false}");
+            "bp_actions=true frame_providers=true frame_recognizers=true "
+            "bypass_api_mutex=false}");
 }
 
 TEST(PolicyTest, DumpStack) {
@@ -186,8 +212,9 @@ TEST(PolicyStackDeathTest, GuardDestroyedOnDifferentThread) {
 TEST(PolicyTest, PushInheritsFromCurrent) {
   // Push* methods inherit from Current() rather than starting from a
   // default Policy: stacking PushPublicStateRunningExpression on top of
-  // PushPrivateState must preserve the Private view.
-  PolicyStack::Guard outer = PolicyStack::Get().PushPrivateState();
+  // PushPrivateState(RunningExpression) must preserve the Private view.
+  PolicyStack::Guard outer = PolicyStack::Get().PushPrivateState(
+      Policy::PrivateStatePurpose::RunningExpression);
   EXPECT_EQ(PolicyStack::Get().Current().view, Policy::View::Private);
 
   PolicyStack::Guard inner =

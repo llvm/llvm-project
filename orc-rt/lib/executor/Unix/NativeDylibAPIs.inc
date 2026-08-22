@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Error.h"
+#include "orc-rt/StringExtras.h"
 
 #include <dlfcn.h>
 
@@ -21,11 +22,11 @@ inline void *hostOSGetGlobalLookupHandle() { return RTLD_DEFAULT; }
 orc_rt::Expected<void *> hostOSLoadLibrary(const std::string &Path) {
   assert(!Path.empty() && "hostOSLoadLibray doesn't support empty paths");
   void *H = dlopen(Path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-  if (H == nullptr) {
-    std::ostringstream ErrMsg;
-    ErrMsg << "error loading \"" << Path << "\": " << dlerror();
-    return orc_rt::make_error<orc_rt::StringError>(ErrMsg.str());
-  }
+  if (H == nullptr)
+    return orc_rt::make_error<orc_rt::StringError>(
+        (orc_rt::StringOutputStream()
+         << "error loading \"" << Path << "\": " << dlerror())
+            .str());
 
   return H;
 }
@@ -33,7 +34,7 @@ orc_rt::Expected<void *> hostOSLoadLibrary(const std::string &Path) {
 orc_rt::Error hostOSUnloadLibrary(void *Handle) {
   if (dlclose(Handle) != 0)
     return orc_rt::make_error<orc_rt::StringError>(
-        (std::ostringstream()
+        (orc_rt::StringOutputStream()
          << "error unloading " << Handle << ": " << dlerror())
             .str());
   return orc_rt::Error::success();
@@ -68,4 +69,4 @@ hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
   return Result;
 }
 
-} // anonymous namespace
+} // namespace

@@ -171,6 +171,11 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_option_for_runtime : Warning<
   "ignoring '%0' option as it is not currently supported for runtime '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_hexagon_reserved_caller_saved_reg : Warning<
+  "reserving the caller-saved register '%0' may lead to incorrect code if it "
+  "is not also reserved in all other translation units and libraries; you are "
+  "responsible for ensuring the register is managed consistently">,
+  InGroup<DiagGroup<"hexagon-reserved-caller-saved">>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
@@ -404,6 +409,11 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
+def err_drv_dyndbg_lto : Error<"'-fdynamic-debugging' incompatible with '-flto'">;
+def err_drv_dyndbg_incompatible : Error<"'-fdynamic-debugging' incompatible with '%0'">;
+def err_drv_dyndbg_ir : Error<"'-fdynamic-debugging' incompatible with IR input">;
+def warn_drv_dyndbg_req_debug : Warning<"'-fdynamic-debugging' ignored: requires debug info">,
+    InGroup<DynamicDebugging>;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -820,6 +830,9 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
+
+def err_drv_compile_mode_unsupported_aix : Error<
+  "32-bit compile mode is not supported. Use OBJECT_MODE=64, -maix64 or -m64">;
 
 def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
 def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;

@@ -14,11 +14,9 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
 namespace fir {
@@ -798,7 +796,8 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
 /// \p intrinsicName.
 std::optional<IntrinsicHandlerEntry>
 lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
-                       std::optional<mlir::Type> resultType);
+                       std::optional<mlir::Type> resultType,
+                       bool isBindcCall = false);
 
 /// Generate a TODO error message for an as yet unimplemented intrinsic.
 void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
@@ -847,6 +846,19 @@ mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
                    mlir::Value x, mlir::Value y);
+
+template <std::size_t N>
+static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
+  // Replace by std::sorted when C++20 is default (will be constexpr).
+  const IntrinsicHandler *lastSeen{nullptr};
+  bool isSorted{true};
+  for (const auto &x : array) {
+    if (lastSeen)
+      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
+    lastSeen = &x;
+  }
+  return isSorted;
+}
 
 } // namespace fir
 

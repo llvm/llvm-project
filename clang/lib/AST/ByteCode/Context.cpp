@@ -208,7 +208,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
+        !Ptr.getFieldDesc()->isPrimitiveArray())
       return false;
 
     // Must be char.
@@ -554,8 +555,8 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-  InterpState State(Parent, *P, Stk, *this, Func);
   auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  InterpState State(Parent, *P, Stk, *this, Func);
   InterpFrame *Frame = new (Memory.get()) InterpFrame(
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;
@@ -571,7 +572,6 @@ bool Context::Run(State &Parent, const Function *Func) {
   return false;
 }
 
-// TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
@@ -687,8 +687,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     unsigned PrimTSize = align(primSize(PT));
     ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
@@ -718,8 +718,8 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));

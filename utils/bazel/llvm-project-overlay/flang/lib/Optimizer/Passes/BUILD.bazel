@@ -25,6 +25,7 @@ cc_library(
     deps = [
         "//flang:CommonHeaders",
         "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
         "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
         "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",

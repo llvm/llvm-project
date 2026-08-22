@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__math/special_functions.h>
+#include <__cmath/special_functions.h>
 #include <cmath>
 #include <optional>
 #include <type_traits>

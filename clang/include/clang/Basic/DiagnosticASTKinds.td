@@ -16,6 +16,11 @@ def note_constexpr_invalid_cast : Note<
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_cast_ptrtoint : Note<
+  "%select{reinterpret_cast||"
+  "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
+  "}0 is not allowed in a constant expression">;
+def note_constexpr_has_lvalue : Note<"converting the address of an object to an integer is not allowed">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
@@ -170,7 +175,7 @@ def note_constexpr_depth_limit_exceeded : Note<
 def note_constexpr_call_limit_exceeded : Note<
   "constexpr evaluation hit maximum call limit">;
 def note_constexpr_step_limit_exceeded : Note<
-  "constexpr evaluation hit maximum step limit; possible infinite loop?">;
+  "constexpr evaluation hit maximum step limit of %0; possible infinite loop?">;
 def note_constexpr_heap_alloc_limit_exceeded : Note<
   "constexpr evaluation hit maximum heap allocation limit">;
 def note_constexpr_this : Note<
@@ -355,8 +360,9 @@ def note_constexpr_new_negative : Note<
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
 def note_constexpr_new_exceeds_limits : Note<
-  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
-  "use '-fconstexpr-steps' to increase this limit">;
+  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1)">;
+def note_constexpr_steps : Note<
+  "use -fconstexpr-steps= to increase this limit (=0 will remove the limit)">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "
   "%1 explicitly initialized elements">;
@@ -1032,6 +1038,15 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def warn_relaxed_constant_fold_cast : Extension<
+  "folding constant expression involving "
+  "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
+def warn_relaxed_constant_fold_null : Extension<
+  "folding constant expression that takes field address of null pointer "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;

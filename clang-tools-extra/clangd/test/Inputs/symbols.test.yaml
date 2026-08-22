@@ -6,7 +6,8 @@ Scope:           'std::'
 SymInfo:         
   Kind:            Class
   Lang:            Cpp
-CanonicalDeclaration: 
+Tags:            262144
+CanonicalDeclaration:
   FileURI:         'test:///vector.h'
   Start:           
     Line:            215

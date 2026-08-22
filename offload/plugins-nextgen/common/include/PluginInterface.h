@@ -66,6 +66,7 @@ namespace plugin {
 struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct PluginContextTy;
 template <typename ResourceRef> class GenericDeviceResourceManagerTy;
 
 namespace Plugin {
@@ -98,7 +99,8 @@ inline Error error(error::ErrorCode Code, Error &&OtherError,
 /// the plugin-specific code.
 /// TODO: Refactor this, must be defined individually by each plugin.
 template <typename... ArgsTy>
-static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+[[maybe_unused]] static Error check(int32_t ErrorCode, const char *ErrFmt,
+                                    ArgsTy... Args);
 } // namespace Plugin
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
@@ -375,6 +377,9 @@ class DeviceImageTy {
   /// The managed image data.
   std::unique_ptr<MemoryBuffer> Image;
 
+  /// An optional buffer for an IR image.
+  std::unique_ptr<MemoryBuffer> DeviceIRImage;
+
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
@@ -402,6 +407,64 @@ public:
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
+
+  /// Get a memory buffer reference to the whole IR image.
+  MemoryBufferRef getIRImageMemoryBuffer() const {
+    if (DeviceIRImage)
+      return MemoryBufferRef(*DeviceIRImage);
+
+    return MemoryBufferRef();
+  }
+
+  bool hasIRImage() const { return DeviceIRImage != nullptr; }
+
+  /// Set the IR image.
+  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
+    DeviceIRImage = std::move(ImageBuffer);
+  }
+};
+
+/// The subset of KernelArgsTy fields the plugin interface needs to launch a
+/// kernel, plus the resolved argument-pointer array. Unlike KernelArgsTy,
+/// this struct is populated by libomptarget on the stack for every launch,
+/// so it is never aliased onto compiler-emitted memory and may be extended
+/// freely.
+struct KernelLaunchArgsTy {
+  /// Version of KernelArgsTy this launch was built from, for ABI
+  /// compatibility checks.
+  uint32_t OmpABIVersion = 0;
+  /// Number of kernel arguments in \p Args.
+  uint32_t NumArgs = 0;
+  /// Array of \p NumArgs pointers, each pointing at one argument's value,
+  /// with any offsets already resolved.
+  void **Args = nullptr;
+  /// Size of the argument data in bytes, one entry per \p Args element,
+  /// possibly null.
+  int64_t *ArgSizes = nullptr;
+  /// Address of the element of \p Args reserved for the kernel launch
+  /// environment (dyn_ptr), or null if this launch has no such slot. The
+  /// caller owns the storage it points into; the plugin fills it in once it
+  /// has computed the actual (device-side) value.
+  void **DynPtrSlot = nullptr;
+  /// Tripcount for the teams / distribute loop, 0 otherwise.
+  uint64_t Tripcount = 0;
+  /// Amount of dynamic cgroup memory requested.
+  uint32_t DynCGroupMem = 0;
+  /// User-requested number of blocks (for x,y,z dimension).
+  uint32_t UserNumBlocks[3] = {0, 0, 0};
+  /// User-requested number of threads (for x,y,z dimension).
+  uint32_t UserThreadLimit[3] = {0, 0, 0};
+  struct {
+    uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
+    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
+    uint64_t StrictThreads
+        : 1; // The user-requested number of threads is strict.
+    uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
+    uint64_t Unused : 60;
+  } Flags = {0, 0, 0, 0, 0};
+  /// Set by the caller when replaying a previously recorded kernel launch, so
+  /// the plugin can report the outcome back; null for a normal launch.
+  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -409,7 +472,7 @@ public:
 /// implement the necessary virtual function members.
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
-  GenericKernelTy(const char *Name)
+  GenericKernelTy(StringRef Name)
       : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
@@ -420,15 +483,17 @@ struct GenericKernelTy {
                          DeviceImageTy &Image) = 0;
 
   /// Launch the kernel on the specific device. The device must be the same
-  /// one used to initialize the kernel.
-  Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
-               KernelExtraArgsTy *KernelExtraArgs,
+  /// one used to initialize the kernel. \p LaunchArgs.Args is the flattened
+  /// argument-pointer array to pass to the kernel, with any offsets already
+  /// resolved. \p LaunchArgs.DynPtrSlot, if non-null, points at the element
+  /// of it reserved for the kernel launch environment (dyn_ptr); the caller
+  /// owns the storage it points into.
+  Error launch(GenericDeviceTy &GenericDevice, KernelLaunchArgsTy &LaunchArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                           uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
-                           KernelLaunchParamsTy LaunchParams,
+                           uint32_t DynBlockMemSize,
+                           KernelLaunchArgsTy &LaunchArgs,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   virtual Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
@@ -468,7 +533,7 @@ struct GenericKernelTy {
   /// \p NumBlocks0 is the number of blocks for this launch and is used to size
   /// the reduction buffer.
   Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
-      GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+      GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
       const DynBlockMemConfTy &DynBlockMemConf,
       AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const;
 
@@ -505,31 +570,23 @@ protected:
 
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
-                        KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
-                        uint32_t NumBlocks[3]) const;
+                        const KernelLaunchArgsTy &LaunchArgs,
+                        uint32_t NumThreads[3], uint32_t NumBlocks[3]) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                                       KernelArgsTy &KernelArgs,
+                                       const KernelLaunchArgsTy &LaunchArgs,
                                        uint32_t NumThreads[3],
                                        uint32_t NumBlocks[3]) const;
 
 private:
   /// Prepare the block memory buffer requested for the kernel and execute the
   /// specified fallback if necessary.
-  Expected<DynBlockMemConfTy> prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                                                 KernelArgsTy &KernelArgs,
-                                                 uint32_t NumBlocks) const;
-
-  /// Prepare the arguments before launching the kernel.
-  KernelLaunchParamsTy
-  prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-              ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-              llvm::SmallVectorImpl<void *> &Args,
-              llvm::SmallVectorImpl<void *> &Ptrs,
-              KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
-              uint32_t Version) const;
+  Expected<DynBlockMemConfTy>
+  prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                     const KernelLaunchArgsTy &LaunchArgs,
+                     uint32_t NumBlocks) const;
 
   /// Get the effective number of threads for the kernel based on the
   /// user-defined number of threads.
@@ -544,6 +601,7 @@ private:
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                  uint32_t UserNumBlocks, uint64_t LoopTripCount,
                                  uint32_t &EffectiveNumThreads,
+                                 bool IsNumThreadsStrict,
                                  bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
@@ -838,6 +896,37 @@ public:
   }
 };
 
+/// A plugin-side context grouping a set of devices.
+struct PluginContextTy {
+  PluginContextTy(GenericPluginTy &Plugin,
+                  llvm::ArrayRef<GenericDeviceTy *> Devices)
+      : Plugin(Plugin), Devices(Devices.begin(), Devices.end()) {}
+
+  PluginContextTy(const PluginContextTy &) = delete;
+  PluginContextTy &operator=(const PluginContextTy &) = delete;
+  PluginContextTy(PluginContextTy &&) = delete;
+  PluginContextTy &operator=(PluginContextTy &&) = delete;
+
+  virtual ~PluginContextTy() = default;
+
+  /// Release resources owned by this context. Called from olDestroyContext
+  /// before the object is destroyed so that errors are propagated instead of
+  /// being swallowed in the destructor.
+  virtual llvm::Error deinit() { return llvm::Error::success(); }
+
+  llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
+  GenericPluginTy &getPlugin() const { return Plugin; }
+
+  /// Initialize a __tgt_async_info structure on \p Device.
+  Error initAsyncInfo(GenericDeviceTy &Device, __tgt_async_info **AsyncInfoPtr);
+  virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+protected:
+  GenericPluginTy &Plugin;
+  llvm::SmallVector<GenericDeviceTy *> Devices;
+};
+
 /// Class implementing common functionalities of offload devices. Each plugin
 /// should define the specific device class, derive from this generic one, and
 /// implement the necessary virtual function members.
@@ -1023,6 +1112,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Copy data between arbitrary memory locations.
+  Error dataMemcpy(void *DstPtr, const void *SrcPtr, int64_t Size,
+                   __tgt_async_info *AsyncInfo);
+  virtual Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
   /// Instert a data fence between previous data operations and the following
   /// operations if necessary for the device
   virtual Error dataFence(__tgt_async_info *AsyncInfo) = 0;
@@ -1043,15 +1138,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                              int64_t PatternSize, int64_t Size,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Run the kernel associated with \p EntryPtr
-  Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-                     KernelArgsTy &KernelArgs,
-                     KernelExtraArgsTy *KernelExtraArgs,
-                     __tgt_async_info *AsyncInfo);
+  /// Prefetch a batch of memory ranges. Mems[i] has size Sizes[i].
+  /// ToHost = true migrates towards the host, false towards the device.
+  /// Backends without prefetch support treat the call as a no-op.
+  Error dataPrefetch(size_t Count, const void **Mems, const size_t *Sizes,
+                     bool ToHost, __tgt_async_info *AsyncInfo);
+  virtual Error dataPrefetchImpl(size_t Count, const void **Mems,
+                                 const size_t *Sizes, bool ToHost,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    return Plugin::success();
+  }
 
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
-  virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+  /// Run the kernel associated with \p EntryPtr
+  Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
+                     __tgt_async_info *AsyncInfo);
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1211,7 +1311,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+  virtual Expected<GenericKernelTy &> constructKernel(StringRef Name) = 0;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
@@ -1559,6 +1659,10 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
+  /// Create a plugin-side context grouping the given devices.
+  virtual Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
+
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
@@ -1650,9 +1754,8 @@ public:
   int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
 
   /// Begin executing a kernel on the given device.
-  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
-                        ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
-                        KernelExtraArgsTy *KernelExtraArgs,
+  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                        KernelLaunchArgsTy &LaunchArgs,
                         __tgt_async_info *AsyncInfoPtr);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.
@@ -1690,9 +1793,6 @@ public:
 
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
-
-  /// Creates an asynchronous queue for the given plugin.
-  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
 
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);

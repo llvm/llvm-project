@@ -67,16 +67,42 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space");
 }
 
+/// Translates a memref memory space attribute into XeVM's numeric address
+/// space, which follows the OpenCL/SPIR-V convention (0 = private, 1 =
+/// global, 2 = constant, 3 = shared/local, 4 = generic). A null attribute,
+/// meaning the memory space was left unspecified, maps to the default space
+/// 0. Returns failure if `memSpace` is a representation this pass does not
+/// know how to translate (e.g. a SPIR-V storage class or an arbitrary string
+/// attribute), rather than assuming it is an `IntegerAttr` and asserting.
+static FailureOr<unsigned> getNumericMemorySpace(Attribute memSpace) {
+  if (!memSpace)
+    return 0u;
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memSpace))
+    return static_cast<unsigned>(intAttr.getInt());
+  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(memSpace))
+    return static_cast<unsigned>(xevmSpace.getValue());
+  if (auto gpuSpace = llvm::dyn_cast<gpu::AddressSpaceAttr>(memSpace)) {
+    switch (gpuSpace.getValue()) {
+    case gpu::AddressSpace::Global:
+      return static_cast<unsigned>(xevm::AddrSpace::GLOBAL);
+    case gpu::AddressSpace::Workgroup:
+      return static_cast<unsigned>(xevm::AddrSpace::SHARED);
+    case gpu::AddressSpace::Private:
+      return static_cast<unsigned>(xevm::AddrSpace::PRIVATE);
+    case gpu::AddressSpace::Constant:
+      return static_cast<unsigned>(xevm::AddrSpace::CONSTANT);
+    }
+    llvm_unreachable("Unknown GPU address space");
+  }
+  return failure();
+}
+
 /// Checks if the given MemRefType refers to shared memory.
 static bool isSharedMemRef(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (!attr)
-    return false;
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == static_cast<int>(xevm::AddrSpace::SHARED);
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
+  FailureOr<unsigned> addrSpace =
+      getNumericMemorySpace(memrefTy.getMemorySpace());
+  return succeeded(addrSpace) &&
+         *addrSpace == static_cast<unsigned>(xevm::AddrSpace::SHARED);
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -592,16 +618,24 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       basePtrI64 = adaptor.getSource();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     } else {
       basePtrI64 = adaptor.getDest();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getDest().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     }
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
@@ -859,9 +893,13 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-      auto addrSpace = memRefTy.getMemorySpaceAsInt();
-      if (addrSpace != 0)
-        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+      FailureOr<unsigned> addrSpace =
+          getNumericMemorySpace(memRefTy.getMemorySpace());
+      if (failed(addrSpace))
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported memref memory space attribute.");
+      if (*addrSpace != 0)
+        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value ptrLLVM =
@@ -1303,6 +1341,72 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
   }
 };
 
+// Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` concatenates the components of its operand across the
+// subgroup, the first component of every lane first, and then hands chunks the
+// size of a result component back out to the lanes in order. Numbering the
+// elements of a `vector<NxT>` fragment held by lane `i` of a subgroup of size
+// `S` by their logical position, that concatenation is exactly the `pack` mode
+// input numbering `j * S + i`. Taking the result as a single `N * width(T)` bit
+// scalar then hands lane `i` the logical positions `i * N .. i * N + N - 1`,
+// which is the `pack` mode output numbering.
+//
+// So `pack` is a vector-to-scalar `xevm.bitcast_shuffle` followed by a bitcast
+// back to the fragment type, and `unpack`, being its inverse, is a bitcast to
+// the scalar followed by a scalar-to-vector `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` only accepts the integer types `i8`, `i16`, `i32` and
+// `i64`, since it is bit-preserving and so does not depend on how the bits are
+// interpreted. A fragment of a floating point type is therefore bitcast to a
+// same-width integer vector on the way in and back on the way out.
+class LaneShuffleToXeVMPattern
+    : public OpConversionPattern<xegpu::LaneShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto vecTy = dyn_cast<VectorType>(adaptor.getSource().getType());
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(op, "Expected a vector fragment.");
+    // The shuffle redistributes whole bytes between the lanes, so sub-byte
+    // element types, fp4 in particular, cannot be shuffled. Widths without a
+    // matching integer type the op accepts are rejected for the same reason.
+    unsigned elemBits = vecTy.getElementTypeBitWidth();
+    if (elemBits != 8 && elemBits != 16 && elemBits != 32 && elemBits != 64)
+      return rewriter.notifyMatchFailure(
+          op, "Expected an element type of 8, 16, 32 or 64 bits.");
+    int64_t fragmentBits = vecTy.getNumElements() * elemBits;
+    if (fragmentBits > 64 || !llvm::isPowerOf2_64(fragmentBits))
+      return rewriter.notifyMatchFailure(
+          op, "Expected a fragment of 8, 16, 32 or 64 bits.");
+
+    Location loc = op.getLoc();
+    Type packedTy = rewriter.getIntegerType(fragmentBits);
+    // The integer vector type the shuffle actually operates on. Equal to the
+    // fragment type when that is already an integer vector.
+    VectorType shuffleTy =
+        VectorType::get(vecTy.getShape(), rewriter.getIntegerType(elemBits));
+
+    Value res;
+    if (op.getMode() == xegpu::LaneShuffleMode::Pack) {
+      Value src = adaptor.getSource();
+      if (shuffleTy != vecTy)
+        src = LLVM::BitcastOp::create(rewriter, loc, shuffleTy, src);
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, packedTy, src);
+      res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    } else {
+      Value packed =
+          LLVM::BitcastOp::create(rewriter, loc, packedTy, adaptor.getSource());
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, shuffleTy, packed);
+      if (shuffleTy != vecTy)
+        res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    }
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
@@ -1626,4 +1730,5 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
   patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
   patterns.add<ExtfToXeVMPattern, TruncfToXeVMPattern>(typeConverter,
                                                        patterns.getContext());
+  patterns.add<LaneShuffleToXeVMPattern>(typeConverter, patterns.getContext());
 }

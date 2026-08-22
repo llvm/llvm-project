@@ -2278,9 +2278,9 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (TheUser != FoldInst)
     return false;
 
-  // Don't try to fold volatile loads.  Target has to deal with alignment
-  // constraints.
-  if (LI->isVolatile())
+  // Don't try to fold ordered loads.  Target has to deal with alignment
+  // constraints and synchronization.
+  if (!LI->isUnordered())
     return false;
 
   // Figure out which vreg this is going into.  If there is no assigned vreg yet
@@ -2375,7 +2375,8 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
     Flags |= MachineMemOperand::MOInvariant;
 
   return FuncInfo.MF->getMachineMemOperand(MachinePointerInfo(Ptr), Flags, Size,
-                                           *Alignment, AAInfo, Ranges);
+                                           *Alignment,
+                                           MMOMetadata(AAInfo, Ranges));
 }
 
 CmpInst::Predicate FastISel::optimizeCmpPredicate(const CmpInst *CI) const {

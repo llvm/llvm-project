@@ -44,12 +44,12 @@ public:
   T *(*fp)(T a, T *b, const T *c, T &d, const T &e);
 };
 
-// FT: [[F_TCLS2F1]] = !{!"_ZTSFvvE.generalized"}
-// FT: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E.generalized"}
-// FT: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E.generalized"}
-// FT: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E.generalized"}
-// FT: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E.generalized"}
-// FT: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E.generalized"}
+// FT: [[F_TCLS2F1]] = !{!"_ZTSFvvE"}
+// FT: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E"}
+// FT: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E"}
+// FT: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E"}
+// FT: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E"}
+// FT: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E"}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Callsites (check for indirect callsite operand bundles)
@@ -101,17 +101,17 @@ void foo() {
 // CST-LABEL: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_(
 // CST-SAME: {{.*}} !callgraph [[F_TFUNC_CLS1:![0-9]+]]
 
-// CST: [[F_TCLS2F1]] = !{!"_ZTSFvvE.generalized"}
+// CST: [[F_TCLS2F1]] = !{!"_ZTSFvvE"}
 // CST: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
-// CST: [[F_TFUNC_CLS1]] = !{!"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E.generalized"}
+// CST: [[F_TFUNC_CLS1]] = !{!"_ZTSFP4Cls1S_S0_PKS_RS_RS1_E"}
 // CST: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
 // CST: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
-// CST: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E.generalized"}
+// CST: [[F_TCLS2F2]] = !{!"_ZTSFv4Cls1E"}
 // CST: [[F_TCLS2F3_CT]] = !{[[F_TCLS2F3:![0-9]+]]}
-// CST: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E.generalized"}
+// CST: [[F_TCLS2F3]] = !{!"_ZTSFvP4Cls1E"}
 // CST: [[F_TCLS2F4_CT]] = !{[[F_TCLS2F4:![0-9]+]]}
-// CST: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E.generalized"}
+// CST: [[F_TCLS2F4]] = !{!"_ZTSFvPK4Cls1E"}
 // CST: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
-// CST: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E.generalized"}
+// CST: [[F_TCLS2F5]] = !{!"_ZTSFvR4Cls1E"}
 // CST: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
-// CST: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E.generalized"}
+// CST: [[F_TCLS2F6]] = !{!"_ZTSFvRK4Cls1E"}

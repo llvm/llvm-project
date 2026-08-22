@@ -1,8 +1,5 @@
 # LLVM Coding Standards
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -902,10 +899,10 @@ If you really need to do something like this, put a private header file in the
 same directory as the source files, and include it locally.  This ensures that
 your private interface remains private and undisturbed by outsiders.
 
-```{note}
+:::{note}
 It's okay to put extra implementation methods in a public class itself. Just
 make them private (or protected) and all is well.
-```
+:::
 
 #### Use Namespace Qualifiers to Define Previously Declared Symbols
 
@@ -1500,10 +1497,10 @@ problematic in this regard --- just `<iostream>`. However, `raw_ostream`
 provides various APIs that are better performing for almost every use than
 `std::ostream` style APIs.
 
-```{note}
+:::{note}
 New code should always use {ref}`raw_ostream <raw_ostream>` for writing, or the
 `llvm::MemoryBuffer` API for reading files.
-```
+:::
 
 (raw_ostream)=
 

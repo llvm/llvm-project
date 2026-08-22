@@ -86,7 +86,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class vector {
+class _LIBCPP_WARN_UNUSED vector {
   using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
   using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
@@ -121,10 +121,10 @@ public:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
-      vector,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<allocator_type>,
+                      vector,
+                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -153,7 +153,6 @@ public:
     __guard.__complete();
   }
 
-#if _LIBCPP_STD_VER >= 14
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a)
       : __layout_(__a) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
@@ -163,7 +162,6 @@ public:
     }
     __guard.__complete();
   }
-#endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
@@ -442,11 +440,11 @@ public:
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
-    return __layout_.__back();
+    return end()[-1];
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
-    return __layout_.__back();
+    return end()[-1];
   }
 
   //
@@ -595,7 +593,7 @@ private:
         "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
         "owns a buffer, or a deallocation function didn't reset the layout's begin pointer.");
     _LIBCPP_ASSERT_INTERNAL(
-        __layout_.__empty(),
+        size() == 0,
         "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
         "owns a buffer, or a deallocation function didn't reset the layout's size.");
     _LIBCPP_ASSERT_INTERNAL(
@@ -1080,7 +1078,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
   pointer __end = __layout_.__end_ptr();
   std::__if_likely_else(
-      !__layout_.__is_full(),
+      size() != capacity(),
       [&] {
         __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
         ++__end;
@@ -1134,7 +1132,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (!__layout_.__is_full()) {
+  if (size() != capacity()) {
     pointer __end = __layout_.__end_ptr();
     if (__p == __end) {
       __emplace_back_assume_capacity(__x);
@@ -1157,7 +1155,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (!__layout_.__is_full()) {
+  if (size() != capacity()) {
     pointer __end = __layout_.__end_ptr();
     if (__p == __end) {
       __emplace_back_assume_capacity(std::move(__x));
@@ -1178,7 +1176,7 @@ template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (!__layout_.__is_full()) {
+  if (size() != capacity()) {
     pointer __end = __layout_.__end_ptr();
     if (__p == __end) {
       __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
@@ -1232,7 +1230,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   difference_type __off = __position - begin();
   pointer __p           = this->__layout_.__begin_ptr() + __off;
   pointer __old_last    = __layout_.__end_ptr();
-  for (; !__layout_.__is_full() && __first != __last; ++__first)
+  for (; size() != capacity() && __first != __last; ++__first)
     __emplace_back_assume_capacity(*__first);
 
   if (__first == __last)

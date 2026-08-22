@@ -67,6 +67,10 @@ static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
     cl::desc("Assume the target supports gather/scatter operations (used for "
              "testing)."));
 
+static cl::opt<float> ScalableEpilogueVFCostScaleFactor(
+    "scalable-epilogue-vf-cost-scale-factor", cl::init(2.0), cl::Hidden,
+    cl::desc("Scale the cost of scalable epilogue VFs by this factor."));
+
 /// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
 /// is passed, the message relates to that particular instruction.
 #ifndef NDEBUG
@@ -134,16 +138,12 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
   });
 }
 
-bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
-                                                  ElementCount VF) const {
-  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
-  auto *Ty = getLoadStoreType(I);
-  const unsigned AS = getLoadStoreAddressSpace(I);
-  const Align Alignment = getLoadStoreAlignment(I);
-
+bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace) const {
   return ForceTargetSupportsMaskedMemoryOps ||
-         (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
-                           : TTI.isLegalMaskedStore(Ty, Alignment, AS));
+         (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
+                 : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
@@ -531,6 +531,15 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
           MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
     }
   }
+
+  // If the loop has no loads/stores or reductions (e.g. a search loop with an
+  // early exit), MinWidth is never updated and is left at its sentinel value.
+  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
+  // callers such as the max-bandwidth VF computation don't divide by the
+  // sentinel and collapse the VF to zero.
+  if (MinWidth == -1U)
+    MinWidth = MaxWidth;
+
   return {MinWidth, MaxWidth};
 }
 
@@ -701,10 +710,27 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostB = B.Cost;
 
   // When there is a hint to always prefer scalable vectors, honour that hint.
-  if (Hints.isScalableVectorizationAlwaysPreferred())
+  if (Config.getHints().isScalableVectorizationAlwaysPreferred())
     if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
         !B.Width.isScalar())
       return true;
+
+  // Favor fixed VFs for epilogue loops by scaling the costs of scalable VFs
+  // 'ScalableEpilogueVFCostScaleFactor' (default 2.0). This is intended to
+  // model that fixed VFs are more likely to be fully unrolled (or optimized
+  // out) post vectorization. TODO: Reconsider this restriction for predicated
+  // epilogues (once supported).
+  if (IsEpilogue && A.Width.isScalable() != B.Width.isScalable() &&
+      A.Cost.isValid() && B.Cost.isValid()) {
+    auto [FixedCost, ScalableCost] = std::make_pair(CostA, CostB);
+    if (B.Width.isFixed())
+      std::swap(FixedCost, ScalableCost);
+
+    ScalableCost *= ScalableEpilogueVFCostScaleFactor;
+
+    if (FixedCost <= ScalableCost)
+      return A.Width.isFixed();
+  }
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -726,7 +752,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,
