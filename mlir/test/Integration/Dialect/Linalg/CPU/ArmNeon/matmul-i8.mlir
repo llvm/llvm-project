@@ -1,5 +1,3 @@
-// REQUIRES: mlir_arm_i8mm_tests
-
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:   -cse -canonicalize -convert-vector-to-scf \

@@ -949,6 +949,36 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sub
 }
 
+define i32 @abs_sub_abdu_sign_check(i32 %p0) {
+; X86-LABEL: abs_sub_abdu_sign_check:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X86-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X86-NEXT:    cmovel %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abs_sub_abdu_sign_check:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X64-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X64-NEXT:    cmovel %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp eq i32 %p0, 0
+  %v = select i1 %cmp, i32 0, i32 1255326472
+  %s = sub i32 %v, -1000000000
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
+  ret i32 %a
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
