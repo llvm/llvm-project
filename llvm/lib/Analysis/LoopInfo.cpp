@@ -138,8 +138,10 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
 
+  // Moving I may make SCEVs of its users more precisely canonicalizable, for
+  // example by allowing an invariant operand to be folded into an addrec.
   if (SE)
-    SE->forgetBlockAndLoopDispositions(I);
+    SE->forgetValue(I);
 
   Changed = true;
   return true;

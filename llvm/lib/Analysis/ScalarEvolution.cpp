@@ -2558,6 +2558,19 @@ bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L) {
   return isLoopInvariant(S, L) && properlyDominates(S, L->getHeader());
 }
 
+static bool hasAddRecWithLoopInvariantOperand(ScalarEvolution &SE,
+                                              ArrayRef<SCEVUse> Ops) {
+  return any_of(Ops, [&](const SCEV *Op) {
+    const auto *AddRec = dyn_cast<SCEVAddRecExpr>(Op);
+    if (!AddRec)
+      return false;
+    return any_of(Ops, [&](const SCEV *Other) {
+      return Other != AddRec &&
+             SE.isAvailableAtLoopEntry(Other, AddRec->getLoop());
+    });
+  });
+}
+
 /// Get a canonical add expression, or something simpler if possible.
 const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
                                         SCEV::NoWrapFlags OrigFlags,
@@ -2595,7 +2608,10 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
     return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
 
-  if (SCEV *S = findExistingSCEVInCache(scAddExpr, Ops)) {
+  // A loop transform may have made an operand newly available at the addrec's
+  // entry. Retry folding rather than returning the less precise cached add.
+  if (SCEV *S = findExistingSCEVInCache(scAddExpr, Ops);
+      S && !hasAddRecWithLoopInvariantOperand(*this, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVAddExpr *Add = static_cast<SCEVAddExpr *>(S);
     if (Add->getNoWrapFlags(OrigFlags) != OrigFlags)
