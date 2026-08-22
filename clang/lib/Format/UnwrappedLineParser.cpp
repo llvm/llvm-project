@@ -2675,7 +2675,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
-  auto ExcessLess = 0;
+  unsigned ExcessLess = 0;
   nextToken();
   const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
   if (!InMacroCall && Prev && Prev->is(TT_FunctionLikeMacro))
@@ -2804,7 +2804,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       parseRequiresExpression();
       break;
     case tok::less:
-      // We have here no clue wether this is a less, or a template opener, opt
+      // We have here no clue whether this is a less, or a template opener, opt
       // out of the predefined StarAndAmpTokenType.
       ++ExcessLess;
       nextToken();
