@@ -103,6 +103,13 @@ TEST_F(RecordMemberKindTest, AZeroWidthBitFieldHoldsNoDataForTheABI) {
   IntType s32 = IntType::get(&context, 32, true);
   auto zeroLen = cir::ArrayType::get(s32, 0);
 
+  EXPECT_FALSE(cir::holdsDataForABI(zeroLen, RecordMemberKind::BitField));
+  EXPECT_TRUE(cir::holdsDataForABI(u8, RecordMemberKind::BitField));
+  // A zero-length array under `data` is a flexible array member, which does.
+  EXPECT_TRUE(cir::holdsDataForABI(zeroLen, RecordMemberKind::Data));
+  EXPECT_FALSE(cir::holdsDataForABI(u8, RecordMemberKind::Pad));
+  EXPECT_FALSE(cir::holdsDataForABI(u8, RecordMemberKind::Empty));
+
   // A record of nothing but zero-width bit-fields declares no storage.
   EXPECT_TRUE(makeStruct("zw", {zeroLen}, {RecordMemberKind::BitField})
                   .isEmptyForABI());

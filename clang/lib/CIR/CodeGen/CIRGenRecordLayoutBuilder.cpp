@@ -1042,7 +1042,8 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // and still marks bitfield.  Computed before clearFields() drops the
     // variant marks.
     const cir::RecordMemberKind storageKind = makeMemberKind(
-        /*holdsData=*/llvm::any_of(getFieldKinds(), cir::holdsDataForABI),
+        /*holdsData=*/
+        cir::anyMemberHoldsDataForABI(getFieldTypes(), getFieldKinds()),
         /*isBitFieldAccessUnit=*/llvm::any_of(getFieldKinds(),
                                               cir::isBitFieldAccessUnit));
     clearFields();

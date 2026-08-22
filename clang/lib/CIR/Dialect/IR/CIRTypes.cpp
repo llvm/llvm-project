@@ -693,13 +693,7 @@ bool RecordType::isEmptyForABI() const {
   // holding no data.
   if (isIncomplete())
     return false;
-  // A zero-width bit-field occupies no storage and holds no data, so a record
-  // of nothing but those is empty for the ABI just as the AST predicate says.
-  return llvm::none_of(
-      llvm::zip_equal(getMembers(), getMemberKinds()), [](const auto &pair) {
-        auto [memberTy, kind] = pair;
-        return holdsDataForABI(kind) && !isZeroWidthBitField(memberTy, kind);
-      });
+  return !anyMemberHoldsDataForABI(getMembers(), getMemberKinds());
 }
 
 //===----------------------------------------------------------------------===//

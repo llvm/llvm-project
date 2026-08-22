@@ -29,6 +29,32 @@ typedef struct { int x; unsigned : 0; }
     __attribute__((ms_struct, aligned(16))) MsTail;
 typedef union { int a; Mid m; } ZeroWidthUnion;
 
+// An initializer the lowering builds a member at a time writes the empty field
+// in place of the bit-field's element, since the field holds no bytes and is
+// not the declared type the element carries.  A relocatable and a `_BitInt`
+// both take that path, reached through an array element and a member record
+// as well.
+extern int arr[4];
+typedef struct { int *p; int : 0; int y; } InitPtr;
+InitPtr gInitPtr = {&arr[2], 5};
+typedef struct { _BitInt(7) b; int : 0; int y; } InitBitInt;
+InitBitInt gInitBitInt = {3, 4};
+InitPtr gInitArr[2] = {{&arr[1], 1}, {&arr[2], 2}};
+typedef struct { InitPtr inner; int z; } InitNest;
+InitNest gInitNest = {{&arr[3], 7}, 9};
+// LLVM-CIR-DAG: @gInitPtr = global %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i8] zeroinitializer, i32 5 }, align 8
+// LLVM-OGCG-DAG: @gInitPtr = global { ptr, i32, [4 x i8] } { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), i32 5, [4 x i8] zeroinitializer }, align 8
+// LLVM-CIR-DAG: @gInitBitInt = global %struct.InitBitInt { i8 3, [3 x i8] zeroinitializer, [0 x i8] zeroinitializer, i32 4 }, align 4
+// LLVM-OGCG-DAG: @gInitBitInt = global { i8, [3 x i8], i32 } { i8 3, [3 x i8] zeroinitializer, i32 4 }, align 4
+// LLVM-CIR-DAG: @gInitArr = global [2 x %struct.InitPtr] [%struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 4), [0 x i8] zeroinitializer, i32 1 }, %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i8] zeroinitializer, i32 2 }], align 16
+// LLVM-CIR-DAG: @gInitNest = global %struct.InitNest { %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 12), [0 x i8] zeroinitializer, i32 7 }, i32 9 }, align 8
+
+// A flexible array member's field holds no bytes too, but it does have the
+// element's type, so it keeps its own initializer.
+typedef struct { int *p; int fam[]; } FamRel;
+FamRel gFamRel = {&arr[2]};
+// LLVM-DAG: @gFamRel = global %struct.FamRel { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i32] zeroinitializer }, align 8
+
 // CIR-DAG: !rec_Tail = !cir.struct<"Tail" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
 // CIR-DAG: !rec_Mid = !cir.struct<"Mid" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !s32i}>
 // CIR-DAG: !rec_Plain = !cir.struct<"Plain" {data !s32i, bitfield !cir.array<!s32i x 0>, data !s32i}>

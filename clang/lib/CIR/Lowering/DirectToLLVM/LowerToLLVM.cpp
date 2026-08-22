@@ -857,6 +857,23 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
 
   uint64_t insertIdx = 0;
   auto paddingItr = paddingAddedIndexes.begin();
+  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmTy);
+
+  // The field \p elt lands in, when that field holds no bytes and the element
+  // kept a type it cannot take.  Only a zero-width bit-field is like this.  A
+  // flexible array member's field also holds no bytes, but does match.
+  auto emptyFieldFor = [&](uint64_t idx, mlir::Attribute elt) -> mlir::Type {
+    if (!structTy || idx >= structTy.getBody().size())
+      return {};
+    mlir::Type fieldTy = structTy.getBody()[idx];
+    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(fieldTy);
+    if (!arrayTy || arrayTy.getNumElements() != 0)
+      return {};
+    auto typedElt = mlir::dyn_cast<mlir::TypedAttr>(elt);
+    if (!typedElt || converter->convertType(typedElt.getType()) == fieldTy)
+      return {};
+    return fieldTy;
+  };
 
   // Iteratively lower each constant element of the record.
   for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
@@ -865,7 +882,10 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
       ++paddingItr;
     }
 
-    mlir::Value init = visit(elt);
+    mlir::Type emptyTy = emptyFieldFor(insertIdx, elt);
+    mlir::Value init = emptyTy
+                           ? mlir::LLVM::ZeroOp::create(rewriter, loc, emptyTy)
+                           : visit(elt);
     result = mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init,
                                                insertIdx);
     ++insertIdx;
