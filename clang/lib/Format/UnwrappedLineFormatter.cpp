@@ -1637,7 +1637,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
                             const SmallVectorImpl<AnnotatedLine *> &Lines,
                             const FormatStyle &Style) {
   const auto &RootToken = *Line.First;
-  if (RootToken.Finalized || isClangFormatOn(RootToken.TokenText))
+  if (isClangFormatOn(RootToken.TokenText))
     return RootToken.NewlinesBefore;
   auto Newlines =
       std::min(RootToken.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1);
