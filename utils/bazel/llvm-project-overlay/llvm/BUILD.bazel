@@ -1481,6 +1481,8 @@ cc_library(
         ],
     ) + ["include/llvm-c/Analysis.h"],
     copts = llvm_copts + select({
+        ":is_windows_clang_cl": ["/fp:except"],
+        ":is_windows_msvc": ["/fp:except"],
         "@platforms//os:emscripten": [],
         "//conditions:default": ["-ftrapping-math"],
     }),

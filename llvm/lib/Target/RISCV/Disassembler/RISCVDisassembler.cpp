@@ -208,9 +208,9 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
+static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
   if (RegNo >= 8)
     return MCDisassembler::Fail;
 

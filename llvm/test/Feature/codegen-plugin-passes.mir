@@ -1,0 +1,17 @@
+# Check that llc registers a loaded plugin's PassBuilder callbacks, so that a
+# pass provided by the plugin can be named in -passes.
+# REQUIRES: x86-registered-target, plugins, examples
+# UNSUPPORTED: target={{.*windows.*}}
+# Plugins are currently broken on AIX, at least in the CI.
+# XFAIL: target={{.*}}-aix{{.*}}
+# RUN: llc -mtriple=x86_64-- %loadnewpmbye -passes=goodbye -wave-goodbye %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- %loadnewpmbye -passes=goodbye --print-pipeline-passes -filetype=null %s | FileCheck %s --check-prefix=PIPELINE
+
+# CHECK: Bye: somefunk
+# PIPELINE: function((anonymous namespace)::Bye)
+---
+name:            somefunk
+body: |
+  bb.0:
+    RET 0
+...

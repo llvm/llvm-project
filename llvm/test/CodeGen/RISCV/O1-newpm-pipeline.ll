@@ -60,6 +60,7 @@
 ; CHECK-NEXT:     peephole-opt
 ; CHECK-NEXT:     dead-mi-elimination
 ; RV64-NEXT:      riscv-opt-w-instrs
+; CHECK-NEXT:     riscv-prera-expand-pseudo
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     process-imp-defs
