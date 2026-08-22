@@ -1,3 +1,10 @@
+set(LLVM_OPTIONAL_SOURCES TestTypeSystemFortran.cpp)
+
+set(FORTRAN_TESTS "")
+if(LLDB_ENABLE_FORTRAN)
+  set(FORTRAN_TESTS TestTypeSystemFortran.cpp)
+endif()
+
 add_lldb_unittest(SymbolTests
   JSONSymbolTest.cpp
   LineTableTest.cpp
@@ -14,6 +21,7 @@ add_lldb_unittest(SymbolTests
   TestType.cpp
   TestLineEntry.cpp
   UnwindPlanTest.cpp
+  ${FORTRAN_TESTS}
 
   LINK_LIBS
     lldbCore
@@ -28,6 +36,13 @@ add_lldb_unittest(SymbolTests
     lldbPluginSymbolLocatorSymStore
     LLVMTestingSupport
   )
+
+if(LLDB_ENABLE_FORTRAN)
+  target_link_libraries(SymbolTests PRIVATE 
+    lldbPluginTypeSystemFortran
+  )
+endif()
+
 
 set(test_inputs
   inlined-functions.yaml
