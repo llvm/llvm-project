@@ -4723,7 +4723,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 }
 
 void Sema::CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc) {
-  if (TemplateDecl *Decl = AutoT->getTypeConstraintConcept()) {
+  if (TemplateDecl *Decl =
+          AutoT->getTypeConstraintConcept().getAsTemplateDecl()) {
     DiagnoseUseOfDecl(Decl, Loc);
   }
 }
@@ -6481,9 +6482,16 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
 
   // __builtin_isfpclass has integer parameter that specify test mask. It is
   // passed in (...), so it should be analyzed completely here.
-  if (IsFPClass)
+  if (IsFPClass) {
     if (BuiltinConstantArgRange(TheCall, 1, 0, llvm::fcAllFlags))
       return true;
+
+    ExprResult MaskRes = PerformImplicitConversion(
+        TheCall->getArg(NumArgs - 1), Context.IntTy, AssignmentAction::Passing);
+    if (!MaskRes.isUsable())
+      return true;
+    TheCall->setArg(NumArgs - 1, MaskRes.get());
+  }
 
   // TODO: enable this code to all classification functions.
   if (IsFPClass) {
@@ -12255,9 +12263,14 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
   }
 
-  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return TryGetExprRange(C, OVE->getSourceExpr(), MaxWidth, InConstantContext,
-                           Approximate);
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+    // The source expression is null for the OpaqueValueExpr that stands in for
+    // a non-type template argument of pointer or reference type; fall back to
+    // the range of the type in that case.
+    if (const Expr *SourceExpr = OVE->getSourceExpr())
+      return TryGetExprRange(C, SourceExpr, MaxWidth, InConstantContext,
+                             Approximate);
+  }
 
   if (const auto *BitField = E->getSourceBitField())
     return IntRange(BitField->getBitWidthValue(),
@@ -15739,7 +15752,7 @@ std::optional<std::pair<
     auto *ME = cast<MemberExpr>(E);
     auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!FD || FD->getType()->isReferenceType() ||
-        FD->getParent()->isInvalidDecl())
+        !ASTContext::hasLayout(FD->getParent()))
       break;
     std::optional<std::pair<CharUnits, CharUnits>> P;
     if (ME->isArrow())

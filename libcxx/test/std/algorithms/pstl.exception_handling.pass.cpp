@@ -356,6 +356,20 @@ int main(int, char**) {
       }
 
       {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // search(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::search(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // search(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::search(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
         auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
 
         // search_n(first, last, n, val)

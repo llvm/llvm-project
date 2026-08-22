@@ -424,6 +424,7 @@ set(files
   __format/formatter_tuple.h
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
+  __format/parser_std_format_spec_data.h
   __format/range_default_formatter.h
   __format/range_format.h
   __format/range_formatter.h
@@ -699,6 +700,7 @@ set(files
   __pstl/cpu_algos/merge.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
+  __pstl/cpu_algos/search.h
   __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h

@@ -13,6 +13,13 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("riscv-asm-printer-begin", RISCVAsmPrinterBeginPass())
+MODULE_PASS("riscv-asm-printer-end", RISCVAsmPrinterEndPass())
+#undef MODULE_PASS
+
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -25,5 +32,12 @@ FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("riscv-asm-printer", RISCVAsmPrinterPass())
+MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
+MACHINE_FUNCTION_PASS("riscv-prera-expand-pseudo",
+                      RISCVPreRAExpandPseudoPass())
+MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
+MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
 #undef MACHINE_FUNCTION_PASS
