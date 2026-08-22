@@ -28802,14 +28802,12 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // only merges the stores, while the scalars remain live for the other users
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
-    // loads, where the vector loads may pay off the gathering. Two outside uses
-    // may still be part of the same profitable tree when they are carry deps
-    // (cmp/add/select, or a two-incoming phi); reject 3+ outside users
-    // or 2 non-benign outside users.
-    auto IsBenignOutsideUser = [](User *U) {
-      auto *UI = dyn_cast<Instruction>(U);
-      if (!UI)
-        return false;
+    // loads, where the vector loads may pay off the gathering. Two outside
+    // uses may still be part of the same profitable tree when they look like
+    // carry deps (cmp, select, non-div/rem binop, or a two-incoming phi);
+    // reject 3+ outside users, or exactly 2 when at least one is not benign.
+    auto IsBenignOutsideUser = [](Instruction *UI) {
+      assert(UI && "Expected instruction.");
       if (auto *PN = dyn_cast<PHINode>(UI))
         return PN->getNumIncomingValues() == 2;
       if (auto *BO = dyn_cast<BinaryOperator>(UI))
@@ -28828,10 +28826,12 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
         ++Outside;
         if (Outside > 2)
           return true;
-        if (!IsBenignOutsideUser(U))
+        if (!IsBenignOutsideUser(cast<Instruction>(U)))
           HasNonBenign = true;
+        if (Outside == 2 && HasNonBenign)
+          return true;
       }
-      return Outside == 2 && HasNonBenign;
+      return false;
     };
     if (S && S.getOpcode() != Instruction::Load &&
         all_of(ValOps.getArrayRef(), [&](Value *V) {
