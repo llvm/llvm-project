@@ -18748,7 +18748,13 @@ InstructionCost BoUpSLP::getSpillCost() {
           LastInst, Completed ? First : &*PrevInstIt, NoCallsInRange ? 1 : 0);
     return NoCallsInRange;
   };
-  auto AddCosts = [&](const TreeEntry *Op) {
+  // The spill/reload is executed once per execution of the call, so the
+  // cost is scaled by the trip count of the loop containing the call, even
+  // for hoisted loop-invariant values defined outside of it.
+  auto GetSpillScale = [&](const BasicBlock *BB) {
+    return getLoopNestScale(LI->getLoopFor(BB));
+  };
+  auto AddCosts = [&](const TreeEntry *Op, uint64_t Scale) {
     if (ScalarOrPseudoEntries.contains(Op))
       return;
     Type *ScalarTy = Op->Scalars.front()->getType();
@@ -18756,7 +18762,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
     auto *VecTy = getWidenedType(ScalarTy, Op->getVectorFactor());
-    uint64_t Scale = getScaleToLoopIterations(*Op);
     InstructionCost KeepLiveCost = TTI->getCostOfKeepingLiveOverCall(VecTy);
     KeepLiveCost *= Scale;
     Cost += KeepLiveCost;
@@ -18766,10 +18771,11 @@ InstructionCost BoUpSLP::getSpillCost() {
               Scale;
     }
   };
-  // Memoize the relationship between blocks, i.e. if there is (at least one)
-  // non-vectorized call between the blocks. This allows to skip the analysis of
-  // the same block paths multiple times.
-  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
+  // Memoize the relationship between blocks, i.e. the spill scale if every
+  // path between the blocks crosses a non-vectorized call, 0 if there is (at
+  // least one) call-free path. This allows to skip the analysis of the same
+  // block paths multiple times.
+  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, uint64_t>
       ParentOpParentToPreds;
   // Memoize whether a basic block contains a non-terminator no-return call.
   // Such blocks are dead-end paths in normal control flow (execution does not
@@ -18823,7 +18829,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (auto It = ParentOpParentToPreds.find(Key);
         It != ParentOpParentToPreds.end())
       return It->second;
-    bool Res = false;
+    uint64_t Res = 0;
     scope_exit Cleanup([&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
     // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
     // even when a call-free forward path from Root back to OpParent exists on
@@ -18835,8 +18841,10 @@ InstructionCost BoUpSLP::getSpillCost() {
       Outermost = L;
       L = L->getParentLoop();
     }
-    if (Outermost && LoopBodyHasCall(Outermost))
+    if (Outermost && LoopBodyHasCall(Outermost)) {
+      Res = getLoopNestScale(Outermost);
       return Res;
+    }
     SmallVector<BasicBlock *> Worklist;
     if (Pred)
       Worklist.push_back(Pred);
@@ -18848,7 +18856,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     // blocks that were visited during the BFS are not necessarily
     // call-free-reachable to OpParent themselves - we may have reached
     // OpParent through a *sibling* path that bypassed them.
-    // We return `true` (no spill cost) if at least one backward path from
+    // We return 0 (no spill cost) if at least one backward path from
     // some predecessor of Root back to OpParent is call-free. Only when
     // *every* such path goes through a non-vec call do we charge the spill
     // cost: only then is it actually necessary to keep the vectorized value
@@ -18861,15 +18869,14 @@ InstructionCost BoUpSLP::getSpillCost() {
     //
     // If we ever pop OpParent from the worklist, we have reached it through
     // a chain of call-free, non-dominated blocks: a call-free path exists
-    // and we return true. If the worklist is exhausted without reaching
+    // and we return 0. If the worklist is exhausted without reaching
     // OpParent, every admissible path is blocked by a call and we return
-    // false so the caller charges the spill cost.
+    // the scale of the loop containing Root, so the caller charges the spill
+    // cost.
     while (!Worklist.empty()) {
       BasicBlock *BB = Worklist.pop_back_val();
-      if (BB == OpParent) {
-        Res = true;
+      if (BB == OpParent)
         return Res;
-      }
       if (!Visited.insert(BB).second)
         continue;
       // Blocks strictly dominated by Root are reached only *after* Root in
@@ -18886,11 +18893,9 @@ InstructionCost BoUpSLP::getSpillCost() {
       auto Pair = std::make_pair(BB, OpParent);
       if (auto It = ParentOpParentToPreds.find(Pair);
           It != ParentOpParentToPreds.end()) {
-        if (It->second) {
-          // BB is known to reach OpParent via a call-free path.
-          Res = true;
+        // BB is known to reach OpParent via a call-free path.
+        if (It->second == 0)
           return Res;
-        }
         // BB is known to be blocked from OpParent by calls; keep checking
         // other paths.
         continue;
@@ -18909,6 +18914,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
     // Worklist drained without ever reaching OpParent: every path between
     // Root and OpParent is blocked by a non-vec call.
+    Res = GetSpillScale(Root);
     return Res;
   };
   SmallVector<const TreeEntry *> LiveEntries(1, Root);
@@ -18962,7 +18968,7 @@ InstructionCost BoUpSLP::getSpillCost() {
             all_of(Op->Scalars, [&](Value *V) {
               return !isa<Instruction>(V) || L->isLoopInvariant(V);
             }))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       Budget = 0;
@@ -18995,11 +19001,11 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (OpParent == Parent) {
         if (Entry->getOpcode() == Instruction::PHI) {
           if (!CheckForNonVecCallsInSameBlock(LastInst, OpLastInst))
-            AddCosts(Op);
+            AddCosts(Op, GetSpillScale(Parent));
           continue;
         }
         if (!CheckForNonVecCallsInSameBlock(OpLastInst, LastInst))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // Check for call instruction in between blocks.
@@ -19007,20 +19013,18 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Entry->getOpcode() != Instruction::PHI &&
           !CheckForNonVecCallsInSameBlock(
               &*Parent->getFirstNonPHIOrDbgOrAlloca(), LastInst)) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // 2. Check op's block from the end.
       if (!CheckForNonVecCallsInSameBlock(OpLastInst,
                                           OpParent->getTerminator())) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(OpParent));
         continue;
       }
       // 3. Check the predecessors of entry's block till op's block.
-      if (!CheckPredecessors(Parent, Pred, OpParent)) {
-        AddCosts(Op);
-        continue;
-      }
+      if (uint64_t Scale = CheckPredecessors(Parent, Pred, OpParent))
+        AddCosts(Op, Scale);
     }
   }
 
