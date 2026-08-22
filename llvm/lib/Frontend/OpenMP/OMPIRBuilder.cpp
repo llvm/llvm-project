@@ -58,6 +58,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
@@ -198,6 +199,17 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
     StringRef Features =
         Kernel->getFnAttribute("target-features").getValueAsString();
     if (Features.count("+wavefrontsize64"))
+      return omp::getAMDGPUGridValues<64>();
+    if (Features.count("+wavefrontsize32"))
+      return omp::getAMDGPUGridValues<32>();
+
+    // Clang sets no wavefront size on OpenMP device kernels, so ask the CPU.
+    StringRef CPU = Kernel->getFnAttribute("target-cpu").getValueAsString();
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(CPU);
+    if (Kind == AMDGPU::GK_NONE)
+      Kind = AMDGPU::getGPUKindFromSubArch(T.getSubArch());
+    if (Kind != AMDGPU::GK_NONE &&
+        !AMDGPU::getFeatureBitset(Kind).test(AMDGPU::FEAT_SUPPORTS_WAVE32))
       return omp::getAMDGPUGridValues<64>();
     return omp::getAMDGPUGridValues<32>();
   }
@@ -8582,6 +8594,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     } else {
       MaxThreadsVal = Attrs.MinThreads.front();
     }
+  }
+
+  // Generic mode runs the main thread on a warp of its own, past thread_limit.
+  bool NeedsMainThreadWarp =
+      Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD &&
+      Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  if (MaxThreadsVal > 0 && NeedsMainThreadWarp && hasGridValue(T)) {
+    // An out-of-range bound is dropped rather than clamped, so clamp it here.
+    const omp::GV &GridValue = getGridValue(T, Kernel);
+    MaxThreadsVal = std::min(MaxThreadsVal + int32_t(GridValue.GV_Warp_Size),
+                             int32_t(GridValue.GV_Max_WG_Size));
   }
 
   if (MaxThreadsVal > 0)

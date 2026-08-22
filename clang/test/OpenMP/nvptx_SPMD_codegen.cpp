@@ -3486,7 +3486,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -3654,7 +3654,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-64-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-64-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-64-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -6904,7 +6904,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i64, align 8
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -7004,7 +7004,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7082,7 +7082,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7177,7 +7177,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7252,7 +7252,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7327,7 +7327,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7402,7 +7402,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7477,7 +7477,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i64, align 8
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -7585,7 +7585,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7671,7 +7671,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7774,7 +7774,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7857,7 +7857,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7940,7 +7940,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8023,7 +8023,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8106,7 +8106,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8190,7 +8190,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8276,7 +8276,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8379,7 +8379,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8462,7 +8462,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8545,7 +8545,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8628,7 +8628,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8711,7 +8711,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8806,7 +8806,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8884,7 +8884,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8979,7 +8979,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9054,7 +9054,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9129,7 +9129,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9204,7 +9204,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -12416,7 +12416,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -12579,7 +12579,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-32-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-32-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-32-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -15753,7 +15753,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -15853,7 +15853,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -15931,7 +15931,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16026,7 +16026,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16101,7 +16101,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16176,7 +16176,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16251,7 +16251,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16326,7 +16326,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -16434,7 +16434,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16520,7 +16520,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16623,7 +16623,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16706,7 +16706,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16789,7 +16789,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16872,7 +16872,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16955,7 +16955,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17039,7 +17039,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17125,7 +17125,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17228,7 +17228,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17311,7 +17311,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17394,7 +17394,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17477,7 +17477,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17560,7 +17560,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17655,7 +17655,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17733,7 +17733,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17828,7 +17828,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17903,7 +17903,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17978,7 +17978,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -18053,7 +18053,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -21265,7 +21265,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -21428,7 +21428,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-32-EX-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-32-EX-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-32-EX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -24602,7 +24602,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -24702,7 +24702,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24780,7 +24780,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24875,7 +24875,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24950,7 +24950,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25025,7 +25025,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25100,7 +25100,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25175,7 +25175,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -25283,7 +25283,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25369,7 +25369,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25472,7 +25472,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25555,7 +25555,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25638,7 +25638,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25721,7 +25721,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25804,7 +25804,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25888,7 +25888,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25974,7 +25974,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26077,7 +26077,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26160,7 +26160,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26243,7 +26243,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26326,7 +26326,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26409,7 +26409,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26504,7 +26504,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26582,7 +26582,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26677,7 +26677,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26752,7 +26752,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26827,7 +26827,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26902,7 +26902,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4

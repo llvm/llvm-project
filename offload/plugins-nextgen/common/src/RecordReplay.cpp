@@ -283,6 +283,8 @@ Error NativeRecordReplayTy::recordDescImpl(
   uint32_t MaxThreads = UserThreads
                             ? std::min(UserThreads, Kernel.getMaxThreads())
                             : Kernel.getMaxThreads();
+  // Generic mode launches a warp more than the program asked for.
+  MaxThreads = std::max(MaxThreads, Instance.NumThreads);
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);
