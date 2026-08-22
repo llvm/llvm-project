@@ -14489,14 +14489,14 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
   InstructionCost FMACost = 0;
-  // Price the fmul as not fused with its user. Passing a context instruction
-  // would let targets that model the fusion discount the unfused side of the
-  // comparison as well.
+  // Price both sides of the fmul+fadd pair as not fused. Passing a context
+  // instruction would let targets that model the fusion discount the unfused
+  // side of the comparison as well.
   auto GetUnfusedFMulCost = [&](Instruction *I) {
     assert(I->getOpcode() == Instruction::FMul && "Expected an fmul");
     TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
     TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
-    return TTI.getArithmeticInstrCost(Instruction::FMul, I->getType(), CostKind,
+    return TTI.getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
                                       Op1Info, Op2Info,
                                       {I->getOperand(0), I->getOperand(1)});
   };
