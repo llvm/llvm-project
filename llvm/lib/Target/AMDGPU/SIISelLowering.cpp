@@ -18906,7 +18906,8 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   SDValue ZeroVal;
   bool CondSelectsZero; // If true, condition=true selects zero
 
-  // Check if FrexpVal comes from ISD::FFREXP or amdgcn_frexp_exp/mant intrinsics.
+  // Check if FrexpVal comes from ISD::FFREXP or amdgcn_frexp_exp/mant
+  // intrinsics.
   SDValue FrexpInput;
   auto isFrexp = [&FrexpInput](SDValue V) {
     if (V.getOpcode() == ISD::FFREXP) {
@@ -18960,24 +18961,25 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
         (CondLHS == FrexpInput) ||
         (LHSIsFabs && peekFPSignOps(FAbsInput) == FrexpInputStripped) ||
         (peekFPSignOps(CondLHS) == FrexpInputStripped);
-    bool RHSMatchesFrexp =
-        (CondRHS == FrexpInput) ||
-        (peekFPSignOps(CondRHS) == FrexpInputStripped);
+    bool RHSMatchesFrexp = (CondRHS == FrexpInput) ||
+                           (peekFPSignOps(CondRHS) == FrexpInputStripped);
 
     if (CC == ISD::SETUO) {
       // fcmp uno x, y - true if either x or y is NaN
       if (LHSMatchesFrexp || RHSMatchesFrexp)
         IsNonFiniteTest = CondSelectsZero;
-    } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) &&
-               LHSMatchesFrexp && LHSIsFabs &&
-               sd_match(CondRHS, m_SpecificFP(APFloat::getInf(
-                   CondRHS.getValueType().getFltSemantics())))) {
+    } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
       // fcmp oeq/ueq fabs(x), +inf - true if x is inf (or inf/nan for ueq)
       IsNonFiniteTest = CondSelectsZero;
-    } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) &&
-               LHSMatchesFrexp && LHSIsFabs &&
-               sd_match(CondRHS, m_SpecificFP(APFloat::getInf(
-                   CondRHS.getValueType().getFltSemantics())))) {
+    } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
       // fcmp one/une fabs(x), +inf - true if x is NOT inf
       IsNonFiniteTest = !CondSelectsZero;
     } else if (CC == ISD::SETO) {
