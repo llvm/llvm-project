@@ -160,7 +160,7 @@ class Test(unittest.TestCase):
                         value="202606L",
                         implemented=False,
                         need_undef=False,
-                        condition=None
+                        condition=None,
                     ),
                 },
             ],
