@@ -183,6 +183,12 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved {doc}`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
+  positives on designated initializers, where initializer lists synthesized
+  for intermediate subobjects caused the trailing comma of the enclosing
+  list to be incorrectly rewritten.
+
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
