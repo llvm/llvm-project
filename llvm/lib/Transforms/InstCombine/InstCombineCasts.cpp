@@ -2618,6 +2618,11 @@ Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
     auto *UI =
         CastInst::Create(Instruction::UIToFP, CI.getOperand(0), CI.getType());
     UI->setNonNeg(true);
+    // nnan/afn/reassoc/contract/arcp carry no meaning for a value-preserving
+    // cast, but ninf/nsz are semantically meaningful for {u,s}itofp and
+    // remain valid after reinterpreting the operand as unsigned.
+    UI->setHasNoInfs(CI.hasNoInfs());
+    UI->setHasNoSignedZeros(CI.hasNoSignedZeros());
     return UI;
   }
   return nullptr;

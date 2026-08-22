@@ -5259,7 +5259,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp(float %x, i32 %y)
 ; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y_CAST]] to i32
 ; PRELINK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; PRELINK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
-; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp nneg i32 [[TMP1]] to float
+; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp ninf nneg i32 [[TMP1]] to float
 ; PRELINK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
 ; PRELINK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; PRELINK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
@@ -5410,7 +5410,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp_i256(float %x, i2
 ; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y_CAST]] to i32
 ; PRELINK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; PRELINK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
-; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp nneg i32 [[TMP1]] to float
+; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp ninf nneg i32 [[TMP1]] to float
 ; PRELINK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
 ; PRELINK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; PRELINK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
@@ -5589,7 +5589,7 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_uitofp(<2 x floa
 ; PRELINK-NEXT:    [[TMP1:%.*]] = fptosi <2 x float> [[Y_CAST]] to <2 x i32>
 ; PRELINK-NEXT:    [[__FABS:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; PRELINK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[__FABS]])
-; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp nneg <2 x i32> [[TMP1]] to <2 x float>
+; PRELINK-NEXT:    [[POWNI2F:%.*]] = uitofp ninf nneg <2 x i32> [[TMP1]] to <2 x float>
 ; PRELINK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x float> [[__LOG2]], [[POWNI2F]]
 ; PRELINK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
 ; PRELINK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 31)
