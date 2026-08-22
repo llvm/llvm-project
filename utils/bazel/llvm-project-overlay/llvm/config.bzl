@@ -28,8 +28,6 @@ def native_arch_defines(arch, triple):
 
 posix_defines = [
     "LLVM_ON_UNIX=1",
-    r'LTDL_SHLIB_EXT=\".so\"',
-    r'LLVM_PLUGIN_EXT=\".so\"',
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
@@ -44,6 +42,11 @@ posix_defines = [
     "HAVE_SYSEXITS_H=1",
     "HAVE_SYS_IOCTL_H=1",
     "HAVE_UNISTD_H=1",
+]
+
+posix_so_defines = posix_defines + [
+    r'LTDL_SHLIB_EXT=\".so\"',
+    r'LLVM_PLUGIN_EXT=\".so\"',
 ]
 
 emscripten_defines = [
@@ -81,7 +84,7 @@ mallinfo_defines = select({
     "//conditions:default": [],
 })
 
-linux_defines = posix_defines + fenv_defines + [
+linux_defines = posix_so_defines + fenv_defines + [
     "_GNU_SOURCE",
     "HAVE_GETAUXVAL=1",
     "HAVE_SBRK=1",
@@ -89,6 +92,8 @@ linux_defines = posix_defines + fenv_defines + [
 ]
 
 macos_defines = posix_defines + fenv_defines + [
+    r'LTDL_SHLIB_EXT=\".dylib\"',
+    r'LLVM_PLUGIN_EXT=\".dylib\"',
     "HAVE_MACH_MACH_H=1",
     "HAVE_MALLOC_MALLOC_H=1",
     "HAVE_MALLOC_ZONE_STATISTICS=1",
@@ -116,7 +121,7 @@ win32_defines = [
 # to express.
 os_defines = select({
     "@platforms//os:emscripten": emscripten_defines,
-    "@platforms//os:freebsd": posix_defines + fenv_defines,
+    "@platforms//os:freebsd": posix_so_defines + fenv_defines,
     "@platforms//os:macos": macos_defines,
     "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
