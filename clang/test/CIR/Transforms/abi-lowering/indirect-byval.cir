@@ -56,6 +56,12 @@
              { kind = "indirect", indirect_align = 8, byval = false } ]
 }
 
+#byref_then_direct = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false },
+             { kind = "direct" } ]
+}
+
 #passthrough = {
   return = { kind = "direct" },
   args   = [ ]
@@ -397,6 +403,26 @@ module attributes {
   // CHECK-NOT:    cir.load
   // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        cir.call @takes_two_byref(%[[TMP]], %[[TMP]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+
+  // The Direct operand keeps reading the load, so the load survives the rewrite.
+  cir.func private @takes_byref_then_direct(%a: !rec_Big, %b: !rec_Big)
+      attributes { test_classify = #byref_then_direct }
+
+  cir.func @caller_byref_then_direct(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_byref_then_direct(%v, %v) : (!rec_Big, !rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byref_then_direct
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.alloca "byref"
+  // CHECK:        %[[V:.*]] = cir.load %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        cir.call @takes_byref_then_direct(%[[TMP]], %[[V]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
 
   // sret return plus a byref argument: the sret slot is prepended at operand 0,
