@@ -152,7 +152,9 @@ constexpr bool test() {
     assert(out.str == expected);
   }
 
-  { // LWG3801 example
+  // LWG3801: "cartesian_product_view::iterator::distance-from ignores 
+  // the size of last underlying range".
+  { 
     int x[] = {1, 2, 3};
     auto v  = std::views::cartesian_product(x, x);
     auto i  = v.begin() + 5; // *i == {2, 3}
