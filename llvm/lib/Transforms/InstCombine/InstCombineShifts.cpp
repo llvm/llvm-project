@@ -923,6 +923,25 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return CastInst::Create(ExtOpcode, Cmp, Ty);
   }
 
+  // (ext(A) * ext(B)) >> (Width / 2)  -->  ext([su]mulh(A, B))
+  // A and B must be equally extended to double their original width.
+  // The result is sign/zero-extended for an arithmetic/logical shift.
+  Value *A, *B;
+  Instruction *ExtA, *ExtB;
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowPoison(TypeBits / 2)) &&
+      match(Op0,
+            m_OneUse(m_Mul(m_Instruction(ExtA, m_ZExtOrSExt(m_Value(A))),
+                           m_Instruction(ExtB, m_ZExtOrSExt(m_Value(B)))))) &&
+      ExtA->getOpcode() == ExtB->getOpcode() && A->getType() == B->getType() &&
+      TypeBits == 2 * A->getType()->getScalarSizeInBits()) {
+    auto IID = ExtA->getOpcode() == Instruction::SExt ? Intrinsic::smulh
+                                                      : Intrinsic::umulh;
+    Value *MulHigh = Builder.CreateBinaryIntrinsic(IID, A, B);
+    auto ExtOp = I.getOpcode() == Instruction::LShr ? Instruction::ZExt
+                                                    : Instruction::SExt;
+    return CastInst::Create(ExtOp, MulHigh, Ty);
+  }
+
   const APInt *Op1C;
   if (!match(C1, m_APInt(Op1C)))
     return nullptr;

@@ -4,10 +4,8 @@
 define i16 @smulh_ashr(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i16 @smulh_ashr(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = sext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smulh.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = sext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = sext i8 %a to i16
@@ -20,10 +18,8 @@ define i16 @smulh_ashr(i8 %a, i8 %b) {
 define i16 @smulh_lshr(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i16 @smulh_lshr(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = sext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smulh.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = sext i8 %a to i16
@@ -36,10 +32,8 @@ define i16 @smulh_lshr(i8 %a, i8 %b) {
 define i16 @umulh_ashr(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i16 @umulh_ashr(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = zext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = sext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = zext i8 %a to i16
@@ -52,10 +46,8 @@ define i16 @umulh_ashr(i8 %a, i8 %b) {
 define i16 @umulh_lshr(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i16 @umulh_lshr(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = zext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = zext i8 %a to i16
@@ -68,11 +60,7 @@ define i16 @umulh_lshr(i8 %a, i8 %b) {
 define i8 @smulh_trunc(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @smulh_trunc(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = sext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i16 [[SHR]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smulh.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %ea = sext i8 %a to i16
@@ -86,11 +74,7 @@ define i8 @smulh_trunc(i8 %a, i8 %b) {
 define i8 @umulh_trunc(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @umulh_trunc(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[EB:%.*]] = zext i8 [[B]] to i16
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i16 [[SHR]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %ea = zext i8 %a to i16
@@ -104,11 +88,7 @@ define i8 @umulh_trunc(i8 %a, i8 %b) {
 define i64 @smulh_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @smulh_i64(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext i64 [[A]] to i128
-; CHECK-NEXT:    [[EB:%.*]] = sext i64 [[B]] to i128
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i128 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i128 [[MUL]], 64
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[SHR]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smulh.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %ea = sext i64 %a to i128
@@ -122,11 +102,7 @@ define i64 @smulh_i64(i64 %a, i64 %b) {
 define i64 @umulh_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @umulh_i64(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i64 [[A]] to i128
-; CHECK-NEXT:    [[EB:%.*]] = zext i64 [[B]] to i128
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i128 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i128 [[MUL]], 64
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[SHR]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umulh.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %ea = zext i64 %a to i128
@@ -140,10 +116,8 @@ define i64 @umulh_i64(i64 %a, i64 %b) {
 define i10 @smulh_i5(i5 %a, i5 %b) {
 ; CHECK-LABEL: define i10 @smulh_i5(
 ; CHECK-SAME: i5 [[A:%.*]], i5 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext i5 [[A]] to i10
-; CHECK-NEXT:    [[EB:%.*]] = sext i5 [[B]] to i10
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i10 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i10 [[MUL]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smulh.i5(i5 [[A]], i5 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext i5 [[TMP1]] to i10
 ; CHECK-NEXT:    ret i10 [[SHR]]
 ;
   %ea = sext i5 %a to i10
@@ -156,10 +130,8 @@ define i10 @smulh_i5(i5 %a, i5 %b) {
 define i10 @umulh_i5(i5 %a, i5 %b) {
 ; CHECK-LABEL: define i10 @umulh_i5(
 ; CHECK-SAME: i5 [[A:%.*]], i5 [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext i5 [[A]] to i10
-; CHECK-NEXT:    [[EB:%.*]] = zext i5 [[B]] to i10
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i10 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i10 [[MUL]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umulh.i5(i5 [[A]], i5 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext i5 [[TMP1]] to i10
 ; CHECK-NEXT:    ret i10 [[SHR]]
 ;
   %ea = zext i5 %a to i10
@@ -172,10 +144,8 @@ define i10 @umulh_i5(i5 %a, i5 %b) {
 define <4 x i32> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: define <4 x i32> @smulh_v4i16(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[MUL]], splat (i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smulh.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
 ;
   %ea = sext <4 x i16> %a to <4 x i32>
@@ -188,10 +158,8 @@ define <4 x i32> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @umulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: define <4 x i32> @umulh_v4i16(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext <4 x i16> [[A]] to <4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = zext <4 x i16> [[B]] to <4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[MUL]], splat (i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.umulh.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
 ;
   %ea = zext <4 x i16> %a to <4 x i32>
@@ -204,10 +172,8 @@ define <4 x i32> @umulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <vscale x 4 x i32> @smulh_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @smulh_nxv4i16(
 ; CHECK-SAME: <vscale x 4 x i16> [[A:%.*]], <vscale x 4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext <vscale x 4 x i16> [[A]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = sext <vscale x 4 x i16> [[B]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <vscale x 4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 4 x i32> [[MUL]], splat (i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.smulh.nxv4i16(<vscale x 4 x i16> [[A]], <vscale x 4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
 ;
   %ea = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
@@ -220,10 +186,8 @@ define <vscale x 4 x i32> @smulh_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i1
 define <vscale x 4 x i32> @umulh_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @umulh_nxv4i16(
 ; CHECK-SAME: <vscale x 4 x i16> [[A:%.*]], <vscale x 4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext <vscale x 4 x i16> [[A]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = zext <vscale x 4 x i16> [[B]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <vscale x 4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 4 x i32> [[MUL]], splat (i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.umulh.nxv4i16(<vscale x 4 x i16> [[A]], <vscale x 4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <vscale x 4 x i16> [[TMP1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
 ;
   %ea = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
@@ -236,10 +200,8 @@ define <vscale x 4 x i32> @umulh_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i1
 define <4 x i32> @smulh_v4i16_poison_lane(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: define <4 x i32> @smulh_v4i16_poison_lane(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[MUL]], <i32 16, i32 poison, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smulh.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
 ;
   %ea = sext <4 x i16> %a to <4 x i32>
@@ -252,10 +214,8 @@ define <4 x i32> @smulh_v4i16_poison_lane(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @umulh_v4i16_poison_lane(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: define <4 x i32> @umulh_v4i16_poison_lane(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[EA:%.*]] = zext <4 x i16> [[A]] to <4 x i32>
-; CHECK-NEXT:    [[EB:%.*]] = zext <4 x i16> [[B]] to <4 x i32>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <4 x i32> [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[MUL]], <i32 16, i32 poison, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.umulh.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
 ;
   %ea = zext <4 x i16> %a to <4 x i32>
@@ -272,8 +232,8 @@ define i16 @operands_multiuse(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[EB:%.*]] = zext i8 [[B]] to i16
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i16 [[EA]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i16 [[EB]])
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EA]], [[EB]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[MUL]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umulh.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[SHR:%.*]] = zext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[SHR]]
 ;
   %ea = zext i8 %a to i16
