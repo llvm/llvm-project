@@ -159,6 +159,12 @@ SyntheticChildrenFrontEnd *
 MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::valarray<>
+bool IsMsvcStlValarray(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
