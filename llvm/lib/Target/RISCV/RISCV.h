@@ -37,7 +37,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();
-void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
+void initializeRISCVCodeGenPrepareLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
@@ -110,11 +110,18 @@ void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
-FunctionPass *createRISCVExpandPseudoPass();
-void initializeRISCVExpandPseudoPass(PassRegistry &);
+class RISCVExpandPseudoPass
+    : public RequiredPassInfoMixin<RISCVExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVExpandPseudoLegacyPass();
+void initializeRISCVExpandPseudoLegacyPass(PassRegistry &);
 
 class RISCVPreRAExpandPseudoPass
-    : public OptionalPassInfoMixin<RISCVPreRAExpandPseudoPass> {
+    : public RequiredPassInfoMixin<RISCVPreRAExpandPseudoPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
