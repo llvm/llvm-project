@@ -87,7 +87,10 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
       unless(hasArgument(
-          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
+          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
+      optionally(hasArgument(0, ignoringParenCasts(declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr"))))))
+        ).bind("sharedPtrInit");
+        // TODO: need test with parens
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -112,7 +115,15 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
 
-  Finder->addMatcher(SmartPtrConstructorMatcher, this);
+  Finder->addMatcher(
+      varDecl(
+          hasInitializer(anyOf(
+              SmartPtrConstructorMatcher,
+              exprWithCleanups(has(SmartPtrConstructorMatcher))
+          ))
+      ).bind("sharedPtrVar"),
+      this
+  );
   Finder->addMatcher(ResetCallMatcher, this);
 }
 
@@ -121,11 +132,44 @@ void SmartPtrInitializationCheck::check(
   const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
   const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method-decl");
   const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("method-parent");
+  const auto *RawPtrVar = Result.Nodes.getNodeAs<VarDecl>("rawPtr");
 
   if (!MethodDecl)
     return;
 
   assert(PointerArg && Record);
+
+  if (RawPtrVar) {
+    const auto *SharedPtrVar = Result.Nodes.getNodeAs<VarDecl>("sharedPtrVar");
+    const auto *SharedPtrInit = Result.Nodes.getNodeAs<CXXConstructExpr>("sharedPtrInit");
+    assert(SharedPtrVar && SharedPtrInit);
+    const auto *Context = SharedPtrVar->getLexicalDeclContext();
+    const auto *CurrentFunction = dyn_cast_or_null<FunctionDecl>(Context);
+    if (!CurrentFunction) {
+        // Если это не функция, возможно это метод класса или блок
+        // TODO: with methods also must work!
+        return;
+    }
+    // Сохраняем информацию о сыром указателе и его инициализациях
+    // Используем пару (функция, сырой указатель) как ключ
+    auto Key = std::make_pair(CurrentFunction->getCanonicalDecl(), RawPtrVar);
+    
+    auto It = SharedPtrInitMap.find(Key);
+    if (It == SharedPtrInitMap.end()) {
+        SmallVector<const CXXConstructExpr *, 2> Inits;
+        Inits.push_back(SharedPtrInit);
+        SharedPtrInitMap[Key] = std::move(Inits);
+    } else {
+        It->second.push_back(SharedPtrInit);
+    }
+
+    // Проверяем, не использовался ли этот сырой указатель для инициализации
+    // нескольких shared_ptr в одной функции
+    auto &Inits = SharedPtrInitMap[Key];
+    if (Inits.size() <= 1) {
+        return;
+    }
+  }
 
   const SourceLocation Loc = PointerArg->getBeginLoc();
   if (Loc.isInvalid())

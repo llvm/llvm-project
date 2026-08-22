@@ -10,6 +10,8 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SMARTPTRINITIALIZATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang::tidy::bugprone {
 
@@ -33,6 +35,10 @@ private:
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
+
+  llvm::DenseMap<std::pair<const FunctionDecl *, const VarDecl *>, 
+                 SmallVector<const CXXConstructExpr *, 2>> 
+      SharedPtrInitMap;
 };
 
 } // namespace clang::tidy::bugprone
