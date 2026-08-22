@@ -131,8 +131,13 @@ builtin_thread_pointer = select({
     "//conditions:default": [],
 })
 
+windows_prefer_forward_slash = select({
+    Label("//llvm:is_windows_clang_mingw"): ["LLVM_WINDOWS_PREFER_FORWARD_SLASH=1"],
+    "//conditions:default": ["LLVM_WINDOWS_PREFER_FORWARD_SLASH=0"],
+})
+
 # TODO: We should split out host vs. target here.
-llvm_config_defines = os_defines + builtin_thread_pointer + select({
+llvm_config_defines = os_defines + builtin_thread_pointer + windows_prefer_forward_slash + select({
     Label("//llvm:is_aarch64_windows_clang_mingw"): native_arch_defines("AArch64", "aarch64-w64-windows-gnu"),
     Label("//llvm:is_aarch64_windows_clang_cl"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
     Label("//llvm:is_aarch64_windows_msvc"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
