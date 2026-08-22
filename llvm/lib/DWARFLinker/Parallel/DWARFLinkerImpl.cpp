@@ -704,7 +704,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           // Clone input compile unit.
           if (CU.isClangModule() ||
               GlobalData.getOptions().UpdateIndexTablesOnly ||
-              CU.getContaingFile().Addresses->hasValidRelocs()) {
+              CU.getContainingFile().Addresses->hasValidRelocs()) {
             if (Error Err = CU.cloneAndEmit(GlobalData.getTargetTriple(),
                                             ArtificialTypeUnit))
               return std::move(Err);

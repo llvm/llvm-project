@@ -748,6 +748,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_sysinfo",
+    hdrs = ["hdr/types/struct_sysinfo.h"],
+)
+
+libc_support_library(
     name = "types_pid_t",
     hdrs = ["hdr/types/pid_t.h"],
 )
@@ -2885,6 +2890,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+        ":types_struct_sysinfo",
     ],
 )
 
@@ -6940,7 +6946,10 @@ libc_support_library(
     hdrs = ["src/__support/math/round.h"],
     deps = [
         ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
     ],
 )
 
@@ -7018,7 +7027,10 @@ libc_support_library(
     hdrs = ["src/__support/math/roundf.h"],
     deps = [
         ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
     ],
 )
 
@@ -15619,6 +15631,7 @@ libc_function(
         ":hdr_sys_resource_macros",
         ":hdr_unistd_macros",
         ":types_struct_rlimit",
+        ":types_struct_sysinfo",
     ],
 )
 
