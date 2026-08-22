@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that expands the pseudo instruction pseudolisimm32
-// into target instructions. This pass should be run during the post-regalloc
-// passes, before post RA scheduling.
+// This file contains one of the several passes that expand pseudo instructions
+// into target instructions. This pass is run after register allocation and
+// before post RA scheduling.
 //
 //===----------------------------------------------------------------------===//
 
