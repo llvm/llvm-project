@@ -37,7 +37,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();
-void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
+void initializeRISCVCodeGenPrepareLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
