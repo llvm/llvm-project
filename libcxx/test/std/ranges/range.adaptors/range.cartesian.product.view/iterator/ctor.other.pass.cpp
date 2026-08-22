@@ -15,6 +15,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <tuple>
 #include <utility>
 
 #include "../../range_adaptor_types.h"
@@ -56,6 +57,22 @@ constexpr bool test() {
     auto it1                                       = v.begin();
     std::ranges::iterator_t<const decltype(v)> it2 = it1;
     assert(it1 == it2);
+  }
+
+  { // LWG3760: "cartesian_product_view::iterator's parent_ is never valid".
+    // The converting constructor must propagate parent_. operator++ consults
+    // parent_->bases_, which is not a constant expression if parent_ is null.
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{a});
+    std::ranges::iterator_t<const decltype(v)> it = v.begin();
+
+    ++it;
+    assert(*it == std::tuple(1, 2));
+
+    ++it;
+    ++it; // wraps the inner range
+    assert(*it == std::tuple(2, 1));
+
+    assert(it - std::as_const(v).begin() == 3);
   }
 
   return true;
