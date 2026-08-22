@@ -156,9 +156,9 @@ add_libc_test(
     libc.hdr.types.clockid_t
     libc.hdr.types.struct_sigevent
     libc.hdr.types.timer_t
-    libc.src.__support.OSUtil.osutil
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.unistd.gettid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

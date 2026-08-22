@@ -17,13 +17,12 @@
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_sigevent.h"
 #include "hdr/types/timer_t.h"
-#include "src/__support/OSUtil/syscall.h"
 #include "src/time/timer_create.h"
 #include "src/time/timer_delete.h"
+#include "src/unistd/gettid.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <sys/syscall.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::any_of;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -57,13 +56,13 @@ TEST_F(LlvmLibcTimerTest, ValidSigeventSigevSignal) {
   ASSERT_THAT(LIBC_NAMESPACE::timer_delete(timerid), Succeeds(0));
 }
 
-#if defined(SYS_gettid) && defined(SIGEV_THREAD_ID)
+#ifdef SIGEV_THREAD_ID
 TEST_F(LlvmLibcTimerTest, ValidSigeventSigevThreadId) {
   struct sigevent se;
   se.sigev_notify = SIGEV_THREAD_ID;
   se.sigev_signo = SIGALRM;
   se.sigev_value.sival_int = 42;
-  se.sigev_notify_thread_id = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
+  se.sigev_notify_thread_id = LIBC_NAMESPACE::gettid();
   timer_t timerid;
   ASSERT_THAT(LIBC_NAMESPACE::timer_create(CLOCK_REALTIME, &se, &timerid),
               Succeeds(0));

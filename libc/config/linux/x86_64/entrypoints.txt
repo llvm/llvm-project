@@ -1542,7 +1542,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timer_create
     libc.src.time.timer_delete
 
-
     # locale.h entrypoints
     libc.src.locale.localeconv
     libc.src.locale.duplocale
