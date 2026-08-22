@@ -4930,6 +4930,7 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                "}",
                Style);
 }
+
 TEST_F(FormatTest, BraceWrappingAfterExportBlock) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -4949,6 +4950,7 @@ TEST_F(FormatTest, BraceWrappingAfterExportBlock) {
                "}",
                Style);
 }
+
 TEST_F(FormatTest, FormatsInlineASM) {
   verifyFormat("asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));");
   verifyFormat("asm(\"nop\" ::: \"memory\");");
