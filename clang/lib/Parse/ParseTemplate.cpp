@@ -1528,8 +1528,10 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
              "current template being instantiated!");
       ParseFunctionStatementBody(LPT.D, FnScope);
       Actions.UnmarkAsLateParsedTemplate(FunD);
-    } else
+    } else {
+      FunD->setInvalidDecl();
       Actions.ActOnFinishFunctionBody(LPT.D, nullptr);
+    }
   }
 }
 

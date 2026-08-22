@@ -1407,6 +1407,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
+      if (Res)
+        Res->getAsFunction()->setInvalidDecl();
       Actions.ActOnFinishFunctionBody(Res, nullptr);
       return Res;
     }

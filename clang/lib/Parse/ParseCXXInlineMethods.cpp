@@ -633,6 +633,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
     // Error recovery.
     if (!Tok.is(tok::l_brace)) {
       FnScope.Exit();
+      LM.D->getAsFunction()->setInvalidDecl();
       Actions.ActOnFinishFunctionBody(LM.D, nullptr);
       return;
     }
