@@ -113,12 +113,20 @@ static void strings(raw_ostream &OS, StringRef FileName,
     }
   };
 
-  // llvm-strings should be able to process a very large file on a
-  // memory-budgeted machine, so the file is read in chunks. To handle this, we
-  // read the file in chunk instead of copying the whole file into memory.
+  // To handle very large files without consuming excessive memory, we read the
+  // file in a little at a time and process it then rather than reading the
+  // entire file at once.
+  //
+  // A string is only buffered until it is known to be long enough to print;
+  // from then on it is streamed out directly, so an arbitrarily long string
+  // never needs an arbitrarily large buffer. Candidate therefore only ever
+  // holds a run that is shorter than MinLength and that was cut off by the end
+  // of a chunk.
+  const size_t Min = MinLength;
   SmallString<DefaultMinLength> Candidate;
   bool InString = false;
-  unsigned StringStart = 0, Offset = 0;
+  // Offset of the start of the current chunk within the file.
+  unsigned ChunkOffset = 0;
 
   Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
   while (true) {
@@ -129,40 +137,65 @@ static void strings(raw_ostream &OS, StringRef FileName,
              << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
       return;
     }
-    std::size_t CurSize = *ReadBytesOrErr;
-    if (CurSize == 0)
+    std::size_t ChunkSize = *ReadBytesOrErr;
+    if (ChunkSize == 0)
       break;
 
-    std::size_t I = 0;
-    while (I != CurSize) {
+    const char *const B = Buffer.data();
+    const char *const E = B + ChunkSize;
+    const char *P = B;
+
+    if (InString || !Candidate.empty()) {
+      while (P != E && isStringChar(*P))
+        ++P;
+      size_t Len = P - B;
       if (InString) {
-        std::size_t Start = I;
-        while (I != CurSize && isStringChar(Buffer[I]))
-          ++I;
-        OS << StringRef(Buffer.data() + Start, I - Start);
-        Offset += I - Start;
-        if (I != CurSize) {
-          OS << '\n';
-          InString = false;
-        }
-      } else if (isStringChar(Buffer[I])) {
-        if (Candidate.empty())
-          StringStart = Offset;
-        Candidate.push_back(Buffer[I]);
-        ++I;
-        ++Offset;
-        if (Candidate.size() >= static_cast<size_t>(MinLength)) {
-          printHeader(StringStart);
-          OS << Candidate;
-          Candidate.clear();
-          InString = true;
-        }
+        OS << StringRef(B, Len);
+      } else if (Candidate.size() + Len >= Min) {
+        printHeader(ChunkOffset - Candidate.size());
+        OS << Candidate << StringRef(B, Len);
+        Candidate.clear();
+        InString = true;
+      } else if (P == E) {
+        Candidate.append(B, E);
       } else {
         Candidate.clear();
-        ++I;
-        ++Offset;
+      }
+      if (P == E) {
+        ChunkOffset += ChunkSize;
+        continue;
+      }
+      if (InString) {
+        OS << '\n';
+        InString = false;
       }
     }
+
+    const char *S = nullptr;
+    for (; P != E; ++P) {
+      if (isStringChar(*P)) {
+        if (!S)
+          S = P;
+      } else if (S) {
+        if (static_cast<size_t>(P - S) >= Min) {
+          printHeader(ChunkOffset + (S - B));
+          OS << StringRef(S, P - S) << '\n';
+        }
+        S = nullptr;
+      }
+    }
+
+    if (S) {
+      size_t Len = E - S;
+      if (Len >= Min) {
+        printHeader(ChunkOffset + (S - B));
+        OS << StringRef(S, Len);
+        InString = true;
+      } else {
+        Candidate.append(S, E);
+      }
+    }
+    ChunkOffset += ChunkSize;
   }
 
   if (InString)
@@ -224,7 +257,9 @@ int main(int argc, char **argv) {
       Expected<sys::fs::file_t> FDOrErr =
           sys::fs::openNativeFileForRead(File, sys::fs::OF_TextWithCRLF);
       if (!FDOrErr) {
-        errs() << File << ": " << toString(FDOrErr.takeError()) << '\n';
+        errs() << File
+               << ": cannot open file: " << toString(FDOrErr.takeError())
+               << '\n';
         continue;
       }
       strings(llvm::outs(), File, *FDOrErr);

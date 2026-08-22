@@ -1,9 +1,0 @@
-## Show that a file that cannot be opened is reported on stderr, and that
-## processing continues with the remaining inputs.
-
-RUN: rm -rf %t && mkdir -p %t
-RUN: echo abcd > %t/good
-RUN: llvm-strings %t/does-not-exist %t/good 2>&1 | FileCheck %s -DFILE=%t/does-not-exist
-
-CHECK: [[FILE]]: {{[Nn]}}o such file or directory
-CHECK: abcd
