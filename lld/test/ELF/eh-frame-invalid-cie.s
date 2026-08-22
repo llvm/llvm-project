@@ -12,10 +12,10 @@
 # RUN: not ld.lld --eh-frame-hdr failed-string.o 2>&1 | FileCheck %s --check-prefix=FAILED-STRING --implicit-check-not=error:
 # RUN: not ld.lld --eh-frame-hdr failed-leb128.o 2>&1 | FileCheck %s --check-prefix=FAILED-LEB128
 
-# TOO-SMALL:      error: corrupted .eh_frame: CIE is too small
+# TOO-SMALL:      error: corrupted .eh_frame: CIE/FDE is too small
 # TOO-SMALL-NEXT: >>> defined in too-small.o:(.eh_frame+0x0)
 
-# UNEXPECTED-END:      error: corrupted .eh_frame: unexpected end of CIE
+# UNEXPECTED-END:      error: corrupted .eh_frame: unexpected end of CIE/FDE
 # UNEXPECTED-END-NEXT: >>> defined in unexpected-end.o:(.eh_frame+0x8)
 
 # FAILED-STRING:      error: corrupted .eh_frame: corrupted CIE (failed to read string)

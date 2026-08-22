@@ -36,6 +36,7 @@ public:
   EhReader(InputSectionBase *s, ArrayRef<uint8_t> d) : isec(s), d(d) {}
   uint8_t getFdeEncoding();
   bool hasLSDA();
+  std::optional<uint64_t> getPcRangeSize(uint8_t encoding);
 
 private:
   template <class P> void errOn(const P *loc, const Twine &msg) {
@@ -48,6 +49,8 @@ private:
   void skipBytes(size_t count);
   StringRef readString();
   void skipLeb128();
+  void skipEncoded(uint8_t encoding);
+  std::optional<uint64_t> readEncodedLength(uint8_t encoding);
   void skipAugP();
   StringRef getAugmentation();
 
@@ -59,7 +62,7 @@ private:
 // Read a byte and advance D by one byte.
 uint8_t EhReader::readByte() {
   if (d.empty()) {
-    errOn(d.data(), "unexpected end of CIE");
+    errOn(d.data(), "unexpected end of CIE/FDE");
     return 0;
   }
   uint8_t b = d.front();
@@ -69,7 +72,7 @@ uint8_t EhReader::readByte() {
 
 void EhReader::skipBytes(size_t count) {
   if (d.size() < count)
-    errOn(d.data(), "CIE is too small");
+    errOn(d.data(), "CIE/FDE is too small");
   else
     d = d.slice(count);
 }
@@ -101,7 +104,7 @@ void EhReader::skipLeb128() {
   errOn(errPos, "corrupted CIE (failed to read LEB128)");
 }
 
-static size_t getAugPSize(Ctx &ctx, unsigned enc) {
+static size_t getEncodedSize(Ctx &ctx, unsigned enc) {
   switch (enc & 0x0f) {
   case DW_EH_PE_absptr:
   case DW_EH_PE_signed:
@@ -119,16 +122,68 @@ static size_t getAugPSize(Ctx &ctx, unsigned enc) {
   return 0;
 }
 
+void EhReader::skipEncoded(uint8_t encoding) {
+  if ((encoding & 0xf0) == DW_EH_PE_aligned)
+    return errOn(d.data(), "DW_EH_PE_aligned encoding is not supported");
+
+  size_t size = getEncodedSize(isec->getCtx(), encoding);
+  if (size == 0)
+    return errOn(d.data(), "unknown FDE encoding");
+  if (size > d.size())
+    return errOn(d.data(), "corrupted CIE/FDE (failed to read encoded value)");
+  d = d.slice(size);
+}
+
 void EhReader::skipAugP() {
   uint8_t enc = readByte();
-  if ((enc & 0xf0) == DW_EH_PE_aligned)
-    return errOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
-  size_t size = getAugPSize(isec->getCtx(), enc);
-  if (size == 0)
-    return errOn(d.data() - 1, "unknown FDE encoding");
-  if (size >= d.size())
-    return errOn(d.data() - 1, "corrupted CIE");
-  d = d.slice(size);
+  skipEncoded(enc);
+}
+
+std::optional<uint64_t> EhReader::readEncodedLength(uint8_t encoding) {
+  using support::endian::read;
+
+  const auto *value = d.data();
+  skipEncoded(encoding);
+
+  auto &ctx = isec->getCtx();
+  const auto endian = ctx.arg.endianness;
+  int64_t signedValue = -1;
+  switch (encoding & 0x0f) {
+  case DW_EH_PE_absptr:
+    if (ctx.arg.wordsize == 4)
+      return read<uint32_t>(value, endian);
+    else
+      return read<uint64_t>(value, endian);
+  case DW_EH_PE_signed:
+    if (ctx.arg.wordsize == 4)
+      signedValue = read<int32_t>(value, endian);
+    else
+      signedValue = read<int64_t>(value, endian);
+    break;
+  case DW_EH_PE_udata2:
+    return read<uint16_t>(value, endian);
+  case DW_EH_PE_sdata2:
+    signedValue = read<int16_t>(value, endian);
+    break;
+  case DW_EH_PE_udata4:
+    return read<uint32_t>(value, endian);
+  case DW_EH_PE_sdata4:
+    signedValue = read<int32_t>(value, endian);
+    break;
+  case DW_EH_PE_udata8:
+    return read<uint64_t>(value, endian);
+  case DW_EH_PE_sdata8:
+    signedValue = read<int64_t>(value, endian);
+    break;
+  default:
+    errOn(value, "unknown FDE encoding");
+    return {};
+  }
+  if (signedValue < 0) {
+    errOn(value, "invalid negative PC range in FDE");
+    return {};
+  }
+  return (uint64_t)signedValue;
 }
 
 uint8_t elf::getFdeEncoding(EhSectionPiece *p) {
@@ -202,4 +257,19 @@ bool EhReader::hasLSDA() {
     }
   }
   return false;
+}
+
+std::optional<uint64_t> EhReader::getPcRangeSize(uint8_t encoding) {
+  // Skip Record Length, CIE Pointer
+  skipBytes(8);
+  // Skip PC Begin
+  skipEncoded(encoding);
+  // PC Range
+  return readEncodedLength(encoding);
+}
+
+std::optional<uint64_t> elf::getPcRangeSize(const EhSectionPiece &p,
+                                            uint8_t encoding) {
+
+  return EhReader(p.sec, p.data()).getPcRangeSize(encoding);
 }

@@ -21,7 +21,7 @@
 # CORRUPTED: error: corrupted .eh_frame: corrupted CIE
 
 # UNKNOWN-FDE:      error: corrupted .eh_frame: unknown FDE encoding
-# UNKNOWN-FDE-NEXT: >>> defined in unknown-fde-encoding.o:(.eh_frame+0xe)
+# UNKNOWN-FDE-NEXT: >>> defined in unknown-fde-encoding.o:(.eh_frame+0xf)
 
 # ALIGNED: error: corrupted .eh_frame: DW_EH_PE_aligned encoding is not supported
 

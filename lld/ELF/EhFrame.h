@@ -16,6 +16,8 @@ struct EhSectionPiece;
 
 uint8_t getFdeEncoding(EhSectionPiece *p);
 bool hasLSDA(const EhSectionPiece &p);
+std::optional<uint64_t> getPcRangeSize(const EhSectionPiece &p,
+                                       uint8_t encoding);
 }
 
 #endif

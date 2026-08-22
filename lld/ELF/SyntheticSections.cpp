@@ -466,18 +466,26 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       auto *isec = cast<EhInputSection>(fde->sec);
       auto &reloc = isec->rels[fde->firstRelocation];
       assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
+
+      auto size = getPcRangeSize(*fde, enc);
+      auto zeroSized = size.has_value() && *size == 0;
       int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
       int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
-      fdes.push_back({pcRel, fdeVARel});
+      fdes.push_back({pcRel, fdeVARel, zeroSized});
       newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
     }
   }
 
   // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
   // at an address, but there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(
-      fdes, [](const EhFrameSection::FdeData &a,
-               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
+  // In that case, we prefer the one that has a PC range of more than 0 bytes,
+  // as the zero-sized range might belong to another function that has a size
+  // of zero and just happens to be at the same address.
+  llvm::stable_sort(fdes, [](const EhFrameSection::FdeData &a,
+                             const EhFrameSection::FdeData &b) {
+    return a.pcRel < b.pcRel ||
+           (a.pcRel == b.pcRel && !a.zeroSized && b.zeroSized);
+  });
   fdes.erase(llvm::unique(fdes,
                           [](const EhFrameSection::FdeData &a,
                              const EhFrameSection::FdeData &b) {

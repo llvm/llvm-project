@@ -28,7 +28,8 @@
 # ABSPTR-NEXT: 0x00002014 24000000
 # ABSPTR:      Hex dump of section '.eh_frame':
 # ABSPTR-NEXT: 0x00002018 0c000000 00000000 01520001 010100ff
-# ABSPTR-NEXT: 0x00002028 0c000000 14000000 34120000 00000000
+# ABSPTR-NEXT: 0x00002028 14000000 14000000 34120000 00000000
+# ABSPTR-NEXT: 0x00002038 01000000 00000000
 ##                        CIE offset--^     ^-- PC begin = 0x1234 (foo + 0x234)
 
 # RUN: llvm-readobj -x .eh_frame_hdr -x .eh_frame udata2 | FileCheck %s --check-prefix=UDATA2
@@ -37,8 +38,8 @@
 # UDATA2-NEXT: 0x00002014 26000000
 # UDATA2:      Hex dump of section '.eh_frame':
 # UDATA2-NEXT: 0x00002018 0e000000 00000000 01525300 01010102
-# UDATA2-NEXT: 0x00002028 ff000600 00001600 00003412
-##                        CIE offset--^     ^-- PC begin = 0x1234 (foo + 0x234)
+# UDATA2-NEXT: 0x00002028 ff000800 00001600 00003412 0100
+##                        CIE offset--^         ^-- PC begin = 0x1234 (foo + 0x234)
 
 # RUN: llvm-readelf -x .eh_frame_hdr sdata4 udata4 | FileCheck %s --check-prefix=HDR4
 # HDR4:      0x00003004 011b033b 10000000 01000000 fcefffff
@@ -65,9 +66,10 @@ foo:
   .byte 0x00        # DW_EH_PE_absptr
   .byte 0xFF
 
-  .long 12          # Size
+  .long 20          # Size
   .long 0x14        # CIE offset
   .quad foo + 0x234 # PC begin
+  .quad 1           # PC range
 
 #--- sdata2.s
 ## DW_EH_PE_sdata2 (0x0A)
@@ -159,9 +161,10 @@ foo:
   .byte 0xFF
   .byte 0x00
 
-  .long 6           # Size
+  .long 8           # Size
   .long 0x16        # CIE offset
   .short foo + 0x234  # PC begin
+  .short 1          # PC range
 
 #--- udata4.s
 ## DW_EH_PE_udata4 (0x03) with FDE for verification
