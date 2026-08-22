@@ -1,0 +1,367 @@
+// End-to-end tests of UnsafeBufferReachableAnalysis. Testing against
+// pointer flow graphs of different shapes.
+//
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: split-file %s %t
+
+// The extract -> link -> analyze -> check pipeline is defined once and reused;
+// each topology only redefines its source name and FileCheck prefix.
+//
+// The CHECK lines use readable tokens instead of inline FileCheck regex; the
+// sed below expands them into regex on the fly and pipes the result straight
+// into FileCheck (no intermediate file):
+//   $NS - skip the "namespace" array, up to its closing ']'.
+//   $WS - whitespace, possibly spanning newlines.
+//   $PTR_Ln - a reachable-set entry closing as "}, n ]", i.e. pointer level n.
+//
+// DEFINE: %{name} =
+// DEFINE: %{prefix} =
+// DEFINE: %{check} = \
+// DEFINE:   %clang_cc1 -fsyntax-only -Wno-self-assign %t/%{name}.cpp \
+// DEFINE:     --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage,TypeConstrainedPointers \
+// DEFINE:     --ssaf-compilation-unit-id=%{name} \
+// DEFINE:     --ssaf-tu-summary-file=%t/%{name}.summary.json && \
+// DEFINE:   clang-ssaf-linker %t/%{name}.summary.json -o %t/%{name}.lu.json && \
+// DEFINE:   clang-ssaf-analyzer %t/%{name}.lu.json -o %t/%{name}.wpa.json \
+// DEFINE:     -a UnsafeBufferReachableAnalysisResult && \
+// DEFINE:   sed -e 's|$NS|{{([^]]\|[[:space:]])+\],}}|g' \
+// DEFINE:       -e 's|$WS|{{[[:space:]]+}}|g' \
+// DEFINE:       -e 's|$PTR_L1|{{[[:space:]]+\\},[[:space:]]+1[[:space:]]+\\]}}|g' \
+// DEFINE:       -e 's|$PTR_L2|{{[[:space:]]+\\},[[:space:]]+2[[:space:]]+\\]}}|g' \
+// DEFINE:       -e 's|$PTR_L3|{{[[:space:]]+\\},[[:space:]]+3[[:space:]]+\\]}}|g' \
+// DEFINE:       -e 's|$PTR_L4|{{[[:space:]]+\\},[[:space:]]+4[[:space:]]+\\]}}|g' \
+// DEFINE:       -e 's|$PTR_L5|{{[[:space:]]+\\},[[:space:]]+5[[:space:]]+\\]}}|g' \
+// DEFINE:       %s \
+// DEFINE:   | FileCheck - --check-prefix=%{prefix} --input-file=%t/%{name}.wpa.json
+
+// REDEFINE: %{name} = linear_chain
+// REDEFINE: %{prefix} = CHAIN
+// RUN: %{check}
+//--- linear_chain.cpp
+// (a,1)->(b,2), (b,1)->(c,2), (c,1)->(d,2); start (a,2).
+// Result: {(a,2),(b,3),(c,4),(d,5)}.
+void f(char **a, char ***b, char ****c, char *****d, int i) {
+  a = *b;
+  b = *c;
+  c = *d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// CHAIN-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// CHAIN-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// CHAIN-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// CHAIN-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// CHAIN: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CHAIN: "@": [[A]]$PTR_L2
+// CHAIN: "@": [[B]]$PTR_L3
+// CHAIN: "@": [[C]]$PTR_L4
+// CHAIN: "@": [[D]]$PTR_L5
+// CHAIN-NOT: "@":
+// CHAIN: "analysis_name":
+
+// REDEFINE: %{name} = linear_chain_disconnected
+// REDEFINE: %{prefix} = CHAINDISC
+// RUN: %{check}
+//--- linear_chain_disconnected.cpp
+// (a,1)->(b,2), (b,4)->(c,1), (c,1)->(d,1); start (a,2).
+// Result: {(a,2),(b,3)}.
+void f(char ***a, char ****b, char *c, char *d, int i) {
+  a = *b;
+  ***b = c;
+  c = d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// CHAINDISC-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// CHAINDISC-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// CHAINDISC: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CHAINDISC: "@": [[A]]$PTR_L2
+// CHAINDISC: "@": [[B]]$PTR_L3
+// CHAINDISC-NOT: "@":
+// CHAINDISC: "analysis_name":
+
+// REDEFINE: %{name} = diamond
+// REDEFINE: %{prefix} = DIAMOND
+// RUN: %{check}
+//--- diamond.cpp
+// (a,1)->(b,2), (a,1)->(c,2), (b,1)->(d,2), (c,1)->(d,2); start (a,2).
+// Result: {(a,2),(b,3),(c,3),(d,4)}.
+void f(char **a, char ***b, char ***c, char ****d, int i) {
+  a = *b;
+  a = *c;
+  b = *d;
+  c = *d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// DIAMOND-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// DIAMOND-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// DIAMOND-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// DIAMOND-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// DIAMOND: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// DIAMOND: "@": [[A]]$PTR_L2
+// DIAMOND: "@": [[B]]$PTR_L3
+// DIAMOND: "@": [[C]]$PTR_L3
+// DIAMOND: "@": [[D]]$PTR_L4
+// DIAMOND-NOT: "@":
+// DIAMOND: "analysis_name":
+
+// REDEFINE: %{name} = disconnected_diamond
+// REDEFINE: %{prefix} = DISCONN
+// RUN: %{check}
+//--- disconnected_diamond.cpp
+// (a,1)->(b,2), (a,1)->(c,2), (b,5)->(d,1), (c,5)->(d,1); start (a,2).
+// Result: {(a,2),(b,3),(c,3)}.
+void f(char ****a, char *****b, char *****c, char *d, int i) {
+  a = *b;
+  a = *c;
+  ****b = d;
+  ****c = d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// DISCONN-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// DISCONN-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// DISCONN-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// DISCONN: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// DISCONN: "@": [[A]]$PTR_L2
+// DISCONN: "@": [[B]]$PTR_L3
+// DISCONN: "@": [[C]]$PTR_L3
+// DISCONN-NOT: "@":
+// DISCONN: "analysis_name":
+
+// REDEFINE: %{name} = disconnected_subgraphs
+// REDEFINE: %{prefix} = DISCONNSUB
+// RUN: %{check}
+//--- disconnected_subgraphs.cpp
+// (a,1)->(b,1), (c,1)->(d,1); start from tail (b,1).
+// Result: {(b,1)}.
+void f(char *a, char *b, char *c, char *d, int i) {
+  a = b;
+  c = d;
+  b[i] = 0; // starter: (b,1)
+}
+// DISCONNSUB-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// DISCONNSUB: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// DISCONNSUB: "@": [[B]]$PTR_L1
+// DISCONNSUB-NOT: "@":
+// DISCONNSUB: "analysis_name":
+
+// REDEFINE: %{name} = cycle
+// REDEFINE: %{prefix} = CYCLE
+// RUN: %{check}
+//--- cycle.cpp
+// (a,1)->(b,1)->(c,1)->(d,1)->(a,1); start (c,2).
+// Result: {(a,2),(b,2),(c,2),(d,2)}.
+void f(char **a, char **b, char **c, char **d, int i) {
+  a = b;
+  b = c;
+  c = d;
+  d = a;
+  (*c)[i] = 0; // starter: (c,2)
+}
+// CYCLE-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// CYCLE-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// CYCLE-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// CYCLE-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// CYCLE: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CYCLE: "@": [[A]]$PTR_L2
+// CYCLE: "@": [[B]]$PTR_L2
+// CYCLE: "@": [[C]]$PTR_L2
+// CYCLE: "@": [[D]]$PTR_L2
+// CYCLE-NOT: "@":
+// CYCLE: "analysis_name":
+
+// REDEFINE: %{name} = cycle_increasing
+// REDEFINE: %{prefix} = CYCLEINC
+// RUN: %{check}
+//--- cycle_increasing.cpp
+// (a,1)->(b,2)->(c,3)->(d,4)->(a,1); start (a,2).
+// Result: {(a,2),(b,3),(c,4),(d,5)}.
+void f(char **a, char ***b, char ****c, char *****d, int i) {
+  a = *b;
+  *b = **c;
+  **c = ***d;
+  ***d = a;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// CYCLEINC-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// CYCLEINC-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// CYCLEINC-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// CYCLEINC-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// CYCLEINC: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CYCLEINC: "@": [[A]]$PTR_L2
+// CYCLEINC: "@": [[B]]$PTR_L3
+// CYCLEINC: "@": [[C]]$PTR_L4
+// CYCLEINC: "@": [[D]]$PTR_L5
+// CYCLEINC-NOT: "@":
+// CYCLEINC: "analysis_name":
+
+// REDEFINE: %{name} = star_from_hub
+// REDEFINE: %{prefix} = HUB
+// RUN: %{check}
+//--- star_from_hub.cpp
+// (a,1)->(b,2), (a,1)->(c,2), (a,1)->(d,2); start (a,2).
+// Result: {(a,2),(b,3),(c,3),(d,3)}.
+void f(char **a, char ***b, char ***c, char ***d, int i) {
+  a = *b;
+  a = *c;
+  a = *d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// HUB-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// HUB-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// HUB-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// HUB-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// HUB: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// HUB: "@": [[A]]$PTR_L2
+// HUB: "@": [[B]]$PTR_L3
+// HUB: "@": [[C]]$PTR_L3
+// HUB: "@": [[D]]$PTR_L3
+// HUB-NOT: "@":
+// HUB: "analysis_name":
+
+// REDEFINE: %{name} = star_from_hub_below_edge
+// REDEFINE: %{prefix} = HUBBELOW
+// RUN: %{check}
+//--- star_from_hub_below_edge.cpp
+// (a,2)->(b,1), (a,2)->(c,1), (a,2)->(d,1); start (a,1).
+// Result: {(a,1)}.
+void f(char **a, char *b, char *c, char *d, int i) {
+  *a = b;
+  *a = c;
+  *a = d;
+  a[i] = 0; // starter: (a,1)
+}
+// HUBBELOW-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// HUBBELOW: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// HUBBELOW: "@": [[A]]$PTR_L1
+// HUBBELOW-NOT: "@":
+// HUBBELOW: "analysis_name":
+
+// REDEFINE: %{name} = reverse_star_from_source
+// REDEFINE: %{prefix} = REVSRC
+// RUN: %{check}
+//--- reverse_star_from_source.cpp
+// (a,1)->(d,2), (b,1)->(d,2), (c,1)->(d,2); start (a,2).
+// Result: {(a,2),(d,3)}.
+void f(char **a, char **b, char **c, char ***d, int i) {
+  a = *d;
+  b = *d;
+  c = *d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// REVSRC-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// REVSRC-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// REVSRC: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// REVSRC: "@": [[A]]$PTR_L2
+// REVSRC: "@": [[D]]$PTR_L3
+// REVSRC-NOT: "@":
+// REVSRC: "analysis_name":
+
+// REDEFINE: %{name} = reverse_star_from_sink
+// REDEFINE: %{prefix} = REVSINK
+// RUN: %{check}
+//--- reverse_star_from_sink.cpp
+// (a,1)->(d,1), (b,1)->(d,1), (c,1)->(d,1); start sink (d,2).
+// Result: {(d,2)}.
+void f(char **a, char **b, char **c, char **d, int i) {
+  a = d;
+  b = d;
+  c = d;
+  (*d)[i] = 0; // starter: (d,2)
+}
+// REVSINK-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// REVSINK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// REVSINK: "@": [[D]]$PTR_L2
+// REVSINK-NOT: "@":
+// REVSINK: "analysis_name":
+
+// REDEFINE: %{name} = self_loop_from_root
+// REDEFINE: %{prefix} = LOOPROOT
+// RUN: %{check}
+//--- self_loop_from_root.cpp
+// (a,1)->(b,1), (b,1)->(b,1), (b,1)->(c,2), (c,1)->(d,2); start (a,2).
+// Result: {(a,2),(b,2),(c,3),(d,4)}.
+void f(char **a, char **b, char ***c, char ****d, int i) {
+  a = b;
+  b = b;
+  b = *c;
+  c = *d;
+  (*a)[i] = 0; // starter: (a,2)
+}
+// LOOPROOT-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// LOOPROOT-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// LOOPROOT-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// LOOPROOT-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// LOOPROOT: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// LOOPROOT: "@": [[A]]$PTR_L2
+// LOOPROOT: "@": [[B]]$PTR_L2
+// LOOPROOT: "@": [[C]]$PTR_L3
+// LOOPROOT: "@": [[D]]$PTR_L4
+// LOOPROOT-NOT: "@":
+// LOOPROOT: "analysis_name":
+
+// REDEFINE: %{name} = self_loop_from_loop_node
+// REDEFINE: %{prefix} = LOOPNODE
+// RUN: %{check}
+//--- self_loop_from_loop_node.cpp
+// Same graph as self_loop_from_root; start on the loop node (b,2).
+// Result: {(b,2),(c,3),(d,4)}.
+void f(char **a, char **b, char ***c, char ****d, int i) {
+  a = b;
+  b = b;
+  b = *c;
+  c = *d;
+  (*b)[i] = 0; // starter: (b,2)
+}
+// LOOPNODE-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// LOOPNODE-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// LOOPNODE-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// LOOPNODE: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// LOOPNODE: "@": [[B]]$PTR_L2
+// LOOPNODE: "@": [[C]]$PTR_L3
+// LOOPNODE: "@": [[D]]$PTR_L4
+// LOOPNODE-NOT: "@":
+// LOOPNODE: "analysis_name":
+
+// REDEFINE: %{name} = multiple_starters
+// REDEFINE: %{prefix} = MULTISTART
+// RUN: %{check}
+//--- multiple_starters.cpp
+// (a,1)->(b,2), (c,1)->(d,2); start {(a,2),(c,2)}.
+// Result: {(a,2),(b,3),(c,2),(d,3)}.
+void f(char **a, char ***b, char **c, char ***d, int i) {
+  a = *b;
+  c = *d;
+  (*a)[i] = 0; // starter: (a,2)
+  (*c)[i] = 0; // starter: (c,2)
+}
+// MULTISTART-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// MULTISTART-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// MULTISTART-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// MULTISTART-DAG: "id": [[D:[0-9]+]],$NS$WS"suffix": "4"
+// MULTISTART: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// MULTISTART: "@": [[A]]$PTR_L2
+// MULTISTART: "@": [[B]]$PTR_L3
+// MULTISTART: "@": [[C]]$PTR_L2
+// MULTISTART: "@": [[D]]$PTR_L3
+// MULTISTART-NOT: "@":
+// MULTISTART: "analysis_name":
+
+// REDEFINE: %{name} = multiple_keys_same_entity
+// REDEFINE: %{prefix} = MULTIKEY
+// RUN: %{check}
+//--- multiple_keys_same_entity.cpp
+// (a,1)->(b,1), (a,2)->(c,1); start (a,3).
+// Result: {(a,3),(b,3),(c,2)}.
+void f(char ***a, char ***b, char **c, int i) {
+  a = b;
+  *a = c;
+  (**a)[i] = 0; // starter: (a,3)
+}
+// MULTIKEY-DAG: "id": [[A:[0-9]+]],$NS$WS"suffix": "1"
+// MULTIKEY-DAG: "id": [[B:[0-9]+]],$NS$WS"suffix": "2"
+// MULTIKEY-DAG: "id": [[C:[0-9]+]],$NS$WS"suffix": "3"
+// MULTIKEY: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// MULTIKEY: "@": [[A]]$PTR_L3
+// MULTIKEY: "@": [[B]]$PTR_L3
+// MULTIKEY: "@": [[C]]$PTR_L2
+// MULTIKEY-NOT: "@":
+// MULTIKEY: "analysis_name":

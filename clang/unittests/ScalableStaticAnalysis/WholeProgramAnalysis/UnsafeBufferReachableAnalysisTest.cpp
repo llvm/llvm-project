@@ -205,31 +205,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain) {
   EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Linear chain: (a,1) -> (b,2), (b,1) -> (c,2), (c,1) -> (d,2).
-// Start from {(a,2)} => {(a,2), (b,3), (c,4), (d,5)}
-TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}}, {{'b', 1}, {'c', 2}}, {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables.size(), 4u);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 4}, {'d', 5}}));
-}
-
-// Linear chain: (a,1) -> (b,2), (b,4) -> (c,1) -> (d,1).
-// Start from {(a,2)} => {(a,2), (b,3)} (halted at (b,3) — no key (b,j<=3))
-TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain3) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}}, {{'b', 4}, {'c', 1}}, {{'c', 1}, {'d', 1}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables.size(), 2u);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'b', 3}}));
-}
-
 // Linear chain: (a,1) -> (b,1) -> (c,1) -> (d,1).
 // Start from mid-chain {(c,1)} => {(c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, LinearChainFromMiddle) {
@@ -255,35 +230,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, Diamond) {
        {{'c', 1}, {'d', 1}}},
       /* StarterLayout */ {{'a', 1}}, __LINE__);
   EXPECT_EQ(Reachables.size(), 4u);
-}
-
-// Diamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,1) -> (d,2), (c,1) -> (d,2).
-// Start from {(a,2)} => {(a,2), (b,3), (c,3), (d,4)}
-TEST_F(UnsafeBufferReachableAnalysisTest, Diamond2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}},
-       {{'a', 1}, {'c', 2}},
-       {{'b', 1}, {'d', 2}},
-       {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}, {'d', 4}}));
-}
-
-// DisconnectedDiamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,5) -> (d,1), (c,5) ->
-// (d,1). Start from {(a,2)} => {(a,2), (b,3), (c,3)}
-TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedDiamond) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}},
-       {{'a', 1}, {'c', 2}},
-       {{'b', 5}, {'d', 1}},
-       {{'c', 5}, {'d', 1}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}}));
 }
 
 // Diamond: (a,1) -> (b,1), (a,1) -> (c,1), (b,1) -> (d,1), (c,1) -> (d,1).
@@ -314,17 +260,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs) {
   EXPECT_TRUE(Reachables.count({'b', 1}));
 }
 
-// Disconnected subgraphs: (a,1) -> (b,1), (c,1) -> (d,1).
-// Start from tail {(b,1)} => {(b,1)}
-TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
-      /* StarterLayout */ {{'b', 1}}, __LINE__);
-  EXPECT_EQ(Reachables.size(), 1u);
-  EXPECT_TRUE(Reachables.count({'b', 1}));
-}
-
 // Cycle: (a,1) -> (b,1) -> (c,1) -> (d,1) -> (a,1).
 // Start from {(c,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, Cycle) {
@@ -341,36 +276,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, Cycle) {
   EXPECT_TRUE(Reachables.count({'b', 1}));
   EXPECT_TRUE(Reachables.count({'c', 1}));
   EXPECT_TRUE(Reachables.count({'d', 1}));
-}
-
-// Cycle: (a,1) -> (b,1) -> (c,1) -> (d,1) -> (a,1).
-// Start from {(c,2)} => {(a,2), (b,2), (c,2), (d,2)}
-TEST_F(UnsafeBufferReachableAnalysisTest, Cycle2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 1}},
-       {{'b', 1}, {'c', 1}},
-       {{'c', 1}, {'d', 1}},
-       {{'d', 1}, {'a', 1}}},
-      /* StarterLayout */ {{'c', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 2}, {'c', 2}, {'d', 2}}));
-}
-
-// Cycle: (a,1) -> (b,2) -> (c,3) -> (d,4) -> (a,1).
-// Start from {(a,2)} => {(a,2), (b,3), (c,4), (d,5)}
-TEST_F(UnsafeBufferReachableAnalysisTest, Cycle3) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}},
-       {{'b', 2}, {'c', 3}},
-       {{'c', 3}, {'d', 4}},
-       {{'d', 4}, {'a', 1}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 4}, {'d', 5}}));
 }
 
 // Empty graph: no edges, start from {(a,1)} => {(a,1)}
@@ -392,29 +297,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub) {
       {{{'a', 1}, {'b', 1}}, {{'a', 1}, {'c', 1}}, {{'a', 1}, {'d', 1}}},
       /* StarterLayout */ {{'a', 1}}, __LINE__);
   EXPECT_EQ(Reachables.size(), 4u);
-}
-
-// Star: (a,1) -> (b,2), (a,1) -> (c,2), (a,1) -> (d,2).
-// Start from {(a,2)} => {(a,2), (b,3), (c,3), (d,3)}
-TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 2}}, {{'a', 1}, {'c', 2}}, {{'a', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}, {'d', 3}}));
-}
-
-// Star: (a,2) -> (b,1), (a,2) -> (c,1), (a,2) -> (d,1).
-// Start from {(a,1)} => {(a,1)}
-TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub3) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 2}, {'b', 1}}, {{'a', 2}, {'c', 1}}, {{'a', 2}, {'d', 1}}},
-      /* StarterLayout */ {{'a', 1}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 1}}));
 }
 
 // Star: (a,1) -> (b,1), (a,1) -> (c,1), (a,1) -> (d,1).
@@ -442,17 +324,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource) {
   EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Reverse star: (a,1) -> (d,2), (b,1) -> (d,2), (c,1) -> (d,2).
-// Start from {(a,2)} => {(a,2), (d,3)}
-TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'d', 2}}, {{'b', 1}, {'d', 2}}, {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'d', 3}}));
-}
-
 // Reverse star: (a,1) -> (d,1), (b,1) -> (d,1), (c,1) -> (d,1).
 // Start from sink {(d,1)} => {(d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink) {
@@ -463,17 +334,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink) {
       /* StarterLayout */ {{'d', 1}}, __LINE__);
   EXPECT_EQ(Reachables.size(), 1u);
   EXPECT_TRUE(Reachables.count({'d', 1}));
-}
-
-// Reverse star: (a,1) -> (d,1), (b,1) -> (d,1), (c,1) -> (d,1).
-// Start from sink {(d,2)} => {(d,2)}
-TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'d', 1}}, {{'b', 1}, {'d', 1}}, {{'c', 1}, {'d', 1}}},
-      /* StarterLayout */ {{'d', 2}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'d', 2}}));
 }
 
 // Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,1) -> (d,1).
@@ -488,21 +348,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot) {
        {{'c', 1}, {'d', 1}}},
       /* StarterLayout */ {{'a', 1}}, __LINE__);
   EXPECT_EQ(Reachables.size(), 4u);
-}
-
-// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,2) -> (d,2).
-// Start from {(a,2)} => {(a,2), (b,2), (c,3), (d,4)}
-TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 1}},
-       {{'b', 1}, {'b', 1}},
-       {{'b', 1}, {'c', 2}},
-       {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 2}, {'c', 3}, {'d', 4}}));
 }
 
 // Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,1) -> (d,1).
@@ -522,20 +367,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode) {
   EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,2) -> (d,2).
-// Start from {(b,2)} => {(b,2), (c,3), (d,4)}
-TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */
-      {{{'a', 1}, {'b', 1}},
-       {{'b', 1}, {'b', 1}},
-       {{'b', 1}, {'c', 2}},
-       {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'b', 2}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'b', 2}, {'c', 3}, {'d', 4}}));
-}
-
 // Multiple starters: (a,1) -> (b,1), (c,1) -> (d,1) (disconnected).
 // Start from {(a,1), (c,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains) {
@@ -544,17 +375,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains) {
       /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
       /* StarterLayout */ {{'a', 1}, {'c', 1}}, __LINE__);
   EXPECT_EQ(Reachables.size(), 4u);
-}
-
-// Multiple starters: (a,1) -> (b,2), (c,1) -> (d,2).
-// Start from {(a,2), (c,2)} => {(a,2), (b,3), (c,2), (d,3)}
-TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains2) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c', 'd'},
-      /* EdgeLayout */ {{{'a', 1}, {'b', 2}}, {{'c', 1}, {'d', 2}}},
-      /* StarterLayout */ {{'a', 2}, {'c', 2}}, __LINE__);
-  EXPECT_EQ(Reachables,
-            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 2}, {'d', 3}}));
 }
 
 // Multiple starters: (a,1) -> (b,1), (c,1) -> (d,1) (disconnected).
@@ -567,16 +387,6 @@ TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersLeaves) {
   EXPECT_EQ(Reachables.size(), 2u);
   EXPECT_TRUE(Reachables.count({'b', 1}));
   EXPECT_TRUE(Reachables.count({'d', 1}));
-}
-
-// Multi-key, same source entity: (a,1) -> (b,1), (a,2) -> (c,1).
-// Start from {(a,3)} => {(a,3), (b,3), (c,2)}
-TEST_F(UnsafeBufferReachableAnalysisTest, MultipleKeysSameEntity) {
-  auto Reachables = singlePartition(
-      /* EntityDomain */ {'a', 'b', 'c'},
-      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'a', 2}, {'c', 1}}},
-      /* StarterLayout */ {{'a', 3}}, __LINE__);
-  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 3}, {'b', 3}, {'c', 2}}));
 }
 
 } // namespace
