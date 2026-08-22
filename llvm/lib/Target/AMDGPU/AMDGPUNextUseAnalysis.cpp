@@ -2106,6 +2106,11 @@ public:
     return getShortestDistance(LiveReg, LaneBitmask::getAll(), FromMI, Uses,
                                nullptr, nullptr, nullptr);
   }
+
+  void updateInstrIds(const MachineInstr *MI) const {
+    auto &MutableInstrToId = const_cast<InstrToIdMap &>(InstrToId);
+    calcInstrIds(MI->getParent(), MutableInstrToId);
+  }
 };
 
 AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
@@ -2263,6 +2268,10 @@ void AMDGPUNextUseAnalysis::getReachableUses(
     Register LiveReg, LaneBitmask LaneMask, const MachineInstr &MI,
     SmallVector<const MachineOperand *> &Uses) const {
   return Impl->getReachableUses(LiveReg, LaneMask, MI, Uses);
+}
+
+void AMDGPUNextUseAnalysis::updateInstrIds(const MachineInstr *MI) const {
+  return Impl->updateInstrIds(MI);
 }
 
 //==============================================================================
