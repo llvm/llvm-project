@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -255,9 +256,14 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
   // We expect the number of assumptions to be small, so in an asserts build
   // check that we don't accumulate duplicates and that all assumptions point
   // to the same function. Scanning the whole cache on every registration is
-  // quadratic, so stop once it outgrows that expectation. Larger caches are
-  // checked by AssumptionCacheTracker::verifyAnalysis() instead.
+  // quadratic, so stop once it outgrows that expectation unless expensive
+  // checks are enabled. Larger caches are checked by
+  // AssumptionCacheTracker::verifyAnalysis() instead.
+#ifdef EXPENSIVE_CHECKS
+  constexpr unsigned MaxAssumesToVerify = std::numeric_limits<unsigned>::max();
+#else
   constexpr unsigned MaxAssumesToVerify = 64;
+#endif
   if (AssumeHandles.size() <= MaxAssumesToVerify) {
     SmallPtrSet<const CallInst *, 16> Cached;
     if (const char *Violation = findCacheViolation(F, AssumeHandles, Cached))

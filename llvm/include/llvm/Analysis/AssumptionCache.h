@@ -170,11 +170,7 @@ public:
   /// Callers inspect every assumption returned, so this returns only the first
   /// -max-assumes-per-value of them.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
-    MutableArrayRef<ResultElem> Assumptions = allAssumptionsFor(V);
-    if (Assumptions.size() > MaxAssumesPerValue)
-      return Assumptions.take_front(MaxAssumesPerValue);
-
-    return Assumptions;
+    return allAssumptionsFor(V).take_front(MaxAssumesPerValue);
   }
 
   /// Access the list of assumptions which affect this value, ignoring the
