@@ -81,6 +81,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                 recordType(hasDeclaration(UniquePtrWithCustomDeleter)))),
             hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
+  // FIXME: need proper suppurt for conditionalOperator cases
   auto SmartPtrConstructorMatcher = cxxConstructExpr(
       hasDeclaration(
           cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
@@ -88,8 +89,9 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
-      optionally(hasArgument(0, declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr")))))
-        );
+      optionally(hasArgument(
+          0, declRefExpr(
+                 to(varDecl(hasInitializer(cxxNewExpr())).bind("raw-ptr"))))));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -103,8 +105,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       on(hasType(hasUnqualifiedDesugaredType(
           recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
 
+  // FIXME: need proper suppurt for conditionalOperator cases
   auto ResetCallMatcher = cxxMemberCallExpr(
-
       on(hasType(hasUnqualifiedDesugaredType(recordType(
           hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
       callee(cxxMethodDecl(ofClass(IsSmartPtrRecord.bind("method-parent")),
@@ -113,10 +115,11 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
-        optionally(hasArgument(0, declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr")))))
-      );
+      optionally(hasArgument(
+          0, declRefExpr(
+                 to(varDecl(hasInitializer(cxxNewExpr())).bind("raw-ptr"))))));
 
-  Finder->addMatcher( SmartPtrConstructorMatcher, this);
+  Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
 }
 
@@ -125,7 +128,7 @@ void SmartPtrInitializationCheck::check(
   const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
   const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method-decl");
   const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("method-parent");
-  const auto *RawPtrVar = Result.Nodes.getNodeAs<VarDecl>("rawPtr");
+  const auto *RawPtrVar = Result.Nodes.getNodeAs<VarDecl>("raw-ptr");
 
   if (!MethodDecl)
     return;
@@ -133,16 +136,15 @@ void SmartPtrInitializationCheck::check(
   assert(PointerArg && Record);
 
   if (RawPtrVar) {
-    // Сохраняем информацию о сыром указателе и его инициализациях
-    // Используем пару (функция, сырой указатель) как ключ
-    const auto Key = RawPtrVar;
-    const unsigned InitsCount = ++SharedPtrInitMap[Key];
+    // Store information about the raw pointer and its initializations
+    // Use the raw pointer as a key
+    const VarDecl *Key = RawPtrVar;
+    const unsigned InitsCount = ++SmartPtrInitMap[Key];
 
-    // Проверяем, не использовался ли этот сырой указатель для инициализации
-    // нескольких shared_ptr в одной функции
-    if (InitsCount <= 1) {
-        return;
-    }
+    // Check if this raw pointer was used to initialize
+    // multiple smart pointers in one function
+    if (InitsCount <= 1)
+      return;
   }
 
   const SourceLocation Loc = PointerArg->getBeginLoc();

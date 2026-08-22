@@ -36,8 +36,7 @@ private:
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
 
-  llvm::DenseMap<const VarDecl *,  unsigned> 
-      SharedPtrInitMap;
+  llvm::DenseMap<const VarDecl *, unsigned> SmartPtrInitMap;
 };
 
 } // namespace clang::tidy::bugprone
