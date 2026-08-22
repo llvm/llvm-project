@@ -562,7 +562,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!PacketSize || !PacketAlign)
     return false;
 
-  unsigned Size = PacketSize->getZExtValue();
+  unsigned Size = static_cast<unsigned>(PacketSize->getZExtValue());
   Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
@@ -1159,7 +1159,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = Exp2Call;
 
   if (needcopysign) {
-    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
+    Type *nTyS =
+        B.getIntNTy(static_cast<unsigned>(eltType->getPrimitiveSizeInBits()));
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())
@@ -1745,12 +1746,12 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   // Merge the sin and cos. For OpenCL 2.0, there may only be a generic pointer
   // implementation. Prefer the private form if available.
   AMDGPULibFunc SinCosLibFuncPrivate(AMDGPULibFunc::EI_SINCOS, fInfo);
-  SinCosLibFuncPrivate.getLeads()[0].PtrKind =
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS);
+  SinCosLibFuncPrivate.getLeads()[0].PtrKind = static_cast<unsigned char>(
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::PRIVATE_ADDRESS));
 
   AMDGPULibFunc SinCosLibFuncGeneric(AMDGPULibFunc::EI_SINCOS, fInfo);
-  SinCosLibFuncGeneric.getLeads()[0].PtrKind =
-      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS);
+  SinCosLibFuncGeneric.getLeads()[0].PtrKind = static_cast<unsigned char>(
+      AMDGPULibFunc::getEPtrKindFromAddrSpace(AMDGPUAS::FLAT_ADDRESS));
 
   FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
   FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
