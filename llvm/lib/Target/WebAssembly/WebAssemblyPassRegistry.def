@@ -67,6 +67,7 @@ MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
 MACHINE_FUNCTION_PASS("wasm-optimize-live-intervals",
                       WebAssemblyOptimizeLiveIntervalsPass())
 MACHINE_FUNCTION_PASS("wasm-peephole", WebAssemblyPeepholePass())
+MACHINE_FUNCTION_PASS("wasm-prelegalizer-combiner", WebAssemblyPreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("wasm-reg-coloring", WebAssemblyRegColoringPass())
 MACHINE_FUNCTION_PASS("wasm-reg-numbering", WebAssemblyRegNumberingPass())
 MACHINE_FUNCTION_PASS("wasm-reg-stackify", WebAssemblyRegStackifyPass(getOptLevel()))
