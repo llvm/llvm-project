@@ -2521,7 +2521,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
       break;
     }
 
-    LLT s128 = LLT::scalar(128);
+    LLT s128 = LLT::integer(128);
     auto CASDst = MRI.createGenericVirtualRegister(s128);
     auto CASDesired = MRI.createGenericVirtualRegister(s128);
     auto CASNew = MRI.createGenericVirtualRegister(s128);
