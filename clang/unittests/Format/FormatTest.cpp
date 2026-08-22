@@ -22422,9 +22422,9 @@ TEST_F(FormatTest, DisableRegions) {
                  "// clang-format on");
 
   verifyNoChange("// clang-format off\n"
-                 "int i;\n"
                  "\n"
                  "\n"
+                 " int  i ;\n"
                  "\n"
                  "\n"
                  "// clang-format on");
