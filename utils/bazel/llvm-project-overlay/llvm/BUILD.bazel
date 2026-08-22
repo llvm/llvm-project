@@ -468,7 +468,6 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
-            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -476,7 +475,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -484,7 +482,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
