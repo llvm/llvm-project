@@ -676,7 +676,7 @@ define <2 x i64> @PR30986(ptr %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2:%.*]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP2]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP8]], i32 1

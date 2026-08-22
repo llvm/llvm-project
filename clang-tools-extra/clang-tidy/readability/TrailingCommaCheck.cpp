@@ -84,7 +84,8 @@ void TrailingCommaCheck::registerMatchers(MatchFinder *Finder) {
           .bind("enum"),
       this);
 
-  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()))
+  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()),
+                                  unless(isImplicit()))
                          .bind("initlist"),
                      this);
 }

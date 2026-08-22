@@ -959,6 +959,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_sysinfo
+  ../libc/include/sys/sysinfo.yaml
+  sys/sysinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sysinfo
+)
+
+add_header_macro(
   sys_utsname
   ../libc/include/sys/utsname.yaml
   sys/utsname.h

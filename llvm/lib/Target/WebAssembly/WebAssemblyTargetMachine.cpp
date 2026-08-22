@@ -542,7 +542,7 @@ bool WebAssemblyPassConfig::addRegBankSelect() {
 }
 
 bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
 
   // We insert only if ISelDAG won't insert these at a later point.
   if (isGlobalISelAbortEnabled()) {

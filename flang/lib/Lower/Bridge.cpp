@@ -5435,6 +5435,15 @@ private:
         !lhsType->HasDeferredTypeParameter();
     const bool lhsHasVectorSubscripts =
         Fortran::evaluate::HasVectorSubscript(assign.lhs);
+    const bool rhsIsCUDADeviceDesignator = [&]() {
+      if (!userDefinedAssignment || !Fortran::evaluate::IsVariable(assign.rhs))
+        return false;
+      for (const Fortran::semantics::Symbol &sym :
+           Fortran::evaluate::CollectCudaSymbols(assign.rhs))
+        if (Fortran::semantics::IsCUDADevice(sym))
+          return true;
+      return false;
+    }();
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
@@ -5480,6 +5489,28 @@ private:
       return lhs;
     };
 
+    auto cleanupImplicitTemps = [&]() {
+      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
+        localSymbols.popScope();
+        for (mlir::Value temp : implicitTemps)
+          fir::FreeMemOp::create(builder, loc, temp);
+      }
+    };
+
+    // Keep CUDA DEVICE designator RHS values as call actuals for user-defined
+    // assignment. A region_assign would later try to enforce RHS value
+    // semantics with a host-side copy, which cannot be formed for DEVICE data.
+    if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
+        rhsIsCUDADeviceDesignator) {
+      Fortran::lower::StatementContext localStmtCtx;
+      hlfir::Entity rhs = evaluateRhs(localStmtCtx);
+      hlfir::Entity lhs = evaluateLhs(localStmtCtx);
+      Fortran::lower::convertUserDefinedAssignmentToHLFIR(
+          loc, *this, *userDefinedAssignment, lhs, rhs, localSymbols);
+      cleanupImplicitTemps();
+      return;
+    }
+
     if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
         !userDefinedAssignment) {
       Fortran::lower::StatementContext localStmtCtx;
@@ -5516,11 +5547,7 @@ private:
                                   keepLhsLengthInAllocatableAssignment);
         }
       }
-      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
-        localSymbols.popScope();
-        for (mlir::Value temp : implicitTemps)
-          fir::FreeMemOp::create(builder, loc, temp);
-      }
+      cleanupImplicitTemps();
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted

@@ -2170,7 +2170,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
 bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Type *Ty = Sqrt.getType()->getScalarType();
-  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST.has16BitInsts()))
+  if (!Ty->isFloatTy())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);

@@ -3100,20 +3100,22 @@ defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 // SAD Patterns
 //===----------------------------------------------------------------------===//
 
-def : GCNPat <
-  (add (sub_oneuse (umax i32:$src0, i32:$src1),
-                   (umin i32:$src0, i32:$src1)),
-       i32:$src2),
-  (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
->;
+let SubtargetPredicate = HasSadInsts in {
+  def : GCNPat <
+    (add (sub_oneuse (umax i32:$src0, i32:$src1),
+                    (umin i32:$src0, i32:$src1)),
+        i32:$src2),
+    (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
+  >;
 
-def : GCNPat <
-  (add (select_oneuse (i1 (setugt i32:$src0, i32:$src1)),
-                      (sub i32:$src0, i32:$src1),
-                      (sub i32:$src1, i32:$src0)),
-       i32:$src2),
-  (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
->;
+  def : GCNPat <
+    (add (select_oneuse (i1 (setugt i32:$src0, i32:$src1)),
+                        (sub i32:$src0, i32:$src1),
+                        (sub i32:$src1, i32:$src0)),
+        i32:$src2),
+    (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
+  >;
+} // End SubtargetPredicate = HasSadInsts
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns

@@ -829,23 +829,34 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     case wasm::WASM_SYMBOL_TYPE_DATA:
       Info.Name = readString(Ctx);
       if (IsDefined) {
-        auto Index = readVaruint32(Ctx);
-        auto Offset = readVaruint64(Ctx);
-        auto Size = readVaruint64(Ctx);
-        if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (Index >= DataSegments.size())
+        if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+            wasm::WASM_SYMBOL_BINDING_COMMON) {
+          if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
             return make_error<GenericBinaryError>(
-                "invalid data segment index: " + Twine(Index),
+                "common symbols cannot be absolute: " + Info.Name,
                 object_error::parse_failed);
-          size_t SegmentSize = DataSegments[Index].Data.Content.size();
-          if (Offset > SegmentSize)
-            return make_error<GenericBinaryError>(
-                "invalid data symbol offset: `" + Info.Name +
-                    "` (offset: " + Twine(Offset) +
-                    " segment size: " + Twine(SegmentSize) + ")",
-                object_error::parse_failed);
+          auto Size = readVaruint64(Ctx);
+          auto Alignment = readUint8(Ctx);
+          Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
+        } else {
+          auto Index = readVaruint32(Ctx);
+          auto Offset = readVaruint64(Ctx);
+          auto Size = readVaruint64(Ctx);
+          if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
+            if (Index >= DataSegments.size())
+              return make_error<GenericBinaryError>(
+                  "invalid data segment index: " + Twine(Index),
+                  object_error::parse_failed);
+            size_t SegmentSize = DataSegments[Index].Data.Content.size();
+            if (Offset > SegmentSize)
+              return make_error<GenericBinaryError>(
+                  "invalid data symbol offset: `" + Info.Name +
+                      "` (offset: " + Twine(Offset) +
+                      " segment size: " + Twine(SegmentSize) + ")",
+                  object_error::parse_failed);
+          }
+          Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
         }
-        Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }
       break;
 

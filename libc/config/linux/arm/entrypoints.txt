@@ -206,6 +206,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
+    # sys/sysinfo.h entrypoints
+    # Disabled due to QEMU test failures.
+    # libc.src.sys.sysinfo.sysinfo
+
     # sys/personality.h entrypoints
     libc.src.sys.personality.personality
 

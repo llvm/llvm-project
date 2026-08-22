@@ -1826,7 +1826,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
-        LLT::scalar(VaListSize * 8));
+        LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
                   *MF.getMachineMemOperand(MachinePointerInfo(),
                                            MachineMemOperand::MOLoad,
@@ -2521,7 +2521,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
       break;
     }
 
-    LLT s128 = LLT::scalar(128);
+    LLT s128 = LLT::integer(128);
     auto CASDst = MRI.createGenericVirtualRegister(s128);
     auto CASDesired = MRI.createGenericVirtualRegister(s128);
     auto CASNew = MRI.createGenericVirtualRegister(s128);

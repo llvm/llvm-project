@@ -8,22 +8,10 @@
 
 #include "NativeProcessLinux.h"
 
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <unistd.h>
-
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-
-#include "NativeThreadLinux.h"
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
-#include "Procfs.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
@@ -49,12 +37,17 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 #include <linux/unistd.h>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #ifdef __aarch64__
 #include <asm/hwcap.h>

@@ -66,6 +66,7 @@ void SectionDescriptor::clearAllSectionData() {
   ListDebugDieRefPatch.erase();
   ListDebugULEB128DieRefPatch.erase();
   ListDebugOffsetPatch.erase();
+  ListDebugDieTypeRefPatch.erase();
   ListDebugType2TypeDieRefPatch.erase();
   ListDebugTypeDeclFilePatch.erase();
   ListDebugTypeLineStrPatch.erase();

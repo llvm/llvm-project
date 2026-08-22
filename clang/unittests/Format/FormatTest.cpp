@@ -22420,6 +22420,14 @@ TEST_F(FormatTest, DisableRegions) {
                  " #endif\n"
                  "#endif\n"
                  "// clang-format on");
+
+  verifyNoChange("// clang-format off\n"
+                 "\n"
+                 "\n"
+                 " int  i ;\n"
+                 "\n"
+                 "\n"
+                 "// clang-format on");
 }
 
 TEST_F(FormatTest, OneLineFormatOffRegex) {

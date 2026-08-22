@@ -1904,6 +1904,9 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   if (!ChildResult)
     return false;
 
+  if (!ChildResult->Reg.isVirtual())
+    return false;
+
   MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
   if (!ParentMI)
     return false;
@@ -1925,11 +1928,19 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
     return false;
 
   Register Dst = ChildMI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, ChildResult->Reg);
+  Register Src = ChildResult->Reg;
+
+  // Src must be legal in every use of Dst. An S_AND_B32 parent with a
+  // V_AND_B32 child defines Src in the scalar bank, and a use that requires a
+  // VGPR does not accept it.
+  if (!Dst.isVirtual() || !MRI->constrainRegClass(Src, MRI->getRegClass(Dst)))
+    return false;
+
+  MRI->replaceRegWith(Dst, Src);
 
   // Clear kill flags if the register operand is not marked as kill.
   if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
-    MRI->clearKillFlags(ChildResult->Reg);
+    MRI->clearKillFlags(Src);
 
   ChildMI.eraseFromParent();
   return true;

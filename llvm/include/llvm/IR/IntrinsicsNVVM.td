@@ -1157,6 +1157,12 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num,
   LLVMType type = LLVMType<!cast<ValueType>("v"#veclen#ElemType)>;
 }
 
+class NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<ArgIndex ColIdx, string Buffer> {
+  IntrinsicProperty Prop =
+      ArgInfo<ColIdx, [ArgName<"collector_" # Buffer>,
+                       ImmArgPrinter<"printTcgen05CollectorUsageOp">]>;
+}
+
 class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
   LLVMType a_operand_type = !if(!eq(Space, "tensor"),
                                   llvm_tmem_ptr_ty, llvm_i64_ty);
@@ -1232,6 +1238,32 @@ class NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<string Kind, string ScaleVecSize> {
     true: false
   );
 }
+
+//
+// tcgen05.mma intrinsics with decompress_b extension
+//
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_BASE<string Space, string Kind,
+                                       string Modifier = "">:
+    NVVM_TCGEN05_MMA_BASE<Space, /* IsSparse= */ 0, Kind> {
+  string name = Prefix # SpSpaceKindStr # Modifier # ".decompress_b";
+  string intr_name = IntrinsicName<name>.intr_name;
+  string record_name = IntrinsicName<name>.record_name;
+}
+
+class NVVM_TCGEN05_MMA_DECOMPRESS<string Space, string Kind>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind>;
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_DISABLE_OUTPUT_LANE<string Space,
+                                                      string Kind,
+                                                      int CtaGroup>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind,
+                                     ".disable_output_lane.cg" # CtaGroup>;
+
+class NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<string Space, string Kind,
+                                             string ScaleVecSize>:
+    NVVM_TCGEN05_MMA_DECOMPRESS_BASE<Space, Kind,
+                                     ".block_scale" # ScaleVecSize>;
 
 class TexVector<string name, list<LLVMType> types> {
   string Name = name;
@@ -3433,8 +3465,8 @@ foreach sparse = [0, 1] in {
            Range<collector_b_idx, 0, 4>,
            ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
            ArgInfo<cta_group_idx, [ArgName<"cta_group">]>,
-           ArgInfo<collector_a_idx, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
-           ArgInfo<collector_b_idx, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
+           NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_a_idx, "a">.Prop,
+           NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_b_idx, "b">.Prop]
         );
 
         def mma.record_name:
@@ -3478,8 +3510,8 @@ foreach sparse = [0, 1] in {
                      Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
                      Range<collector_b_idx, 0, 4>,
                      ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
-                     ArgInfo<collector_a_idx, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
-                     ArgInfo<collector_b_idx, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
+                     NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_a_idx, "a">.Prop,
+                     NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_b_idx, "b">.Prop]
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
@@ -3516,8 +3548,8 @@ foreach sparse = [0, 1] in {
                          Range<collector_usage_a, 0, 4>,
                          Range<collector_usage_b, 0, 4>,
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
-                         ArgInfo<collector_usage_a, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
-                         ArgInfo<collector_usage_b, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
+                         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+                         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
             mma.intr_name>;
         }
       } // scale_vec_size
@@ -3552,8 +3584,7 @@ foreach sparse = [0, 1] in {
                             ImmArgPrinter<"printTcgen05MMAKind">]>,
          ArgInfo<collector_buffer_b_idx, [ArgName<"collector_b_buffer">,
                                           ImmArgPrinter<"printTcgen05MMACollectorBBuffer">]>,
-         ArgInfo<collector_usage_b_op_idx, [ArgName<"collector_b">,
-                                            ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b_op_idx, "b">.Prop]
       );
 
       def mma.record_name:
@@ -3562,6 +3593,101 @@ foreach sparse = [0, 1] in {
     } // zero_col_mask
   } // space
 } // sparse
+
+//
+// tcgen05.mma decompress intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS<space, "f8f6f4">;
+  defvar args = !listconcat(
+                  mma.common_args,
+                  [llvm_tmem_ptr_ty] // decompress_b
+                );
+  defvar flags = [llvm_i32_ty,  // cta_group
+                  llvm_i32_ty,  // collector_usage_a
+                  llvm_i32_ty]; // collector_usage_b
+  defvar nargs = !size(args);
+  defvar cta_group = ArgIndex<nargs>;
+  defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+  defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
+
+  defvar intrinsic_properties = !listconcat(
+      mma.common_intr_props,
+      [Range<cta_group, 1, 3>,
+       Range<collector_usage_a, 0, 4>,
+       Range<collector_usage_b, 0, 4>,
+       ArgInfo<cta_group, [ArgName<"cta_group">]>,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+  def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                          intrinsic_properties, mma.intr_name>;
+} // space
+
+//
+// tcgen05.mma decompress disable_output_lane intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  foreach cta_group = [1, 2] in {
+    defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS_DISABLE_OUTPUT_LANE<
+                  space, "f8f6f4", cta_group>;
+    defvar disable_output_lane_type =
+              !if(!eq(cta_group, 1), llvm_v4i32_ty, llvm_v8i32_ty);
+    defvar args = !listconcat(
+                    mma.common_args,
+                    [llvm_tmem_ptr_ty],        // decompress_b
+                    [disable_output_lane_type] // disable_output_lane
+                  );
+    defvar flags = [llvm_i32_ty,  // collector_usage_a
+                    llvm_i32_ty]; // collector_usage_b
+    defvar nargs = !size(args);
+    defvar collector_usage_a = ArgIndex<nargs>;
+    defvar collector_usage_b = ArgIndex<!add(nargs, 1)>;
+
+    defvar intrinsic_properties = !listconcat(
+        mma.common_intr_props,
+        [Range<collector_usage_a, 0, 4>,
+         Range<collector_usage_b, 0, 4>,
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+         NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+    def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                            intrinsic_properties, mma.intr_name>;
+  } // cta_group
+} // space
+
+//
+// tcgen05.mma decompress block_scale intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  defvar mma = NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<space, "mxf8f6f4",
+                                                      ".block32">;
+  defvar args = !listconcat(
+                  mma.common_args,
+                  [llvm_tmem_ptr_ty,  // scale_a
+                   llvm_tmem_ptr_ty,  // scale_b
+                   llvm_tmem_ptr_ty]  // decompress_b
+                );
+  defvar flags = [llvm_i32_ty,  // cta_group
+                  llvm_i32_ty,  // collector_usage_a
+                  llvm_i32_ty]; // collector_usage_b
+  defvar nargs = !size(args);
+  defvar cta_group = ArgIndex<nargs>;
+  defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+  defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
+
+  defvar intrinsic_properties = !listconcat(
+      mma.common_intr_props,
+      [Range<cta_group, 1, 3>,
+       Range<collector_usage_a, 0, 4>,
+       Range<collector_usage_b, 0, 4>,
+       ArgInfo<cta_group, [ArgName<"cta_group">]>,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
+       NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
+
+  def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
+                          intrinsic_properties, mma.intr_name>;
+} // space
 
 //
 // tensormap.replace intrinsics

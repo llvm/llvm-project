@@ -12,6 +12,10 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/FuncletLayout.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -82,7 +86,16 @@ public:
 
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
+
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
   Expected<bool>
   addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
@@ -173,6 +186,52 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
   addMachineFunctionPass(WebAssemblyCleanCodeAfterTrapPass(), PMW);
+
+  return Error::success();
+}
+
+Error WebAssemblyCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void WebAssemblyCodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO(boomanaiden154): Add WebAssemblyPreLegalizerCombiner when it has
+    // been ported.
+  }
+}
+
+Error WebAssemblyCodeGenPassBuilder::addLegalizeMachineIR(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void WebAssemblyCodeGenPassBuilder::addPreRegBankSelect(
+    PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO(boomanaiden154): Add WebAssemblyPostLegalizerCombiner when it has
+    // been ported.
+  }
+}
+
+Error WebAssemblyCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error WebAssemblyCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+
+  if (isGlobalISelAbortEnabled()) {
+    addMachineFunctionPass(WebAssemblyArgumentMovePass(), PMW);
+    addMachineFunctionPass(WebAssemblySetP2AlignOperandsPass(), PMW);
+    addMachineFunctionPass(WebAssemblyFixBrTableDefaultsPass(), PMW);
+    addMachineFunctionPass(WebAssemblyCleanCodeAfterTrapPass(), PMW);
+  }
 
   return Error::success();
 }

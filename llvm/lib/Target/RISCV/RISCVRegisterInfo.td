@@ -395,10 +395,10 @@ def SP : GPRRegisterClass<(add X2)> {
   let DiagnosticString = "register must be sp (x2)";
 }
 
-// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
+// Callee-saved Registers from s0 to s7, used by instructions in Zcmp and Xqccmp.
+def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))> {
-  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticType = "InvalidRegClassGPRS07";
   let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
 }
 

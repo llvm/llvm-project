@@ -827,6 +827,13 @@ TEST(DWARFExpression, DW_OP_piece) {
       ExpectHostAddress(expected_host_buffer));
 }
 
+TEST(DWARFExpression, DW_OP_bit_piece) {
+  // Extract the high 16 bits of a 32-bit value.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const4u, 0x44, 0x33, 0x22, 0x11,
+                                 DW_OP_bit_piece, 16, 16}),
+                       ExpectScalar(0x1122));
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
@@ -881,6 +888,20 @@ TEST(DWARFExpression, DW_OP_addr_index_address_size) {
     ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
     EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
   }
+}
+
+TEST(DWARFExpression, DW_OP_GNU_const_index_address_size) {
+  // DW_OP_GNU_const_index pushes a generic value, so it is canonicalized to
+  // the target address size: on this 32-bit target, 0x2a + 0xffffffff + 1
+  // wraps back to 0x2a.
+  MockDwarfDelegate unit(/*version=*/5,
+                         /*debug_addr=*/{{0, 0x11}, {1, 0x2a}});
+  auto result =
+      Evaluate({DW_OP_GNU_const_index, 0x01, DW_OP_const4u, 0xff, 0xff, 0xff,
+                0xff, DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
 
 TEST(DWARFExpression, DW_OP_addr_big_endian) {
@@ -1201,6 +1222,14 @@ TEST(DWARFExpression, DW_OP_shl_overflow_count) {
   SUCCEED();
 }
 
+TEST(DWARFExpression, DW_OP_shra_overflow_count) {
+  // Shift count exceeding scalar bit width must not crash. The arithmetic
+  // shift sign-fills, so -1 stays -1.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-1),
+                                 DW_OP_const1u, 99, DW_OP_shra}),
+                       ExpectScalar(static_cast<int32_t>(-1)));
+}
+
 TEST(DWARFExpression, DW_OP_push_object_address_no_object) {
   // Without an object_address_ptr, must fail cleanly.
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_push_object_address}), llvm::Failed());
@@ -1255,6 +1284,13 @@ TEST(DWARFExpression, DW_OP_bit_piece_overflow) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit5, DW_OP_stack_value, DW_OP_bit_piece, 0x63, 0x00}),
       ExpectScalar(5));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_offset_overflow) {
+  // A bit offset beyond the scalar width must not crash; shifting the whole
+  // value out leaves zero. ULEB128(1000) = {0xE8, 0x07}.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_bit_piece, 32, 0xE8, 0x07}),
+                       ExpectScalar(0));
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {

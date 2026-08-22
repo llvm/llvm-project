@@ -43,40 +43,6 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include <optional>
-
-namespace mlir {
-// Self-delimiting full specializations remain usable in a keyed prop-dict even
-// when their storage type is optional or container-like.
-template <>
-struct FieldParser<llvm::SmallVector<int32_t>> {
-  static FailureOr<llvm::SmallVector<int32_t>> parse(AsmParser &parser) {
-    llvm::SmallVector<int32_t> values;
-    if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
-          int32_t value;
-          if (parser.parseInteger(value))
-            return failure();
-          values.push_back(value);
-          return success();
-        }))
-      return failure();
-    return values;
-  }
-};
-
-template <>
-struct FieldParser<std::optional<int16_t>> {
-  static FailureOr<std::optional<int16_t>> parse(AsmParser &parser) {
-    if (succeeded(parser.parseOptionalKeyword("none")))
-      return std::optional<int16_t>{};
-    int16_t value;
-    if (parser.parseKeyword("some") || parser.parseLess() ||
-        parser.parseInteger(value) || parser.parseGreater())
-      return failure();
-    return std::optional<int16_t>{value};
-  }
-};
-} // namespace mlir
 
 namespace test {
 class TestDialect;

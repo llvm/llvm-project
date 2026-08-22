@@ -11185,7 +11185,7 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
   // %cond = to_bool_vec %source
   // %splat = splat /*val=*/VL
   // %tz = step_vector
-  // %v = vp.select %cond, /*true=*/tz, /*false=*/%splat
+  // %v = select %cond, /*true=*/tz, /*false=*/%splat
   // %r = vp.reduce.umin %v
   SDLoc DL(N);
   SDValue Source = N->getOperand(0);
@@ -11201,15 +11201,13 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
     SDValue AllZero = DAG.getConstant(0, DL, SrcVT);
     SrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                              SrcVT.getVectorElementCount());
-    Source = DAG.getNode(ISD::VP_SETCC, DL, SrcVT, Source, AllZero,
-                         DAG.getCondCode(ISD::SETNE), Mask, EVL);
+    Source = DAG.getSetCC(DL, SrcVT, Source, AllZero, ISD::SETNE);
   }
 
   SDValue ExtEVL = DAG.getZExtOrTrunc(EVL, DL, ResVT);
   SDValue Splat = DAG.getSplat(ResVecVT, DL, ExtEVL);
   SDValue StepVec = DAG.getStepVector(DL, ResVecVT);
-  SDValue Select =
-      DAG.getNode(ISD::VP_SELECT, DL, ResVecVT, Source, StepVec, Splat, EVL);
+  SDValue Select = DAG.getSelect(DL, ResVecVT, Source, StepVec, Splat);
   return DAG.getNode(ISD::VP_REDUCE_UMIN, DL, ResVT, ExtEVL, Select, Mask, EVL);
 }
 

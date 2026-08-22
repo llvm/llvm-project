@@ -145,7 +145,7 @@ LLVM_ABI void initializeInferAddressSpacesPass(PassRegistry &);
 LLVM_ABI void initializeInlineAsmPreparePass(PassRegistry &);
 LLVM_ABI void initializeInstSimplifyLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeInstructionCombiningPassPass(PassRegistry &);
-LLVM_ABI void initializeInstructionSelectPass(PassRegistry &);
+LLVM_ABI void initializeInstructionSelectLegacyPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedAccessPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedLoadCombinePass(PassRegistry &);
 LLVM_ABI void initializeJMCInstrumenterPass(PassRegistry &);
