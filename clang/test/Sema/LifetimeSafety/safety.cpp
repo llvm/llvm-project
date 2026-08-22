@@ -2896,6 +2896,7 @@ S multiple_lifetimebound_params() {
   S s = getS2(str, std::string("temp")); // expected-warning {{stack memory associated with local variable 'str' is returned}} \
                                          // expected-warning {{temporary object does not live long enough}} \
                                          // expected-note {{result of call to 'getS2' aliases the storage of temporary object because parameter 'b' is lifetimebound}} \
+                                         // expected-note {{result of call to 'getS2' aliases the storage of local variable 'str' because parameter 'a' is lifetimebound}} \
                                          // expected-note {{temporary object is destroyed here}}
   return s;                              // expected-note {{returned here}} \
                                          // expected-note {{later used here}} \
