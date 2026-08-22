@@ -102,6 +102,7 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     stack-frame-layout
+; CHECK-NEXT:     riscv-expand-pseudo
 ; CHECK-NEXT:     unpack-mi-bundles
 ; CHECK-NEXT:     verify
 ; CHECK-NEXT:     riscv-asm-printer

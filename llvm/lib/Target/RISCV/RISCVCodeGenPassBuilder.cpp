@@ -176,7 +176,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVMoveMergePass
     // TODO: RISCVPushPopOptimizationPass
   }
-  // TODO: RISCVExpandPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoPass(), PMW);
 
   // Add QC Relaxation Markers as late as possible, and only for RV32
   if (getOptLevel() != CodeGenOptLevel::None &&

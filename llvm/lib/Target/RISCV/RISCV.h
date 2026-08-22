@@ -110,8 +110,15 @@ void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
-FunctionPass *createRISCVExpandPseudoPass();
-void initializeRISCVExpandPseudoPass(PassRegistry &);
+class RISCVExpandPseudoPass
+    : public OptionalPassInfoMixin<RISCVExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVExpandPseudoLegacyPass();
+void initializeRISCVExpandPseudoLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPreRAExpandPseudoPass();
 void initializeRISCVPreRAExpandPseudoPass(PassRegistry &);
