@@ -187,11 +187,15 @@ def run_pass(source, pipeline):
 with ir.Context(), ir.Location.unknown():
     MemoryEffectsTest.load()
 
-    # CHECK: recursive memory effects traits: False True
+    from mlir.dialects import scf, arith
+
+    # CHECK: recursive memory effects traits: False True True False
     print(
         "recursive memory effects traits:",
         RegionOp.has_trait(ir.RecursiveMemoryEffectsTrait),
         RecursiveRegionOp.has_trait(ir.RecursiveMemoryEffectsTrait),
+        scf.IfOp.has_trait(ir.RecursiveMemoryEffectsTrait),
+        arith.AddIOp.has_trait(ir.RecursiveMemoryEffectsTrait),
     )
 
     # CHECK: memory effect properties: True True True True
