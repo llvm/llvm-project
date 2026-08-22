@@ -37,21 +37,26 @@ void calls_unknown() noexcept {
   extern_declared();
 }
 
+struct Error {};
+
 void calls_unknown_caught() noexcept {
   // CHECK-MESSAGES-ALL-NOT: warning:
   // CHECK-MESSAGES-UNDEFINED-NOT: warning:
   // CHECK-MESSAGES-NONE-NOT: warning:
   try {
     extern_declared();
-  } catch(...) {
+  } catch (const Error &) {
+  } catch (...) {
   }
 }
 
-struct Error {};
-
 void calls_unknown_typed_catch() noexcept {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
-  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-28]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-ALL: :[[@LINE+5]]:5: note: frame #1: function 'calls_unknown_typed_catch' calls function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-4]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-31]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE+2]]:5: note: frame #1: function 'calls_unknown_typed_catch' calls function 'extern_declared' here
   try {
     extern_declared();
   } catch (const Error &) {

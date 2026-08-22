@@ -118,10 +118,6 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
-- Fixed crashes in {doc}`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` when analyzing exceptions of
-  unknown type with `TreatFunctionsWithoutSpecificationAsThrowing` enabled.
-
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
