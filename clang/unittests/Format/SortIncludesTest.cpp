@@ -1357,7 +1357,7 @@ TEST_F(SortIncludesTest, DisableFormatDisablesIncludeSorting) {
   StringRef Unsorted = "#include <b.h>\n"
                        "#include <a.h>\n";
   verifyFormat(Sorted, sort(Unsorted));
-  FmtStyle.DisableFormat = true;
+  FmtStyle.DisableFormat.DisableSortIncludes = true;
   verifyFormat(Unsorted, sort(Unsorted, "input.cpp", 0));
 }
 

@@ -2938,9 +2938,24 @@ struct FormatStyle {
   /// \version 3.7
   bool DerivePointerAlignment;
 
+  struct DisableFormatOptions {
+    
+    bool DisableSortIncludes;
+
+    bool DisablePostPreprocessorFormatting;
+
+    bool operator==(const DisableFormatOptions &R) const {
+      return DisableSortIncludes == R.DisableSortIncludes &&
+             DisablePostPreprocessorFormatting == R.DisablePostPreprocessorFormatting;
+    }
+    bool operator!=(const DisableFormatOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// Disables formatting completely.
   /// \version 3.7
-  bool DisableFormat;
+  DisableFormatOptions DisableFormat;
 
   /// Different styles for empty line after access modifiers.
   /// `EmptyLineBeforeAccessModifier` configuration handles the number of
