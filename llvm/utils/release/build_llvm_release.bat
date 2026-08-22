@@ -199,8 +199,8 @@ if "%force-msvc%" == "" (
       set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
       
       set common_cmake_flags=%common_cmake_flags%^
-        -DCMAKE_C_COMPILER=clang-cl.exe ^
-        -DCMAKE_CXX_COMPILER=clang-cl.exe ^
+        -DCMAKE_C_COMPILER=C:\clang\clang-msvc\bin\clang-cl.exe ^
+        -DCMAKE_CXX_COMPILER=C:\clang\clang-msvc\bin\clang-cl.exe ^
         -DCMAKE_LINKER=lld-link.exe ^
         -DLLVM_ENABLE_LLD=ON ^
         -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
@@ -297,7 +297,7 @@ set arch=%1
 set python_dir=%2
 
 call :set_environment %python_dir% || exit /b 1
-REM call "%vsdevcmd%" -arch=%arch% || exit /b 1
+call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
