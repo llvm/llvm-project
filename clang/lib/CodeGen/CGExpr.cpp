@@ -7099,30 +7099,84 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (Chain)
     Args.add(RValue::get(Chain), CGM.getContext().VoidPtrTy);
 
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
+  // C++17 [over.match.oper]/2 keeps the operands of an overloaded operator in
+  // the order prescribed for the built-in operator. Note that we allow this to
+  // override the order dictated by the calling convention on the MS ABI, which
+  // means that parameter destruction order is not necessarily reverse
+  // construction order.
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
   bool StaticOperator = false;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    if (OCE->isAssignmentOp())
+    // Every operator is listed so that -Wswitch forces a decision on any
+    // operator added later.
+    switch (OCE->getOperator()) {
+    // The assignment operators sequence the right operand before the left. This
+    // list is also spelled out in CXXOperatorCallExpr::isAssignmentOp.
+    case OO_Equal:
+    case OO_PlusEqual:
+    case OO_MinusEqual:
+    case OO_StarEqual:
+    case OO_SlashEqual:
+    case OO_PercentEqual:
+    case OO_CaretEqual:
+    case OO_AmpEqual:
+    case OO_PipeEqual:
+    case OO_LessLessEqual:
+    case OO_GreaterGreaterEqual:
       Order = EvaluationOrder::ForceRightToLeft;
-    else {
-      switch (OCE->getOperator()) {
-      case OO_LessLess:
-      case OO_GreaterGreater:
-      case OO_AmpAmp:
-      case OO_PipePipe:
-      case OO_Comma:
-      case OO_ArrowStar:
-        Order = EvaluationOrder::ForceLeftToRight;
-        break;
-      default:
-        break;
-      }
+      break;
+
+    // The shift, logical, comma and pointer-to-member operators sequence the
+    // left operand before the right.
+    case OO_LessLess:
+    case OO_GreaterGreater:
+    case OO_AmpAmp:
+    case OO_PipePipe:
+    case OO_Comma:
+    case OO_ArrowStar:
+      Order = EvaluationOrder::ForceLeftToRight;
+      break;
+
+    // [expr.sub]/1 and [expr.call]/8 sequence the object argument before the
+    // index or argument expressions, which are unsequenced among themselves.
+    case OO_Subscript:
+    case OO_Call:
+      Order = EvaluationOrder::ForceFirstBeforeRest;
+      break;
+
+    // No constraint on the operand order.
+    case OO_New:
+    case OO_Delete:
+    case OO_Array_New:
+    case OO_Array_Delete:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_Star:
+    case OO_Slash:
+    case OO_Percent:
+    case OO_Caret:
+    case OO_Amp:
+    case OO_Pipe:
+    case OO_Tilde:
+    case OO_Exclaim:
+    case OO_Less:
+    case OO_Greater:
+    case OO_EqualEqual:
+    case OO_ExclaimEqual:
+    case OO_LessEqual:
+    case OO_GreaterEqual:
+    case OO_Spaceship:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
+    case OO_Arrow:
+    case OO_Conditional:
+    case OO_Coawait:
+      break;
+
+    case OO_None:
+    case NUM_OVERLOADED_OPERATORS:
+      llvm_unreachable("Not an overloaded operator");
     }
 
     if (const auto *MD =
@@ -7134,7 +7188,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   auto Arguments = E->arguments();
   if (StaticOperator) {
     // If we're calling a static operator, we need to emit the object argument
-    // and ignore it.
+    // and ignore it. Emitting it here already sequences the object first, so no
+    // further constraint is needed.
+    if (Order == EvaluationOrder::ForceFirstBeforeRest)
+      Order = EvaluationOrder::Default;
     EmitIgnoredExpr(E->getArg(0));
     Arguments = drop_begin(Arguments, 1);
   }

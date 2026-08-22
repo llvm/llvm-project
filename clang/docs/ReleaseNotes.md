@@ -464,6 +464,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed the evaluation order of an overloaded `operator[]` or `operator()`
+  declared with an explicit object parameter on Microsoft ABI targets. The index
+  or argument expressions were evaluated before the object expression. Parameter
+  destruction order for such a call is no longer reverse construction order, as
+  with the other operators that have a prescribed operand order.
+
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
