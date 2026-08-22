@@ -48,6 +48,6 @@ def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
                  [vector_length_sub_to_distance_lowering,
                   vector_select_to_faceforward_lowering,
-                  matrix_transpose_lowering, matrix_multiply_lowering, degrees_lowering]> {
+                  degrees_lowering, matrix_transpose_lowering, matrix_multiply_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }

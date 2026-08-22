@@ -239,11 +239,6 @@ void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
-bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_transpose;
-}
-
 void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
   Register ResReg = MI.getOperand(0).getReg();
   Register InReg = MI.getOperand(2).getReg();
