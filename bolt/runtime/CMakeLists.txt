@@ -40,6 +40,9 @@ set(BOLT_RT_FLAGS
   # Protect against distros adding -fno-omit-frame-pointer and compiling with GCC.
   # Refs: llvm/llvm-project#148595 https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77882
   -fomit-frame-pointer
+  # JITLink currently does not support SHF_COMPRESSED sections with relocations, ensure
+  # debug sections are uncompressed to avoid out-of-bounds read and segfault.
+  -gz=none
 )
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} 
