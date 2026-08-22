@@ -19,14 +19,12 @@
 #ifndef LLVM_TOOLS_LLC_NEWPMDRIVER_H
 #define LLVM_TOOLS_LLC_NEWPMDRIVER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
 
 namespace llvm {
 class Module;
-class PassPlugin;
 class TargetLibraryInfoImpl;
 class TargetMachine;
 class ToolOutputFile;
@@ -39,12 +37,14 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override;
 };
 
-int compileModuleWithNewPM(
-    StringRef Arg0, std::unique_ptr<Module> M, std::unique_ptr<MIRParser> MIR,
-    std::unique_ptr<TargetMachine> Target, std::unique_ptr<ToolOutputFile> Out,
-    std::unique_ptr<ToolOutputFile> DwoOut, LLVMContext &Context,
-    const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType);
+int compileModuleWithNewPM(StringRef Arg0, std::unique_ptr<Module> M,
+                           std::unique_ptr<MIRParser> MIR,
+                           std::unique_ptr<TargetMachine> Target,
+                           std::unique_ptr<ToolOutputFile> Out,
+                           std::unique_ptr<ToolOutputFile> DwoOut,
+                           LLVMContext &Context,
+                           const TargetLibraryInfoImpl &TLII, VerifierKind VK,
+                           StringRef PassPipeline, CodeGenFileType FileType);
 } // namespace llvm
 
 #endif
