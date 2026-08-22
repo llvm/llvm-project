@@ -165,11 +165,21 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     } else if (IsWasm) {
       CGF.ErrorUnsupported(Finally,
                            "@finally is not implemented for WebAssembly");
+    } else if (IsMSVC) {
+      CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
+      if (!CGF.CurSEHParent)
+        CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
+      const Stmt *FinallyBlock = Finally->getFinallyBody();
+      HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/ false, FinallyBlock);
+      HelperCGF.EmitStmt(FinallyBlock);
+      HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
+
+      llvm::Function *FinallyFunc = HelperCGF.CurFn;
+      CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
     }
   }
 
   SmallVector<CatchHandler, 8> Handlers;
-
 
   // Enter the catch, if there is one.
   if (S.getNumCatchStmts()) {
@@ -201,76 +211,23 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
   }
 
-  if (IsMSVC) {
-    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
-      CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
-      if (!CGF.CurSEHParent)
-        CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
-      // Outline the finally block.
-      const Stmt *FinallyBlock = Finally->getFinallyBody();
-      HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/ false, FinallyBlock);
-
-      // Emit the original filter expression, convert to i32, and return.
-      HelperCGF.EmitStmt(FinallyBlock);
-
-      HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
-
-      llvm::Function *FinallyFunc = HelperCGF.CurFn;
-
-      // Push a cleanup for __finally blocks.
-      CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
-    }
-  }
-
   // Emit the try body.
   CGF.EmitStmt(S.getTryBody());
-
-  // lpad or catch.dispatch (the dispatch block) has now been emitted
-  //
-  // Here an example:
-  // void may_throw();
-  // @try {
-  //    may_throw();
-  // } @catch(id a) {
-  // } @catch(id b) {
-  // [...]
-  //
-  // With funclet-based exception handling, the dispatch block is created in
-  // getEHDispatchBlock() <- getInvokeDestImpl() <- EmitCall().
-  // The following IR is emitted in this case:
-  // On aarch64-linux-gnu (landing-pad based)
-  //   %call = invoke i32 @may_throw()
-  //      to label %invoke.cont unwind label %lpad, !dbg !19
-  // On aarch64-pc-windows-msvc (funclet based)
-  // %call = invoke i32 @may_throw()
-  //      to label %invoke.cont unwind label %catch.dispatch, !dbg !17
 
   // Leave the try.
   llvm::BasicBlock *DispatchBlock = nullptr;
   if (S.getNumCatchStmts()) {
-    // The dispatch block that was created during the emission of the try block
-    // was cached. We retrieve it when popping the current catch scope.
-    DispatchBlock = CGF.popCatchScope();
+    EHCatchScope &CatchScope = cast<EHCatchScope>(*CGF.EHStack.begin());
+    if (CatchScope.hasEHBranches())
+      DispatchBlock = CatchScope.getCachedEHDispatchBlock();
+    CGF.popCatchScope();
   }
 
-  // On Windows and WASM, the new exception handling instructions are used.
-  //
-  // Continuing with the previous example, on Windows, we emit one catchpad for
-  // every catch handler. This is not the case for WASM where all catch handlers
-  // merged into one big catchpad:
-  //
-  // catch.dispatch:
-  // %0 = catchswitch within none [label %catch.start] unwind to caller
-  // catch.start:
-  //   %1 = catchpad within %0 [ptr @__objc_id_type_info, ptr null]
-  //   [...]
-  //   br i1 %matches, label %catch, label %catch2
-  //
   // We save the old funclet pad here before we traverse each catch handler.
   SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   llvm::CatchPadInst *CPI = nullptr;
-  if (!!DispatchBlock && IsWasm) {
+  if (DispatchBlock && IsWasm) {
     auto *CatchSwitch =
         cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
@@ -297,15 +254,14 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       llvm::BasicBlock::iterator CPICandidate =
           Handler.Block->getFirstNonPHIIt();
       if (CPICandidate != Handler.Block->end()) {
-        CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate);
-        if (!!CPI) {
+        if ((CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate))) {
           CGF.CurrentFuncletPad = CPI;
           CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
         }
       }
     }
 
-    if (!!CPI) {
+    if (CPI) {
       // A catchpad requires a matching catchret instruction. We emit this in
       // form of a cleanup.
       CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);

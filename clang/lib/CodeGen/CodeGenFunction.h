@@ -1326,7 +1326,7 @@ public:
   /// popCatchScope - Pops the catch scope at the top of the EHScope
   /// stack, emitting any required code (other than the catch handlers
   /// themselves).
-  llvm::BasicBlock *popCatchScope();
+  void popCatchScope();
 
   // This function should be called after emitting all catch clauses and none
   // of them were 'catch-all' clauses.

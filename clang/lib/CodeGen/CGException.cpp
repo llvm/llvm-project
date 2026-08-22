@@ -1213,13 +1213,11 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   }
 }
 
-llvm::BasicBlock *CodeGenFunction::popCatchScope() {
+void CodeGenFunction::popCatchScope() {
   EHCatchScope &catchScope = cast<EHCatchScope>(*EHStack.begin());
-  llvm::BasicBlock *dispatchBlock = catchScope.getCachedEHDispatchBlock();
   if (catchScope.hasEHBranches())
     emitCatchDispatchBlock(*this, catchScope);
   EHStack.popCatch();
-  return dispatchBlock;
 }
 
 void CodeGenFunction::WasmEmitFallthroughRethrow(
@@ -1416,9 +1414,9 @@ namespace {
 
         CGF.EmitBlock(RethrowBB);
         if (SavedExnVar) {
-          CGF.EmitRuntimeCallOrInvoke(RethrowFn,
-            CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
-                                          CGF.getPointerAlign()));
+          CGF.EmitRuntimeCallOrInvoke(RethrowFn, CGF.Builder.CreateAlignedLoad(
+                                                     CGF.Int8PtrTy, SavedExnVar,
+                                                     CGF.getPointerAlign()));
         } else {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn);
         }
