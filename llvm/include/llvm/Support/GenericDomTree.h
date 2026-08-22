@@ -113,30 +113,6 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase *getIDom() const { return IDom; }
   unsigned getLevel() const { return Level; }
 
-  // TODO: make these private once NewGVN doesn't require these anymore.
-  void addChild(DomTreeNodeBase *C) {
-    assert(!C->Sibling && "cannot add child that already has siblings");
-    assert(!*AppendPtr && "sibling of last child must be nullptr");
-    *AppendPtr = C;
-    AppendPtr = &C->Sibling;
-  }
-
-  // TODO: make these private once NewGVN doesn't require these anymore.
-  void removeChild(DomTreeNodeBase *C) {
-    DomTreeNodeBase **It = &FirstChild;
-    while (*It != C) {
-      assert(*It != nullptr && "Not in immediate dominator children list!");
-      It = &(*It)->Sibling;
-    }
-    assert(!*AppendPtr && "sibling of last child must be nullptr");
-    assert(C->Sibling || AppendPtr == &C->Sibling);
-    *It = C->Sibling;
-    if (C->Sibling)
-      C->Sibling = nullptr;
-    else
-      AppendPtr = It;
-  }
-
   bool isLeaf() const { return FirstChild == nullptr; }
 
   bool compare(const DomTreeNodeBase *Other) const {
@@ -177,6 +153,28 @@ template <class NodeT> class DomTreeNodeBase {
   unsigned getDFSNumOut() const { return DFSNumOut; }
 
 private:
+  void addChild(DomTreeNodeBase *C) {
+    assert(!C->Sibling && "cannot add child that already has siblings");
+    assert(!*AppendPtr && "sibling of last child must be nullptr");
+    *AppendPtr = C;
+    AppendPtr = &C->Sibling;
+  }
+
+  void removeChild(DomTreeNodeBase *C) {
+    DomTreeNodeBase **It = &FirstChild;
+    while (*It != C) {
+      assert(*It != nullptr && "Not in immediate dominator children list!");
+      It = &(*It)->Sibling;
+    }
+    assert(!*AppendPtr && "sibling of last child must be nullptr");
+    assert(C->Sibling || AppendPtr == &C->Sibling);
+    *It = C->Sibling;
+    if (C->Sibling)
+      C->Sibling = nullptr;
+    else
+      AppendPtr = It;
+  }
+
   // Return true if this node is dominated by other. Use this only if DFS info
   // is valid.
   bool DominatedBy(const DomTreeNodeBase *other) const {
