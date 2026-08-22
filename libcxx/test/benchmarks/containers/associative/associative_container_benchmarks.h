@@ -29,8 +29,8 @@ template <class Container>
 struct adapt_operations {
   // using ValueType = ...;
   // using KeyType   = ...;
-  // static ValueType value_from_key(KeyType const& k);
-  // static KeyType key_from_value(ValueType const& value);
+  // static ValueType make_value_from_key(KeyType const& k);
+  // static KeyType const& key_from_value(ValueType const& value);
 
   // using InsertionResult = ...;
   // static Container::iterator get_iterator(InsertionResult const&);
@@ -56,11 +56,11 @@ void associative_container_benchmarks(std::string container) {
   auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
-      kv.push_back(adapt_operations<Container>::value_from_key(k));
+      kv.push_back(adapt_operations<Container>::make_value_from_key(k));
     return kv;
   };
 
-  auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
+  auto get_key = [](Value const& v) -> Key const& { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(8192);
