@@ -24,18 +24,10 @@ using namespace llvm;
 
 namespace {
 
-class RISCVPostRAExpandPseudo : public MachineFunctionPass {
+class RISCVPostRAExpandPseudoImpl {
 public:
   const RISCVInstrInfo *TII;
-  static char ID;
-
-  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return RISCV_POST_RA_EXPAND_PSEUDO_NAME;
-  }
+  bool run(MachineFunction &MF);
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);
@@ -48,9 +40,29 @@ private:
                          MachineBasicBlock::iterator MBBI);
 };
 
-char RISCVPostRAExpandPseudo::ID = 0;
+class RISCVPostRAExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-bool RISCVPostRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+  RISCVPostRAExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return RISCVPostRAExpandPseudoImpl().run(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override {
+    return RISCV_POST_RA_EXPAND_PSEUDO_NAME;
+  }
+};
+
+char RISCVPostRAExpandPseudoLegacy::ID = 0;
+
+bool RISCVPostRAExpandPseudoImpl::run(MachineFunction &MF) {
   TII = static_cast<const RISCVInstrInfo *>(MF.getSubtarget().getInstrInfo());
   bool Modified = false;
   for (auto &MBB : MF)
@@ -58,7 +70,7 @@ bool RISCVPostRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-bool RISCVPostRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool RISCVPostRAExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -71,9 +83,9 @@ bool RISCVPostRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MBBI,
-                                       MachineBasicBlock::iterator &NextMBBI) {
+bool RISCVPostRAExpandPseudoImpl::expandMI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMovImm:
     return expandMovImm(MBB, MBBI);
@@ -88,8 +100,8 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
   }
 }
 
-bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI) {
+bool RISCVPostRAExpandPseudoImpl::expandMovImm(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
   int64_t Val = MBBI->getOperand(1).getImm();
@@ -105,8 +117,8 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI) {
+bool RISCVPostRAExpandPseudoImpl::expandMovAddr(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
   Register DstReg = MBBI->getOperand(0).getReg();
@@ -125,7 +137,7 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVPostRAExpandPseudo::expandAddUpperImm(
+bool RISCVPostRAExpandPseudoImpl::expandAddUpperImm(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
@@ -161,8 +173,8 @@ static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &MI) {
 }
 
 // Expand PseudoMERGE to MERGE, MVM, or MVMN.
-bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+bool RISCVPostRAExpandPseudoImpl::expandMERGE(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
@@ -218,12 +230,24 @@ bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-post-ra-expand-pseudo",
+INITIALIZE_PASS(RISCVPostRAExpandPseudoLegacy, "riscv-post-ra-expand-pseudo",
                 RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 
-FunctionPass *createRISCVPostRAExpandPseudoPass() {
-  return new RISCVPostRAExpandPseudo();
+FunctionPass *createRISCVPostRAExpandPseudoLegacyPass() {
+  return new RISCVPostRAExpandPseudoLegacy();
+}
+
+PreservedAnalyses
+RISCVPostRAExpandPseudoPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVPostRAExpandPseudoImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 } // end of namespace llvm
