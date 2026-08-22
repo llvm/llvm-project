@@ -47,7 +47,6 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
         case frontend::EmitBC:
         case frontend::EmitObj:
         case frontend::PrintPreprocessedInput:
-        case frontend::EmitLLVM:
         case frontend::EmitLLVMOnly:
           Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
           break;
