@@ -878,7 +878,7 @@ bool RISCVPreRAExpandPseudoImpl::expandLoadTLSDescAddress(
 INITIALIZE_PASS(RISCVExpandPseudo, "riscv-expand-pseudo",
                 RISCV_EXPAND_PSEUDO_NAME, false, false)
 
-INITIALIZE_PASS(RISCVPreRAExpandPseudoLegacy, "riscv-prera-expand-pseudo",
+INITIALIZE_PASS(RISCVPreRAExpandPseudoLegacy, "riscv-pre-ra-expand-pseudo",
                 RISCV_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
 namespace llvm {
