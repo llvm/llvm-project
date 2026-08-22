@@ -255,7 +255,7 @@
 "`LWG3769 <https://wg21.link/LWG3769>`__","``basic_const_iterator::operator==`` causes infinite constraint recursion","2023-02 (Issaquah)","","","`#105069 <https://github.com/llvm/llvm-project/issues/105069>`__",""
 "`LWG3807 <https://wg21.link/LWG3807>`__","The feature test macro for ``ranges::find_last`` should be renamed","2023-02 (Issaquah)","","","`#105070 <https://github.com/llvm/llvm-project/issues/105070>`__",""
 "`LWG3811 <https://wg21.link/LWG3811>`__","``views::as_const`` on ``ref_view<T>`` should return ``ref_view<const T>``","2023-02 (Issaquah)","","","`#105071 <https://github.com/llvm/llvm-project/issues/105071>`__",""
-"`LWG3820 <https://wg21.link/LWG3820>`__","``cartesian_product_view::iterator::prev`` is not quite right","2023-02 (Issaquah)","","","`#105072 <https://github.com/llvm/llvm-project/issues/105072>`__",""
+"`LWG3820 <https://wg21.link/LWG3820>`__","``cartesian_product_view::iterator::prev`` is not quite right","2023-02 (Issaquah)","|Complete|","24","`#105072 <https://github.com/llvm/llvm-project/issues/105072>`__",""
 "`LWG3825 <https://wg21.link/LWG3825>`__","Missing compile-time argument ``id`` check in ``basic_format_parse_context::next_arg_id``","2023-02 (Issaquah)","|Complete|","17","`#105073 <https://github.com/llvm/llvm-project/issues/105073>`__",""
 "`LWG3204 <https://wg21.link/LWG3204>`__","``sub_match::swap`` only swaps the base class","2023-02 (Issaquah)","|Complete|","17","`#105074 <https://github.com/llvm/llvm-project/issues/105074>`__",""
 "`LWG3733 <https://wg21.link/LWG3733>`__","``ranges::to`` misuses ``cpp17-input-iterator``","2023-02 (Issaquah)","|Complete|","17","`#105075 <https://github.com/llvm/llvm-project/issues/105075>`__",""

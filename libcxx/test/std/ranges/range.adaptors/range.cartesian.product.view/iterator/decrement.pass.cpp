@@ -130,6 +130,20 @@ constexpr bool test() {
     assert(*it == std::tuple(2, 20, 200));
   }
 
+  { // LWG3820: "cartesian_product_view::iterator::prev is not quite right".
+    // `prev` must not apply cartesian-common-arg-end to the first range, which is required to
+    // model neither common_range nor sized_range. This is the example from the issue.
+    auto v  = std::views::cartesian_product(std::views::iota(0));
+    auto it = v.begin() + 3;
+    assert(*it == std::tuple(3));
+
+    --it;
+    assert(*it == std::tuple(2));
+
+    assert(*it-- == std::tuple(2));
+    assert(*it == std::tuple(1));
+  }
+
   return true;
 }
 

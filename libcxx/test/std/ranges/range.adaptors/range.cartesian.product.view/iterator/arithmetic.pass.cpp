@@ -149,6 +149,38 @@ constexpr bool test() {
     assert(*(it3 - 2) == std::tuple(2, 40)); // crosses back over a wrap boundary
   }
 
+  { // LWG3820: "cartesian_product_view::iterator::prev is not quite right".
+    // The first range only has to model random_access_range: neither `prev` nor the
+    // `operator+=` machinery may ask it for a size or an end. This is the example from the
+    // issue -- an unbounded iota_view is neither sized nor common.
+    auto v  = std::views::cartesian_product(std::views::iota(0));
+    auto it = v.begin();
+
+    it += 3;
+    assert(*it == std::tuple(3));
+
+    it -= 2;
+    assert(*it == std::tuple(1));
+
+    assert(*(it + 4) == std::tuple(5));
+    assert(*(4 + it) == std::tuple(5));
+    assert(*(it - 1) == std::tuple(0));
+  }
+
+  { // an unsized, non-common random-access first range supports the whole arithmetic set
+    std::ranges::cartesian_product_view v(NonSizedRandomAccessView{a}, SizedRandomAccessView{b});
+
+    auto it = v.begin();
+    it += 5; // (a[1], b[1])
+    assert(*it == std::tuple(2, 20));
+
+    it -= 4; // (a[0], b[1])
+    assert(*it == std::tuple(1, 20));
+
+    assert(*(it + 6) == std::tuple(2, 40));
+    assert((it + 6) - it == 6);
+  }
+
   return true;
 }
 
