@@ -145,11 +145,8 @@ void SmartPtrInitializationCheck::check(
     assert(SharedPtrVar && SharedPtrInit);
     const auto *Context = SharedPtrVar->getLexicalDeclContext();
     const auto *CurrentFunction = dyn_cast_or_null<FunctionDecl>(Context);
-    if (!CurrentFunction) {
-        // Если это не функция, возможно это метод класса или блок
-        // TODO: with methods also must work!
-        return;
-    }
+    assert(CurrentFunction);
+
     // Сохраняем информацию о сыром указателе и его инициализациях
     // Используем пару (функция, сырой указатель) как ключ
     auto Key = std::make_pair(CurrentFunction->getCanonicalDecl(), RawPtrVar);
