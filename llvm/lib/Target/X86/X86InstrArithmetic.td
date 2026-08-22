@@ -1459,7 +1459,7 @@ let Uses = [RDX] in
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions
 //
-// We don't have patterns for ACX as there is no advantage over ADC for
+// We don't have patterns for ADCX as there is no advantage over ADC for
 // most code.
 let Form = MRMSrcReg in {
   def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32>, T8, PD;
