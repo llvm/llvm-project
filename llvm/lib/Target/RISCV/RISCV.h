@@ -140,8 +140,15 @@ FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 extern char &RISCVInsertVSETVLIID;
 
-FunctionPass *createRISCVPostRAExpandPseudoPass();
-void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
+class RISCVPostRAExpandPseudoPass
+    : public RequiredPassInfoMixin<RISCVPostRAExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPostRAExpandPseudoLegacyPass();
+void initializeRISCVPostRAExpandPseudoLegacyPass(PassRegistry &);
 FunctionPass *createRISCVInsertReadWriteCSRPass();
 void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
 
