@@ -7537,7 +7537,7 @@ LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,
     Register SegReg = SrcRegs[i];
     if (ExtractOffset != 0 || SegSize != NarrowSize) {
       // A genuine extract is needed.
-      SegReg = MRI.createGenericVirtualRegister(LLT::scalar(SegSize));
+      SegReg = MRI.createGenericVirtualRegister(LLT::integer(SegSize));
       MIRBuilder.buildExtract(SegReg, SrcRegs[i], ExtractOffset);
     }
 
