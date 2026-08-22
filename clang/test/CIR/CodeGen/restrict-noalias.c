@@ -28,8 +28,8 @@ void test_builtin(const char *__restrict fmt) {
 }
 
 // Builtins must NOT get noalias from restrict (matching OGCG behavior).
-// CIR: cir.func {{.*}} @test_builtin(%arg0: !cir.ptr<!s8i> {llvm.noalias, llvm.noundef}
-// CIR:   cir.call @printf(%{{.*}}) : (!cir.ptr<!s8i> {llvm.noundef}) -> !s32i
+// CIR: cir.func {{.*}} @test_builtin(%arg0: !cir.ptr<!s8i> {cir.const_pointee, llvm.noalias, llvm.noundef}
+// CIR:   cir.call @printf(%{{.*}}) : (!cir.ptr<!s8i> {cir.const_pointee, llvm.noundef}) -> !s32i
 
 // LLVM: define dso_local void @test_builtin(ptr noalias noundef %{{.*}})
 // LLVM:   call i32 (ptr, ...) @printf(ptr noundef %{{.*}})

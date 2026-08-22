@@ -85,7 +85,7 @@ void library_builtins() {
 
 // CIR: cir.func{{.*}} @_Z16library_builtinsv()
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
-// CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i> {llvm.noundef}) -> !s32i
+// CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i> {cir.const_pointee, llvm.noundef}) -> !s32i
 // CIR: cir.call @abort() nothrow {noreturn} : () -> ()
 
 // LLVM: define{{.*}} void @_Z16library_builtinsv()

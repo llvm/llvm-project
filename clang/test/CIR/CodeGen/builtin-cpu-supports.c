@@ -23,7 +23,7 @@ extern void a(const char *);
 // CIR-NEXT:   cir.if %[[RES]] {
 // CIR-NEXT:     %[[STR:.*]] = cir.get_global 
 // CIR-NEXT:     %[[STR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[STR]] : !cir.ptr<!cir.array<!s8i x 7>> -> !cir.ptr<!s8i>
-// CIR-NEXT:     cir.call @a(%[[STR_DECAY]]) : (!cir.ptr<!s8i> {llvm.noundef}) -> ()
+// CIR-NEXT:     cir.call @a(%[[STR_DECAY]]) : (!cir.ptr<!s8i> {cir.const_pointee, llvm.noundef}) -> ()
 // CIR-NEXT:   }
 // CIR-NEXT: }
 // CIR-NEXT: cir.scope {
@@ -37,7 +37,7 @@ extern void a(const char *);
 // CIR-NEXT:   cir.if %[[RES]] {
 // CIR-NEXT:     %[[STR:.*]] = cir.get_global 
 // CIR-NEXT:     %[[STR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[STR]] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
-// CIR-NEXT:     cir.call @a(%[[STR_DECAY]]) : (!cir.ptr<!s8i> {llvm.noundef}) -> ()
+// CIR-NEXT:     cir.call @a(%[[STR_DECAY]]) : (!cir.ptr<!s8i> {cir.const_pointee, llvm.noundef}) -> ()
 // CIR-NEXT:   }
 // CIR-NEXT: }
 
