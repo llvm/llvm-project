@@ -4790,12 +4790,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return true;
     }
 
-    if (Opc == Instruction::BitExtract) {
-      if (parseType(Ty) ||
-          parseToken(lltok::comma, "expected comma after bitextract's type"))
-        return true;
-    }
-
     if (parseGlobalValueVector(Elts) ||
         parseToken(lltok::rparen, "expected ')' in constantexpr"))
       return true;
