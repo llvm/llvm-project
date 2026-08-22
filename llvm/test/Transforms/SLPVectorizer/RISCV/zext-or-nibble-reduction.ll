@@ -9,32 +9,11 @@
 define i64 @test(ptr %src) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[A0:%.*]] = and i8 [[L0]], 15
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[L1]], 4
-; CHECK-NEXT:    [[OR8:%.*]] = or disjoint i8 [[SH1]], [[A0]]
-; CHECK-NEXT:    [[OR0:%.*]] = zext i8 [[OR8]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P2]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], splat (i8 15)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i64> [[TMP2]], <i64 8, i64 12, i64 16, i64 20>
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 6
-; CHECK-NEXT:    [[L6:%.*]] = load i8, ptr [[P6]], align 1
-; CHECK-NEXT:    [[A6:%.*]] = and i8 [[L6]], 15
-; CHECK-NEXT:    [[Z6:%.*]] = zext nneg i8 [[A6]] to i64
-; CHECK-NEXT:    [[SH6:%.*]] = shl nuw nsw i64 [[Z6]], 24
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 7
-; CHECK-NEXT:    [[L7:%.*]] = load i8, ptr [[P7]], align 1
-; CHECK-NEXT:    [[A7:%.*]] = and i8 [[L7]], 15
-; CHECK-NEXT:    [[Z7:%.*]] = zext nneg i8 [[A7]] to i64
-; CHECK-NEXT:    [[SH7:%.*]] = shl nuw nsw i64 [[Z7]], 28
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP4]], [[OR0]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i64 [[SH6]], [[SH7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i8> [[TMP0]], splat (i8 15)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i64> [[TMP1]], <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP2]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
 entry:
@@ -89,34 +68,11 @@ entry:
 define i64 @test_i32_pack(ptr %src) {
 ; CHECK-LABEL: @test_i32_pack(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[A0:%.*]] = and i8 [[L0]], 15
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[L1]], 4
-; CHECK-NEXT:    [[OR8:%.*]] = or disjoint i8 [[SH1]], [[A0]]
-; CHECK-NEXT:    [[Z01:%.*]] = zext i8 [[OR8]] to i32
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[A2:%.*]] = and i8 [[L2]], 15
-; CHECK-NEXT:    [[Z2:%.*]] = zext nneg i8 [[A2]] to i32
-; CHECK-NEXT:    [[SH2:%.*]] = shl nuw i32 [[Z2]], 8
-; CHECK-NEXT:    [[OR16:%.*]] = or disjoint i32 [[SH2]], [[Z01]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[A3:%.*]] = and i8 [[L3]], 15
-; CHECK-NEXT:    [[Z3:%.*]] = zext nneg i8 [[A3]] to i32
-; CHECK-NEXT:    [[SH3:%.*]] = shl nuw i32 [[Z3]], 12
-; CHECK-NEXT:    [[OR32:%.*]] = or disjoint i32 [[SH3]], [[OR16]]
-; CHECK-NEXT:    [[OR0:%.*]] = zext i32 [[OR32]] to i64
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P4]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], splat (i8 15)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP2]], <i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP4]], [[OR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], splat (i8 15)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <8 x i64> [[TMP2]], <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
 entry:
