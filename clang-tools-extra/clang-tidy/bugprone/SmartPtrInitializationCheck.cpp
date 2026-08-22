@@ -115,15 +115,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
 
-  Finder->addMatcher(
-      varDecl(
-          hasInitializer(anyOf(
-              SmartPtrConstructorMatcher,
-              exprWithCleanups(has(SmartPtrConstructorMatcher))
-          ))
-      ).bind("sharedPtrVar"),
-      this
-  );
+  Finder->addMatcher( SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
 }
 
@@ -140,17 +132,13 @@ void SmartPtrInitializationCheck::check(
   assert(PointerArg && Record);
 
   if (RawPtrVar) {
-    const auto *SharedPtrVar = Result.Nodes.getNodeAs<VarDecl>("sharedPtrVar");
     const auto *SharedPtrInit = Result.Nodes.getNodeAs<CXXConstructExpr>("sharedPtrInit");
-    assert(SharedPtrVar && SharedPtrInit);
-    const auto *Context = SharedPtrVar->getLexicalDeclContext();
-    const auto *CurrentFunction = dyn_cast_or_null<FunctionDecl>(Context);
-    assert(CurrentFunction);
+    assert( SharedPtrInit);
 
     // Сохраняем информацию о сыром указателе и его инициализациях
     // Используем пару (функция, сырой указатель) как ключ
-    auto Key = std::make_pair(CurrentFunction->getCanonicalDecl(), RawPtrVar);
-    
+    auto Key = RawPtrVar;
+
     auto It = SharedPtrInitMap.find(Key);
     if (It == SharedPtrInitMap.end()) {
         SmallVector<const CXXConstructExpr *, 2> Inits;

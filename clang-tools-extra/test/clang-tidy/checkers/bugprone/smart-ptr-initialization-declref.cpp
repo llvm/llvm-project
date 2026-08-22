@@ -90,4 +90,20 @@ void test_new_expression_fail_as_method() {
 
 };
 
+// test_new_expression_ok_in_global
+A* first = new A();
+A* second = new A();
+std::shared_ptr<A> a(first);
+std::unique_ptr<A> b(second);
+
+// test_new_expression_fail_in_global
+A* first2 = new A();
+A* second2 = new A();
+std::shared_ptr<A> a1(first2);
+std::shared_ptr<A> a2(first2);
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+std::unique_ptr<A> b1(second2);
+std::unique_ptr<A> b2(second2);
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+
 // TODO: reset 

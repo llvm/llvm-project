@@ -36,8 +36,7 @@ private:
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
 
-  llvm::DenseMap<std::pair<const FunctionDecl *, const VarDecl *>, 
-                 SmallVector<const CXXConstructExpr *, 2>> 
+  llvm::DenseMap<const VarDecl *, SmallVector<const CXXConstructExpr *, 2>> 
       SharedPtrInitMap;
 };
 
