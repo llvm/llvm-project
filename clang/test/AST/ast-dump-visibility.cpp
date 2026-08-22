@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump -std=c++2c -fms-extensions %s | FileCheck --match-full-lines --check-prefix=CHECK %s
+// RUN: %clang_cc1 -ast-dump -std=c++2c -triple x86_64-unknown-linux-gnu -fms-extensions %s | FileCheck --match-full-lines --check-prefix=CHECK %s
 
 int a1;
 // CHECK: |-VarDecl {{.*}} a1 'int' external-linkage
