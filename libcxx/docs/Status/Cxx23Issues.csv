@@ -268,7 +268,7 @@
 "`LWG3841 <https://wg21.link/LWG3841>`__","``<version>`` should not be ""all freestanding""","2023-02 (Issaquah)","","","`#105083 <https://github.com/llvm/llvm-project/issues/105083>`__",""
 "`LWG3842 <https://wg21.link/LWG3842>`__","Unclear wording for ``precision`` in ``chrono-format-spec``","2023-02 (Issaquah)","|Complete|","16","`#105085 <https://github.com/llvm/llvm-project/issues/105085>`__",""
 "`LWG3848 <https://wg21.link/LWG3848>`__","``adjacent_view``, ``adjacent_transform_view`` and ``slide_view`` missing ``base`` accessor","2023-02 (Issaquah)","","","`#105086 <https://github.com/llvm/llvm-project/issues/105086>`__",""
-"`LWG3849 <https://wg21.link/LWG3849>`__","``cartesian_product_view::iterator``'s default constructor is overconstrained","2023-02 (Issaquah)","","","`#105087 <https://github.com/llvm/llvm-project/issues/105087>`__",""
+"`LWG3849 <https://wg21.link/LWG3849>`__","``cartesian_product_view::iterator``'s default constructor is overconstrained","2023-02 (Issaquah)","|Complete|","24","`#105087 <https://github.com/llvm/llvm-project/issues/105087>`__",""
 "`LWG3850 <https://wg21.link/LWG3850>`__","``views::as_const`` on ``empty_view<T>`` should return ``empty_view<const T>``","2023-02 (Issaquah)","","","`#105088 <https://github.com/llvm/llvm-project/issues/105088>`__",""
 "`LWG3851 <https://wg21.link/LWG3851>`__","``chunk_view::inner-iterator`` missing custom ``iter_move`` and ``iter_swap``","2023-02 (Issaquah)","","","`#105089 <https://github.com/llvm/llvm-project/issues/105089>`__",""
 "`LWG3853 <https://wg21.link/LWG3853>`__","``basic_const_iterator<volatile int*>::operator->`` is ill-formed","2023-02 (Issaquah)","","","`#105090 <https://github.com/llvm/llvm-project/issues/105090>`__",""
