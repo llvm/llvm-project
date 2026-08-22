@@ -367,6 +367,15 @@ TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
   EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }
 
+TEST_FOR_EACH_ALLOCATOR(NegativeTestForFullHeap, 2048) {
+  // Numbers are selected to stress the first exponential bin for 64bit target.
+  void *ptr1 = allocator.allocate(528);
+  allocator.allocate(1000);
+  allocator.free(ptr1);
+  void *ptr3 = allocator.allocate(605);
+  EXPECT_EQ(ptr3, static_cast<void *>(nullptr));
+}
+
 TEST_FOR_EACH_ALLOCATOR(IntegrityCheck, 2048) {
   allocator.integrity_check();
 

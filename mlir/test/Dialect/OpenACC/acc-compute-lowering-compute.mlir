@@ -10,7 +10,7 @@ func.func @parallel_gang_loop(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.parallel
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
+  // CHECK: acc.par_width {{.*}} par_dim(#acc.par_dim<block_x>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.parallel
   // CHECK: acc.par_dims = #acc<par_dims[block_x]>
@@ -18,7 +18,7 @@ func.func @parallel_gang_loop(%buf: memref<1xi32>) {
     acc.loop gang control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       memref.store %arg0, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -37,7 +37,7 @@ func.func @parallel_seq_loop(%buf: memref<4xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
   // CHECK-NOT: acc.parallel
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
+  // CHECK: acc.par_width {{.*}} par_dim(#acc.par_dim<block_x>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
@@ -46,7 +46,7 @@ func.func @parallel_seq_loop(%buf: memref<4xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {seq = [#acc.device_type<none>]}
+    } seq
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -64,7 +64,7 @@ func.func @serial_loop(%buf: memref<4xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
   // CHECK-NOT: acc.serial
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
@@ -73,7 +73,7 @@ func.func @serial_loop(%buf: memref<4xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -99,7 +99,7 @@ func.func @kernels_loop(%buf: memref<8xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<8xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
   acc.copyout accPtr(%dev : memref<8xi32>) to varPtr(%buf : memref<8xi32>)
@@ -117,7 +117,7 @@ func.func @constant_livein_materialized_into_compute_region(%buf: memref<1xi32>)
   %c42 = arith.constant 42 : i32
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK-SAME: ins({{.*}}) : (memref<1xi32>) {
   // CHECK-DAG: arith.constant 42 : i32
@@ -148,7 +148,7 @@ func.func @parallel_unit_launch_serial_loops(%buf: memref<4xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
   // CHECK-NOT: acc.parallel
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
@@ -157,7 +157,7 @@ func.func @parallel_unit_launch_serial_loops(%buf: memref<4xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -180,7 +180,7 @@ func.func @kernels_unit_launch_serial_loops(%buf: memref<4xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
   // CHECK-NOT: acc.kernels
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
@@ -189,7 +189,7 @@ func.func @kernels_unit_launch_serial_loops(%buf: memref<4xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -210,11 +210,11 @@ func.func @parallel_vector_length32_independent(%buf: memref<4xi32>) {
   // CHECK-NOT: acc.par_dims = #acc<par_dims[sequential]>
   // CHECK: acc.par_dims = #acc<par_dims[thread_x]>
   acc.parallel num_gangs({%c1_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c32_i32 : i32) dataOperands(%dev : memref<4xi32>) {
-    acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+    acc.loop vector control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -235,11 +235,11 @@ func.func @kernels_num_gangs4_independent(%buf: memref<4xi32>) {
   // CHECK-NOT: acc.par_dims = #acc<par_dims[sequential]>
   // CHECK: acc.par_dims = #acc<par_dims[thread_x]>
   acc.kernels num_gangs({%c4_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c1_i32 : i32) dataOperands(%dev : memref<4xi32>) {
-    acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+    acc.loop vector control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -260,11 +260,11 @@ func.func @parallel_num_gangs_1_2_independent(%buf: memref<4xi32>) {
   // CHECK-NOT: acc.par_dims = #acc<par_dims[sequential]>
   // CHECK: acc.par_dims = #acc<par_dims[thread_x]>
   acc.parallel num_gangs({%c1_i32 : i32, %c2_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c1_i32 : i32) dataOperands(%dev : memref<4xi32>) {
-    acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+    acc.loop vector control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<4xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)

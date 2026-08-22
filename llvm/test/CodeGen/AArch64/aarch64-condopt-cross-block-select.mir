@@ -1,0 +1,567 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=aarch64-condopt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -passes=aarch64-condopt %s -o - | FileCheck %s
+
+# Tests for the cross-block select-family extensions to optimizeCrossBlock().
+# The pass handles four head/true-successor combinations:
+#
+#   Bcc    (head) + Bcc    (true) -- original case, tested in aarch64-condopt*.mir
+#   Select (head) + Bcc    (true) -- head ends with CSEL/CSET/CSINC/CSINV/CSNEG
+#   Bcc    (head) + Select (true) -- true-successor ends with a select
+#   Select (head) + Select (true) -- both blocks end with a select
+#
+# Condition code integer encoding used throughout:
+#   GT = 12,  GE = 10,  LT = 11,  LE = 13
+#
+# Note: CSET lowers to CSINCWr $rd, $wzr, $wzr, invert(cond) in MIR.
+# The $wzr-source form is not optimized by this pass (physical register
+# liveness is not tracked the same way); CSINC with virtual register
+# sources (select_head_select_true_csinc) covers the opcode dispatch path.
+
+---
+# Bcc (head) + Select (true): positive test.
+#
+# bb.0 ends with a Bcc (GT, #9).  bb.1 ends with a CSELWr (GT, #10) followed
+# by an unconditional branch.  The head CMP is adjusted from #9 GT to #10 GE
+# so that both CMPs become identical and CSE can remove the duplicate.
+#
+# Input:  bb.0: CMP #9  GT Bcc   -> bb.1
+#         bb.1: CMP #10 GT CSELWr
+# Output: bb.0: CMP #10 GE Bcc   -> bb.1
+#         bb.1: CMP #10 GT CSELWr   (unchanged)
+name:            bcc_head_select_true
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: bcc_head_select_true
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 10, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3
+    successors: %bb.1, %bb.2
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    Bcc 12, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    %4:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %4, %3, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Select (head) + Bcc (true): positive test.
+#
+# bb.0 ends with a CSELWr (GT, #9) followed by an unconditional branch to
+# bb.1.  bb.1 ends with a Bcc (GT, #10).  The head CMP is adjusted from
+# #9 GT to #10 GE so that both CMPs become identical.
+#
+# Input:  bb.0: CMP #9  GT CSELWr  -> bb.1 (unconditional)
+#         bb.1: CMP #10 GT Bcc
+# Output: bb.0: CMP #10 GE CSELWr  (adjusted)
+#         bb.1: CMP #10 GT Bcc      (unchanged)
+name:            select_head_bcc_true
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_head_bcc_true
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 1
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %4:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %4, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    Bcc 12, %bb.2, implicit $nzcv
+    B %bb.3
+
+  bb.2:
+    $w0 = MOVi32imm 1
+    RET_ReallyLR implicit $w0
+
+  bb.3:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Select (head) + Select (true): positive test.
+#
+# Both bb.0 and bb.1 end with a CSELWr followed by an unconditional branch.
+# bb.0: CMP #9 GT CSELWr -> bb.1 (unconditional)
+# bb.1: CMP #10 GT CSELWr -> bb.2 (unconditional)
+# The head CMP is adjusted from #9 GT to #10 GE.
+#
+# Input:  bb.0: CMP #9  GT CSELWr
+#         bb.1: CMP #10 GT CSELWr
+# Output: bb.0: CMP #10 GE CSELWr  (adjusted)
+#         bb.1: CMP #10 GT CSELWr  (unchanged)
+name:            select_head_select_true
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_head_select_true
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3, $x4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3, $x4
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %5, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %6, %4, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Negative test: Select (head) + Select (true), NZCV lives out of true-successor.
+#
+# bb.1 has a successor (bb.2) that declares $nzcv as a live-in.  The pass must
+# NOT optimise this case because adjusting the CMP in bb.1 would silently
+# change the flags seen by bb.2's consumer.
+#
+# Input and output are identical (no transformation expected).
+name:            select_select_nzcv_lives_out
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_select_nzcv_lives_out
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3, $x4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSELWr2:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   $w0 = COPY [[CSELWr2]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3, $x4
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %5, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %6, %4, 0
+    B %bb.2
+
+  bb.2:
+    liveins: $nzcv
+
+    %7:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Negative test: Select (head) + Select (true), different source registers.
+#
+# bb.0 compares %0 (traces to $w0) and bb.1 compares %1 (traces to $w1).
+# registersMatch() must reject this pair; no transformation expected.
+name:            select_select_different_regs
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_select_different_regs
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $w3, $x4, $x5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32common = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32 = COPY $w3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr64common = COPY $x5
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY1]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY5]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $w3, $x4, $x5
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32common = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr32 = COPY $w3
+    %4:gpr64common = COPY $x4
+    %5:gpr64common = COPY $x5
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %6:gpr32 = CSELWr %2, %3, 12, implicit $nzcv
+    STRWui killed %6, %4, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %1, 10, 0, implicit-def $nzcv
+    %7:gpr32 = CSELWr %2, %3, 12, implicit $nzcv
+    STRWui killed %7, %5, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Note: CSET (CSINCWr $wzr, $wzr, cc) is covered structurally by the
+# select_head_select_true_csinc test below, which exercises the same
+# findCondCodeUseOperandIdxForBranchOrSelect opcode dispatch path.
+# A dedicated CSET test with $wzr physical-register sources does not
+# trigger the optimizer because findSelectConsumer cannot trace liveness
+# through physical $wzr operands in the same way as virtual registers.
+
+---
+# Positive test: Select (head) + Select (true) using CSINCWr (also covers
+# the CSET opcode dispatch path since CSET lowers to CSINCWr).
+#
+# Same structure as select_head_select_true but uses CSINCWr instead of CSELWr.
+# Verifies that findCondCodeUseOperandIdxForBranchOrSelect returns the correct
+# operand index for CSINC.
+#
+# Input:  bb.0: CMP #9  GT CSINCWr -> bb.1
+#         bb.1: CMP #10 GT CSINCWr
+# Output: bb.0: CMP #10 GE CSINCWr (adjusted)
+#         bb.1: CMP #10 GT CSINCWr (unchanged)
+name:            select_head_select_true_csinc
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_head_select_true_csinc
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3, $x4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSINCWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSINCWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3, $x4
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %5:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
+    STRWui killed %5, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    %6:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
+    STRWui killed %6, %4, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Negative test: second NZCV reader between the select and the CMP.
+#
+# In bb.1 there are two CSELWr instructions both reading NZCV from the same
+# CMP. findSelectConsumer finds the last one first, then detects the second
+# NZCV reader while scanning back toward the CMP and returns {nullptr, Invalid},
+# preventing any transformation.
+#
+# Input and output are identical (no transformation expected).
+name:            select_second_nzcv_reader_between_select_and_cmp
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_second_nzcv_reader_between_select_and_cmp
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3, $x4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   [[CSELWr2:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr2]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3, $x4
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %5, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    ; Two consumers of the same CMP: findSelectConsumer must reject bb.1.
+    %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    %7:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %7, %4, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
+
+---
+# Negative test: unrelated NZCV-modifying instruction between the select and
+# the CMP inside findSelectConsumer.
+#
+# In bb.1 a SUBSWri with a live (non-dead) destination sits between the
+# CSELWr and the CMP. findSelectConsumer must detect that this NZCV writer is
+# not isCmpInstruction() (because its destination is not dead) and return
+# {nullptr, Invalid}, preventing any transformation.
+#
+# Input and output are identical (no transformation expected).
+name:            select_unrelated_nzcv_writer_between_select_and_cmp
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: select_unrelated_nzcv_writer_between_select_and_cmp
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2, $x3, $x4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[SUBS:%[0-9]+]]:gpr32common = SUBSWri [[COPY]], 5, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
+  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $w0 = MOVi32imm 0
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    liveins: $w0, $w1, $w2, $x3, $x4
+    successors: %bb.1
+
+    %0:gpr32common = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
+    %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %5, %3, 0
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
+    ; SUBSWri with a live (non-dead) destination writes NZCV but is not a pure
+    ; CMP (canAdjustCmp rejects it). findSelectConsumer must reject this block.
+    %6:gpr32common = SUBSWri %0, 5, 0, implicit-def $nzcv
+    %7:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
+    STRWui killed %7, %4, 0
+    B %bb.2
+
+  bb.2:
+    $w0 = MOVi32imm 0
+    RET_ReallyLR implicit $w0
+...
