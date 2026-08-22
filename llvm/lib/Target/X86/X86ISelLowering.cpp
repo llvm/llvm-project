@@ -53544,12 +53544,11 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // output is natively dead. Future transforms must be careful not to consume
     // it.
     EVT AdoxVT = (VT == MVT::i8 || VT == MVT::i16) ? MVT::i32 : VT;
-    SDValue AdoxX =
-        (VT == AdoxVT) ? X : DAG.getNode(ISD::ANY_EXTEND, DL, AdoxVT, X);
+    SDValue AdoxX = DAG.getAnyExtOrTrunc(X, DL, AdoxVT);
     SDValue Adox =
         DAG.getNode(X86ISD::ADOX, DL, DAG.getVTList(AdoxVT, MVT::i32), AdoxX,
                     DAG.getConstant(0, DL, AdoxVT), EFLAGS);
-    return (VT == AdoxVT) ? Adox : DAG.getNode(ISD::TRUNCATE, DL, VT, Adox);
+    return DAG.getAnyExtOrTrunc(Adox, DL, VT);
   }
 
   if (ZeroSecondOpOnly)
@@ -59805,16 +59804,26 @@ static SDValue combineADOX(SDNode *N, SelectionDAG &DAG) {
   SDValue AddOp = LHS;
 
   // Unwrap extensions. This changes what the wide intermediate represents,
-  // but it is safe because X86ISD::ADOX currently only has one producer
-  // (the widen-then-truncate path in combineAddOrSubToADCOrSBB), so the
-  // wide result is guaranteed to be truncated back to the original width,
-  // discarding any high-bit garbage.
+  // but we will verify later that all uses of the wide result are
+  // truncations to the original width.
   if (AddOp.getOpcode() == ISD::ANY_EXTEND ||
       AddOp.getOpcode() == ISD::ZERO_EXTEND)
     AddOp = AddOp.getOperand(0);
 
   if (AddOp.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
       !needCarryOrOverflowFlag(SDValue(N, 1))) {
+    if (AddOp != LHS) {
+      unsigned OrigBits = AddOp.getValueType().getScalarSizeInBits();
+      for (SDUse &Use : N->uses()) {
+        if (Use.getResNo() == 0) {
+          SDNode *User = Use.getUser();
+          if (User->getOpcode() != ISD::TRUNCATE ||
+              User->getValueType(0).getScalarSizeInBits() > OrigBits)
+            return SDValue();
+        }
+      }
+    }
+
     SDValue X = AddOp.getOperand(0);
     SDValue Y = AddOp.getOperand(1);
     if (AddOp != LHS) {
