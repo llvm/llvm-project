@@ -53,13 +53,7 @@ getMaybeLaneData(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() < 2)
-    return std::nullopt;
-  for (int64_t d : ArrayRef<int64_t>(laneData).drop_back(2))
-    if (d != 1)
-      return std::nullopt;
-  return SmallVector<int64_t>(laneData.end() - 2, laneData.end());
+  return xegpu::getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
 }
 
 /// Get the 2D lane layout from a tensor desc type if it exists. As with
@@ -70,13 +64,8 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() < 2)
-    return std::nullopt;
-  for (int64_t d : ArrayRef<int64_t>(laneLayout).drop_back(2))
-    if (d != 1)
-      return std::nullopt;
-  return SmallVector<int64_t>(laneLayout.end() - 2, laneLayout.end());
+  return xegpu::getInner2DIfUnitLeadingDims(
+      layout.getEffectiveLaneLayoutAsInt());
 }
 
 /// A layout can be optimized if its lane layout is transposed (lane[0] != 1 &&
@@ -305,19 +294,10 @@ public:
     Value source = createNdOp.getSource();
     auto memrefType = dyn_cast<MemRefType>(source.getType());
 
-    // A dynamic memref's shape/strides are recovered from runtime metadata
-    // (getMixedSizes/getMixedStrides can't represent a dynamic dim); a static
-    // one uses the op accessors directly.
-    auto isStaticMemref = [](MemRefType mt) {
-      if (!mt.hasStaticShape())
-        return false;
-      SmallVector<int64_t> st;
-      int64_t off;
-      return succeeded(mt.getStridesAndOffset(st, off)) &&
-             llvm::none_of(st, ShapedType::isDynamic);
-    };
-    bool dynamicMemref = memrefType && !isStaticMemref(memrefType);
-
+    // getMixedSizes/getMixedStrides cannot represent a dynamic memref dim, so
+    // recover those from runtime metadata.
+    bool dynamicMemref =
+        memrefType && !xegpu::hasStaticShapeAndStrides(memrefType);
     SmallVector<OpFoldResult> mixedSizes;
     SmallVector<OpFoldResult> mixedStrides;
     memref::ExtractStridedMetadataOp meta;

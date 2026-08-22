@@ -773,19 +773,21 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
+std::optional<SmallVector<int64_t>>
+xegpu::getInner2DIfUnitLeadingDims(ArrayRef<int64_t> vals) {
+  if (vals.size() < 2)
+    return std::nullopt;
+  if (llvm::any_of(vals.drop_back(2), [](int64_t v) { return v != 1; }))
+    return std::nullopt;
+  return SmallVector<int64_t>(vals.take_back(2));
+}
+
 bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  // Packing (VNNI) applies to the innermost 2 dims. A >2D layout is accepted
-  // only when its leading (batch) dims are unit; packed iff lane_data[rank-2]
-  // (the second-to-last, "col") dim is not 1.
-  if (laneData.size() < 2)
-    return false;
-  for (int64_t d : ArrayRef<int64_t>(laneData).drop_back(2))
-    if (d != 1)
-      return false;
-  return laneData[laneData.size() - 2] != 1;
+  auto laneData =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
+  return laneData && (*laneData)[0] != 1;
 }
 
 bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
@@ -796,17 +798,19 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
     return false;
   if (!layout)
     return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  // The transpose acts on the innermost 2 dims. A >2D layout is accepted only
-  // when its leading (batch) dims are unit; the inner 2 dims must be the
-  // transposed [subgroupSize, 1] form.
-  if (laneLayout.size() < 2)
+  auto laneLayout =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneLayoutAsInt());
+  return laneLayout && (*laneLayout)[0] == uArch->getSubgroupSize() &&
+         (*laneLayout)[1] == 1;
+}
+
+bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
+  if (!type.hasStaticShape())
     return false;
-  for (int64_t d : ArrayRef<int64_t>(laneLayout).drop_back(2))
-    if (d != 1)
-      return false;
-  return laneLayout[laneLayout.size() - 2] == uArch->getSubgroupSize() &&
-         laneLayout[laneLayout.size() - 1] == 1;
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  return succeeded(type.getStridesAndOffset(strides, offset)) &&
+         llvm::none_of(strides, ShapedType::isDynamic);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

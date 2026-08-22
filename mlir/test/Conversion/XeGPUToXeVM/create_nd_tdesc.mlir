@@ -46,8 +46,8 @@ gpu.module @create_nd_tdesc {
 
         // A dynamic memref uses the bare form: its shape/strides are recovered
         // from the memref via extract_strided_metadata (no explicit operands).
-        // CHECK: %[[CST_3:.*]] = arith.constant dense<0> : vector<8xi32>
         // CHECK: %{{.*}}, %{{.*}}, %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[DYN]] : memref<?x?xf16>
+        // CHECK: %[[CST_3:.*]] = arith.constant dense<0> : vector<8xi32>
         // CHECK: %[[SHAPE_W3:.*]] = arith.index_cast %[[SIZES]]#1 : index to i32
         // CHECK: %[[SHAPE_H3:.*]] = arith.index_cast %[[SIZES]]#0 : index to i32
         // CHECK: %[[PITCH3:.*]] = arith.index_cast %[[STRIDES]]#0 : index to i32

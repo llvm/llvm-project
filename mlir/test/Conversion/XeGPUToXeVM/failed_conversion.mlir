@@ -28,3 +28,30 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+
+// A 2D-block op transfers the innermost 2 dims only, so a non-unit leading dim
+// must be rejected rather than lowered to a load of the wrong shape.
+
+gpu.module @test_kernel {
+  gpu.func @load_nd_non_unit_batch(%src: memref<4x8x16xf32>, %z: index) kernel {
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<4x8x16xf32> -> !xegpu.tensor_desc<2x8x16xf32>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %v = xegpu.load_nd %t[%z, %c0, %c0] : !xegpu.tensor_desc<2x8x16xf32> -> vector<16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// The payload has room for only 3 leading strides, so rank > 5 is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_rank_too_large(%src: memref<2x2x2x2x8x16xf32>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x2x2x2x8x16xf32> -> !xegpu.tensor_desc<1x1x1x1x8x16xf32>
+    gpu.return
+  }
+}

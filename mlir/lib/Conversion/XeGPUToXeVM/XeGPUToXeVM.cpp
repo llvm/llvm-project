@@ -60,6 +60,10 @@ enum class NdTdescOffset : uint32_t {
   LeadingStride2 = 7, // load/store lowering. Left at 0 for 2D descriptors.
 };
 
+// Spare payload slots above, and the resulting max lowerable descriptor rank.
+static constexpr int64_t maxNdTdescLeadingDims{3};
+static constexpr int64_t maxNdTdescRank{2 + maxNdTdescLeadingDims};
+
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   switch (xeGpuMemspace) {
   case xegpu::MemorySpace::Global:
@@ -217,12 +221,67 @@ class CreateNdDescToXeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto source = op.getSource();
+
+    // Check all failure conditions before generating any IR, so nothing has to
+    // be rolled back.
+    int64_t rank = op.getType().getRank();
+    int64_t sourceRank;
+    auto memrefTy = dyn_cast<MemRefType>(source.getType());
+    if (memrefTy) {
+      if (!memrefTy.isStrided())
+        return rewriter.notifyMatchFailure(op, "Expected strided Memref.");
+      sourceRank = memrefTy.getRank();
+    } else if (isa<IntegerType>(source.getType())) {
+      sourceRank = op.getMixedSizes().size();
+    } else {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected ranked Memref or integer.");
+    }
+    if (sourceRank != rank)
+      return rewriter.notifyMatchFailure(
+          op, "Expected descriptor rank to match source rank; subview the "
+              "source down to the descriptor rank.");
+    if (rank > maxNdTdescRank)
+      return rewriter.notifyMatchFailure(
+          op, "Batched nd descriptor supports at most " +
+                  std::to_string(maxNdTdescLeadingDims) +
+                  " leading dims (rank <= " + std::to_string(maxNdTdescRank) +
+                  ").");
+
+    Type payloadElemTy = rewriter.getI32Type();
+    Type i64Ty = rewriter.getI64Type();
+
+    // Access the adaptor only after the failure checks, so a bail-out leaves no
+    // materialization cast behind.
+    Value baseAddr = adaptor.getSource();
+    if (isa<IntegerType>(source.getType()) && baseAddr.getType() != i64Ty) {
+      // Pointer type may be i32. Cast to i64 if needed.
+      baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
+    }
+    // 1D tensor descriptor is just the base address.
+    if (rank == 1) {
+      rewriter.replaceOp(op, baseAddr);
+      return success();
+    }
+
+    // getMixedSizes/getMixedStrides cannot represent a dynamic memref dim, so
+    // recover those from runtime metadata.
+    SmallVector<OpFoldResult> mixedSizes;
+    SmallVector<OpFoldResult> mixedStrides;
+    if (memrefTy && !xegpu::hasStaticShapeAndStrides(memrefTy)) {
+      auto meta =
+          memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+      mixedSizes = meta.getConstifiedMixedSizes();
+      mixedStrides = meta.getConstifiedMixedStrides();
+    } else {
+      mixedSizes = op.getMixedSizes();
+      mixedStrides = op.getMixedStrides();
+    }
+
     // Op is lowered to a code sequence that populates payload.
     // Payload is a 8xi32 vector. Offset to individual fields are defined in
     // NdTdescOffset enum.
-    Type payloadElemTy = rewriter.getI32Type();
     VectorType payloadTy = VectorType::get(8, payloadElemTy);
-    Type i64Ty = rewriter.getI64Type();
     // 4xi64 view is used for inserting the base pointer.
     VectorType payloadI64Ty = VectorType::get(4, i64Ty);
     // Initialize payload to zero.
@@ -230,62 +289,6 @@ class CreateNdDescToXeVMPattern
         rewriter, loc,
         DenseElementsAttr::get(payloadTy, IntegerAttr::get(payloadElemTy, 0)));
 
-    Value baseAddr;
-    Value baseShapeW;
-    Value baseShapeH;
-
-    // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
-    auto sourceTy = source.getType();
-    auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
-
-    // For a memref source, shape/strides come from the memref (dynamic dims are
-    // recovered from runtime metadata); an integer source carries them as
-    // explicit op operands.
-    SmallVector<OpFoldResult> mixedSizes;
-    SmallVector<OpFoldResult> mixedStrides;
-    // If source is a memref, we need to extract the aligned pointer as index.
-    // Pointer type is passed as i32 or i64 by type converter.
-    if (sourceMemrefTy) {
-      if (!sourceMemrefTy.hasRank()) {
-        return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
-      }
-      SmallVector<int64_t> staticStrides;
-      int64_t staticOffset;
-      if (failed(
-              sourceMemrefTy.getStridesAndOffset(staticStrides, staticOffset)))
-        return rewriter.notifyMatchFailure(op, "Expected strided Memref.");
-      // A fully static memref yields constants directly; a dynamic one recovers
-      // its dynamic dims from runtime metadata.
-      bool allStatic = sourceMemrefTy.hasStaticShape() &&
-                       llvm::none_of(staticStrides, ShapedType::isDynamic);
-      if (allStatic) {
-        mixedSizes = op.getMixedSizes();
-        mixedStrides = op.getMixedStrides();
-      } else {
-        auto srcMeta =
-            memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
-        mixedSizes = srcMeta.getConstifiedMixedSizes();
-        mixedStrides = srcMeta.getConstifiedMixedStrides();
-      }
-      // Access adaptor after failure check to avoid rolling back generated code
-      // for materialization cast.
-      baseAddr = adaptor.getSource();
-    } else {
-      mixedSizes = op.getMixedSizes();
-      mixedStrides = op.getMixedStrides();
-      baseAddr = adaptor.getSource();
-      if (baseAddr.getType() != i64Ty) {
-        // Pointer type may be i32. Cast to i64 if needed.
-        baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
-      }
-    }
-    // Descriptor shape rank.
-    int64_t rank = mixedSizes.size();
-    // 1D tensor descriptor is just the base address.
-    if (rank == 1) {
-      rewriter.replaceOp(op, baseAddr);
-      return success();
-    }
     // Utility for creating offset values from op fold result.
     auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
                             unsigned idx) -> Value {
@@ -293,10 +296,9 @@ class CreateNdDescToXeVMPattern
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
-    // For ND descriptors, the last 2 dimensions are the 2D tile (H, W).
-    // Any leading dimensions are batch dims with associated strides.
-    baseShapeW = createOffset(mixedSizes, rank - 1);
-    baseShapeH = createOffset(mixedSizes, rank - 2);
+    // The descriptor's innermost 2 dims are the 2D tile (H, W).
+    Value baseShapeW = createOffset(mixedSizes, rank - 1);
+    Value baseShapeH = createOffset(mixedSizes, rank - 2);
     // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
     Value basePitch = createOffset(mixedStrides, rank - 2);
     // Populate payload.
@@ -315,20 +317,13 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
-    // For a >2D descriptor, encode the leading (batch) dim element strides into
-    // the spare payload slots; the load/store/prefetch lowering folds the batch
-    // offsets into the base pointer with these, keeping the 2D-block surface at
-    // the innermost matrix. 2D descriptors leave these slots at 0.
-    if (rank > 2) {
-      if (rank - 2 > 3)
-        return rewriter.notifyMatchFailure(
-            op, "Batched nd descriptor supports at most 3 leading dims.");
-      for (int64_t d = 0; d < rank - 2; ++d) {
-        Value leadingStride = createOffset(mixedStrides, d);
-        payload = vector::InsertOp::create(
-            rewriter, loc, leadingStride, payload,
-            static_cast<int>(NdTdescOffset::LeadingStride0) + d);
-      }
+    // Leading (batch) strides go into the spare payload slots; the load/store/
+    // prefetch lowering folds the batch offsets into the base pointer with it.
+    for (int64_t d = 0; d < rank - 2; ++d) {
+      Value leadingStride = createOffset(mixedStrides, d);
+      payload = vector::InsertOp::create(
+          rewriter, loc, leadingStride, payload,
+          static_cast<int>(NdTdescOffset::LeadingStride0) + d);
     }
     rewriter.replaceOp(op, payload);
     return success();
@@ -355,6 +350,16 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     if (opOffsetsSize != tileRank)
       return rewriter.notifyMatchFailure(
           op, "Expected offset rank to match descriptor rank.");
+    // A 2D-block op transfers the innermost 2 dims only, so a leading dim must
+    // be a unit tile whose offset can be folded into the base pointer.
+    if (tileRank > 2 && llvm::any_of(tdescTy.getShape().drop_back(2),
+                                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Expected leading (batch) descriptor dims to be unit.");
+    if (tileRank > maxNdTdescRank)
+      return rewriter.notifyMatchFailure(
+          op, "Expected descriptor rank <= " + std::to_string(maxNdTdescRank) +
+                  ".");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     bool isSubByte = elemBitSize < 8;
