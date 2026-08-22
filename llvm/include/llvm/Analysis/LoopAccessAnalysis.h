@@ -556,8 +556,9 @@ public:
   /// We need \p PSE in order to compute the SCEV expression of the pointer
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
-  /// and add new predicates to \p PSE.
-  LLVM_ABI void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+  /// and add new predicates to \p PSE. Returns false without inserting anything
+  /// if the bounds of \p PtrExpr cannot be computed.
+  LLVM_ABI bool insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                        Type *AccessTy, bool WritePtr, unsigned DepSetId,
                        unsigned ASId, PredicatedScalarEvolution &PSE,
                        bool NeedsFreeze);

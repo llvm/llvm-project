@@ -521,7 +521,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))))
+; CHECK-NEXT:          (Low: ((2 * (sext i32 %j to i64))<nsw> + %B) High: (2 + (2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
