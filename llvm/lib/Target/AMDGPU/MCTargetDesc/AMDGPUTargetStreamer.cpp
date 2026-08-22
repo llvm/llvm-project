@@ -1202,7 +1202,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPUInfo(
   auto getOrAddString = [&](StringRef Str) -> uint32_t {
     if (Str.empty())
       return UINT32_MAX;
-    return StrTab.add(Str);
+    return static_cast<uint32_t>(StrTab.add(Str));
   };
 
   auto EmitU32Entry = [&](AMDGPU::InfoKind Kind, uint32_t Val) {
