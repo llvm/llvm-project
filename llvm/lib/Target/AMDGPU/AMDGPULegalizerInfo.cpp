@@ -64,7 +64,7 @@ static LLT getPow2VectorType(LLT Ty) {
 
 // Round the number of bits to the next power of two bits
 static LLT getPow2ScalarType(LLT Ty) {
-  unsigned Bits = Ty.getSizeInBits();
+  unsigned Bits = static_cast<unsigned>(Ty.getSizeInBits());
   unsigned Pow2Bits = 1 <<  Log2_32_Ceil(Bits);
   return LLT::scalar(Pow2Bits);
 }
@@ -79,7 +79,7 @@ static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
       return false;
 
     const LLT EltTy = Ty.getElementType();
-    const unsigned EltSize = EltTy.getSizeInBits();
+    const unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
     return Ty.getNumElements() % 2 != 0 &&
            EltSize > 1 && EltSize < 32 &&
            Ty.getSizeInBits() % 32 != 0;
@@ -114,7 +114,7 @@ static LegalizeMutation fewerEltsToSize64Vector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     const LLT EltTy = Ty.getElementType();
-    unsigned Size = Ty.getSizeInBits();
+    unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
     unsigned Pieces = (Size + 63) / 64;
     unsigned NewNumElts = (Ty.getNumElements() + 1) / Pieces;
     return std::pair(TypeIdx, LLT::scalarOrVector(
@@ -129,8 +129,8 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
 
     const LLT EltTy = Ty.getElementType();
-    const int Size = Ty.getSizeInBits();
-    const int EltSize = EltTy.getSizeInBits();
+    const int Size = static_cast<int>(Ty.getSizeInBits());
+    const int EltSize = static_cast<int>(EltTy.getSizeInBits());
     const int NextMul32 = (Size + 31) / 32;
 
     assert(EltSize < 32);
@@ -143,7 +143,8 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
 // Retrieves the scalar type that's the same size as the mem desc
 static LegalizeMutation getScalarTypeFromMemDesc(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    unsigned MemSize =
+        static_cast<unsigned>(Query.MMODescrs[0].MemoryTy.getSizeInBits());
     return std::make_pair(TypeIdx, LLT::integer(MemSize));
   };
 }
@@ -153,7 +154,8 @@ static LegalizeMutation moreElementsToNextExistingRegClass(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     const unsigned NumElts = Ty.getNumElements();
-    const unsigned EltSize = Ty.getElementType().getSizeInBits();
+    const unsigned EltSize =
+        static_cast<unsigned>(Ty.getElementType().getSizeInBits());
     const unsigned MaxNumElts = MaxRegisterSize / EltSize;
 
     assert(EltSize == 32 || EltSize == 64);
@@ -185,7 +187,7 @@ static LLT getBufferRsrcRegisterType(const LLT Ty) {
 }
 
 static LLT getBitcastRegisterType(const LLT Ty) {
-  const unsigned Size = Ty.getSizeInBits();
+  const unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
 
   if (Size <= 32) {
     // <2 x i8> -> i16
@@ -206,7 +208,7 @@ static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
 static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
-    unsigned Size = Ty.getSizeInBits();
+    unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
     assert(Size % 32 == 0);
     return std::pair(TypeIdx,
                      LLT::scalarOrVector(ElementCount::getFixed(Size / 32),
@@ -241,12 +243,12 @@ static bool isRegisterSize(const GCNSubtarget &ST, unsigned Size) {
 }
 
 static bool isRegisterVectorElementType(LLT EltTy) {
-  const int EltSize = EltTy.getSizeInBits();
+  const int EltSize = static_cast<int>(EltTy.getSizeInBits());
   return EltSize == 16 || EltSize % 32 == 0;
 }
 
 static bool isRegisterVectorType(LLT Ty) {
-  const int EltSize = Ty.getElementType().getSizeInBits();
+  const int EltSize = static_cast<int>(Ty.getElementType().getSizeInBits());
   return EltSize == 32 || EltSize == 64 ||
          (EltSize == 16 && Ty.getNumElements() % 2 == 0) ||
          EltSize == 128 || EltSize == 256;
@@ -254,7 +256,7 @@ static bool isRegisterVectorType(LLT Ty) {
 
 // TODO: replace all uses of isRegisterType with isRegisterClassType
 static bool isRegisterType(const GCNSubtarget &ST, LLT Ty) {
-  if (!isRegisterSize(ST, Ty.getSizeInBits()))
+  if (!isRegisterSize(ST, static_cast<unsigned>(Ty.getSizeInBits())))
     return false;
 
   if (Ty.isVector())
@@ -280,7 +282,8 @@ static LegalityPredicate isIllegalRegisterType(const GCNSubtarget &ST,
   return [=, &ST](const LegalityQuery &Query) {
     LLT Ty = Query.Types[TypeIdx];
     return isRegisterType(ST, Ty) &&
-           !SIRegisterInfo::getSGPRClassForBitWidth(Ty.getSizeInBits());
+           !SIRegisterInfo::getSGPRClassForBitWidth(
+               static_cast<unsigned>(Ty.getSizeInBits()));
   };
 }
 
@@ -404,7 +407,8 @@ static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
 // than 32-bits and mem location is a power of 2
 static LegalityPredicate isTruncStoreToSizePowerOf2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    unsigned MemSize =
+        static_cast<unsigned>(Query.MMODescrs[0].MemoryTy.getSizeInBits());
     return isWideScalarExtLoadTruncStore(TypeIdx)(Query) &&
            isPowerOf2_64(MemSize);
   };
@@ -447,7 +451,7 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   // Handle G_LOAD, G_ZEXTLOAD, G_SEXTLOAD
   const bool IsLoad = Query.Opcode != AMDGPU::G_STORE;
 
-  unsigned RegSize = Ty.getSizeInBits();
+  unsigned RegSize = static_cast<unsigned>(Ty.getSizeInBits());
   uint64_t MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
   uint64_t AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
@@ -500,8 +504,8 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   if (AlignBits < MemSize) {
     const SITargetLowering *TLI = ST.getTargetLowering();
-    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
-                                                 Align(AlignBits / 8)))
+    if (!TLI->allowsMisalignedMemoryAccessesImpl(static_cast<unsigned>(MemSize),
+                                                 AS, Align(AlignBits / 8)))
       return false;
   }
 
@@ -531,7 +535,7 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
   if (EnableNewLegality)
     return false;
 
-  const unsigned Size = Ty.getSizeInBits();
+  const unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
   if (Ty.isPointerVector())
     return true;
   if (Size <= 64)
@@ -556,8 +560,8 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 /// to a different type.
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
                                        const LLT MemTy) {
-  const unsigned MemSizeInBits = MemTy.getSizeInBits();
-  const unsigned Size = Ty.getSizeInBits();
+  const unsigned MemSizeInBits = static_cast<unsigned>(MemTy.getSizeInBits());
+  const unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
   if (Size != MemSizeInBits)
     return Size <= 32 && Ty.isVector();
 
@@ -576,7 +580,7 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
 static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
                             uint64_t AlignInBits, unsigned AddrSpace,
                             unsigned Opcode) {
-  unsigned SizeInBits = MemoryTy.getSizeInBits();
+  unsigned SizeInBits = static_cast<unsigned>(MemoryTy.getSizeInBits());
   // We don't want to widen cases that are naturally legal.
   if (isPowerOf2_32(SizeInBits))
     return false;
@@ -594,7 +598,7 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
   // to it.
   //
   // TODO: Could check dereferenceable for less aligned cases.
-  unsigned RoundedSize = NextPowerOf2(SizeInBits);
+  unsigned RoundedSize = static_cast<unsigned>(NextPowerOf2(SizeInBits));
   if (AlignInBits < RoundedSize)
     return false;
 
@@ -634,7 +638,8 @@ static LLT castBufferRsrcFromV4I32(MachineInstr &MI, MachineIRBuilder &B,
   const LLT VectorTy = getBufferRsrcRegisterType(PointerTy);
   if (!PointerTy.isVector()) {
     // Happy path: (4 x s32) -> (s32, s32, s32, s32) -> (p8)
-    const unsigned NumParts = PointerTy.getSizeInBits() / 32;
+    const unsigned NumParts =
+        static_cast<unsigned>(PointerTy.getSizeInBits() / 32);
     const LLT I32 = LLT::integer(32);
 
     Register VectorReg = MRI.createGenericVirtualRegister(VectorTy);
@@ -670,7 +675,8 @@ static Register castBufferRsrcToV4I32(Register Pointer, MachineIRBuilder &B) {
   if (!PointerTy.isVector()) {
     // Special case: p8 -> (s32, s32, s32, s32) -> (4xs32)
     SmallVector<Register, 4> PointerParts;
-    const unsigned NumParts = PointerTy.getSizeInBits() / 32;
+    const unsigned NumParts =
+        static_cast<unsigned>(PointerTy.getSizeInBits() / 32);
     auto Unmerged = B.buildUnmerge(LLT::integer(32), Pointer);
     for (unsigned I = 0; I < NumParts; ++I)
       PointerParts.push_back(Unmerged.getReg(I));
@@ -1531,11 +1537,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalIf(sameSize(0, 1))
       .widenScalarIf(smallerThan(1, 0),
                      [](const LegalityQuery &Query) {
-                       return std::pair(
-                           1, LLT::scalar(Query.Types[0].getSizeInBits()));
+                       return std::pair(1,
+                                        LLT::scalar(static_cast<unsigned>(
+                                            Query.Types[0].getSizeInBits())));
                      })
       .narrowScalarIf(largerThan(1, 0), [](const LegalityQuery &Query) {
-        return std::pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
+        return std::pair(1, LLT::scalar(static_cast<unsigned>(
+                                Query.Types[0].getSizeInBits())));
       });
 
   getActionDefinitionsBuilder(G_PTRTOINT)
@@ -1547,11 +1555,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalIf(sameSize(0, 1))
       .widenScalarIf(smallerThan(0, 1),
                      [](const LegalityQuery &Query) {
-                       return std::pair(
-                           0, LLT::scalar(Query.Types[1].getSizeInBits()));
+                       return std::pair(0,
+                                        LLT::scalar(static_cast<unsigned>(
+                                            Query.Types[1].getSizeInBits())));
                      })
       .narrowScalarIf(largerThan(0, 1), [](const LegalityQuery &Query) {
-        return std::pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
+        return std::pair(0, LLT::scalar(static_cast<unsigned>(
+                                Query.Types[1].getSizeInBits())));
       });
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
@@ -1563,7 +1573,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     const LLT DstTy = Query.Types[0];
 
     // Split vector extloads.
-    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    unsigned MemSize =
+        static_cast<unsigned>(Query.MMODescrs[0].MemoryTy.getSizeInBits());
 
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
@@ -1695,8 +1706,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               const LLT DstTy = Query.Types[0];
               const LLT PtrTy = Query.Types[1];
 
-              const unsigned DstSize = DstTy.getSizeInBits();
-              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+              const unsigned DstSize =
+                  static_cast<unsigned>(DstTy.getSizeInBits());
+              unsigned MemSize = static_cast<unsigned>(
+                  Query.MMODescrs[0].MemoryTy.getSizeInBits());
 
               // Split extloads.
               if (DstSize > MemSize)
@@ -1709,7 +1722,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 return std::pair(0, LLT::scalar(MaxSize));
 
               uint64_t Align = Query.MMODescrs[0].AlignInBits;
-              return std::pair(0, LLT::scalar(Align));
+              return std::pair(0, LLT::scalar(static_cast<unsigned>(Align)));
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
@@ -1730,10 +1743,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // FIXME: 3 element stores scalarized on SI
 
               // Split if it's too large for the address space.
-              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+              unsigned MemSize = static_cast<unsigned>(
+                  Query.MMODescrs[0].MemoryTy.getSizeInBits());
               if (MemSize > MaxSize) {
                 unsigned NumElts = DstTy.getNumElements();
-                unsigned EltSize = EltTy.getSizeInBits();
+                unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
 
                 if (MaxSize % EltSize == 0) {
                   return std::pair(
@@ -1757,8 +1771,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (DstTy.getSizeInBits() > MemSize)
                 return std::pair(0, EltTy);
 
-              unsigned EltSize = EltTy.getSizeInBits();
-              unsigned DstSize = DstTy.getSizeInBits();
+              unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
+              unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
               if (!isPowerOf2_32(DstSize)) {
                 // We're probably decomposing an odd sized store. Try to split
                 // to the widest type. TODO: Account for alignment. As-is it
@@ -1973,9 +1987,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const LLT EltTy = Query.Types[EltTypeIdx];
           const LLT VecTy = Query.Types[VecTypeIdx];
           const LLT IdxTy = Query.Types[IdxTypeIdx];
-          const unsigned EltSize = EltTy.getSizeInBits();
-          const bool isLegalVecType =
-              !!SIRegisterInfo::getSGPRClassForBitWidth(VecTy.getSizeInBits());
+          const unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
+          const bool isLegalVecType = !!SIRegisterInfo::getSGPRClassForBitWidth(
+              static_cast<unsigned>(VecTy.getSizeInBits()));
           // Address space 8 pointers are 128-bit wide values, but the logic
           // below will try to bitcast them to 2N x s64, which will fail.
           // Therefore, as an intermediate step, wrap extracts/insertions from a
@@ -2002,8 +2016,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                      // indexing if this is scalar. If not, fall back to 32.
                      const LLT EltTy = Query.Types[EltTypeIdx];
                      const LLT VecTy = Query.Types[VecTypeIdx];
-                     const unsigned DstEltSize = EltTy.getSizeInBits();
-                     const unsigned VecSize = VecTy.getSizeInBits();
+                     const unsigned DstEltSize =
+                         static_cast<unsigned>(EltTy.getSizeInBits());
+                     const unsigned VecSize =
+                         static_cast<unsigned>(VecTy.getSizeInBits());
 
                      const unsigned TargetEltSize =
                          DstEltSize % 64 == 0 ? 64 : 32;
@@ -2113,7 +2129,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         const LLT &EltTy = Ty.getElementType();
         if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 512)
           return true;
-        if (!llvm::has_single_bit<uint32_t>(EltTy.getSizeInBits()))
+        if (!llvm::has_single_bit<uint32_t>(
+                static_cast<unsigned>(EltTy.getSizeInBits())))
           return true;
       }
       return false;
@@ -2173,9 +2190,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         // Pick the next power of 2, or a multiple of 64 over 128.
         // Whichever is smaller.
         const LLT &Ty = Query.Types[BigTyIdx];
-        unsigned NewSizeInBits = 1 << Log2_32_Ceil(Ty.getSizeInBits() + 1);
+        unsigned NewSizeInBits =
+            1 << Log2_32_Ceil(static_cast<unsigned>(Ty.getSizeInBits() + 1));
         if (NewSizeInBits >= 256) {
-          unsigned RoundedTo = alignTo<64>(Ty.getSizeInBits() + 1);
+          unsigned RoundedTo =
+              static_cast<unsigned>(alignTo<64>(Ty.getSizeInBits() + 1));
           if (RoundedTo < NewSizeInBits)
             NewSizeInBits = RoundedTo;
         }
@@ -2592,7 +2611,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return true;
     }
 
-    unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
+    unsigned NullVal =
+        static_cast<unsigned>(AMDGPU::getNullPointerValue(DestAS));
 
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
     auto FlatNull = B.buildConstant(SrcTy, 0);
@@ -3002,8 +3022,8 @@ bool AMDGPULegalizerInfo::legalizeExtract(LegalizerHelper &Helper,
     return Helper.lowerExtract(MI) == LegalizerHelper::Legalized;
 
   const LLT DstTy = MRI.getType(DstReg);
-  unsigned StartIdx = Offset / 32;
-  unsigned DstCount = DstTy.getSizeInBits() / 32;
+  unsigned StartIdx = static_cast<unsigned>(Offset / 32);
+  unsigned DstCount = static_cast<unsigned>(DstTy.getSizeInBits() / 32);
   auto Unmerge = B.buildUnmerge(LLT::integer(32), SrcReg);
 
   if (DstCount == 1) {
@@ -3031,9 +3051,9 @@ bool AMDGPULegalizerInfo::legalizeInsert(LegalizerHelper &Helper,
   Register InsertSrc = MI.getOperand(2).getReg();
   uint64_t Offset = MI.getOperand(3).getImm();
 
-  unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  unsigned DstSize = static_cast<unsigned>(MRI.getType(DstReg).getSizeInBits());
   const LLT InsertTy = MRI.getType(InsertSrc);
-  unsigned InsertSize = InsertTy.getSizeInBits();
+  unsigned InsertSize = static_cast<unsigned>(InsertTy.getSizeInBits());
 
   // Fall back to generic lowering for non-32-bit-aligned cases which
   // require shift+mask sequences that generic code handles correctly.
@@ -3043,7 +3063,7 @@ bool AMDGPULegalizerInfo::legalizeInsert(LegalizerHelper &Helper,
   const LLT I32 = LLT::integer(32);
   unsigned DstCount = DstSize / 32;
   unsigned InsertCount = InsertSize / 32;
-  unsigned StartIdx = Offset / 32;
+  unsigned StartIdx = static_cast<unsigned>(Offset / 32);
 
   auto SrcUnmerge = B.buildUnmerge(I32, SrcReg);
 
@@ -3092,7 +3112,7 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   // vector of integers using ptrtoint (and inttoptr on the output) in order to
   // drive the legalization forward.
   if (EltTy.isPointer() && EltTy.getSizeInBits() > 64) {
-    LLT IntTy = LLT::integer(EltTy.getSizeInBits());
+    LLT IntTy = LLT::integer(static_cast<unsigned>(EltTy.getSizeInBits()));
     LLT IntVecTy = VecTy.changeElementType(IntTy);
 
     auto IntVec = B.buildPtrToInt(IntVecTy, Vec);
@@ -3114,7 +3134,7 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
 
   if (IdxVal < VecTy.getNumElements()) {
     auto Unmerge = B.buildUnmerge(EltTy, Vec);
-    B.buildCopy(Dst, Unmerge.getReg(IdxVal));
+    B.buildCopy(Dst, Unmerge.getReg(static_cast<unsigned>(IdxVal)));
   } else {
     B.buildUndef(Dst);
   }
@@ -3145,7 +3165,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   // new value, and then inttoptr the result vector back. This will then allow
   // the rest of legalization to take over.
   if (EltTy.isPointer() && EltTy.getSizeInBits() > 64) {
-    LLT IntTy = LLT::integer(EltTy.getSizeInBits());
+    LLT IntTy = LLT::integer(static_cast<unsigned>(EltTy.getSizeInBits()));
     LLT IntVecTy = VecTy.changeElementType(IntTy);
 
     auto IntVecSource = B.buildPtrToInt(IntVecTy, Vec);
@@ -3446,9 +3466,10 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
 static LLT widenToNextPowerOf2(LLT Ty) {
   if (Ty.isVector())
-    return Ty.changeElementCount(
-        ElementCount::getFixed(PowerOf2Ceil(Ty.getNumElements())));
-  return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
+    return Ty.changeElementCount(ElementCount::getFixed(
+        static_cast<unsigned>(PowerOf2Ceil(Ty.getNumElements()))));
+  return Ty.changeElementSize(
+      static_cast<unsigned>(PowerOf2Ceil(Ty.getSizeInBits())));
 }
 
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
@@ -3484,15 +3505,15 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   }
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  const unsigned ValSize = ValTy.getSizeInBits();
+  const unsigned ValSize = static_cast<unsigned>(ValTy.getSizeInBits());
   const LLT MemTy = MMO->getMemoryType();
   const Align MemAlign = MMO->getAlign();
-  const unsigned MemSize = MemTy.getSizeInBits();
+  const unsigned MemSize = static_cast<unsigned>(MemTy.getSizeInBits());
   const uint64_t AlignInBits = 8 * MemAlign.value();
 
   // Widen non-power-of-2 loads to the alignment if needed
   if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
-    const unsigned WideMemSize = PowerOf2Ceil(MemSize);
+    const unsigned WideMemSize = static_cast<unsigned>(PowerOf2Ceil(MemSize));
 
     // This was already the correct extending load result type, so just adjust
     // the memory type.
@@ -4702,7 +4723,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   LLT Ty = MRI.getType(DstReg);
   assert(Ty.isScalar());
 
-  unsigned Size = Ty.getSizeInBits();
+  unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
   if (ST.hasVMulU64Inst() && Size == 64)
     return true;
 
@@ -4787,7 +4808,7 @@ bool AMDGPULegalizerInfo::legalizeCTLS(MachineInstr &MI,
   LLT SrcTy = MRI.getType(Src);
   const LLT I32 = LLT::integer(32);
   assert(SrcTy == I32 && "legalizeCTLS only supports i32");
-  unsigned BitWidth = SrcTy.getSizeInBits();
+  unsigned BitWidth = static_cast<unsigned>(SrcTy.getSizeInBits());
 
   auto Sffbh = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {I32}).addUse(Src);
   auto Clamped = B.buildUMin(I32, Sffbh, B.buildConstant(I32, BitWidth));
@@ -4929,7 +4950,8 @@ bool AMDGPULegalizerInfo::legalizeWorkGroupId(
   }
   case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
     using namespace AMDGPU::Hwreg;
-    unsigned ClusterIdField = HwregEncoding::encode(ID_IB_STS2, 6, 4);
+    unsigned ClusterIdField =
+        static_cast<unsigned>(HwregEncoding::encode(ID_IB_STS2, 6, 4));
     Register ClusterId = MRI.createGenericVirtualRegister(I32);
     MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
     B.buildInstr(AMDGPU::S_GETREG_B32_const)
@@ -5511,7 +5533,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
   LLT ResTy = MRI.getType(Res);
 
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
@@ -5571,7 +5593,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   Register Res = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
   Register Y = MI.getOperand(2).getReg();
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
   LLT ResTy = MRI.getType(Res);
 
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
@@ -5626,7 +5648,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
 
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
 
   LLT I32 = LLT::integer(32);
 
@@ -5676,8 +5698,8 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   return true;
 }
 
-static constexpr unsigned SPDenormModeBitField =
-    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 4, 2);
+static constexpr unsigned SPDenormModeBitField = static_cast<unsigned>(
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 4, 2));
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
@@ -5715,7 +5737,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   SIModeRegisterDefaults Mode = MFI->getMode();
 
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
 
   LLT S1 = LLT::scalar(1);
 
@@ -5799,7 +5821,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
 
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
 
   LLT S1 = LLT::scalar(1);
 
@@ -5876,7 +5898,7 @@ bool AMDGPULegalizerInfo::legalizeFFREXP(MachineInstr &MI,
   Register Res0 = MI.getOperand(0).getReg();
   Register Res1 = MI.getOperand(1).getReg();
   Register Val = MI.getOperand(2).getReg();
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
 
   LLT Ty = MRI.getType(Res0);
   LLT InstrExpTy = Ty == F16 ? LLT::integer(16) : LLT::integer(32);
@@ -5911,7 +5933,7 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
-  uint16_t Flags = MI.getFlags();
+  uint16_t Flags = static_cast<uint16_t>(MI.getFlags());
 
   LLT S1 = LLT::scalar(1);
 
@@ -6264,12 +6286,13 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   }
 
   LLT Ty = MRI.getType(DstReg);
-  unsigned Size = Ty.getSizeInBits();
+  unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
 
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
       ST.hasDPALU_DPP() &&
-      AMDGPU::isLegalDPALU_DPPControl(ST, MI.getOperand(4).getImm()))
+      AMDGPU::isLegalDPALU_DPPControl(
+          ST, static_cast<unsigned>(MI.getOperand(4).getImm())))
     SplitSize = 64;
 
   if (Size == SplitSize) {
@@ -6315,7 +6338,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   bool NeedsBitcast = false;
   if (IntTy.isVector()) {
     LLT EltTy = IntTy.getElementType();
-    unsigned EltSize = EltTy.getSizeInBits();
+    unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
     if (EltSize == SplitSize) {
       PartialResTy = EltTy;
     } else if (EltSize == 16 || EltSize == 32) {
@@ -6351,8 +6374,9 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
 
   if (NeedsBitcast || IsFloat)
     B.buildBitcast(
-        DstReg,
-        B.buildMergeLikeInstr(LLT::integer(IntTy.getSizeInBits()), PartialRes));
+        DstReg, B.buildMergeLikeInstr(
+                    LLT::integer(static_cast<unsigned>(IntTy.getSizeInBits())),
+                    PartialRes));
   else
     B.buildMergeLikeInstr(DstReg, PartialRes);
 
@@ -6367,7 +6391,7 @@ bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
     ST.getTargetLowering()->getImplicitParameterOffset(
       B.getMF(), AMDGPUTargetLowering::FIRST_IMPLICIT);
   LLT DstTy = MRI.getType(DstReg);
-  LLT IdxTy = LLT::integer(DstTy.getSizeInBits());
+  LLT IdxTy = LLT::integer(static_cast<unsigned>(DstTy.getSizeInBits()));
 
   Register KernargPtrReg = MRI.createGenericVirtualRegister(DstTy);
   if (!loadInputValue(KernargPtrReg, B,
@@ -6406,7 +6430,8 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
     Register Zero = B.buildConstant(I32, 0).getReg(0);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
-    LLT PtrIntTy = LLT::integer(MRI.getType(Pointer).getSizeInBits());
+    LLT PtrIntTy = LLT::integer(
+        static_cast<unsigned>(MRI.getType(Pointer).getSizeInBits()));
     auto PointerInt = B.buildPtrToInt(PtrIntTy, Pointer);
     auto ExtPointer = B.buildAnyExtOrTrunc(I64, PointerInt);
     auto NumRecordsLHS = B.buildShl(I64, NumRecords, B.buildConstant(I32, 57));
@@ -6687,7 +6712,7 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   const LLT I32 = LLT::integer(32);
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  const int MemSize = MMO->getSize().getValue();
+  const int MemSize = static_cast<int>(MMO->getSize().getValue());
   LLT MemTy = MMO->getMemoryType();
 
   if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
@@ -6724,11 +6749,12 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   unsigned Format = 0;
   if (IsTyped) {
-    Format = MI.getOperand(5 + OpOffset).getImm();
+    Format = static_cast<unsigned>(MI.getOperand(5 + OpOffset).getImm());
     ++OpOffset;
   }
 
-  unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
+  unsigned AuxiliaryData =
+      static_cast<unsigned>(MI.getOperand(5 + OpOffset).getImm());
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
@@ -6838,11 +6864,12 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   unsigned Format = 0;
   if (IsTyped) {
-    Format = MI.getOperand(5 + OpOffset).getImm();
+    Format = static_cast<unsigned>(MI.getOperand(5 + OpOffset).getImm());
     ++OpOffset;
   }
 
-  unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
+  unsigned AuxiliaryData =
+      static_cast<unsigned>(MI.getOperand(5 + OpOffset).getImm());
   unsigned ImmOffset;
 
   LLT Ty = MRI.getType(Dst);
@@ -6916,16 +6943,17 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   }
 
   if (IsTFE) {
-    unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
+    unsigned NumValueDWords =
+        static_cast<unsigned>(divideCeil(Ty.getSizeInBits(), 32));
     unsigned NumLoadDWords = NumValueDWords + 1;
     LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
     Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
     buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
                     Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
     bool IsFloat = Ty.getScalarType().isFloat();
-    LLT DstIntTy =
-        IsFloat ? Ty.changeElementType(LLT::integer(EltTy.getSizeInBits()))
-                : Ty;
+    LLT DstIntTy = IsFloat ? Ty.changeElementType(LLT::integer(
+                                 static_cast<unsigned>(EltTy.getSizeInBits())))
+                           : Ty;
     Register DstInt =
         IsFloat ? B.getMRI()->createGenericVirtualRegister(DstIntTy) : Dst;
     if (MemTy.getSizeInBits() < 32) {
@@ -7108,7 +7136,8 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(4 + OpOffset).getReg();
   Register SOffset = MI.getOperand(5 + OpOffset).getReg();
-  unsigned AuxiliaryData = MI.getOperand(6 + OpOffset).getImm();
+  unsigned AuxiliaryData =
+      static_cast<unsigned>(MI.getOperand(6 + OpOffset).getImm());
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
 
@@ -7214,7 +7243,7 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
     }
   }
 
-  int NumAddrRegs = AddrRegs.size();
+  int NumAddrRegs = static_cast<int>(AddrRegs.size());
   if (NumAddrRegs != 1) {
     LLT EltTy = B.getMRI()->getType(AddrRegs[0]);
     auto VAddr =
@@ -7291,7 +7320,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
-    DMask = MI.getOperand(ArgOffset + Intr->DMaskIndex).getImm();
+    DMask = static_cast<unsigned>(
+        MI.getOperand(ArgOffset + Intr->DMaskIndex).getImm());
     if (BaseOpcode->Gather4) {
       DMaskLanes = 4;
     } else if (DMask != 0) {
@@ -7379,20 +7409,21 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
     if (UsePartialNSA) {
       // Pack registers that would go over NSAMaxSize into last VAddr register
-      LLT PackedAddrTy =
-          LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), F16);
+      LLT PackedAddrTy = LLT::fixed_vector(
+          static_cast<unsigned>(2 * (PackedRegs.size() - NSAMaxSize + 1)), F16);
       auto Concat = B.buildConcatVectors(
           PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
       PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
       PackedRegs.resize(NSAMaxSize);
     } else if (!UseNSA && PackedRegs.size() > 1) {
-      LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), F16);
+      LLT PackedAddrTy =
+          LLT::fixed_vector(static_cast<unsigned>(2 * PackedRegs.size()), F16);
       auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
       PackedRegs[0] = Concat.getReg(0);
       PackedRegs.resize(1);
     }
 
-    const unsigned NumPacked = PackedRegs.size();
+    const unsigned NumPacked = static_cast<unsigned>(PackedRegs.size());
     for (unsigned I = Intr->VAddrStart; I < Intr->VAddrEnd; I++) {
       MachineOperand &SrcOp = MI.getOperand(ArgOffset + I);
       if (!SrcOp.isReg()) {
@@ -7500,8 +7531,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     TFETy = LLT::fixed_vector(AdjustedNumElts + 1, I32);
     RegTy = I32;
   } else {
-    unsigned EltSize = EltTy.getSizeInBits();
-    unsigned RoundedElts = (AdjustedTy.getSizeInBits() + 31) / 32;
+    unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
+    unsigned RoundedElts =
+        static_cast<unsigned>((AdjustedTy.getSizeInBits() + 31) / 32);
     unsigned RoundedSize = 32 * RoundedElts;
     RoundedTy = LLT::scalarOrVector(
         ElementCount::getFixed(RoundedSize / EltSize), EltTy);
@@ -7522,7 +7554,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // TODO: For TFE with d16, if we used a TFE type that was a multiple of <2 x
   // f16> instead of i32, we would only need 1 bitcast instead of multiple.
   const LLT LoadResultTy = IsTFE ? TFETy : RoundedTy;
-  const int ResultNumRegs = LoadResultTy.getSizeInBits() / 32;
+  const int ResultNumRegs = static_cast<int>(LoadResultTy.getSizeInBits() / 32);
 
   Register NewResultReg = MRI->createGenericVirtualRegister(LoadResultTy);
 
@@ -7613,13 +7645,13 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // Pad out any elements eliminated due to the dmask.
   LLT ResTy = MRI->getType(ResultRegs[0]);
   if (!ResTy.isVector()) {
-    padWithUndef(ResTy, NumElts - ResultRegs.size());
+    padWithUndef(ResTy, static_cast<int>(NumElts - ResultRegs.size()));
     B.buildBuildVector(DstReg, ResultRegs);
     return true;
   }
 
   assert(!ST.hasUnpackedD16VMem() && (ResTy == V2I16 || ResTy == V2F16));
-  const int RegsToCover = (Ty.getSizeInBits() + 31) / 32;
+  const int RegsToCover = static_cast<int>((Ty.getSizeInBits() + 31) / 32);
 
   // Deal with the one annoying legal case.
   const LLT V3I16 = LLT::fixed_vector(3, I16);
@@ -7654,7 +7686,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return true;
   }
 
-  padWithUndef(ResTy, RegsToCover - ResultRegs.size());
+  padWithUndef(ResTy, static_cast<int>(RegsToCover - ResultRegs.size()));
   B.buildConcatVectors(DstReg, ResultRegs);
   return true;
 }
@@ -7667,7 +7699,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   Register OrigDst = MI.getOperand(0).getReg();
   Register Dst;
   LLT Ty = B.getMRI()->getType(OrigDst);
-  unsigned Size = Ty.getSizeInBits();
+  unsigned Size = static_cast<unsigned>(Ty.getSizeInBits());
   MachineFunction &MF = B.getMF();
   bool HasMMO = !MI.memoperands_empty();
   unsigned Opc = 0;
@@ -8016,7 +8048,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
 
   if (!UseNSA) {
     // Build a single vector containing all the operands so far prepared.
-    LLT OpTy = LLT::fixed_vector(Ops.size(), I32);
+    LLT OpTy = LLT::fixed_vector(static_cast<unsigned>(Ops.size()), I32);
     Register MergedOps = B.buildMergeLikeInstr(OpTy, Ops).getReg(0);
     Ops.clear();
     Ops.push_back(MergedOps);
@@ -8127,11 +8159,11 @@ bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
   return true;
 }
 
-static constexpr unsigned FPEnvModeBitField =
-    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
+static constexpr unsigned FPEnvModeBitField = static_cast<unsigned>(
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23));
 
-static constexpr unsigned FPEnvTrapBitField =
-    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_TRAPSTS, 0, 5);
+static constexpr unsigned FPEnvTrapBitField = static_cast<unsigned>(
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_TRAPSTS, 0, 5));
 
 bool AMDGPULegalizerInfo::legalizeGetFPEnv(MachineInstr &MI,
                                            MachineRegisterInfo &MRI,
