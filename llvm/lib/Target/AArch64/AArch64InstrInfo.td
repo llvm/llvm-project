@@ -953,6 +953,9 @@ def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 // element must be identical.
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
+// AArch64ISD::CMTST node: result is all-ones per lane where (X & Y) != 0.
+def AArch64cmtst: SDNode<"AArch64ISD::CMTST", SDT_AArch64Zip>;
+
 def AArch64cmeq : PatFrag<(ops node:$lhs, node:$rhs),
                           (setcc node:$lhs, node:$rhs, SETEQ)>;
 def AArch64cmge : PatFrag<(ops node:$lhs, node:$rhs),
@@ -980,9 +983,6 @@ def AArch64cmlez : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGE)>;
 def AArch64cmltz : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGT)>;
-
-def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
-                           (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
 def AArch64fcmeqz : PatFrag<(ops node:$lhs),
                             (AArch64fcmeq node:$lhs, immAllZerosV)>;
@@ -6085,6 +6085,15 @@ multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag im
 
   def : Pat<(DstVT (partial_reduce_umla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
             (!cast<Instruction>("UADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  // A zero accumulator has nothing to add to so it lowers to [SU]ADDLP.
+  def : Pat<(DstVT (partial_reduce_smla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("SADDLP" # SrcVT # "_" # DstVT) $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("UADDLP" # SrcVT # "_" # DstVT) $Input)>;
 }
 
 defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64movi (i32 1))>;

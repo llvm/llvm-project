@@ -296,6 +296,8 @@ public:
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
+
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -567,7 +569,6 @@ public:
                              bool AllowUnknown = false) const override;
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
-  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP
@@ -600,6 +601,10 @@ public:
                                                 EVT &IntermediateVT,
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
+
+  bool preferVectorizedNonPowerOfTwoTypeBreakdown() const override {
+    return true;
+  }
 
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
@@ -653,6 +658,7 @@ private:
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore128(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSMULFIXSAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) const;

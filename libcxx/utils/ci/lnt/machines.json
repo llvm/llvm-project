@@ -1,7 +1,7 @@
 [
   {
     "lnt-machine": "macos-26.5-arm64-20260812",
-    "runner": ["self-hosted", "macOS", "apple-runners"],
+    "runner": ["self-hosted", "macOS", "26.5", "ARM64", "apple-runners"],
     "cxx": "clang++",
     "running-on": "macos",
     "xcode-version": "26.5",
@@ -11,7 +11,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "lnt-url": "http://lnt.llvm.org"
+      "lnt-url": "https://lnt.llvm.org"
     }
   },
   {
@@ -25,7 +25,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
-      "lnt-url": "http://lnt.llvm.org"
+      "lnt-url": "https://lnt.llvm.org"
     }
   }
 ]

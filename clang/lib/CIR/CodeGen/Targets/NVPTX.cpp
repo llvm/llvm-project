@@ -15,11 +15,49 @@
 #include "../TargetInfo.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/NVVMAttributes.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
+
+/// Handle the launch_bounds attribute, which maps onto the nvvm.maxntid,
+/// nvvm.minctasm and nvvm.maxclusterrank function attributes.
+static void handleCUDALaunchBoundsAttr(const CUDALaunchBoundsAttr *attr,
+                                       cir::FuncOp func, CIRGenModule &cgm,
+                                       CIRGenBuilderTy &builder) {
+  auto setNVVMAttr = [&](llvm::StringRef name, const llvm::APSInt &value) {
+    func->setAttr(("cir." + name).str(),
+                  builder.getStringAttr(llvm::utostr(value.getExtValue())));
+  };
+
+  llvm::APSInt maxThreads(32);
+  maxThreads =
+      attr->getMaxThreads()->EvaluateKnownConstInt(cgm.getASTContext());
+  if (maxThreads > 0)
+    setNVVMAttr(llvm::NVVMAttr::MaxNTID, maxThreads);
+
+  // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
+  // was not specified in __launch_bounds__ or if the user specified a 0 value,
+  // we don't have to add a PTX directive.
+  if (attr->getMinBlocks()) {
+    llvm::APSInt minBlocks(32);
+    minBlocks =
+        attr->getMinBlocks()->EvaluateKnownConstInt(cgm.getASTContext());
+    if (minBlocks > 0)
+      setNVVMAttr(llvm::NVVMAttr::MinCTASm, minBlocks);
+  }
+
+  if (attr->getMaxBlocks()) {
+    llvm::APSInt maxBlocks(32);
+    maxBlocks =
+        attr->getMaxBlocks()->EvaluateKnownConstInt(cgm.getASTContext());
+    if (maxBlocks > 0)
+      setNVVMAttr(llvm::NVVMAttr::MaxClusterRank, maxBlocks);
+  }
+}
 
 class NVPTXABIInfo : public ABIInfo {
 public:
@@ -65,8 +103,8 @@ public:
           func.setCallingConv(cir::CallingConv::PTXKernel);
           assert(!cir::MissingFeatures::opFuncParameterAttributes());
         }
-        if (fd->hasAttr<CUDALaunchBoundsAttr>())
-          assert(!cir::MissingFeatures::handleCUDALaunchBoundsAttr());
+        if (const auto *attr = fd->getAttr<CUDALaunchBoundsAttr>())
+          handleCUDALaunchBoundsAttr(attr, func, cgm, cgm.getBuilder());
       }
     }
   }

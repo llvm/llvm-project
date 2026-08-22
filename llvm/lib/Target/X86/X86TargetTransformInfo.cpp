@@ -2429,6 +2429,37 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  // A narrow (i8/i16) zero-extension used as a GEP *index* can be folded into
+  // the addressing mode of the consuming memory op, but only if the source is
+  // already materialised zero-extended in a full register. X86's SIB form
+  // [base + index*scale + disp] reads the index at full width and does NOT
+  // zero-extend a narrow index (unlike AArch64's uxtw-extended addressing), so
+  // a "dirty" narrow source (e.g. an i16 add result used only as an index)
+  // still needs a dedicated movzx and is not free. Price it as free only with
+  // positive evidence that no movzx is required.
+  if (ISD == ISD::ZERO_EXTEND && I && I->hasOneUse() && Src->isIntegerTy() &&
+      Src->getScalarSizeInBits() < 32) {
+    const Use &U = *I->use_begin();
+    if (isa<GetElementPtrInst>(U.getUser()) &&
+        U.getOperandNo() != GetElementPtrInst::getPointerOperandIndex()) {
+      const Value *Op = I->getOperand(0);
+      // Clean sources: an extending load, a zeroext argument, or a value whose
+      // high bits are provably zero (e.g. from a shift/mask). These mirror the
+      // proof-based reasoning the middle end uses elsewhere (ValueTracking and
+      // InstCombine's canEvaluateZExtd); we intentionally do NOT treat a merely
+      // multiply-used operand as clean, since that is a guess rather than
+      // proof.
+      if (isa<LoadInst>(Op))
+        return TTI::TCC_Free;
+      if (const auto *A = dyn_cast<Argument>(Op))
+        if (A->hasAttribute(Attribute::ZExt))
+          return TTI::TCC_Free;
+      if (computeKnownBits(Op, I->getDataLayout(), /*AC=*/nullptr, I)
+              .countMinLeadingZeros() > 0)
+        return TTI::TCC_Free;
+    }
+  }
+
   // The cost tables include both specific, custom (non-legal) src/dst type
   // conversions and generic, legalized types. We test for customs first, before
   // falling back to legalization.
@@ -5659,7 +5690,7 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
 InstructionCost X86TTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) const {
+    const TTI::TargetCostKind CostKind) const {
   if (Info.isSameBase() && Info.isKnownStride()) {
     // If all the pointers have known stride all the differences are translated
     // into constants. X86 memory addressing allows encoding it into
