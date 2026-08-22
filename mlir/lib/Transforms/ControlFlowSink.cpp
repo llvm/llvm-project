@@ -15,6 +15,7 @@
 
 #include "mlir/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -40,10 +41,25 @@ void ControlFlowSink::runOnOperation() {
     SmallVector<Region *> regionsToSink;
     // Get the regions are that known to be executed at most once.
     getSinglyExecutedRegionsToSink(branch, regionsToSink);
-    // Sink side-effect free operations.
+    // Sink memory-effect-free operations.
     numSunk = controlFlowSink(
         regionsToSink, domInfo,
-        [](Operation *op, Region *) { return isMemoryEffectFree(op); },
+        [](Operation *op, Region *) {
+          if (!isMemoryEffectFree(op))
+            return false;
+          // A non-pure operation whose result is currently a valid affine
+          // dimension or symbol must remain at the top level of its affine
+          // scope to stay valid. Sinking such an operation into a
+          // conditionally executed region moves its definition into a nested
+          // region, breaking that invariant and producing invalid IR (e.g.
+          // `index.remu` used by `affine.load`).
+          if (isPure(op))
+            return true;
+          for (Value result : op->getResults())
+            if (affine::isValidDim(result) || affine::isValidSymbol(result))
+              return false;
+          return true;
+        },
         [](Operation *op, Region *region) {
           // Move the operation to the beginning of the region's entry block.
           // This guarantees the preservation of SSA dominance of all of the
