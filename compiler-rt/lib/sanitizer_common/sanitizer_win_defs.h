@@ -49,7 +49,7 @@
 #    define IN_SECTION(n) __attribute__((section(n)))
 #  endif
 
-#  if !SANITIZER_GO && defined(__clang__)
+#  if !SANITIZER_GO && (!defined(__GNUC__) || defined(__clang__))
 
 // ----------------- A workaround for the absence of weak symbols --------------
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can

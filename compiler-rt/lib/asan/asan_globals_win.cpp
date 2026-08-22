@@ -15,7 +15,7 @@
 #  include "sanitizer_common/sanitizer_win_defs.h"
 
 #  if defined(__GNUC__) && !defined(__clang__)
-extern "C" void __debugbreak();
+#    include <intrin.h>
 #  endif
 
 namespace __asan {
