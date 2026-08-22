@@ -154,6 +154,16 @@ class Test(unittest.TestCase):
                     ),
                 },
             ],
+            "29": [
+                {
+                    "__cpp_lib_view_interface": VersionHeader(
+                        value="202606L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None
+                    ),
+                },
+            ],
         }
 
         self.assertEqual(self.ftm.version_header_implementation, expected)
