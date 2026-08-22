@@ -1883,6 +1883,11 @@ struct Attributor {
     InvokeWithDeadSuccessor.insert(&II);
   }
 
+  /// Record that an indirect call in \p Caller was replaced by direct calls.
+  void recordIndirectCallSpecialization(Function &Caller) {
+    SpecializedIndirectCallers.insert(&Caller);
+  }
+
   /// Record that \p I is deleted after information was manifested. This also
   /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
@@ -2589,6 +2594,9 @@ private:
   SmallSetVector<BasicBlock *, 8> ToBeDeletedBlocks;
   SmallSetVector<WeakVH, 8> ToBeDeletedInsts;
   ///}
+
+  /// Functions in which an indirect call was replaced by direct calls.
+  SmallSetVector<Function *, 8> SpecializedIndirectCallers;
 
   /// Container with all the query AAs that requested an update via
   /// registerForUpdate.

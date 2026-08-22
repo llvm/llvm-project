@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -2668,6 +2669,42 @@ ChangeStatus Attributor::cleanupIR() {
     if (!Functions.count(Fn))
       continue;
     Configuration.CGUpdater.removeFunction(*Fn);
+  }
+
+  // Specializing an indirect call turns an edge that only existed through a
+  // function pointer into a direct one, which can close a call graph cycle and
+  // make `norecurse` false for every function in it.
+  if (!SpecializedIndirectCallers.empty()) {
+    CallGraph CG(*SpecializedIndirectCallers.front()->getParent());
+    SmallPtrSet<Function *, 8> Handled;
+    for (Function *Caller : SpecializedIndirectCallers) {
+      if (!Handled.insert(Caller).second)
+        continue;
+      CallGraphNode *Node = CG[Caller];
+      for (scc_iterator<CallGraphNode *> It = scc_begin(Node); !It.isAtEnd();
+           ++It) {
+        if (!is_contained(*It, Node))
+          continue;
+        if (!It.hasCycle())
+          break;
+        for (CallGraphNode *N : *It) {
+          Function *Fn = N->getFunction();
+          if (!Fn || ToBeDeletedFunctions.count(Fn) || !Functions.count(Fn))
+            continue;
+          Handled.insert(Fn);
+          if (!Fn->hasFnAttribute(Attribute::NoRecurse))
+            continue;
+          Fn->removeFnAttr(Attribute::NoRecurse);
+          for (User *U : Fn->users())
+            if (auto *CB = dyn_cast<CallBase>(U))
+              if (CB->getCalledFunction() == Fn &&
+                  Functions.count(CB->getFunction()))
+                CB->removeFnAttr(Attribute::NoRecurse);
+          ManifestChange = ChangeStatus::CHANGED;
+        }
+        break;
+      }
+    }
   }
 
   if (!ToBeChangedUses.empty())

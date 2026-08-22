@@ -12530,6 +12530,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     // Special handling for the single callee case.
     if (AllCalleesKnown && AssumedCallees.size() == 1) {
       auto *NewCallee = AssumedCallees.front();
+      A.recordIndirectCallSpecialization(*CB->getFunction());
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
         NumIndirectCallsPromoted++;
@@ -12564,6 +12565,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         continue;
       }
       SpecializedForAnyCallees = true;
+      A.recordIndirectCallSpecialization(*CB->getFunction());
 
       LastCmp = new ICmpInst(IP, llvm::CmpInst::ICMP_EQ, FP, NewCallee);
       Instruction *ThenTI =
