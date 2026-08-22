@@ -1500,8 +1500,10 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
       SrcInst->isTerminator())
     return false;
 
-  EVT SrcVT = TLI.getValueType(DL, SrcInst->getType());
-  EVT DestVT = TLI.getValueType(DL, BCI->getType());
+  Type *DestTy = BCI->getType();
+  Type *SrcTy = SrcInst->getType();
+  EVT SrcVT = TLI.getValueType(DL, SrcTy);
+  EVT DestVT = TLI.getValueType(DL, DestTy);
 
   // Bail out on scalable vectors and illegal destination types
   if (SrcVT.isScalableVector() || DestVT.isScalableVector() ||
@@ -1514,8 +1516,6 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
     return false;
 
   // Block large or cross-domain scalars to prevent spills and broken atomics.
-  Type *DestTy = BCI->getType();
-  Type *SrcTy = SrcInst->getType();
   bool IsCrossDomain = DestTy->isFPOrFPVectorTy() != SrcTy->isFPOrFPVectorTy();
 
   // A scalar is large if it requires more than one native register.
@@ -1532,6 +1532,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
                                         : std::next(SrcInst->getIterator());
   BCI->moveBefore(*SrcBB, InsertPt);
+
   return true;
 }
 

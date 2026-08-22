@@ -25,3 +25,30 @@ exit:
   %res = phi double [ %bc, %if.then ], [ 0.0, %entry ]
   ret double %res
 }
+
+
+
+define <2 x i64> @test_hoist_bitcast_i128_to_v2i64(i1 %cond, i128 %a) {
+; CHECK-LABEL: @test_hoist_bitcast_i128_to_v2i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[A:%.*]], 1
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[ADD]] to <2 x i64>
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi <2 x i64> [ [[BC]], [[IF_THEN]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+entry:
+  %add = add i128 %a, 1
+  br i1 %cond, label %if.then, label %exit
+
+if.then:
+  %bc = bitcast i128 %add to <2 x i64>
+  br label %exit
+
+exit:
+  %res = phi <2 x i64> [ %bc, %if.then ], [ zeroinitializer, %entry ]
+  ret <2 x i64> %res
+}
