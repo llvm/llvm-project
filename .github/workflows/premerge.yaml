@@ -67,6 +67,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Reversing the iteration order of unordered containers on one
+          # configuration to add nuance.
+          LLVM_REVERSE_ITERATION: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && 'ON') || 'OFF' }}
         run: |
           git config --global --add safe.directory '*'
 
