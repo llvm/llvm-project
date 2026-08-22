@@ -1,5 +1,5 @@
-## Check that R_RISCV_GOT_HI20 relocations are re-encoded correctly when the
-## matching %pcrel_lo is not in the instruction immediately after the AUIPC.
+## Check that the RV64 R_RISCV_GOT_HI20/%pcrel_lo pair is rebuilt when the
+## matching low instruction is not immediately after AUIPC.
 
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj -o %t.o %s
 # RUN: ld.lld -q -o %t.exe %t.o
