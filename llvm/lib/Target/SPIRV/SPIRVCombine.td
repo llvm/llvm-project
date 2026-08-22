@@ -22,6 +22,12 @@ def vector_select_to_faceforward_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
 
+def degrees_lowering
+    : GICombineRule<(defs root:$root),
+                    (match (wip_match_opcode G_FMUL):$root,
+                        [{ return Helper.matchDegrees(*${root}); }]),
+                    (apply [{ Helper.applyDegrees(*${root}); }])>;
+
 def matrix_transpose_lowering
     : GICombineRule<
           (defs root:$root),
@@ -37,12 +43,6 @@ def matrix_multiply_lowering
               [{ return mi_match(*${root}, MRI,
                                  m_GIntrinsic<Intrinsic::matrix_multiply>()); }]),
           (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
-
-def degrees_lowering
-    : GICombineRule<(defs root:$root),
-                    (match (wip_match_opcode G_FMUL):$root,
-                        [{ return Helper.matchDegrees(*${root}); }]),
-                    (apply [{ Helper.applyDegrees(*${root}); }])>;
 
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",

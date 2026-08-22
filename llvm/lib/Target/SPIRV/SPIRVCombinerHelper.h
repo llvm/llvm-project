@@ -33,10 +33,11 @@ public:
   void applySPIRVDistance(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
-  void applyMatrixTranspose(MachineInstr &MI) const;
-  void applyMatrixMultiply(MachineInstr &MI) const;
   bool matchDegrees(MachineInstr &MI) const;
   void applyDegrees(MachineInstr &MI) const;
+  bool matchMatrixTranspose(MachineInstr &MI) const;
+  void applyMatrixTranspose(MachineInstr &MI) const;
+  void applyMatrixMultiply(MachineInstr &MI) const;
 
 private:
   SPIRVTypeInst getDotProductVectorType(Register ResReg, uint32_t K,
