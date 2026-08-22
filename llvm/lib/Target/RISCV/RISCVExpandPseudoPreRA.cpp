@@ -21,12 +21,11 @@
 
 using namespace llvm;
 
-#define RISCV_PRERA_EXPAND_PSEUDO_NAME                                         \
-  "RISC-V Pre-RA pseudo instruction expansion pass"
+#define RISCV_EXPAND_PSEUDO_PRE_RA_NAME "RISC-V Pseudo Instruction Expansion - Pre-RA"
 
 namespace {
 
-class RISCVPreRAExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
+class RISCVExpandPseudoPreRAImpl final : public RISCVExpandPseudoImplBase {
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI) const override;
 
@@ -50,14 +49,14 @@ class RISCVPreRAExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
                                 MachineBasicBlock::iterator MBBI) const;
 };
 
-class RISCVPreRAExpandPseudoLegacy : public MachineFunctionPass {
+class RISCVExpandPseudoPreRALegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVPreRAExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+  RISCVExpandPseudoPreRALegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return RISCVPreRAExpandPseudoImpl().run(MF);
+    return RISCVExpandPseudoPreRAImpl().run(MF);
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -69,13 +68,13 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
   StringRef getPassName() const override {
-    return RISCV_PRERA_EXPAND_PSEUDO_NAME;
+    return RISCV_EXPAND_PSEUDO_PRE_RA_NAME;
   }
 };
 
 } // anonymous namespace
 
-bool RISCVPreRAExpandPseudoImpl::expandMI(
+bool RISCVExpandPseudoPreRAImpl::expandMI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) const {
 
@@ -95,7 +94,7 @@ bool RISCVPreRAExpandPseudoImpl::expandMI(
   return false;
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandAuipcInstPair(
+bool RISCVExpandPseudoPreRAImpl::expandAuipcInstPair(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned FlagsHi,
     unsigned SecondOpcode) const {
   MachineFunction *MF = MBB.getParent();
@@ -126,29 +125,29 @@ bool RISCVPreRAExpandPseudoImpl::expandAuipcInstPair(
   return true;
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandLoadLocalAddress(
+bool RISCVExpandPseudoPreRAImpl::expandLoadLocalAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   return expandAuipcInstPair(MBB, MBBI, RISCVII::MO_PCREL_HI, RISCV::ADDI);
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandLoadGlobalAddress(
+bool RISCVExpandPseudoPreRAImpl::expandLoadGlobalAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   unsigned SecondOpcode = STI->is64Bit() ? RISCV::LD : RISCV::LW;
   return expandAuipcInstPair(MBB, MBBI, RISCVII::MO_GOT_HI, SecondOpcode);
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandLoadTLSIEAddress(
+bool RISCVExpandPseudoPreRAImpl::expandLoadTLSIEAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   unsigned SecondOpcode = STI->is64Bit() ? RISCV::LD : RISCV::LW;
   return expandAuipcInstPair(MBB, MBBI, RISCVII::MO_TLS_GOT_HI, SecondOpcode);
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandLoadTLSGDAddress(
+bool RISCVExpandPseudoPreRAImpl::expandLoadTLSGDAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   return expandAuipcInstPair(MBB, MBBI, RISCVII::MO_TLS_GD_HI, RISCV::ADDI);
 }
 
-bool RISCVPreRAExpandPseudoImpl::expandLoadTLSDescAddress(
+bool RISCVExpandPseudoPreRAImpl::expandLoadTLSDescAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
@@ -192,20 +191,20 @@ bool RISCVPreRAExpandPseudoImpl::expandLoadTLSDescAddress(
   return true;
 }
 
-char RISCVPreRAExpandPseudoLegacy::ID = 0;
+char RISCVExpandPseudoPreRALegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVPreRAExpandPseudoLegacy, "riscv-pre-ra-expand-pseudo",
-                RISCV_PRERA_EXPAND_PSEUDO_NAME, false, false)
+INITIALIZE_PASS(RISCVExpandPseudoPreRALegacy, "riscv-expand-pseudo-pre-ra",
+                RISCV_EXPAND_PSEUDO_PRE_RA_NAME, false, false)
 
-FunctionPass *llvm::createRISCVPreRAExpandPseudoLegacyPass() {
-  return new RISCVPreRAExpandPseudoLegacy();
+FunctionPass *llvm::createRISCVExpandPseudoPreRALegacyPass() {
+  return new RISCVExpandPseudoPreRALegacy();
 }
 
 PreservedAnalyses
-RISCVPreRAExpandPseudoPass::run(MachineFunction &MF,
+RISCVExpandPseudoPreRAPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  bool Changed = RISCVPreRAExpandPseudoImpl().run(MF);
+  bool Changed = RISCVExpandPseudoPreRAImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 

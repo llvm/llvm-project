@@ -1,4 +1,4 @@
-//===-- RISCVPostRAExpandPseudoInsts.cpp - Expand pseudo instrs ----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,12 +21,12 @@
 
 using namespace llvm;
 
-#define RISCV_POST_RA_EXPAND_PSEUDO_NAME                                       \
-  "RISC-V post-regalloc pseudo instruction expansion pass"
+#define RISCV_EXPAND_PSEUDO_POST_RA_NAME                                       \
+  "RISC-V Pseudo Instruction Expansion - Post-RA"
 
 namespace {
 
-class RISCVPostRAExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
+class RISCVExpandPseudoPostRAImpl final : public RISCVExpandPseudoImplBase {
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI) const override;
 
@@ -43,14 +43,14 @@ class RISCVPostRAExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
                          MachineBasicBlock::iterator MBBI) const;
 };
 
-class RISCVPostRAExpandPseudoLegacy : public MachineFunctionPass {
+class RISCVExpandPseudoPostRALegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVPostRAExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+  RISCVExpandPseudoPostRALegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return RISCVPostRAExpandPseudoImpl().run(MF);
+    return RISCVExpandPseudoPostRAImpl().run(MF);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -59,13 +59,13 @@ public:
   }
 
   StringRef getPassName() const override {
-    return RISCV_POST_RA_EXPAND_PSEUDO_NAME;
+    return RISCV_EXPAND_PSEUDO_POST_RA_NAME;
   }
 };
 
 } // anonymous namespace
 
-bool RISCVPostRAExpandPseudoImpl::expandMI(
+bool RISCVExpandPseudoPostRAImpl::expandMI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) const {
   switch (MBBI->getOpcode()) {
@@ -82,7 +82,7 @@ bool RISCVPostRAExpandPseudoImpl::expandMI(
   return false;
 }
 
-bool RISCVPostRAExpandPseudoImpl::expandMovImm(
+bool RISCVExpandPseudoPostRAImpl::expandMovImm(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
@@ -99,7 +99,7 @@ bool RISCVPostRAExpandPseudoImpl::expandMovImm(
   return true;
 }
 
-bool RISCVPostRAExpandPseudoImpl::expandMovAddr(
+bool RISCVExpandPseudoPostRAImpl::expandMovAddr(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
@@ -119,7 +119,7 @@ bool RISCVPostRAExpandPseudoImpl::expandMovAddr(
   return true;
 }
 
-bool RISCVPostRAExpandPseudoImpl::expandAddUpperImm(
+bool RISCVExpandPseudoPostRAImpl::expandAddUpperImm(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
@@ -155,7 +155,7 @@ static void transferImpOps(const MachineInstr &OldMI, MachineInstrBuilder &MI) {
 }
 
 // Expand PseudoMERGE to MERGE, MVM, or MVMN.
-bool RISCVPostRAExpandPseudoImpl::expandMERGE(
+bool RISCVExpandPseudoPostRAImpl::expandMERGE(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -210,19 +210,19 @@ bool RISCVPostRAExpandPseudoImpl::expandMERGE(
   return true;
 }
 
-char RISCVPostRAExpandPseudoLegacy::ID = 0;
+char RISCVExpandPseudoPostRALegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVPostRAExpandPseudoLegacy, "riscv-post-ra-expand-pseudo",
-                RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
+INITIALIZE_PASS(RISCVExpandPseudoPostRALegacy, "riscv-expand-pseudo-post-ra",
+                RISCV_EXPAND_PSEUDO_POST_RA_NAME, false, false)
 
-FunctionPass *llvm::createRISCVPostRAExpandPseudoLegacyPass() {
-  return new RISCVPostRAExpandPseudoLegacy();
+FunctionPass *llvm::createRISCVExpandPseudoPostRALegacyPass() {
+  return new RISCVExpandPseudoPostRALegacy();
 }
 
 PreservedAnalyses
-RISCVPostRAExpandPseudoPass::run(MachineFunction &MF,
+RISCVExpandPseudoPostRAPass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = RISCVPostRAExpandPseudoImpl().run(MF);
+  bool Changed = RISCVExpandPseudoPostRAImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
