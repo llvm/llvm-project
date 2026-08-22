@@ -88,9 +88,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
-      optionally(hasArgument(0, ignoringParenCasts(declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr"))))))
+      optionally(hasArgument(0, declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr")))))
         );
-        // TODO: need test with parens
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -114,7 +113,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
       unless(hasArgument(
           0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
-        optionally(hasArgument(0, ignoringParenCasts(declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr"))))))
+        optionally(hasArgument(0, declRefExpr(to(varDecl(hasInitializer(cxxNewExpr())).bind("rawPtr")))))
       );
 
   Finder->addMatcher( SmartPtrConstructorMatcher, this);
