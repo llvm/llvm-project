@@ -2614,8 +2614,10 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 void PyDynamicOpTrait::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTrait> cls(m, "DynamicOpTrait");
   cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName, nb::object target,
-         DefaultingPyMlirContext context) {
+      [](const nb::object &cls,
+         const nb::typed<nb::object, std::variant<nb::type_object, nb::str>>
+             &opName,
+         nb::object target, DefaultingPyMlirContext context) {
         if (target.is_none())
           target = cls;
         return PyDynamicOpTrait::attach(opName, target, *context.get());
@@ -2634,9 +2636,13 @@ bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
       m, "IsTerminatorTrait");
-  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
+  cls.def_prop_ro_static(typeIDAttr, [](nanobind::object & /*class*/) {
+    return PyTypeID(mlirDynamicOpTraitIsTerminatorGetTypeID());
+  });
   cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName,
+      [](const nb::object &cls,
+         const nb::typed<nb::object, std::variant<nb::type_object, nb::str>>
+             &opName,
          DefaultingPyMlirContext context) {
         return PyDynamicOpTraits::IsTerminator::attach(opName, *context.get());
       },
@@ -2653,9 +2659,13 @@ bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
 void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
       m, "NoTerminatorTrait");
-  cls.attr(typeIDAttr) = PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
+  cls.def_prop_ro_static(typeIDAttr, [](nanobind::object & /*class*/) {
+    return PyTypeID(mlirDynamicOpTraitNoTerminatorGetTypeID());
+  });
   cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName,
+      [](const nb::object &cls,
+         const nb::typed<nb::object, std::variant<nb::type_object, nb::str>>
+             &opName,
          DefaultingPyMlirContext context) {
         return PyDynamicOpTraits::NoTerminator::attach(opName, *context.get());
       },
@@ -2672,10 +2682,13 @@ bool PyDynamicOpTraits::IsIsolatedFromAbove::attach(const nb::object &opName,
 void PyDynamicOpTraits::IsIsolatedFromAbove::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::IsIsolatedFromAbove, PyDynamicOpTrait> cls(
       m, "IsIsolatedFromAboveTrait");
-  cls.attr(typeIDAttr) =
-      PyTypeID(mlirDynamicOpTraitIsIsolatedFromAboveGetTypeID());
+  cls.def_prop_ro_static(typeIDAttr, [](nanobind::object & /*class*/) {
+    return PyTypeID(mlirDynamicOpTraitIsIsolatedFromAboveGetTypeID());
+  });
   cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName,
+      [](const nb::object &cls,
+         const nb::typed<nb::object, std::variant<nb::type_object, nb::str>>
+             &opName,
          DefaultingPyMlirContext context) {
         return PyDynamicOpTraits::IsIsolatedFromAbove::attach(opName,
                                                               *context.get());
@@ -2694,10 +2707,13 @@ bool PyDynamicOpTraits::RecursiveMemoryEffects::attach(const nb::object &opName,
 void PyDynamicOpTraits::RecursiveMemoryEffects::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTraits::RecursiveMemoryEffects, PyDynamicOpTrait> cls(
       m, "RecursiveMemoryEffectsTrait");
-  cls.attr(typeIDAttr) =
-      PyTypeID(mlirDynamicOpTraitRecursiveMemoryEffectsGetTypeID());
+  cls.def_prop_ro_static(typeIDAttr, [](nanobind::object & /*class*/) {
+    return PyTypeID(mlirDynamicOpTraitRecursiveMemoryEffectsGetTypeID());
+  });
   cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName,
+      [](const nb::object &cls,
+         const nb::typed<nb::object, std::variant<nb::type_object, nb::str>>
+             &opName,
          DefaultingPyMlirContext context) {
         return PyDynamicOpTraits::RecursiveMemoryEffects::attach(
             opName, *context.get());
