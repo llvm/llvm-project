@@ -1423,7 +1423,8 @@ Error BinaryFunction::disassemble() {
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
-      if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
+      if (!MIB->isIndirectBranch(Instruction) &&
+          MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
         // Check if the target is within the same function. Otherwise it's
         // a call, possibly a tail call.
