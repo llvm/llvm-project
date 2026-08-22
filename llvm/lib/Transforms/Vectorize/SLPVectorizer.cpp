@@ -2489,6 +2489,8 @@ public:
     for (T *V : DeadVals) {
       auto *I = cast<Instruction>(V);
       eraseInstruction(I);
+      if (auto *EE = DE.lookupExtract(V))
+        DeadInsts.push_back(EE);
     }
     DenseSet<Value *> Processed;
     for (T *V : DeadVals) {
@@ -2527,6 +2529,8 @@ public:
       Instruction *VI = cast_or_null<Instruction>(V);
       if (!VI || !VI->getParent())
         continue;
+      if (auto *EE = DE.lookupExtract(V))
+        DeadInsts.push_back(EE);
       assert(isInstructionTriviallyDead(VI, TLI) &&
              "Live instruction found in dead worklist!");
       assert(VI->use_empty() && "Instructions with uses are not dead.");
