@@ -26,9 +26,9 @@ func.func @worker_seq_vector_reuse() {
   %c256_pw = arith.constant 256 : index
   %c4_pw = arith.constant 4 : index
   %c32_pw = arith.constant 32 : index
-  %par_bx = acc.par_width %c256_pw {par_dim = #acc.par_dim<block_x>}
-  %par_ty = acc.par_width %c4_pw {par_dim = #acc.par_dim<thread_y>}
-  %par_tx = acc.par_width %c32_pw {par_dim = #acc.par_dim<thread_x>}
+  %par_bx = acc.par_width %c256_pw par_dim(#acc.par_dim<block_x>)
+  %par_ty = acc.par_width %c4_pw par_dim(#acc.par_dim<thread_y>)
+  %par_tx = acc.par_width %c32_pw par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv0 = acc.privatize : () -> !acc.private_type<memref<32xf32>>
     acc.compute_region launch(%grid = %par_bx, %worker = %par_ty, %block = %par_tx) ins(%arg10 = %priv0) : (!acc.private_type<memref<32xf32>>) {

@@ -69,3 +69,28 @@ struct __is_volatile {};  // expected-warning {{made available}}
 
 
 }
+
+#if __cplusplus >= 202002L
+namespace std {
+enum class __order : signed char { less = -1, equal = 0, greater = 1 };
+
+struct strong_ordering {
+  __order value;
+
+  constexpr explicit strong_ordering(__order value) : value(value) {}
+
+  static const strong_ordering less;
+  static const strong_ordering equal;
+  static const strong_ordering greater;
+};
+
+constexpr strong_ordering strong_ordering::less(__order::less);
+constexpr strong_ordering strong_ordering::equal(__order::equal);
+constexpr strong_ordering strong_ordering::greater(__order::greater);
+} // namespace std
+
+template <class T, class U>
+constexpr std::strong_ordering type_order() {
+  return __builtin_type_order(T, U);
+}
+#endif

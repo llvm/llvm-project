@@ -28,3 +28,29 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+
+// Verify that xegpu.lane_shuffle of a sub-byte element type is rejected: the
+// shuffle redistributes whole bytes between the lanes, so fp4 fragments cannot
+// be shuffled.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_f4(%a: vector<4xf4E2M1FN>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xf4E2M1FN>
+    gpu.return
+  }
+}
+
+// -----
+
+// Verify that a xegpu.lane_shuffle fragment wider than 64 bits is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_too_wide(%a: vector<4xi32>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xi32>
+    gpu.return
+  }
+}
