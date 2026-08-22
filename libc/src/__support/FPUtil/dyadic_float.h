@@ -256,10 +256,13 @@ template <size_t Bits> struct DyadicFloat {
             static_cast<StorageType>(unbiased_exp + FPBits::EXP_BIAS);
       }
 
-      MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
-      round = (mantissa & round_mask) != 0;
-      MantissaType sticky_mask = round_mask - 1;
-      sticky = (mantissa & sticky_mask) != 0;
+      if (extra_fraction_len > 0) {
+        MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
+        round = (mantissa & round_mask) != 0;
+        MantissaType sticky_mask = round_mask - 1;
+        sticky = (mantissa & sticky_mask) != 0;
+      }
+
       out_mantissa = static_cast<StorageType>(mantissa >> extra_fraction_len);
     }
 
