@@ -562,6 +562,9 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
         VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
         VD->setInitStyle(VarDecl::CallInit);
         CheckCompleteVariableDeclaration(VD);
+        // The constructor is selected with the coroutine parameter copies as
+        // arguments. Mark the original parameters as referenced for
+        // -Wunused-parameter.
         markCoroutineParametersReferenced(*FD);
       }
     } else
@@ -1456,7 +1459,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
-  bool PlacementArgsAreCoroutineParameters = false;
+  // Track whether PlacementArgs still refer to the coroutine parameters.
+  bool PlacementArgsFromCoroutine = false;
   DeclarationName NewName =
       S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
@@ -1513,7 +1517,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   if (PromiseContainsNew) {
     if (!collectPlacementArgs(S, FD, Loc, PlacementArgs))
       return false;
-    PlacementArgsAreCoroutineParameters = true;
+    PlacementArgsFromCoroutine = true;
   }
 
   LookupAllocationFunction();
@@ -1580,7 +1584,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     if (!StdNoThrow)
       return false;
     PlacementArgs = {StdNoThrow};
-    PlacementArgsAreCoroutineParameters = false;
+    PlacementArgsFromCoroutine = false;
     OperatorNew = nullptr;
     LookupAllocationFunction(AllocationFunctionScope::Global);
   }
@@ -1667,9 +1671,12 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       isAlignedAllocation(IAP.PassAlignment))
     NewArgs.push_back(FrameAlignment);
 
-  if (OperatorNew->getNumParams() > NewArgs.size()) {
+  // getNumParams() does not include an ellipsis, but a variadic allocation
+  // function still receives the coroutine parameters as placement arguments.
+  if (OperatorNew->isVariadic() ||
+      OperatorNew->getNumParams() > NewArgs.size()) {
     llvm::append_range(NewArgs, PlacementArgs);
-    if (PlacementArgsAreCoroutineParameters)
+    if (PlacementArgsFromCoroutine)
       markCoroutineParametersReferenced(FD);
   }
 
