@@ -24,6 +24,10 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
+// This test crashes with -fstack-protector-strong
+// (see https://github.com/llvm/llvm-project/issues/212002)
+// ADDITIONAL_COMPILE_FLAGS: -fno-stack-protector
+
 #include <atomic>
 #include <cassert>
 #include <cstring>
