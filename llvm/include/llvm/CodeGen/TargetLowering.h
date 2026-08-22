@@ -6002,26 +6002,24 @@ public:
       SmallVectorImpl<SDValue> &Results,
       std::optional<unsigned> CallRetResNo = {}) const;
 
-  /// Legalize a SETCC with given LHS and RHS and condition code CC
-  /// on the current target.
+  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
+  /// current target.
   ///
   /// If the SETCC has been legalized using AND / OR, then the legalized node
   /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
   /// will be set to false.
   ///
-  /// If the SETCC has been legalized by using
-  /// getSetCCSwappedOperands(), then the values of LHS and RHS will be
-  /// swapped, CC will be set to the new condition, and NeedInvert will be set
-  /// to false.
+  /// If the SETCC has been legalized by using getSetCCSwappedOperands(), then
+  /// the values of LHS and RHS will be swapped, CC will be set to the new
+  /// condition, and NeedInvert will be set to false.
   ///
-  /// If the SETCC has been legalized using the inverse condcode,
-  /// then LHS and RHS will be unchanged, CC will set to the inverted condcode,
-  /// and NeedInvert will be set to true. The caller must invert the result of
-  /// the SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to
-  /// swap the effect of a true/false result.
+  /// If the SETCC has been legalized using the inverse condcode, then LHS and
+  /// RHS will be unchanged, CC will set to the inverted condcode, and
+  /// NeedInvert will be set to true. The caller must invert the result of the
+  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
+  /// the effect of a true/false result.
   ///
-  /// \returns true if the SETCC has been legalized, false if it
-  /// hasn't.
+  /// \returns true if the SETCC has been legalized, false if it hasn't.
   bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
                              SDValue &RHS, SDValue &CC, bool &NeedInvert,
                              const SDLoc &dl, SDValue &Chain,
