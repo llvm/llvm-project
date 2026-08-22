@@ -56,6 +56,12 @@ static cl::opt<bool> VPlanPrintMetadata(
     cl::desc("Controls the printing of recipe metadata when debugging."));
 #endif
 
+bool VPUser::usesScalars(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  VPWideningInfo WideInfo = vputils::getWideningInfo(*cast<VPRecipeBase>(this));
+  return WideInfo.usesScalarOperands() || usesFirstLaneOnly(Op);
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -787,7 +793,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *Cond =
         State.get(getOperand(0),
-                  OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
+                  OnlyFirstLaneUsed || vputils::getWideningInfo(getOperand(0))
+                                           .producesSingleScalarResult());
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(),
@@ -2863,7 +2870,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::Select: {
     VPValue *CondOp = getOperand(0);
-    Value *Cond = State.get(CondOp, vputils::isSingleScalar(CondOp));
+    Value *Cond = State.get(
+        CondOp, vputils::getWideningInfo(CondOp).producesSingleScalarResult());
     Value *Op0 = State.get(getOperand(1));
     Value *Op1 = State.get(getOperand(2));
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);

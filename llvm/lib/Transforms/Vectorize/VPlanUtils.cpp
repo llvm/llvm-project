@@ -380,11 +380,10 @@ vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
   return {};
 }
 
-/// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
-/// uniform, the result will also be uniform.
-static bool preservesUniformity(unsigned Opcode) {
+static VPWideningInfo getNarrowableWideningInfo(unsigned Opcode,
+                                                VPWideningInfo WideOrRep) {
   if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
-    return true;
+    return WideOrRep | VPWideningInfo::SingleScalar;
   switch (Opcode) {
   case Instruction::Freeze:
   case Instruction::GetElementPtr:
@@ -392,13 +391,107 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::FCmp:
   case Instruction::Select:
   case VPInstruction::Not:
-  case VPInstruction::Broadcast:
   case VPInstruction::MaskedCond:
   case VPInstruction::PtrAdd:
-    return true;
+    return WideOrRep | VPWideningInfo::SingleScalar;
   default:
-    return false;
+    return WideOrRep;
   }
+}
+
+VPWideningInfo vputils::getWideningInfo(const VPRecipeBase &R) {
+  switch (R.getVPRecipeID()) {
+  case VPRecipeBase::VPVectorPointerSC:
+  case VPRecipeBase::VPVectorEndPointerSC:
+  case VPRecipeBase::VPDerivedIVSC:
+  case VPRecipeBase::VPExpandSCEVSC:
+  case VPRecipeBase::VPIRInstructionSC:
+  case VPRecipeBase::VPBranchOnMaskSC:
+    return VPWideningInfo::SingleScalar;
+  case VPRecipeBase::VPScalarIVStepsSC:
+    return VPWideningInfo::GenPerAllLanes;
+  case VPRecipeBase::VPWidenCastSC:
+  case VPRecipeBase::VPWidenGEPSC:
+  case VPRecipeBase::VPPredInstPHISC:
+  case VPRecipeBase::VPBlendSC:
+    return VPWideningInfo::Wide | VPWideningInfo::SingleScalar;
+  case VPRecipeBase::VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(&R);
+    // Broadcast is a special case of a vector-to-scalar.
+    if (VPI->isVectorToScalar() || VPI->getOpcode() == VPInstruction::Broadcast)
+      return VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
+    // These opcodes take multiple scalars are produce a vector.
+    if (is_contained({VPInstruction::BuildStructVector,
+                      VPInstruction::BuildVector,
+                      VPInstruction::ActiveLaneMask},
+                     VPI->getOpcode()))
+      return VPWideningInfo::Wide | VPWideningInfo::Agnostic;
+    if (VPI->isSingleScalar())
+      return VPWideningInfo::SingleScalar;
+    if (VPI->doesGeneratePerAllLanes())
+      return VPWideningInfo::GenPerAllLanes;
+    return getNarrowableWideningInfo(VPI->getOpcode(), VPWideningInfo::Wide);
+  }
+  case VPRecipeBase::VPExpressionSC: {
+    auto *Expr = cast<VPExpressionRecipe>(&R);
+    return Expr->isVectorToScalar()
+               ? (VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic)
+               : VPWideningInfo::Wide;
+  }
+  case VPRecipeBase::VPReductionSC:
+  case VPRecipeBase::VPReductionEVLSC: {
+    auto *Red = cast<VPReductionRecipe>(&R);
+    return Red->isPartialReduction()
+               ? VPWideningInfo::Wide
+               : (VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic);
+  }
+  case VPRecipeBase::VPReplicateSC: {
+    auto *Rep = cast<VPReplicateRecipe>(&R);
+    if (Rep->isSingleScalar())
+      return VPWideningInfo::SingleScalar;
+    return getNarrowableWideningInfo(Rep->getOpcode(),
+                                     VPWideningInfo::GenPerAllLanes);
+  }
+  case VPRecipeBase::VPWidenSC: {
+    auto *Wide = cast<VPWidenRecipe>(&R);
+    return getNarrowableWideningInfo(Wide->getOpcode(), VPWideningInfo::Wide);
+  }
+  case VPRecipeBase::VPWidenCanonicalIVSC:
+  case VPRecipeBase::VPWidenPHISC:
+  case VPRecipeBase::VPWidenCallSC:
+  case VPRecipeBase::VPWidenIntrinsicSC:
+  case VPRecipeBase::VPWidenMemIntrinsicSC:
+  case VPRecipeBase::VPWidenLoadSC:
+  case VPRecipeBase::VPWidenLoadEVLSC:
+  case VPRecipeBase::VPWidenStoreSC:
+  case VPRecipeBase::VPWidenStoreEVLSC:
+  case VPRecipeBase::VPInterleaveSC:
+  case VPRecipeBase::VPInterleaveEVLSC:
+  case VPRecipeBase::VPHistogramSC:
+  case VPRecipeBase::VPCurrentIterationPHISC:
+  case VPRecipeBase::VPActiveLaneMaskPHISC:
+  case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+  case VPRecipeBase::VPWidenIntOrFpInductionSC:
+  case VPRecipeBase::VPWidenPointerInductionSC:
+  case VPRecipeBase::VPReductionPHISC:
+    return VPWideningInfo::Wide;
+  }
+  llvm_unreachable("Fell off end of switch: unknown recipe class");
+}
+
+VPWideningInfo vputils::getWideningInfo(const VPValue *VPV) {
+  if (!VPV->hasDefiningRecipe()) {
+    // Only a CanonicalIV region value is single scalar.
+    if (auto *RV = dyn_cast<VPRegionValue>(VPV))
+      return RV == RV->getDefiningRegion()->getCanonicalIV()
+                 ? VPWideningInfo::SingleScalar
+                 : VPWideningInfo::Wide;
+    // A non-constant live-in may be introduce a Broadcast.
+    return isa<VPConstant>(VPV)
+               ? VPWideningInfo::SingleScalar
+               : VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
+  }
+  return getWideningInfo(*VPV->getDefiningRecipe());
 }
 
 bool vputils::isElementwise(const VPValue *V) {
@@ -410,12 +503,6 @@ bool vputils::isElementwise(const VPValue *V) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // Live-in, symbolic and canonical-IV region values are single-scalar.
-  if (auto *RV = dyn_cast<VPRegionValue>(VPV))
-    return RV == RV->getDefiningRegion()->getCanonicalIV();
-  if (isa<VPIRValue, VPSymbolicValue>(VPV))
-    return true;
-
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
     const VPRegionBlock *RegionOfR = Rep->getRegion();
     // Don't consider recipes in replicate regions as uniform yet; their first
@@ -423,29 +510,13 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
-  }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
-  if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
-    return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
-    return true;
-  if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
-    return Expr->isVectorToScalar();
-
-  // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
+  // FIXME: Marking WidenCast as a single-scalar leads to regressions.
+  VPWideningInfo Info = getWideningInfo(VPV);
+  return Info.producesSingleScalarResult() ||
+         (!isa<VPWidenCastRecipe>(VPV) &&
+          Info.couldProduceSingleScalarResult() &&
+          all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar));
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
@@ -455,50 +526,40 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
-  const VPRecipeBase *R = V->getDefiningRecipe();
-  const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
-  const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB &&
-      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-    if (match(R,
+  // Bail out on VPPhi, as we can end up in infinite cycles.
+  if (isa<VPPhi>(V))
+    return false;
+
+  if (const VPRecipeBase *R = V->getDefiningRecipe()) {
+    const VPBasicBlock *VPBB = R->getParent();
+    const VPlan *Plan = VPBB->getPlan();
+    if (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry()) {
+      if (match(
+              R,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
-        match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
-      return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+          match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
+        return false;
+      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    }
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
+      // Be conservative about side-effects, except for the
+      // known-side-effecting assumes and stores, which we know will be
+      // uniform.
+      return RepR->isSingleScalar() &&
+             (!RepR->mayHaveSideEffects() ||
+              isa<AssumeInst, StoreInst>(RepR->getUnderlyingInstr())) &&
+             all_of(RepR->operands(), isUniformAcrossVFsAndUFs);
+    }
   }
 
-  return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case([](const VPDerivedIVRecipe *R) { return true; })
-      .Case([](const VPReplicateRecipe *R) {
-        // Be conservative about side-effects, except for the
-        // known-side-effecting assumes and stores, which we know will be
-        // uniform.
-        return R->isSingleScalar() &&
-               (!R->mayHaveSideEffects() ||
-                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
-      })
-      .Case([](const VPWidenRecipe *R) {
-        return preservesUniformity(R->getOpcode()) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
-      })
-      .Case([](const VPPhi *) {
-        // Bail out on VPPhi, as we can end up in infinite cycles.
-        return false;
-      })
-      .Case([](const VPInstruction *VPI) {
-        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-                preservesUniformity(VPI->getOpcode())) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
-      })
-      .Case([](const VPWidenCastRecipe *R) {
-        // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
-      })
-      .Default([](const VPRecipeBase *) { // A value is considered non-uniform
-                                          // unless proven otherwise.
-        return false;
-      });
+  // TODO: Match more recipes.
+  if (!isa<VPDerivedIVRecipe, VPWidenRecipe, VPWidenCastRecipe, VPInstruction>(
+          V))
+    return false;
+
+  VPWideningInfo Info = getWideningInfo(V);
+  return Info.couldProduceSingleScalarResult() &&
+         all_of(V->getDefiningRecipe()->operands(), isUniformAcrossVFsAndUFs);
 }
 
 bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
