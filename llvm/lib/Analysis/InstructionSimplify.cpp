@@ -3386,6 +3386,20 @@ static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
          (C2->sle(*C1) && C1->isNonPositive());
 }
 
+/// Match a quotient Q that is at most half of X and its complement X - Q.
+static bool matchHalfOrLessAndComplement(Value *Q, Value *Complement,
+                                         const SimplifyQuery &SQ) {
+  Value *X;
+  const APInt *C;
+  bool IsHalfOrLess =
+      (match(Q, m_UDiv(m_Value(X), m_APInt(C))) && C->uge(2)) ||
+      (match(Q, m_LShr(m_Value(X), m_APInt(C))) && !C->isZero());
+  // Undef may take different values in the quotient and subtraction.
+  return IsHalfOrLess &&
+         match(Complement, m_Sub(m_Specific(X), m_Specific(Q))) &&
+         isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT);
+}
+
 /// TODO: A large part of this logic is duplicated in InstCombine's
 /// foldICmpBinOp(). We should be able to share that and avoid the code
 /// duplication.
@@ -3524,6 +3538,14 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
     if (Pred == ICmpInst::ICMP_ULE)
       return ConstantInt::getTrue(getCompareTy(RHS));
   }
+
+  // If Q is at most X / 2, then Q <= X - Q.
+  if ((Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT) &&
+      matchHalfOrLessAndComplement(LHS, RHS, Q))
+    return ConstantInt::get(getCompareTy(LHS), Pred == ICmpInst::ICMP_ULE);
+  if ((Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
+      matchHalfOrLessAndComplement(RHS, LHS, Q))
+    return ConstantInt::get(getCompareTy(LHS), Pred == ICmpInst::ICMP_UGE);
 
   if (!MaxRecurse || !LBO || !RBO || LBO->getOpcode() != RBO->getOpcode())
     return nullptr;

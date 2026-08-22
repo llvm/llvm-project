@@ -1159,6 +1159,103 @@ define i1 @udiv8(i32 %X, i32 %Y) {
   ret i1 %C
 }
 
+; https://github.com/llvm/llvm-project/issues/91527
+
+define i1 @udiv_le_complement(i32 noundef %x) {
+; CHECK-LABEL: @udiv_le_complement(
+; CHECK-NEXT:    ret i1 true
+;
+  %q = udiv i32 %x, 2
+  %complement = sub i32 %x, %q
+  %cmp = icmp ule i32 %q, %complement
+  ret i1 %cmp
+}
+
+define i1 @udiv_gt_complement(i32 noundef %x) {
+; CHECK-LABEL: @udiv_gt_complement(
+; CHECK-NEXT:    ret i1 false
+;
+  %q = udiv i32 %x, 3
+  %complement = sub i32 %x, %q
+  %cmp = icmp ugt i32 %q, %complement
+  ret i1 %cmp
+}
+
+define i1 @udiv_complement_ge(i32 noundef %x) {
+; CHECK-LABEL: @udiv_complement_ge(
+; CHECK-NEXT:    ret i1 true
+;
+  %q = udiv i32 %x, 200
+  %complement = sub i32 %x, %q
+  %cmp = icmp uge i32 %complement, %q
+  ret i1 %cmp
+}
+
+define i1 @udiv_complement_lt(i32 noundef %x) {
+; CHECK-LABEL: @udiv_complement_lt(
+; CHECK-NEXT:    ret i1 false
+;
+  %q = udiv i32 %x, 200
+  %complement = sub i32 %x, %q
+  %cmp = icmp ult i32 %complement, %q
+  ret i1 %cmp
+}
+
+define i1 @lshr_gt_complement(i64 noundef %x) {
+; CHECK-LABEL: @lshr_gt_complement(
+; CHECK-NEXT:    ret i1 false
+;
+  %q = lshr i64 %x, 1
+  %complement = sub i64 %x, %q
+  %cmp = icmp ugt i64 %q, %complement
+  ret i1 %cmp
+}
+
+define <2 x i1> @udiv_le_complement_vec(<2 x i8> noundef %x) {
+; CHECK-LABEL: @udiv_le_complement_vec(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %q = udiv <2 x i8> %x, splat (i8 2)
+  %complement = sub <2 x i8> %x, %q
+  %cmp = icmp ule <2 x i8> %q, %complement
+  ret <2 x i1> %cmp
+}
+
+define i1 @udiv_le_complement_may_be_undef(i32 %x) {
+; CHECK-LABEL: @udiv_le_complement_may_be_undef(
+; CHECK-NEXT:    [[Q:%.*]] = udiv i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[COMPLEMENT:%.*]] = sub i32 [[X]], [[Q]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[Q]], [[COMPLEMENT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %q = udiv i32 %x, 2
+  %complement = sub i32 %x, %q
+  %cmp = icmp ule i32 %q, %complement
+  ret i1 %cmp
+}
+
+define i1 @udiv_le_complement_divisor_one(i32 noundef %x) {
+; CHECK-LABEL: @udiv_le_complement_divisor_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %q = udiv i32 %x, 1
+  %complement = sub i32 %x, %q
+  %cmp = icmp ule i32 %q, %complement
+  ret i1 %cmp
+}
+
+define i1 @lshr_le_complement_shift_zero(i32 noundef %x) {
+; CHECK-LABEL: @lshr_le_complement_shift_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %q = lshr i32 %x, 0
+  %complement = sub i32 %x, %q
+  %cmp = icmp ule i32 %q, %complement
+  ret i1 %cmp
+}
+
 define i1 @udiv_nonzero_eq(i32 %x) {
 ; CHECK-LABEL: @udiv_nonzero_eq(
 ; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
