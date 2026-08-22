@@ -4942,7 +4942,7 @@ TEST_F(FormatTest, BraceWrappingAfterExportBlock) {
                "  int foo();\n"
                "}",
                Style);
-               
+
   Style.BraceWrapping.AfterExportBlock = false;
   verifyFormat("export {\n"
                "  int foo();\n"

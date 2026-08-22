@@ -1725,8 +1725,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterObjCDeclaration=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
-                            /*AfterExternBlock=*/false,
                             /*AfterExportBlock=*/false,
+                            /*AfterExternBlock=*/false,
                             /*BeforeCatch=*/false,
                             /*BeforeElse=*/false,
                             /*BeforeLambdaBody=*/false,
@@ -1747,8 +1747,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
-    Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.AfterExportBlock = true;
+    Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
     break;
@@ -1767,8 +1767,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
-    Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.AfterExportBlock = true;
+    Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
     Expanded.BraceWrapping.BeforeLambdaBody = true;
@@ -1798,8 +1798,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterObjCDeclaration=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
-        /*AfterExternBlock=*/true,
         /*AfterExportBlock=*/true,
+        /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
         /*BeforeLambdaBody=*/true,
@@ -1901,8 +1901,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterObjCDeclaration=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
-                             /*AfterExternBlock=*/false,
                              /*AfterExportBlock=*/false,
+                             /*AfterExternBlock=*/false,
                              /*BeforeCatch=*/false,
                              /*BeforeElse=*/false,
                              /*BeforeLambdaBody=*/false,
