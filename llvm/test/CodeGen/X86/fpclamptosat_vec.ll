@@ -230,12 +230,9 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    andnps %xmm2, %xmm3
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    orps %xmm3, %xmm1
+; SSE-NEXT:    xorps %xmm1, %xmm2
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andnps %xmm1, %xmm0
+; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: stest_f32i32:
@@ -243,8 +240,7 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
-; AVX2-NEXT:    vblendvps %xmm1, %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -2760,12 +2756,9 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    andnps %xmm2, %xmm3
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    orps %xmm3, %xmm1
+; SSE-NEXT:    xorps %xmm1, %xmm2
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andnps %xmm1, %xmm0
+; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: stest_f32i32_mm:
@@ -2773,8 +2766,7 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
-; AVX2-NEXT:    vblendvps %xmm1, %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
