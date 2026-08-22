@@ -31,7 +31,6 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
@@ -568,12 +567,6 @@ Interpreter::Parse(llvm::StringRef Code) {
     return TuOrErr.takeError();
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
-
-  // Under -emit-llvm, print the module IR.
-  if (InitPTUSize && LastPTU.TheModule &&
-      getCompilerInstance()->getFrontendOpts().ProgramAction ==
-          frontend::EmitLLVM)
-    LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
   return LastPTU;
 }
