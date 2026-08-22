@@ -17737,7 +17737,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // the target's modeled STLF penalty so a chain that is still profitable
       // after paying it can vectorize.
       if (EnableSLPStoreLoadForwardCheck && E->State == TreeEntry::Vectorize &&
-          !E->getInterleaveFactor() &&
           findStoreLoadForwardingConflict(BaseSI, E->getVectorFactor()))
         VecStCost += TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
       return VecStCost + CommonCost;
@@ -28328,11 +28327,12 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
       FirstStore->getPointerOperand(), *SE, StoreL);
 
   // A store-to-load forwarding hazard can involve any load in the loop that
-  // reads the widened store's base, not only loads that became SLP tree nodes.
-  // A conflicting load may feed a scalar store, sit below a gather/splat leaf,
-  // or be vectorized in a different tree, so it need not appear as a load node
-  // of the chain being costed. Enumerate every simple load in the store's loop
-  // that shares the store base.
+  // reads the widened store's base, not only loads that became SLP tree nodes:
+  // a conflicting load may feed a scalar store, sit below a gather/splat leaf,
+  // or be vectorized in a different tree. Enumerate every simple load in the
+  // store's loop that shares the store base. The widened width below is only
+  // visible for loads in the current tree; loads vectorized by other trees are
+  // modeled at scalar width.
   Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
   const auto CandidateLoads = [&] {
     SmallPtrSet<LoadInst *, 8> Loads;
