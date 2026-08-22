@@ -5863,7 +5863,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 
   // Using this symbolic name for the PHI, analyze the value coming around
   // the back-edge.
-  const SCEV *BEValue = getSCEV(BEValueV);
+  const SCEV *BEValue = getSCEVAtScope(BEValueV, L);
 
   // NOTE: If BEValue is loop invariant, we know that the PHI node just
   // has a special value for the first iteration of the loop.
