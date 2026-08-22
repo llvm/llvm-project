@@ -392,11 +392,8 @@ define i1 @bools_logical(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[NOT]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a

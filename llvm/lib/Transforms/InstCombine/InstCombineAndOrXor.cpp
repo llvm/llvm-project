@@ -5548,6 +5548,16 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
     return FoldedLogic;
 
+  // (select C, B, A) ^ (A & ~C) --> B & C
+  // Both the select and the AND must be one-use, so this reduces instruction
+  // count.
+  Value *A, *B, *C;
+  if (match(&I,
+            m_c_Xor(m_OneUse(m_Select(m_Value(C), m_Value(B), m_Value(A))),
+                    m_OneUse(m_c_And(m_Deferred(A),
+                                    m_Not(m_Deferred(C)))))))
+    return BinaryOperator::CreateAnd(B, C);
+
   // Y ^ (X | Y) --> X & ~Y
   // Y ^ (Y | X) --> X & ~Y
   if (match(Op1, m_OneUse(m_c_Or(m_Value(X), m_Specific(Op0)))))
@@ -5570,7 +5580,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       match(Op0, m_OneUse(m_c_And(m_Value(X), m_Specific(Op1)))))
     return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(X));
 
-  Value *A, *B, *C;
   // (A ^ B) ^ (A | C) --> (~A & C) ^ B -- There are 4 commuted variants.
   if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
                         m_OneUse(m_c_Or(m_Deferred(A), m_Value(C))))))
