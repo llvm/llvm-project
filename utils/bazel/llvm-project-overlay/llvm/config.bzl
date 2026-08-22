@@ -140,6 +140,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     Label("//llvm:darwin_arm64"): native_arch_defines("AArch64", "arm64-apple-darwin"),
     Label("//llvm:darwin_x86_64"): native_arch_defines("X86", "x86_64-unknown-darwin"),
     Label("//llvm:linux_aarch64"): native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
+    Label("//llvm:linux_armv7"): native_arch_defines("ARM", "armv7-linux-gnueabihf"),
     Label("//llvm:linux_ppc64le"): native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
     Label("//llvm:linux_riscv64"): native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
     Label("//llvm:linux_s390x"): native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
