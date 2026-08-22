@@ -14,6 +14,7 @@
 // FIXME: Use appropriate wrappers for poll.h and mman.h
 // to support Windows and remove this linux-only guard.
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -49,13 +50,8 @@ static const size_t kDataBufferSize = kBufferPages * getpagesize();
 // the next page, so we allocate one more page.
 static const size_t kMappedBufferSize = (kBufferPages + 1) * getpagesize();
 
-// The event is disabled before we poll, so a sample either is already in the
-// ring buffer -- wakeup_events == 1 leaves POLLIN asserted -- or it will never
-// arrive. One poll is therefore conclusive, and the retries only absorb wake-up
-// latency. This used to be 160 * 10s, which turned a host without working LBR
-// into a 27 minute hang.
-constexpr int kPollTimeoutMs = 1000;
-constexpr int kMaxTimeouts = 2;
+static constexpr int kPollTimeoutMs = 1000;
+static constexpr int kMaxPolls = 3;
 
 // Waits for the LBR perf events.
 static int pollLbrPerfEvent(const int FileDescriptor) {
@@ -252,13 +248,11 @@ Error X86LbrCounter::checkLbrSupport() {
   counter.stop();
   (void)Sum;
 
-  auto ResultOrError = counter.doReadCounter(nullptr, nullptr);
-  if (ResultOrError)
-    if (!ResultOrError.get().empty())
-      // If there is at least one non-zero entry, then LBR is supported.
-      for (const int64_t &Value : ResultOrError.get())
-        if (Value != 0)
-          return Error::success();
+  // A read that fails just means LBR is unusable here. If there is at least one
+  // non-zero entry, then LBR is supported.
+  if (auto Result = expectedToOptional(counter.doReadCounter(nullptr, nullptr)))
+    if (any_of(*Result, [](int64_t Value) { return Value != 0; }))
+      return Error::success();
 
   return make_error<StringError>(
       "LBR format with cycles is not suppported on the host.",
@@ -287,21 +281,21 @@ X86LbrCounter::doReadCounter(const void *From, const void *To) const {
   // counts from the buffer.
   SmallVector<int64_t, 4> CycleArray;
   auto DataBuf = std::make_unique<char[]>(kDataBufferSize);
-  int NumTimeouts = 0;
-  int PollResult = 0;
 
-  while (PollResult <= 0) {
+  // The event is disabled before we get here, so a sample either is already in
+  // the ring buffer -- wakeup_events == 1 leaves POLLIN asserted -- or it will
+  // never arrive. The budget only absorbs wake-up latency.
+  int PollResult = 0;
+  for (int I = 0; I != kMaxPolls && PollResult == 0; ++I)
     PollResult = pollLbrPerfEvent(getFileDescriptor());
-    if (PollResult > 0)
-      break;
-    if (PollResult == -1)
-      return make_error<StringError>("Cannot poll LBR perf event.",
-                                     errc::io_error);
-    if (NumTimeouts++ >= kMaxTimeouts)
-      return make_error<StringError>(
-          "LBR polling still timed out after max number of attempts.",
-          errc::device_or_resource_busy);
-  }
+
+  if (PollResult < 0)
+    return make_error<StringError>("Cannot poll LBR perf event.",
+                                   errc::io_error);
+  if (PollResult == 0)
+    return make_error<StringError>(
+        "LBR polling still timed out after max number of attempts.",
+        errc::device_or_resource_busy);
 
   struct perf_event_mmap_page Page;
   memcpy(&Page, MMappedBuffer, sizeof(struct perf_event_mmap_page));
