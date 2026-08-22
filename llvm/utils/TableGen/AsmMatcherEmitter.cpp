@@ -3207,8 +3207,8 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
         "getAvailableFeatures();\n\n";
 
   OS << "  // Get the next operand index.\n";
-  OS << "  unsigned NextOpNum = Operands.size()"
-     << (HasMnemonicFirst ? " - 1" : "") << ";\n";
+  OS << "  unsigned NextOpNum = static_cast<unsigned>(Operands.size()"
+     << (HasMnemonicFirst ? " - 1" : "") << ");\n";
 
   // Emit code to search the table.
   OS << "  // Search the table.\n";
@@ -4141,8 +4141,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         "~AvailableFeatures;\n";
   OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
         "features:\";\n";
-  OS << "                      for (unsigned I = 0, E = "
-        "NewMissingFeatures.size(); I != E; ++I)\n";
+  OS << "                      for (unsigned I = 0, E = static_cast<unsigned>("
+        "NewMissingFeatures.size()); I != E; ++I)\n";
   OS << "                        if (NewMissingFeatures[I])\n";
   OS << "                          dbgs() << ' ' << I;\n";
   OS << "                      dbgs() << \"\\n\");\n";
