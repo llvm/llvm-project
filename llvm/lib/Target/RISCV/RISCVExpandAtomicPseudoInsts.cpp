@@ -28,19 +28,11 @@ using namespace llvm;
 
 namespace {
 
-class RISCVExpandAtomicPseudo : public MachineFunctionPass {
+class RISCVExpandAtomicPseudoImpl {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
-  static char ID;
-
-  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return RISCV_EXPAND_ATOMIC_PSEUDO_NAME;
-  }
+  bool run(MachineFunction &MF);
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);
@@ -68,9 +60,24 @@ private:
 #endif
 };
 
-char RISCVExpandAtomicPseudo::ID = 0;
+class RISCVExpandAtomicPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-bool RISCVExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
+  RISCVExpandAtomicPseudoLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return RISCVExpandAtomicPseudoImpl().run(MF);
+  }
+
+  StringRef getPassName() const override {
+    return RISCV_EXPAND_ATOMIC_PSEUDO_NAME;
+  }
+};
+
+char RISCVExpandAtomicPseudoLegacy::ID = 0;
+
+bool RISCVExpandAtomicPseudoImpl::run(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
   TII = STI->getInstrInfo();
 
@@ -89,7 +96,7 @@ bool RISCVExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-bool RISCVExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool RISCVExpandAtomicPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -102,9 +109,9 @@ bool RISCVExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool RISCVExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MBBI,
-                                       MachineBasicBlock::iterator &NextMBBI) {
+bool RISCVExpandAtomicPseudoImpl::expandMI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
   // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
   // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
@@ -491,7 +498,7 @@ static void doMaskedAtomicBinOpExpansion(const RISCVInstrInfo *TII,
       .addMBB(LoopMBB);
 }
 
-bool RISCVExpandAtomicPseudo::expandAtomicBinOp(
+bool RISCVExpandAtomicPseudoImpl::expandAtomicBinOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) {
@@ -698,7 +705,7 @@ static void doMaskedAtomicMinMaxOpExpansion(
       .addMBB(LoopHeadMBB);
 }
 
-bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
+bool RISCVExpandAtomicPseudoImpl::expandAtomicMinMaxOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) {
@@ -816,7 +823,7 @@ bool tryToFoldBNEOnCmpXchgResult(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
+bool RISCVExpandAtomicPseudoImpl::expandAtomicCmpXchg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, bool IsMasked,
     int Width, MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
@@ -924,9 +931,18 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVExpandAtomicPseudo, "riscv-expand-atomic-pseudo",
+INITIALIZE_PASS(RISCVExpandAtomicPseudoLegacy, "riscv-expand-atomic-pseudo",
                 RISCV_EXPAND_ATOMIC_PSEUDO_NAME, false, false)
 
-FunctionPass *llvm::createRISCVExpandAtomicPseudoPass() {
-  return new RISCVExpandAtomicPseudo();
+FunctionPass *llvm::createRISCVExpandAtomicPseudoLegacyPass() {
+  return new RISCVExpandAtomicPseudoLegacy();
+}
+
+PreservedAnalyses
+RISCVExpandAtomicPseudoPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVExpandAtomicPseudoImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
 }

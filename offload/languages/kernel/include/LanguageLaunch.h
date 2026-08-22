@@ -9,7 +9,6 @@
 #ifndef LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_LAUNCH_H
 #define LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_LAUNCH_H
 
-#include "OffloadAPI.h"
 #include "Types.h"
 
 #include <cstddef>
@@ -19,21 +18,17 @@ extern "C" {
 
 /// Push call configuration for kernel launch
 unsigned __llvmPushCallConfiguration(dim3 __grid_size, dim3 __block_size,
-                                     size_t __shared_memory, void *__stream);
+                                     size_t __shared_memory = 0,
+                                     void *__stream = 0);
 
 /// Pop call configuration for kernel launch
 unsigned __llvmPopCallConfiguration(dim3 *__grid_size, dim3 *__block_size,
                                     size_t *__shared_memory, void **__stream);
 
-/// Internal kernel launch implementation
-ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
-                                   dim3 BlockDim, void *KernelArgsPtr,
-                                   size_t DynamicSharedMem, void *Stream);
-
 /// LLVM-style kernel launch entry point
-unsigned __llvmLaunchKernel(const char *KernelID, dim3 GridDim, dim3 BlockDim,
-                            void *KernelArgsPtr, size_t DynamicSharedMem,
-                            void *Stream);
+unsigned llvmLaunchKernel(const char *KernelID, dim3 GridDim, dim3 BlockDim,
+                          void *KernelArgsPtr, size_t DynamicSharedMem = 0,
+                          void *Stream = 0);
 }
 
 #endif // LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_LAUNCH_H

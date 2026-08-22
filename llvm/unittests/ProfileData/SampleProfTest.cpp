@@ -198,11 +198,19 @@ struct SampleProfTest : ::testing::Test {
     return Reader->getFormatVersion();
   }
 
-  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
+  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
+                     bool UseMD5ProfSymList = false,
+                     bool UseMD5IndexedTables = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
-    if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
-      static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      if (UseMD5)
+        Writer->setUseMD5();
+      if (UseMD5ProfSymList)
+        Writer->setUseMD5ProfileSymbolList();
+      if (UseMD5IndexedTables)
+        Writer->setUseMD5IndexedTables();
+    }
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -487,29 +495,13 @@ TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
 }
 
 TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
-  const char *Args[] = {"SampleProfTest", "--md5-prof-sym-list=true"};
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
-
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
-
-  const char *ArgsFalse[] = {"SampleProfTest", "--md5-prof-sym-list=false"};
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/true);
 }
 
 TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
-  const char *Args[] = {"SampleProfTest",
-                        "--sample-profile-write-eytzinger-name-tables=true"};
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
-
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
-
-  const char *ArgsFalse[] = {
-      "SampleProfTest", "--sample-profile-write-eytzinger-name-tables=false"};
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false, /*UseMD5IndexedTables=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
@@ -602,6 +594,16 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
 }
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+// Verify that function-offset flags are rejected for unrelated section types.
+TEST(SampleProfSectionFlagTest, RejectsMismatchedSectionSpecificFlag) {
+  SecHdrTableEntry Entry{SecLBRProfile, 0, 0, 0, 0};
+  EXPECT_DEATH(
+      static_cast<void>(hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)),
+      "Misuse of a flag in an incompatible section");
+}
+#endif
 
 // Verify that requesting format version 103 results in a version 103 profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion103) {

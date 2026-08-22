@@ -196,7 +196,6 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   if (!QueueGroupInfoOrErr)
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
-  QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
@@ -209,8 +208,6 @@ Error L0DeviceTy::deinitImpl() {
   for (auto &PGM : Programs)
     if (auto Err = PGM.deinit())
       return Err;
-  if (auto Err = QueueCache.deinit())
-    return Err;
   return MemAllocator.deinit();
 }
 
@@ -258,11 +255,19 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
+void L0DeviceTy::releaseQueue(L0QueueTy *Queue) {
+  if (!Queue)
+    return;
+  Queue->getUserCtx()->returnCachedQueue(Queue);
+}
+
 Expected<L0QueueTy *>
-L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
+L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                             LevelZeroPluginContextTy *UserCtx) {
   L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto NewQueueOrErr = QueueCache.getQueue();
+    auto &Ctx = UserCtx ? *UserCtx : L0Context.getDefaultUserCtx();
+    auto NewQueueOrErr = Ctx.takeCachedQueue(this);
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
     Queue = *NewQueueOrErr;
@@ -400,11 +405,6 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
-}
-
-Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
-  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }
 
 const char *L0DeviceTy::getArchCStr() const {
@@ -632,7 +632,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    auto CmdListOrErr = createImmCmdList(InOrder);
+    auto CmdListOrErr = createImmCmdList(getZeContext(), InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     Ret->async_info->Queue = *CmdListOrErr;
@@ -738,7 +738,8 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
-L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
+L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                             ze_context_handle_t UserZeCtx, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
     Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
@@ -751,7 +752,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
-  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
+  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, UserZeCtx, getZeDevice(),
                     &Desc, &CmdList);
   ODBG(OLDT_Device) << "Created an immediate command list " << CmdList
                     << " (Ordinal: " << Ordinal << ", Index: " << Index

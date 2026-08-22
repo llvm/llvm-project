@@ -480,8 +480,9 @@ def extract_lines(patch_file, whole_file):
                 line_count = 1
                 if match.group(3):
                     line_count = int(match.group(3))
-                # A hunk that adds no lines is a pure deletion, and start_line
-                # refers to the preceding line, which the deletion left alone.
+                # A hunk that adds no lines is a pure deletion. start_line
+                # refers to the preceding line (0 when the deletion is at the
+                # start of a file), which the deletion left alone.
                 if line_count == 0:
                     continue
                 matches.setdefault(filename, []).append(Range(start_line, line_count))

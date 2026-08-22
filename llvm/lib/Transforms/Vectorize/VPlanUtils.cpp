@@ -59,25 +59,18 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-/// Returns true if \p R propagates poison from any operand to its result.
-static bool propagatesPoisonFromRecipeOp(const VPRecipeBase *R) {
-  return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case<VPWidenGEPRecipe, VPWidenCastRecipe>(
-          [](const VPRecipeBase *) { return true; })
-      .Case([](const VPReplicateRecipe *Rep) {
-        // GEP and casts propagate poison from all operands.
-        unsigned Opcode = Rep->getOpcode();
-        return Opcode == Instruction::GetElementPtr ||
-               Instruction::isCast(Opcode);
-      })
-      .Default([](const VPRecipeBase *) { return false; });
-}
-
 /// Returns true if \p V being poison is guaranteed to trigger UB because it
 /// propagates to the address of a memory recipe.
 static bool poisonGuaranteesUB(const VPValue *V) {
   SmallPtrSet<const VPValue *, 8> Visited;
   SmallVector<const VPValue *, 16> Worklist;
+
+  auto PropagatesPoisonFromRecipeOp = [](const VPRecipeBase *R) {
+    if (!isa<VPSingleDefRecipe>(R))
+      return false;
+    unsigned Opcode = vputils::getOpcode(R->getVPSingleValue());
+    return Instruction::isCast(Opcode) || Opcode == Instruction::GetElementPtr;
+  };
 
   Worklist.push_back(V);
 
@@ -88,7 +81,8 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
+      auto *R = cast<VPRecipeBase>(U);
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(R)) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -101,9 +95,8 @@ static bool poisonGuaranteesUB(const VPValue *V) {
       }
 
       // Check if poison propagates through this recipe to any of its users.
-      auto *R = cast<VPRecipeBase>(U);
       for (const VPValue *Op : R->operands()) {
-        if (Op == Current && propagatesPoisonFromRecipeOp(R)) {
+        if (Op == Current && PropagatesPoisonFromRecipeOp(R)) {
           Worklist.push_back(R->getVPSingleValue());
           break;
         }
@@ -871,11 +864,10 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createVScale(S->getType(), DL);
-  case scAddExpr:
-  case scMulExpr: {
-    auto *NAry = cast<SCEVNAryExpr>(S);
-    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
-                                     NAry->hasNoSignedWrap());
+  case scAddExpr: {
+    auto *AddE = cast<SCEVAddExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(AddE->hasNoUnsignedWrap(),
+                                     AddE->hasNoSignedWrap());
 
     // Expanded poiner SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
@@ -892,26 +884,60 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
     }
 
-    bool IsAdd = isa<SCEVAddExpr>(S);
-    unsigned Opcode = IsAdd ? Instruction::Add : Instruction::Mul;
-    // Iterate in reverse so that constants are emitted last. For adds, sort
-    // non-constant-negative operands last, matching SCEVExpander's LoopCompare,
-    // so that they are accumulated into the result rather than starting it.
-    SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
-    if (IsAdd)
-      stable_sort(SCEVOps, [](const SCEV *L, const SCEV *R) {
-        return !L->isNonConstantNegative() && R->isNonConstantNegative();
-      });
+    // Non-constant-negative add operands are expanded negated and subtracted
+    // from the running result below, instead of being negated and added.
+    auto UseSubtract = [](const SCEV *Op) {
+      return Op->isNonConstantNegative();
+    };
+    // Iterate in reverse so that constants are emitted last, and move the
+    // subtracted operands last, matching SCEVExpander's LoopCompare, so that
+    // they don't start the running result.
+    SmallVector<const SCEV *, 2> SCEVOps(reverse(AddE->operands()));
+    stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
+      return !UseSubtract(L) && UseSubtract(R);
+    });
     SmallVector<VPValue *, 2> Ops;
     for (const SCEV *Op : SCEVOps) {
+      // The first operand starts the result, so it is never subtracted.
+      bool Negate = !Ops.empty() && UseSubtract(Op);
+      VPValue *OpV = tryToExpand(Negate ? SE.getNegativeSCEV(Op) : Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPValue *Result = Ops.front();
+    for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
+      if (UseSubtract(Op)) {
+        // Result + (-Op) == Result - Op, which saves the multiply for the
+        // negation. NSW only transfers if negating Op cannot overflow, see
+        // ScalarEvolution::getMinusSCEV.
+        bool HasNSW =
+            WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
+        Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
+                                             {/*HasNUW=*/false, HasNSW}, DL);
+        continue;
+      }
+      Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
+                                           WrapFlags, DL);
+    }
+    return Result;
+  }
+  case scMulExpr: {
+    auto *MulE = cast<SCEVMulExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(MulE->hasNoUnsignedWrap(),
+                                     MulE->hasNoSignedWrap());
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEV *Op : reverse(MulE->operands())) {
       VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
+    for (VPValue *OpV : drop_begin(Ops)) {
+      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, OpV},
+                                           WrapFlags, DL);
+    }
     return Result;
   }
   case scUDivExpr: {
@@ -919,9 +945,23 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     VPValue *LHS = tryToExpand(UDiv->getLHS());
     if (!LHS)
       return nullptr;
-    VPValue *RHS = tryToExpand(UDiv->getRHS());
+    const SCEV *RHSExpr = UDiv->getRHS();
+    VPValue *RHS = tryToExpand(RHSExpr);
     if (!RHS)
       return nullptr;
+    if (SafeUDivMode) {
+      // Make sure the UDiv's divisor is guaranteed to not be zero/poison, to
+      // avoid UB.
+      Type *Ty = UDiv->getType();
+      bool GuaranteedNotPoison =
+          ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
+      if (!GuaranteedNotPoison)
+        RHS = Builder.createScalarFreeze(RHS, DL);
+      if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
+        RHS = Builder.createScalarIntrinsic(
+            Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
+            DL);
+    }
     return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
@@ -972,8 +1012,9 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
-  case scSMinExpr: {
-    auto *MinMax = cast<SCEVMinMaxExpr>(S);
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
+    auto *MinMax = cast<SCEVNAryExpr>(S);
     Intrinsic::ID IntrinsicID;
     switch (S->getSCEVType()) {
     case scUMaxExpr:
@@ -983,6 +1024,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       IntrinsicID = Intrinsic::smax;
       break;
     case scUMinExpr:
+    case scSequentialUMinExpr:
       IntrinsicID = Intrinsic::umin;
       break;
     case scSMinExpr:
@@ -992,15 +1034,25 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       llvm_unreachable("Unexpected min/max SCEV type");
     }
     // Chain operands in reverse order matching SCEVExpander's expansion of
-    // min/max expressions.
+    // min/max expressions. In SafeUDivMode freeze expansion results of operands
+    // other than the first for sequential UMins, to avoid short-circuiting
+    // divide-by-0/poison.
+    bool IsSequential = S->getSCEVType() == scSequentialUMinExpr;
+    Type *ResultTy = MinMax->getType();
+    bool PrevSafeMode = SafeUDivMode;
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : reverse(MinMax->operands())) {
-      VPValue *OpV = tryToExpand(Op);
+    for (const SCEV *SCEVOp : reverse(MinMax->operands())) {
+      bool MayShortCircuit =
+          IsSequential && Ops.size() != MinMax->getNumOperands() - 1;
+      SafeUDivMode = MayShortCircuit || PrevSafeMode;
+      VPValue *OpV = tryToExpand(SCEVOp);
+      SafeUDivMode = PrevSafeMode;
       if (!OpV)
         return nullptr;
+      if (MayShortCircuit)
+        OpV = Builder.createScalarFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
-    Type *ResultTy = MinMax->getType();
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},

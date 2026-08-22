@@ -222,13 +222,13 @@ public:
 
   using BaseT::getVectorInstrCost;
   InstructionCost
-  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
+  getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr,
                             TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
