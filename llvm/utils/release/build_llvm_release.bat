@@ -297,7 +297,7 @@ set arch=%1
 set python_dir=%2
 
 call :set_environment %python_dir% || exit /b 1
-call "%vsdevcmd%" -arch=%arch% || exit /b 1
+REM call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
