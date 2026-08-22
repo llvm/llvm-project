@@ -189,18 +189,15 @@ public:
     }
     case Block: {
       const auto *CE = cast<CallExpr>(E);
-      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(),
-                                                CE->arg_end());
+      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(), CE->arg_end());
     }
     case ObjCMethod: {
       const auto *ME = cast<ObjCMessageExpr>(E);
-      return llvm::SmallVector<const Expr *, 4>(ME->arg_begin(),
-                                                ME->arg_end());
+      return llvm::SmallVector<const Expr *, 4>(ME->arg_begin(), ME->arg_end());
     }
     case Constructor: {
       const auto *CE = cast<CXXConstructExpr>(E);
-      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(),
-                                                CE->arg_end());
+      return llvm::SmallVector<const Expr *, 4>(CE->arg_begin(), CE->arg_end());
     }
     case Destructor:
     case InheritedConstructor:
