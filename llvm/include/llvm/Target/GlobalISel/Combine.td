@@ -276,7 +276,9 @@ def sext_inreg_to_zext_inreg : GICombineRule<
       [{
         unsigned BitWidth = MRI.getType(${src}.getReg()).getScalarSizeInBits();
         return Helper.getValueTracking()->maskedValueIsZero(${src}.getReg(),
-                 APInt::getOneBitSet(BitWidth, ${imm}.getImm() - 1)); }]),
+                 APInt::getOneBitSet(
+                     BitWidth,
+                     static_cast<unsigned>(${imm}.getImm() - 1))); }]),
     (apply [{
       Helper.getBuilder().setInstrAndDebugLoc(*${root});
       Helper.getBuilder().buildZExtInReg(${dst}, ${src}, ${imm}.getImm());
@@ -1036,7 +1038,7 @@ def merge_unmerge : GICombineRule<
              return false;
 
            // Check counts match.
-           unsigned NumMergeSrcs = ${merge_srcs}.size();
+           unsigned NumMergeSrcs = static_cast<unsigned>(${merge_srcs}.size());
            unsigned NumUnmergeDefs = UnmergeMI->getNumDefs();
            if (NumMergeSrcs != NumUnmergeDefs)
              return false;
