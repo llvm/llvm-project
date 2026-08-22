@@ -11569,7 +11569,7 @@ Vector types are not currently supported as the result type.
 ##### Semantics:
 
 The result is the bit range `source[offset : offset + bitwidth(ty))`,
-reinterpreted as a value of type `ty` as if by a `bitcast`.
+reinterpreted as a value of type `ty` as if by a {ref}`bitcast <i_bitcast>`.
 Bit `0` is the least significant bit of `source`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
@@ -11620,7 +11620,7 @@ to insert.
 ##### Semantics:
 
 The result is `base` with the bit range `[offset : offset + bitwidth(ty))`
-replaced by the bits of `val`, reinterpreted as if by a `bitcast`.
+replaced by the bits of `val`, reinterpreted as if by a {ref}`bitcast <i_bitcast>`.
 Bit `0` is the least significant bit of `base`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
