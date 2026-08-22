@@ -3456,9 +3456,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     llvm::erase_if(Features, [&](const std::string& F) {
        return getTarget().isReadOnlyFeature(F.substr(1));
     });
-    llvm::sort(Features);
-    Attrs.addAttribute("target-features", llvm::join(Features, ","));
-    AddedAttr = true;
+    if (!Features.empty()) {
+      llvm::sort(Features);
+      Attrs.addAttribute("target-features", llvm::join(Features, ","));
+      AddedAttr = true;
+    }
   }
   // Add metadata for AArch64 Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
