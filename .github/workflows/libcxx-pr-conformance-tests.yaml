@@ -100,10 +100,10 @@ jobs:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-16'
             cxx: 'g++-16'
-          - config: 'generic-cxx29'
+          - config: 'generic-cxx26'
             cc: 'clang-22'
             cxx: 'clang++-22'
-          - config: 'generic-cxx29'
+          - config: 'generic-cxx26'
             cc: 'clang-21'
             cxx: 'clang++-21'
     steps:
