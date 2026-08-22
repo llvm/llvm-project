@@ -57,11 +57,11 @@ public:
 } // namespace
 
 namespace {
-class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
+class RISCVCodeGenPrepareLegacy : public FunctionPass {
 public:
   static char ID;
 
-  RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
+  RISCVCodeGenPrepareLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return PASS_NAME; }
@@ -420,7 +420,7 @@ bool RISCVCodeGenPrepareImpl::run() {
   return MadeChange;
 }
 
-bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+bool RISCVCodeGenPrepareLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
@@ -433,16 +433,16 @@ bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   return RVCGP.run();
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME,
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
+INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
                     false)
 
-char RISCVCodeGenPrepareLegacyPass::ID = 0;
+char RISCVCodeGenPrepareLegacy::ID = 0;
 
 FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
-  return new RISCVCodeGenPrepareLegacyPass();
+  return new RISCVCodeGenPrepareLegacy();
 }
 
 PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
