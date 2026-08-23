@@ -2062,6 +2062,7 @@ let Predicates = [HasStdExtP] in {
   // Pseudo version of MERGE without the tied constraint. Will be expanded to
   // MERGE, MVM, or MVMN after register allocation.
   // dst = (~rd & rs1) | (rd & rs2)
+  let Size = 8 in
   def PseudoMERGE : Pseudo<(outs GPR:$dst), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
                            []>;
   def : Pat<(XLenVT (or (and GPR:$rd, GPR:$rs2), (and (not GPR:$rd), GPR:$rs1))),
