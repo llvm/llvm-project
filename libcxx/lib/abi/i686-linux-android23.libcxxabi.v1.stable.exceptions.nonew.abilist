@@ -1214,8 +1214,11 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_allEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_oneEPVKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk123__hazard_pointer_retireEPNS_25__hazard_pointer_obj_nodeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk124__hazard_pointer_acquireEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk124__hazard_pointer_releaseEPNS_21__hazard_pointer_slotE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk126__atomic_notify_all_nativeILj4EEEvPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk126__atomic_notify_one_nativeILj4EEEvPKv', 'type': 'FUNC'}
