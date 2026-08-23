@@ -551,6 +551,9 @@ features cannot lower the translation-unit ABI level;
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
 
+- Fixed a crash when passing a braced initializer list to a const reference
+  to an array of unknown bound in C++20. (#GH215501)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

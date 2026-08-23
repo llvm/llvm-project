@@ -5004,8 +5004,7 @@ static void TryReferenceListInitialization(Sema &S,
       Sequence.AddReferenceBindingStep(cv1T1IgnoreAS,
                                        /*BindingTemporary=*/true);
       if (S.getLangOpts().CPlusPlus20 &&
-          isa<IncompleteArrayType>(T1->getUnqualifiedDesugaredType()) &&
-          DestType->isRValueReferenceType()) {
+          isa<IncompleteArrayType>(T1->getUnqualifiedDesugaredType())) {
         // C++20 [dcl.init.list]p3.10:
         // List-initialization of an object or reference of type T is defined as
         // follows:
@@ -5013,9 +5012,13 @@ static void TryReferenceListInitialization(Sema &S,
         // case the type of the prvalue is the type of x in the declaration U
         // x[] H, where H is the initializer list.
 
-        // The call to AddReferenceBindingStep above converts the rvalue to an
-        // xvalue. Convert that xvalue to the incomplete array type.
-        Sequence.AddQualificationConversionStep(cv1T1, clang::VK_XValue);
+        // The prvalue described above is the initializer-list result and
+        // already has the deduced bound. The preceding reference-binding
+        // step materializes it, so this conversion operates on a glvalue.
+        // Convert it to the incomplete array type while preserving its
+        // value category.
+        Sequence.AddQualificationConversionStep(
+            cv1T1, DestType->isRValueReferenceType() ? VK_XValue : VK_LValue);
       }
       if (T1Quals.hasAddressSpace())
         Sequence.AddQualificationConversionStep(
