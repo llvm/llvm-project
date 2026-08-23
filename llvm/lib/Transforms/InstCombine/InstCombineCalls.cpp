@@ -612,6 +612,25 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
       auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
       return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
     }
+
+    // ctlz(zext(bitreverse(x))) -> zext(cttz(x) | (WideBits - NarrowBits))
+    // [poison-on-zero]
+    // ctlz(zext(bitreverse(x))) -> zext(cttz(x) + (WideBits - NarrowBits))
+    // [defined-on-zero]
+    if (match(Op0, m_OneUse(m_ZExt(m_BitReverse(m_Value(X)))))) {
+      Type *NarrowTy = X->getType();
+      unsigned WideBits = II.getType()->getScalarSizeInBits();
+      unsigned NarrowBits = NarrowTy->getScalarSizeInBits();
+      bool IsPoison = match(Op1, m_One());
+
+      auto *Cttz = IC.Builder.CreateBinaryIntrinsic(
+          Intrinsic::cttz, X, ConstantInt::getBool(II.getContext(), IsPoison));
+      auto *Diff = ConstantInt::get(NarrowTy, WideBits - NarrowBits);
+      Value *Combined = IsPoison ? IC.Builder.CreateOr(Cttz, Diff)
+                                 : IC.Builder.CreateNUWAdd(Cttz, Diff);
+      auto *ZextResult = IC.Builder.CreateZExt(Combined, II.getType());
+      return IC.replaceInstUsesWith(II, ZextResult);
+    }
   }
 
   // cttz(Pow2) -> Log2(Pow2)
