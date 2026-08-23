@@ -24,6 +24,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
@@ -128,61 +129,11 @@ TEST_CONSTEXPR_CXX26 bool test_with_hash() {
   return true;
 }
 
-#if TEST_STD_VER >= 26
-// TODO: move to libcxx/include/__functional/hash.h
-namespace std {
-
-// TODO: use _ prefix
-template <typename _Tp>
-concept EnabledForHash = requires(_Tp t) {
-  { std::bool_constant<__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
-};
-
-template <typename _Tp>
-concept DisabledForHash = not EnabledForHash<_Tp>;
-
-// TODO: document the constraints of using this at runtime OR make it consteval only
-template <typename _Tp>
-struct __constexpr_hash;
-
-template <DisabledForHash _Tp>
-struct __constexpr_hash<_Tp> {
-  __constexpr_hash()                                   = delete;
-  __constexpr_hash(const __constexpr_hash&)            = delete;
-  __constexpr_hash& operator=(const __constexpr_hash&) = delete;
-};
-
-template <EnabledForHash _Tp>
-struct __constexpr_hash<_Tp> {
-  [[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Tp& __v) const noexcept {
-    if constexpr (std::is_same_v<_Tp, nullptr_t>) {
-      return 662607004ull;
-    } else if constexpr (std::is_integral_v<_Tp>) {
-      if constexpr (sizeof(_Tp) <= sizeof(size_t)) {
-        return static_cast<size_t>(__v);
-      } else {
-        constexpr size_t multiple = sizeof(_Tp) / sizeof(size_t);
-        char region[multiple];
-
-        // TODO: 0, 1, 2, 3, 4
-        return region[multiple - 1]; // TODO: hash-ing
-      }
-    }
-    __builtin_unreachable(); // todo: revisit
-  }
-
-  __constexpr_hash() noexcept                          = default;
-  __constexpr_hash& operator=(const __constexpr_hash&) = default;
-};
-
-} // namespace std
-#endif
-
 int main(int, char**) {
   assert(test_with_hash<std::hash>());
 
 #if TEST_STD_VER >= 26
-  static_assert(test_with_hash<std::__constexpr_hash>());
+  static_assert(test_with_hash<support::constexpr_hash>());
 #endif
 
   return 0;
