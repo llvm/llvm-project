@@ -1547,7 +1547,12 @@ private:
   Operation *parentOp;
   OpBuilder builder;
   LogicalResult resolveTensorDescConsumer(OpOperand &operand);
-  LogicalResult resolveVectorConsumer(OpOperand &operand);
+  /// `terminatorMapping` is the pre-built successor-operand to successor-input
+  /// mapping of `operand`'s owner when that owner is a region terminator, and
+  /// null otherwise.
+  LogicalResult
+  resolveVectorConsumer(OpOperand &operand,
+                        const RegionBranchSuccessorMapping *terminatorMapping);
   LogicalResult assignResultLayout(OpResult &result);
 };
 
@@ -1584,6 +1589,18 @@ LogicalResult ResolveLayoutConflicts::run() {
         }
       }
     }
+    // All operands of a region terminator are forwarded through the same
+    // successors, so build the successor-operand to successor-input mapping
+    // once here instead of once per operand.
+    RegionBranchSuccessorMapping terminatorMapping;
+    const RegionBranchSuccessorMapping *terminatorMappingPtr = nullptr;
+    if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+      if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
+        branch.getSuccessorOperandInputMapping(terminatorMapping,
+                                               RegionBranchPoint(terminator));
+        terminatorMappingPtr = &terminatorMapping;
+      }
+    }
     for (OpOperand &operand : op->getOpOperands()) {
       // Handle conflicts in tensor descriptor operands.
       Type operandType = operand.get().getType();
@@ -1598,7 +1615,7 @@ LogicalResult ResolveLayoutConflicts::run() {
       }
       // Handle conflicts in vector operands.
       if (isa<VectorType>(operandType)) {
-        auto res = resolveVectorConsumer(operand);
+        auto res = resolveVectorConsumer(operand, terminatorMappingPtr);
         if (failed(res)) {
           DBGS() << "Failed to resolve vector consumer: " << *op << "\n";
           return WalkResult::interrupt();
@@ -1628,8 +1645,8 @@ LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
   return success();
 }
 
-LogicalResult
-ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
+LogicalResult ResolveLayoutConflicts::resolveVectorConsumer(
+    OpOperand &operand, const RegionBranchSuccessorMapping *terminatorMapping) {
   Value vectorValue = operand.get();
   Operation *consumerOp = operand.getOwner();
   // Get the current layout of the vector value.
@@ -1641,12 +1658,16 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
     return success(); // uniform non-tensor-data vector does not require
                       // layout
   }
-  // getConsumerLayoutAt also covers region-carried operands (loop init and
-  // yield operands), so a layout conflict there is reconciled below rather than
-  // silently trusted to region forwarding.
-  auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
+  // getConsumerLayoutAt also covers values carried across a region boundary
+  // (loop init operands and yield/condition operands), so a layout conflict
+  // there is reconciled below rather than silently trusted to region
+  // forwarding.
+  auto consumerLayout = xegpu::getConsumerLayoutAt(operand, terminatorMapping);
   if (!consumerLayout) {
-    // A terminator (e.g.scf.if's yield) legitimately has no layout to reconcile
+    // A terminator operand whose forwarding target carries no layout has
+    // nothing to reconcile here: the target's layout is settled at its own use
+    // points, or is genuinely absent. Leave the operand alone instead of
+    // reporting a missing consumer layout.
     if (isa<RegionBranchTerminatorOpInterface>(consumerOp))
       return success();
     return consumerOp->emitError(

@@ -417,7 +417,16 @@ completeDpasMxLaneLayoutFromInstData(DistributeLayoutAttr aLayout,
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout
 /// users and determine the expected layout accordingly.
-DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+///
+/// For an operand of a region terminator (e.g. `scf.yield`, `scf.condition`)
+/// the expected layout is the layout of the successor input the operand is
+/// forwarded to, which requires the terminator's successor-operand to
+/// successor-input mapping. That mapping is a property of the terminator, so
+/// callers that query every operand of one terminator can build it once and
+/// pass it as `mapping`; otherwise it is built internally.
+DistributeLayoutAttr
+getConsumerLayoutAt(OpOperand &operand,
+                    const RegionBranchSuccessorMapping *mapping = nullptr);
 
 /// Returns true if `op` is safe and cheap to clone: it has no side effects,
 /// no regions, and all of its operands are themselves trivially

@@ -225,13 +225,17 @@ func.func @conflict_inside_loop() {
 }
 
 // Conflict on the scf.for init operand: the init value %cst carries [16, 16],
-// but the loop-carried position is pinned to [8, 16] (layout_operand_3). The
-// splat constant is rematerialized with the loop-carried layout and the init
-// is repointed to the clone.
+// but the loop-carried position is pinned to [8, 16] (layout_operand_3). A
+// splat constant is trivially rematerializable, so instead of a convert_layout
+// the constant is cloned with the loop-carried layout and the init operand is
+// repointed to the clone. The original [16, 16] constant stays in the IR (it is
+// left for DCE), hence the two arith.constant checks below for a single
+// constant in the input.
 // CHECK-LABEL: func.func @conflict_init_operand
-// CHECK:         arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} dense<{{.*}}> : vector<16x16xf16>
-// CHECK-NEXT:    %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<{{.*}}> : vector<16x16xf16>
-// CHECK:         scf.for {{.*}} iter_args(%{{.*}} = %[[CST]]) -> (vector<16x16xf16>)
+// CHECK:         %[[ORIG:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} dense<{{.*}}> : vector<16x16xf16>
+// CHECK-NEXT:    %[[CLONE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<{{.*}}> : vector<16x16xf16>
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         scf.for {{.*}} iter_args(%{{.*}} = %[[CLONE]]) -> (vector<16x16xf16>)
 // CHECK:         layout_operand_3 = #xegpu.layout<inst_data = [8, 16]>
 func.func @conflict_init_operand() {
   %c0 = arith.constant 0 : index
@@ -241,6 +245,107 @@ func.func @conflict_init_operand() {
   %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> vector<16x16xf16> {
     scf.yield %acc : vector<16x16xf16>
   } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  return
+}
+
+// Conflict on the scf.yield operand: the loop body produces [16, 16] but the
+// loop-carried position is pinned to [8, 16], so the value must be converted
+// before it re-enters the loop.
+// CHECK-LABEL: func.func @conflict_yield_operand
+// CHECK:         %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16x16xf16>
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[EXP]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-SAME:      : vector<16x16xf16>
+// CHECK-NEXT:    scf.yield %[[CVT]] : vector<16x16xf16>
+func.func @conflict_yield_operand() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> vector<16x16xf16> {
+    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+    %2 = math.exp %1 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+    scf.yield %2 : vector<16x16xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  return
+}
+
+// Nested loops carrying the same value in different layouts: the outer loop
+// carries [8, 16] and the inner one [16, 16]. Both boundaries are region
+// crossings, so the inner init operand and the outer yield operand each need a
+// convert_layout.
+// CHECK-LABEL: func.func @conflict_nested_loop_carried
+// CHECK:         %[[OUTER:.*]] = scf.for {{.*}} iter_args(%[[OUTER_ACC:.*]] = %{{.*}}) -> (vector<16x16xf16>) {
+// CHECK:           %[[CVT_IN:.*]] = xegpu.convert_layout %[[OUTER_ACC]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK:           %[[INNER:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[CVT_IN]]) -> (vector<16x16xf16>) {
+// CHECK:           } {layout_operand_3 = #xegpu.layout<inst_data = [16, 16]>, layout_result_0 = #xegpu.layout<inst_data = [16, 16]>}
+// CHECK:           %[[CVT_OUT:.*]] = xegpu.convert_layout %[[INNER]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK:           scf.yield %[[CVT_OUT]] : vector<16x16xf16>
+// CHECK:         } {layout_operand_3 = #xegpu.layout<inst_data = [8, 16]>, layout_result_0 = #xegpu.layout<inst_data = [8, 16]>}
+func.func @conflict_nested_loop_carried() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%outer = %cst) -> vector<16x16xf16> {
+    %1 = scf.for %j = %c0 to %c4 step %c1 iter_args(%inner = %outer) -> vector<16x16xf16> {
+      %2 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+      %3 = arith.addf %inner, %2 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+      scf.yield %3 : vector<16x16xf16>
+    } {layout_operand_3 = #inst_data_16x16, layout_result_0 = #inst_data_16x16}
+    scf.yield %1 : vector<16x16xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  %4 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  return
+}
+
+// An scf.yield operand that only feeds a parent result: the "then" region
+// produces [16, 16] while the scf.if result is [8, 16], so the yielded value is
+// converted. The "else" region already matches and is left alone.
+// CHECK-LABEL: func.func @conflict_if_result
+// CHECK:         %[[THEN:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[THEN]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    scf.yield %[[CVT]] : vector<16x16xf16>
+// CHECK:       } else {
+// CHECK-NEXT:    %[[ELSE:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<16x16xf16>
+// CHECK-NEXT:    scf.yield %[[ELSE]] : vector<16x16xf16>
+func.func @conflict_if_result(%cond: i1) {
+  %0 = scf.if %cond -> vector<16x16xf16> {
+    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+    scf.yield %1 : vector<16x16xf16>
+  } else {
+    %2 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<16x16xf16>
+    scf.yield %2 : vector<16x16xf16>
+  } {layout_result_0 = #inst_data_8x16}
+  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  return
+}
+
+// Conflict on an scf.condition operand. The "after" region argument it feeds is
+// not tied to an init operand, so no layout attribute pins it; the required
+// layout comes from what the argument's use inside the "after" region asks for
+// ([8, 16] via math.exp), and the [16, 16] value is converted before the
+// condition.
+// CHECK-LABEL: func.func @conflict_while_condition_operand
+// CHECK:         %[[V:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    scf.condition(%{{.*}}) %[[CVT]] : vector<16x16xf16>
+func.func @conflict_while_condition_operand(%cond: i1) {
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.while (%before = %cst) : (vector<16x16xf16>) -> vector<16x16xf16> {
+    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+    scf.condition(%cond) %1 : vector<16x16xf16>
+  } do {
+  ^bb0(%after: vector<16x16xf16>):
+    %2 = math.exp %after {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+    scf.yield %2 : vector<16x16xf16>
+  } attributes {layout_operand_0 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }
 
