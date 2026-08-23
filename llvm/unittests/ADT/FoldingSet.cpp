@@ -188,8 +188,7 @@ TEST(FoldingSetTest, ClearOnNonEmpty) {
   EXPECT_TRUE(Trivial.empty());
 }
 
-// 48 is the most the default 64 buckets hold and 49 is one past it, so both
-// sides of the grow boundary are covered.
+// 48 is the most the default 64 buckets hold; 49 is one past it.
 TEST(FoldingSetTest, Reserve) {
   for (unsigned Size : {0u, 1u, 2u, 48u, 49u}) {
     FoldingSet<TrivialPair> Set;
@@ -366,8 +365,7 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   EXPECT_THAT(Set, SizeIs(0));
 }
 
-// Exercise growth, and the Algorithm R shifting that erase performs, against a
-// reference model. Nothing else in this file inserts enough nodes to rehash.
+// Exercise growth and Algorithm R shifting against a reference model.
 TEST(FoldingSetTest, InsertEraseStress) {
   FoldingSet<TrivialPair> Set;
   std::map<unsigned, std::unique_ptr<TrivialPair>> Model;
@@ -398,8 +396,6 @@ TEST(FoldingSetTest, InsertEraseStress) {
     ASSERT_EQ(Model.size(), Set.size());
   }
 
-  // Every surviving node must still be reachable along its probe chain, and
-  // iteration must visit each of them exactly once.
   for (const auto &KV : Model) {
     FoldingSetNodeID ID;
     ID.AddInteger(KV.first);
@@ -461,8 +457,7 @@ TEST(FoldingSetTest, MoveInvalidatesIterators) {
 }
 #endif
 
-// The InsertPos token is a hash, not a position, so it stays valid across
-// insertions that rehash the table.
+// The InsertPos token is a hash, not a position, so a rehash cannot stale it.
 TEST(FoldingSetTest, InsertPosSurvivesGrowth) {
   FoldingSet<TrivialPair> Set;
   TrivialPair Late(9999, 9999);

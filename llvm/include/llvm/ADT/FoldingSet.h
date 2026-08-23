@@ -100,6 +100,9 @@ namespace llvm {
 ///    MyNode *N = new MyNode(Name, Value);
 ///    MyFoldingSet.InsertNode(N, InsertPoint);
 ///
+/// InsertPoint survives intervening insertions, but N must profile identically
+/// to the ID that produced it, or N becomes unfindable.
+///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
 ///    bool WasRemoved = MyFoldingSet.RemoveNode(M);
@@ -179,14 +182,16 @@ public:
   FoldingSetNodeIDRef() = default;
   FoldingSetNodeIDRef(const unsigned *D, size_t S) : Data(D), Size(S) {}
 
+  static constexpr unsigned NotAHash = 0;
+
   // Compute a strong hash value used to lookup the node in the FoldingSetBase.
   // The hash value is not guaranteed to be deterministic across processes.
+  // Never returns NotAHash: FoldingSetBase uses it to keep the InsertPos token
+  // non-null and to mark a node belonging to no set.
   unsigned ComputeHash() const {
     unsigned Hash =
         static_cast<unsigned>(hash_combine_range(Data, Data + Size));
-    // FoldingSetBase hands a hash back to the caller as a non-null InsertPos
-    // token, which on a 32-bit host leaves no encoding for UINT32_MAX.
-    return Hash == UINT32_MAX ? 0 : Hash;
+    return Hash == NotAHash ? 1 : Hash;
   }
 
   // Compute a deterministic hash value across processes that is suitable for
@@ -316,15 +321,10 @@ public:
   //===--------------------------------------------------------------------===//
   /// This class is used to maintain node state in a folding set.
   class Node {
-  public:
-    /// FoldingSetNodeIDRef::ComputeHash() never returns this, so it marks a
-    /// node that is not in any folding set.
-    static constexpr uint32_t NotInSet = UINT32_MAX;
-
   private:
     // Hash of the node's profile, cached so that growth and removal never
-    // re-run Profile().
-    uint32_t FoldingSetHash = NotInSet;
+    // re-run Profile(). NotAHash while the node is in no folding set.
+    uint32_t FoldingSetHash = FoldingSetNodeIDRef::NotAHash;
 
   public:
     Node() = default;
@@ -366,28 +366,26 @@ protected:
   };
 
 private:
-  /// The hashes of the nodes in Buckets, in the same order. Only entries whose
-  /// bucket is non-null are live. Comparing these rejects mismatches before the
-  /// profile compare, so walking a probe chain touches no nodes.
+  /// The hashes of Buckets, in the same order. Comparing these rejects
+  /// mismatches without touching a node.
   uint32_t *getHashes() const {
     return reinterpret_cast<uint32_t *>(Buckets + NumBuckets);
   }
 
   /// Put \p N in the first empty slot following its home, without checking
-  /// capacity. Does not touch \p N: a rehash already knows the hash and must
-  /// not dirty every node to rewrite it.
+  /// capacity. Does not touch \p N, so a rehash need not dirty every node.
   void placeNode(Node *N, uint32_t Hash);
 
-  /// Compare \p N against \p ID. Kept out of line so that the scratch storage
-  /// (FoldingSetNodeID) stays off the probe loop's path.
+  /// Compare \p N against \p ID. Out of line to keep FoldingSetNodeID's inline
+  /// storage out of the probe loop's frame.
   static bool nodeEquals(const FoldingSetInfo &Info, const FoldingSetBase *Self,
                          Node *N, const FoldingSetNodeID &ID, unsigned IDHash);
 
   friend class FoldingSetIteratorImpl;
 
-  /// Resize the hash table and rehash everything. \p NewBucketCount must be a
-  /// power of two, and must be greater than the old bucket count.
-  void GrowBucketCount(unsigned NewBucketCount);
+  /// Rehash into at least \p MinNumBuckets buckets, rounded up to a power of
+  /// two and floored at the constructor's minimum.
+  void grow(unsigned MinNumBuckets);
 
 protected:
   // The below methods are protected to encourage subclasses to provide a more
@@ -413,7 +411,7 @@ protected:
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos.
+  /// FindNodeOrInsertPos for an ID that \p N profiles identically to.
   LLVM_ABI void InsertNode(Node *N, void *InsertPos);
 };
 

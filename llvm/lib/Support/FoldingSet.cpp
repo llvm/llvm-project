@@ -17,6 +17,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -133,14 +134,14 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 
-/// Encode a hash into the non-null token FindNodeOrInsertPos hands back.
-/// Unlike a bucket address the token survives intervening insertions.
+/// Encode a hash as the token FindNodeOrInsertPos hands back. Never null, and
+/// unlike a bucket address it survives intervening insertions.
 static void *encodeHash(uint32_t Hash) {
-  return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash) + 1);
+  return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash));
 }
 
 static uint32_t decodeHash(void *InsertPos) {
-  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos) - 1);
+  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos));
 }
 
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
@@ -195,10 +196,10 @@ void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
   ++NumNodes;
 }
 
-void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
-  assert((NewBucketCount > NumBuckets) &&
-         "Can't shrink a folding set with GrowBucketCount");
-  assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
+void FoldingSetBase::grow(unsigned MinNumBuckets) {
+  // The floor is the smallest size the constructor accepts.
+  unsigned NewBucketCount = std::max(64u, llvm::bit_ceil(MinNumBuckets));
+  assert(NewBucketCount > NumBuckets && "Can't shrink a folding set");
 
   FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
   const uint32_t *Hashes = getHashes();
@@ -212,9 +213,8 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
 void FoldingSetBase::reserve(unsigned N) {
   if (N * 4 <= NumBuckets * 3)
     return;
-  // N + (N + 2) / 3 is ceil(4N/3), the smallest bucket count satisfying the
-  // growth condition above.
-  GrowBucketCount(llvm::bit_ceil(N + (N + 2) / 3));
+  // N + (N + 2) / 3 is ceil(4N/3).
+  grow(N + (N + 2) / 3);
 }
 
 LLVM_ATTRIBUTE_NOINLINE bool
@@ -231,8 +231,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   const uint32_t *Hashes = getHashes();
   unsigned Mask = NumBuckets - 1;
   for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
-    // Reject on the hash first: the common case only reads the bucket and hash
-    // arrays, which matters for cache locality.
+    // Reject on the hash first, so a probe step touches no node.
     if (Hashes[I] != IDHash)
       continue;
     Node *N = static_cast<Node *>(Buckets[I]);
@@ -242,7 +241,6 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     }
   }
 
-  // Didn't find the node, hand back the hash so that InsertNode can place it.
   InsertPos = encodeHash(IDHash);
   return nullptr;
 }
@@ -251,7 +249,7 @@ void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
   assert(InsertPos && "Invalid InsertPos!");
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
-    GrowBucketCount(NumBuckets * 2);
+    grow(NumBuckets * 2);
   uint32_t Hash = decodeHash(InsertPos);
   placeNode(N, Hash);
   N->setFoldingSetHash(Hash);
@@ -259,8 +257,8 @@ void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
 
 bool FoldingSetBase::RemoveNode(Node *N) {
   uint32_t Hash = N->getFoldingSetHash();
-  if (Hash == Node::NotInSet)
-    return false;
+  if (Hash == FoldingSetNodeIDRef::NotAHash)
+    return false; // Never inserted.
 
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
@@ -284,7 +282,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
     }
   }
   Buckets[I] = nullptr;
-  N->setFoldingSetHash(Node::NotInSet);
+  N->setFoldingSetHash(FoldingSetNodeIDRef::NotAHash);
   --NumNodes;
   return true;
 }
