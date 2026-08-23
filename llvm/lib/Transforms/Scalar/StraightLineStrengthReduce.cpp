@@ -70,9 +70,12 @@
 
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -83,6 +86,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -96,11 +100,14 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
 #include <list>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -402,6 +409,11 @@ private:
   // Rewrites candidate C with respect to Basis.
   void rewriteCandidate(const Candidate &C);
 
+  bool canReuseInstruction(const SCEV *S, Instruction *I,
+                           SmallVectorImpl<Instruction *> &DropInsts);
+  bool isDisjointAfterScrubbing(const PossiblyDisjointInst *PDI);
+  void initializeScrubbedFunction(const Function &F);
+
   // Emit code that computes the "bump" from Basis to C.
   static Value *emitBump(const Candidate &Basis, const Candidate &C,
                          IRBuilder<> &Builder, const DataLayout *DL);
@@ -411,6 +423,12 @@ private:
   ScalarEvolution *SE;
   TargetTransformInfo *TTI = nullptr;
   std::list<Candidate> Candidates;
+
+  std::unique_ptr<Function> ScrubbedFunction;
+  ValueToValueMapTy ScrubbedValues;
+  std::unique_ptr<DominatorTree> ScrubbedDT;
+  std::unique_ptr<AssumptionCache> ScrubbedAC;
+  DenseMap<const Instruction *, bool> ScrubbedDisjointCache;
 
   // Map from SCEV to instructions that represent the value,
   // instructions are sorted in depth-first order.
@@ -714,6 +732,90 @@ bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
   }
   return SameType && Basis.Ins != C.Ins &&
          Basis.CandidateKind == C.CandidateKind;
+}
+
+void StraightLineStrengthReduce::initializeScrubbedFunction(const Function &F) {
+  if (ScrubbedFunction)
+    return;
+
+  ScrubbedFunction.reset(
+      Function::Create(F.getFunctionType(), GlobalValue::ExternalLinkage));
+  auto NewArg = ScrubbedFunction->arg_begin();
+  for (const Argument &Arg : F.args()) {
+    NewArg->setName(Arg.getName());
+    ScrubbedValues[&Arg] = &*NewArg++;
+  }
+
+  SmallVector<ReturnInst *, 4> Returns;
+  CloneFunctionInto(ScrubbedFunction.get(), &F, ScrubbedValues,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
+  for (Instruction &I : instructions(*ScrubbedFunction))
+    I.dropPoisonGeneratingAnnotations();
+
+  ScrubbedDT = std::make_unique<DominatorTree>(*ScrubbedFunction);
+  ScrubbedAC = std::make_unique<AssumptionCache>(*ScrubbedFunction);
+}
+
+bool StraightLineStrengthReduce::isDisjointAfterScrubbing(
+    const PossiblyDisjointInst *PDI) {
+  auto *OrigI = cast<Instruction>(PDI);
+  auto It = ScrubbedDisjointCache.find(OrigI);
+  if (It != ScrubbedDisjointCache.end())
+    return It->second;
+
+  initializeScrubbedFunction(*OrigI->getFunction());
+  auto *ScrubbedI = cast<Instruction>(
+      ScrubbedValues.lookup(const_cast<Instruction *>(OrigI)));
+  bool Proven = haveNoCommonBitsSet(
+      ScrubbedI->getOperand(0), ScrubbedI->getOperand(1),
+      SimplifyQuery(*DL, ScrubbedDT.get(), ScrubbedAC.get(), ScrubbedI));
+  ScrubbedDisjointCache[OrigI] = Proven;
+  return Proven;
+}
+
+bool StraightLineStrengthReduce::canReuseInstruction(
+    const SCEV *S, Instruction *I, SmallVectorImpl<Instruction *> &DropInsts) {
+  if (programUndefinedIfPoison(I))
+    return true;
+
+  SmallPtrSet<const Value *, 8> PoisonVals;
+  SE->getPoisonGeneratingValues(PoisonVals, S);
+
+  SmallVector<Value *> Worklist;
+  SmallPtrSet<Value *, 8> Visited;
+  Worklist.push_back(I);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (Visited.size() > 16)
+      return false;
+    if (PoisonVals.contains(V) || isGuaranteedNotToBePoison(V))
+      continue;
+
+    auto *CurI = dyn_cast<Instruction>(V);
+    if (!CurI)
+      return false;
+
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(CurI))
+      if (PDI->isDisjoint() && !isDisjointAfterScrubbing(PDI))
+        return false;
+
+    if (auto *II = dyn_cast<IntrinsicInst>(CurI);
+        II && II->getIntrinsicID() == Intrinsic::vscale)
+      continue;
+
+    if (canCreatePoison(cast<Operator>(CurI),
+                        /*ConsiderFlagsAndMetadata=*/false))
+      return false;
+
+    if (CurI->hasPoisonGeneratingAnnotations())
+      DropInsts.push_back(CurI);
+
+    for (Value *Op : CurI->operands())
+      Worklist.push_back(Op);
+  }
+  return true;
 }
 
 // Try to find a Delta that C can reuse Basis to rewrite.
@@ -1053,7 +1155,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   // same instruction. The DropList is stored on the Candidate so
   // candidatePredicate can drop the flags when a rewrite is being done.
   if (!EnablePoisonReuseGuard ||
-      SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
+      canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
   }
 }
@@ -1364,6 +1466,15 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
 
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
+  // Candidate discovery may drop poison annotations, so snapshot the entry IR.
+  for (Instruction &I : instructions(F)) {
+    auto *PDI = dyn_cast<PossiblyDisjointInst>(&I);
+    if (PDI && PDI->isDisjoint()) {
+      initializeScrubbedFunction(F);
+      break;
+    }
+  }
+
   // Traverse the dominator tree in the depth-first order. This order makes sure
   // all bases of a candidate are in Candidates when we process it.
   for (const auto Node : depth_first(DT))

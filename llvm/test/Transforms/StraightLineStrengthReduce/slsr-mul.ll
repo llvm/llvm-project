@@ -68,6 +68,54 @@ define void @or(i32 %a, i32 %s) {
   ret void
 }
 
+; Reuse a basis containing `or disjoint` when disjointness follows from the
+; operands themselves. The reused instruction has the annotation dropped so
+; it is no more poisonous than the SCEV expression it replaces.
+define void @or_disjoint_structural(i32 %a, i32 %s) {
+; CHECK-LABEL: @or_disjoint_structural(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 3
+; CHECK-NEXT:    [[MUL0:%.*]] = mul i32 [[OR]], [[S:%.*]]
+; CHECK-NEXT:    call void @foo(i32 [[MUL0]])
+; CHECK-NEXT:    [[MUL1:%.*]] = add i32 [[MUL0]], [[S]]
+; CHECK-NEXT:    call void @foo(i32 [[MUL1]])
+; CHECK-NEXT:    ret void
+  %shl = shl i32 %a, 4
+  %or = or disjoint i32 %shl, 3
+  %mul0 = mul i32 %or, %s
+  call void @foo(i32 %mul0)
+
+  %add = add i32 %shl, 4
+  %mul1 = mul i32 %add, %s
+  call void @foo(i32 %mul1)
+  ret void
+}
+
+; Do not use poison-generating annotations to prove that an `or disjoint`
+; basis is safe. Without `nneg`, bit 7 of %zext may overlap %bit.
+define void @or_disjoint_annotation(i32 %a, i8 %b, i32 %s) {
+; CHECK-LABEL: @or_disjoint_annotation(
+; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[A:%.*]], 128
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[BIT]], [[ZEXT]]
+; CHECK-NEXT:    [[MUL0:%.*]] = mul i32 [[OR]], [[S:%.*]]
+; CHECK-NEXT:    call void @foo(i32 [[MUL0]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[BIT]], [[ZEXT]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[S]]
+; CHECK-NEXT:    call void @foo(i32 [[MUL1]])
+; CHECK-NEXT:    ret void
+  %bit = and i32 %a, 128
+  %zext = zext nneg i8 %b to i32
+  %or = or disjoint i32 %bit, %zext
+  %mul0 = mul i32 %or, %s
+  call void @foo(i32 %mul0)
+
+  %add = add i32 %bit, %zext
+  %mul1 = mul i32 %add, %s
+  call void @foo(i32 %mul1)
+  ret void
+}
+
 ; foo(a * b)
 ; foo((a + 1) * b)
 ; foo(a * (b + 1))
