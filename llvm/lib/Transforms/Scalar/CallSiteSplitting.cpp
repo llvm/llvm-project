@@ -328,6 +328,12 @@ static void splitCallSite(CallBase &CB,
         DTU);
     assert(SplitBlock && "Unexpected new basic block split.");
 
+    // The split block shouldn't inherit !llvm.loop metadata.
+    Instruction *SplitTerm = SplitBlock->getTerminator();
+    SplitTerm->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
+      return MDKind == LLVMContext::MD_loop;
+    });
+
     auto *NewCI =
         cast<CallBase>(&*std::prev(SplitBlock->getTerminator()->getIterator()));
     addConditions(*NewCI, Preds[i].second);
