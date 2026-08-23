@@ -302,8 +302,7 @@ public:
 /// the memory management and probing that does not depend on the node type.
 class FoldingSetBase : public DebugEpochBase {
 protected:
-  /// Array of node pointers; a null entry marks an empty slot. A parallel
-  /// array of 32-bit hashes shares the same allocation, see getHashes().
+  /// Array of node pointers; a null entry marks an empty slot.
   void **Buckets = nullptr;
 
   /// Length of the Buckets array.  Always a power of 2.
@@ -366,12 +365,6 @@ protected:
   };
 
 private:
-  /// The hashes of Buckets, in the same order. Comparing these rejects
-  /// mismatches without touching a node.
-  uint32_t *getHashes() const {
-    return reinterpret_cast<uint32_t *>(Buckets + NumBuckets);
-  }
-
   /// Put \p N in the first empty slot following its home, without checking
   /// capacity. Does not touch \p N, so a rehash need not dirty every node.
   void placeNode(Node *N, uint32_t Hash);

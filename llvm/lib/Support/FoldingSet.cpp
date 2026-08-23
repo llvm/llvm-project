@@ -149,7 +149,7 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
          "Initial hash table size out of range");
   NumBuckets = 1 << Log2InitSize;
   Buckets = static_cast<void **>(
-      safe_calloc(NumBuckets, sizeof(void *) + sizeof(uint32_t)));
+      safe_calloc(NumBuckets, sizeof(void *)));
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
@@ -192,7 +192,6 @@ void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
     I = (I + 1) & Mask;
   }
   Buckets[I] = N;
-  getHashes()[I] = Hash;
   ++NumNodes;
 }
 
@@ -202,10 +201,10 @@ void FoldingSetBase::grow(unsigned MinNumBuckets) {
   assert(NewBucketCount > NumBuckets && "Can't shrink a folding set");
 
   FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
-  const uint32_t *Hashes = getHashes();
   for (unsigned I = 0; I != NumBuckets; ++I)
     if (void *N = Buckets[I])
-      Tmp.placeNode(static_cast<Node *>(N), Hashes[I]);
+      Tmp.placeNode(static_cast<Node *>(N),
+                    static_cast<Node *>(N)->getFoldingSetHash());
 
   *this = std::move(Tmp);
 }
@@ -228,13 +227,12 @@ FoldingSetBase::nodeEquals(const FoldingSetInfo &Info,
 FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
   unsigned IDHash = ID.ComputeHash();
-  const uint32_t *Hashes = getHashes();
   unsigned Mask = NumBuckets - 1;
   for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
     // Reject on the hash first, so a probe step touches no node.
-    if (Hashes[I] != IDHash)
-      continue;
     Node *N = static_cast<Node *>(Buckets[I]);
+    if (N->getFoldingSetHash() != IDHash)
+      continue;
     if (nodeEquals(Info, this, N, ID, IDHash)) {
       InsertPos = nullptr;
       return N;
@@ -270,14 +268,12 @@ bool FoldingSetBase::RemoveNode(Node *N) {
 
   incrementEpoch();
 
-  uint32_t *Hashes = getHashes();
   // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
   // whose probe path crosses the hole.
   for (unsigned J = (I + 1) & Mask; Buckets[J]; J = (J + 1) & Mask) {
-    unsigned Ideal = Hashes[J];
+    unsigned Ideal = static_cast<Node *>(Buckets[J])->getFoldingSetHash();
     if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
       Buckets[I] = Buckets[J];
-      Hashes[I] = Hashes[J];
       I = J;
     }
   }
