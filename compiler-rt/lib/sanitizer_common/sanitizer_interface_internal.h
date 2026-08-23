@@ -115,6 +115,19 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_const_cmp8();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_switch();
+// Dataflow coverage: observe a call/function argument and a return value.
+//   __sanitizer_cov_trace_args(uptr pc, u32 arg_idx, u32 arg_size, void *arg,
+//                              u64 *field_offsets, u32 num_fields)
+//   __sanitizer_cov_trace_ret (uptr pc, u32 ret_size, void *ret,
+//                              u64 *field_offsets, u32 num_fields)
+// `arg`/`ret` may be null (argument optimized away, or skipped for a function
+// whose inline asm ties up the x86 base pointer); consumers must not dereference
+// a null pointer. `field_offsets` (when non-null) has num_fields {offset,size}
+// pairs describing the fields of a struct-typed arg/return.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_args();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_ret();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_div4();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void

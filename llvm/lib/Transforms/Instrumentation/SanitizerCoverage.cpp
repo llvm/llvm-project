@@ -1469,6 +1469,22 @@ void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
     SA.Fragments.push_back({V, BitOff});
   };
 
+  // Only this function's own parameters carry a usable arg number: the
+  // parameters of an inlined callee (always_inline survives -fno-inline)
+  // are numbered too, and their records may reference our Arguments --
+  // kmalloc(size, flags) inlined into f(ptr, size) yields
+  // #dbg_value(%size, "size" arg:1) which would clobber f's source arg 1.
+  auto IsOwnParam = [&](const DbgVariableRecord *DVR,
+                        const DILocalVariable *Var) {
+    if (!Var || !Var->getArg())
+      return false;
+    if (DVR->getDebugLoc() && DVR->getDebugLoc().getInlinedAt())
+      return false;
+    if (SP && Var->getScope() && Var->getScope()->getSubprogram() != SP)
+      return false;
+    return true;
+  };
+
   // Pass 1: direct argument debug records (batched scan)
   SmallVector<DbgVariableRecord *, 16> AllDVRs;
   for (auto &Arg : F.args()) {
@@ -1476,7 +1492,7 @@ void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
     findDbgValues(&Arg, AllDVRs);
     for (auto *DVR : AllDVRs) {
       DILocalVariable *Var = DVR->getVariable();
-      if (!Var || !Var->getArg())
+      if (!IsOwnParam(DVR, Var))
         continue;
       unsigned SrcIdx = Var->getArg();
       auto &SA = SrcArgs[SrcIdx];
@@ -1497,7 +1513,7 @@ void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
       if (!DVar)
         continue;
       DILocalVariable *Var = DVar->getVariable();
-      if (!Var || !Var->getArg())
+      if (!IsOwnParam(DVar, Var))
         continue;
       unsigned SrcIdx = Var->getArg();
       // Skip if pass 1 already found a direct argument reference for this param
@@ -1508,6 +1524,13 @@ void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
       Value *V = DVar->getValue();
       if (!V || isa<Argument>(V))
         continue; // Direct args handled in pass 1
+      // A parameter IPO proved dead is described as poison/undef (callers
+      // pass poison too): there is no value to spill, so leave it to the
+      // dead-arg fallback below (null pointer trace) instead of storing
+      // poison -- dropped by codegen, leaving an uninitialized slot -- or
+      // passing poison as ArgPtr, which leaves the register unset.
+      if (isa<UndefValue>(V))
+        continue;
       // A #dbg_value may point at a value that does NOT dominate the entry-block
       // terminator where the trace call is inserted (debug records are exempt from
       // SSA dominance). Using such a value as ArgPtr emits IR that fails the verifier

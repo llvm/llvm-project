@@ -402,6 +402,23 @@ void __sanitizer_cov_trace_ret(uint64_t pc, uint32_t ret_size,
 Both `ptr` and `offsets` may be null (a value the pass could not spill, a void
 return); a consumer must null-check before dereferencing.
 
+### Userspace runtime
+
+`compiler-rt` provides weak, empty default definitions of both callbacks (in
+`sanitizer_common`), so a program compiled with `trace-args`/`trace-ret` links
+even without any runtime consuming the data. A user runtime overrides the weak
+default with a strong definition to observe the values.
+
+libFuzzer implements the callbacks (`TracePC::HandleDataflow`) and folds each
+observed value into the value-profile map. Enable it with `-use_value_profile=1`;
+every distinct argument/return value then contributes a value-profile feature, so a
+new argument or return value that a code path has never produced before counts as new
+coverage and is added to the corpus. The fold mixes the PC, the argument/return
+location, and the field id, so the same value seen at different sites stays distinct.
+
+Kernel builds consume the same callbacks through the KCOV dataflow subsystem instead
+of compiler-rt.
+
 ### x86 base-pointer note
 
 To report a scalar value, the pass may spill it to a stack slot and pass the slot
