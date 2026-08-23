@@ -1371,6 +1371,13 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   return nullptr;
 }
 
+/// Returns true if \p V is available at the end of \p VPBB, i.e. it either is a
+/// live-in from the original IR or defined in \p VPBB.
+static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
+  VPRecipeBase *DefR = V->getDefiningRecipe();
+  return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
+}
+
 /// Combine \p Def into a simpler recipe. May modify or create new recipes.
 static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (auto *V = simplifyRecipe(Plan, Def)) {
@@ -1669,20 +1676,20 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   VPValue *IVInc;
   if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
                        m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc))) &&
+      IVInc->getNumUsers() == 2) {
     auto *Phi = cast<VPPhi>(X);
-    if (IVInc->getNumUsers() == 2) {
-      // If Phi has a second user (besides IVInc's defining recipe), it must
-      // be Inc = Phi + Y for the fold to apply.
-      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
-          findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
-      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
-        Def->replaceAllUsesWith(IVInc);
-        if (Inc)
-          Inc->replaceAllUsesWith(Phi);
-        Phi->setOperand(0, Y);
-        return Def;
-      }
+    // If Phi has a second user (besides IVInc's defining recipe), it must be
+    // Inc = Phi + Y for the fold to apply.
+    auto *Inc = dyn_cast_if_present<VPSingleDefRecipe>(
+        findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+    if ((Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) &&
+        isAvailableAtEndOf(Y, Phi->getIncomingBlock(0))) {
+      Def->replaceAllUsesWith(IVInc);
+      if (Inc)
+        Inc->replaceAllUsesWith(Phi);
+      Phi->setOperand(0, Y);
+      return Def;
     }
   }
 
