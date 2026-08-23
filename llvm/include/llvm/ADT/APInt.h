@@ -2331,17 +2331,15 @@ LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
 /// 0^0 is supported and returns 1.
 LLVM_ABI APInt pow(const APInt &X, int64_t N);
 
-/// Compute GCD of two unsigned APInt values.
+/// Compute GCD of two APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values
 /// using Stein's algorithm.
 ///
-/// \returns the greatest common divisor of A and B.
-LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B);
-
-/// Compute GCD of two signed APInt values. It takes the absolute value of the
-/// both \p A and \p B, and returns the unsigned greatest common divisor.
-LLVM_ABI APInt SGreatestCommonDivisor(APInt A, APInt B);
+/// \returns the greatest common divisor of A and B. If \p Signed is true, it
+/// takes the absolute value of the both arguments, and returns the unsigned
+/// greatest common divisor.
+LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B, bool IsSigned = false);
 
 /// Converts the given APInt to a double value.
 ///

@@ -2886,7 +2886,6 @@ TEST(APIntTest, abdu) {
 
 TEST(APIntTest, GCD) {
   using APIntOps::GreatestCommonDivisor;
-  using APIntOps::SGreatestCommonDivisor;
 
   for (unsigned Bits : {1, 2, 32, 63, 64, 65}) {
     // Test some corner cases near zero.
@@ -2902,10 +2901,12 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(GreatestCommonDivisor(One, Two), One);
       EXPECT_EQ(GreatestCommonDivisor(Two, Two), Two);
 
-      EXPECT_EQ(SGreatestCommonDivisor(Zero, MinusTwo), Two);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, MinusTwo), One);
-      EXPECT_EQ(SGreatestCommonDivisor(One, MinusTwo), One);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, MinusTwo), Two);
+      EXPECT_EQ(GreatestCommonDivisor(Zero, MinusTwo, /*IsSigned=*/true), Two);
+      EXPECT_EQ(GreatestCommonDivisor(MinusOne, MinusTwo, /*IsSigned=*/true),
+                One);
+      EXPECT_EQ(GreatestCommonDivisor(One, MinusTwo, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(MinusTwo, MinusTwo, /*IsSigned=*/true),
+                Two);
 
       // Test some corner cases near the highest representable value.
       APInt Max(Bits, 0);
@@ -2915,19 +2916,19 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(GreatestCommonDivisor(Two, Max), One);
       EXPECT_EQ(GreatestCommonDivisor(Max, Max), Max);
 
-      EXPECT_EQ(SGreatestCommonDivisor(Zero, Max), One);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, Max), One);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, Max), One);
-      EXPECT_EQ(SGreatestCommonDivisor(Max, Max), One);
+      EXPECT_EQ(GreatestCommonDivisor(Zero, Max, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(MinusOne, Max, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(MinusTwo, Max, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(Max, Max, /*IsSigned=*/true), One);
 
       // Test some corner cases near the minimum signed value.
       APInt SMin = APInt::getSignedMinValue(Bits);
-      EXPECT_EQ(SGreatestCommonDivisor(Zero, SMin), SMin);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, SMin), One);
-      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, SMin), Two);
-      EXPECT_EQ(SGreatestCommonDivisor(One, SMin), One);
-      EXPECT_EQ(SGreatestCommonDivisor(Two, SMin), Two);
-      EXPECT_EQ(SGreatestCommonDivisor(SMin, SMin), SMin);
+      EXPECT_EQ(GreatestCommonDivisor(Zero, SMin, /*IsSigned=*/true), SMin);
+      EXPECT_EQ(GreatestCommonDivisor(MinusOne, SMin, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(MinusTwo, SMin, /*IsSigned=*/true), Two);
+      EXPECT_EQ(GreatestCommonDivisor(One, SMin, /*IsSigned=*/true), One);
+      EXPECT_EQ(GreatestCommonDivisor(Two, SMin, /*IsSigned=*/true), Two);
+      EXPECT_EQ(GreatestCommonDivisor(SMin, SMin, /*IsSigned=*/true), SMin);
 
       APInt MaxOver2 = Max.udiv(Two);
       EXPECT_EQ(GreatestCommonDivisor(MaxOver2, Max), One);
@@ -2947,7 +2948,7 @@ TEST(APIntTest, GCD) {
   APInt SB = HugePrime * APInt(BitWidth, -123456, true);
   APInt C = GreatestCommonDivisor(A, B);
   EXPECT_EQ(C, HugePrime);
-  APInt SC = SGreatestCommonDivisor(SA, SB);
+  APInt SC = GreatestCommonDivisor(SA, SB, /*IsSigned=*/true);
   EXPECT_EQ(SC, HugePrime);
 }
 
