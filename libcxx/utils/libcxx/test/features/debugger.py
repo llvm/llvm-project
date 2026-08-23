@@ -38,7 +38,10 @@ def check_lldb(cfg):
     if lldb_path is None:
         return False
 
-    python_pkg = subprocess.check_output(["lldb", "-P"], text=True)
+    try:
+        python_pkg = subprocess.check_output(["lldb", "-P"], text=True)
+    except subprocess.CalledProcessError:
+        return False
 
     return len(python_pkg) != 0
 
