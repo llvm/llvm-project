@@ -411,9 +411,9 @@ namespace References {
     int D2 : &d - &c + 1;
     int E : e / 2;
     int F : f - 11;
-    int G : g; // expected-error {{constant expression}} expected-note {{initializer of 'g' is unknown}}
+    int G : g; // expected-error {{constant expression}} expected-note {{read of non-constexpr variable 'g' is not allowed in a constant expression}}
     int H : h(); // expected-error {{constant expression}} expected-note {{undefined function 'h'}}
-    int I : i; // expected-error {{constant expression}} expected-note {{initializer of 'i' is not a constant expression}}
+    int I : i; // expected-error {{constant expression}} expected-note {{read of non-constexpr variable 'i' is not allowed in a constant expression}}
     int J : j();
     int K : k;
   };
