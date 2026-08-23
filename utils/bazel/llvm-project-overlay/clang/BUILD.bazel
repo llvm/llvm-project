@@ -2770,6 +2770,8 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":lex",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":support",
         ":tooling_core",
