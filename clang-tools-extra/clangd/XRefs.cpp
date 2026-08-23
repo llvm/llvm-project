@@ -2093,6 +2093,26 @@ analyseAllVarUsages(const FunctionDecl *FD,
   return Result;
 }
 
+static std::string hierarchyDetail(const NamedDecl &ND) {
+  auto *Context = ND.getDeclContext();
+  if (!Context)
+    return printQualifiedName(ND);
+
+  // Global declarations and Objective-C methods should keep their plain symbol
+  // name as the user-facing detail. For nested namespaces/types, prefer the
+  // enclosing container instead so the item matches the symbol-scope semantics
+  // used elsewhere in clangd.
+  if (isa<TranslationUnitDecl>(Context) || isa<ObjCMethodDecl>(ND))
+    return ND.getNameAsString();
+  if (auto *ContextND = dyn_cast<NamedDecl>(Context)) {
+    if (isa<NamespaceDecl>(ContextND) &&
+        cast<NamespaceDecl>(ContextND)->isAnonymousNamespace())
+      return "";
+    return printQualifiedName(*ContextND);
+  }
+  return ND.getNameAsString();
+}
+
 template <typename HierarchyItem>
 static std::optional<HierarchyItem>
 declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
@@ -2123,7 +2143,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
-  HI.detail = printQualifiedName(ND);
+  HI.detail = hierarchyDetail(ND);
   HI.kind = SK;
   HI.tags = getSymbolTags(ND);
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
