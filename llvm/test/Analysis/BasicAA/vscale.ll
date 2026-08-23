@@ -19,8 +19,7 @@ define void @gep_alloca_const_offset_1() {
 ; CHECK-LABEL: gep_alloca_const_offset_2
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep2
-; TODO: AliasResult for gep1,gep2 can be improved as MustAlias
-; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
+; CHECK-DAG:  MustAlias:    <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
 define void @gep_alloca_const_offset_2() {
   %alloc = alloca <vscale x 4 x i32>
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %alloc, i64 1
@@ -76,8 +75,7 @@ define void @gep_alloca_symbolic_offset(i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: gep_same_base_const_offset
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x i32>* %p
 ; CHECK-DAG:  MayAlias:     i32* %gep2, <vscale x 4 x i32>* %p
-; TODO: AliasResult for gep1,gep2 can be improved as NoAlias
-; CHECK-DAG:  MayAlias:     i32* %gep1, i32* %gep2
+; CHECK-DAG:  NoAlias:      i32* %gep1, i32* %gep2
 define void @gep_same_base_const_offset(ptr %p) {
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
   %gep2 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 1
@@ -171,7 +169,7 @@ define void @gep_bitcast_1(ptr %p) {
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x i32>* %p
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x float>* %p
 ; CHECK-DAG:  MayAlias:     float* %gep2, <vscale x 4 x i32>* %p
-; CHECK-DAG:  MayAlias:     i32* %gep1, float* %gep2
+; CHECK-DAG:  MustAlias:    i32* %gep1, float* %gep2
 ; CHECK-DAG:  MayAlias:     float* %gep2, <vscale x 4 x float>* %p
 define void @gep_bitcast_2(ptr %p) {
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
@@ -216,7 +214,7 @@ define void @gep_neg_notscalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
@@ -240,9 +238,9 @@ define void @gep_neg_scalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16m16
 ; CHECK-DAG:   NoAlias:      <4 x i32>* %vm16, <4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <4 x i32>* %m16pv16, <4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
 define void @gep_pos_notscalable(ptr %p) vscale_range(1,16) {
   %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
@@ -264,7 +262,7 @@ define void @gep_pos_notscalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
