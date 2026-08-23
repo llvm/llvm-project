@@ -577,8 +577,7 @@ struct BasicAAResult::DecomposedGEP {
     OS << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
        << ", nuw=" << (NWFlags.hasNoUnsignedWrap() ? "1" : "0")
        << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
-       << ", ScalableOffset=" << ScalableOffset
-       << ", VarIndices=[";
+       << ", ScalableOffset=" << ScalableOffset << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
         OS << ", ";
