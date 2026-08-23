@@ -17,7 +17,6 @@ on:
   push:
     branches:
       - 'release/**'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -164,7 +163,6 @@ jobs:
       - name: Build and Test
         timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
-        shell: cmd
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -173,7 +171,7 @@ jobs:
           WINDOWS_RUNTIMES: ${{ steps.vars.outputs.windows-runtimes }}
           WINDOWS_RUNTIMES_CHECK_TARGETS: ${{ steps.vars.outputs.windows-runtimes-check-targets }}
         run: |
-          call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
+          cmd.exe /c "C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64"
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
           bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"$WINDOWS_PROJECTS\" \"$WINDOWS_CHECK_TARGETS\" \"$WINDOWS_RUNTIMES\" \"$WINDOWS_RUNTIMES_CHECK_TARGETS\""
