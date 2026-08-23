@@ -208,25 +208,22 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 define float @test_bitextract_float_b87_crossword(b87 %src) {
 ; ARM-LABEL: test_bitextract_float_b87_crossword:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bfc r2, #23, #9
-; ARM-NEXT:    lsr r0, r1, #28
-; ARM-NEXT:    orr r0, r0, r2, lsl #4
+; ARM-NEXT:    lsr r0, r1, #23
+; ARM-NEXT:    orr r0, r0, r2, lsl #9
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitextract_float_b87_crossword:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    bfc r2, #23, #9
-; THUMB-M-NEXT:    lsrs r0, r1, #28
-; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #4
+; THUMB-M-NEXT:    lsrs r0, r1, #23
+; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #9
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitextract_float_b87_crossword:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    bfc r2, #23, #9
-; THUMB-A-NEXT:    lsrs r0, r1, #28
-; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #4
+; THUMB-A-NEXT:    lsrs r0, r1, #23
+; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #9
 ; THUMB-A-NEXT:    bx lr
-  %result = bitextract float, b87 %src, i32 60
+  %result = bitextract float, b87 %src, i32 55
   ret float %result
 }
 

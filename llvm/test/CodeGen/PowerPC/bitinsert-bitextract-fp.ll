@@ -84,13 +84,13 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 define float @test_bitextract_float_b87_crossword(b87 %src) {
 ; CHECK-LABEL: test_bitextract_float_b87_crossword:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rldicl 4, 4, 4, 60
-; CHECK-NEXT:    rlwimi 4, 3, 4, 5, 27
+; CHECK-NEXT:    rotldi 4, 4, 9
+; CHECK-NEXT:    rldimi 4, 3, 9, 0
 ; CHECK-NEXT:    mtfprd 0, 4
 ; CHECK-NEXT:    xxsldwi 0, 0, 0, 1
 ; CHECK-NEXT:    xscvspdpn 1, 0
 ; CHECK-NEXT:    blr
-  %result = bitextract float, b87 %src, i32 60
+  %result = bitextract float, b87 %src, i32 55
   ret float %result
 }
 

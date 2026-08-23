@@ -271,40 +271,38 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 define float @test_bitextract_float_b87_crossword(b87 %src) {
 ; RV32-LABEL: test_bitextract_float_b87_crossword:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 8(a0)
-; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    slli a1, a1, 9
-; RV32-NEXT:    srli a0, a0, 28
-; RV32-NEXT:    srli a1, a1, 5
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    lw a1, 4(a0)
+; RV32-NEXT:    lw a0, 8(a0)
+; RV32-NEXT:    slli a0, a0, 9
+; RV32-NEXT:    srli a1, a1, 23
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitextract_float_b87_crossword:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lw a1, 8(a0)
-; RV32ZBB-NEXT:    lw a0, 4(a0)
-; RV32ZBB-NEXT:    slli a1, a1, 9
-; RV32ZBB-NEXT:    srli a0, a0, 28
-; RV32ZBB-NEXT:    srli a1, a1, 5
-; RV32ZBB-NEXT:    or a0, a0, a1
+; RV32ZBB-NEXT:    lw a1, 4(a0)
+; RV32ZBB-NEXT:    lw a0, 8(a0)
+; RV32ZBB-NEXT:    slli a0, a0, 9
+; RV32ZBB-NEXT:    srli a1, a1, 23
+; RV32ZBB-NEXT:    or a0, a1, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitextract_float_b87_crossword:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a1, a1, 41
-; RV64-NEXT:    srli a0, a0, 60
-; RV64-NEXT:    srli a1, a1, 37
+; RV64-NEXT:    srli a0, a0, 55
+; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitextract_float_b87_crossword:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    slli a1, a1, 41
-; RV64ZBB-NEXT:    srli a0, a0, 60
-; RV64ZBB-NEXT:    srli a1, a1, 37
+; RV64ZBB-NEXT:    srli a0, a0, 55
+; RV64ZBB-NEXT:    srli a1, a1, 32
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
-  %result = bitextract float, b87 %src, i32 60
+  %result = bitextract float, b87 %src, i32 55
   ret float %result
 }
 
