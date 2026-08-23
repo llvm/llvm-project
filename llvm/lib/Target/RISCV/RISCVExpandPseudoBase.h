@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_RISCV_RISCVEXPANDPSEUDOBASE_H
+#define LLVM_LIB_TARGET_RISCV_RISCVEXPANDPSEUDOBASE_H
+
 #include "RISCV.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -39,3 +42,5 @@ private:
 };
 
 } // namespace llvm
+
+#endif // LLVM_LIB_TARGET_RISCV_RISCVEXPANDPSEUDOBASE_H
