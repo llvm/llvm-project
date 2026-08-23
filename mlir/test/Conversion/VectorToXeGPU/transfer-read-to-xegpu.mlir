@@ -417,7 +417,7 @@ gpu.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
+gpu.func @load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
     %offset: index) -> vector<8xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
@@ -425,8 +425,49 @@ gpu.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
   gpu.return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL:  @no_load_out_of_bounds_1D_vector(
-// CHECK:        vector.transfer_read
+// A 1D out-of-bounds read is promoted to a single-row block load, the only
+// access with a boundary check. The rank-3 source already collapses to a 2D
+// view, so no expand_shape is needed.
+// LOAD-ND-LABEL:  @load_out_of_bounds_1D_vector(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// LOAD-ND-SAME:   %[[OFFSET:.+]]: index
+// LOAD-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]]
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SUBVIEW]]
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<1x8xf32>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET]], %[[OFFSET]]]{{.*}}-> vector<1x8xf32>
+// LOAD-ND:        %[[RES:.+]] = vector.shape_cast %[[VEC]] : vector<1x8xf32> to vector<8xf32>
+// LOAD-ND:        return %[[RES]]
+
+// LOAD-GATHER-LABEL:  @load_out_of_bounds_1D_vector(
+// LOAD-GATHER:        vector.transfer_read
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_out_of_bounds_1D_memref(%source: memref<?xf32, strided<[1], offset: ?>>,
+    %offset: index) -> vector<8xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset], %c0
+    : memref<?xf32, strided<[1], offset: ?>>, vector<8xf32>
+  gpu.return %0 : vector<8xf32>
+}
+
+// A 1D memref is a surface of a single row holding all of its elements, so it
+// is expanded to a 1xD view to describe it.
+// LOAD-ND-LABEL:  @load_out_of_bounds_1D_memref(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<?xf32, strided<[1], offset: ?>>,
+// LOAD-ND-SAME:   %[[OFFSET:.+]]: index
+// LOAD-ND:        %[[DIM:.+]] = memref.dim %[[SRC]]
+// LOAD-ND:        %[[ROW:.+]] = memref.expand_shape %[[SRC]] {{\[\[}}0, 1{{\]\]}} output_shape [1, %[[DIM]]]
+// LOAD-ND-SAME:     into memref<1x?xf32, strided<[?, 1], offset: ?>>
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[ROW]]
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<1x8xf32>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][0, %[[OFFSET]]]{{.*}}-> vector<1x8xf32>
+// LOAD-ND:        %[[RES:.+]] = vector.shape_cast %[[VEC]] : vector<1x8xf32> to vector<8xf32>
+// LOAD-ND:        return %[[RES]]
+
+// LOAD-GATHER-LABEL:  @load_out_of_bounds_1D_memref(
+// LOAD-GATHER:        vector.transfer_read
 }
 
 // -----
