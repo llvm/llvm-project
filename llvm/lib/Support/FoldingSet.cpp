@@ -131,66 +131,55 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 }
 
 //===----------------------------------------------------------------------===//
-/// Helper functions for FoldingSetBase.
-
-/// GetNextPtr - In order to save space, each bucket is a
-/// singly-linked-list. In order to make deletion more efficient, we make
-/// the list circular, so we can delete a node without computing its hash.
-/// The problem with this is that the start of the hash buckets are not
-/// Nodes. If NextInBucketPtr is a bucket pointer, this method returns null:
-/// use GetBucketPtr when this happens.
-static FoldingSetBase::Node *GetNextPtr(void *NextInBucketPtr) {
-  // The low bit is set if this is the pointer back to the bucket.
-  if (reinterpret_cast<intptr_t>(NextInBucketPtr) & 1)
-    return nullptr;
-
-  return static_cast<FoldingSetBase::Node *>(NextInBucketPtr);
-}
-
-/// GetBucketPtr - Provides a casting of a bucket pointer for isNode
-/// testing.
-static void **GetBucketPtr(void *NextInBucketPtr) {
-  intptr_t Ptr = reinterpret_cast<intptr_t>(NextInBucketPtr);
-  assert((Ptr & 1) && "Not a bucket pointer");
-  return reinterpret_cast<void **>(Ptr & ~intptr_t(1));
-}
-
-/// GetBucketFor - Hash the specified node ID and return the hash bucket for
-/// the specified ID.
-static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
-  // NumBuckets is always a power of 2.
-  unsigned BucketNum = Hash & (NumBuckets - 1);
-  return Buckets + BucketNum;
-}
-
-/// AllocateBuckets - Allocate initialized bucket memory.
-static void **AllocateBuckets(unsigned NumBuckets) {
-  void **Buckets =
-      static_cast<void **>(safe_calloc(NumBuckets + 1, sizeof(void *)));
-  // Set the very last bucket to be a non-null "pointer".
-  Buckets[NumBuckets] = reinterpret_cast<void *>(-1);
-  return Buckets;
-}
-
-//===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
+//
+// FoldingSet is an open-addressed hash set using linear probing. One
+// allocation holds the bucket array followed by a parallel array of the
+// buckets' 32-bit hashes:
+//   [ Buckets (NumBuckets * sizeof(void *)) ][ Hashes (NumBuckets * 4) ]
+// A null bucket marks an empty slot, and the hash array rejects mismatches
+// before the profile compare, so walking a probe chain touches no nodes.
+// Nodes cache their own hash as well, which is what lets RemoveNode() find a
+// node without re-running Profile().
+//
+// Removal uses Knuth TAOCP vol. 3 6.4 Algorithm R, as StringMap, DenseMap and
+// SmallPtrSet do: it closes the hole rather than leaving a tombstone, so the
+// table stays sized to the live node count under insert/erase churn.
+
+/// Encode a hash into the non-null token FindNodeOrInsertPos hands back.
+/// Unlike a bucket address the token survives intervening insertions.
+static void *encodeHash(uint32_t Hash) {
+  return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash) + 1);
+}
+
+static uint32_t decodeHash(void *InsertPos) {
+  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos) - 1);
+}
+
+/// AllocateBuckets - Allocate zeroed bucket and hash arrays.
+static void **AllocateBuckets(unsigned NumBuckets) {
+  return static_cast<void **>(
+      safe_calloc(NumBuckets, sizeof(void *) + sizeof(uint32_t)));
+}
 
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
   NumBuckets = 1 << Log2InitSize;
   Buckets = AllocateBuckets(NumBuckets);
-  NumNodes = 0;
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
     : Buckets(Arg.Buckets), NumBuckets(Arg.NumBuckets), NumNodes(Arg.NumNodes) {
+  Arg.incrementEpoch();
   Arg.Buckets = nullptr;
   Arg.NumBuckets = 0;
   Arg.NumNodes = 0;
 }
 
 FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
+  incrementEpoch();
+  RHS.incrementEpoch();
   free(Buckets); // This may be null if the set is in a moved-from state.
   Buckets = RHS.Buckets;
   NumBuckets = RHS.NumBuckets;
@@ -204,14 +193,23 @@ FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
 FoldingSetBase::~FoldingSetBase() { free(Buckets); }
 
 void FoldingSetBase::clear() {
-  // Set all but the last bucket to null pointers.
-  memset(Buckets, 0, NumBuckets * sizeof(void *));
-
-  // Set the very last bucket to be a non-null "pointer".
-  Buckets[NumBuckets] = reinterpret_cast<void *>(-1);
-
-  // Reset the node count to zero.
+  incrementEpoch();
+  // Stale hashes are unreachable, so only the occupancy needs resetting.
+  if (NumBuckets)
+    memset(Buckets, 0, NumBuckets * sizeof(void *));
   NumNodes = 0;
+}
+
+void FoldingSetBase::insertImpl(Node *N, uint32_t Hash) {
+  incrementEpoch();
+  unsigned Mask = NumBuckets - 1;
+  unsigned I = Hash & Mask;
+  while (Buckets[I])
+    I = (I + 1) & Mask;
+  Buckets[I] = N;
+  getHashes()[I] = Hash;
+  N->setFoldingSetHash(Hash);
+  ++NumNodes;
 }
 
 void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
@@ -221,126 +219,82 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
 
   FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
-  FoldingSetNodeID TempID;
-  for (unsigned i = 0; i != NumBuckets; ++i) {
-    void *Probe = Buckets[i];
-    if (!Probe)
-      continue;
-    while (Node *NodeInBucket = GetNextPtr(Probe)) {
-      // Figure out the next link, remove NodeInBucket from the old link.
-      Probe = NodeInBucket->getNextInBucket();
-      NodeInBucket->SetNextInBucket(nullptr);
-
-      // Insert the node into the new bucket, after recomputing the hash.
-      Tmp.InsertNode(
-          NodeInBucket,
-          GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
-                       Tmp.Buckets, Tmp.NumBuckets),
-          Info);
-      TempID.clear();
-    }
-  }
+  const uint32_t *Hashes = getHashes();
+  for (unsigned I = 0; I != NumBuckets; ++I)
+    if (void *N = Buckets[I])
+      Tmp.insertImpl(static_cast<Node *>(N), Hashes[I]);
 
   *this = std::move(Tmp);
 }
 
 void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
-  // This will give us somewhere between EltCount / 2 and
-  // EltCount buckets.  This puts us in the load factor
-  // range of 1.0 - 2.0.
   if (EltCount <= capacity())
     return;
-  GrowBucketCount(llvm::bit_floor(EltCount), Info);
+  uint64_t Required = divideCeil(uint64_t(EltCount) * 4, 3);
+  GrowBucketCount(
+      static_cast<unsigned>(llvm::bit_ceil(std::max<uint64_t>(Required, 64))),
+      Info);
 }
 
 FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
   unsigned IDHash = ID.ComputeHash();
-  void **Bucket = GetBucketFor(IDHash, Buckets, NumBuckets);
-  void *Probe = *Bucket;
-
-  InsertPos = nullptr;
+  const uint32_t *Hashes = getHashes();
+  unsigned Mask = NumBuckets - 1;
 
   FoldingSetNodeID TempID;
-  while (Node *NodeInBucket = GetNextPtr(Probe)) {
-    if (Info.NodeEquals(this, NodeInBucket, ID, IDHash, TempID))
-      return NodeInBucket;
+  for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
+    // Reject on the hash first: the common case only reads the bucket and hash
+    // arrays, which matters for cache locality.
+    if (Hashes[I] != IDHash)
+      continue;
+    Node *N = static_cast<Node *>(Buckets[I]);
+    if (Info.NodeEquals(this, N, ID, IDHash, TempID)) {
+      InsertPos = nullptr;
+      return N;
+    }
     TempID.clear();
-
-    Probe = NodeInBucket->getNextInBucket();
   }
 
-  // Didn't find the node, return null with the bucket as the InsertPos.
-  InsertPos = Bucket;
+  // Didn't find the node, hand back the hash so that InsertNode can place it.
+  InsertPos = encodeHash(IDHash);
   return nullptr;
 }
 
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
-  assert(!N->getNextInBucket());
-  // Do we need to grow the hashtable?
-  if (NumNodes + 1 > capacity()) {
+  assert(InsertPos && "Invalid InsertPos!");
+  if (NumNodes + 1 > capacity())
     GrowBucketCount(NumBuckets * 2, Info);
-    FoldingSetNodeID TempID;
-    InsertPos = GetBucketFor(Info.ComputeNodeHash(this, N, TempID), Buckets,
-                             NumBuckets);
-  }
-
-  ++NumNodes;
-
-  /// The insert position is actually a bucket pointer.
-  void **Bucket = static_cast<void **>(InsertPos);
-
-  void *Next = *Bucket;
-
-  // If this is the first insertion into this bucket, its next pointer will be
-  // null.  Pretend as if it pointed to itself, setting the low bit to indicate
-  // that it is a pointer to the bucket.
-  if (!Next)
-    Next = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(Bucket) | 1);
-
-  // Set the node's next pointer, and make the bucket point to the node.
-  N->SetNextInBucket(Next);
-  *Bucket = N;
+  insertImpl(N, decodeHash(InsertPos));
 }
 
 bool FoldingSetBase::RemoveNode(Node *N) {
-  // Because each bucket is a circular list, we don't need to compute N's hash
-  // to remove it.
-  void *Ptr = N->getNextInBucket();
-  if (!Ptr)
-    return false; // Not in folding set.
+  uint32_t *Hashes = getHashes();
+  unsigned Mask = NumBuckets - 1;
 
-  --NumNodes;
-  N->SetNextInBucket(nullptr);
+  unsigned I = N->getFoldingSetHash() & Mask;
+  while (Buckets[I] != N) {
+    if (!Buckets[I])
+      return false; // Not in folding set.
+    I = (I + 1) & Mask;
+  }
 
-  // Remember what N originally pointed to, either a bucket or another node.
-  void *NodeNextPtr = Ptr;
+  incrementEpoch();
 
-  // Chase around the list until we find the node (or bucket) which points to N.
-  while (true) {
-    if (Node *NodeInBucket = GetNextPtr(Ptr)) {
-      // Advance pointer.
-      Ptr = NodeInBucket->getNextInBucket();
-
-      // We found a node that points to N, change it to point to N's next node,
-      // removing N from the list.
-      if (Ptr == N) {
-        NodeInBucket->SetNextInBucket(NodeNextPtr);
-        return true;
-      }
-    } else {
-      void **Bucket = GetBucketPtr(Ptr);
-      Ptr = *Bucket;
-
-      // If we found that the bucket points to N, update the bucket to point to
-      // whatever is next.
-      if (Ptr == N) {
-        *Bucket = NodeNextPtr;
-        return true;
-      }
+  // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
+  // whose probe path crosses the hole.
+  for (unsigned J = (I + 1) & Mask; Buckets[J]; J = (J + 1) & Mask) {
+    unsigned Ideal = Hashes[J];
+    if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
+      Buckets[I] = Buckets[J];
+      Hashes[I] = Hashes[J];
+      I = J;
     }
   }
+  Buckets[I] = nullptr;
+  --NumNodes;
+  return true;
 }
 
 FoldingSetBase::Node *
@@ -357,31 +311,16 @@ FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
 //===----------------------------------------------------------------------===//
 // FoldingSetIteratorImpl Implementation
 
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
-  // Skip to the first non-null non-self-cycle bucket.
-  while (*Bucket != reinterpret_cast<void *>(-1) &&
-         (!*Bucket || !GetNextPtr(*Bucket)))
-    ++Bucket;
-
-  NodePtr = static_cast<FoldingSetNode *>(*Bucket);
+FoldingSetIteratorImpl::FoldingSetIteratorImpl(const FoldingSetBase *Set,
+                                               unsigned Index)
+    : DebugEpochBase::HandleBase(Set), Set(Set), Index(Index) {
+  while (this->Index < Set->NumBuckets && !Set->Buckets[this->Index])
+    ++this->Index;
 }
 
 void FoldingSetIteratorImpl::advance() {
-  // If there is another link within this bucket, go to it.
-  void *Probe = NodePtr->getNextInBucket();
-
-  if (FoldingSetNode *NextNodeInBucket = GetNextPtr(Probe))
-    NodePtr = NextNodeInBucket;
-  else {
-    // Otherwise, this is the last link in this bucket.
-    void **Bucket = GetBucketPtr(Probe);
-
-    // Skip to the next non-null non-self-cycle bucket.
-    do {
-      ++Bucket;
-    } while (*Bucket != reinterpret_cast<void *>(-1) &&
-             (!*Bucket || !GetNextPtr(*Bucket)));
-
-    NodePtr = static_cast<FoldingSetNode *>(*Bucket);
-  }
+  assert(isHandleInSync() && "invalid iterator access!");
+  do
+    ++Index;
+  while (Index < Set->NumBuckets && !Set->Buckets[Index]);
 }

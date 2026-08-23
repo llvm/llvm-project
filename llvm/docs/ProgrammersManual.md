@@ -2058,8 +2058,8 @@ building composite data structures.
 #### llvm/ADT/FoldingSet.h
 
 `FoldingSet` is an aggregate class that is really good at uniquing
-expensive-to-create or polymorphic objects.  It is a combination of a chained
-hash table with intrusive links (uniqued objects are required to inherit from
+expensive-to-create or polymorphic objects.  It is a linear-probed hash table
+whose buckets point to the uniqued objects (which are required to inherit from
 `FoldingSetNode`) that uses {ref}`SmallVector <dss_smallvector>` as part of its ID
 process.
 
@@ -2076,11 +2076,12 @@ element that we want to query for.  The query either returns the element
 matching the ID or it returns an opaque ID that indicates where insertion should
 take place.  Construction of the ID usually does not require heap traffic.
 
-Because `FoldingSet` uses intrusive links, it can support polymorphic objects in
+Because the buckets are pointers, `FoldingSet` can support polymorphic objects in
 the set (for example, you can have `SDNode` instances mixed with `LoadSDNodes`).
 Because the elements are individually allocated, pointers to the elements are
 stable: inserting or removing elements does not invalidate any pointers to other
-elements.
+elements.  Removing an element relocates other buckets, so it invalidates
+iterators.
 
 (dss_set)=
 

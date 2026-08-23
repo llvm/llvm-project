@@ -13,6 +13,10 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <map>
+#include <memory>
+#include <random>
+#include <set>
 #include <string>
 
 using namespace llvm;
@@ -357,5 +361,100 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   EXPECT_THAT(Set, IsEmpty());
   EXPECT_THAT(Set, SizeIs(0));
 }
+
+// Exercise growth, and the Algorithm R shifting that erase performs, against a
+// reference model. Nothing else in this file inserts enough nodes to rehash.
+TEST(FoldingSetTest, InsertEraseStress) {
+  FoldingSet<TrivialPair> Set;
+  std::map<unsigned, std::unique_ptr<TrivialPair>> Model;
+  std::mt19937 Rng(42);
+  for (unsigned Op = 0; Op != 1000; ++Op) {
+    unsigned Key = Rng() % 4096;
+    FoldingSetNodeID ID;
+    ID.AddInteger(Key);
+    ID.AddInteger(Key);
+
+    auto It = Model.find(Key);
+    if (Rng() & 1) {
+      void *InsertPos = nullptr;
+      TrivialPair *Found = Set.FindNodeOrInsertPos(ID, InsertPos);
+      if (It != Model.end()) {
+        ASSERT_EQ(It->second.get(), Found);
+        continue;
+      }
+      ASSERT_EQ(nullptr, Found);
+      auto N = std::make_unique<TrivialPair>(Key, Key);
+      Set.InsertNode(N.get(), InsertPos);
+      Model.emplace(Key, std::move(N));
+    } else if (It != Model.end()) {
+      ASSERT_TRUE(Set.RemoveNode(It->second.get()));
+      ASSERT_FALSE(Set.RemoveNode(It->second.get()));
+      Model.erase(It);
+    }
+    ASSERT_EQ(Model.size(), Set.size());
+  }
+
+  // Every surviving node must still be reachable along its probe chain, and
+  // iteration must visit each of them exactly once.
+  for (const auto &KV : Model) {
+    FoldingSetNodeID ID;
+    ID.AddInteger(KV.first);
+    ID.AddInteger(KV.first);
+    void *InsertPos = nullptr;
+    EXPECT_EQ(KV.second.get(), Set.FindNodeOrInsertPos(ID, InsertPos));
+  }
+  std::set<TrivialPair *> Visited;
+  for (TrivialPair &N : Set)
+    EXPECT_TRUE(Visited.insert(&N).second);
+  EXPECT_EQ(Model.size(), Visited.size());
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(FoldingSetTest, InsertInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.InsertNode(&T2);
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, RemoveInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  Set.InsertNode(&T2);
+  auto It = Set.begin();
+  Set.RemoveNode(&T2);
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, RemoveOfAbsentNodeKeepsIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), Absent(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  EXPECT_FALSE(Set.RemoveNode(&Absent));
+  EXPECT_EQ(&T1, &*It);
+}
+
+TEST(FoldingSetTest, ClearInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.clear();
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, MoveInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  FoldingSet<TrivialPair> Other(std::move(Set));
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+#endif
 
 } // namespace
