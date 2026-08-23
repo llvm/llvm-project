@@ -125,7 +125,7 @@ define amdgpu_ps void @sextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -135,7 +135,7 @@ define amdgpu_ps void @sextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
@@ -268,7 +268,7 @@ define amdgpu_ps void @zextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -278,7 +278,7 @@ define amdgpu_ps void @zextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
@@ -297,7 +297,7 @@ define amdgpu_ps void @sextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -307,7 +307,7 @@ define amdgpu_ps void @sextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
@@ -326,7 +326,7 @@ define amdgpu_ps void @zextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -336,7 +336,7 @@ define amdgpu_ps void @zextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra

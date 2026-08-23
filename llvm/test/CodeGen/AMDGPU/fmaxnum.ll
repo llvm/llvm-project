@@ -1920,12 +1920,12 @@ define amdgpu_kernel void @test_fmax_f16_v_ieee_on(ptr addrspace(1) %out, half %
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.h, s2, s2
-; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.l, s3, s3
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.l, s2, s2
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.h, s3, s3
 ; GFX12-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_max_num_f16_e32 v0.l, v0.h, v0.l
+; GFX12-SDAG-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -2039,12 +2039,12 @@ define amdgpu_kernel void @test_fmax_f16_s_ieee_on(ptr addrspace(1) %out, half i
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.h, s2, s2
-; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.l, s3, s3
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.l, s2, s2
+; GFX12-SDAG-NEXT:    v_max_num_f16_e64 v0.h, s3, s3
 ; GFX12-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_max_num_f16_e32 v0.l, v0.h, v0.l
+; GFX12-SDAG-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;

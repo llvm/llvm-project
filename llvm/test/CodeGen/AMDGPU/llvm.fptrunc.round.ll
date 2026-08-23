@@ -693,35 +693,20 @@ define amdgpu_gs void @s_fptrunc_round_f32_to_f16_upward_multiple_calls(float in
 ; GISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s2, s1
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-SDAG-NEXT:    s_add_f16 s0, s0, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    s_add_f16 s0, s1, s0
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-SDAG-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s2, s1
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s1, s0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-GISEL-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_cvt_f16_f32 s2, s1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
+; GFX12-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
+; GFX12-NEXT:    s_add_f16 s0, s0, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_add_f16 s0, s1, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %res1 = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
   %res2 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.upward")
   %res3 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.downward")
