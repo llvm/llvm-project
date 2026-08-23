@@ -848,6 +848,26 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
       break;
     }
 
+    if (Class == ARCInstKind::Release) {
+      Instruction *PrevInst = Inst->getPrevNode();
+      while (PrevInst && PrevInst->isDebugOrPseudoInst())
+        PrevInst = PrevInst->getPrevNode();
+
+      if (PrevInst && GetBasicARCInstKind(PrevInst) == ARCInstKind::Retain &&
+          GetArgRCIdentityRoot(Inst) == GetArgRCIdentityRoot(PrevInst)) {
+        LLVM_DEBUG(dbgs() << "Deleting adjacent retain and release: "
+                          << *PrevInst << " and " << *Inst << "\n");
+        if (!PrevInst->use_empty())
+          PrevInst->replaceAllUsesWith(
+              cast<CallInst>(PrevInst)->getArgOperand(0));
+        EraseInstruction(Inst);
+        EraseInstruction(PrevInst);
+        Changed = true;
+        ++NumNoops;
+        continue;
+      }
+    }
+
     OptimizeIndividualCallImpl(F, Inst, Class, Arg);
   }
 
