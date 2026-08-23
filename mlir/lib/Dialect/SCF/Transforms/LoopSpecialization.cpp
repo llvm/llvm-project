@@ -236,6 +236,11 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
     return failure();
 
+  // The peeling bound (%lb + %step) is computed with affine.apply, which
+  // accepts only index operands.
+  if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
+    return failure();
+
   AffineExpr lbSymbol, stepSymbol;
   bindSymbols(b.getContext(), lbSymbol, stepSymbol);
 
