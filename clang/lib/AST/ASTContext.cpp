@@ -13467,7 +13467,15 @@ void ASTContext::forEachMultiversionedFunctionVersion(
     const FunctionDecl *FD,
     llvm::function_ref<void(FunctionDecl *)> Pred) const {
   assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
-  llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
+  // Function template specializations do not appear as separate results when
+  // looking up the name of their primary template. The target_clones attribute
+  // stores every version on the specialization itself, so visit it directly.
+  if (FD->isTargetClonesMultiVersion() &&
+      FD->isFunctionTemplateSpecialization()) {
+    Pred(const_cast<FunctionDecl *>(FD)->getMostRecentDecl());
+    return;
+  }
+  llvm::SmallDenseSet<const FunctionDecl *, 4> SeenDecls;
   FD = FD->getMostRecentDecl();
   // FIXME: The order of traversal here matters and depends on the order of
   // lookup results, which happens to be (mostly) oldest-to-newest, but we

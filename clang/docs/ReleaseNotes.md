@@ -232,6 +232,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Attribute Changes in Clang
 
+- The `target_clones` attribute now supports function templates. Each
+  specialization is multiversioned and dispatched independently. (#GH116501)
+
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 ### Improvements to Clang's diagnostics

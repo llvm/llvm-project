@@ -3397,6 +3397,9 @@ generation options. Additionally, these versions will be resolved at runtime
 based on the priority of their attribute options. All `target_clone` functions
 are considered multiversioned functions.
 
+In C++, the attribute may be applied to a function template. Each specialization
+of the template is multiversioned and dispatched independently.
+
 For AArch64 target:
 The attribute contains comma-separated strings of target features joined by "+"
 sign. For example:
