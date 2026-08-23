@@ -142,12 +142,11 @@ define i8 @ashr_shl_same_shamt_exact_freeze(i8 %x, i8 %cnt_in) {
   ret i8 %r
 }
 
-; FIXME: 'exact' is invalid because the shift amount may be undef.
 define i8 @ashr_shl_same_shamt_exact_fail(i8 %x, i8 %cnt_in) {
 ; CHECK-LABEL: @ashr_shl_same_shamt_exact_fail(
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 7
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 [[SHL]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[SHL]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cnt = and i8 %cnt_in, 7
@@ -156,14 +155,13 @@ define i8 @ashr_shl_same_shamt_exact_fail(i8 %x, i8 %cnt_in) {
   ret i8 %r
 }
 
-; FIXME: 'exact' is invalid because the shift amount may be undef.
 define i16 @ashr_shl_same_shamt_exact_fail_zext(i16 %x, i4 %n) {
 ; CHECK-LABEL: @ashr_shl_same_shamt_exact_fail_zext(
 ; CHECK-NEXT:    [[HIGHBITS:%.*]] = lshr i16 [[X:%.*]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i4 0, [[N:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[SUB]] to i16
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[HIGHBITS]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i16 [[SHL]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i16 [[SHL]], [[Z]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %highbits = lshr i16 %x, 1

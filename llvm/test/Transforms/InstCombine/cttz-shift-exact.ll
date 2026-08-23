@@ -7,7 +7,7 @@ define i32 @test_cttz_lshr(i32 %x) {
 ; CHECK-LABEL: define i32 @test_cttz_lshr(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr exact i32 [[X]], [[CTTZ]]
+; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 %x, i1 false)
@@ -19,7 +19,7 @@ define i32 @test_cttz_ashr(i32 %x) {
 ; CHECK-LABEL: define i32 @test_cttz_ashr(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = ashr exact i32 [[X]], [[CTTZ]]
+; CHECK-NEXT:    [[SH:%.*]] = ashr i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -65,13 +65,12 @@ define i32 @test_cttz_ashr_freeze(i32 %x_in) {
   ret i32 %sh
 }
 
-; FIXME: 'exact' is invalid because %x may be undef.
 define i32 @test_cttz_lshr_nonzero(i32 %y) {
 ; CHECK-LABEL: define i32 @test_cttz_lshr_nonzero(
 ; CHECK-SAME: i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[Y]], 4
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 3) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr exact i32 [[X]], [[CTTZ]]
+; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
   %x = or i32 %y, 4
