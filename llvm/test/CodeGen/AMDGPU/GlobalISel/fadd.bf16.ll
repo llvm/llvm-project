@@ -83,6 +83,8 @@ define amdgpu_ps bfloat @fadd_bf16_ss(bfloat inreg %a, bfloat inreg %b) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s0, s0
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s1, s1, s0
 ; GFX1250-NEXT:    v_pk_add_bf16 v0, s0, s1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
@@ -560,6 +562,7 @@ define amdgpu_ps <3 x bfloat> @fadd_v3bf16_ss(<3 x bfloat> inreg %a, <3 x bfloat
 ; GFX12-NEXT:    s_cmp_u_f32 s1, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, s3, s2
 ; GFX12-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX12-NEXT:    s_pack_ll_b32_b16 s1, s1, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -1057,6 +1060,7 @@ define amdgpu_ps <5 x bfloat> @fadd_v5bf16_ss(<5 x bfloat> inreg %a, <5 x bfloat
 ; GFX12-NEXT:    s_cmp_u_f32 s2, 0
 ; GFX12-NEXT:    s_cselect_b32 s2, s5, s4
 ; GFX12-NEXT:    s_lshr_b32 s2, s2, 16
+; GFX12-NEXT:    s_pack_ll_b32_b16 s2, s2, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-NEXT:    ; return to shader part epilog
 ;

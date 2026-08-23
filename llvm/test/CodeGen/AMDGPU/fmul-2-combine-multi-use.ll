@@ -632,14 +632,16 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; GFX11-DENORM-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-DENORM-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX11-DENORM-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-DENORM-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-DENORM-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX11-DENORM-TRUE16-NEXT:    v_add_f16_e64 v0.l, s2, s2
-; GFX11-DENORM-TRUE16-NEXT:    v_fma_f16 v0.h, s2, 2.0, s3
-; GFX11-DENORM-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
+; GFX11-DENORM-TRUE16-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-TRUE16-NEXT:    v_fmac_f16_e64 v1.l, s2, 2.0
+; GFX11-DENORM-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1] dlc
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-TRUE16-NEXT:    global_store_d16_hi_b16 v1, v0, s[0:1] offset:2 dlc
+; GFX11-DENORM-TRUE16-NEXT:    global_store_b16 v2, v1, s[0:1] offset:2 dlc
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
 ;

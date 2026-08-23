@@ -239,14 +239,19 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
                                       const SIRegisterInfo *TRI,
                                       const SIInstrInfo *TII) {
-  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineFunction *MF = MI.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
   auto &Src = MI.getOperand(1);
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = Src.getReg();
+
   if (!SrcReg.isVirtual() || !DstReg.isVirtual())
     return false;
 
-  for (const auto &MO : MRI.reg_nodbg_operands(DstReg)) {
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  SmallVector<MachineOperand *, 4> Lo16Users;
+
+  for (auto &MO : MRI.reg_nodbg_operands(DstReg)) {
     const auto *UseMI = MO.getParent();
     if (UseMI == &MI)
       continue;
@@ -258,9 +263,30 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
     if (OpIdx >= UseMI->getDesc().getNumOperands() ||
         !TII->isOperandLegal(*UseMI, OpIdx, &Src))
       return false;
+
+    // For SGPR to VGPR copy in true16, we could have subregidx on user
+    // lo/hi16:vgprXX which get transformed to illegal lo/hi16:sgprXX.
+    // Reject hi16, and collect lo16 MO
+    // TODO. The check above do not check for subregister.
+    // And thus composed sub0_lo/hi16 will not reach here. Fix it if this is
+    // changed.
+    unsigned SubRegIdx = MO.getSubReg();
+    if (ST.useRealTrue16Insts()) {
+      if (SubRegIdx == AMDGPU::lo16)
+        Lo16Users.push_back(&MO);
+      else if (SubRegIdx == AMDGPU::hi16)
+        return false;
+    }
   }
   // Change VGPR to SGPR destination.
   MRI.setRegClass(DstReg, TRI->getEquivalentSGPRClass(MRI.getRegClass(DstReg)));
+
+  // Replace lo16 to nosubreg/sub0 for sgpr
+  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
+  bool HasSub0 = TRI->getSubClassWithSubReg(RC, AMDGPU::sub0);
+  for (auto &MO : Lo16Users)
+    MO->setSubReg(HasSub0 ? AMDGPU::sub0 : AMDGPU::NoSubRegister);
+
   return true;
 }
 

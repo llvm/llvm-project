@@ -611,20 +611,37 @@ define amdgpu_cs <3 x i16> @abs_sgpr_v3i16(<3 x i16> inreg %arg) {
 ; GFX10-NEXT:    s_abs_i32 s1, s1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-LABEL: abs_sgpr_v3i16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s0
-; GFX1250-NEXT:    s_ashr_i32 s0, s0, 16
-; GFX1250-NEXT:    s_abs_i32 s2, s2
-; GFX1250-NEXT:    s_abs_i32 s0, s0
-; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
-; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
-; GFX1250-NEXT:    s_abs_i32 s1, s1
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-FAKE16-LABEL: abs_sgpr_v3i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-FAKE16-NEXT:    s_sext_i32_i16 s2, s0
+; GFX1250-FAKE16-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX1250-FAKE16-NEXT:    s_abs_i32 s2, s2
+; GFX1250-FAKE16-NEXT:    s_abs_i32 s0, s0
+; GFX1250-FAKE16-NEXT:    s_sext_i32_i16 s1, s1
+; GFX1250-FAKE16-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GFX1250-FAKE16-NEXT:    s_abs_i32 s1, s1
+; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-REAL16-LABEL: abs_sgpr_v3i16:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-REAL16-NEXT:    v_nop
+; GFX1250-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-REAL16-NEXT:    s_sext_i32_i16 s2, s0
+; GFX1250-REAL16-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX1250-REAL16-NEXT:    s_abs_i32 s2, s2
+; GFX1250-REAL16-NEXT:    s_sext_i32_i16 s1, s1
+; GFX1250-REAL16-NEXT:    s_abs_i32 s0, s0
+; GFX1250-REAL16-NEXT:    s_abs_i32 s1, s1
+; GFX1250-REAL16-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-REAL16-NEXT:    s_pack_ll_b32_b16 s1, s1, s0
+; GFX1250-REAL16-NEXT:    ; return to shader part epilog
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
 }
