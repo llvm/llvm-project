@@ -405,11 +405,6 @@ if(NOT WIN32 AND NOT APPLE)
 endif()
 add_dependencies(libomp-micro-tests libomp-test-deps)
 
-# `omp` needs to be exported if in-tree build.
-set(export_to_llvmexports)
-get_target_export_arg(omp LLVM export_to_llvmexports)
-set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
-
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
