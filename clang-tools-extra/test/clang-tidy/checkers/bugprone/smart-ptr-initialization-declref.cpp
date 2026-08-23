@@ -16,6 +16,13 @@ void test_new_expression_ok() {
   std::unique_ptr<A> b(second);
 }
 
+void test_new_expression_cast_ok() {
+  A* first = static_cast<A*>(new A());
+  A* second = static_cast<A*>(new A());
+  std::shared_ptr<A> a(first);
+  std::unique_ptr<A> b(second);
+}
+
 void test_new_expression_fail() {
   A* first = new A();
   A* second = new A();

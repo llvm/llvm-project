@@ -82,16 +82,23 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
             hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
   // FIXME: need proper suppurt for conditionalOperator cases
+  auto AllowedArguments =
+      anyOf(ignoringParenCasts(cxxNewExpr()), 
+            ignoringParenCasts(ReleaseCallMatcher),
+            ignoringParenCasts(conditionalOperator()));
+
+  auto RawPtrMatcher =
+      declRefExpr(to(varDecl(hasInitializer(ignoringParenCasts(cxxNewExpr()))).bind("raw-ptr")));
+
   auto SmartPtrConstructorMatcher = cxxConstructExpr(
       hasDeclaration(
           cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
       unless(hasArgument(
-          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
+          0, AllowedArguments)),
       optionally(hasArgument(
-          0, declRefExpr(
-                 to(varDecl(hasInitializer(cxxNewExpr())).bind("raw-ptr"))))));
+          0, RawPtrMatcher)));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -105,7 +112,6 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       on(hasType(hasUnqualifiedDesugaredType(
           recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
 
-  // FIXME: need proper suppurt for conditionalOperator cases
   auto ResetCallMatcher = cxxMemberCallExpr(
       on(hasType(hasUnqualifiedDesugaredType(recordType(
           hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
@@ -114,10 +120,9 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
       unless(hasArgument(
-          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))),
+          0, AllowedArguments)),
       optionally(hasArgument(
-          0, declRefExpr(
-                 to(varDecl(hasInitializer(cxxNewExpr())).bind("raw-ptr"))))));
+          0, RawPtrMatcher)));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);

@@ -49,6 +49,10 @@ void test_release_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
   std::unique_ptr<A> p2(p1.release());
 }
 
+void test_release_cast_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
+  std::unique_ptr<A> p2(static_cast<A*>(p1.release()));
+}
+
 struct NoopDeleter {
     void operator() (A* p) {}
 };
@@ -112,6 +116,11 @@ void test_new_expression_reset_ok() {
 void test_release_reset_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
   std::unique_ptr<A> p2;
   p2.reset(p1.release());
+}
+
+void test_release_reset_cast_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
+  std::unique_ptr<A> p2;
+  p2.reset(static_cast<A*>(p1.release()));
 }
 
 void test_custom_deleter_reset_ok() {
