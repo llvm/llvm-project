@@ -188,8 +188,8 @@ TEST(FoldingSetTest, ClearOnNonEmpty) {
   EXPECT_TRUE(Trivial.empty());
 }
 
-// 48 is the most the default 64 buckets hold, 49 is one past it, and 0 must not
-// allocate.
+// 48 is the most the default 64 buckets hold and 49 is one past it, so both
+// sides of the grow boundary are covered.
 TEST(FoldingSetTest, Reserve) {
   for (unsigned Size : {0u, 1u, 2u, 48u, 49u}) {
     FoldingSet<TrivialPair> Set;
@@ -460,5 +460,30 @@ TEST(FoldingSetTest, MoveInvalidatesIterators) {
   EXPECT_DEATH((void)It->Value, "invalid iterator access");
 }
 #endif
+
+// The InsertPos token is a hash, not a position, so it stays valid across
+// insertions that rehash the table.
+TEST(FoldingSetTest, InsertPosSurvivesGrowth) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair Late(9999, 9999);
+
+  FoldingSetNodeID ID;
+  Late.Profile(ID);
+  void *InsertPos = nullptr;
+  ASSERT_EQ(nullptr, Set.FindNodeOrInsertPos(ID, InsertPos));
+  ASSERT_NE(nullptr, InsertPos);
+
+  // Force several rehashes while the token is held.
+  std::vector<std::unique_ptr<TrivialPair>> Nodes;
+  for (unsigned I = 0; I != 200; ++I) {
+    Nodes.push_back(std::make_unique<TrivialPair>(I, I));
+    Set.InsertNode(Nodes.back().get());
+  }
+
+  Set.InsertNode(&Late, InsertPos);
+  void *Unused = nullptr;
+  EXPECT_EQ(&Late, Set.FindNodeOrInsertPos(ID, Unused));
+  EXPECT_EQ(201u, Set.size());
+}
 
 } // namespace

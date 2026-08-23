@@ -35,7 +35,7 @@ namespace llvm {
 /// This folding set is used for two purposes:
 ///   1. Given information about a node we want to create, look up the unique
 ///      instance of the node in the set.  If the node already exists, return
-///      it, otherwise return the bucket it should be inserted into.
+///      it, otherwise return a token that makes the insertion cheap.
 ///   2. Given a node that has already been created, remove it from the set.
 ///
 /// The hash table is linear-probing open addressing with tombstone-free
@@ -316,10 +316,15 @@ public:
   //===--------------------------------------------------------------------===//
   /// This class is used to maintain node state in a folding set.
   class Node {
+  public:
+    /// FoldingSetNodeIDRef::ComputeHash() never returns this, so it marks a
+    /// node that is not in any folding set.
+    static constexpr uint32_t NotInSet = UINT32_MAX;
+
   private:
     // Hash of the node's profile, cached so that growth and removal never
     // re-run Profile().
-    uint32_t FoldingSetHash = 0;
+    uint32_t FoldingSetHash = NotInSet;
 
   public:
     Node() = default;
@@ -368,9 +373,10 @@ private:
     return reinterpret_cast<uint32_t *>(Buckets + NumBuckets);
   }
 
-  /// Insert \p N at the first empty slot following its home, without checking
-  /// capacity.
-  void insertImpl(Node *N, uint32_t Hash);
+  /// Put \p N in the first empty slot following its home, without checking
+  /// capacity. Does not touch \p N: a rehash already knows the hash and must
+  /// not dirty every node to rewrite it.
+  void placeNode(Node *N, uint32_t Hash);
 
   /// Compare \p N against \p ID. Kept out of line so that the scratch storage
   /// (FoldingSetNodeID) stays off the probe loop's path.
@@ -660,7 +666,7 @@ protected:
 public:
   bool operator==(const FoldingSetIteratorImpl &RHS) const {
     assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
-    return Index == RHS.Index;
+    return Set == RHS.Set && Index == RHS.Index;
   }
   bool operator!=(const FoldingSetIteratorImpl &RHS) const {
     return !(*this == RHS);

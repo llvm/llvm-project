@@ -182,14 +182,16 @@ void FoldingSetBase::clear() {
   NumNodes = 0;
 }
 
-void FoldingSetBase::insertImpl(Node *N, uint32_t Hash) {
+void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
-  while (Buckets[I])
+  while (Buckets[I]) {
+    // A second copy of N hashes here too, so the probe always passes it.
+    assert(Buckets[I] != N && "Node already in the folding set");
     I = (I + 1) & Mask;
+  }
   Buckets[I] = N;
   getHashes()[I] = Hash;
-  N->setFoldingSetHash(Hash);
   ++NumNodes;
 }
 
@@ -202,7 +204,7 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
   const uint32_t *Hashes = getHashes();
   for (unsigned I = 0; I != NumBuckets; ++I)
     if (void *N = Buckets[I])
-      Tmp.insertImpl(static_cast<Node *>(N), Hashes[I]);
+      Tmp.placeNode(static_cast<Node *>(N), Hashes[I]);
 
   *this = std::move(Tmp);
 }
@@ -250,12 +252,18 @@ void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
     GrowBucketCount(NumBuckets * 2);
-  insertImpl(N, decodeHash(InsertPos));
+  uint32_t Hash = decodeHash(InsertPos);
+  placeNode(N, Hash);
+  N->setFoldingSetHash(Hash);
 }
 
 bool FoldingSetBase::RemoveNode(Node *N) {
+  uint32_t Hash = N->getFoldingSetHash();
+  if (Hash == Node::NotInSet)
+    return false;
+
   unsigned Mask = NumBuckets - 1;
-  unsigned I = N->getFoldingSetHash() & Mask;
+  unsigned I = Hash & Mask;
   while (Buckets[I] != N) {
     if (!Buckets[I])
       return false; // Not in folding set.
@@ -276,6 +284,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
     }
   }
   Buckets[I] = nullptr;
+  N->setFoldingSetHash(Node::NotInSet);
   --NumNodes;
   return true;
 }
