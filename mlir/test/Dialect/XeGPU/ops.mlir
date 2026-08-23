@@ -81,19 +81,17 @@ gpu.func @test_create_nd_tdesc_8(%src: ui64, %w : index, %h : index, %x : index,
 // CHECK-LABEL: func @test_create_nd_tdesc_9({{.*}})
 
 gpu.func @test_create_nd_tdesc_9(%src: memref<?x?xf16>, %w : index, %h : index, %x : index, %y : index) {
-
-  %c1 = arith.constant 1 : index
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0, shape : [%arg2, %arg1], strides : [%arg1, %c1] : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
-  %1 = xegpu.create_nd_tdesc %src , shape:[%h, %w], strides:[%w, %c1]  : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  // A dynamic-shape memref uses the bare form; shape/strides come from it.
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  %1 = xegpu.create_nd_tdesc %src : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
 
   gpu.return
 }
 
 // CHECK-LABEL: func @test_create_nd_tdesc_10({{.*}})
 gpu.func @test_create_nd_tdesc_10(%src: memref<?x?xf16>, %w : index, %h : index, %x : index, %y : index) {
-  %c1 = arith.constant 1 : index
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0, shape : [%arg2, %arg1], strides : [%arg1, %c1] : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
-  %2 = xegpu.create_nd_tdesc %src, shape:[%h, %w], strides:[%w, %c1]  : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  %2 = xegpu.create_nd_tdesc %src : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
 
   gpu.return
 }

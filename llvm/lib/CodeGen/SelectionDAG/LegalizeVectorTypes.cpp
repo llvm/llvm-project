@@ -6494,11 +6494,25 @@ SDValue DAGTypeLegalizer::WidenVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
+  SDLoc DL(N);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue InOp = GetWidenedVector(N->getOperand(0));
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
 
-  return DAG.getAddrSpaceCast(SDLoc(N), WidenVT, InOp,
+  // The source has the same number of elements as the result, so widen it to
+  // match WidenVT. It only lives in the widened-vector map if it is itself
+  // widened; otherwise pad it up to the widened element count.
+  SDValue InOp = N->getOperand(0);
+  EVT InVT = InOp.getValueType();
+  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+    InOp = GetWidenedVector(InOp);
+  } else {
+    EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
+                                     InVT.getVectorElementType(), WidenEC);
+    InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
+  }
+
+  return DAG.getAddrSpaceCast(DL, WidenVT, InOp,
                               AddrSpaceCastN->getSrcAddressSpace(),
                               AddrSpaceCastN->getDestAddressSpace());
 }

@@ -1429,6 +1429,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expf_static_rounding_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf16_test
   SUITE
     libc-math-smoke-tests
