@@ -359,7 +359,7 @@ jobs:
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
-        C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=arm64 -host_arch=arm64
+        & C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=arm64 -host_arch=arm64
         .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
