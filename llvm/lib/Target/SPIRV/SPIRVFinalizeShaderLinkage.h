@@ -21,7 +21,7 @@ namespace llvm {
 class SPIRVTargetMachine;
 
 class SPIRVFinalizeShaderLinkage
-    : public OptionalPassInfoMixin<SPIRVFinalizeShaderLinkage> {
+    : public RequiredPassInfoMixin<SPIRVFinalizeShaderLinkage> {
   const SPIRVTargetMachine &TM;
 
 public:

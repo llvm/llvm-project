@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class SPIRVRegularizer : public OptionalPassInfoMixin<SPIRVRegularizer> {
+class SPIRVRegularizer : public RequiredPassInfoMixin<SPIRVRegularizer> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
