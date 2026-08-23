@@ -16,7 +16,7 @@ namespace llvm {
 class SPIRVTargetMachine;
 
 class SPIRVPrepareFunctions
-    : public OptionalPassInfoMixin<SPIRVPrepareFunctions> {
+    : public RequiredPassInfoMixin<SPIRVPrepareFunctions> {
   const SPIRVTargetMachine &TM;
 
 public:

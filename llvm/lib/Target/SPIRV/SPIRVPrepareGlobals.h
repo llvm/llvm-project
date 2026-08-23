@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class SPIRVPrepareGlobals : public OptionalPassInfoMixin<SPIRVPrepareGlobals> {
+class SPIRVPrepareGlobals : public RequiredPassInfoMixin<SPIRVPrepareGlobals> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

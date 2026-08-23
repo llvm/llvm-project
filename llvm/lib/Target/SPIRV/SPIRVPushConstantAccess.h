@@ -15,7 +15,7 @@
 namespace llvm {
 
 class SPIRVPushConstantAccess
-    : public OptionalPassInfoMixin<SPIRVPushConstantAccess> {
+    : public RequiredPassInfoMixin<SPIRVPushConstantAccess> {
   const SPIRVTargetMachine &TM;
 
 public:
