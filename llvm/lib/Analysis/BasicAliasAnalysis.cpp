@@ -2030,8 +2030,7 @@ bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
       return false;
 
     APInt Scale = Var0.IsNegated ? -Var0.Scale : Var0.Scale;
-    APInt IndexDiff =
-        (E0.Offset - E1.Offset).sextOrTrunc(Scale.getBitWidth());
+    APInt IndexDiff = (E0.Offset - E1.Offset).sextOrTrunc(Scale.getBitWidth());
     APInt Diff = GEP.Offset + IndexDiff * Scale;
     return Diff.isNegative() ? (-Diff).uge(V1Size) : Diff.uge(V2Size);
   };
