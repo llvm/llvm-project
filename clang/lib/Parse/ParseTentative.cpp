@@ -35,45 +35,59 @@ bool Parser::isCXXDeclarationStatement(
   case tok::coloncolon:
   case tok::identifier: {
     if (DisambiguatingWithExpression) {
+      {
+        // Suppress access checks: the declaration context of an out-of-line
+        // member is not known yet. On the recognized declaration shapes below
+        // the real parse redoes the checks from the unannotated tokens.
+        RevertingTentativeParsingAction TPA(*this, /*Unannotated=*/true);
+        SuppressAccessChecks AccessSuppressor(*this, /*activate=*/true);
+        // Parse the C++ scope specifier.
+        CXXScopeSpec SS;
+        ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHasErrors=*/false,
+                                       /*EnteringContext=*/true);
+
+        switch (Tok.getKind()) {
+        case tok::identifier: {
+          IdentifierInfo *II = Tok.getIdentifierInfo();
+          bool isDeductionGuide = Actions.isDeductionGuideName(
+              getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
+          if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
+              isDeductionGuide) {
+            if (isConstructorDeclarator(
+                    /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                    /*IsFriend=*/DeclSpec::FriendSpecified::No))
+              return true;
+          } else if (SS.isNotEmpty()) {
+            // If the scope is not empty, it could alternatively be something
+            // like a typedef or using declaration. That declaration might be
+            // private in the global context, which would be diagnosed by
+            // calling into isCXXSimpleDeclaration, but may actually be fine in
+            // the context of member functions and static variable definitions.
+            // Check if the next token is also an identifier and assume a
+            // declaration. We cannot check if the scopes match because the
+            // declarations could involve namespaces and friend declarations.
+            if (NextToken().is(tok::identifier))
+              return true;
+          }
+          break;
+        }
+        case tok::kw_operator:
+          return true;
+        case tok::tilde:
+          return true;
+        default:
+          break;
+        }
+      }
+      // Not a recognized declaration shape. Parse the scope specifier again
+      // without suppression, so qualifier access diagnoses as it does for a
+      // statement, and keep the annotations for the checks below.
       RevertingTentativeParsingAction TPA(*this);
-      // Parse the C++ scope specifier.
       CXXScopeSpec SS;
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/true);
-
-      switch (Tok.getKind()) {
-      case tok::identifier: {
-        IdentifierInfo *II = Tok.getIdentifierInfo();
-        bool isDeductionGuide = Actions.isDeductionGuideName(
-            getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
-        if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
-            isDeductionGuide) {
-          if (isConstructorDeclarator(
-                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
-                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
-            return true;
-        } else if (SS.isNotEmpty()) {
-          // If the scope is not empty, it could alternatively be something like
-          // a typedef or using declaration. That declaration might be private
-          // in the global context, which would be diagnosed by calling into
-          // isCXXSimpleDeclaration, but may actually be fine in the context of
-          // member functions and static variable definitions. Check if the next
-          // token is also an identifier and assume a declaration.
-          // We cannot check if the scopes match because the declarations could
-          // involve namespaces and friend declarations.
-          if (NextToken().is(tok::identifier))
-            return true;
-        }
-        break;
-      }
-      case tok::kw_operator:
-        return true;
-      case tok::tilde:
-        return true;
-      default:
-        break;
-      }
     }
   }
     [[fallthrough]];
@@ -1145,8 +1159,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))

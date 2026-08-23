@@ -164,7 +164,8 @@ void removeParDim(SmallVector<GPUParallelDimAttr> &parDims,
 }
 
 #define ACC_OP_WITH_PAR_DIMS_LIST                                              \
-  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp
+  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp,              \
+      ReductionCombineOp
 
 GPUParallelDimsAttr getParDimsAttr(Operation *op) {
   return llvm::TypeSwitch<Operation *, GPUParallelDimsAttr>(op)

@@ -3717,6 +3717,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
+  case DependentTemplateIdExprClass:
   case CXXUnresolvedConstructExprClass:
   case CXXDependentScopeMemberExprClass:
   case UnresolvedLookupExprClass:

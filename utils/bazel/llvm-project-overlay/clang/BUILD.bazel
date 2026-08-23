@@ -1957,6 +1957,7 @@ cc_library(
         ":parse",
         ":sema",
         ":serialization",
+        "//compiler-rt:emutls",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
@@ -2756,6 +2757,7 @@ cc_library(
         ":basic",
         ":scalable_static_analysis_core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

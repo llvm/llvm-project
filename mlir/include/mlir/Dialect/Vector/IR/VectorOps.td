@@ -1075,13 +1075,15 @@ def Vector_InsertStridedSliceOp :
 
     ```mlir
     %2 = vector.insert_strided_slice %0, %1
-        {offsets = [0, 0, 2], strides = [1, 1]}:
+        offsets = [0, 0, 2], strides = [1, 1] :
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
 
   let assemblyFormat = [{
-    $valueToStore `,` $dest attr-dict `:` type($valueToStore) `into` type($dest)
+    $valueToStore `,` $dest
+    `offsets` `=` $offsets `,` `strides` `=` $strides attr-dict
+    `:` type($valueToStore) `into` type($dest)
   }];
 
   let builders = [
@@ -1217,7 +1219,7 @@ def Vector_ExtractStridedSliceOp :
 
     ```mlir
     %1 = vector.extract_strided_slice %0
-        {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
+        offsets = [0, 2], sizes = [2, 4], strides = [1, 1] :
       vector<4x8x16xf32> to vector<2x4x16xf32>
 
     // TODO: Evolve to a range form syntax similar to:
@@ -1245,7 +1247,10 @@ def Vector_ExtractStridedSliceOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type(results)";
+  let assemblyFormat = [{
+    $source `offsets` `=` $offsets `,` `sizes` `=` $sizes `,`
+    `strides` `=` $strides attr-dict `:` type($source) `to` type(results)
+  }];
 }
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
@@ -1785,8 +1790,14 @@ def Vector_LoadOp : Vector_Op<"load", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat =
-      "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($result)
+  }];
 }
 
 // Promises IndexedAccessOpInterface.
@@ -1896,8 +1907,14 @@ def Vector_StoreOp : Vector_Op<"store", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
-                       "`:` type($base) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $valueToStore `,` $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($valueToStore)
+  }];
 }
 
 // Promises IndexedAccessOpInterface.
@@ -1969,8 +1986,12 @@ def Vector_MaskedLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -2064,9 +2085,11 @@ def Vector_MaskedStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore "
-      "attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -2173,7 +2196,8 @@ def Vector_GatherOp :
 
   let assemblyFormat =
     "$base `[` $offsets `]` `[` $indices `]` `,` "
-    "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
+    "$mask `,` $pass_thru (`alignment` `=` $alignment^)? "
+    "attr-dict `:` type($base) `,` "
     "type($indices)  `,` type($mask) `,` type($pass_thru) "
     "`into` type($result)";
   let hasCanonicalizer = 1;
@@ -2264,10 +2288,12 @@ def Vector_ScatterOp
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
-  let assemblyFormat = "$base `[` $offsets `]` `[` $indices `]` `,` "
-                       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-                       "type($indices)  `,` type($mask) `,` "
-                       "type($valueToStore) (`->` type($result)^)?";
+  let assemblyFormat = [{
+    $base `[` $offsets `]` `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($indices)  `,` type($mask) `,`
+    type($valueToStore) (`->` type($result)^)?
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2353,8 +2379,12 @@ def Vector_ExpandLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2439,9 +2469,11 @@ def Vector_CompressStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore attr-dict `:` "
-      "type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let builders = [
@@ -3008,7 +3040,7 @@ def Vector_ScanOp :
     Example:
 
     ```mlir
-    %1:2 = vector.scan <add>, %0, %acc {inclusive = false, reduction_dim = 1 : i64} :
+    %1:2 = vector.scan <add>, %0, %acc reduction_dim = 1, inclusive = false :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
@@ -3027,9 +3059,11 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getInitialValue().getType());
     }
   }];
-  let assemblyFormat =
-    "$kind `,` $source `,` $initial_value attr-dict `:` "
-    "type($source) `,` type($initial_value) ";
+  let assemblyFormat = [{
+    $kind `,` $source `,` $initial_value
+    `reduction_dim` `=` $reduction_dim `,` `inclusive` `=` $inclusive
+    attr-dict `:` type($source) `,` type($initial_value)
+  }];
   let hasVerifier = 1;
 }
 

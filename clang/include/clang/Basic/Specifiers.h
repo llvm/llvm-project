@@ -290,7 +290,6 @@ namespace clang {
     CC_AAPCS,              // __attribute__((pcs("aapcs")))
     CC_AAPCS_VFP,          // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc,       // __attribute__((intel_ocl_bicc))
-    CC_SpirFunction,       // default for OpenCL functions on SPIR target
     CC_DeviceKernel,       // __attribute__((device_kernel))
     CC_Swift,              // __attribute__((swiftcall))
     CC_SwiftAsync,         // __attribute__((swiftasynccall))
@@ -327,7 +326,6 @@ namespace clang {
     case CC_X86RegCall:
     case CC_X86Pascal:
     case CC_X86VectorCall:
-    case CC_SpirFunction:
     case CC_DeviceKernel:
     case CC_Swift:
     case CC_SwiftAsync:
