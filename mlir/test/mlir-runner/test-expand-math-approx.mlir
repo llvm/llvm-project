@@ -886,6 +886,41 @@ func.func @rsqrt() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// Ceil.
+// -------------------------------------------------------------------------- //
+
+func.func @ceil_f32_bits(%arg : f32) {
+  %result = math.ceil %arg : f32
+  %bits = arith.bitcast %result : f32 to i32
+  vector.print %bits : i32
+  return
+}
+
+func.func @ceil_f64_bits(%arg : f64) {
+  %result = math.ceil %arg : f64
+  %bits = arith.bitcast %result : f64 to i64
+  vector.print %bits : i64
+  return
+}
+
+func.func @ceil() {
+  %neg_fraction_f32 = arith.constant -0.25 : f32
+  %neg_zero_f32 = arith.constant 0x80000000 : f32
+  %neg_fraction_f64 = arith.constant -0.25 : f64
+  %neg_zero_f64 = arith.constant 0x8000000000000000 : f64
+
+  // CHECK: -2147483648
+  call @ceil_f32_bits(%neg_fraction_f32) : (f32) -> ()
+  // CHECK-NEXT: -2147483648
+  call @ceil_f32_bits(%neg_zero_f32) : (f32) -> ()
+  // CHECK-NEXT: -9223372036854775808
+  call @ceil_f64_bits(%neg_fraction_f64) : (f64) -> ()
+  // CHECK-NEXT: -9223372036854775808
+  call @ceil_f64_bits(%neg_zero_f64) : (f64) -> ()
+  return
+}
+
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
@@ -898,5 +933,6 @@ func.func @main() {
   call @acosh() : () -> ()
   call @atanh() : () -> ()
   call @rsqrt() : () -> ()
+  call @ceil() : () -> ()
   return
 }
