@@ -24,7 +24,7 @@ def vector_select_to_faceforward_lowering : GICombineRule <
 
 def degrees_lowering
     : GICombineRule<(defs root:$root),
-                    (match (wip_match_opcode G_FMUL):$root,
+                    (match (G_FMUL $dst, $lhs, $rhs):$root,
                         [{ return Helper.matchDegrees(*${root}); }]),
                     (apply [{ Helper.applyDegrees(*${root}); }])>;
 
