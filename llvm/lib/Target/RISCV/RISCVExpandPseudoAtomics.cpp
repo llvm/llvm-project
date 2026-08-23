@@ -23,7 +23,8 @@
 
 using namespace llvm;
 
-#define RISCV_EXPAND_PSEUDO_ATOMICS_NAME "RISC-V Pseudo Instruction Expansion - Atomics"
+#define RISCV_EXPAND_PSEUDO_ATOMICS_NAME                                       \
+  "RISC-V Pseudo Instruction Expansion - Atomics"
 
 namespace {
 
@@ -292,7 +293,7 @@ RISCVExpandPseudoAtomicsImpl::getSCForRMW64(AtomicOrdering Ordering) const {
 }
 
 unsigned RISCVExpandPseudoAtomicsImpl::getLRForRMW(AtomicOrdering Ordering,
-                                                  int Width) const {
+                                                   int Width) const {
   if (Width == 32)
     return getLRForRMW32(Ordering);
   if (Width == 64)
@@ -301,7 +302,7 @@ unsigned RISCVExpandPseudoAtomicsImpl::getLRForRMW(AtomicOrdering Ordering,
 }
 
 unsigned RISCVExpandPseudoAtomicsImpl::getSCForRMW(AtomicOrdering Ordering,
-                                                  int Width) const {
+                                                   int Width) const {
   if (Width == 32)
     return getSCForRMW32(Ordering);
   if (Width == 64)
@@ -518,9 +519,9 @@ bool RISCVExpandPseudoAtomicsImpl::expandAtomicBinOp(
 }
 
 void RISCVExpandPseudoAtomicsImpl::insertSext(DebugLoc DL,
-                                             MachineBasicBlock *MBB,
-                                             Register ValReg,
-                                             Register ShamtReg) const {
+                                              MachineBasicBlock *MBB,
+                                              Register ValReg,
+                                              Register ShamtReg) const {
   BuildMI(MBB, DL, TII->get(RISCV::SLL), ValReg)
       .addReg(ValReg)
       .addReg(ShamtReg);
@@ -911,7 +912,7 @@ FunctionPass *llvm::createRISCVExpandPseudoAtomicsLegacyPass() {
 
 PreservedAnalyses
 RISCVExpandPseudoAtomicsPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
+                                  MachineFunctionAnalysisManager &MFAM) {
   bool Changed = RISCVExpandPseudoAtomicsImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

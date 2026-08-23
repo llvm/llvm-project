@@ -21,7 +21,8 @@
 
 using namespace llvm;
 
-#define RISCV_EXPAND_PSEUDO_PRE_RA_NAME "RISC-V Pseudo Instruction Expansion - Pre-RA"
+#define RISCV_EXPAND_PSEUDO_PRE_RA_NAME                                        \
+  "RISC-V Pseudo Instruction Expansion - Pre-RA"
 
 namespace {
 
