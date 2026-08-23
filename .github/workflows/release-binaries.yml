@@ -312,7 +312,7 @@ jobs:
         Set-Location C:\clang\clang-msvc\bin ;
         Copy-Item -Path C:\clang\clang-msvc\bin-full\*.dll -Destination C:\clang\clang-msvc\bin\. ;
         Copy-Item -Path C:\clang\clang-msvc\bin-full\clang-cl.exe -Destination C:\clang\clang-msvc\bin\. ;
-       Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ;
         Set-Location C:\clang\clang-msvc ;
         Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
         echo "C:\clang\clang-msvc\bin" >> $env:GITHUB_PATH ;
