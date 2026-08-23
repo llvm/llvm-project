@@ -352,6 +352,9 @@ static void discoverTypeIndices(ArrayRef<uint8_t> Content, TypeLeafKind Kind,
   case TypeLeafKind::LF_POINTER:
     handlePointer(Content, Refs);
     break;
+  case TypeLeafKind::LF_ALIAS:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // UnderlyingType
+    break;
   default:
     break;
   }
