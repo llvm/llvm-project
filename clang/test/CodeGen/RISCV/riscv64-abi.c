@@ -709,14 +709,15 @@ struct floatcomplex_s f_ret_floatcomplex_s(void) {
   return (struct floatcomplex_s){1.0};
 }
 
-// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex(i64 %x.coerce)
+// Complex integer values or structs containing a single complex
+// integer value should be passed as if it were an int+int struct.
+
 // LP64-LP64F-LP64D-LABEL: define dso_local i16 @f_ucharcomplex
 // LP64-LP64F-LP64D-SAME: (i16 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 unsigned char __complex__ f_ucharcomplex(unsigned char __complex__ x) { return x; }
 
-// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex(i64 %x.coerce)
 // LP64-LP64F-LP64D-LABEL: define dso_local i32 @f_ushortcomplex
 // LP64-LP64F-LP64D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
@@ -726,14 +727,9 @@ unsigned short __complex__ f_ushortcomplex(unsigned short __complex__ x) { retur
 struct ucharcomplex_s {
   unsigned char __complex__ c;
 };
-// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex_s(i64 %x.coerce)
-// LP64-LABEL: define dso_local i16 @f_ucharcomplex_s
-// LP64-SAME: (i16 [[X_COERCE:%.*]]) #[[ATTR0]] {
-// LP64:  entry:
-//
-// LP64F-LP64D-LABEL: define dso_local { i8, i8 } @f_ucharcomplex_s
-// LP64F-LP64D-SAME: (i8 [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
-// LP64F-LP64D:  entry:
+// LP64-LP64F-LP64D-LABEL: define dso_local i16 @f_ucharcomplex_s
+// LP64-LP64F-LP64D-SAME: (i16 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
 //
 struct ucharcomplex_s f_ucharcomplex_s(struct ucharcomplex_s x) {
   return x;
@@ -742,14 +738,9 @@ struct ucharcomplex_s f_ucharcomplex_s(struct ucharcomplex_s x) {
 struct ushortcomplex_s {
   unsigned short __complex__ c;
 };
-// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex_s(i64 %x.coerce)
-// LP64-LABEL: define dso_local i32 @f_ushortcomplex_s
-// LP64-SAME: (i32 [[X_COERCE:%.*]]) #[[ATTR0]] {
-// LP64:  entry:
-//
-// LP64F-LP64D-LABEL: define dso_local { i16, i16 } @f_ushortcomplex_s
-// LP64F-LP64D-SAME: (i16 [[TMP0:%.*]], i16 [[TMP1:%.*]]) #[[ATTR0]] {
-// LP64F-LP64D:  entry:
+// LP64-LP64F-LP64D-LABEL: define dso_local i32 @f_ushortcomplex_s
+// LP64-LP64F-LP64D-SAME: (i32 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
 //
 struct ushortcomplex_s f_ushortcomplex_s(struct ushortcomplex_s x) {
   return x;

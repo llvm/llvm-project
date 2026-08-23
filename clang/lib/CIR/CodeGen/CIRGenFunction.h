@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -49,6 +50,7 @@ class LoopOp;
 } // namespace mlir
 
 namespace clang {
+class OutlinedFunctionDecl;
 class SYCLKernelCallStmt;
 } // namespace clang
 
@@ -236,6 +238,14 @@ public:
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
   /// global initializers.
   mlir::Operation *curFn = nullptr;
+
+  /// While the initializer of a variable with static storage duration is being
+  /// emitted, the region that destructors registered by that initializer belong
+  /// in: the cir.global's own dtor region for a namespace-scope variable, and
+  /// the enclosing cir.local_init's for a function-local static, which has to
+  /// be destroyed in-function under its guard. Null outside such an
+  /// initializer.
+  mlir::Region *curStaticVarDtorRegion = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
@@ -2305,6 +2315,13 @@ public:
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
   mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
+
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
 
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
