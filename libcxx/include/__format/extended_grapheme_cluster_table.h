@@ -107,8 +107,8 @@ enum class __property : uint8_t {
 /// The entries of the extended grapheme cluster bondary property table.
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakProperty.txt
-/// - https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
+/// - https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakProperty.txt
+/// - https://www.unicode.org/Public/18.0.0/ucd/emoji/emoji-data.txt
 ///
 /// The data has 3 values
 /// - bits [0, 3] The property. One of the values generated from the datafiles
