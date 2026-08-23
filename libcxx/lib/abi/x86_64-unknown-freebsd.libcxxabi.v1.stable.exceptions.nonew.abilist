@@ -62,6 +62,7 @@
 {'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_throw', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_uncaught_exceptions', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZN9__gnu_cxx30debugger_signal_for_breakpointE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNKSt12bad_any_cast4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt12experimental15fundamentals_v112bad_any_cast4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'type': 'FUNC'}

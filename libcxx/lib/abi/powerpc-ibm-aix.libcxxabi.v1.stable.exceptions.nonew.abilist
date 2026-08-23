@@ -1,3 +1,4 @@
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZN9__gnu_cxx30debugger_signal_for_breakpointE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt12bad_any_cast4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt12experimental15fundamentals_v112bad_any_cast4whatEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
