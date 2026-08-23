@@ -1,0 +1,11 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_lib_dir = lit_config.substitute("@LLVM_LIBRARY_DIR@")
+config.llvm_shlib_ext = "@SHLIBEXT@"
+config.tr_obj_root = "@TR_BINARY_DIR@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+lit_config.load_config(config, "@TR_SOURCE_DIR@/test/lit.cfg.py")
