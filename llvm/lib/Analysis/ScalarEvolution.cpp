@@ -2287,54 +2287,66 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
   return Interesting;
 }
 
-bool ScalarEvolution::willNotOverflow(unsigned Opcode, bool Signed,
+/// Checks that the application of binary function \p OperationFn to \p LHS and
+/// \p RHS does not wrap in the unsigned or signed (if \p Signed) manner.
+static bool
+willNotWrapByExtend(function_ref<const SCEV *(SCEVUse, SCEVUse)> OperationFn,
+                    const SCEV *LHS, const SCEV *RHS, bool Signed,
+                    ScalarEvolution *SE) {
+  auto *NarrowTy = LHS->getType();
+  auto *WideTy = IntegerType::get(NarrowTy->getContext(),
+                                  SE->getTypeSizeInBits(NarrowTy) * 2);
+
+  using ExtFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, Type *, unsigned);
+  std::function<const SCEV *(SCEVUse, Type *)> ExtensionFn =
+      Signed
+          ? bind_front(
+                bind_back<ExtFnTy>(&ScalarEvolution::getSignExtendExpr, 0), SE)
+          : bind_front(
+                bind_back<ExtFnTy>(&ScalarEvolution::getZeroExtendExpr, 0), SE);
+
+  // Check ExtensionFn(OperationFn(LHS, RHS)) == OperationFn(ExtensionFn(LHS),
+  // ExtensionFn(RHS))
+  const SCEV *A = ExtensionFn(OperationFn(LHS, RHS), WideTy);
+  const SCEV *LHSB = ExtensionFn(LHS, WideTy);
+  const SCEV *RHSB = ExtensionFn(RHS, WideTy);
+  const SCEV *B = OperationFn(LHSB, RHSB);
+  return A == B;
+}
+
+bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       const SCEV *LHS, const SCEV *RHS,
-                                      const Instruction *CtxI, const Loop *L) {
+                                      const Instruction *CtxI) {
   using OpFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, SCEVUse,
                                                   SCEV::NoWrapFlags, unsigned);
-  std::function<const SCEV *(SCEVUse, SCEVUse, SCEV::NoWrapFlags, unsigned)>
-      OperationFn;
-  switch (Opcode) {
+  std::function<const SCEV *(SCEVUse, SCEVUse)> OperationFn;
+  switch (BinOp) {
   default:
     llvm_unreachable("Unsupported binary op");
   case Instruction::Add:
-    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getAddExpr, this);
+    OperationFn = bind_front(
+        bind_back<OpFnTy>(&ScalarEvolution::getAddExpr, SCEV::FlagAnyWrap, 0),
+        this);
     break;
   case Instruction::Sub:
-    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getMinusSCEV, this);
+    OperationFn = bind_front(
+        bind_back<OpFnTy>(&ScalarEvolution::getMinusSCEV, SCEV::FlagAnyWrap, 0),
+        this);
     break;
   case Instruction::Mul:
-    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getMulExpr, this);
-    break;
-  case Instruction::PHI:
-    assert(L && "Loop argument must be given for PHI");
-    OperationFn = [&](SCEVUse LHS, SCEVUse RHS, SCEV::NoWrapFlags NW,
-                      unsigned) { return getAddRecExpr(LHS, RHS, L, NW); };
+    OperationFn = bind_front(
+        bind_back<OpFnTy>(&ScalarEvolution::getMulExpr, SCEV::FlagAnyWrap, 0),
+        this);
     break;
   }
 
-  using ExtFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, Type *, unsigned);
-  std::function<const SCEV *(SCEVUse, Type *, unsigned)> ExtensionFn =
-      Signed ? bind_front<ExtFnTy>(&ScalarEvolution::getSignExtendExpr, this)
-             : bind_front<ExtFnTy>(&ScalarEvolution::getZeroExtendExpr, this);
-
-  // Check ext(LHS op RHS) == ext(LHS) op ext(RHS)
-  auto *NarrowTy = cast<IntegerType>(LHS->getType());
-  auto *WideTy =
-      IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
-
-  const SCEV *A =
-      ExtensionFn(OperationFn(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
-  const SCEV *LHSB = ExtensionFn(LHS, WideTy, 0);
-  const SCEV *RHSB = ExtensionFn(RHS, WideTy, 0);
-  const SCEV *B = OperationFn(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
-  if (A == B)
+  if (willNotWrapByExtend(OperationFn, LHS, RHS, Signed, this))
     return true;
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
   // TODO: Support mul.
-  if (Opcode == Instruction::Mul || Opcode == Instruction::PHI)
+  if (BinOp == Instruction::Mul)
     return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
@@ -2342,7 +2354,7 @@ bool ScalarEvolution::willNotOverflow(unsigned Opcode, bool Signed,
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
-  bool IsSub = (Opcode == Instruction::Sub);
+  bool IsSub = (BinOp == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.
   bool OverflowDown = IsSub ^ IsNegativeConst;
@@ -3485,9 +3497,12 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
           bool NoWrap = !StepInt.urem(DivInt) &&
-                        willNotOverflow(Instruction::PHI, /*Signed=*/false,
-                                        AR->getStart(), Step, /*CtxI=*/nullptr,
-                                        AR->getLoop());
+                        willNotWrapByExtend(
+                            [&](SCEVUse Start, SCEVUse Step) {
+                              return getAddRecExpr(Start, Step, AR->getLoop(),
+                                                   SCEV::FlagAnyWrap);
+                            },
+                            AR->getStart(), Step, /*Signed=*/false, this);
           if (!StepInt.urem(DivInt) && NoWrap) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())

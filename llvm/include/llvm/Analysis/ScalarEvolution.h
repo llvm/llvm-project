@@ -704,14 +704,12 @@ public:
   /// scAddRecExpr. The result will be cached in HasRecMap.
   LLVM_ABI bool containsAddRecurrence(const SCEV *S);
 
-  /// Is operation with \p Opcode between \p LHS and \p RHS provably does not
-  /// have a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
-  /// no-overflow fact should be true in the context of this instruction. If \p
-  /// Opcode is Instruction::PHI, the parameter \p L must be specified.
-  LLVM_ABI bool willNotOverflow(unsigned Opcode, bool Signed, const SCEV *LHS,
-                                const SCEV *RHS,
-                                const Instruction *CtxI = nullptr,
-                                const Loop *L = nullptr);
+  /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
+  /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
+  /// no-overflow fact should be true in the context of this instruction.
+  LLVM_ABI bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
+                                const SCEV *LHS, const SCEV *RHS,
+                                const Instruction *CtxI = nullptr);
 
   /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
