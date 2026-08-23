@@ -82,23 +82,21 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
             hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
   // FIXME: need proper suppurt for conditionalOperator cases
-  auto AllowedArguments =
-      anyOf(ignoringParenCasts(cxxNewExpr()), 
-            ignoringParenCasts(ReleaseCallMatcher),
-            ignoringParenCasts(conditionalOperator()));
+  auto AllowedArguments = anyOf(ignoringParenCasts(cxxNewExpr()),
+                                ignoringParenCasts(ReleaseCallMatcher),
+                                ignoringParenCasts(conditionalOperator()));
 
   auto RawPtrMatcher =
-      declRefExpr(to(varDecl(hasInitializer(ignoringParenCasts(cxxNewExpr()))).bind("raw-ptr")));
+      declRefExpr(to(varDecl(hasInitializer(ignoringParenCasts(cxxNewExpr())))
+                         .bind("raw-ptr")));
 
   auto SmartPtrConstructorMatcher = cxxConstructExpr(
       hasDeclaration(
           cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
-      unless(hasArgument(
-          0, AllowedArguments)),
-      optionally(hasArgument(
-          0, RawPtrMatcher)));
+      unless(hasArgument(0, AllowedArguments)),
+      optionally(hasArgument(0, RawPtrMatcher)));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -119,10 +117,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                            hasName("reset"))
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
-      unless(hasArgument(
-          0, AllowedArguments)),
-      optionally(hasArgument(
-          0, RawPtrMatcher)));
+      unless(hasArgument(0, AllowedArguments)),
+      optionally(hasArgument(0, RawPtrMatcher)));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
