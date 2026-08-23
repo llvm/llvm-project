@@ -294,7 +294,7 @@ define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
 ; CHECK-NEXT:    IR   %sub = sub i32 %rem.neg, 1
 ; CHECK-NEXT:    IR   %shl = shl i32 %sub, 31
 ; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw ir<%rem.neg>, ir<31>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add ir<-2147483547>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = sub ir<-2147483547>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
@@ -657,6 +657,38 @@ exit:
   ret void
 }
 
+; The trip count is (-1 * %x) + (-3 * %y), i.e. all operands are non-constant
+; negative. The first operand starts the running result, so it must not be
+; expanded negated, even though it is subtracted from below.
+define void @scev_add_all_operands_negative(ptr %dst, i64 %x, i64 %y) mustprogress {
+; CHECK-LABEL: VPlan for loop in 'scev_add_all_operands_negative'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %end = mul i64 %y, -3
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = sub ir<0>, ir<%x>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = mul ir<%y>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %end = mul i64 %y, -3
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %x, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %dst, i64 %iv
+  store i32 0, ptr %gep, align 4
+  %iv.next = add nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

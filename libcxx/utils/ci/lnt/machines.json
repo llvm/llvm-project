@@ -1,31 +1,49 @@
 [
   {
-    "lnt-machine": "macos-26.5-arm64",
-    "runner": ["self-hosted", "macOS", "ARM64", "26", "26.5"],
+    "lnt-machine": "macos-26.5-arm64-20260812",
+    "runner": ["self-hosted", "macOS", "26.5", "ARM64", "apple-runners"],
     "cxx": "clang++",
     "running-on": "macos",
     "xcode-version": "26.5",
-    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
+    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
     "coverage": {
-      "since": "2025-01-01",
+      "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "lnt-url": "http://lnt.llvm.org"
+      "lnt-url": "https://lnt.llvm.org"
     }
   },
   {
-    "lnt-machine": "linux-x86_64",
+    "lnt-machine": "macos-26.5-arm64-hardenedfast-20260821",
+    "runner": ["self-hosted", "macOS", "26.5", "ARM64", "apple-runners"],
+    "cxx": "clang++",
+    "running-on": "macos",
+    "xcode-version": "26.5",
+    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "cmake-cache": "libcxx/utils/ci/lnt/cmake/hardened-fast.cmake",
+    "coverage": {
+      "since": "2023-12-01",
+      "every": "week",
+      "samples": 3,
+      "max-in-flight": 4,
+      "lnt-url": "https://lnt.llvm.org"
+    }
+  },
+  {
+    "lnt-machine": "linux-x86_64-20260812",
     "runner": "llvm-premerge-libcxx-runners",
     "cxx": "clang++-22",
     "running-on": "linux",
-    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
+    "benchmark-suite-version": "8bb5e216937e6b541f351aa1637c67e85a43ada0",
+    "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
     "coverage": {
-      "since": "2025-01-01",
+      "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
-      "lnt-url": "http://lnt.llvm.org"
+      "lnt-url": "https://lnt.llvm.org"
     }
   }
 ]

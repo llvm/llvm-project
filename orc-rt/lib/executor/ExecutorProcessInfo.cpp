@@ -76,9 +76,10 @@ Expected<size_t> ExecutorProcessInfo::detectPageSize() noexcept {
   if (PageSize == -1)
     return make_error<StringError>(strerror(errno));
   if (!isPowerOf2(PageSize))
-    return make_error<StringError>("reported page size " +
-                                   std::to_string(PageSize) +
-                                   " is not a power of two");
+    return make_error<StringError>((StringOutputStream()
+                                    << "reported page size " << PageSize
+                                    << " is not a power of two")
+                                       .str());
   return static_cast<size_t>(PageSize);
 }
 

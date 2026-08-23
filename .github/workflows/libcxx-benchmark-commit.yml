@@ -5,7 +5,7 @@
 name: "[libc++] Run benchmark suite against commit"
 
 # Keep in sync with libcxx/utils/ci/lnt/dispatch-benchmarks
-run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}"
+run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}${{ !inputs.submit-lnt && ' (dry run)' || '' }}"
 
 permissions:
   contents: read
@@ -42,7 +42,7 @@ on:
         description: 'The URL of the LNT instance to submit to'
         required: false
         type: string
-        default: http://lnt.llvm.org
+        default: https://lnt.llvm.org
 
 jobs:
   # Determine which configuration to run based on the `lnt-machine` input.
@@ -144,12 +144,13 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install -r libcxx/utils/requirements.txt
+          pip install -r libcxx/utils/ci/lnt/requirements.txt
 
       - name: Run the benchmarks
         env:
-          COMMIT: ${{ inputs.commit }}
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
@@ -163,6 +164,7 @@ jobs:
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
+            --cmake-cache "${CMAKE_CACHE}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"
 

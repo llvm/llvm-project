@@ -1,6 +1,36 @@
 add_custom_target(libc_stdio_unittests)
 
 add_libc_test(
+  freopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    freopen_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.macros.properties.os
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fileno
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.freopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.stdout
+    libc.src.unistd.close
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   fileop_test
   SUITE
     libc_stdio_unittests
@@ -132,8 +162,7 @@ add_libc_test(
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcMemoryHelpers
+    libc.test.UnitTest.MemoryMatcher
 )
 
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
@@ -357,8 +386,7 @@ add_libc_test(
     sscanf_test.cpp
   DEPENDS
     libc.src.stdio.sscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )
@@ -371,8 +399,7 @@ add_libc_test(
     vsscanf_test.cpp
   DEPENDS
     libc.src.stdio.vsscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )
@@ -591,6 +618,21 @@ add_libc_test(
     libc.src.stdio.ftello
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
+)
+
+add_libc_test(
+  tmpfile_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpfile_test.cpp
+  DEPENDS
+    libc.src.stdio.tmpfile
+    libc.src.stdio.fflush
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
 )
 
 # Create an output directory for any temporary test files.

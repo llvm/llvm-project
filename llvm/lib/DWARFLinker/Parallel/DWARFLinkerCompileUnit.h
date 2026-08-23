@@ -98,6 +98,9 @@ public:
   /// Returns stage of overall processing.
   Stage getStage() const { return Stage; }
 
+  /// Returns raw DW_AT_language of the input compile unit.
+  std::optional<uint16_t> getLanguage() const { return Language; }
+
   /// Set stage of overall processing.
   void setStage(Stage Stage) { this->Stage = Stage; }
 
@@ -109,7 +112,7 @@ public:
   StringEntry *getFileName(unsigned FileIdx, StringPool &GlobalStrings);
 
   /// Returns DWARFFile containing this compile unit.
-  const DWARFFile &getContaingFile() const { return File; }
+  const DWARFFile &getContainingFile() const { return File; }
 
   /// Set deterministic priority for type DIE allocation ordering.
   /// Lower priority values win when multiple CUs race to define the same type.

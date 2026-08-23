@@ -24,8 +24,8 @@ module attributes {gpu.container_module} {
   func.func @test_block_combine_no_reload(%arg_slot: memref<i32>, %arg_res: memref<i32>) {
     %c1_pw = arith.constant 1 : index
     %c128 = arith.constant 128 : index
-    %bx = acc.par_width %c1_pw {par_dim = #acc.par_dim<block_x>}
-    %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+    %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+    %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
     acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%a_slot = %arg_slot, %a_res = %arg_res) : (memref<i32>, memref<i32>) {
       %c0 = arith.constant 0 : index
       %c1 = arith.constant 1 : index
@@ -47,13 +47,13 @@ module attributes {gpu.container_module} {
               scf.reduce.return %sum : i32
             }
           } {acc.par_dims = #acc<par_dims[sequential]>}
-          acc.reduction_accumulate %inner_red to %a_slot <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+          acc.reduction_accumulate %inner_red to %a_slot <add> par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_x]>}
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.predicate_region {
-        acc.reduction_combine %a_slot into %a_res <add> : memref<i32> {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+        acc.reduction_combine %a_slot into %a_res <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<i32>
       }
       acc.yield
     } {kernel_func_name = @test_block_combine_no_reload_kernel, kernel_module_name = @cuda_device_mod, origin = "acc.parallel"}

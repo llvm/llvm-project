@@ -9,24 +9,6 @@
 
 auto pack_indexing(auto... p) { return p...[0]; }
 
-// CIR: %[[P_0:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
-// CIR: %[[P_1:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
-// CIR: %[[P_2:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
-// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
-// CIR: %[[RESULT:.*]] = cir.load{{.*}} %[[P_0]] : !cir.ptr<!s32i>, !s32i
-// CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
-// CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
-// CIR: cir.return %[[TMP]] : !s32i
-
-// LLVM: %[[P_0:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[P_1:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[P_2:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RET_VAL:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RESULT:.*]] = load i32, ptr %[[P_0]], align 4
-// LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
-// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
-// LLVM: ret i32 %[[TMP]]
-
 // OGCG-DAG: %[[P_0:.*]] = alloca i32, align 4
 // OGCG-DAG: %[[P_1:.*]] = alloca i32, align 4
 // OGCG-DAG: %[[P_2:.*]] = alloca i32, align 4
@@ -41,8 +23,26 @@ int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[RET_VAL:.*]] = alloca i32, i64 1, align 4
+// CIR: %[[P_0:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[P_1:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[P_2:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[RESULT:.*]] = cir.load{{.*}} %[[P_0]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.return %[[TMP]] : !s32i
+
+// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = call noundef i32 @_Z13pack_indexingIJiiiEEDaDpT_(i32 noundef 1, i32 noundef 2, i32 noundef 3)
+// LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
+// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
+// LLVM: ret i32 %[[TMP]]
+
+// LLVM: %[[P_0:.*]] = alloca i32, align 4
+// LLVM: %[[P_1:.*]] = alloca i32, align 4
+// LLVM: %[[P_2:.*]] = alloca i32, align 4
+// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
+// LLVM: %[[RESULT:.*]] = load i32, ptr %[[P_0]], align 4
 // LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
 // LLVM: ret i32 %[[TMP]]
@@ -71,9 +71,9 @@ float _Complex pack_indexing_complex() {
 // CIR:   cir.return %[[TMP_RET]] : !cir.complex<!cir.float>
 
 // LLVM: define {{.*}} { float, float } @_Z21pack_indexing_complexv()
-// LLVM:   %[[RET_VAL:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[COMPLEX_0:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[COMPLEX_1:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   %[[RET_VAL:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[COMPLEX_0:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[COMPLEX_1:.*]] = alloca { float, float }, align 4
 // LLVM:   store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[COMPLEX_0]], align 4
 // LLVM:   %[[TMP_COMPLEX_0:.*]] = load { float, float }, ptr %[[COMPLEX_0]], align 4
 // LLVM:   store { float, float } { float 3.000000e+00, float 4.000000e+00 }, ptr %[[COMPLEX_1]], align 4

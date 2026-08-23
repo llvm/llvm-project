@@ -40,6 +40,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -153,6 +154,33 @@ makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
         return Object{const_cast<semantics::Symbol *>(sym), std::nullopt};
       });
   return objects;
+}
+
+static bool hasPrivatizedArrayElementReduction(
+    llvm::ArrayRef<Object> reductionObjects,
+    const llvm::SetVector<const semantics::Symbol *> &privatizedSymbols) {
+  for (const Object &object : reductionObjects) {
+    if (!object.sym() || !object.ref())
+      continue;
+    std::optional<evaluate::DataRef> dataRef =
+        evaluate::ExtractDataRef(*object.ref());
+    if (!dataRef)
+      continue;
+    const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+    if (!arrayRef ||
+        llvm::any_of(arrayRef->subscript(), [](const auto &subscript) {
+          return std::holds_alternative<evaluate::Triplet>(subscript.u);
+        }))
+      continue;
+
+    const semantics::Symbol &ultimate = object.sym()->GetUltimate();
+    if (llvm::any_of(privatizedSymbols,
+                     [&](const semantics::Symbol *privatizedSymbol) {
+                       return privatizedSymbol->GetUltimate() == ultimate;
+                     }))
+      return true;
+  }
+  return false;
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -892,7 +920,6 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                              llvm::ArrayRef<mlir::Value> vars,
                              llvm::ArrayRef<mlir::BlockArgument> args) {
     llvm::SmallVector<const semantics::Symbol *> processedSyms;
-    llvm::SmallVector<const Object *> processedObjects;
     for (const Object &object : objects) {
       const semantics::Symbol *sym = object.sym();
       if (!sym) {
@@ -903,32 +930,20 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
         // llvm::zip_equal(processedSyms, vars, args) asserts equal lengths.
         // The matching block argument is silently skipped below.
         processedSyms.push_back(nullptr);
-        processedObjects.push_back(nullptr);
         continue;
       }
       if (const auto *commonDet =
               sym->detailsIf<semantics::CommonBlockDetails>()) {
-        for (auto &mem : commonDet->objects()) {
-          processedSyms.push_back(&*mem);
-          processedObjects.push_back(&object);
-        }
+        llvm::transform(commonDet->objects(), std::back_inserter(processedSyms),
+                        [&](const auto &mem) { return &*mem; });
       } else {
         processedSyms.push_back(sym);
-        processedObjects.push_back(&object);
       }
     }
 
-    assert(processedSyms.size() == processedObjects.size());
-    for (auto [sym, var, arg, object] :
-         llvm::zip_equal(processedSyms, vars, args, processedObjects)) {
+    for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args)) {
       if (!sym)
         continue; // Skip synthetic reduction entries (no Fortran symbol).
-      bool skipBind =
-          ReductionProcessor::isExpressionLoweredAsReductionObject(object) ||
-          (object && sym->Rank() > 0 &&
-           !fir::unwrapUntilSeqType(arg.getType()));
-      if (skipBind)
-        continue;
       converter.bindSymbol(
           *sym,
           hlfir::translateToExtendedValue(
@@ -1494,16 +1509,43 @@ static void getDeclareTargetInfo(
   } else {
     List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
+      // Case: implicit capture of the enclosing function/subroutine.
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
-      // Main programs are never device routines. Skip them so that a bare
-      // '!$omp declare target' inside an interface body that lives in a named
-      // main program does not incorrectly mark _QQmain as a device function.
-      if (owningProc && !owningProc->isMainProgram()) {
-        // Case: declare target, implicit capture of enclosing
-        // function/subroutine.
+      bool owningProcNotMainProgram =
+          owningProc && !owningProc->isMainProgram();
+
+      const semantics::Symbol *owningSym =
+          owningProcNotMainProgram
+              ? &owningProc->getSubprogramSymbol()
+              : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
+
+      // A bare '!$omp declare target' may appear in the specification part of
+      // an interface body. In that case, the PFT records the directive as an
+      // evaluation of the enclosing program unit rather than of the interface
+      // body's subprogram, so eval.getOwningProcedure() points at the main
+      // program.
+      //
+      // Detect this by comparing the program unit lexically containing
+      // the directive with the procedure currently being lowered; when they
+      // differ, it might be this case or it might be one of the entries of a
+      // multiple-entry subprogram. In the first case, the directive belongs to
+      // the interface-body subprogram; otherwise, the owning subprogram is the
+      // correct one.
+      const semantics::Scope &progUnitScope =
+          semantics::GetProgramUnitContaining(
+              semaCtx.FindScope(construct.v.source));
+      const semantics::Symbol *lexicalSym = progUnitScope.symbol();
+
+      if (lexicalSym && lexicalSym != owningSym) {
+        // Interface subprogram capture or non-default subprogram entry.
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     owningProc->getSubprogramSymbol());
+                                     owningProcNotMainProgram ? *owningSym
+                                                              : *lexicalSym);
+      } else if (owningProcNotMainProgram) {
+        // Main programs are never device routines, so skip those here.
+        symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
+                                     *owningSym);
       }
     }
 
@@ -1608,44 +1650,13 @@ genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
   // next one would result in 'hlfir.declare' operations being introduced inside
   // of a wrapper, which is illegal.
   mlir::IRMapping mapper;
-  llvm::SmallVector<std::pair<Object, mlir::Value>> mappedReductionObjects;
-  auto mapEquivalentReductionObjects =
-      [&](const ObjectEntryBlockArgsEntry &entry) {
-        for (auto [object, var] : llvm::zip(entry.objects, entry.vars)) {
-          for (auto [mappedObject, mappedValue] :
-               llvm::reverse(mappedReductionObjects)) {
-            if (object.id() == mappedObject.id()) {
-              mapper.map(var, mappedValue);
-              break;
-            }
-          }
-        }
-      };
-  auto rememberReductionObjects =
-      [&](const ObjectEntryBlockArgsEntry &entry,
-          llvm::ArrayRef<mlir::BlockArgument> args) {
-        for (auto [object, arg] : llvm::zip(entry.objects, args))
-          mappedReductionObjects.emplace_back(object, arg);
-      };
-
   for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
-    mapEquivalentReductionObjects(blockArgs.inReduction);
-    mapEquivalentReductionObjects(blockArgs.reduction);
-    mapEquivalentReductionObjects(blockArgs.taskReduction);
-
     for (mlir::OpOperand &operand : argGeneratingOp->getOpOperands())
       operand.set(mapper.lookupOrDefault(operand.get()));
 
     for (const auto [arg, var] : llvm::zip_equal(
              argGeneratingOp->getRegion(0).getArguments(), blockArgs.getVars()))
       mapper.map(var, arg);
-
-    rememberReductionObjects(blockArgs.inReduction,
-                             argGeneratingOp.getInReductionBlockArgs());
-    rememberReductionObjects(blockArgs.reduction,
-                             argGeneratingOp.getReductionBlockArgs());
-    rememberReductionObjects(blockArgs.taskReduction,
-                             argGeneratingOp.getTaskReductionBlockArgs());
   }
 
   // Bind the entry block arguments of parent wrappers to the corresponding
@@ -1832,11 +1843,13 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   if (declareTargetOp.isDeclareTarget()) {
     if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
-                                       captureClause, automap);
+                                       captureClause, automap,
+                                       /*implicit=*/false);
     return;
   }
 
-  declareTargetOp.setDeclareTarget(deviceType, captureClause, automap);
+  declareTargetOp.setDeclareTarget(deviceType, captureClause, automap,
+                                   /*implicit=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1929,186 +1942,6 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
-static mlir::Value getReductionOverrideValue(fir::FirOpBuilder &builder,
-                                             mlir::Location loc,
-                                             const Object *object,
-                                             mlir::BlockArgument arg) {
-  if (hlfir::isFortranEntityWithAttributes(arg))
-    return arg;
-
-  fir::FortranVariableFlagsAttr attributes;
-  llvm::SmallVector<mlir::Value> typeParams;
-  auto declareOp = hlfir::DeclareOp::create(
-      builder, loc, arg, "omp.reduction.element", nullptr, typeParams, nullptr,
-      nullptr, 0, attributes);
-  return declareOp.getBase();
-}
-
-static void
-addReductionObjectOverrides(fir::FirOpBuilder &builder, mlir::Location loc,
-                            lower::ExprToValueMap &overrides,
-                            const ObjectEntryBlockArgsEntry &entry,
-                            llvm::ArrayRef<mlir::BlockArgument> blockArgs) {
-  if (entry.objects.empty())
-    return;
-
-  for (auto pair : llvm::zip_equal(entry.objects, blockArgs)) {
-    const Object &object = std::get<0>(pair);
-    const mlir::BlockArgument &arg = std::get<1>(pair);
-    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
-      continue;
-    const SomeExpr *expr = &object.ref().value();
-
-    // Evict any outer-scope entry for the same array element so the
-    // innermost scope always wins regardless of DenseMap iteration order.
-    llvm::SmallVector<const SomeExpr *> toEvict;
-    for (auto [key, value] : overrides) {
-      if (Fortran::lower::isEqual(key, expr)) {
-        toEvict.push_back(key);
-      }
-    }
-    for (const SomeExpr *key : toEvict) {
-      overrides.erase(key);
-    }
-
-    overrides[expr] = getReductionOverrideValue(builder, loc, &object, arg);
-  }
-}
-
-static const semantics::Symbol *getArrayElementSymbol(const SomeExpr &expr) {
-  std::optional<Fortran::evaluate::DataRef> dataRef =
-      Fortran::evaluate::ExtractDataRef(expr);
-  if (!dataRef)
-    return nullptr;
-
-  if (const auto *arrayRef =
-          std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u))
-    return &arrayRef->GetLastSymbol();
-
-  return nullptr;
-}
-
-static void
-addSymbolAliases(llvm::SmallVectorImpl<const semantics::Symbol *> &aliases,
-                 const semantics::Symbol *symbol) {
-  aliases.push_back(symbol);
-  aliases.push_back(&symbol->GetUltimate());
-  if (const auto *hostAssoc =
-          symbol->detailsIf<semantics::HostAssocDetails>()) {
-    aliases.push_back(&hostAssoc->symbol());
-    aliases.push_back(&hostAssoc->symbol().GetUltimate());
-  }
-}
-
-struct ArrayElementReductionUseCollector {
-  explicit ArrayElementReductionUseCollector(
-      const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
-          &aliasToReductionSymbol,
-      llvm::DenseMap<const semantics::Symbol *,
-                     llvm::SmallVector<const SomeExpr *>>
-          &reductionElementExprs)
-      : aliasToReductionSymbol(aliasToReductionSymbol),
-        reductionElementExprs(reductionElementExprs) {}
-
-  const llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
-      &aliasToReductionSymbol;
-  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
-      &reductionElementExprs;
-  llvm::SmallPtrSet<const semantics::Symbol *, 16> seen;
-  llvm::SmallPtrSet<const semantics::Symbol *, 16> uncovered;
-
-  void classifyReductionElementUses(const SomeExpr &expr) {
-    llvm::SmallPtrSet<const semantics::Symbol *, 4> exprCandidates;
-    auto getReductionSymbol = [this](const semantics::Symbol &symbol) {
-      auto it = aliasToReductionSymbol.find(&symbol);
-      return it == aliasToReductionSymbol.end() ? nullptr : it->second;
-    };
-    for (const semantics::Symbol &symbol :
-         Fortran::evaluate::CollectSymbols(expr))
-      if (const semantics::Symbol *reductionSymbol = getReductionSymbol(symbol))
-        exprCandidates.insert(reductionSymbol);
-    if (exprCandidates.empty())
-      return;
-
-    auto isCoveredReductionUse =
-        [this](const semantics::Symbol *reductionSymbol, const SomeExpr &expr) {
-          auto it = reductionElementExprs.find(reductionSymbol);
-          return it != reductionElementExprs.end() &&
-                 llvm::any_of(it->second, [&](const SomeExpr *reductionExpr) {
-                   return Fortran::lower::isEqual(&expr, reductionExpr);
-                 });
-        };
-    llvm::SmallPtrSet<const semantics::Symbol *, 4> seenInExpr;
-    for (const SomeExpr &designator :
-         semantics::omp::GetTopLevelDesignators(expr)) {
-      const semantics::Symbol *symbol = getArrayElementSymbol(designator);
-      const semantics::Symbol *reductionSymbol =
-          symbol ? getReductionSymbol(*symbol) : nullptr;
-      if (!reductionSymbol)
-        continue;
-
-      if (isCoveredReductionUse(reductionSymbol, designator)) {
-        seen.insert(reductionSymbol);
-        seenInExpr.insert(reductionSymbol);
-      } else {
-        uncovered.insert(reductionSymbol);
-      }
-    }
-
-    for (const semantics::Symbol *symbol : exprCandidates)
-      if (!seenInExpr.contains(symbol))
-        uncovered.insert(symbol);
-  }
-
-  template <typename T>
-  bool Pre(const T &node) {
-    if constexpr (parser::HasTypedExpr<T>::value) {
-      if (const SomeExpr *expr = semantics::GetExpr(nullptr, node)) {
-        classifyReductionElementUses(*expr);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool Pre(const parser::Name &name) { return false; }
-
-  template <typename T>
-  void Post(const T &) {}
-};
-
-static llvm::SmallVector<const semantics::Symbol *>
-getSymbolsCoveredByReductionElements(lower::pft::Evaluation &eval,
-                                     llvm::ArrayRef<Object> reductionObjects) {
-  llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *>
-      aliasToReductionSymbol;
-  llvm::DenseMap<const semantics::Symbol *, llvm::SmallVector<const SomeExpr *>>
-      reductionElementExprs;
-  for (const Object &object : reductionObjects) {
-    if (!ReductionProcessor::isExpressionLoweredAsReductionObject(&object))
-      continue;
-    llvm::SmallVector<const semantics::Symbol *> aliases;
-    addSymbolAliases(aliases, object.sym());
-    for (const semantics::Symbol *alias : aliases)
-      aliasToReductionSymbol[alias] = object.sym();
-    reductionElementExprs[object.sym()].push_back(&*object.ref());
-  }
-
-  if (reductionElementExprs.empty())
-    return {};
-
-  ArrayElementReductionUseCollector collector(aliasToReductionSymbol,
-                                              reductionElementExprs);
-  eval.visit([&](const auto &node) { parser::Walk(node, collector); });
-
-  llvm::SmallVector<const semantics::Symbol *> suppressList;
-  for (auto &[symbol, exprs] : reductionElementExprs)
-    if (collector.seen.contains(symbol) &&
-        !collector.uncovered.contains(symbol))
-      suppressList.push_back(symbol);
-  return suppressList;
-}
-
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -2192,27 +2025,6 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     groupprivatizeVars(info.converter, info.eval);
 
   if (!info.genSkeletonOnly) {
-    lower::ExprToValueMap local;
-    if (auto *old = info.converter.getExprOverrides())
-      local.insert(old->begin(), old->end());
-    if (info.blockArgs) {
-      if (auto ompBlockArgOp =
-              mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(op)) {
-        addReductionObjectOverrides(firOpBuilder, info.loc, local,
-                                    info.blockArgs->inReduction,
-                                    ompBlockArgOp.getInReductionBlockArgs());
-        addReductionObjectOverrides(firOpBuilder, info.loc, local,
-                                    info.blockArgs->reduction,
-                                    ompBlockArgOp.getReductionBlockArgs());
-        addReductionObjectOverrides(firOpBuilder, info.loc, local,
-                                    info.blockArgs->taskReduction,
-                                    ompBlockArgOp.getTaskReductionBlockArgs());
-      }
-    }
-
-    auto *old = info.converter.getExprOverrides();
-    info.converter.overrideExprValues(local.empty() ? old : &local);
-
     if (ConstructQueue::const_iterator next = std::next(item);
         next != queue.end()) {
       genOMPDispatch(info.converter, info.symTable, info.semaCtx, info.eval,
@@ -2232,8 +2044,6 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
         genNestedEvaluations(info.converter, info.eval);
       temp->erase();
     }
-
-    info.converter.overrideExprValues(old);
   }
 
   // Get or create a unique exiting block from the given region, or
@@ -3095,25 +2905,8 @@ static mlir::omp::LoopNestOp genLoopNestOp(
         wrapperArgs,
     llvm::omp::Directive directive, DataSharingProcessor &dsp,
     llvm::function_ref<void(mlir::Operation *)> loopPostIvCb = nullptr) {
-  const lower::ExprToValueMap *oldOverrides = converter.getExprOverrides();
-  lower::ExprToValueMap loopNestOverrides;
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
-    if (oldOverrides)
-      loopNestOverrides.insert(oldOverrides->begin(), oldOverrides->end());
-    for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
-      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
-                                  loopNestOverrides, blockArgs.inReduction,
-                                  argGeneratingOp.getInReductionBlockArgs());
-      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
-                                  loopNestOverrides, blockArgs.reduction,
-                                  argGeneratingOp.getReductionBlockArgs());
-      addReductionObjectOverrides(converter.getFirOpBuilder(), loc,
-                                  loopNestOverrides, blockArgs.taskReduction,
-                                  argGeneratingOp.getTaskReductionBlockArgs());
-    }
-    converter.overrideExprValues(
-        loopNestOverrides.empty() ? oldOverrides : &loopNestOverrides);
     if (loopPostIvCb)
       loopPostIvCb(op);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
@@ -3122,7 +2915,7 @@ static mlir::omp::LoopNestOp genLoopNestOp(
   uint64_t nestValue = getCollapseValue(item->clauses);
   nestValue = nestValue < iv.size() ? iv.size() : nestValue;
   auto *nestedEval = getCollapsedLoopEval(eval, nestValue);
-  auto loopNestOp = genOpWithBody<mlir::omp::LoopNestOp>(
+  return genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
           .setClauses(&item->clauses)
@@ -3130,8 +2923,6 @@ static mlir::omp::LoopNestOp genLoopNestOp(
           .setGenRegionEntryCb(ivCallback)
           .setCollapseInfo(nestValue, eval),
       queue, item, clauseOps);
-  converter.overrideExprValues(oldOverrides);
-  return loopNestOp;
 }
 
 static mlir::omp::LoopOp
@@ -3487,6 +3278,22 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
                             looprangeClause.first, looprangeClause.count);
 }
 
+// Returns true when an OpenMP construct sits between \p eval and the DO loop it
+// applies to. getNestedDoConstruct descends through such a construct to reach
+// the loop, which means the intervening construct is never lowered.
+static bool hasNestedLoopTransformation(lower::pft::Evaluation &eval) {
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    if (nested.getIf<parser::CompilerDirective>() ||
+        nested.getIf<parser::NonLabelDoStmt>())
+      continue;
+    if (nested.getIf<parser::DoConstruct>())
+      return false;
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return true;
+  }
+  return false;
+}
+
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         Fortran::lower::SymMap &symTable,
                         lower::StatementContext &stmtCtx,
@@ -3498,8 +3305,8 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, semaCtx, item->clauses);
 
-  // The `full` clause is not yet implemented.
-  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+  // Process the `full` clause, which requests complete unrolling.
+  bool hasFull = cp.processFull();
 
   // Process the `partial` clause. If present, it may carry a constant unroll
   // factor.
@@ -3507,6 +3314,12 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   bool hasPartial = cp.processPartial(partialFactor);
   if (hasPartial && !partialFactor.has_value())
     TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
+
+  // Chaining a loop transformation onto the result of UNROLL needs the
+  // unrolled loop to be available as a generatee, which omp.unroll_* does not
+  // provide yet. Diagnose instead of silently dropping the nested construct.
+  if (hasNestedLoopTransformation(eval))
+    TODO(loc, "loop transformation nested inside an UNROLL construct");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -3520,7 +3333,10 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   auto cli = llvm::getSingleElement(canonLoops).getCli();
 
-  if (partialFactor.has_value()) {
+  if (hasFull) {
+    // Fully unroll the loop.
+    mlir::omp::UnrollFullOp::create(firOpBuilder, loc, cli);
+  } else if (partialFactor.has_value()) {
     // Partially unroll the loop by the given constant factor.
     mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
                                        static_cast<uint64_t>(*partialFactor));
@@ -3902,9 +3718,6 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallDenseSet<const semantics::Symbol *> condLpSymSet(
       condLpSyms.begin(), condLpSyms.end());
 
-  // Track whether any non-conditional lastprivate copy-backs were emitted.
-  bool hasNonCondLastprivate = false;
-
   if (!lastprivates.empty()) {
     mlir::Region &sectionsBody = sectionsOp.getRegion();
     assert(sectionsBody.hasOneBlock());
@@ -3926,7 +3739,6 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // Skip conditional LP symbols — handled by the reduction path.
         if (condLpSymSet.count(sym))
           continue;
-        hasNonCondLastprivate = true;
         if (const auto *common =
                 sym->detailsIf<semantics::CommonBlockDetails>()) {
           for (const auto &obj : common->objects())
@@ -3941,16 +3753,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Perform DataSharingProcessor's step2 out of SECTIONS
   builder.setInsertionPointAfter(sectionsOp.getOperation());
   dsp.processStep2(sectionsOp, false);
-  // Emit barrier when nowait is present and there are lastprivate copy-backs
-  // (either non-conditional or conditional).  The barrier ensures all threads
-  // have completed their work before lastprivate values are read/copied.
-  //
-  // NOTE: The LLVM OpenMP runtime currently imposes an implicit barrier
-  // inside __kmpc_reduce for tree reductions.  If the runtime were modified
-  // to release losing threads early when nowait is specified, we could use
-  // the return value from the tree reduction (case 1 = winner) to let the
-  // winner thread perform the copy-back without a separate barrier.
-  if (clauseOps.nowait && (hasNonCondLastprivate || !condLpSyms.empty()))
+  // Emit barrier when nowait is present and conditional lastprivate reduction
+  // results must be finalized before copy-back.
+  if (clauseOps.nowait && !condLpSyms.empty())
     mlir::omp::BarrierOp::create(builder, loc);
 
   // Copy-back: copy winning values from the shared reduction struct to the
@@ -4341,6 +4146,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         if (typeSpec) {
           std::string mapperIdName =
               typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+          if (!semantics::IsIsoCType(typeSpec) &&
+              !typeSpec->parameters().empty()) {
+            if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                    converter.genType(*typeSpec)))
+              mapperIdName =
+                  Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+                      recordType);
+          }
           if (auto *mapperSym =
                   converter.getCurrentScope().FindSymbol(mapperIdName))
             mapperIdName = converter.mangleName(
@@ -4348,6 +4161,30 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           else
             mapperIdName =
                 converter.mangleName(mapperIdName, *typeSpec->GetScope());
+
+          if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                  converter.genType(*typeSpec))) {
+            auto [nameKind, deconstructed] =
+                fir::NameUniquer::deconstruct(recordType.getName());
+            if (nameKind == fir::NameUniquer::NameKind::DERIVED_TYPE &&
+                !deconstructed.kinds.empty()) {
+              llvm::SmallVector<llvm::StringRef> modules;
+              llvm::SmallVector<llvm::StringRef> procs;
+              for (const std::string &module : deconstructed.modules)
+                modules.emplace_back(module);
+              for (const std::string &proc : deconstructed.procs)
+                procs.emplace_back(proc);
+              std::string kindlessMapperName = fir::NameUniquer::doGenerated(
+                  modules, procs, deconstructed.blockId,
+                  deconstructed.name + llvm::omp::OmpDefaultMapperName);
+              if (auto explicitMapper =
+                      converter.getModuleOp()
+                          .lookupSymbol<mlir::omp::DeclareMapperOp>(
+                              kindlessMapperName);
+                  explicitMapper && explicitMapper.getType() == recordType)
+                mapperIdName = std::move(kindlessMapperName);
+            }
+          }
 
           if (!mapperIdName.empty()) {
             bool isPointer = semantics::IsPointer(sym);
@@ -4508,15 +4345,15 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             .setClauses(&item->clauses),
         queue, item, clauseOps);
 
-  llvm::SmallVector<const semantics::Symbol *>
-      symbolsCoveredByReductionElements =
-          getSymbolsCoveredByReductionElements(eval, inReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, symTable,
-                           /*isTargetPrivatization=*/false,
-                           symbolsCoveredByReductionElements);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
+
+  if (hasPrivatizedArrayElementReduction(inReductionObjects,
+                                         dsp.getAllSymbolsToPrivatize()))
+    TODO(loc, "TASK construct with IN_REDUCTION of an array element whose "
+              "base array is privatized");
 
   ObjectEntryBlockArgs taskArgs;
   taskArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
@@ -5131,18 +4968,19 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
 
   genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      taskloopClauseOps, reductionObjects, inReductionObjects);
-  llvm::SmallVector<Object> allReductionObjects;
-  llvm::append_range(allReductionObjects, reductionObjects);
-  llvm::append_range(allReductionObjects, inReductionObjects);
-  llvm::SmallVector<const semantics::Symbol *>
-      symbolsCoveredByReductionElements =
-          getSymbolsCoveredByReductionElements(eval, allReductionObjects);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable,
-                           /*isTargetPrivatization=*/false,
-                           symbolsCoveredByReductionElements);
+                           enableDelayedPrivatization, symTable);
   dsp.processStep1(&taskloopClauseOps);
+
+  if (hasPrivatizedArrayElementReduction(inReductionObjects,
+                                         dsp.getAllSymbolsToPrivatize()))
+    TODO(loc, "TASKLOOP construct with IN_REDUCTION of an array element whose "
+              "base array is privatized");
+  if (hasPrivatizedArrayElementReduction(reductionObjects,
+                                         dsp.getAllSymbolsToPrivatize()))
+    TODO(loc, "TASKLOOP construct with REDUCTION of an array element whose "
+              "base array is privatized");
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -5788,6 +5626,15 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAllocateDirective &allocate) {
+  // The allocate directive is lowered as a runtime allocation with a matching
+  // deallocation registered as a cleanup at the exit of the enclosing function
+  // scope. In the case of modules, there is no place in which to emit the
+  // deallocation cleanup when that stage is reached, crashing the compiler
+  // during teardown.
+  if (converter.getCurrentScope().kind() == semantics::Scope::Kind::Module)
+    TODO(converter.genLocation(allocate.source),
+         "OpenMP ALLOCATE directive in unsupported declaration scope");
+
   lower::StatementContext stmtCtx;
   ObjectList objects = makeObjects((allocate.BeginDir().Arguments()), semaCtx);
   const auto &clauseList = (allocate.BeginDir().Clauses());
@@ -6430,7 +6277,7 @@ static fir::RecordType buildConditionalLpType(
   // invariant here to catch any semantic regression in assertions builds.
   for (const auto *sym : condLpSyms) {
     const semantics::Symbol &ultimate = sym->GetUltimate();
-    const semantics::DeclTypeSpec *type = ultimate.GetType();
+    [[maybe_unused]] const semantics::DeclTypeSpec *type = ultimate.GetType();
     assert(ultimate.Rank() == 0 && type &&
            (type->category() == semantics::DeclTypeSpec::Category::Numeric ||
             type->category() == semantics::DeclTypeSpec::Category::Logical) &&
