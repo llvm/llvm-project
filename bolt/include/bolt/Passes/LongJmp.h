@@ -10,6 +10,8 @@
 #define BOLT_PASSES_LONGJMP_H
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace bolt {
@@ -80,46 +82,71 @@ class LongJmpPass : public BinaryFunctionPass {
   bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
 
-  /// A group of functions that are located within the longest direct
-  /// branch/call instruction distance. Functions within the cluster do not
-  /// require a thunk for calls in the same cluster. The cluster may include
-  /// a set of thunks for covering calls to functions outside.
-  struct FunctionCluster {
-    /// All functions in this cluster.
-    DenseSet<BinaryFunction *> Functions;
-
-    /// Symbols corresponding to entry points of functions that this cluster
-    /// calls. Note that it excludes all functions in the cluster itself.
-    DenseSet<const MCSymbol *> Callees;
+  /// A group of function fragments that are located within the longest direct
+  /// branch/call instruction distance. Jumps within the cluster do not require
+  /// a thunk. The cluster may include thunks for jumps to targets outside.
+  struct FragmentCluster {
+    /// Output code section containing fragments in this cluster.
+    SmallString<32> SectionName;
 
     /// Estimated size of the cluster in bytes.
     uint64_t Size{0};
 
-    /// The index of the last function in the cluster. Used as an insertion
-    /// point for adding thunks to the output function list.
+    /// Number of function fragments in the cluster.
+    size_t NumFragments{0};
+
+    /// The indices of the first and last functions contributing fragments to
+    /// this cluster. Used as insertion points for adding thunks to the output
+    /// function list.
+    size_t FirstFunctionIndex = -1;
     size_t LastFunctionIndex = -1;
 
-    /// When placing hot code at the end of the binary, track the first function
-    /// for insertion purposes.
-    size_t FirstFunctionIndex = -1;
+    /// Thunks located after this cluster.
+    BinaryFunctionListType ForwardThunkList;
 
-    /// Thunks located at the end of this cluster.
-    BinaryFunctionListType ThunkList;
+    /// Thunks located before this cluster.
+    BinaryFunctionListType BackwardThunkList;
 
-    /// Thunks used by this cluster. Some could be in a ThunkList of the
-    /// preceding cluster.
+    /// Call thunks used by this cluster.
     ///
     /// <Function Symbol> -> <Thunk Function>.
-    DenseMap<const MCSymbol *, BinaryFunction *> Thunks;
+    DenseMap<const MCSymbol *, BinaryFunction *> CallThunks;
+
+    /// <Destination Symbol> -> <Thunk Function>.
+    DenseMap<const MCSymbol *, BinaryFunction *> ForwardBranchThunks;
+    DenseMap<const MCSymbol *, BinaryFunction *> BackwardBranchThunks;
   };
 
   /// Maximum size of combined regular functions in the cluster. Note that it's
   /// less than 128MB, because the size of the cluster plus its thunks should be
   /// less than 128MB.
-  static constexpr uint64_t MaxClusterSize = 125 * 1024 * 1024;
+  static constexpr uint64_t MaxClusterSize = 120 * 1024 * 1024;
 
-  /// Relax calls using function cluster approach.
-  void relaxCalls(BinaryContext &BC);
+  struct FragmentClusterLayout {
+    SmallVector<FragmentCluster, 4> Clusters;
+    DenseMap<const BinaryBasicBlock *, unsigned> BBToCluster;
+    DenseMap<const MCSymbol *, unsigned> SymToCluster;
+  };
+
+  FragmentClusterLayout
+  buildClusterLayout(BinaryContext &BC,
+                     const BinaryFunctionListType &OutputFunctions);
+
+  /// Relax calls using function fragment clusters.
+  void relaxCalls(BinaryContext &BC, BinaryFunctionListType &OutputFunctions,
+                  FragmentClusterLayout &Layout);
+
+  /// Relax direct unconditional branches using function fragment clusters.
+  void relaxUnconditionalBranches(BinaryContext &BC,
+                                  BinaryFunctionListType &OutputFunctions,
+                                  FragmentClusterLayout &Layout);
+
+  /// Insert all thunks owned by the fragment cluster layout.
+  void insertClusterThunks(BinaryFunctionListType &OutputFunctions,
+                           FragmentClusterLayout &Layout);
+
+  /// Relax calls and direct unconditional branches using one cluster layout.
+  void relaxWithClusters(BinaryContext &BC);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
