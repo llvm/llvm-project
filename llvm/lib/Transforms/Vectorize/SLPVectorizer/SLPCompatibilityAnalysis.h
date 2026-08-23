@@ -23,12 +23,15 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 
 #include <cstdint>
 #include <utility>
 
 namespace llvm {
+class APInt;
 class Constant;
+class ConstantInt;
 class TargetLibraryInfo;
 class Value;
 } // namespace llvm
@@ -128,6 +131,55 @@ public:
   SmallVector<Value *> getOperand(const Instruction *I) const {
     return MainOp.getOperand(I);
   }
+};
+
+/// Helper class that determines whether a list of integer comparisons can
+/// share a single predicate. InstCombine canonicalizes single-element and
+/// single-complement range comparisons to eq/ne at the type boundaries
+/// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
+/// rest of the list by adjusting the compared constant.
+class CmpSamePredicateHelper {
+  using MaskType = std::uint16_t;
+  /// Bit i represents predicate ICMP_EQ + i.
+  static constexpr unsigned NumPreds = CmpInst::ICMP_SLE - CmpInst::ICMP_EQ + 1;
+  static constexpr MaskType AllPreds = (1 << NumPreds) - 1;
+  /// Intersection of the per-lane convertible predicate sets.
+  MaskType Mask = AllPreds;
+  /// Predicates present in the list natively. The shared predicate must be
+  /// one of them: the main op must be an actual instruction with this
+  /// predicate.
+  MaskType SeenBefore = 0;
+
+  static constexpr MaskType getBit(CmpInst::Predicate P) {
+    return static_cast<MaskType>(1) << (P - CmpInst::ICMP_EQ);
+  }
+  /// Returns the mask of the predicates that can express the comparison
+  /// (Pred, X, C) with an adjusted constant C, including Pred itself.
+  static MaskType getFormsMask(CmpInst::Predicate Pred, const APInt &C);
+  /// Returns the constant of the (Pred, X, C') form equivalent to the
+  /// boundary family (IsComplement, K). Pred must be in the family mask.
+  static APInt getFamilyConstant(bool IsComplement, const APInt &K,
+                                 CmpInst::Predicate Pred);
+
+public:
+  /// Intersects the convertible predicate set of \p CI with the running
+  /// set. Returns false when the intersection becomes empty.
+  bool add(const ICmpInst *CI);
+  /// Returns the shared predicate, preferring the predicate of
+  /// \p Preferred when the whole list can use it, or BAD_ICMP_PREDICATE
+  /// when the list cannot share a natively present predicate.
+  CmpInst::Predicate getPredicate(const ICmpInst *Preferred) const;
+  /// Returns the predicate the whole list can share, or BAD_ICMP_PREDICATE
+  /// when it cannot share a natively present predicate.
+  static CmpInst::Predicate getSharedPredicate(ArrayRef<Value *> VL,
+                                               const ICmpInst *Preferred);
+  /// Checks if the comparison \p CI can be expressed with the predicate
+  /// \p Pred by adjusting its constant operand.
+  static bool canConvertTo(const CmpInst *CI, CmpInst::Predicate Pred);
+  /// Returns the adjusted constant operand expressing \p CI with the
+  /// predicate \p Pred, or nullptr if not convertible.
+  static ConstantInt *getAdjustedConstant(const CmpInst *CI,
+                                          CmpInst::Predicate Pred);
 };
 
 /// Main data required for vectorization of instructions.
