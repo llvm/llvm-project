@@ -38,12 +38,12 @@ define void @test_positive_willreturn_nounwind(ptr %val) {
 ; CHECK-LABEL: @test_positive_willreturn_nounwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    call void @bar_willreturn_nounwind(ptr sret([1024 x i32]) align 4 [[VAL:%.*]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[VAL:%.*]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %tmp = alloca [1024 x i32], align 4
-  call void @bar_willreturn_nounwind(ptr sret([1024 x i32]) align 4 %tmp) #0
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn nounwind memory(argmem: write)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
   ret void
 }
@@ -53,13 +53,13 @@ define void @test_negative_missing_willreturn(ptr %val) {
 ; CHECK-LABEL: @test_negative_missing_willreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    call void @bar_missing_willreturn(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %tmp = alloca [1024 x i32], align 4
-  call void @bar_missing_willreturn(ptr sret([1024 x i32]) align 4 %tmp) #1
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) nounwind memory(argmem: write)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
   ret void
 }
@@ -69,40 +69,34 @@ define void @test_negative_missing_nounwind(ptr %val) {
 ; CHECK-LABEL: @test_negative_missing_nounwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    call void @bar_missing_nounwind(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %tmp = alloca [1024 x i32], align 4
-  call void @bar_missing_nounwind(ptr sret([1024 x i32]) align 4 %tmp) #2
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn memory(argmem: write)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
   ret void
 }
 
-; instruction between call and memcpy that may trap.
+; willreturn nounwind attributes, but instruction between call and memcpy that may trap.
 define void @test_negative_may_trap_between(ptr %val, ptr %unknown) {
 ; CHECK-LABEL: @test_negative_may_trap_between(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
-; CHECK-NEXT:    call void @bar_willreturn_nounwind(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[VAL_LOADED:%.*]] = load volatile i32, ptr [[UNKNOWN:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %tmp = alloca [1024 x i32], align 4
-  call void @bar_willreturn_nounwind(ptr sret([1024 x i32]) align 4 %tmp) #0
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn nounwind memory(argmem: write)
   ; A volatile load can trap and has side effects.
   %val_loaded = load volatile i32, ptr %unknown
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
   ret void
 }
 
-declare void @bar_willreturn_nounwind(ptr nocapture sret([1024 x i32]) align 4) #0
-declare void @bar_missing_willreturn(ptr nocapture sret([1024 x i32]) align 4) #1
-declare void @bar_missing_nounwind(ptr nocapture sret([1024 x i32]) align 4) #2
-
-attributes #0 = { willreturn nounwind memory(argmem: write) }
-attributes #1 = { nounwind memory(argmem: write) }
-attributes #2 = { willreturn memory(argmem: write) }
+declare void @bar(ptr nocapture sret([1024 x i32]) align 4)
