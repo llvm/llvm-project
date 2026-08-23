@@ -2334,7 +2334,7 @@ bool ScalarEvolution::willNotOverflow(unsigned Opcode, bool Signed,
   if (!CtxI)
     return false;
   // TODO: Support mul.
-  if (Opcode == Instruction::Mul)
+  if (Opcode == Instruction::Mul || Opcode == Instruction::PHI)
     return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
@@ -3484,7 +3484,8 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           // {X,+,N}/C --> {X/C,+,N/C} if safe and N/C can be folded.
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
-          bool NoWrap = willNotOverflow(Instruction::PHI, /*Signed=*/false,
+          bool NoWrap = !StepInt.urem(DivInt) &&
+                        willNotOverflow(Instruction::PHI, /*Signed=*/false,
                                         AR->getStart(), Step, /*CtxI=*/nullptr,
                                         AR->getLoop());
           if (!StepInt.urem(DivInt) && NoWrap) {
