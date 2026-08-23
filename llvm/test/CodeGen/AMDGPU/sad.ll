@@ -1246,7 +1246,7 @@ define amdgpu_kernel void @v_sad_u32_i16_pat1(ptr addrspace(1) %out, i16 %a, i16
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s2, s5, s2
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s3
-; GFX12-5-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-5-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX12-5-GISEL-NEXT:    s_endpgm
   %icmp0 = icmp ugt i16 %a, %b
@@ -1364,7 +1364,7 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s5
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-5-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX12-5-GISEL-NEXT:    s_endpgm
