@@ -4154,7 +4154,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a scalable
       // vector, use a scalar element insert.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -4233,7 +4233,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a scalable
       // vector, use a scalar element extract.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
