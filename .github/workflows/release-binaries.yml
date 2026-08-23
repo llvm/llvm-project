@@ -260,7 +260,7 @@ jobs:
         Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
     - name: Debug
-      if: failed()
+      if: failure()
       run: |
         cat C:\ProgramData\chocolatey\logs\chocolatey.log
       # We need to hard code the python library path for Windows, so in order
