@@ -16,6 +16,26 @@ New entries should be added directly below the "Version" header.
 Version 24.0
 ------------
 
+* [libc++] Implement P2530R3: Hazard Pointers for C++26
+
+  <hazard_pointer> keeps its domain (hazard pointer records, retired lists, reclamation) in the built
+  library, behind three exported functions used by the inline hazard_pointer/hazard_pointer_obj_base.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__124__hazard_pointer_acquireEv
+  Symbol added: _ZNSt3__124__hazard_pointer_releaseEPNS_21__hazard_pointer_slotE
+  Symbol added: _ZNSt3__123__hazard_pointer_retireEPNS_25__hazard_pointer_obj_nodeE
+
+  x86_64-unknown-linux-gnu, x86_64-unknown-freebsd, powerpc-ibm-aix, powerpc64-ibm-aix
+  -----------------------------------------------------------------------------------
+  The hazard pointer domain allocates with nothrow new, which the built library did not use before.
+  Where libc++abi is a separate library this adds two undefined symbols resolved from it at load time.
+  (The Apple lists already carried these imports; on Android they are defined in libc++_shared.so.)
+
+  Symbol added: _ZnwmRKSt9nothrow_t
+  Symbol added: _ZnamRKSt9nothrow_t
+
 * [libc++] Remove locale::id::__next_id from the ABI
 
   `__next_id` is only ever used inside the dylib, so we can avoid making it public.

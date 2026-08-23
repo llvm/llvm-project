@@ -1490,6 +1490,15 @@ module std {
     export *
   }
 
+  module hazard_pointer {
+    module domain                         { header "__hazard_pointer/domain.h" }
+    module hazard_pointer                 { header "__hazard_pointer/hazard_pointer.h" }
+    module hazard_pointer_obj_base        { header "__hazard_pointer/hazard_pointer_obj_base.h" }
+
+    header "hazard_pointer"
+    export *
+  }
+
   module initializer_list {
     header "initializer_list"
     export *

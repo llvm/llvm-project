@@ -440,6 +440,13 @@ future string_view
 future tuple
 future typeinfo
 future version
+hazard_pointer climits
+hazard_pointer cstdint
+hazard_pointer cstring
+hazard_pointer ctime
+hazard_pointer limits
+hazard_pointer ratio
+hazard_pointer version
 initializer_list version
 iomanip cctype
 iomanip cerrno

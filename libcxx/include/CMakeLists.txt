@@ -491,6 +491,9 @@ set(files
   __fwd/variant.h
   __fwd/vector.h
   __hash_table
+  __hazard_pointer/domain.h
+  __hazard_pointer/hazard_pointer.h
+  __hazard_pointer/hazard_pointer_obj_base.h
   __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
@@ -1071,6 +1074,7 @@ set(files
   fstream
   functional
   future
+  hazard_pointer
   initializer_list
   iomanip
   ios
