@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVRegularizer.h"
 #include "SPIRV.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"

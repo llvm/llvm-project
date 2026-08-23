@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
