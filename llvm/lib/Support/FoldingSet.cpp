@@ -185,12 +185,15 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
     : Buckets(Arg.Buckets), NumBuckets(Arg.NumBuckets), NumNodes(Arg.NumNodes) {
+  Arg.incrementEpoch();
   Arg.Buckets = nullptr;
   Arg.NumBuckets = 0;
   Arg.NumNodes = 0;
 }
 
 FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
+  incrementEpoch();
+  RHS.incrementEpoch();
   free(Buckets); // This may be null if the set is in a moved-from state.
   Buckets = RHS.Buckets;
   NumBuckets = RHS.NumBuckets;
@@ -204,6 +207,7 @@ FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
 FoldingSetBase::~FoldingSetBase() { free(Buckets); }
 
 void FoldingSetBase::clear() {
+  incrementEpoch();
   // Set all but the last bucket to null pointers.
   memset(Buckets, 0, NumBuckets * sizeof(void *));
 
@@ -248,7 +252,7 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   // This will give us somewhere between EltCount / 2 and
   // EltCount buckets.  This puts us in the load factor
   // range of 1.0 - 2.0.
-  if (EltCount < capacity())
+  if (EltCount <= capacity())
     return;
   GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
@@ -278,6 +282,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
   assert(!N->getNextInBucket());
+  incrementEpoch();
   // Do we need to grow the hashtable?
   if (NumNodes + 1 > capacity()) {
     GrowBucketCount(NumBuckets * 2, Info);
@@ -311,6 +316,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   if (!Ptr)
     return false; // Not in folding set.
 
+  incrementEpoch();
   --NumNodes;
   N->SetNextInBucket(nullptr);
 
@@ -357,7 +363,9 @@ FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
 //===----------------------------------------------------------------------===//
 // FoldingSetIteratorImpl Implementation
 
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
+FoldingSetIteratorImpl::FoldingSetIteratorImpl(const DebugEpochBase *Epoch,
+                                               void **Bucket)
+    : DebugEpochBase::HandleBase(Epoch) {
   // Skip to the first non-null non-self-cycle bucket.
   while (*Bucket != reinterpret_cast<void *>(-1) &&
          (!*Bucket || !GetNextPtr(*Bucket)))
@@ -367,6 +375,7 @@ FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
 }
 
 void FoldingSetIteratorImpl::advance() {
+  assert(isHandleInSync() && "invalid iterator access!");
   // If there is another link within this bucket, go to it.
   void *Probe = NodePtr->getNextInBucket();
 

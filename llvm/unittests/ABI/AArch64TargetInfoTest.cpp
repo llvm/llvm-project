@@ -144,6 +144,22 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCSSoft) {
 }
 
 // Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// return path under Win64.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectWin64) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
+
+  for (const ABIType *RetTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getReturnInfo());
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
 // argument path under AAPCS.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCS) {
   std::unique_ptr<TargetInfo> TI =
@@ -191,6 +207,66 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCSSoft) {
        {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// argument path under Win64.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
+
+  for (const ABIType *ArgTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+// Transparent unions are classified as their first field type.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
+  using llvm::abi::FieldInfo;
+  using llvm::abi::RecordFlags;
+  using llvm::abi::StructPacking;
+
+  // First field is i32; second field is ignored for classification.
+  const ABIType *TUInt = TB.getUnionType(
+      {FieldInfo(I32), FieldInfo(F32)}, llvm::TypeSize::getFixed(32),
+      llvm::Align(4), StructPacking::Default, RecordFlags::IsTransparent);
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUInt});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  // First field is a promotable integer: DarwinPCS extends; others are Direct.
+  const ABIType *TUChar = TB.getUnionType(
+      {FieldInfo(I8), FieldInfo(U8)}, llvm::TypeSize::getFixed(8),
+      llvm::Align(1), StructPacking::Default, RecordFlags::IsTransparent);
+
+  {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getArgInfo(0).Info, I8, /*IsSigned=*/true);
+  }
+
+  for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::Win64,
+                              AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
     TI->computeInfo(*FI);
     expectUncoercedDirect(FI->getArgInfo(0).Info);
   }

@@ -1790,6 +1790,8 @@ def CriticalOp : OpenMP_Op<"critical", [
   let assemblyFormat = [{
     (`(` $name^ `)`)? $region attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -169,10 +169,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV32ZICOND-LABEL: select_const_fp:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    lui a1, 1024
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV32ZICOND-NEXT:    lui a1, 263168
-; RV32ZICOND-NEXT:    add a0, a0, a1
+; RV32ZICOND-NEXT:    lui a1, 264192
+; RV32ZICOND-NEXT:    slli a0, a0, 22
+; RV32ZICOND-NEXT:    sub a0, a1, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_const_fp:
@@ -210,10 +209,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV64ZICOND-LABEL: select_const_fp:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    lui a1, 1024
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV64ZICOND-NEXT:    lui a1, 263168
-; RV64ZICOND-NEXT:    add a0, a0, a1
+; RV64ZICOND-NEXT:    lui a1, 264192
+; RV64ZICOND-NEXT:    slli a0, a0, 22
+; RV64ZICOND-NEXT:    sub a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1
@@ -1425,5 +1423,161 @@ define i32 @select_394_0(i32 signext %x) {
 ; RV64-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
   %cond = select i1 %cmp, i32 394, i32 0
+  ret i32 %cond
+}
+
+define i32 @diff_pow2_4392_4388(i32 signext %x) {
+; RV32I-LABEL: diff_pow2_4392_4388:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, 3
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    blt a0, a2, .LBB35_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    addi a0, a1, 292
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB35_2:
+; RV32I-NEXT:    addi a0, a1, 296
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: diff_pow2_4392_4388:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    li a2, 3
+; RV32IF-NEXT:    lui a1, 1
+; RV32IF-NEXT:    blt a0, a2, .LBB35_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    addi a0, a1, 292
+; RV32IF-NEXT:    ret
+; RV32IF-NEXT:  .LBB35_2:
+; RV32IF-NEXT:    addi a0, a1, 296
+; RV32IF-NEXT:    ret
+;
+; RV32ZICOND-LABEL: diff_pow2_4392_4388:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    lui a1, 1
+; RV32ZICOND-NEXT:    slti a0, a0, 3
+; RV32ZICOND-NEXT:    slli a0, a0, 2
+; RV32ZICOND-NEXT:    addi a1, a1, 292
+; RV32ZICOND-NEXT:    add a0, a0, a1
+; RV32ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: diff_pow2_4392_4388:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    lui a1, 1
+; RV32IXQCI-NEXT:    addi a2, a1, 296
+; RV32IXQCI-NEXT:    addi a1, a1, 292
+; RV32IXQCI-NEXT:    qc.mvlti a1, a0, 3, a2
+; RV32IXQCI-NEXT:    mv a0, a1
+; RV32IXQCI-NEXT:    ret
+;
+; RV64I-LABEL: diff_pow2_4392_4388:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 3
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    blt a0, a2, .LBB35_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    addi a0, a1, 292
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB35_2:
+; RV64I-NEXT:    addi a0, a1, 296
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: diff_pow2_4392_4388:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    li a2, 3
+; RV64IFD-NEXT:    lui a1, 1
+; RV64IFD-NEXT:    blt a0, a2, .LBB35_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    addi a0, a1, 292
+; RV64IFD-NEXT:    ret
+; RV64IFD-NEXT:  .LBB35_2:
+; RV64IFD-NEXT:    addi a0, a1, 296
+; RV64IFD-NEXT:    ret
+;
+; RV64ZICOND-LABEL: diff_pow2_4392_4388:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    lui a1, 1
+; RV64ZICOND-NEXT:    slti a0, a0, 3
+; RV64ZICOND-NEXT:    slli a0, a0, 2
+; RV64ZICOND-NEXT:    addi a1, a1, 292
+; RV64ZICOND-NEXT:    add a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+  %cmp = icmp slt i32 %x, 3
+  %cond = select i1 %cmp, i32 4392, i32 4388
+  ret i32 %cond
+}
+
+define i32 @diff_pow2_4000_4016(i32 signext %x) {
+; RV32I-LABEL: diff_pow2_4000_4016:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, 5
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    blt a0, a2, .LBB36_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    addi a0, a1, -80
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB36_2:
+; RV32I-NEXT:    addi a0, a1, -96
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: diff_pow2_4000_4016:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    li a2, 5
+; RV32IF-NEXT:    lui a1, 1
+; RV32IF-NEXT:    blt a0, a2, .LBB36_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    addi a0, a1, -80
+; RV32IF-NEXT:    ret
+; RV32IF-NEXT:  .LBB36_2:
+; RV32IF-NEXT:    addi a0, a1, -96
+; RV32IF-NEXT:    ret
+;
+; RV32ZICOND-LABEL: diff_pow2_4000_4016:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    slti a0, a0, 5
+; RV32ZICOND-NEXT:    xori a0, a0, 251
+; RV32ZICOND-NEXT:    slli a0, a0, 4
+; RV32ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: diff_pow2_4000_4016:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    lui a1, 1
+; RV32IXQCI-NEXT:    addi a2, a1, -96
+; RV32IXQCI-NEXT:    addi a1, a1, -80
+; RV32IXQCI-NEXT:    qc.mvlti a1, a0, 5, a2
+; RV32IXQCI-NEXT:    mv a0, a1
+; RV32IXQCI-NEXT:    ret
+;
+; RV64I-LABEL: diff_pow2_4000_4016:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 5
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    blt a0, a2, .LBB36_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    addi a0, a1, -80
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB36_2:
+; RV64I-NEXT:    addi a0, a1, -96
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: diff_pow2_4000_4016:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    li a2, 5
+; RV64IFD-NEXT:    lui a1, 1
+; RV64IFD-NEXT:    blt a0, a2, .LBB36_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    addi a0, a1, -80
+; RV64IFD-NEXT:    ret
+; RV64IFD-NEXT:  .LBB36_2:
+; RV64IFD-NEXT:    addi a0, a1, -96
+; RV64IFD-NEXT:    ret
+;
+; RV64ZICOND-LABEL: diff_pow2_4000_4016:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    slti a0, a0, 5
+; RV64ZICOND-NEXT:    xori a0, a0, 251
+; RV64ZICOND-NEXT:    slli a0, a0, 4
+; RV64ZICOND-NEXT:    ret
+  %cmp = icmp slt i32 %x, 5
+  %cond = select i1 %cmp, i32 4000, i32 4016
   ret i32 %cond
 }
