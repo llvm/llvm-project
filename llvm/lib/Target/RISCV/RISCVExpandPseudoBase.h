@@ -25,17 +25,32 @@ class RISCVInstrInfo;
 
 class RISCVExpandPseudoImplBase {
 public:
+  /// Expand a subset of pseudos in the current function. Returns whether the
+  /// function was modified.
+  ///
+  /// This will assert if expansion increased the estimated size of the
+  /// function.
   bool run(MachineFunction &MF);
 
   virtual ~RISCVExpandPseudoImplBase() = default;
 
 protected:
+  /// The Subtarget for the current function.
   const RISCVSubtarget *STI;
+
+  /// The derived TargetInstrInfo for the current function.
   const RISCVInstrInfo *TII;
 
+  /// This method should be implemented to expand the instruction at `*MBBI`.
+  /// The iteration over the current basic block will continue at `NextMBBI`.
+  /// This method should return `true` if it replaced the instruction at
+  /// `*MBBI`.
   virtual bool expandMI(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MBBI,
-                        MachineBasicBlock::iterator &NextMBBI) const;
+                        MachineBasicBlock::iterator &NextMBBI) const {
+    reportFatalInternalError("Expand Pseudos not yet implemented.");
+    return false;
+  }
 
 private:
   bool expandMBB(MachineBasicBlock &MBB) const;
