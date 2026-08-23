@@ -39,7 +39,7 @@ namespace llvm {
 ///   2. Given a node that has already been created, remove it from the set.
 ///
 /// The hash table is linear-probing open addressing with tombstone-free
-/// deletion, power-of-two capacity, and a 0.75 maxiumum load factor.
+/// deletion, power-of-two capacity, and a 0.75 maximum load factor.
 ///
 /// Any node that is to be included in the folding set must be a subclass of
 /// FoldingSetNode.  The node class must also define a Profile method used to
@@ -338,10 +338,6 @@ public:
   /// Returns true if there are no nodes in the folding set.
   [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
-  /// Returns the number of nodes permitted in the folding set
-  /// before a rebucket operation is performed.
-  unsigned capacity() const { return NumBuckets - NumBuckets / 4; }
-
 protected:
   /// Functions provided by the derived class to compute folding properties.
   /// This is effectively a vtable for FoldingSetBase, except that we don't
@@ -366,7 +362,8 @@ protected:
 
 private:
   /// The hashes of the nodes in Buckets, in the same order. Only entries whose
-  /// bucket is non-null are live.
+  /// bucket is non-null are live. Comparing these rejects mismatches before the
+  /// profile compare, so walking a probe chain touches no nodes.
   uint32_t *getHashes() const {
     return reinterpret_cast<uint32_t *>(Buckets + NumBuckets);
   }
@@ -390,9 +387,9 @@ protected:
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
 
-  /// Grow the number of buckets so that we can hold at least \p EltCount
-  /// nodes before rebucketing. May allocate more space than requested.
-  LLVM_ABI void reserve(unsigned EltCount);
+  /// Grow the number of buckets so that we can hold at least \p N nodes
+  /// before rebucketing. May allocate more space than requested.
+  LLVM_ABI void reserve(unsigned N);
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -516,9 +513,9 @@ public:
   const_iterator begin() const { return const_iterator(this, 0); }
   const_iterator end() const { return const_iterator(this, NumBuckets); }
 
-  /// Grow the number of buckets so that we can hold at least \p EltCount
-  /// nodes before rebucketing. May allocate more space than requested.
-  void reserve(unsigned EltCount) { FoldingSetBase::reserve(EltCount); }
+  /// Grow the number of buckets so that we can hold at least \p N nodes
+  /// before rebucketing. May allocate more space than requested.
+  void reserve(unsigned N) { FoldingSetBase::reserve(N); }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.

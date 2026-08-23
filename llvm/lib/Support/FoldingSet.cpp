@@ -132,20 +132,6 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
-//
-// FoldingSet is an open-addressed hash set. One allocation holds the bucket
-// array followed by a parallel array of the buckets' 32-bit hashes:
-//   [ Buckets (NumBuckets * sizeof(void *)) ][ Hashes (NumBuckets * 4) ]
-// A null bucket marks an empty slot, and the hash array rejects mismatches
-// before the profile compare, so walking a probe chain touches no nodes.
-// Nodes cache their own hash as well, which is what lets RemoveNode() find a
-// node without re-running Profile().
-//
-// Removal uses Knuth TAOCP vol. 3 6.4 Algorithm R, as StringMap, DenseMap and
-// SmallPtrSet do: it closes the hole rather than leaving a tombstone, so the
-// table stays sized to the live node count under insert/erase churn. Probing
-// is therefore linear rather than quadratic, since Algorithm R requires every
-// node to sit on the contiguous run of slots starting at its home.
 
 /// Encode a hash into the non-null token FindNodeOrInsertPos hands back.
 /// Unlike a bucket address the token survives intervening insertions.
@@ -221,12 +207,12 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
   *this = std::move(Tmp);
 }
 
-void FoldingSetBase::reserve(unsigned EltCount) {
-  if (EltCount <= capacity())
+void FoldingSetBase::reserve(unsigned N) {
+  if (N * 4 <= NumBuckets * 3)
     return;
-  uint64_t Required = divideCeil(uint64_t(EltCount) * 4, 3);
-  GrowBucketCount(
-      static_cast<unsigned>(llvm::bit_ceil(std::max<uint64_t>(Required, 64))));
+  // N + (N + 2) / 3 is ceil(4N/3), the smallest bucket count satisfying the
+  // growth condition above.
+  GrowBucketCount(llvm::bit_ceil(N + (N + 2) / 3));
 }
 
 LLVM_ATTRIBUTE_NOINLINE bool
@@ -262,7 +248,6 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
   assert(InsertPos && "Invalid InsertPos!");
   incrementEpoch();
-  // capacity() rearranged to avoid the divide; keep the two in agreement.
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
     GrowBucketCount(NumBuckets * 2);
   insertImpl(N, decodeHash(InsertPos));

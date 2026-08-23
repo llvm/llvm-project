@@ -18,6 +18,7 @@
 #include <random>
 #include <set>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using testing::ElementsAre;
@@ -187,25 +188,28 @@ TEST(FoldingSetTest, ClearOnNonEmpty) {
   EXPECT_TRUE(Trivial.empty());
 }
 
-TEST(FoldingSetTest, CapacityLargerThanReserve) {
-  FoldingSet<TrivialPair> Trivial;
-  unsigned OldCapacity = Trivial.capacity();
-  Trivial.reserve(OldCapacity + 1);
-  EXPECT_GE(Trivial.capacity(), OldCapacity + 1);
-}
+// 48 is the most the default 64 buckets hold, 49 is one past it, and 0 must not
+// allocate.
+TEST(FoldingSetTest, Reserve) {
+  for (unsigned Size : {0u, 1u, 2u, 48u, 49u}) {
+    FoldingSet<TrivialPair> Set;
+    Set.reserve(Size);
 
-TEST(FoldingSetTest, SmallReserveChangesNothing) {
-  FoldingSet<TrivialPair> Trivial;
-  unsigned OldCapacity = Trivial.capacity();
-  Trivial.reserve(OldCapacity - 1);
-  EXPECT_EQ(Trivial.capacity(), OldCapacity);
-}
+    std::vector<std::unique_ptr<TrivialPair>> Nodes;
+    for (unsigned I = 0; I != Size; ++I) {
+      Nodes.push_back(std::make_unique<TrivialPair>(I, I));
+      Set.InsertNode(Nodes.back().get());
+    }
+    ASSERT_EQ(Size, Set.size());
 
-TEST(FoldingSetTest, ReserveExactCapacity) {
-  FoldingSet<TrivialPair> Trivial;
-  unsigned OldCapacity = Trivial.capacity();
-  Trivial.reserve(OldCapacity);
-  EXPECT_EQ(Trivial.capacity(), OldCapacity);
+    for (unsigned I = 0; I != Size; ++I) {
+      FoldingSetNodeID ID;
+      ID.AddInteger(I);
+      ID.AddInteger(I);
+      void *InsertPos = nullptr;
+      EXPECT_EQ(Nodes[I].get(), Set.FindNodeOrInsertPos(ID, InsertPos));
+    }
+  }
 }
 
 TEST(FoldingSetTest, MoveConstructor) {
