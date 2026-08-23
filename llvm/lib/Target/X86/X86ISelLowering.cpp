@@ -59272,6 +59272,84 @@ static SDValue combineRotate(SDNode *N, SelectionDAG &DAG,
 }
 
 // Combiner: turn uniform-constant splat funnel shifts into VSHLD/VSHRD
+static SDValue combineScalarFunnelShift(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &Subtarget) {
+
+  EVT VT = N->getValueType(0);
+  if (VT.isVector())
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned Opc = N->getOpcode();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Amt = N->getOperand(2);
+
+  auto *AmtC = dyn_cast<ConstantSDNode>(Amt);
+  if (!AmtC)
+    return SDValue();
+
+  unsigned ShiftAmt = AmtC->getZExtValue();
+  unsigned BitWidth = VT.getSizeInBits();
+
+  // We want to match:
+  // fshr(Carry, Dst, 1) -> RCR Dst, 1
+  // fshl(Dst, Carry, 1) -> RCL Dst, 1
+  bool IsRCR = (Opc == ISD::FSHR && ShiftAmt == 1) ||
+               (Opc == ISD::FSHL && ShiftAmt == BitWidth - 1);
+  bool IsRCL = (Opc == ISD::FSHL && ShiftAmt == 1) ||
+               (Opc == ISD::FSHR && ShiftAmt == BitWidth - 1);
+
+  if (!IsRCR && !IsRCL)
+    return SDValue();
+
+  SDValue Carry = IsRCR ? Op0 : Op1;
+  SDValue Dst = IsRCR ? Op1 : Op0;
+
+  if (IsRCL) {
+    SDValue Shift = DAG.getConstant(BitWidth - 1, DL, VT);
+    Carry = DAG.getNode(ISD::SRL, DL, VT, Carry, Shift);
+  }
+
+  SDValue EFLAGS;
+  SDValue BaseCarry = Carry;
+  if (BaseCarry.getOpcode() == ISD::ZERO_EXTEND ||
+      BaseCarry.getOpcode() == ISD::TRUNCATE ||
+      BaseCarry.getOpcode() == ISD::ANY_EXTEND)
+    BaseCarry = BaseCarry.getOperand(0);
+
+  if (BaseCarry.getOpcode() == X86ISD::SETCC ||
+      BaseCarry.getOpcode() == X86ISD::SETCC_CARRY) {
+    X86::CondCode CC = (X86::CondCode)BaseCarry.getConstantOperandVal(0);
+    if (CC == X86::COND_B)
+      EFLAGS = BaseCarry.getOperand(1);
+  }
+
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  if (!EFLAGS) {
+    // If we can't extract EFLAGS natively, we must synthesize it using SUB/AND.
+    // This adds 2 instructions (bt, sbb). Combined with RCL/RCR, it's 3
+    // instructions total. This is only profitable if SHLD is very slow (e.g.
+    // AMD) or if we have APX NDD.
+    if (!Subtarget.isSHLDSlow() && !Subtarget.hasNDD())
+      return SDValue();
+
+    // EFLAGS = SUB(0, AND(Carry, 1)). This sets CF=1 if lowest bit is 1.
+    SDValue And =
+        DAG.getNode(ISD::AND, DL, VT, Carry, DAG.getConstant(1, DL, VT));
+    SDValue Sub =
+        DAG.getNode(X86ISD::SUB, DL, VTs, DAG.getConstant(0, DL, VT), And);
+    EFLAGS = SDValue(Sub.getNode(), 1);
+  }
+
+  // RCR/RCL
+  unsigned TargetOpc = IsRCR ? X86ISD::RCR : X86ISD::RCL;
+  SDValue Rot = DAG.getNode(TargetOpc, DL, VTs, Dst, EFLAGS);
+
+  return SDValue(Rot.getNode(), 0);
+}
+
 static SDValue combineFunnelShift(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
@@ -59280,6 +59358,9 @@ static SDValue combineFunnelShift(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDValue Amt = N->getOperand(2);
   EVT VT = Op0.getValueType();
+
+  if (SDValue ScalarRes = combineScalarFunnelShift(N, DAG, DCI, Subtarget))
+    return ScalarRes;
 
   if (!VT.isVector())
     return SDValue();
@@ -59672,6 +59753,26 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   if (LHSC && !RHSC)
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), RHS, LHS,
                        CarryIn);
+
+  // ADC(X, X, Carry) -> RCL(X, Carry)
+  // RCL only defines CF and OF. ADC defines all flags.
+  // We can only do this fold if the EFLAGS result of ADC is dead.
+  SDValue EFLAGS = SDValue(N, 1);
+  bool IsEFLAGSDead = EFLAGS.use_empty();
+  if (!IsEFLAGSDead && EFLAGS.hasOneUse()) {
+    SDNode *User = nullptr;
+    for (const SDUse &U : EFLAGS->uses()) {
+      if (U.getResNo() == EFLAGS.getResNo()) {
+        User = const_cast<SDNode *>(U.getUser());
+        break;
+      }
+    }
+    if (User && User->getOpcode() == ISD::FREEZE &&
+        SDValue(User, 0).use_empty())
+      IsEFLAGSDead = true;
+  }
+  if (LHS == RHS && IsEFLAGSDead)
+    return DAG.getNode(X86ISD::RCL, SDLoc(N), N->getVTList(), LHS, CarryIn);
 
   // If the LHS and RHS of the ADC node are zero, then it can't overflow and
   // the result is either zero or one (depending on the input carry bit).

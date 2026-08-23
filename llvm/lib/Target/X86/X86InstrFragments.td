@@ -38,6 +38,14 @@ def SDTBinaryArithWithFlags : SDTypeProfile<2, 2,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisInt<0>, SDTCisVT<1, i32>]>;
 
+def SDTUnaryArithWithFlagsInOut : SDTypeProfile<2, 2,
+                                           [SDTCisSameAs<0, 2>,
+                                            SDTCisInt<0>, SDTCisVT<1, i32>,
+                                            SDTCisVT<3, i32>]>;
+
+def X86rcl_flag  : SDNode<"X86ISD::RCL",  SDTUnaryArithWithFlagsInOut>;
+def X86rcr_flag  : SDNode<"X86ISD::RCR",  SDTUnaryArithWithFlagsInOut>;
+
 // SDTBinaryArithWithFlagsInOut - RES1, EFLAGS = op LHS, RHS, EFLAGS
 def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                             [SDTCisSameAs<0, 2>,

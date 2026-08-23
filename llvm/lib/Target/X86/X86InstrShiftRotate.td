@@ -249,6 +249,45 @@ let Predicates = [NoNDD] in {
   def : Pat<(rotr GR16:$src1, (i8 15)), (ROL16r1 GR16:$src1)>;
   def : Pat<(rotr GR32:$src1, (i8 31)), (ROL32r1 GR32:$src1)>;
   def : Pat<(rotr GR64:$src1, (i8 63)), (ROL64r1 GR64:$src1)>;
+
+  def : Pat<(X86rcl_flag GR8:$src1, EFLAGS), (ADC8rr GR8:$src1, GR8:$src1)>;
+  def : Pat<(X86rcl_flag GR16:$src1, EFLAGS), (ADC16rr GR16:$src1, GR16:$src1)>;
+  def : Pat<(X86rcl_flag GR32:$src1, EFLAGS), (ADC32rr GR32:$src1, GR32:$src1)>;
+  def : Pat<(X86rcl_flag GR64:$src1, EFLAGS), (ADC64rr GR64:$src1, GR64:$src1)>;
+
+  let Predicates = [NotFastSHLDRotate] in {
+    def : Pat<(store (X86rcl_flag (loadi8 addr:$dst), EFLAGS), addr:$dst), (RCL8m1 addr:$dst)>;
+    def : Pat<(store (X86rcl_flag (loadi16 addr:$dst), EFLAGS), addr:$dst), (RCL16m1 addr:$dst)>;
+    def : Pat<(store (X86rcl_flag (loadi32 addr:$dst), EFLAGS), addr:$dst), (RCL32m1 addr:$dst)>;
+    def : Pat<(store (X86rcl_flag (loadi64 addr:$dst), EFLAGS), addr:$dst), (RCL64m1 addr:$dst)>;
+  }
+
+  let Predicates = [HasNDD] in {
+    def : Pat<(X86rcl_flag (loadi8 addr:$src), EFLAGS), (RCL8m1_ND addr:$src)>;
+    def : Pat<(X86rcl_flag (loadi16 addr:$src), EFLAGS), (RCL16m1_ND addr:$src)>;
+    def : Pat<(X86rcl_flag (loadi32 addr:$src), EFLAGS), (RCL32m1_ND addr:$src)>;
+    def : Pat<(X86rcl_flag (loadi64 addr:$src), EFLAGS), (RCL64m1_ND addr:$src)>;
+
+    def : Pat<(X86rcr_flag GR8:$src, EFLAGS), (RCR8r1_ND GR8:$src)>;
+    def : Pat<(X86rcr_flag GR16:$src, EFLAGS), (RCR16r1_ND GR16:$src)>;
+    def : Pat<(X86rcr_flag GR32:$src, EFLAGS), (RCR32r1_ND GR32:$src)>;
+    def : Pat<(X86rcr_flag GR64:$src, EFLAGS), (RCR64r1_ND GR64:$src)>;
+    
+    def : Pat<(X86rcr_flag (loadi8 addr:$src), EFLAGS), (RCR8m1_ND addr:$src)>;
+    def : Pat<(X86rcr_flag (loadi16 addr:$src), EFLAGS), (RCR16m1_ND addr:$src)>;
+    def : Pat<(X86rcr_flag (loadi32 addr:$src), EFLAGS), (RCR32m1_ND addr:$src)>;
+    def : Pat<(X86rcr_flag (loadi64 addr:$src), EFLAGS), (RCR64m1_ND addr:$src)>;
+  }
+
+  def : Pat<(X86rcr_flag GR8:$src1, EFLAGS), (RCR8r1 GR8:$src1)>;
+  def : Pat<(X86rcr_flag GR16:$src1, EFLAGS), (RCR16r1 GR16:$src1)>;
+  def : Pat<(X86rcr_flag GR32:$src1, EFLAGS), (RCR32r1 GR32:$src1)>;
+  def : Pat<(X86rcr_flag GR64:$src1, EFLAGS), (RCR64r1 GR64:$src1)>;
+
+  def : Pat<(store (X86rcr_flag (loadi8 addr:$dst), EFLAGS), addr:$dst), (RCR8m1 addr:$dst)>;
+  def : Pat<(store (X86rcr_flag (loadi16 addr:$dst), EFLAGS), addr:$dst), (RCR16m1 addr:$dst)>;
+  def : Pat<(store (X86rcr_flag (loadi32 addr:$dst), EFLAGS), addr:$dst), (RCR32m1 addr:$dst)>;
+  def : Pat<(store (X86rcr_flag (loadi64 addr:$dst), EFLAGS), addr:$dst), (RCR64m1 addr:$dst)>;
 }
 let Predicates = [HasNDD] in {
   def : Pat<(rotl GR8:$src1,  (i8 7)),  (ROR8r1_ND  GR8:$src1)>;

@@ -6,18 +6,14 @@
 define void @rcl_mem_testA(ptr %ptr, i32 %b) {
 ; AMD-LABEL: rcl_mem_testA:
 ; AMD:       # %bb.0: # %entry
-; AMD-NEXT:    movl (%rdi), %eax
 ; AMD-NEXT:    cmpl $70, %esi
-; AMD-NEXT:    adcl %eax, %eax
-; AMD-NEXT:    movl %eax, (%rdi)
+; AMD-NEXT:    rcll (%rdi)
 ; AMD-NEXT:    retq
 ;
 ; NDD-LABEL: rcl_mem_testA:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rdi), %eax
 ; NDD-NEXT:    cmpl $70, %esi
-; NDD-NEXT:    adcl %eax, %eax
-; NDD-NEXT:    movl %eax, (%rdi)
+; NDD-NEXT:    rcll (%rdi)
 ; NDD-NEXT:    retq
 ;
 ; SANDYBRIDGE-LABEL: rcl_mem_testA:
@@ -47,9 +43,8 @@ define i32 @rcl_mem_testB(ptr %ptr, i32 %b) {
 ;
 ; NDD-LABEL: rcl_mem_testB:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rdi), %eax
 ; NDD-NEXT:    cmpl $70, %esi
-; NDD-NEXT:    adcl %eax, %eax
+; NDD-NEXT:    rcll (%rdi), %eax
 ; NDD-NEXT:    retq
 ;
 ; SANDYBRIDGE-LABEL: rcl_mem_testB:
@@ -70,18 +65,19 @@ entry:
 define i32 @rcr_test(i32 %a, i32 %b) {
 ; AMD-LABEL: rcr_test:
 ; AMD:       # %bb.0: # %entry
-; AMD-NEXT:    xorl %eax, %eax
+; AMD-NEXT:    movl %edi, %eax
+; AMD-NEXT:    xorl %ecx, %ecx
 ; AMD-NEXT:    cmpl $70, %esi
-; AMD-NEXT:    setb %al
-; AMD-NEXT:    shldl $31, %edi, %eax
+; AMD-NEXT:    sbbl %ecx, %ecx
+; AMD-NEXT:    rcrl %eax
 ; AMD-NEXT:    retq
 ;
 ; NDD-LABEL: rcr_test:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    cmpl $70, %esi
-; NDD-NEXT:    setb %al
-; NDD-NEXT:    shldl $31, %edi, %eax
+; NDD-NEXT:    sbbl %eax, %eax
+; NDD-NEXT:    rcrl %edi, %eax
 ; NDD-NEXT:    retq
 ;
 ; SANDYBRIDGE-LABEL: rcr_test:
@@ -100,3 +96,44 @@ entry:
 
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
+
+define i32 @adc_flags_used(ptr %ptr, i32 %b) {
+; AMD-LABEL: adc_flags_used:
+; AMD:       # %bb.0: # %entry
+; AMD-NEXT:    movl (%rdi), %eax
+; AMD-NEXT:    cmpl $70, %esi
+; AMD-NEXT:    adcl %eax, %eax
+; AMD-NEXT:    movl $10, %ecx
+; AMD-NEXT:    movl $20, %eax
+; AMD-NEXT:    cmovel %ecx, %eax
+; AMD-NEXT:    retq
+;
+; NDD-LABEL: adc_flags_used:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    movl (%rdi), %eax
+; NDD-NEXT:    cmpl $70, %esi
+; NDD-NEXT:    adcl %eax, %eax
+; NDD-NEXT:    movl $10, %eax
+; NDD-NEXT:    movl $20, %ecx
+; NDD-NEXT:    cmovnel %ecx, %eax
+; NDD-NEXT:    retq
+;
+; SANDYBRIDGE-LABEL: adc_flags_used:
+; SANDYBRIDGE:       # %bb.0: # %entry
+; SANDYBRIDGE-NEXT:    movl (%rdi), %eax
+; SANDYBRIDGE-NEXT:    cmpl $70, %esi
+; SANDYBRIDGE-NEXT:    adcl %eax, %eax
+; SANDYBRIDGE-NEXT:    movl $10, %ecx
+; SANDYBRIDGE-NEXT:    movl $20, %eax
+; SANDYBRIDGE-NEXT:    cmovel %ecx, %eax
+; SANDYBRIDGE-NEXT:    retq
+entry:
+  %dst = load i32, ptr %ptr
+  %cmp = icmp ult i32 %b, 70
+  %conv = zext i1 %cmp to i32
+  %add1 = add i32 %dst, %dst
+  %add2 = add i32 %add1, %conv
+  %cmp2 = icmp eq i32 %add2, 0
+  %sel = select i1 %cmp2, i32 10, i32 20
+  ret i32 %sel
+}
