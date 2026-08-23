@@ -9,6 +9,18 @@ func.func @create_nd_tdesc_1(%src: memref<24xf32>) {
 
 // -----
 
+// Explicit shape/strides on a memref source is deprecated and rejected.
+func.func @create_nd_tdesc_memref_explicit_shape(%src: memref<?x?xf16>,
+    %h: index, %w: index) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{shape and strides should not be specified for a memref source}}
+  %1 = xegpu.create_nd_tdesc %src, shape: [%h, %w], strides: [%w, %c1]
+    : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  return
+}
+
+// -----
+
 func.func @create_nd_tdesc_2(%src: memref<24x32xf32>) {
   // expected-error@+1 {{TensorDesc should have the same element type with the source if it is a memref}}
   %1 = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf16>

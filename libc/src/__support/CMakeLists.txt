@@ -396,6 +396,15 @@ add_header_library(
 )
 
 add_header_library(
+  frac64
+  HDRS
+    frac64.h
+  DEPENDS
+    .big_int
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   uint128
   HDRS
     uint128.h

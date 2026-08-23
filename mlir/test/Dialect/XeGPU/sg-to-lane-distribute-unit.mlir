@@ -60,6 +60,32 @@ gpu.func @load_nd_transpose() {
   gpu.return
 }
 
+// >2D load with unit leading dims: packed set from the inner lane_data.
+// CHECK-LABEL: gpu.func @load_nd_packed_4d
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] <{packed}> : !xegpu.tensor_desc<1x1x16x16xf16> -> vector<16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<16xf16> to vector<1x1x16x1xf16>
+gpu.func @load_nd_packed_4d() {
+  %c0 = arith.constant 0 : index
+  %0 = "some_op"() : () -> !xegpu.tensor_desc<1x1x16x16xf16>
+  %1 = xegpu.load_nd %0[%c0, %c0, %c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 2, 1]>}
+    : !xegpu.tensor_desc<1x1x16x16xf16> -> vector<1x1x16x16xf16>
+  gpu.return
+}
+
+// >2D load with unit leading dims: transposed on the inner 2D tile.
+// CHECK-LABEL: gpu.func @load_nd_transpose_4d
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<1x1x16x8xf32> -> vector<8xf32>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<1x1x1x8xf32>
+gpu.func @load_nd_transpose_4d() {
+  %c0 = arith.constant 0 : index
+  %0 = "some_op"() : () -> !xegpu.tensor_desc<1x1x16x8xf32>
+  %1 = xegpu.load_nd %0[%c0, %c0, %c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 1, 16, 1], lane_data = [1, 1, 1, 1]>}
+    : !xegpu.tensor_desc<1x1x16x8xf32> -> vector<1x1x16x8xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @load_nd_array_length
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64xf16>

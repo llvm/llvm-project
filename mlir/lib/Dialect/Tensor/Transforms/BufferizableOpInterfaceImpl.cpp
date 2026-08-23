@@ -1119,18 +1119,12 @@ struct ConcatOpInterface
     if (failed(tensorAlloc))
       return failure();
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
-
-    // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType)) !=
-        Attribute())
-      return op->emitError("memory space not implemented yet");
-
-    MemRefLayoutAttrInterface layout;
-    MemRefType memrefType =
-        MemRefType::get(concatOp.getResultType().getShape(),
-                        concatOp.getResultType().getElementType(), layout);
+    FailureOr<BufferLikeType> memrefType =
+        bufferization::getBufferType(*tensorAlloc, options, state);
+    if (failed(memrefType))
+      return failure();
     Value dstBuffer = bufferization::ToBufferOp::create(
-        rewriter, op->getLoc(), memrefType, *tensorAlloc);
+        rewriter, op->getLoc(), *memrefType, *tensorAlloc);
 
     // Extract the dimension for the concat op
     uint64_t concatDim = concatOp.getDim();
@@ -1166,7 +1160,7 @@ struct ConcatOpInterface
       sizes[concatDim] = concatDimSize;
 
       // Create a subview of the destination buffer.
-      auto dstMemrefType = cast<MemRefType>(memrefType);
+      auto dstMemrefType = cast<MemRefType>(*memrefType);
       MemRefType subviewMemRefType =
           memref::SubViewOp::inferRankReducedResultType(
               operandTensorType.getShape(), dstMemrefType, offsets, sizes,

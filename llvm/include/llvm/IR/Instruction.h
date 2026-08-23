@@ -236,16 +236,6 @@ public:
   LLVM_ABI InstListType::iterator eraseFromParent();
 
   /// Insert an unlinked instruction into a basic block immediately before
-  /// the specified instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// insertBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void insertBefore(Instruction *InsertPos);
-
-  /// Insert an unlinked instruction into a basic block immediately before
   /// the specified position.
   LLVM_ABI void insertBefore(InstListType::iterator InsertPos);
 
@@ -266,16 +256,6 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// moveBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBefore(Instruction *MovePos);
-
-  /// Unlink this instruction from its current basic block and insert it into
-  /// the basic block that MovePos lives in, right before MovePos.
   LLVM_ABI void moveBefore(InstListType::iterator InsertPos);
 
   /// Perform a \ref moveBefore operation, while signalling that the caller
@@ -287,15 +267,6 @@ public:
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
   LLVM_ABI void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-
-  /// Perform a \ref moveBefore operation, while signalling that the caller
-  /// intends to preserve the original ordering of instructions. This implicitly
-  /// means that any adjacent debug-info should move with this instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour of
-  /// moveBeforePreserving, as all insertions should be at iterator positions.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBeforePreserving(Instruction *MovePos);
 
 private:
   /// RemoveDIs project: all other moves implemented with this method,

@@ -137,13 +137,16 @@ public:
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    // The memory region is unchanged; pass through the existing shape/strides.
-    // The general builder recognizes the static-memref case and drops the
-    // redundant attributes.
-    auto newOp = xegpu::CreateNdDescOp::create(
-        rewriter, op.getLoc(), newTdescType, source, op.getMixedSizes(),
-        op.getMixedStrides());
-    rewriter.replaceOp(op, newOp.getResult());
+    Value newOp;
+    if (isa<MemRefType>(source.getType()))
+      newOp =
+          xegpu::CreateNdDescOp::create(rewriter, op.getLoc(), newTdescType,
+                                        cast<TypedValue<MemRefType>>(source));
+    else
+      newOp = xegpu::CreateNdDescOp::create(rewriter, op.getLoc(), newTdescType,
+                                            source, op.getMixedSizes(),
+                                            op.getMixedStrides());
+    rewriter.replaceOp(op, newOp);
     return success();
   }
 };

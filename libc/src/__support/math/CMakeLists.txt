@@ -3086,6 +3086,19 @@ add_header_library(
 )
 
 add_header_library(
+  expf_integer_eval
+  HDRS
+    expf_integer_eval.h
+  DEPENDS
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac64
+)
+
+add_header_library(
   expf16_utils
   HDRS
     expf16_utils.h

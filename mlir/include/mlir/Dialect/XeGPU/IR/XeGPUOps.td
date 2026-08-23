@@ -74,20 +74,20 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Arguments:
     - `source`: an object representing (starting address/pointer of) a memory region.
        It can be either a memref object, or simply a pointer represented by uint64_t type.
-       For the case of dynamic memrefs or pointer, the shape and layout information of the
-       memory region should be explicitly passed via `shape` and `strides` parameters.
+       For a memref source (static or dynamic shape) the shape and strides are taken from
+       the memref itself and must not be passed explicitly; only a pointer source requires
+       the `shape` and `strides` parameters.
 
-    - `shape`: the shape information of the memory region pointed by the "source". It is
-         typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
-        But if "source" is simply a pointer represented as uint64_t type, or a memref
-        type without shape information e.g., memref<?x?xf16>, the shape information has
-        to be explicitly passed via the "shape" and "const_shape" arguments.
+    - `shape`: the shape information of the memory region pointed by the "source". For a
+        memref source it is encoded via the MemRefType, e.g., memref<4096x4096xf16> or a
+        dynamic memref<?x?xf16> (whose dynamic dims are recovered at lowering time). Only
+        when "source" is a pointer represented as uint64_t type must the shape be passed
+        explicitly via the "shape" and "const_shape" arguments.
 
     - `strides`: the strides of the memory region pointed by the "source". Similar to shape,
-        it is typically encoded via the MemRefType of the source too. But if "source" is
-        simply a pointer represented as uint64_t type, or a memref type without shape
-        information e.g., memref<?x?xf16>, the strides information has to be explicitly
-        passed via the "strides" and "const_strides" argument.
+        for a memref source it is encoded via the MemRefType, including a dynamic
+        memref<?x?xf16>. Only when "source" is a pointer represented as uint64_t type must
+        the strides be passed explicitly via the "strides" and "const_strides" arguments.
 
     Results:
     - `res`: nd tensor descriptor
@@ -98,14 +98,14 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     %1 = xegpu.create_nd_tdesc %0 : memref<1024x1024xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 2 (dynamic memref; shape/strides are inferred from the memref, not
+    passed explicitly):
     ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
-    %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0 : memref<?x?xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 3 (a pointer source must supply shape/strides explicitly):
     ```mlir
     %0 = ... : ui64
     %c1 = arith.constant 1 : index
