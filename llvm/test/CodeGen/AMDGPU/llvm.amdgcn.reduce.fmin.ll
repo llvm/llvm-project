@@ -314,13 +314,12 @@ define amdgpu_kernel void @uniform_value_half(ptr addrspace(1) %out, half %in) {
 ; GFX12DAGISEL-LABEL: uniform_value_half:
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
 ; GFX12DAGISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; GFX12DAGISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12DAGISEL-NEXT:    s_cvt_f32_f16 s2, s2
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX12DAGISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX12DAGISEL-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX12DAGISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX12DAGISEL-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
   entry:
   %result = call half @llvm.amdgcn.wave.reduce.fmin(half %in, i32 1)
