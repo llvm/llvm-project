@@ -72,7 +72,7 @@ func.func @implied_do_in_acc_serial(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bind
 // CHECK:       [[ADD:%[0-9]+]] = arith.addi [[SUB]], %c1 : index
 // CHECK:       [[DIV:%[0-9]+]] = arith.divsi [[ADD]], %c1 : index
 // CHECK:       [[FOR:%[0-9]+]] = scf.for %{{.*}} = %{{.*}} to [[DIV]] step %{{.*}} iter_args(%{{.*}} = %c1) -> (index) {
-// CHECK:       [[IV:%[0-9]+]] = arith.addi %c1, {{.*}} : index
+// CHECK:       [[IV:%[0-9]+]] = arith.addi %c1, {{.*}} overflow<nsw> : index
 // CHECK:       fir.convert [[IV]] : (index) -> i32
 // CHECK:       scf.yield
 
@@ -135,8 +135,8 @@ func.func @mv_(%arg0: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "a", llvm.no
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           scf.for %{{.*}} = %[[C0]] to %[[VAL_2]] step %[[C1]] iter_args(%{{.*}} = %[[ARG0]]) -> (index) {
-// CHECK:             %[[MUL:.*]] = arith.muli %{{.*}}, %[[ARG2]] : index
-// CHECK:             %[[ADD0:.*]] = arith.addi %[[ARG0]], %[[MUL]] : index
+// CHECK:             %[[MUL:.*]] = arith.muli %{{.*}}, %[[ARG2]] overflow<nsw> : index
+// CHECK:             %[[ADD0:.*]] = arith.addi %[[ARG0]], %[[MUL]] overflow<nsw> : index
 // CHECK:             %[[ADD1:.*]] = arith.addi %[[ADD0]], %[[ARG2]] overflow<nsw> : index
 // CHECK:             scf.yield %[[ADD1]] : index
 // CHECK:           }

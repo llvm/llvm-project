@@ -523,6 +523,22 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
 
+  // Determine the type used by loads/stores on this alloca. Per
+  // isAllocaPromotable, all loads/stores must use the same type, and GEP/
+  // bitcast/addrspacecast derived pointers cannot have load/store users, so
+  // loads/stores are always direct users of the alloca.
+  Type *PromotedType = nullptr;
+  for (User *U : AI->users()) {
+    if (auto *LI = dyn_cast<LoadInst>(U)) {
+      PromotedType = LI->getType();
+      break;
+    }
+    if (auto *SI = dyn_cast<StoreInst>(U)) {
+      PromotedType = SI->getValueOperand()->getType();
+      break;
+    }
+  }
+
   for (Use &U : llvm::make_early_inc_range(AI->uses())) {
     Instruction *I = cast<Instruction>(U.getUser());
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
@@ -535,9 +551,8 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
     }
 
     if (!I->getType()->isVoidTy()) {
-      // The only users of this bitcast/GEP instruction are lifetime intrinsics.
-      // Follow the use/def chain to erase them now instead of leaving it for
-      // dead code elimination later.
+      // Follow the use/def chain to erase users of this instruction now
+      // instead of leaving it for dead code elimination later.
       for (Use &UU : llvm::make_early_inc_range(I->uses())) {
         Instruction *Inst = cast<Instruction>(UU.getUser());
 
@@ -546,9 +561,23 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
           Inst->dropDroppableUse(UU);
           continue;
         }
+
         Inst->eraseFromParent();
       }
     }
+
+    // Same as above for lifetime intrinsics directly on the alloca. If the
+    // alloca has no load/store users, PromotedType is null and the alloca will
+    // be deleted as dead, so no store is needed.
+    if (PromotedType)
+      if (auto *II = dyn_cast<IntrinsicInst>(I))
+        if (II->isLifetimeStartOrEnd()) {
+          auto *Store = new StoreInst(UndefValue::get(PromotedType), AI,
+                                      /*isVolatile=*/false, AI->getAlign(),
+                                      I->getIterator());
+          Store->setDebugLoc(II->getDebugLoc());
+        }
+
     I->eraseFromParent();
   }
 }

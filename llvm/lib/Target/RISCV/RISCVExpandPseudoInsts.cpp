@@ -6,39 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that expands pseudo instructions into target
-// instructions. This pass should be run after register allocation but before
-// the post-regalloc scheduling pass.
+// This file contains one of the four passes that expand pseudo instructions
+// into target instructions. This pass is run very late, but before atomic
+// instructions are expanded.
 //
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
+#include "RISCVSubtarget.h"
 
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/MC/MCContext.h"
 
 using namespace llvm;
 
 #define RISCV_EXPAND_PSEUDO_NAME "RISC-V pseudo instruction expansion pass"
-#define RISCV_PRERA_EXPAND_PSEUDO_NAME "RISC-V Pre-RA pseudo instruction expansion pass"
 
 namespace {
 
-class RISCVExpandPseudo : public MachineFunctionPass {
+class RISCVExpandPseudoImpl {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
-  static char ID;
-
-  RISCVExpandPseudo() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return RISCV_EXPAND_PSEUDO_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);
@@ -73,9 +65,22 @@ private:
 #endif
 };
 
-char RISCVExpandPseudo::ID = 0;
+class RISCVExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-bool RISCVExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+  RISCVExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return RISCVExpandPseudoImpl().run(MF);
+  }
+
+  StringRef getPassName() const override { return RISCV_EXPAND_PSEUDO_NAME; }
+};
+
+char RISCVExpandPseudoLegacy::ID = 0;
+
+bool RISCVExpandPseudoImpl::run(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
   TII = STI->getInstrInfo();
 
@@ -94,7 +99,7 @@ bool RISCVExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-bool RISCVExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool RISCVExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -107,9 +112,9 @@ bool RISCVExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI,
-                                 MachineBasicBlock::iterator &NextMBBI) {
+bool RISCVExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     MachineBasicBlock::iterator &NextMBBI) {
   // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
   // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
@@ -201,9 +206,9 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   return false;
 }
 
-bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   MachineBasicBlock::iterator &NextMBBI) {
+bool RISCVExpandPseudoImpl::expandCCOp(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       MachineBasicBlock::iterator &NextMBBI) {
   // First try expanding to a Conditional Move rather than a branch+mv
   if (expandCCOpToCMov(MBB, MBBI))
     return true;
@@ -330,8 +335,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator MBBI) {
+bool RISCVExpandPseudoImpl::expandCCOpToCMov(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
@@ -457,9 +462,9 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI,
-                                          unsigned Opcode) {
+bool RISCVExpandPseudoImpl::expandVMSET_VMCLR(MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator MBBI,
+                                              unsigned Opcode) {
   DebugLoc DL = MBBI->getDebugLoc();
   Register DstReg = MBBI->getOperand(0).getReg();
   const MCInstrDesc &Desc = TII->get(Opcode);
@@ -470,8 +475,8 @@ bool RISCVExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandMV_FPR16INX(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+bool RISCVExpandPseudoImpl::expandMV_FPR16INX(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
   Register DstReg = TRI->getMatchingSuperReg(
@@ -487,8 +492,8 @@ bool RISCVExpandPseudo::expandMV_FPR16INX(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandMV_FPR32INX(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+bool RISCVExpandPseudoImpl::expandMV_FPR32INX(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
   Register DstReg = TRI->getMatchingSuperReg(
@@ -507,8 +512,8 @@ bool RISCVExpandPseudo::expandMV_FPR32INX(MachineBasicBlock &MBB,
 // This function expands the PseudoRV32ZdinxSD for storing a double-precision
 // floating-point value into memory by generating an equivalent instruction
 // sequence for RV32.
-bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
-                                             MachineBasicBlock::iterator MBBI) {
+bool RISCVExpandPseudoImpl::expandRV32ZdinxStore(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
   Register Lo =
@@ -556,8 +561,8 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
 // This function expands PseudoRV32ZdinxLoad for loading a double-precision
 // floating-point value from memory into an equivalent instruction sequence for
 // RV32.
-bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI) {
+bool RISCVExpandPseudoImpl::expandRV32ZdinxLoad(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
   Register Lo =
@@ -614,7 +619,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
+bool RISCVExpandPseudoImpl::expandPseudoReadVLENBViaVSETVLIX0(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
@@ -632,7 +637,7 @@ bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
   return true;
 }
 
-bool RISCVExpandPseudo::expandPseudoClearFPR64(
+bool RISCVExpandPseudoImpl::expandPseudoClearFPR64(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
@@ -649,230 +654,24 @@ bool RISCVExpandPseudo::expandPseudoClearFPR64(
   return true;
 }
 
-class RISCVPreRAExpandPseudo : public MachineFunctionPass {
-public:
-  const RISCVSubtarget *STI;
-  const RISCVInstrInfo *TII;
-  static char ID;
-
-  RISCVPreRAExpandPseudo() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-  StringRef getPassName() const override {
-    return RISCV_PRERA_EXPAND_PSEUDO_NAME;
-  }
-
-private:
-  bool expandMBB(MachineBasicBlock &MBB);
-  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool expandAuipcInstPair(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           MachineBasicBlock::iterator &NextMBBI,
-                           unsigned FlagsHi, unsigned SecondOpcode);
-  bool expandLoadLocalAddress(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadGlobalAddress(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI,
-                               MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadTLSIEAddress(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadTLSGDAddress(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadTLSDescAddress(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                MachineBasicBlock::iterator &NextMBBI);
-
-#ifndef NDEBUG
-  unsigned getInstSizeInBytes(const MachineFunction &MF) const {
-    unsigned Size = 0;
-    for (auto &MBB : MF)
-      for (auto &MI : MBB)
-        Size += TII->getInstSizeInBytes(MI);
-    return Size;
-  }
-#endif
-};
-
-char RISCVPreRAExpandPseudo::ID = 0;
-
-bool RISCVPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &MF.getSubtarget<RISCVSubtarget>();
-  TII = STI->getInstrInfo();
-
-#ifndef NDEBUG
-  const unsigned OldSize = getInstSizeInBytes(MF);
-#endif
-
-  bool Modified = false;
-  for (auto &MBB : MF)
-    Modified |= expandMBB(MBB);
-
-#ifndef NDEBUG
-  const unsigned NewSize = getInstSizeInBytes(MF);
-  assert(OldSize >= NewSize);
-#endif
-  return Modified;
-}
-
-bool RISCVPreRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
-bool RISCVPreRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI,
-                                      MachineBasicBlock::iterator &NextMBBI) {
-
-  switch (MBBI->getOpcode()) {
-  case RISCV::PseudoLLA:
-    return expandLoadLocalAddress(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoLGA:
-    return expandLoadGlobalAddress(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoLA_TLS_IE:
-    return expandLoadTLSIEAddress(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoLA_TLS_GD:
-    return expandLoadTLSGDAddress(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoLA_TLSDESC:
-    return expandLoadTLSDescAddress(MBB, MBBI, NextMBBI);
-  }
-  return false;
-}
-
-bool RISCVPreRAExpandPseudo::expandAuipcInstPair(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned FlagsHi,
-    unsigned SecondOpcode) {
-  MachineFunction *MF = MBB.getParent();
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-
-  Register DestReg = MI.getOperand(0).getReg();
-  Register ScratchReg =
-      MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-
-  MachineOperand &Symbol = MI.getOperand(1);
-  Symbol.setTargetFlags(FlagsHi);
-  MCSymbol *AUIPCSymbol = MF->getContext().createNamedTempSymbol("pcrel_hi");
-
-  MachineInstr *MIAUIPC =
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::AUIPC), ScratchReg).add(Symbol);
-  MIAUIPC->setPreInstrSymbol(*MF, AUIPCSymbol);
-
-  MachineInstr *SecondMI =
-      BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
-          .addReg(ScratchReg)
-          .addSym(AUIPCSymbol, RISCVII::MO_PCREL_LO);
-
-  if (MI.hasOneMemOperand())
-    SecondMI->addMemOperand(*MF, *MI.memoperands_begin());
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool RISCVPreRAExpandPseudo::expandLoadLocalAddress(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_PCREL_HI,
-                             RISCV::ADDI);
-}
-
-bool RISCVPreRAExpandPseudo::expandLoadGlobalAddress(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  unsigned SecondOpcode = STI->is64Bit() ? RISCV::LD : RISCV::LW;
-  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_GOT_HI,
-                             SecondOpcode);
-}
-
-bool RISCVPreRAExpandPseudo::expandLoadTLSIEAddress(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  unsigned SecondOpcode = STI->is64Bit() ? RISCV::LD : RISCV::LW;
-  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GOT_HI,
-                             SecondOpcode);
-}
-
-bool RISCVPreRAExpandPseudo::expandLoadTLSGDAddress(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GD_HI,
-                             RISCV::ADDI);
-}
-
-bool RISCVPreRAExpandPseudo::expandLoadTLSDescAddress(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  MachineFunction *MF = MBB.getParent();
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-
-  const auto &STI = MF->getSubtarget<RISCVSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? RISCV::LD : RISCV::LW;
-
-  Register FinalReg = MI.getOperand(0).getReg();
-  Register DestReg =
-      MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-  Register ScratchReg =
-      MF->getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-
-  MachineOperand &Symbol = MI.getOperand(1);
-  Symbol.setTargetFlags(RISCVII::MO_TLSDESC_HI);
-  MCSymbol *AUIPCSymbol = MF->getContext().createNamedTempSymbol("tlsdesc_hi");
-
-  MachineInstr *MIAUIPC =
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::AUIPC), ScratchReg).add(Symbol);
-  MIAUIPC->setPreInstrSymbol(*MF, AUIPCSymbol);
-
-  BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
-      .addReg(ScratchReg)
-      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_LOAD_LO);
-
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), RISCV::X10)
-      .addReg(ScratchReg)
-      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_ADD_LO);
-
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoTLSDESCCall), RISCV::X5)
-      .addReg(DestReg)
-      .addImm(0)
-      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_CALL);
-
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), FinalReg)
-      .addReg(RISCV::X10)
-      .addReg(RISCV::X4);
-
-  MI.eraseFromParent();
-  return true;
-}
-
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVExpandPseudo, "riscv-expand-pseudo",
+INITIALIZE_PASS(RISCVExpandPseudoLegacy, "riscv-expand-pseudo",
                 RISCV_EXPAND_PSEUDO_NAME, false, false)
-
-INITIALIZE_PASS(RISCVPreRAExpandPseudo, "riscv-prera-expand-pseudo",
-                RISCV_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
 namespace llvm {
 
-FunctionPass *createRISCVExpandPseudoPass() { return new RISCVExpandPseudo(); }
-FunctionPass *createRISCVPreRAExpandPseudoPass() { return new RISCVPreRAExpandPseudo(); }
+FunctionPass *createRISCVExpandPseudoLegacyPass() {
+  return new RISCVExpandPseudoLegacy();
+}
+
+PreservedAnalyses
+RISCVExpandPseudoPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVExpandPseudoImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
 
 } // end of namespace llvm

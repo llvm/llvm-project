@@ -484,8 +484,8 @@ module attributes {gpu.container_module} {
     %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
-    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "uf"}
-    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) {dataClause = #acc<data_clause acc_present>, name = "uf"}
+    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) name("uf") -> !fir.box<!fir.array<?x?xf32>>
+    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) dataClause(acc_present) name("uf")
     return
   }
   gpu.module @cuda_device_mod {
