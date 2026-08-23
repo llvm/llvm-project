@@ -945,6 +945,7 @@ public:
     LoadEntriesToVectorize.clear();
     IsGraphTransformMode = false;
     GatheredLoadsEntriesFirst.reset();
+    SplatGatheredScalarsRoots.clear();
     CompressEntryToData.clear();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
@@ -2896,6 +2897,12 @@ private:
           SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
           &GatheredLoads);
 
+  /// Run through the gather nodes that are splats of the same instruction and
+  /// try to vectorize the unique splatted values together as a separate
+  /// subtree. The splat gathers are then emitted as broadcasts of the
+  /// vectorized subtree instead of insertion sequences.
+  void tryToVectorizeSplatGatheredScalars();
+
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
   /// pointers to the collected stores.
@@ -3766,6 +3773,11 @@ private:
 
   /// The index of the first gathered load entry in the VectorizeTree.
   std::optional<unsigned> GatheredLoadsEntriesFirst;
+
+  /// Root entries of the subtrees built for the splat gather nodes' unique
+  /// scalars. They have no users in the tree and must be emitted explicitly
+  /// before the root node.
+  SmallVector<TreeEntry *> SplatGatheredScalarsRoots;
 
   /// Maps compress entries to their mask data for the final codegen.
   SmallDenseMap<const TreeEntry *,
@@ -9130,6 +9142,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
+  // Build splat-gather subtrees here so the reordering passes cover them too.
+  tryToVectorizeSplatGatheredScalars();
 }
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
@@ -9139,6 +9153,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
+  // Build splat-gather subtrees here so the reordering passes cover them too.
+  tryToVectorizeSplatGatheredScalars();
 }
 
 /// Tries to find subvector of loads and builds new vector of only loads if can
@@ -12167,6 +12183,51 @@ public:
   }
 };
 } // namespace
+
+void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
+  // A splat gather (the same instruction in every lane) is emitted as an
+  // expensive insertion sequence. Vectorize the unique scalars of such gathers
+  // together as a separate subtree, so the gathers become cheap broadcasts of
+  // the vectorized value.
+  SmallMapVector<std::pair<BasicBlock *, Type *>, SmallSetVector<Value *, 4>, 4>
+      Groups;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    // Only gathers with vectorized (non-gather) users can reuse the broadcast.
+    if (!TE->isGather() || !TE->hasState() || !TE->UserTreeIndex ||
+        TE->UserTreeIndex.UserTE->isGather() || !isSplat(TE->Scalars))
+      continue;
+    auto *I = dyn_cast<BinaryOperator>(TE->getMainOp());
+    if (!I || isVectorized(I) || isDeleted(I) ||
+        (UserIgnoreList && UserIgnoreList->contains(I)))
+      continue;
+    Groups[std::make_pair(I->getParent(), I->getType())].insert(I);
+  }
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+  for (auto &[_, Group] : Groups) {
+    if (Group.size() < 2)
+      continue;
+    // Copyable-aware check so bundles with copyable lanes are not skipped.
+    if (!Analysis.buildInstructionsState(Group.getArrayRef(), *this))
+      continue;
+    unsigned PrevSize = VectorizableTree.size();
+    buildTreeRec(Group.getArrayRef(), 0, EdgeInfo());
+    if (PrevSize == VectorizableTree.size())
+      continue;
+    TreeEntry *NewRoot = VectorizableTree[PrevSize].get();
+    if (NewRoot->isGather()) {
+      // Failed to vectorize the bundle: drop the added gather entry, it has
+      // no users and only adds cost.
+      for (Value *V : NewRoot->Scalars) {
+        auto It = ValueToGatherNodes.find(V);
+        if (It != ValueToGatherNodes.end())
+          It->second.remove(NewRoot);
+      }
+      VectorizableTree.pop_back();
+      continue;
+    }
+    SplatGatheredScalarsRoots.push_back(NewRoot);
+  }
+}
 
 BoUpSLP::ScalarsVectorizationLegality
 BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
@@ -25429,6 +25490,14 @@ Value *BoUpSLP::vectorizeTree(
     Builder.SetInsertPoint(Entry.second);
     Builder.SetCurrentDebugLocation(Entry.second->getDebugLoc());
     (void)vectorizeTree(Entry.first);
+  }
+  // Emit the subtrees built for the splat gather nodes' unique scalars, so
+  // the splat gathers can be emitted as their broadcasts. They go before the
+  // gathered loads, which skip entries that already have a vector value.
+  for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+    if (DeletedNodes.contains(TE) || TE->VectorizedValue)
+      continue;
+    (void)vectorizeTree(TE);
   }
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
