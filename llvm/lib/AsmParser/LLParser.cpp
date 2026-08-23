@@ -4277,8 +4277,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     Lex.Lex();
 
     // guard constant vector elements must begin with a type.
-    if (Lex.getKind() == lltok::APSInt ||
-        Lex.getKind() == lltok::Type)
+    if (Lex.getKind() == lltok::APSInt || Lex.getKind() == lltok::Type)
       return error(Lex.getLoc(),
                    "constant vector elements must begin with a type");
 
