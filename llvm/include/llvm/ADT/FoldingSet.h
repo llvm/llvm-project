@@ -503,7 +503,9 @@ public:
   using const_iterator = FoldingSetIterator<const T>;
 
   const_iterator begin() const { return const_iterator(this, Buckets); }
-  const_iterator end() const { return const_iterator(this, Buckets + NumBuckets); }
+  const_iterator end() const {
+    return const_iterator(this, Buckets + NumBuckets);
+  }
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
@@ -637,13 +639,18 @@ public:
 //===----------------------------------------------------------------------===//
 /// This is the common iterator support shared by all folding sets, which knows
 /// how to walk the folding set hash table.
-class FoldingSetIteratorImpl : protected DebugEpochBase::HandleBase {
+class FoldingSetIteratorImpl : DebugEpochBase::HandleBase {
 protected:
   FoldingSetNode *NodePtr;
 
   LLVM_ABI FoldingSetIteratorImpl(const DebugEpochBase *Epoch, void **Bucket);
 
   LLVM_ABI void advance();
+
+  FoldingSetNode *getNode() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    return NodePtr;
+  }
 
 public:
   bool operator==(const FoldingSetIteratorImpl &RHS) const {
@@ -660,15 +667,9 @@ public:
   explicit FoldingSetIterator(const DebugEpochBase *Epoch, void **Bucket)
       : FoldingSetIteratorImpl(Epoch, Bucket) {}
 
-  T &operator*() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    return *static_cast<T *>(NodePtr);
-  }
+  T &operator*() const { return *static_cast<T *>(getNode()); }
 
-  T *operator->() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    return static_cast<T *>(NodePtr);
-  }
+  T *operator->() const { return static_cast<T *>(getNode()); }
 
   inline FoldingSetIterator &operator++() { // Preincrement
     advance();
