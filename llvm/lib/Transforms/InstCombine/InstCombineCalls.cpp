@@ -626,8 +626,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
       auto *Cttz = IC.Builder.CreateBinaryIntrinsic(
           Intrinsic::cttz, X, ConstantInt::getBool(II.getContext(), IsPoison));
       auto *Diff = ConstantInt::get(NarrowTy, WideBits - NarrowBits);
-      Value *Combined = IsPoison ? IC.Builder.CreateOr(Cttz, Diff)
-                                 : IC.Builder.CreateNUWAdd(Cttz, Diff);
+      Value *Combined = IC.Builder.CreateNUWAdd(Cttz, Diff);
       auto *ZextResult = IC.Builder.CreateZExt(Combined, II.getType());
       return IC.replaceInstUsesWith(II, ZextResult);
     }
