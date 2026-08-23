@@ -692,8 +692,10 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
       // We've exhausted the values produced by the tail call instruction, the
       // rest are essentially undef. The type doesn't really matter, but we need
       // *something*.
-      Type *SlotType =
-          ExtractValueInst::getIndexedType(RetSubTypes.back(), RetPath.back());
+      Type *SlotType = RetVal->getType();
+      if (!RetPath.empty())
+        SlotType = ExtractValueInst::getIndexedType(RetSubTypes.back(),
+                                                    RetPath.back());
       CallVal = UndefValue::get(SlotType);
     }
 
