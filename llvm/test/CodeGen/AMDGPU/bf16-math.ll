@@ -490,7 +490,7 @@ define amdgpu_ps bfloat @test_clamp_bf16_s(bfloat inreg %src) {
 ; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
 ; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; TRUE16-NEXT:    v_mov_b32_e32 v0, s0
 ; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    ; return to shader part epilog
@@ -548,7 +548,7 @@ define amdgpu_ps float @test_clamp_bf16_hi16_s(<2 x bfloat> inreg %src) {
 ; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
 ; TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; TRUE16-NEXT:    v_mov_b32_e32 v0, s0
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
