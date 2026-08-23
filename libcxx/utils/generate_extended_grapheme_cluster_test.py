@@ -227,7 +227,7 @@ def lineToCppDataLineUtf32(line: BreakTestItem) -> str:
 """
 Generate test data from "GraphemeBreakText.txt"
 This file can be downloaded from:
-https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakTest.txt
+https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakTest.txt
 This script looks for GraphemeBreakTest.txt in same directory as this script
 """
 
