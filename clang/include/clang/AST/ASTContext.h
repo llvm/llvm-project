@@ -284,7 +284,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
   // a `FoldingSet`, since both could end up in the same bucket.
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
+  // Keyed by an interned FoldingSetNodeIDRef rather than a FoldingSetNodeID to
+  // avoid its large inline SmallVector in every bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
@@ -4011,6 +4013,34 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
 
   static bool isEqual(const FoldingSetNodeID &LHS,
                       const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+// The empty/tombstone keys have a null Data, which no interned ref has, so
+// isEqual guards against comparing through their null pointer.
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
+  static FoldingSetNodeIDRef getEmptyKey() {
+    return FoldingSetNodeIDRef(nullptr, 0);
+  }
+  static FoldingSetNodeIDRef getTombstoneKey() {
+    return FoldingSetNodeIDRef(nullptr, 1);
+  }
+  static unsigned getHashValue(FoldingSetNodeIDRef Val) {
+    return Val.ComputeHash();
+  }
+  static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+    if (LHS.getData() == RHS.getData() && LHS.getSize() == RHS.getSize())
+      return true;
+    if (!LHS.getData() || !RHS.getData())
+      return false;
+    return LHS == RHS;
+  }
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+  static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
+    if (!RHS.getData())
+      return false;
     return LHS == RHS;
   }
 };
