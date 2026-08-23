@@ -256,6 +256,7 @@ jobs:
       # good practice to do this on other OSes so the version of python doesn't
       # get changed unexpectedly.
     - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      if: false
       id: setup-python
       background: true
       with:
@@ -272,6 +273,7 @@ jobs:
 
     - wait: setup-python
 
+    # For some reason this Install Wix step fails if it is run before setup-python.
     - name: Install Wix (Windows ARM64)
       background: true
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
