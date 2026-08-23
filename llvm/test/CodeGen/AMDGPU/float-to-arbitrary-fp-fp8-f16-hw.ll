@@ -518,11 +518,11 @@ define <3 x i8> @to_fp8_v3f16(<3 x half> %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.h, v1
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.h, v1
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v2.h
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -780,11 +780,11 @@ define <3 x i8> @to_bf8_v3f16(<3 x half> %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.h, v1
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.h, v1
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v2.h
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;

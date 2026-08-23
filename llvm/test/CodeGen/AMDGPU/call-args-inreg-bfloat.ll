@@ -48,10 +48,12 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
 ; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_bf16_inreg@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_bf16_inreg@rel32@hi+12
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1

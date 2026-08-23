@@ -92,9 +92,8 @@ define amdgpu_kernel void @v_alignbyte_b32(ptr addrspace(1) %out, i32 %src1, i32
 ; GFX11-TRUE16-SDAG-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
 ; GFX11-TRUE16-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
-; GFX11-TRUE16-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-SDAG-NEXT:    v_alignbyte_b32 v0, s0, s1, v0.l
 ; GFX11-TRUE16-SDAG-NEXT:    global_store_b32 v1, v0, s[4:5]
