@@ -27,11 +27,11 @@ struct _LIBCPP_NO_SPECIALIZATIONS type_order {
   using value_type                       = strong_ordering;
 
   _LIBCPP_HIDE_FROM_ABI constexpr operator value_type() const noexcept { return value; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator()() const noexcept { return value; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr value_type operator()() noexcept { return value; }
 };
 
 template <class _Tp, class _Up>
-inline constexpr strong_ordering type_order_v = __builtin_type_order(_Tp, _Up);
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr strong_ordering type_order_v = __builtin_type_order(_Tp, _Up);
 
 _LIBCPP_END_NAMESPACE_STD
 

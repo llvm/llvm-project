@@ -28,16 +28,17 @@ constexpr bool test_order(std::strong_ordering expected) {
 }
 
 template <class T, class U>
-constexpr bool eq = test_order<T, U>(std::strong_ordering::equal);
+constexpr bool eq = test_order<T, U>(std::strong_ordering::equal) && test_order<U, T>(std::strong_ordering::equal);
 template <class T, class U>
-constexpr bool lt = test_order<T, U>(std::strong_ordering::less);
+constexpr bool lt = test_order<T, U>(std::strong_ordering::less) && test_order<U, T>(std::strong_ordering::greater);
 template <class T, class U>
-constexpr bool gt = test_order<T, U>(std::strong_ordering::greater);
+constexpr bool gt = test_order<T, U>(std::strong_ordering::greater) && test_order<U, T>(std::strong_ordering::less);
 template <class T, class U>
-constexpr bool ne = lt<T, U> || gt<T, U>;
+constexpr bool ne = (lt<T, U> || gt<T, U>);
 
 struct A {};
 struct B {};
+struct C {};
 
 static_assert(std::same_as<std::type_order<A, A>::value_type, std::strong_ordering>);
 static_assert(std::same_as<decltype(std::type_order<A, A>::value), const std::strong_ordering>);
@@ -50,7 +51,9 @@ static_assert(ne<int, const int>);
 static_assert(ne<int, int&>);
 
 static_assert(eq<A, A>);
-static_assert(ne<A, B> && ne<B, A>);
+static_assert(ne<A, B>);
+
+static_assert((!(lt<A, B> && lt<B, C>) || lt<A, C>)^(!(gt<A, B> && gt<B, C>) || gt<A, C>));
 
 struct incomplete;
 static_assert(eq<incomplete, incomplete>);
