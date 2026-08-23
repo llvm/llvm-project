@@ -46,7 +46,7 @@
 #  include <unistd.h>
 #endif
 
-volatile int __gnu_cxx::debugger_signal_for_breakpoint = 0;
+_LIBCPP_EXPORTED_FROM_ABI volatile int __gnu_cxx::debugger_signal_for_breakpoint = 0;
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")

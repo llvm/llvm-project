@@ -39,7 +39,7 @@ namespace __gnu_cxx {
 // - If the value is positive, std::breakpoint() will use it as the argument to std::raise, so it should be a valid
 // signal number, e.g. SIGABRT or SIGTRAP.
 // - If the value is negative, std::breakpoint() will use a target-specific trap.
-extern volatile int debugger_signal_for_breakpoint;
+_LIBCPP_EXPORTED_FROM_ABI extern volatile int debugger_signal_for_breakpoint;
 } // namespace __gnu_cxx
 
 _LIBCPP_BEGIN_NAMESPACE_STD
