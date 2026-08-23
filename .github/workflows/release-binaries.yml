@@ -251,12 +251,19 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
+    - name: Install Wix (Windows ARM64)
+      background: true
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset --version 3.14.1.20250415
+        # Add wix install directory to PATH.
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+
       # We need to hard code the python library path for Windows, so in order
       # to do that we need to specify a specific python version.  It's also
       # good practice to do this on other OSes so the version of python doesn't
       # get changed unexpectedly.
     - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-      if: false
       id: setup-python
       background: true
       with:
@@ -272,15 +279,6 @@ jobs:
         ref: ${{ needs.prepare.outputs.ref }}
 
     - wait: setup-python
-
-    # For some reason this Install Wix step fails if it is run before setup-python.
-    - name: Install Wix (Windows ARM64)
-      background: true
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        choco install wixtoolset --version 3.14.1.20250415
-        # Add wix install directory to PATH.
-        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
