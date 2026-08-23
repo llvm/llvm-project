@@ -4429,10 +4429,10 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
 
 void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   Check(BitInsertInst::isValidOperands(BII.getOperand(0), BII.getOperand(1),
-                                        BII.getOperand(2)),
+                                       BII.getOperand(2)),
         "Invalid bitinsert operands!", &BII);
   Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
-        DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   if (auto *PTy = dyn_cast<PointerType>(BII.getOperand(1)->getType()))
     Check(!DL.isNonIntegralPointerType(PTy),
@@ -4442,10 +4442,10 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
 
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   Check(BitExtractInst::isValidOperands(BEI.getType(), BEI.getOperand(0),
-                                         BEI.getOperand(1)),
+                                        BEI.getOperand(1)),
         "Invalid bitextract operands!", &BEI);
   Check(DL.getTypeSizeInBits(BEI.getType()) <=
-        DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
         "bitextract result type cannot be wider than source type!", &BEI);
   if (auto *PTy = dyn_cast<PointerType>(BEI.getType()))
     Check(!DL.isNonIntegralPointerType(PTy),
