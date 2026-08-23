@@ -256,9 +256,9 @@ define i32 @adc_fold_with_used_flag(i32 %a0) nounwind {
 ; X86-LABEL: adc_fold_with_used_flag:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    btl $11, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $55, %esi
-; X86-NEXT:    adcl $45, %esi
+; X86-NEXT:    adcl $100, %esi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    pushl %eax
@@ -271,9 +271,9 @@ define i32 @adc_fold_with_used_flag(i32 %a0) nounwind {
 ; X64-LABEL: adc_fold_with_used_flag:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
+; X64-NEXT:    xorl %ebx, %ebx
 ; X64-NEXT:    btl $11, %edi
-; X64-NEXT:    movl $55, %ebx
-; X64-NEXT:    adcl $45, %ebx
+; X64-NEXT:    adcl $100, %ebx
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    movzbl %al, %edi
 ; X64-NEXT:    callq use@PLT
