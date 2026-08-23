@@ -2714,6 +2714,21 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+    if (VecVT.isScalableVector())
+      break;
+    unsigned NumSrcElts = VecVT.getNumElements();
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+  }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
     Register SrcReg = MI.getOperand(1).getReg();
