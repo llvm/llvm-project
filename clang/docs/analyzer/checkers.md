@@ -3359,9 +3359,10 @@ int *direct_return() {
 }
 ```
 
-The attribute states that the returned value may refer to the annotated
-parameter or to the object the function is called on. These are the two
-places where the attribute can be applied.
+The attribute states that the returned value is dangling after the lifetime
+of the annotated parameter, or of the implicit object argument, has ended.
+Refer to the [documentation](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound)
+of this Clang attribute.
 
 ```cpp
 struct Wrapper {
@@ -3396,8 +3397,7 @@ A dangling pointer that is held by a compound object (a struct field) is not
 tracked, so returning such an object is not reported.
 
 Only objects whose memory region is on the stack are tracked. A returned value
-that is bound to heap-allocated memory is not reported. Interoperability
-between this checker and {ref}`unix-malloc` would address this limitation.
+that is bound to heap-allocated memory is not reported.
 
 (alpha-core-storetoimmutable)=
 
