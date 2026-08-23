@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"

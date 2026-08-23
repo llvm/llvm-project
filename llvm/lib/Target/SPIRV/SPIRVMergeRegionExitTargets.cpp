@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVMergeRegionExitTargets.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
