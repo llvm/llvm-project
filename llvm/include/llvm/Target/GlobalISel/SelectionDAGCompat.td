@@ -215,6 +215,8 @@ def : GINodeEquiv<G_VECREDUCE_FMAX, vecreduce_fmax>;
 def : GINodeEquiv<G_VECREDUCE_FMIN, vecreduce_fmin>;
 def : GINodeEquiv<G_VECREDUCE_FMAXIMUM, vecreduce_fmaximum>;
 def : GINodeEquiv<G_VECREDUCE_FMINIMUM, vecreduce_fminimum>;
+def : GINodeEquiv<G_VECREDUCE_FMAXIMUMNUM, vecreduce_fmaximumnum>;
+def : GINodeEquiv<G_VECREDUCE_FMINIMUMNUM, vecreduce_fminimumnum>;
 def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
 def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
 def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;
