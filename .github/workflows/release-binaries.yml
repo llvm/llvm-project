@@ -295,7 +295,7 @@ jobs:
     - name: Install Wix (Windows ARM64)
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
       run: |
-        choco install wixtoolset
+        choco install wixtoolset --version 3.14.1.20250415
         # Add wix install directory to PATH.
         Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
