@@ -32,13 +32,15 @@ features += [
 ]
 
 
-# Detect whether LLDB debugger is on the system.
+# Detect whether LLDB debugger is on the system, and has access to Python API
 def check_lldb(cfg):
     lldb_path = shutil.which("lldb")
     if lldb_path is None:
         return False
 
-    return True
+    python_pkg = subprocess.check_output(["lldb", "-P"], text=True)
+
+    return len(python_pkg) != 0
 
 
 features += [
