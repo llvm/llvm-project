@@ -215,7 +215,8 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
   LLT Ty = MRI.getType(DstReg);
   if (Ty == LLT::scalar(32) || Ty == LLT::scalar(16)) {
     Register SrcReg = MI.getOperand(1).getReg();
-    unsigned SrcSize = MRI.getType(SrcReg).getSizeInBits();
+    unsigned SrcSize =
+        static_cast<unsigned>(MRI.getType(SrcReg).getSizeInBits());
     assert(SrcSize == 16 || SrcSize == 32 || SrcSize == 64);
     const APInt Mask = APInt::getHighBitsSet(SrcSize, SrcSize - 8);
     return Helper.getValueTracking()->maskedValueIsZero(SrcReg, Mask);
@@ -333,9 +334,9 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
 
     unsigned ShiftOffset = 8 * Offset;
     if (IsShr)
-      ShiftOffset += ShiftAmt;
+      ShiftOffset += static_cast<unsigned>(ShiftAmt);
     else
-      ShiftOffset -= ShiftAmt;
+      ShiftOffset -= static_cast<unsigned>(ShiftAmt);
 
     MatchInfo.CvtVal = Src0;
     MatchInfo.ShiftOffset = ShiftOffset;

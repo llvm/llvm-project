@@ -31,9 +31,9 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
     unsigned Offset;
     const MachineOperand &Op = Def->getOperand(1);
     if (Op.isImm())
-      Offset = Op.getImm();
+      Offset = static_cast<unsigned>(Op.getImm());
     else
-      Offset = Op.getCImm()->getZExtValue();
+      Offset = static_cast<unsigned>(Op.getCImm()->getZExtValue());
 
     return std::pair(Register(), Offset);
   }
@@ -48,18 +48,20 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
     }
     // TODO: Handle G_OR used for add case
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
-      return std::pair(Def->getOperand(1).getReg(), Offset);
+      return std::pair(Def->getOperand(1).getReg(),
+                       static_cast<unsigned>(Offset));
 
     // FIXME: matcher should ignore copies
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return std::pair(Def->getOperand(1).getReg(), Offset);
+      return std::pair(Def->getOperand(1).getReg(),
+                       static_cast<unsigned>(Offset));
   }
 
   Register Base;
   if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
       ValueTracking->maskedValueIsZero(Base,
                                        APInt(32, Offset, /*isSigned=*/true)))
-    return std::pair(Base, Offset);
+    return std::pair(Base, static_cast<unsigned>(Offset));
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
@@ -75,10 +77,12 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
       }
       // If Base was int converted to pointer, simply return int and offset.
       if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
-        return std::pair(Base->getOperand(1).getReg(), Offset);
+        return std::pair(Base->getOperand(1).getReg(),
+                         static_cast<unsigned>(Offset));
 
       // Register returned here will be of pointer type.
-      return std::pair(Base->getOperand(0).getReg(), Offset);
+      return std::pair(Base->getOperand(0).getReg(),
+                       static_cast<unsigned>(Offset));
     }
   }
 
