@@ -287,12 +287,10 @@ jobs:
       run: |
         echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
-    - wait-all:
-    # End of Parallel block.
-
     # For pull requests, install a fast version of clang so that we can finish the
     # build under the 6 hour timeout limit.
     - name: Install fast clang
+      background: true
       if: runner.os == 'Windows' && runner.arch == 'ARM64' && github.event_name == 'pull_request'
       env:
         LLVM_VERSION: 22.1.8
@@ -318,6 +316,9 @@ jobs:
         Set-Location C:\clang\clang-msvc ;
         Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
         echo "C:\clang\clang-msvc\bin" >> $env:GITHUB_PATH ;
+
+    - wait-all:
+    # End of Parallel block.
 
 
     - name: Configure Linux/MacOS
