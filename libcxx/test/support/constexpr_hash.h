@@ -4,6 +4,7 @@
 
 #include "test_macros.h"
 #include <type_traits>
+#include <bit>
 
 namespace support {
 
@@ -44,6 +45,25 @@ struct constexpr_hash<_Tp> {
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
+    } else if constexpr (std::is_floating_point_v<_Tp>) {
+    if (__v == 0.0f)
+      return 0;
+    // return __scalar_hash<_Tp>::operator()(__v);
+
+        constexpr size_t multiple = sizeof(_Tp) / sizeof(char);
+        std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(__v);
+
+        // TODO: pack indexing?
+        size_t res = 0;
+        for(size_t i = 0; i < multiple; ++i) {
+            res ^= region[i];
+        }
+        return res;
+
+        // TODO: 0, 1, 2, 3, 4
+        // return region[multiple - 1]; // TODO: hash-ing
+        // return 1234ULL;
+
     }
     __builtin_unreachable(); // todo: revisit
   }
