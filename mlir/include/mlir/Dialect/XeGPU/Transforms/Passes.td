@@ -11,6 +11,40 @@
 
 include "mlir/Pass/PassBase.td"
 
+def XeGPUCanonicalize : Pass<"xegpu-canonicalize"> {
+  let summary = "XeGPU specific canonicalization of vector/xegpu code";
+  let description = [{
+    Canonicalizations that bring the IR into the form the rest of the XeGPU
+    lowering expects. They are not profitable in general, so they are applied
+    explicitly here instead of from the dialect canonicalization patterns.
+
+    Currently the pass restores the N-D form of flattened `vector.gather` /
+    `vector.scatter`. XeGPU layouts (`sg_layout`, `inst_data`, `lane_layout`,
+    ...) are expressed in terms of the N-D shape of the data, so a flattened
+    gather forces layout propagation to reason through the surrounding
+    `vector.shape_cast` ops, which is either impossible or produces layouts
+    that cannot be distributed.
+
+    ```mlir
+    // Before:
+    %cst = arith.constant dense<0.0> : vector<8192xbf16>
+    %flat_idx = vector.shape_cast %idx : vector<128x64xindex> to vector<8192xindex>
+    %flat_mask = vector.shape_cast %mask : vector<128x64xi1> to vector<8192xi1>
+    %flat_res = vector.gather %src[%c0] [%flat_idx], %flat_mask, %cst
+      : memref<?xbf16>, vector<8192xindex>, vector<8192xi1>, vector<8192xbf16>
+        into vector<8192xbf16>
+    %res = vector.shape_cast %flat_res : vector<8192xbf16> to vector<128x64xbf16>
+
+    // After:
+    %cst = arith.constant dense<0.0> : vector<128x64xbf16>
+    %res = vector.gather %src[%c0] [%idx], %mask, %cst
+      : memref<?xbf16>, vector<128x64xindex>, vector<128x64xi1>,
+        vector<128x64xbf16> into vector<128x64xbf16>
+    ```
+  }];
+  let dependentDialects = ["arith::ArithDialect", "vector::VectorDialect"];
+}
+
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let summary = "Propagate and assign XeGPU layout information";
   let description = [{

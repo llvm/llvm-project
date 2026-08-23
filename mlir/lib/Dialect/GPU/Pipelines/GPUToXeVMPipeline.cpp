@@ -66,6 +66,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
   laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUCanonicalize());
   if (options.enableVectorToXeGPU)
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertVectorToXeGPU());
   if (options.xegpuOpLevel == "workgroup") {

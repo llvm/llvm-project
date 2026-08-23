@@ -59,6 +59,8 @@ struct UnrollOptions {
   }
 };
 
+/// Appends the XeGPU specific canonicalization patterns into `patterns`.
+void populateXeGPUCanonicalizePatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for array length optimization into `patterns`.
