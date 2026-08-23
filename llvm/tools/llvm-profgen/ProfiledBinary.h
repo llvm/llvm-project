@@ -615,7 +615,7 @@ public:
   SampleContextFrameVector
   getFrameLocationStack(uint64_t Address, bool UseProbeDiscriminator = false) {
     InstructionPointer IP(this, Address);
-    return symbolize(IP, /*UseCanonicalFnName*/true, UseProbeDiscriminator);
+    return symbolize(IP, /*UseCanonicalFnName*/ true, UseProbeDiscriminator);
   }
 
   const SampleContextFrameVector &
