@@ -20390,6 +20390,72 @@ than +0.0. If any element of the vector is a NaN, the result is NaN.
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
 
+(int_vector_reduce_fmaximumnum)=
+
+#### '`llvm.vector.reduce.fmaximumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
+`MAX` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximumnum.*`' intrinsic:
+
+- this intrinsic does not propagate NaNs: the result is a NaN only if every
+  element of the input vector is a NaN.
+- By default -0.0 is considered less than +0.0, so if the maximum is a zero,
+  the result is `-0.0` when every zero in the vector is `-0.0`, and `+0.0`
+  otherwise.
+- If the `nsz` flag is specified and the result is a zero, its sign is
+  unspecified when the vector contains zeros of both signs: if every zero in
+  the vector has the same sign, the result still has that sign.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fminimumnum)=
+
+#### '`llvm.vector.reduce.fminimumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
+`MIN` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimumnum.*`' intrinsic:
+
+- this intrinsic does not propagate NaNs: the result is a NaN only if every
+  element of the input vector is a NaN.
+- By default -0.0 is considered less than +0.0, so if the minimum is a zero,
+  the result is `+0.0` when every zero in the vector is `+0.0`, and `-0.0`
+  otherwise.
+- If the `nsz` flag is specified and the result is a zero, its sign is
+  unspecified when the vector contains zeros of both signs: if every zero in
+  the vector has the same sign, the result still has that sign.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
 ### Vector Partial Reduction Intrinsics
 
 Partial reductions of vectors can be expressed using the intrinsics described in

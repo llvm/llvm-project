@@ -2141,7 +2141,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:  return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -21045,15 +21047,16 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
     }
   }
 
-  // There are no VECREDUCE variants of FMINIMUMNUM or FMAXIMUMNUM
-  if (Opc == ISD::FMINIMUMNUM || Opc == ISD::FMAXIMUMNUM)
-    return SDValue();
+  unsigned ReduceOpc;
+  if (PropAllNaNsToQNaNs)
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM;
+  else if (PropOnlySNaNsToQNaNs)
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX;
+  else
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMINIMUMNUM : ISD::VECREDUCE_FMAXIMUMNUM;
 
-  if (SDValue SD = reassociateReduction(
-          PropAllNaNsToQNaNs
-              ? (IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM)
-              : (IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX),
-          Opc, SDLoc(N), VT, N0, N1, Flags))
+  if (SDValue SD =
+          reassociateReduction(ReduceOpc, Opc, SDLoc(N), VT, N0, N1, Flags))
     return SD;
 
   return SDValue();

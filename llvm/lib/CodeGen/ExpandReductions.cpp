@@ -51,7 +51,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       case Intrinsic::vector_reduce_fmax:
       case Intrinsic::vector_reduce_fmin:
       case Intrinsic::vector_reduce_fmaximum:
-      case Intrinsic::vector_reduce_fminimum: {
+      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_fmaximumnum:
+      case Intrinsic::vector_reduce_fminimumnum: {
         // Only expand if the target doesn't support this operation natively.
         if (TTI->shouldExpandReduction(II))
           Worklist.push_back(II);
@@ -163,7 +165,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       break;
     }
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       Value *Vec = II->getArgOperand(0);
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
