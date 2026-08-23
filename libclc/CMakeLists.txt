@@ -87,7 +87,7 @@ else()
 endif()
 
 foreach( tool IN ITEMS llvm-link opt )
-  find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+  find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_NATIVE_TOOL_DIR} NO_DEFAULT_PATH )
   if( NOT LLVM_TOOL_${tool} )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
