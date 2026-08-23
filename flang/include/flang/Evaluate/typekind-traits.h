@@ -12,6 +12,7 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/integer-value.h"
+#include "flang/Evaluate/logical-value.h"
 #include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/type.h"
 

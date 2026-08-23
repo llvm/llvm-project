@@ -38,6 +38,7 @@ add_flang_library(FortranEvaluate
   complex-value.cpp
   complex-value.cpp
   constant.cpp
+  designator-path.cpp
   expression.cpp
   fold.cpp
   fold-character.cpp

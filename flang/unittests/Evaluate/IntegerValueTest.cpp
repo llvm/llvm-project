@@ -2062,15 +2062,17 @@ TEST_P(IntegerValueKindPair, ConvertUnsigned) {
   const int common{std::min(fromBits, toBits)};
 
   // All ones: zero-extended when widening, truncated (and flagged) otherwise.
-  auto ones{IntegerValue::ConvertUnsigned(IntegerValue{from, -1}, toBits)};
+  auto ones{IntegerValue::ConvertUnsigned(to, IntegerValue{from, -1})};
   EXPECT_EQ(to, ones.value.kind());
   EXPECT_EQ(toBits < fromBits, ones.overflow);
   EXPECT_EQ(IntegerValue::MASKR(to, common), ones.value);
+
   // A value that fits in either width converts exactly.
-  auto exact{IntegerValue::ConvertUnsigned(IntegerValue{from, 0x34}, toBits)};
+  auto exact{IntegerValue::ConvertUnsigned(to, IntegerValue{from, 0x34})};
   EXPECT_FALSE(exact.overflow);
   EXPECT_EQ(IntegerValue(to, 0x34), exact.value);
-  auto zero{IntegerValue::ConvertUnsigned(IntegerValue::Zero(from), toBits)};
+
+  auto zero{IntegerValue::ConvertUnsigned(to, IntegerValue::Zero(from))};
   EXPECT_FALSE(zero.overflow);
   EXPECT_TRUE(zero.value.IsZero());
 }
@@ -2078,18 +2080,20 @@ TEST_P(IntegerValueKindPair, ConvertUnsigned) {
 TEST_P(IntegerValueKindPair, ConvertSigned) {
   const int from{std::get<0>(GetParam())}, to{std::get<1>(GetParam())};
   const int fromBits{IntegerValue::bits(from)}, toBits{IntegerValue::bits(to)};
+
   // All ones stays all ones: it sign-extends and truncates to itself.
-  auto ones{IntegerValue::ConvertSigned(IntegerValue{from, -1}, toBits)};
+  auto ones{IntegerValue::ConvertSigned(to, IntegerValue{from, -1})};
   EXPECT_EQ(to, ones.value.kind());
   EXPECT_FALSE(ones.overflow);
   EXPECT_EQ(IntegerValue(to, -1), ones.value);
+
   // Truncation that changes the value is flagged.
-  auto huge{IntegerValue::ConvertSigned(IntegerValue::HUGE(from), toBits)};
+  auto huge{IntegerValue::ConvertSigned(to, IntegerValue::HUGE(from))};
   EXPECT_EQ(toBits < fromBits, huge.overflow);
   EXPECT_EQ(toBits < fromBits ? IntegerValue(to, -1)
                               : IntegerValue::MASKR(to, fromBits - 1),
       huge.value);
-  auto exact{IntegerValue::ConvertSigned(IntegerValue{from, -56}, toBits)};
+  auto exact{IntegerValue::ConvertSigned(to, IntegerValue{from, -56})};
   EXPECT_FALSE(exact.overflow);
   EXPECT_EQ(IntegerValue(to, -56), exact.value);
 }
@@ -2099,6 +2103,7 @@ TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
   const int other{std::get<1>(GetParam())};
   IntegerValue x{receiver, 0x5a};
   IntegerValue allOnes{other, -1};
+
   // The result takes the receiver's kind; the argument is converted to it,
   // preserving its sign.
   EXPECT_EQ(receiver, x.IOR(allOnes).kind());
@@ -2106,6 +2111,7 @@ TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
   EXPECT_EQ(x, x.IAND(allOnes));
   EXPECT_EQ(Ordering::Greater, x.CompareSigned(allOnes));
   EXPECT_EQ(IntegerValue(receiver, 0x5a - 1), x.AddSigned(allOnes).value);
+
   // A monostate operand behaves as a zero of the receiver's width.
   EXPECT_EQ(x, x.IOR(IntegerValue{}));
 }

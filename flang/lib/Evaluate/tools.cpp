@@ -10,6 +10,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/tools.h"
@@ -1364,9 +1365,19 @@ template <common::TypeCategory CAT> struct SignedNumericExpr {
   bool isPositive;
 };
 
-template <common::TypeCategory CAT>
-static void flattenTopLevelAddSubtract(const NumericExpr<CAT> &expr,
-    llvm::SmallVectorImpl<SignedNumericTerm<CAT>> &terms,
+struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
+  using Base = AnyTraverse<HasConversionHelper>;
+  HasConversionHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename TO, common::TypeCategory FROM>
+  bool operator()(const Convert<TO, FROM> &) const {
+    return true;
+  }
+};
+
+template <common::TypeCategory CAT, int KIND>
+static void flattenTopLevelAddSubtract(const NumericExpr<CAT, KIND> &expr,
+    llvm::SmallVectorImpl<SignedNumericTerm<CAT, KIND>> &terms,
     bool isPositive = true) {
   // Only flatten Add and Subtract nodes. Every other node, including
   // Parentheses, is one opaque signed term whose tree is preserved.
@@ -1432,11 +1443,32 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
   return std::nullopt;
 }
 
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const NumericExpr<CAT> &expr) {
-  if (!std::get_if<Add<Numeric<CAT>>>(&expr.u) &&
-      !std::get_if<Subtract<Numeric<CAT>>>(&expr.u))
+template <common::TypeCategory CAT, int KIND>
+static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
+    const NumericExpr<CAT, KIND> &expr) {
+  if (const auto *convert =
+          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
+    std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
+        [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeKind<CAT>>{std::move(*result)};
+          return std::nullopt;
+        },
+        convert->left().u);
+    if (!rewritten)
+      return std::nullopt;
+    return NumericExpr<CAT, KIND>{
+        Convert<Numeric<CAT, KIND>, CAT>{std::move(*rewritten)}};
+  }
+
+  // Only a conversion around the complete expression is supported. Keep
+  // conversions embedded in a mixed-kind tree attached to their original
+  // operations until those cases have their own correctness coverage.
+  if (HasConversionHelper{}(expr))
+    return std::nullopt;
+
+  if (!std::get_if<Add<Numeric<CAT, KIND>>>(&expr.u) &&
+      !std::get_if<Subtract<Numeric<CAT, KIND>>>(&expr.u))
     return std::nullopt;
 
   llvm::SmallVector<SignedNumericTerm<CAT>, 8> terms;
@@ -1453,7 +1485,7 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
       buildSignedAdd(std::move(tailExpr), std::move(headExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
-  return Expr<SomeType>{std::move(result.expr)};
+  return std::move(result.expr);
 }
 
 template <common::TypeCategory CAT>
@@ -1465,30 +1497,154 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
       CAT == common::TypeCategory::Complex) {
     return common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          return tryBuildSplitSumExpressionTree(typedExpr);
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeType>{std::move(*result)};
+          return std::nullopt;
         },
         expr.u);
   }
   return std::nullopt;
 }
 
+template <typename> struct IsExpr : std::false_type {};
+template <typename T> struct IsExpr<Expr<T>> : std::true_type {};
+
+template <typename> struct IsFunctionRef : std::false_type {};
+template <typename T> struct IsFunctionRef<FunctionRef<T>> : std::true_type {};
+
+template <typename> struct IsConditionalExpr : std::false_type {};
+template <typename T>
+struct IsConditionalExpr<ConditionalExpr<T>> : std::true_type {};
+
+class SplitSumExpressionTreeRewriter {
+public:
+  std::optional<Expr<SomeType>> Rewrite(const Expr<SomeType> &expr) {
+    Expr<SomeType> rewritten{rewriteExpr(Expr<SomeType>{expr})};
+    if (changed_)
+      return rewritten;
+    return std::nullopt;
+  }
+
+private:
+  template <typename T>
+  static std::optional<Expr<T>> tryRewriteCurrent(const Expr<T> &) {
+    return std::nullopt;
+  }
+
+  template <common::TypeCategory CAT, int KIND>
+  static std::optional<NumericExpr<CAT, KIND>> tryRewriteCurrent(
+      const NumericExpr<CAT, KIND> &expr) {
+    if constexpr (CAT == common::TypeCategory::Real ||
+        CAT == common::TypeCategory::Complex)
+      return tryBuildSplitSumExpressionTree(expr);
+    return std::nullopt;
+  }
+
+  template <typename D, std::size_t... Is>
+  D rewriteOperation(D &&op, std::index_sequence<Is...>) {
+    return D{rewriteExpr(std::move(op.template operand<Is>()))...};
+  }
+
+  template <typename T, std::size_t... Is>
+  Extremum<T> rewriteOperation(Extremum<T> &&op, std::index_sequence<Is...>) {
+    return Extremum<T>{
+        op.ordering, rewriteExpr(std::move(op.template operand<Is>()))...};
+  }
+
+  template <int KIND, std::size_t... Is>
+  ComplexComponent<KIND> rewriteOperation(
+      ComplexComponent<KIND> &&op, std::index_sequence<Is...>) {
+    return ComplexComponent<KIND>{op.isImaginaryPart,
+        rewriteExpr(std::move(op.template operand<Is>()))...};
+  }
+
+  template <int KIND, std::size_t... Is>
+  LogicalOperation<KIND> rewriteOperation(
+      LogicalOperation<KIND> &&op, std::index_sequence<Is...>) {
+    return LogicalOperation<KIND>{op.logicalOperator,
+        rewriteExpr(std::move(op.template operand<Is>()))...};
+  }
+
+  template <typename T, std::size_t... Is>
+  Relational<T> rewriteOperation(
+      Relational<T> &&op, std::index_sequence<Is...>) {
+    return Relational<T>{
+        op.opr, rewriteExpr(std::move(op.template operand<Is>()))...};
+  }
+
+  Relational<SomeType> rewriteRelational(Relational<SomeType> &&relational) {
+    return common::visit(
+        [&](auto &&typed) -> Relational<SomeType> {
+          using RelationalType = std::decay_t<decltype(typed)>;
+          return Relational<SomeType>{rewriteOperation(std::move(typed),
+              std::make_index_sequence<RelationalType::operands>{})};
+        },
+        std::move(relational.u));
+  }
+
+  template <typename T>
+  ConditionalExpr<T> rewriteConditional(ConditionalExpr<T> &&conditional) {
+    return ConditionalExpr<T>{rewriteExpr(std::move(conditional.condition())),
+        rewriteExpr(std::move(conditional.thenValue())),
+        rewriteExpr(std::move(conditional.elseValue()))};
+  }
+
+  template <typename T> FunctionRef<T> rewriteFunction(FunctionRef<T> &&ref) {
+    if (!ref.proc().IsPure())
+      return std::move(ref);
+    for (std::optional<ActualArgument> &maybeArg : ref.arguments()) {
+      if (maybeArg)
+        if (Expr<SomeType> * argExpr{maybeArg->UnwrapExpr()})
+          *argExpr = rewriteExpr(std::move(*argExpr));
+    }
+    return std::move(ref);
+  }
+
+  template <typename T> Expr<T> rewriteExpr(Expr<T> &&expr) {
+    if (std::optional<Expr<T>> rewritten{tryRewriteCurrent(expr)}) {
+      changed_ = true;
+      return std::move(*rewritten);
+    }
+    return common::visit(
+        [&](auto &&node) -> Expr<T> {
+          using Node = std::decay_t<decltype(node)>;
+          if constexpr (IsExpr<Node>::value) {
+            return Expr<T>{rewriteExpr(std::move(node))};
+          } else if constexpr (IsFunctionRef<Node>::value) {
+            return Expr<T>{rewriteFunction(std::move(node))};
+          } else if constexpr (IsConditionalExpr<Node>::value) {
+            return Expr<T>{rewriteConditional(std::move(node))};
+          } else if constexpr (std::is_same_v<Node, Relational<SomeType>>) {
+            return Expr<T>{rewriteRelational(std::move(node))};
+          } else if constexpr (rewrite::is_operation_v<Node>) {
+            if constexpr (std::is_same_v<Node, Parentheses<T>>)
+              return Expr<T>{std::move(node)};
+            else
+              return Expr<T>{rewriteOperation(
+                  std::move(node), std::make_index_sequence<Node::operands>{})};
+          } else {
+            return Expr<T>{std::move(node)};
+          }
+        },
+        std::move(expr.u));
+  }
+
+  bool changed_{false};
+};
+
 } // namespace
 
-bool CanBuildSplitSumExpressionTree(
+bool CanBuildSplitSumExpressionTree(FoldingContext &context,
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
-      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasVectorSubscript(lhs) && !FindImpureCall(context, rhs) &&
       !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
       !HasVolatileOrAsynchronousSymbol(lhs);
 }
 
-std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTrees(
     const Expr<SomeType> &expr) {
-  return common::visit(
-      [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-        return tryBuildSplitSumExpressionTree(typedExpr);
-      },
-      expr.u);
+  return SplitSumExpressionTreeRewriter{}.Rewrite(expr);
 }
 
 bool IsArraySection(const Expr<SomeType> &expr) {

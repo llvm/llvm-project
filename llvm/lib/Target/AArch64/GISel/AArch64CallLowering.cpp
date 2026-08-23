@@ -676,7 +676,7 @@ void AArch64CallLowering::saveVarArgRegisters(
           MIRBuilder.buildConstant(MRI.createGenericVirtualRegister(s64), 16);
 
       for (unsigned i = FirstVariadicFPR; i < FPRArgRegs.size(); ++i) {
-        Register Val = MRI.createGenericVirtualRegister(LLT::scalar(128));
+        Register Val = MRI.createGenericVirtualRegister(LLT::float128());
         Handler.assignValueToReg(
             Val, FPRArgRegs[i],
             CCValAssign::getReg(

@@ -29,10 +29,6 @@ void test_destroying_delete(S *s) {
   delete s;
 }
 
-// S::operator delete(S *, std::destroying_delete_t)
-// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef}, !rec_std3A3Adestroying_delete_t)
-// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef, %"struct.std::destroying_delete_t")
-
 // The destroying operator delete takes over the entire delete operation:
 // no destructor call and no delete-cleanup are emitted in the caller; the
 // operator delete is invoked inside the standard null-check if-region and is
@@ -65,6 +61,10 @@ void test_destroying_delete(S *s) {
 // LLVM-NOT: call void @_ZN1SD{{[12]}}Ev
 // LLVM: [[END]]:
 // LLVM:   ret void
+
+// S::operator delete(S *, std::destroying_delete_t)
+// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef}, !rec_std3A3Adestroying_delete_t)
+// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef, %"struct.std::destroying_delete_t")
 
 // Classic codegen elides empty-class parameters at the ABI level, so the
 // destroying_delete_t tag disappears from both the declaration and the call.

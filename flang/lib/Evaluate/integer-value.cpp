@@ -71,14 +71,14 @@ IntegerValue::ValueWithOverflow IntegerValue::Read(
 }
 
 IntegerValue::ValueWithOverflow IntegerValue::ConvertUnsigned(
-    const IntegerValue &from, int toBits) {
-  auto r{IntegerValueImpl::ConvertUnsigned(from.impl(), toBits)};
+    int toKind, const IntegerValue &from) {
+  auto r{IntegerValueImpl::ConvertUnsigned(toKind, from.impl())};
   return {FromImpl(std::move(r.value)), r.overflow};
 }
 
 typename IntegerValue::ValueWithOverflow IntegerValue::ConvertSigned(
-    const IntegerValue &from, int toBits) {
-  auto r{IntegerValueImpl::ConvertSigned(from.impl(), toBits)};
+    int toKind, const IntegerValue &from) {
+  auto r{IntegerValueImpl::ConvertSigned(toKind, from.impl())};
   return {FromImpl(std::move(r.value)), r.overflow};
 }
 

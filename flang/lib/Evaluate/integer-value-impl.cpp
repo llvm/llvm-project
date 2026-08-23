@@ -528,13 +528,14 @@ bool IntegerValueImpl::POPPAR() const {
 }
 
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
-    const IntegerValueImpl &from, int toBits) {
+    int toKind, const IntegerValueImpl &from) {
   if (from.IsMonostate()) {
-    return {};
+    // Now we know the kind
+    return {Zero(toKind), false};
   }
   return from.withWord([&](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return withWordProto(toBits / 8, [&](auto proto) -> ValueWithOverflow {
+    return withWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
       using T = decltype(proto);
       auto r{T::template ConvertSigned<S>(x)};
       return {FromWord(r.value), r.overflow};
@@ -543,13 +544,14 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
 }
 
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertUnsigned(
-    const IntegerValueImpl &from, int toBits) {
+    int toKind, const IntegerValueImpl &from) {
   if (from.IsMonostate()) {
-    return {};
+    // Now we know the kind
+    return {Zero(toKind), false};
   }
   return from.withWord([&](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return withWordProto(toBits / 8, [&](auto proto) -> ValueWithOverflow {
+    return withWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
       using T = decltype(proto);
       auto r{T::template ConvertUnsigned<S>(x)};
       return {FromWord(r.value), r.overflow};

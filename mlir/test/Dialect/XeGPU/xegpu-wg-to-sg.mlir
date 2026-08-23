@@ -371,9 +371,9 @@ gpu.module @test_distribution {
     //CHECK: [[off_y:%.+]] = arith.remui [[l_off_y]], [[c64]] : index
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
     //CHECK: [[off_x:%.+]] = arith.remui [[l_off_x]], [[c128]] : index
-    //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
+    //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
     %0 = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
-    %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
+    %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}> : !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
     gpu.return
   }
 
@@ -756,7 +756,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: distribute_load_slice_attr
   gpu.func @distribute_load_slice_attr() {
-    %2 = memref.alloca() {alignment = 1024} : memref<4096xf32>
+    %2 = memref.alloca() alignment = 1024 : memref<4096xf32>
     %offset =  arith.constant dense<0> : vector<256xindex>
     %mask = arith.constant dense<1> : vector<256xi1>
 
@@ -982,7 +982,7 @@ gpu.module @test_distribution {
     // CHECK-DAG: %[[LOAD_MUL_X:.*]] = arith.muli %[[LOAD_X]], %[[C32:.*]] : index
     // CHECK-DAG: %[[LOAD_OFF_Y:.*]] = arith.remui %[[LOAD_MUL_Y]], %[[C128:.*]] : index
     // CHECK-DAG: %[[LOAD_OFF_X:.*]] = arith.remui %[[LOAD_MUL_X]], %[[C256:.*]] : index
-    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[LOAD_OFF_Y]], %[[LOAD_OFF_X]]] <{layout = #xegpu.layout<inst_data = [16, 16]>}>: !xegpu.mem_desc<128x256xf32>, index, index -> vector<16x32xf32>
+    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[LOAD_OFF_Y]], %[[LOAD_OFF_X]]] <{layout = #xegpu.layout<inst_data = [16, 16]>}> : !xegpu.mem_desc<128x256xf32>, index, index -> vector<16x32xf32>
     %0 = xegpu.create_nd_tdesc %arg0 : memref<128x256xf32> -> !xegpu.tensor_desc<128x256xf32>
     %1 = xegpu.load_nd %0[0, 0] {layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>} : !xegpu.tensor_desc<128x256xf32> -> vector<128x256xf32>
     %2 = xegpu.convert_layout %1 <{input_layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>,
@@ -1023,7 +1023,7 @@ gpu.module @test_distribution {
     // CHECK-DAG: %[[LOAD_OFF_Z:.*]] = arith.remui %[[LOAD_Z]], %[[C8:.*]] : index
     // CHECK-DAG: %[[LOAD_OFF_Y:.*]] = arith.remui %[[LOAD_MUL_Y]], %[[C128:.*]] : index
     // CHECK-DAG: %[[LOAD_OFF_X:.*]] = arith.remui %[[LOAD_MUL_X]], %[[C256:.*]] : index
-    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[LOAD_OFF_Z]], %[[LOAD_OFF_Y]], %[[LOAD_OFF_X]]] <{layout = #xegpu.layout<inst_data = [1, 16, 16]>}>: !xegpu.mem_desc<8x128x256xf32>, index, index, index -> vector<1x16x32xf32>
+    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[LOAD_OFF_Z]], %[[LOAD_OFF_Y]], %[[LOAD_OFF_X]]] <{layout = #xegpu.layout<inst_data = [1, 16, 16]>}> : !xegpu.mem_desc<8x128x256xf32>, index, index, index -> vector<1x16x32xf32>
     %offset = arith.constant dense<0> : vector<8x128x256xindex>
     %mask = arith.constant dense<true> : vector<8x128x256xi1>
     %1 = xegpu.load %arg0[%offset], %mask {chunk_size = 1, layout = #xegpu.layout<sg_layout = [8, 4, 16], sg_data = [1, 32, 16], inst_data = [1, 16, 16]>} : memref<?xf32>, vector<8x128x256xindex>, vector<8x128x256xi1> -> vector<8x128x256xf32>

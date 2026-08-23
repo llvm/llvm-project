@@ -6,20 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+// a test will allocate an impossible amount of memory on purpose
+// and it will trigger an expected failure
+// UNSUPPORTED: asan, msan, tsan, hwasan
+
 // test set_new_handler
 
 #include <new>
 #include <cassert>
+#include <cstdlib>
+#include <limits>
+#include <climits>
 
 #include "test_macros.h"
 
 void f1() {}
 void f2() {}
+void f3() { std::exit(0); }
 
-int main(int, char**)
-{
-    assert(std::set_new_handler(f1) == 0);
-    assert(std::set_new_handler(f2) == f1);
+int main(int, char**) {
+  assert(std::set_new_handler(f1) == 0);
+  assert(std::set_new_handler(f2) == f1);
+
+  // note: this test must be the last test since it will trigger
+  // the new handler and exit on the first call to it to signal success
+  // else we would be stuck in the handler being called in a loop
+  std::set_new_handler(f3);
+  volatile size_t max_size = std::numeric_limits<size_t>::max();
+  auto ptr                 = new char[max_size]; // huge allocation
+  (void)ptr;
 
   return 0;
 }
