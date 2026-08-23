@@ -125,7 +125,7 @@ enum class __property : uint8_t {
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
 // clang-format off
-_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1590] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1588] = {
     0x00000091,
     0x00005005,
     0x00005811,
@@ -1554,8 +1554,6 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1590] = {
     0x0b598062,
     0x0b6b180c,
     0x0b6b383c,
-    0x0b6cc002,
-    0x0b6ce802,
     0x0b7a7802,
     0x0b7a8b6a,
     0x0b7c7832,
