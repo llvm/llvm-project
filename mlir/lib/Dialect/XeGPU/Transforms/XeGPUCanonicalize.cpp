@@ -91,12 +91,14 @@ static Value unflatten(PatternRewriter &rewriter, Value flat,
 /// ```mlir
 /// // Before:
 /// %cst = arith.constant dense<0.0> : vector<8192xbf16>
-/// %flat_idx = vector.shape_cast %idx : vector<128x64xindex> to vector<8192xindex>
-/// %flat_mask = vector.shape_cast %mask : vector<128x64xi1> to vector<8192xi1>
-/// %flat_res = vector.gather %src[%c0] [%flat_idx], %flat_mask, %cst
+/// %flat_idx = vector.shape_cast %idx : vector<128x64xindex> to
+/// vector<8192xindex> %flat_mask = vector.shape_cast %mask : vector<128x64xi1>
+/// to vector<8192xi1> %flat_res = vector.gather %src[%c0] [%flat_idx],
+/// %flat_mask, %cst
 ///     : memref<?xbf16>, vector<8192xindex>, vector<8192xi1>, vector<8192xbf16>
 ///       into vector<8192xbf16>
-/// %res = vector.shape_cast %flat_res : vector<8192xbf16> to vector<128x64xbf16>
+/// %res = vector.shape_cast %flat_res : vector<8192xbf16> to
+/// vector<128x64xbf16>
 ///
 /// // After:
 /// %cst = arith.constant dense<0.0> : vector<128x64xbf16>
