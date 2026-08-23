@@ -290,6 +290,36 @@ jobs:
     - wait-all:
     # End of Parallel block.
 
+    # For pull requests, install a fast version of clang so that we can finish the
+    # build under the 6 hour timeout limit.
+    - name: Install fast clang
+      if: runner.os == 'Windows' && runner.arch == 'ARM64' && github.event_name == 'pull_request'
+      env:
+        LLVM_VERSION: 22.1.8
+      run: |
+        New-Item -Path "C:\temp-download" -ItemType "Directory" -Force ;
+        New-Item -Path "C:\clang" -ItemType "Directory" -Force ;
+        Set-Location C:\temp-download ;
+        Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-${env:LLVM_VERSION}/clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" ;
+        (Get-FileHash -Path "C:\temp-download\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ;
+        xz.exe -d -qq clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz ;
+        C:\Windows\System32\tar.exe -xf clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar -C C:\clang ;
+        Set-Location C:\clang ;
+        Rename-Item -Path "C:\clang\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ;
+        Set-Location C:\clang\clang-msvc ;
+        Remove-Item -Path C:\clang\clang-msvc\libexec -Recurse -Force ;
+        Remove-Item -Path C:\clang\clang-msvc\share -Recurse -Force ;
+        Rename-Item -Path "C:\clang\clang-msvc\bin" -NewName "C:\clang\clang-msvc\bin-full" ;
+        New-Item -Path "C:\clang\clang-msvc\bin" -ItemType Directory -Force ;
+        Set-Location C:\clang\clang-msvc\bin ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\*.dll -Destination C:\clang\clang-msvc\bin\. ;
+        Copy-Item -Path C:\clang\clang-msvc\bin-full\clang-cl.exe -Destination C:\clang\clang-msvc\bin\. ;
+       Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ;
+        Set-Location C:\clang\clang-msvc ;
+        Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
+        echo "C:\clang\clang-msvc\bin" >> $env:GITHUB_PATH ;
+
+
     - name: Configure Linux/MacOS
       id: build
       if: runner.os != 'Windows'
@@ -323,7 +353,9 @@ jobs:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '') }}
       run: |
+        subst S: ${{ github.workspace }
         cd S:\llvm\utils\release\
+        C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=arm64 -host_arch=arm64
         .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
