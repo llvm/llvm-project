@@ -2019,6 +2019,34 @@ bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
+  // If one index is a select, check whether both arms have a constant
+  // distance from the other index. This preserves correlations such as
+  // select(x + 1, x + 2) versus x + 3 that range analysis loses.
+  auto IsNoAlias = [&](const Value *V0, const Value *V1) {
+    LinearExpression E0 = GetLinearExpression(CastedValue(V0), DL, 0, AC, DT);
+    LinearExpression E1 = GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
+    if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
+        !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI))
+      return false;
+
+    APInt Scale = Var0.IsNegated ? -Var0.Scale : Var0.Scale;
+    APInt IndexDiff = (E0.Offset - E1.Offset).sextOrTrunc(Scale.getBitWidth());
+    APInt Diff = GEP.Offset + IndexDiff * Scale;
+    return Diff.isNegative() ? (-Diff).uge(V1Size) : Diff.uge(V2Size);
+  };
+
+  if (Var0.Val.ZExtBits == 0 && Var0.Val.SExtBits == 0 &&
+      Var1.Val.ZExtBits == 0 && Var1.Val.SExtBits == 0) {
+    if (const auto *SI = dyn_cast<SelectInst>(Var0.Val.V))
+      if (IsNoAlias(SI->getTrueValue(), Var1.Val.V) &&
+          IsNoAlias(SI->getFalseValue(), Var1.Val.V))
+        return true;
+    if (const auto *SI = dyn_cast<SelectInst>(Var1.Val.V))
+      if (IsNoAlias(Var0.Val.V, SI->getTrueValue()) &&
+          IsNoAlias(Var0.Val.V, SI->getFalseValue()))
+        return true;
+  }
+
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
