@@ -755,10 +755,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       (Target->shouldDefaultToNewPM() &&
        !(EnableNewPassManager.getNumOccurrences() && !EnableNewPassManager) &&
        getRunPassNames().empty())) {
-    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
-                                  std::move(Target), std::move(Out),
-                                  std::move(DwoOut), Context, TLII, VK,
-                                  PassPipeline, codegen::getFileType());
+    return compileModuleWithNewPM(
+        argv[0], std::move(M), std::move(MIR), std::move(Target),
+        std::move(Out), std::move(DwoOut), Context, TLII, VK, PassPipeline,
+        PluginList, codegen::getFileType());
   }
 
   // Build up all of the passes that we want to do to the module.
