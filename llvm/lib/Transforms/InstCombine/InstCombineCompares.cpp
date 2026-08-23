@@ -5310,6 +5310,18 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return NewICmp;
 
   const CmpInst::Predicate Pred = I.getPredicate();
+
+  // (X urem Y) == X --> X u< Y
+  // (X urem Y) != X --> X u>= Y
+  Value *Dividend, *Divisor;
+  if (I.isEquality() &&
+      match(&I, m_c_ICmp(m_URem(m_Value(Dividend), m_Value(Divisor)),
+                         m_Deferred(Dividend)))) {
+    CmpInst::Predicate NewPred =
+        Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    return new ICmpInst(NewPred, Dividend, Divisor);
+  }
+
   Value *X;
 
   // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.

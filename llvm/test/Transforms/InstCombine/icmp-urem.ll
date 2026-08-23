@@ -9,8 +9,7 @@
 define i1 @icmp_eq_urem_dividend(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_dividend(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = urem i32 %x, %y
@@ -23,8 +22,7 @@ define i1 @icmp_eq_urem_dividend(i32 %x, i32 %y) {
 define i1 @icmp_ne_urem_dividend_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_ne_urem_dividend_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], [[REM]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = urem i32 %x, %y
@@ -37,8 +35,7 @@ define i1 @icmp_ne_urem_dividend_commuted(i32 %x, i32 %y) {
 define <2 x i1> @icmp_eq_urem_dividend_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_urem_dividend_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[REM]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[X]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %rem = urem <2 x i32> %x, %y
@@ -49,8 +46,7 @@ define <2 x i1> @icmp_eq_urem_dividend_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <vscale x 2 x i1> @icmp_ne_urem_dividend_nxv2i32(
 ; CHECK-LABEL: define <vscale x 2 x i1> @icmp_ne_urem_dividend_nxv2i32(
 ; CHECK-SAME: <vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = urem <vscale x 2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <vscale x 2 x i32> [[REM]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <vscale x 2 x i32> [[X]], [[Y]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   <vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
@@ -68,7 +64,7 @@ define i1 @icmp_eq_urem_dividend_extra_use(i32 %x, i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[REM]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = urem i32 %x, %y
@@ -85,10 +81,10 @@ define i64 @icmp_eq_urem_dividend_umax(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @icmp_eq_urem_dividend_umax(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[REM]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[X]], [[REM]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ; CHECK:       [[EXIT]]:
