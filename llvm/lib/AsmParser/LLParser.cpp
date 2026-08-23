@@ -3178,6 +3178,9 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   SMLoc TypeLoc = Lex.getLoc();
   switch (Lex.getKind()) {
   default:
+    if (InConstantVector && Lex.getKind() == lltok::APSInt)
+      return error(Lex.getLoc(),
+                   "constant vector elements must begin with a type");
     return tokError(Msg);
   case lltok::Type:
     // Type ::= 'float' | 'void' (etc)
@@ -3230,6 +3233,10 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return true;
     } else if (parseArrayVectorType(Result, true))
       return true;
+    if (InConstantVector && Result && Result->isVectorTy())
+      return error(TypeLoc,
+                   "unexpected vector type; constant vector elements should not "
+                   "repeat the type");
     break;
   case lltok::LocalVar: {
     // Type ::= %foo
@@ -4203,6 +4210,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_LocalName;
     break;
   case lltok::APSInt:
+    if (InConstantVector && !ExpectedTy)
+      return error(ID.Loc,
+                   "constant vector elements must begin with a type");
     ID.APSIntVal = Lex.getAPSIntVal();
     ID.Kind = ValID::t_APSInt;
     break;
@@ -4276,16 +4286,15 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     // ValID ::= '<' '{' ConstVector '}' '>' --> Packed Struct.
     Lex.Lex();
 
-    // guard constant vector elements must begin with a type.
-    if (Lex.getKind() == lltok::APSInt || Lex.getKind() == lltok::Type)
-      return error(Lex.getLoc(),
-                   "constant vector elements must begin with a type");
-
     bool isPackedStruct = EatIfPresent(lltok::lbrace);
 
     SmallVector<Constant*, 16> Elts;
     LocTy FirstEltLoc = Lex.getLoc();
-    if (parseGlobalValueVector(Elts) ||
+    bool SavedInConstantVector = InConstantVector;
+    InConstantVector = true;
+    bool ParseRes = parseGlobalValueVector(Elts);
+    InConstantVector = SavedInConstantVector;
+    if (ParseRes ||
         (isPackedStruct &&
          parseToken(lltok::rbrace, "expected end of packed struct")) ||
         parseToken(lltok::greater, "expected end of constant"))
