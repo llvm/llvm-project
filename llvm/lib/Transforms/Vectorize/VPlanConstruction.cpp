@@ -1429,6 +1429,58 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
   addIncomingForLastPredecessor(ScalarPH);
 }
 
+void VPlanTransforms::modelGeneratedMainLoopBlocks(
+    VPlan &Plan, VPlan &MainPlan, VPIRBasicBlock *EnteredFrom) {
+  // Map blocks from MainPlan to new, empty VPIRBasicBlocks in Plan, so the
+  // skeleton CFG can be modeled explicitly. MainPlan's entry maps to Plan's
+  // now-disconnected entry, its scalar PH to EnteredFrom, mapped last so it can
+  // be dropped as source below. Blocks without successors have no edges.
+  auto *MainEntry = cast<VPIRBasicBlock>(MainPlan.getEntry());
+  auto *MainScalarPH = cast<VPIRBasicBlock>(MainPlan.getScalarPreheader());
+  SmallVector<VPIRBasicBlock *> BypassBlocks;
+  SmallMapVector<VPIRBasicBlock *, VPIRBasicBlock *, 8> Old2NewVPBB;
+  Old2NewVPBB[MainEntry] = cast<VPIRBasicBlock>(Plan.getEntry());
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      MainEntry);
+  for (VPIRBasicBlock *VPBB : VPBlockUtils::blocksAs<VPIRBasicBlock>(RPOT)) {
+    // Collect bypass blocks (minimum iteration checks, runtime checks).
+    if (VPBB->getNumSuccessors() == 2 &&
+        VPBB->getSuccessors()[0] == MainScalarPH)
+      BypassBlocks.push_back(VPBB);
+    if (VPBB != MainEntry && VPBB != MainScalarPH && VPBB->hasSuccessors())
+      Old2NewVPBB[VPBB] =
+          Plan.createEmptyVPIRBasicBlock(VPBB->getIRBasicBlock());
+  }
+  Old2NewVPBB[MainScalarPH] = EnteredFrom;
+
+  // First, connect the edges from the bypass blocks to the scalar preheader, in
+  // reverse order, to preserve the predecessor order of the generated IR. The
+  // last bypass block branches into Plan and is mirrored below.
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  for (VPIRBasicBlock *MainVPBB : reverse(drop_end(BypassBlocks))) {
+    VPBlockUtils::connectBlocks(Old2NewVPBB[MainVPBB], ScalarPH);
+    addIncomingForLastPredecessor(ScalarPH);
+  }
+
+  // Mirror MainPlan's CFG, skipping the bypass edges connected above, which
+  // come first, and edges to blocks not modeled in Plan.
+  for (auto &[MainVPBB, VPBB] : drop_end(Old2NewVPBB))
+    for (VPBlockBase *Succ :
+         drop_begin(MainVPBB->getSuccessors(), VPBB->getNumSuccessors()))
+      if (auto *SuccVPBB = Old2NewVPBB.lookup(cast<VPIRBasicBlock>(Succ)))
+        VPBlockUtils::connectBlocks(VPBB, SuccVPBB);
+
+  // EnteredFrom is the only modeled block with phis; re-use the incoming values
+  // its IR phis already have for the new predecessors.
+  for (VPRecipeBase &R : EnteredFrom->phis()) {
+    auto *PhiR = cast<VPIRPhi>(&R);
+    for (VPIRBasicBlock *Pred :
+         VPBlockUtils::blocksAs<VPIRBasicBlock>(EnteredFrom->getPredecessors()))
+      PhiR->addIncoming(Plan.getOrAddLiveIn(
+          PhiR->getIRPhi().getIncomingValueForBlock(Pred->getIRBasicBlock())));
+  }
+}
+
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};

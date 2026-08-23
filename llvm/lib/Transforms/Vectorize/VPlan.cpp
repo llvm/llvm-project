@@ -476,19 +476,28 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
-      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
-      // in the original IR, except when the predecessor is the entry block.
-      // This enables including SCEV and memory runtime check blocks in VPlan.
-      // TODO: Remove exception by modeling the terminator of entry block using
+      // Generated successors are redirected, as for the entry block and for
+      // blocks bypassing both vector loops during epilogue vectorization. Edges
+      // already present in the generated IR need no update; this happens during
+      // epilogue vectorization, where the plan models blocks generated for the
+      // main vector loop.
+      // TODO: Remove the exception by modeling those terminators using
       // BranchOnCond.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       auto *TermBr = cast<CondBrInst>(PredBBTerminator);
-      assert((!TermBr->getSuccessor(idx) ||
-              (isa<VPIRBasicBlock>(this) &&
-               (TermBr->getSuccessor(idx) == NewBB ||
-                PredVPBlock == getPlan()->getEntry()))) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, NewBB);
+      if (TermBr->getSuccessor(0) != NewBB &&
+          TermBr->getSuccessor(1) != NewBB) {
+        unsigned Idx = PredVPSuccessors.front() == this ? 0 : 1;
+        BasicBlock *ReplacedSucc = TermBr->getSuccessor(Idx);
+        assert(
+            (!ReplacedSucc || isa<VPIRBasicBlock>(PredVPBB)) &&
+            "only VPIRBasicBlock predecessors may have an existing successor "
+            "redirected");
+        if (ReplacedSucc)
+          ReplacedSucc->removePredecessor(PredBB, /*KeepOneInputPHIs=*/true);
+        TermBr->setSuccessor(Idx, NewBB);
+        if (ReplacedSucc)
+          CFG.DTU.applyUpdates({{DominatorTree::Delete, PredBB, ReplacedSucc}});
+      }
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
