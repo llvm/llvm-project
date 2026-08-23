@@ -38,7 +38,6 @@ constexpr bool ne = (lt<T, U> || gt<T, U>);
 
 struct A {};
 struct B {};
-struct C {};
 
 static_assert(std::same_as<std::type_order<A, A>::value_type, std::strong_ordering>);
 static_assert(std::same_as<decltype(std::type_order<A, A>::value), const std::strong_ordering>);
@@ -53,7 +52,7 @@ static_assert(ne<int, int&>);
 static_assert(eq<A, A>);
 static_assert(ne<A, B>);
 
-static_assert((!(lt<A, B> && lt<B, C>) || lt<A, C>)^(!(gt<A, B> && gt<B, C>) || gt<A, C>));
+static_assert(lt<A, B> ^ gt<A, B>);
 
 struct incomplete;
 static_assert(eq<incomplete, incomplete>);
