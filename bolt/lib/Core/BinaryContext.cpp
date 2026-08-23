@@ -107,6 +107,12 @@ static cl::opt<bool> DropDWOPageCache(
 namespace llvm {
 namespace bolt {
 
+CodeSectionOrder::CodeSectionOrder(const BinaryContext &BC)
+    : CodeSectionOrder(
+          BC.getColdCodeSectionName(), BC.getHotTextMoverSectionName(),
+          BC.getMainCodeSectionName(), BC.getWarmCodeSectionName(), opts::HotText,
+          opts::HotFunctionsAtEnd) {}
+
 char BOLTError::ID = 0;
 
 BOLTError::BOLTError(bool IsFatal, const Twine &S)

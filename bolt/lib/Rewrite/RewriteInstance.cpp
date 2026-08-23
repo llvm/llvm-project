@@ -4382,105 +4382,13 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   }
 }
 
-namespace {
-
-/// Defines the strict weak ordering for BOLT-produced code sections.
-class CodeSectionOrder {
-public:
-  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
-                   StringRef MainSectionName, StringRef WarmSectionName,
-                   bool HotText, bool HotFunctionsAtEnd)
-      : ColdSectionName(ColdSectionName),
-        HotTextMoverSectionName(HotTextMoverSectionName),
-        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
-        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
-
-  bool operator()(StringRef AName, StringRef BName) const {
-    const SectionKind AKind = getKind(AName);
-    const SectionKind BKind = getKind(BName);
-    const unsigned ARank = getRank(AKind);
-    const unsigned BRank = getRank(BKind);
-    if (ARank != BRank)
-      return ARank < BRank;
-
-    if (AKind == SectionKind::Cold) {
-      if (AName.size() != BName.size())
-        return HotFunctionsAtEnd ? AName.size() > BName.size()
-                                 : AName.size() < BName.size();
-      if (AName != BName)
-        return HotFunctionsAtEnd ? AName > BName : AName < BName;
-    }
-
-    return false;
-  }
-
-private:
-  enum class SectionKind { Mover, Main, Warm, Cold, Other };
-
-  SectionKind getKind(StringRef Name) const {
-    if (HotText && Name == HotTextMoverSectionName)
-      return SectionKind::Mover;
-    if (Name == MainSectionName)
-      return SectionKind::Main;
-    if (Name == WarmSectionName)
-      return SectionKind::Warm;
-    if (Name.starts_with(ColdSectionName))
-      return SectionKind::Cold;
-    return SectionKind::Other;
-  }
-
-  unsigned getRank(SectionKind Kind) const {
-    if (Kind == SectionKind::Mover)
-      return 0;
-    if (HotFunctionsAtEnd) {
-      switch (Kind) {
-      case SectionKind::Other:
-        return 1;
-      case SectionKind::Cold:
-        return 2;
-      case SectionKind::Warm:
-        return 3;
-      case SectionKind::Main:
-        return 4;
-      case SectionKind::Mover:
-        llvm_unreachable("handled above");
-      }
-    }
-    switch (Kind) {
-    case SectionKind::Main:
-      return 1;
-    case SectionKind::Warm:
-      return 2;
-    case SectionKind::Cold:
-      return 3;
-    case SectionKind::Other:
-      return 4;
-    case SectionKind::Mover:
-      llvm_unreachable("handled above");
-    }
-    llvm_unreachable("unknown section kind");
-  }
-
-  StringRef ColdSectionName;
-  StringRef HotTextMoverSectionName;
-  StringRef MainSectionName;
-  StringRef WarmSectionName;
-  bool HotText;
-  bool HotFunctionsAtEnd;
-};
-
-} // namespace
-
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   std::vector<BinarySection *> CodeSections;
   for (BinarySection &Section : BC->textSections())
     if (Section.hasValidSectionID())
       CodeSections.emplace_back(&Section);
 
-  const CodeSectionOrder CompareSections(
-      BC->getColdCodeSectionName(), BC->getHotTextMoverSectionName(),
-      BC->getMainCodeSectionName(), BC->getWarmCodeSectionName(), opts::HotText,
-      opts::HotFunctionsAtEnd);
+  const CodeSectionOrder CompareSections(*BC);
 
   // Determine the order of sections.
   llvm::stable_sort(CodeSections,
@@ -4697,21 +4605,36 @@ void RewriteInstance::mapCodeSectionsInPlace(
   // Processing in non-relocation mode.
   uint64_t NewTextSectionStartAddress = NextAvailableAddress;
 
+  auto MapMainFragment = [&](BinaryFunction &Func, uint64_t OutputAddress) {
+    ErrorOr<BinarySection &> FuncSection = Func.getCodeSection();
+    assert(FuncSection && "cannot find section for function");
+    FuncSection->setOutputAddress(OutputAddress);
+    LLVM_DEBUG(dbgs() << "BOLT: mapping 0x"
+                      << Twine::utohexstr(FuncSection->getAllocAddress())
+                      << " to 0x" << Twine::utohexstr(OutputAddress) << '\n');
+    MapSection(*FuncSection, OutputAddress);
+    Func.setImageAddress(FuncSection->getAllocAddress());
+    Func.setImageSize(FuncSection->getOutputSize());
+  };
+
+  // Map injected patches at their pre-assigned addresses. Injected functions
+  // returned by BC->getInjectedBinaryFunctions() are not contained in
+  // BC->getBinaryFunctions(). Their sections are unique and are removed after
+  // their contents have been copied in place.
+  for (BinaryFunction *Func : BC->getInjectedBinaryFunctions()) {
+    const uint64_t OutputAddress = Func->getOutputAddress();
+    if (!Func->isEmitted() || !OutputAddress)
+      continue;
+
+    MapMainFragment(*Func, OutputAddress);
+  }
+
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
     if (!Function.isEmitted())
       continue;
 
-    ErrorOr<BinarySection &> FuncSection = Function.getCodeSection();
-    assert(FuncSection && "cannot find section for function");
-    FuncSection->setOutputAddress(Function.getAddress());
-    LLVM_DEBUG(dbgs() << "BOLT: mapping 0x"
-                      << Twine::utohexstr(FuncSection->getAllocAddress())
-                      << " to 0x" << Twine::utohexstr(Function.getAddress())
-                      << '\n');
-    MapSection(*FuncSection, Function.getAddress());
-    Function.setImageAddress(FuncSection->getAllocAddress());
-    Function.setImageSize(FuncSection->getOutputSize());
+    MapMainFragment(Function, Function.getAddress());
     assert(Function.getImageSize() <= Function.getMaxSize() &&
            "Unexpected large function");
 
@@ -4763,6 +4686,37 @@ void RewriteInstance::mapCodeSectionsInPlace(
     Section.setOutputAddress(NewTextSectionStartAddress);
     Section.setOutputFileOffset(
         getFileOffsetForAddress(NewTextSectionStartAddress));
+  }
+
+  // Unlike cold fragments, non-fixed injected functions remain in their
+  // emitted code sections. Allocate those sections immediately after the
+  // moved cold fragments so their placement depends only on code layout. The
+  // functions themselves receive their final output addresses later from
+  // linker-resolved symbols in BinaryFunction::updateOutputValues().
+  SmallVector<BinarySection *, 4> InjectedSections;
+  for (const BinaryFunction *Func : BC->getOutputBinaryFunctions()) {
+    if (!(Func->isInjected() && Func->isEmitted() && !Func->getOutputAddress()))
+      continue;
+
+    assert(!Func->isSplit() && "injected functions cannot be split");
+    ErrorOr<BinarySection &> Section = Func->getCodeSection();
+    if (Section && !llvm::is_contained(InjectedSections, &*Section))
+      InjectedSections.push_back(&*Section);
+  }
+
+  for (BinarySection *Section : InjectedSections) {
+    assert(!Section->getOutputAddress() &&
+           "non-fixed injected section already mapped");
+    NextAvailableAddress =
+        alignTo(NextAvailableAddress, Section->getAlignment());
+    LLVM_DEBUG(
+        dbgs() << "BOLT: mapping injected section " << Section->getName()
+               << " at 0x" << Twine::utohexstr(Section->getAllocAddress())
+               << " to 0x" << Twine::utohexstr(NextAvailableAddress) << "\n");
+    MapSection(*Section, NextAvailableAddress);
+    Section->setOutputAddress(NextAvailableAddress);
+    Section->setOutputFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+    NextAvailableAddress += Section->getOutputSize();
   }
 }
 
