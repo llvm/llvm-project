@@ -260,12 +260,23 @@ define amdgpu_ps i16 @s_mad_u16(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg
 ; GFX10-NEXT:    s_add_i32 s0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_mad_u16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_add_i32 s0, s0, s2
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: s_mad_u16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: s_mad_u16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %mul = mul i16 %arg0, %arg1
   %add = add i16 %mul, %arg2
   ret i16 %add
@@ -293,13 +304,25 @@ define amdgpu_ps i32 @s_mad_u16_zext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg
 ; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_mad_u16_zext:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_add_i32 s0, s0, s2
-; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: s_mad_u16_zext:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: s_mad_u16_zext:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %mul = mul i16 %arg0, %arg1
   %add = add i16 %mul, %arg2
   %zext = zext i16 %add to i32
@@ -331,14 +354,27 @@ define amdgpu_ps i64 @s_mad_u16_zext64(i16 inreg %arg0, i16 inreg %arg1, i16 inr
 ; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_mad_u16_zext64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_mov_b32 s1, 0
-; GFX11-NEXT:    s_add_i32 s0, s0, s2
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: s_mad_u16_zext64:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: s_mad_u16_zext64:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_mov_b32 s1, 0
+; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %mul = mul i16 %arg0, %arg1
   %add = add i16 %mul, %arg2
   %zext = zext i16 %add to i64
@@ -367,13 +403,25 @@ define amdgpu_ps i32 @s_mad_u16_sext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg
 ; GFX10-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_mad_u16_sext:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_add_i32 s0, s0, s2
-; GFX11-NEXT:    s_sext_i32_i16 s0, s0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-TRUE16-LABEL: s_mad_u16_sext:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: s_mad_u16_sext:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-FAKE16-NEXT:    s_sext_i32_i16 s0, s0
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
   %mul = mul i16 %arg0, %arg1
   %add = add i16 %mul, %arg2
   %sext = sext i16 %add to i32
@@ -383,3 +431,4 @@ define amdgpu_ps i32 @s_mad_u16_sext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg
 declare i32 @llvm.amdgcn.workitem.id.x()
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
+; GFX11: {{.*}}
