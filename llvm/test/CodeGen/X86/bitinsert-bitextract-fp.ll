@@ -81,11 +81,10 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 define float @test_bitextract_float_b87_crossword(b87 %src) {
 ; CHECK-LABEL: test_bitextract_float_b87_crossword:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $8388607, %esi # imm = 0x7FFFFF
-; CHECK-NEXT:    shldq $4, %rdi, %rsi
-; CHECK-NEXT:    movd %esi, %xmm0
+; CHECK-NEXT:    shrdq $55, %rsi, %rdi
+; CHECK-NEXT:    movd %edi, %xmm0
 ; CHECK-NEXT:    retq
-  %result = bitextract float, b87 %src, i32 60
+  %result = bitextract float, b87 %src, i32 55
   ret float %result
 }
 
