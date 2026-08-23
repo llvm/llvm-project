@@ -116,7 +116,7 @@ function(_get_compile_options_from_config output_var)
   endif()
 
   if(LIBC_CONF_QSORT_IMPL)
-    libc_add_definition(config_options "LIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+    libc_add_definition(config_options "LIBC_COPT_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
   libc_add_definition(config_options "LIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")

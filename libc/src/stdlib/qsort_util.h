@@ -15,13 +15,13 @@
 #define LIBC_QSORT_QUICK_SORT 1
 #define LIBC_QSORT_HEAP_SORT 2
 
-#ifndef LIBC_QSORT_IMPL
-#define LIBC_QSORT_IMPL LIBC_QSORT_QUICK_SORT
-#endif // LIBC_QSORT_IMPL
+#ifndef LIBC_COPT_QSORT_IMPL
+#define LIBC_COPT_QSORT_IMPL LIBC_QSORT_QUICK_SORT
+#endif // LIBC_COPT_QSORT_IMPL
 
-#if (LIBC_QSORT_IMPL != LIBC_QSORT_QUICK_SORT &&                               \
-     LIBC_QSORT_IMPL != LIBC_QSORT_HEAP_SORT)
-#error "LIBC_QSORT_IMPL is not recognized."
+#if (LIBC_COPT_QSORT_IMPL != LIBC_QSORT_QUICK_SORT &&                          \
+     LIBC_COPT_QSORT_IMPL != LIBC_QSORT_HEAP_SORT)
+#error "LIBC_COPT_QSORT_IMPL is not recognized."
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -66,7 +66,8 @@ LIBC_INLINE void unstable_sort_impl(void *array, size_t array_len,
 template <typename F>
 LIBC_INLINE void unstable_sort_dispatch(void *array, size_t array_len,
                                         size_t elem_size, F is_less) {
-  constexpr bool USE_QUICK_SORT = (LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT);
+  constexpr bool USE_QUICK_SORT =
+      (LIBC_COPT_QSORT_IMPL == LIBC_QSORT_QUICK_SORT);
   unstable_sort_impl<USE_QUICK_SORT>(array, array_len, elem_size, is_less);
 }
 
