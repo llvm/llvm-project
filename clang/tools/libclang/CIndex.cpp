@@ -1312,6 +1312,14 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
+      return true;
+
+  return VisitFriendDecl(D);
+}
+
 bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
   for (auto *B : D->bindings()) {
     if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
@@ -1336,9 +1344,8 @@ bool CursorVisitor::VisitTypeConstraint(const TypeConstraint &TC) {
     if (VisitNestedNameSpecifierLoc(TC.getNestedNameSpecifierLoc()))
       return true;
   }
-  if (TC.getNamedConcept()) {
-    if (Visit(MakeCursorTemplateRef(TC.getNamedConcept(),
-                                    TC.getConceptNameLoc(), TU)))
+  if (TemplateDecl *TD = TC.getNamedConcept().getAsTemplateDecl()) {
+    if (Visit(MakeCursorTemplateRef(TD, TC.getConceptNameLoc(), TU)))
       return true;
   }
   if (auto Args = TC.getTemplateArgsAsWritten()) {
@@ -1797,9 +1804,8 @@ bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
   if (TL.isConstrained()) {
     if (auto *CR = TL.getConceptReference()) {
-      if (CR->getNamedConcept()) {
-        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
-                                           CR->getConceptNameLoc(), TU));
+      if (TemplateDecl *TD = CR->getNamedConcept().getAsTemplateDecl()) {
+        return Visit(MakeCursorTemplateRef(TD, CR->getConceptNameLoc(), TU));
       }
     }
   }
@@ -2194,7 +2200,10 @@ public:
   void VisitOMPFlushDirective(const OMPFlushDirective *D);
   void VisitOMPDepobjDirective(const OMPDepobjDirective *D);
   void VisitOMPScanDirective(const OMPScanDirective *D);
-  void VisitOMPOrderedDirective(const OMPOrderedDirective *D);
+  void
+  VisitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective *D);
+  void
+  VisitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective *D);
   void VisitOMPAtomicDirective(const OMPAtomicDirective *D);
   void VisitOMPTargetDirective(const OMPTargetDirective *D);
   void VisitOMPTargetDataDirective(const OMPTargetDataDirective *D);
@@ -3474,7 +3483,13 @@ void EnqueueVisitor::VisitOMPScanDirective(const OMPScanDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
-void EnqueueVisitor::VisitOMPOrderedDirective(const OMPOrderedDirective *D) {
+void EnqueueVisitor::VisitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
@@ -3976,8 +3991,8 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
           return true;
       }
 
-      if (E->getNamedConcept() &&
-          Visit(MakeCursorTemplateRef(E->getNamedConcept(),
+      if (E->getNamedConcept().getAsTemplateDecl() &&
+          Visit(MakeCursorTemplateRef(E->getConceptDecl(),
                                       E->getConceptNameLoc(), TU)))
         return true;
 
@@ -6389,8 +6404,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPDepobjDirective");
   case CXCursor_OMPScanDirective:
     return cxstring::createRef("OMPScanDirective");
-  case CXCursor_OMPOrderedDirective:
-    return cxstring::createRef("OMPOrderedDirective");
+  case CXCursor_OMPOrderedStandaloneDirective:
+    return cxstring::createRef("OMPOrderedStandaloneDirective");
+  case CXCursor_OMPOrderedBlockAssocDirective:
+    return cxstring::createRef("OMPOrderedBlockAssocDirective");
   case CXCursor_OMPAtomicDirective:
     return cxstring::createRef("OMPAtomicDirective");
   case CXCursor_OMPTargetDirective:

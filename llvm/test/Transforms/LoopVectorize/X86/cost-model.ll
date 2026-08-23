@@ -449,16 +449,15 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-LABEL: define void @multi_exit(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[UMAX9:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX9]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN10]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 24
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMIN]] to i32
@@ -474,8 +473,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 8
-; CHECK-NEXT:    [[UMAX3:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[UMAX3]], -1
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
 ; CHECK-NEXT:    [[TMP16:%.*]] = freeze i64 [[TMP15]]
 ; CHECK-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP16]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[UMIN4]], 3
@@ -1115,5 +1113,5 @@ attributes #4 = { "target-cpu"="haswell" }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}

@@ -426,8 +426,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
     // A Clang module or a header unit cannot serve as the primary module
     // interface while recovering from an implementation unit declaration.
-    if (Interface && !Interface->isNamedModule())
+    if (Interface && !Interface->isNamedModule()) {
+      Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       return nullptr;
+    }
 
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -1451,7 +1453,7 @@ bool ExposureChecker::checkExposure(const CXXRecordDecl *RD, bool Diag) {
 
 class ReferenceTULocalChecker : public DynamicRecursiveASTVisitor {
 public:
-  using CallbackTy = std::function<void(DeclRefExpr *, ValueDecl *)>;
+  using CallbackTy = std::function<void(SourceLocation, NamedDecl *)>;
 
   ReferenceTULocalChecker(ExposureChecker &C, CallbackTy &&Callback)
       : Checker(C), Callback(std::move(Callback)) {}
@@ -1487,7 +1489,14 @@ public:
           VD->getInit()->isConstantInitializer(Context))
         return true;
 
-    Callback(DRE, Referenced);
+    Callback(DRE->getExprLoc(), Referenced);
+    return true;
+  }
+
+  bool VisitTagTypeLoc(TagTypeLoc TL) override {
+    TagDecl *Referenced = TL.getDecl();
+    if (Checker.isTULocal(Referenced))
+      Callback(TL.getNameLoc(), Referenced);
     return true;
   }
 
@@ -1501,10 +1510,10 @@ bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
 
   bool HasReferencedTULocals = false;
   ReferenceTULocalChecker Checker(
-      *this, [this, &HasReferencedTULocals, Diag](DeclRefExpr *DRE,
-                                                  ValueDecl *Referenced) {
+      *this, [this, &HasReferencedTULocals, Diag](SourceLocation Loc,
+                                                  NamedDecl *Referenced) {
         if (Diag) {
-          SemaRef.Diag(DRE->getExprLoc(), diag::warn_exposure) << Referenced;
+          SemaRef.Diag(Loc, diag::warn_exposure) << Referenced;
         }
         HasReferencedTULocals = true;
       });
@@ -1564,11 +1573,17 @@ void Sema::checkExposure(const TranslationUnitDecl *TU) {
     FunctionDecl *FD = FDAndInstantiationLocPair.first;
     SourceLocation PointOfInstantiation = FDAndInstantiationLocPair.second;
 
-    if (!FD->hasBody())
+    // Substitution may fail before an instantiated body is formed. The pattern
+    // still contains non-dependent references to TU-local entities, use the
+    // instantiation pattern as the body.
+    const FunctionDecl *BodyOwner = FD;
+    if (!BodyOwner->hasBody())
+      BodyOwner = FD->getTemplateInstantiationPattern();
+    if (!BodyOwner || !BodyOwner->hasBody())
       continue;
 
-    ReferenceTULocalChecker(Checker, [&, this](DeclRefExpr *DRE,
-                                               ValueDecl *Referenced) {
+    ReferenceTULocalChecker(Checker, [&, this](SourceLocation,
+                                               NamedDecl *Referenced) {
       // A "defect" in current implementation. Now an implicit instantiation of
       // a template, the instantiation is considered to be in the same module
       // unit as the template instead of the module unit where the instantiation
@@ -1593,7 +1608,7 @@ void Sema::checkExposure(const TranslationUnitDecl *TU) {
            diag::warn_reference_tu_local_entity_in_other_tu)
           << FD << Referenced
           << Referenced->getOwningModule()->getTopLevelModuleName();
-    }).TraverseStmt(FD->getBody());
+    }).TraverseStmt(BodyOwner->getBody());
   }
 }
 

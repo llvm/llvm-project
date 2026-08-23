@@ -98,16 +98,16 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
     switch (Dir) {
     case SchedDirection::BottomUp: {
       for (auto *DepN : N->preds(DAG)) {
-        DepN->decrUnscheduledSuccs();
-        if (DepN->readyBottomUp() && !DepN->scheduled())
+        DepN->decrUnscheduledDeps();
+        if (DepN->ready() && !DepN->scheduled())
           ReadyList.insert(DepN);
       }
       break;
     }
     case SchedDirection::TopDown: {
       for (auto *DepN : N->succs(DAG)) {
-        DepN->decrUnscheduledPreds();
-        if (DepN->readyTopDown() && !DepN->scheduled())
+        DepN->decrUnscheduledDeps();
+        if (DepN->ready() && !DepN->scheduled())
           ReadyList.insert(DepN);
       }
       break;
@@ -141,12 +141,12 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
     if (Dir == SchedDirection::BottomUp) {
       for (auto *PredN : N->preds(DAG)) {
         ReadyList.remove(PredN);
-        PredN->incrUnscheduledSuccs();
+        PredN->incrUnscheduledDeps();
       }
     } else {
       for (auto *SuccN : N->succs(DAG)) {
         ReadyList.remove(SuccN);
-        SuccN->incrUnscheduledPreds();
+        SuccN->incrUnscheduledDeps();
       }
     }
   }
@@ -322,13 +322,13 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
       // Recompute UnscheduledSuccs for nodes not only in ResetIntvl but even
       // for nodes above the top of schedule.
       for (auto *PredN : N->preds(DAG))
-        PredN->incrUnscheduledSuccs();
+        PredN->incrUnscheduledDeps();
     } else {
       assert(Dir == SchedDirection::TopDown);
       // Recompute UnscheduledPreds for nodes not only in ResetIntvl but even
       // for nodes below the bottom of schedule.
       for (auto *SuccN : N->succs(DAG))
-        SuccN->incrUnscheduledPreds();
+        SuccN->incrUnscheduledDeps();
     }
   }
 
@@ -342,8 +342,7 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
           : Interval<Instruction>(TopI, DAG.getInterval().bottom());
   for (Instruction &I : RefillIntvl) {
     auto *N = DAG.getNode(&I);
-    if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                        : N->readyTopDown())
+    if (N->ready())
       ReadyList.insert(N);
   }
 }
@@ -405,10 +404,14 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
-    for (auto &I : Extension) {
+    Interval<Instruction> InstrsInterval(Instrs);
+    Interval<Instruction> ScanForReady =
+        InstrsInterval.getUnionInterval(Extension);
+    for (auto &I : ScanForReady) {
       auto *N = DAG.getNode(&I);
-      if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                          : N->readyTopDown())
+      if (N->scheduled())
+        continue;
+      if (N->ready() && !ReadyList.contains(N))
         ReadyList.insert(N);
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.

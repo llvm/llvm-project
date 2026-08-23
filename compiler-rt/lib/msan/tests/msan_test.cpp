@@ -3279,6 +3279,7 @@ TEST(MemorySanitizer, scanf) {
   delete d;
 }
 
+#if !defined(__NetBSD__)
 static void *SimpleThread_threadfn(void* data) {
   return new int;
 }
@@ -3344,6 +3345,7 @@ TEST(MemorySanitizer, SmallPreAllocatedStackThread) {
   res = pthread_attr_destroy(&attr);
   ASSERT_EQ(0, res);
 }
+#endif
 
 TEST(MemorySanitizer, pthread_attr_get) {
   pthread_attr_t attr;
@@ -3430,6 +3432,7 @@ TEST(MemorySanitizer, pthread_key_create) {
   ASSERT_EQ(0, res);
 }
 
+#if !defined(__NetBSD__)
 namespace {
 struct SignalCondArg {
   pthread_cond_t* cond;
@@ -3475,6 +3478,7 @@ TEST(MemorySanitizer, pthread_cond_wait) {
   pthread_mutex_destroy(&mu);
   pthread_cond_destroy(&cond);
 }
+#endif
 
 TEST(MemorySanitizer, tmpnam) {
   char s[L_tmpnam];

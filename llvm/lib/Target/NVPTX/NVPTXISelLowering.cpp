@@ -560,11 +560,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
     case ISD::FMAXIMUMNUM:
     case ISD::FMINIMUMNUM:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70;
+      IsOpSupported &= STI.hasFeature(NVPTX::SM80);
       break;
     case ISD::FEXP2:
     case ISD::FTANH:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM75) && STI.getPTXVersion() >= 70;
+      IsOpSupported &=
+          STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
@@ -587,7 +588,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-      IsOpSupported = STI.hasFeature(NVPTX::SM90) && STI.getPTXVersion() >= 80;
+      IsOpSupported =
+          STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX80);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoI16x2Action);
@@ -618,7 +620,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f16, Expand);
 
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
-  if (STI.hasFeature(NVPTX::SM30) && STI.getPTXVersion() > 31)
+  if (STI.hasFeature(NVPTX::SM30))
     setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
 
   setFP16OperationAction(ISD::SETCC, MVT::f16, Legal, Promote);
@@ -861,7 +863,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ADDE, MVT::i32, Legal);
   setOperationAction(ISD::SUBC, MVT::i32, Legal);
   setOperationAction(ISD::SUBE, MVT::i32, Legal);
-  if (STI.getPTXVersion() >= 43) {
+  if (STI.hasFeature(NVPTX::PTX43)) {
     setOperationAction(ISD::ADDC, MVT::i64, Legal);
     setOperationAction(ISD::ADDE, MVT::i64, Legal);
     setOperationAction(ISD::SUBC, MVT::i64, Legal);
@@ -954,7 +956,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
   const bool IsFP16FP16x2NegAvailable = STI.hasFeature(NVPTX::SM53) &&
-                                        STI.getPTXVersion() >= 60 &&
+                                        STI.hasFeature(NVPTX::PTX60) &&
                                         STI.allowFP16Math();
   for (const auto &VT : {MVT::f16, MVT::v2f16})
     setOperationAction(ISD::FNEG, VT,
@@ -979,10 +981,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
-  if (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 71) {
+  if (!STI.hasFeature(NVPTX::SM80) || !STI.hasFeature(NVPTX::PTX71)) {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
   }
-  if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
+  if (!STI.hasFeature(NVPTX::SM90)) {
     for (MVT VT : {MVT::bf16, MVT::f32, MVT::f64}) {
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -996,7 +998,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
-  if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
+  if (!STI.hasFeature(NVPTX::SM90)) {
     for (MVT VT : {MVT::i1, MVT::i16, MVT::i32, MVT::i64}) {
       setOperationAction(
           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
@@ -1048,7 +1050,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // - f16/f16x2 (sm_75+, PTX 7.0+)
   // - bf16/bf16x2 (sm_90+, PTX 7.8+)
   // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
-  if (STI.hasFeature(NVPTX::SM75) && STI.getPTXVersion() >= 70)
+  if (STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70))
     setOperationAction(ISD::FTANH, MVT::f32, Legal);
   setOperationAction(ISD::FTANH, MVT::v2f32, Expand);
 
@@ -1064,7 +1066,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
-  if (STI.getPTXVersion() >= 65) {
+  if (STI.hasFeature(NVPTX::PTX65)) {
     setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
     setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
   } else {
@@ -1088,8 +1090,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
     setOperationAction(Op, MVT::v2f32, Expand);
   }
-  bool SupportsF32MinMaxNaN =
-      STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70;
+  bool SupportsF32MinMaxNaN = STI.hasFeature(NVPTX::SM80);
   for (const auto &Op : {ISD::FMINIMUM, ISD::FMAXIMUM}) {
     setOperationAction(Op, MVT::f32, SupportsF32MinMaxNaN ? Legal : Expand);
     setFP16OperationAction(Op, MVT::f16, Legal, Expand);
@@ -1279,7 +1280,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
   if (CLI.IsVarArg &&
-      (STI.getPTXVersion() < 60 || !STI.hasFeature(NVPTX::SM30)))
+      (!STI.hasFeature(NVPTX::PTX60) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(
         "Support for variadic functions (unsized array parameter) introduced "
         "in PTX ISA version 6.0 and requires target sm_30.");
@@ -1682,7 +1683,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
 
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1723,7 +1724,7 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op.getNode());
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1745,7 +1746,7 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
 SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op.getNode());
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1902,7 +1903,7 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   // Whether we can use 3-input min/max when expanding the reduction.
   const bool CanUseMinMax3 =
       EltTy == MVT::f32 && STI.hasFeature(NVPTX::SM100) &&
-      STI.getPTXVersion() >= 88 &&
+      STI.hasFeature(NVPTX::PTX88) &&
       (Opcode == ISD::VECREDUCE_FMAX || Opcode == ISD::VECREDUCE_FMIN ||
        Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM);
 
@@ -2358,7 +2359,7 @@ SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
 
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
                                             SelectionDAG &DAG) const {
-  assert(!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78);
+  assert(!STI.hasFeature(NVPTX::SM90));
 
   if (Op.getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
@@ -2374,7 +2375,7 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
 
 SDValue NVPTXTargetLowering::LowerFP_TO_INT(SDValue Op,
                                             SelectionDAG &DAG) const {
-  assert(!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78);
+  assert(!STI.hasFeature(NVPTX::SM90));
 
   if (Op.getOperand(0).getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
@@ -2394,24 +2395,22 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   EVT WideVT = Wide.getValueType();
   if (NarrowVT.getScalarType() == MVT::bf16) {
     const TargetLowering *TLI = STI.getTargetLowering();
-    if (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 70) {
+    if (!STI.hasFeature(NVPTX::SM80)) {
       return TLI->expandFP_ROUND(Op.getNode(), DAG);
     }
-    if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
-      // This combination was the first to support f32 -> bf16.
-      if (STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70) {
-        if (WideVT.getScalarType() == MVT::f32) {
-          return Op;
-        }
-        if (WideVT.getScalarType() == MVT::f64) {
-          SDLoc Loc(Op);
-          // Round-inexact-to-odd f64 to f32, then do the final rounding using
-          // the hardware f32 -> bf16 instruction.
-          SDValue rod = TLI->expandRoundInexactToOdd(
-              WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
-              DAG);
-          return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
-        }
+    if (!STI.hasFeature(NVPTX::SM90)) {
+      // sm_80 was the first architecture to support f32 -> bf16.
+      if (WideVT.getScalarType() == MVT::f32) {
+        return Op;
+      }
+      if (WideVT.getScalarType() == MVT::f64) {
+        SDLoc Loc(Op);
+        // Round-inexact-to-odd f64 to f32, then do the final rounding using
+        // the hardware f32 -> bf16 instruction.
+        SDValue rod = TLI->expandRoundInexactToOdd(
+            WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
+            DAG);
+        return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
       }
       return TLI->expandFP_ROUND(Op.getNode(), DAG);
     }
@@ -2428,15 +2427,14 @@ SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
   EVT WideVT = Op.getValueType();
   if (NarrowVT.getScalarType() == MVT::bf16) {
     if (WideVT.getScalarType() == MVT::f32 &&
-        (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 71)) {
+        (!STI.hasFeature(NVPTX::SM80) || !STI.hasFeature(NVPTX::PTX71))) {
       SDLoc Loc(Op);
       return DAG.getNode(ISD::BF16_TO_FP, Loc, WideVT, Narrow);
     }
-    if (WideVT.getScalarType() == MVT::f64 &&
-        (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78)) {
+    if (WideVT.getScalarType() == MVT::f64 && !STI.hasFeature(NVPTX::SM90)) {
       EVT F32 = NarrowVT.changeElementType(*DAG.getContext(), MVT::f32);
       SDLoc Loc(Op);
-      if (STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 71) {
+      if (STI.hasFeature(NVPTX::SM80) && STI.hasFeature(NVPTX::PTX71)) {
         Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);
       } else {
         Op = DAG.getNode(ISD::BF16_TO_FP, Loc, F32, Narrow);
@@ -2678,6 +2676,18 @@ static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return NVPTXISD::
         TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
   };
   llvm_unreachable("unhandled tcgen05.mma.disable_output_lane intrinsic");
 }
@@ -2890,6 +2900,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
   case Intrinsic::nvvm_tensormap_replace_elemtype:
     return lowerTensormapReplaceElemtype(Op, DAG);
@@ -5499,6 +5517,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
@@ -5524,6 +5546,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
@@ -5548,6 +5574,16 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(4);
+    Infos.push_back(Info);
+    return;
   }
 }
 
@@ -6268,7 +6304,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
 
   // 3-input min/max requires PTX 8.8+ and SM_100+, and only supports f32s
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f32 || STI.getPTXVersion() < 88 ||
+  if (VT != MVT::f32 || !STI.hasFeature(NVPTX::PTX88) ||
       !STI.hasFeature(NVPTX::SM100))
     return SDValue();
 
@@ -6618,11 +6654,140 @@ static SDValue PerformMULCombine(SDNode *N,
   return PerformMULCombineWithOperands(N, N0, N1, DCI);
 }
 
+/// Commute SHL with a bitwise logic operation when doing so exposes a common
+/// shifted operand. For example:
+///
+/// Before:
+///   N          = shl (zext (LogicOp X, C)), ShiftAmount
+///   OtherShift = shl (zext (OtherLogicOp X, OtherC)), ShiftAmount
+///
+/// After:
+///   ShiftedX   = shl (zext X), ShiftAmount
+///   N          = LogicOp ShiftedX, ShiftedC
+///   OtherShift = OtherLogicOp ShiftedX, ShiftedOtherC
+///
+/// ShiftedC = (zext C) << ShiftAmount and ShiftedOtherC =
+/// (zext OtherC) << ShiftAmount are folded constants. This replaces two
+/// variable shifts with the single shared ShiftedX. Requiring another matching
+/// shift avoids disrupting isolated address calculations where a shift may be
+/// folded into the addressing mode.
+static SDValue combineShiftOfLogicOp(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+
+  struct ShiftOfLogicOp {
+    SDNode *Shift;
+    SDValue LogicOp;
+    SDValue X;
+    SDValue Constant;
+    unsigned ExtendOpcode;
+  };
+
+  // Match a logic operation, with an optional extension, inside a SHL.
+  auto matchShiftOfLogicOp =
+      [&](SDNode *Shift) -> std::optional<ShiftOfLogicOp> {
+    if (Shift->getOpcode() != ISD::SHL || !Shift->getOperand(0).hasOneUse())
+      return std::nullopt;
+    ShiftOfLogicOp Match;
+    Match.Shift = Shift;
+    Match.LogicOp = Shift->getOperand(0);
+    Match.ExtendOpcode = 0;
+    if (ISD::isExtOpcode(Match.LogicOp.getOpcode())) {
+      Match.ExtendOpcode = Match.LogicOp.getOpcode();
+      Match.LogicOp = Match.LogicOp.getOperand(0);
+    }
+
+    if (!sd_match(Match.LogicOp, m_OneUse(m_BitwiseLogic(
+                                     m_Value(Match.X),
+                                     m_Value(Match.Constant, m_ConstInt())))))
+      return std::nullopt;
+
+    return Match;
+  };
+
+  // Match N as the root shift-of-logic; bail if it does not fit the pattern.
+  const std::optional<ShiftOfLogicOp> Root = matchShiftOfLogicOp(N);
+  if (!Root)
+    return SDValue();
+
+  // Only profitable for a constant shift amount: the per-op constant shift then
+  // folds away instead of becoming an extra variable shift.
+  if (!isConstOrConstSplat(N->getOperand(1)))
+    return SDValue();
+
+  // Collect candidate shifts that share X. Reached through another user of X,
+  // the logic result feeds the shift directly or through an optional extend.
+  SmallVector<SDNode *, 4> CandidateShifts;
+  for (const SDNode *CandidateLogicOp : Root->X->users()) {
+    if (CandidateLogicOp == Root->LogicOp.getNode())
+      continue;
+    for (SDNode *LogicUser : CandidateLogicOp->users()) {
+      if (ISD::isExtOpcode(LogicUser->getOpcode())) {
+        // shl (ext (logic X, C)): step through the extend to find the shift.
+        for (SDNode *ExtendUser : LogicUser->users())
+          if (ExtendUser->getOpcode() == ISD::SHL)
+            CandidateShifts.push_back(ExtendUser);
+      } else if (LogicUser->getOpcode() == ISD::SHL) {
+        // shl (logic X, C): the user is already the shift.
+        CandidateShifts.push_back(LogicUser);
+      }
+    }
+  }
+
+  // Verify each candidate against the root's pattern: the same X, extension,
+  // type, and shift amount.
+  const EVT VT = N->getValueType(0);
+  const SDValue ShiftAmount = N->getOperand(1);
+  SmallVector<ShiftOfLogicOp, 4> Matches;
+  for (SDNode *CandidateShift : CandidateShifts) {
+    const std::optional<ShiftOfLogicOp> Candidate =
+        matchShiftOfLogicOp(CandidateShift);
+    if (Candidate && Candidate->X == Root->X &&
+        Candidate->ExtendOpcode == Root->ExtendOpcode &&
+        CandidateShift->getValueType(0) == VT &&
+        CandidateShift->getOperand(1) == ShiftAmount)
+      Matches.push_back(*Candidate);
+  }
+  if (Matches.empty())
+    return SDValue();
+
+  // Build the shared shifted X once, then rewrite the root and every match
+  // into a logic op over it so the shift is CSE'd.
+  SelectionDAG &DAG = DCI.DAG;
+  const SDValue ShiftedX =
+      DAG.getNode(ISD::SHL, SDLoc(N), VT,
+                  Root->ExtendOpcode
+                      ? DAG.getNode(Root->ExtendOpcode, SDLoc(N), VT, Root->X)
+                      : Root->X,
+                  ShiftAmount);
+
+  // Rebuild the logic op from shared ShiftedX and a folded constant shift.
+  auto buildCommutedLogicOp = [&](const SDValue LogicOp, SDValue C,
+                                  const SDLoc &DL) {
+    if (Root->ExtendOpcode)
+      C = DAG.getNode(Root->ExtendOpcode, DL, VT, C);
+    const SDValue ShiftedC = DAG.getNode(ISD::SHL, DL, VT, C, ShiftAmount);
+    return DAG.getNode(LogicOp.getOpcode(), DL, VT, ShiftedX, ShiftedC,
+                       LogicOp->getFlags());
+  };
+
+  for (const ShiftOfLogicOp &Match : Matches)
+    DCI.CombineTo(Match.Shift,
+                  buildCommutedLogicOp(Match.LogicOp, Match.Constant,
+                                       SDLoc(Match.Shift)));
+  return buildCommutedLogicOp(Root->LogicOp, Root->Constant, SDLoc(N));
+}
+
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
   if (OptLevel > CodeGenOptLevel::None) {
+    // Expose a shared shifted operand for CSE before mul.wide folding, which
+    // would otherwise consume the shift.
+    if (SDValue Ret = combineShiftOfLogicOp(N, DCI))
+      return Ret;
+
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
@@ -7484,12 +7649,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
       AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-    const bool FTZ =
-        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
-        DenormalMode::PreserveSign;
+    const Function *F = AI->getFunction();
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+                       DenormalMode::PreserveSign;
       bool UseNative = AllowFTZAtomics;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
@@ -7504,12 +7669,17 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
-        STI.hasFeature(NVPTX::SM70) && STI.getPTXVersion() >= 63)
-      return AtomicExpansionKind::None;
+    if (Ty->isHalfTy()) {
+      // atom.add.f16 never flushes denormals, so it only agrees with a
+      // function that is not in FTZ mode for f16.
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+                       DenormalMode::PreserveSign;
+      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+          STI.hasFeature(NVPTX::PTX63))
+        return AtomicExpansionKind::None;
+    }
 
-    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90) &&
-        STI.getPTXVersion() >= 78)
+    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
       return AtomicExpansionKind::None;
 
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())

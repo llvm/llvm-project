@@ -114,9 +114,12 @@ struct UnrolledLoopInfo {
 /// due to invalid unroll factors. Requires positive loop bounds and step. If
 /// specified, annotates the Ops in each unrolled iteration by applying
 /// `annotateFn`.
+/// If `shouldPromoteIfSingleIteration` is true, the function will promote the
+/// loop body up if this has turned into a single iteration loop.
 FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
+    bool shouldPromoteIfSingleIteration = true);
 
 /// Unrolls this loop completely.
 LogicalResult loopUnrollFull(scf::ForOp forOp);

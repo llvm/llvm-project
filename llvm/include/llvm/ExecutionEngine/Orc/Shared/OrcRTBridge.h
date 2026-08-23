@@ -15,17 +15,12 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 namespace rt {
-
-LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
 
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
@@ -45,37 +40,10 @@ LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
+LLVM_ABI extern const char *DeregisterJITLoaderGDBAllocActionName;
 
 LLVM_ABI extern const char *const DispatchName;
 LLVM_ABI extern const char *const DispatchCtxName;
-
-/// Symbol names for memory management implementation.
-/// FIXME: We should find a better home for this struct.
-struct SimpleExecutorMemoryManagerSymbolNames {
-  StringRef AllocatorName;
-  StringRef ReserveName;
-  StringRef InitializeName;
-  StringRef DeinitializeName;
-  StringRef ReleaseName;
-};
-
-/// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
-/// interface.
-extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
-    orc_rt_SimpleNativeMemoryMapSPSSymbols;
-
-/// Symbol names for dylib management implementation.
-/// FIXME: We should find a better home for this struct.
-struct SimpleExecutorDylibManagerSymbolNames {
-  StringRef InstanceName;
-  StringRef OpenName;
-  StringRef ResolveName;
-};
-
-/// Default symbol names for the ORC runtime's NativeDylibManager SPS
-/// interface.
-extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
-    orc_rt_NativeDylibManagerSPSSymbols;
 
 /// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
 /// SPS interface.
@@ -88,15 +56,6 @@ struct MachOUnwindInfoRegistrarSymbolNames {
 /// StandaloneMachOUnwindInfoRegistrar SPS interface.
 extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
-
-using SPSSimpleExecutorDylibManagerOpenSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSString, uint64_t);
-
-using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
-    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
-    shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-    shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
@@ -124,20 +83,6 @@ using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
 using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
-// SimpleNativeMemoryMap APIs.
-using SPSSimpleRemoteMemoryMapReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 uint64_t);
-using SPSSimpleRemoteMemoryMapInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSFinalizeRequest);
-using SPSSimpleRemoteMemoryMapDeinitializeSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
-                                      shared::SPSSequence<shared::SPSString>);
 } // end namespace rt
 
 namespace rt_alt {

@@ -688,7 +688,6 @@ add_libc_test(
 
 add_libc_test(
   getopt_test
-  HERMETIC_TEST_ONLY # Uses libc's own stderr
   SUITE
     libc_unistd_unittests
   SRCS
