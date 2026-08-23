@@ -110,7 +110,7 @@ namespace __escaped_output_table {
 /// - bits [14, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size. Note the code expects code units the fit
 ///   into 18 bits, instead of the 21 bits needed for the full Unicode range.
-_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[744] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[742] = {
     0x00000020 /* 00000000 - 00000020 [   33] */,
     0x001fc021 /* 0000007f - 000000a0 [   34] */,
     0x002b4000 /* 000000ad - 000000ad [    1] */,
@@ -673,9 +673,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[744] = {
     0x5ad88000 /* 00016b62 - 00016b62 [    1] */,
     0x5ade0004 /* 00016b78 - 00016b7c [    5] */,
     0x5ae401af /* 00016b90 - 00016d3f [  432] */,
-    0x5b5e8005 /* 00016d7a - 00016d7f [    6] */,
-    0x5b678001 /* 00016d9e - 00016d9f [    2] */,
-    0x5b6a8095 /* 00016daa - 00016e3f [  150] */,
+    0x5b5e80c5 /* 00016d7a - 00016e3f [  198] */,
     0x5ba6c004 /* 00016e9b - 00016e9f [    5] */,
     0x5bae4001 /* 00016eb9 - 00016eba [    2] */,
     0x5bb5002b /* 00016ed4 - 00016eff [   44] */,
