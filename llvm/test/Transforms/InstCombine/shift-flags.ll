@@ -117,3 +117,59 @@ define i8 @ashr_add_exact_fail(i8 %amt_in, i8 %cnt_in) {
   %r = ashr i8 %amt, %cnt
   ret i8 %r
 }
+
+define i8 @ashr_shl_same_shamt_exact(i8 %x, i8 noundef %cnt) {
+; CHECK-LABEL: @ashr_shl_same_shamt_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[CNT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 [[SHL]], [[CNT]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, %cnt
+  %r = ashr i8 %shl, %cnt
+  ret i8 %r
+}
+
+define i8 @ashr_shl_same_shamt_exact_freeze(i8 %x, i8 %cnt_in) {
+; CHECK-LABEL: @ashr_shl_same_shamt_exact_freeze(
+; CHECK-NEXT:    [[CNT:%.*]] = freeze i8 [[CNT_IN:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 [[SHL]], [[CNT]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cnt = freeze i8 %cnt_in
+  %shl = shl i8 %x, %cnt
+  %r = ashr i8 %shl, %cnt
+  ret i8 %r
+}
+
+; FIXME: 'exact' is invalid because the shift amount may be undef.
+define i8 @ashr_shl_same_shamt_exact_fail(i8 %x, i8 %cnt_in) {
+; CHECK-LABEL: @ashr_shl_same_shamt_exact_fail(
+; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 7
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 [[SHL]], [[CNT]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cnt = and i8 %cnt_in, 7
+  %shl = shl i8 %x, %cnt
+  %r = ashr i8 %shl, %cnt
+  ret i8 %r
+}
+
+; FIXME: 'exact' is invalid because the shift amount may be undef.
+define i16 @ashr_shl_same_shamt_exact_fail_zext(i16 %x, i4 %n) {
+; CHECK-LABEL: @ashr_shl_same_shamt_exact_fail_zext(
+; CHECK-NEXT:    [[HIGHBITS:%.*]] = lshr i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i4 0, [[N:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i4 [[SUB]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[HIGHBITS]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i16 [[SHL]], [[Z]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %highbits = lshr i16 %x, 1
+  %sub = sub i4 0, %n
+  %z = zext i4 %sub to i16
+  %shl = shl i16 %highbits, %z
+  %r = ashr i16 %shl, %z
+  ret i16 %r
+}
