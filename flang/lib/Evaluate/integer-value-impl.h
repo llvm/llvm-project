@@ -190,9 +190,9 @@ public:
   bool POPPAR() const;
 
   static ValueWithOverflow ConvertSigned(
-      const IntegerValueImpl &from, int toBits);
+      int toKind, const IntegerValueImpl &from);
   static ValueWithOverflow ConvertUnsigned(
-      const IntegerValueImpl &from, int toBits);
+      int toKind, const IntegerValueImpl &from);
 
   static ValueWithOverflow Read(
       int kind, const char *&pp, int base, bool isSigned);

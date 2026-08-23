@@ -130,10 +130,10 @@ public:
 
   /// ZExt or Trunc
   static ValueWithOverflow ConvertUnsigned(
-      const IntegerValue &from, int toBits);
+      int toKind, const IntegerValue &from);
 
   /// SExt or Trunc
-  static ValueWithOverflow ConvertSigned(const IntegerValue &from, int toBits);
+  static ValueWithOverflow ConvertSigned(int toKind, const IntegerValue &from);
 
   std::string UnsignedDecimal() const;
 
