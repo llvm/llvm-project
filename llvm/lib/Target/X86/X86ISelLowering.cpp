@@ -30219,6 +30219,14 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
       MinMax = Result;
   }
 
+  // Signed-zero correction above can change the sign of the numeric operand
+  // when NewX is NaN. For minimumnum/maximumnum, restore NewY in that case.
+  if (ShouldHandleZeros && IsNum && !IgnoreNaN && !IsXNeverNaN) {
+    SDValue IsXNaN =
+        DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+    MinMax = DAG.getSelect(DL, VT, IsXNaN, NewY, MinMax);
+  }
+
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
 
