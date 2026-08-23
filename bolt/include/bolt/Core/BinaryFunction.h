@@ -394,6 +394,9 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the function is a synthetic branch/call thunk.
+  bool IsThunk{false};
+
   /// True if the original entry point of the function may get called, but the
   /// original body cannot be executed and needs to be patched with code that
   /// redirects execution to the new function body.
@@ -1504,6 +1507,9 @@ public:
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
 
+  /// Return true if this function is a synthetic branch/call thunk.
+  bool isThunk() const { return IsThunk; }
+
   /// Return true if the function requires a patch.
   bool needsPatch() const { return NeedsPatch; }
 
@@ -1939,6 +1945,12 @@ public:
   void setIsPatch(bool V) {
     assert(isInjected() && "Only injected functions can be used as patches");
     IsPatch = V;
+  }
+
+  /// Indicate that this function is a synthetic branch/call thunk.
+  void setIsThunk(bool V) {
+    assert(isInjected() && "Only injected functions can be used as thunks");
+    IsThunk = V;
   }
 
   /// Mark the function for patching.

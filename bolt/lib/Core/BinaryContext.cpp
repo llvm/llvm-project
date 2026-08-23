@@ -54,6 +54,7 @@ namespace opts {
 
 extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> UpdateDebugSections;
+extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -351,6 +352,103 @@ bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
     return true;
 
   return false;
+}
+
+namespace {
+
+/// Defines the strict weak ordering for BOLT-produced code sections.
+class CodeSectionOrder {
+public:
+  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
+                   StringRef MainSectionName, StringRef WarmSectionName,
+                   bool HotText, bool HotFunctionsAtEnd)
+      : ColdSectionName(ColdSectionName),
+        HotTextMoverSectionName(HotTextMoverSectionName),
+        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
+        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
+
+  bool operator()(StringRef AName, StringRef BName) const {
+    const SectionKind AKind = getKind(AName);
+    const SectionKind BKind = getKind(BName);
+    const unsigned ARank = getRank(AKind);
+    const unsigned BRank = getRank(BKind);
+    if (ARank != BRank)
+      return ARank < BRank;
+
+    if (AKind == SectionKind::Cold) {
+      if (AName.size() != BName.size())
+        return HotFunctionsAtEnd ? AName.size() > BName.size()
+                                 : AName.size() < BName.size();
+      if (AName != BName)
+        return HotFunctionsAtEnd ? AName > BName : AName < BName;
+    }
+
+    return false;
+  }
+
+private:
+  enum class SectionKind { Mover, Main, Warm, Cold, Other };
+
+  SectionKind getKind(StringRef Name) const {
+    if (HotText && Name == HotTextMoverSectionName)
+      return SectionKind::Mover;
+    if (Name == MainSectionName)
+      return SectionKind::Main;
+    if (Name == WarmSectionName)
+      return SectionKind::Warm;
+    if (Name.starts_with(ColdSectionName))
+      return SectionKind::Cold;
+    return SectionKind::Other;
+  }
+
+  unsigned getRank(SectionKind Kind) const {
+    if (Kind == SectionKind::Mover)
+      return 0;
+    if (HotFunctionsAtEnd) {
+      switch (Kind) {
+      case SectionKind::Other:
+        return 1;
+      case SectionKind::Cold:
+        return 2;
+      case SectionKind::Warm:
+        return 3;
+      case SectionKind::Main:
+        return 4;
+      case SectionKind::Mover:
+        llvm_unreachable("handled above");
+      }
+    }
+    switch (Kind) {
+    case SectionKind::Main:
+      return 1;
+    case SectionKind::Warm:
+      return 2;
+    case SectionKind::Cold:
+      return 3;
+    case SectionKind::Other:
+      return 4;
+    case SectionKind::Mover:
+      llvm_unreachable("handled above");
+    }
+    llvm_unreachable("unknown section kind");
+  }
+
+  StringRef ColdSectionName;
+  StringRef HotTextMoverSectionName;
+  StringRef MainSectionName;
+  StringRef WarmSectionName;
+  bool HotText;
+  bool HotFunctionsAtEnd;
+};
+
+} // namespace
+
+bool BinaryContext::compareSectionNames(StringRef A, StringRef B) const {
+  const CodeSectionOrder CompareSections(
+      getColdCodeSectionName(), getHotTextMoverSectionName(),
+      getMainCodeSectionName(), getWarmCodeSectionName(), opts::HotText,
+      opts::HotFunctionsAtEnd);
+  return CompareSections(A, B);
 }
 
 std::unique_ptr<MCObjectWriter>
@@ -2816,7 +2914,9 @@ BinaryContext::createInstructionPatch(uint64_t Address,
 BinaryFunction *
 BinaryContext::createThunkBinaryFunction(const std::string &Name) {
   static NameResolver NR;
-  return createInjectedBinaryFunction(NR.uniquify(Name));
+  BinaryFunction *BF = createInjectedBinaryFunction(NR.uniquify(Name));
+  BF->setIsThunk(true);
+  return BF;
 }
 
 std::pair<size_t, size_t>
