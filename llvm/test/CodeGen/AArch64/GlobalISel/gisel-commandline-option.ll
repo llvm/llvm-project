@@ -75,6 +75,8 @@
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect
+; ENABLED-O1-NEXT:  MachineDominator Tree Construction
+; ENABLED-O1-NEXT:  AArch64 Local Dynamic TLS Access Clean-up
 ; ENABLED-O1-NEXT:  AArch64 Post Select Optimizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  ResetMachineFunction

@@ -809,8 +809,16 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelectLegacy(getOptLevel()));
+
+  // For ELF, reuse the _TLS_MODULE_BASE_ calculation across local-dynamic
+  // TLS accesses within a function.
+  if (TM->getTargetTriple().isOSBinFormatELF() &&
+      getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CleanupLocalDynamicTLSPass());
+
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
+
   return false;
 }
 

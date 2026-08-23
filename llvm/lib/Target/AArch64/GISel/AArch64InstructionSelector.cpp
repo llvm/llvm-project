@@ -223,6 +223,10 @@ private:
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectTLSGlobalValueELF(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectTLSLocalExecELF(const GlobalValue *GV, MachineInstr &I,
+                             MachineRegisterInfo &MRI);
+  bool selectTLSGlobalValueMachO(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
@@ -2879,12 +2883,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       assert(OpFlags == AArch64II::MO_GOT);
     } else {
       GV = I.getOperand(1).getGlobal();
-      if (GV->isThreadLocal()) {
-        // We don't support instructions with emulated TLS variables yet
-        if (TM.useEmulatedTLS())
-          return false;
+      if (GV->isThreadLocal())
         return selectTLSGlobalValue(I, MRI);
-      }
+
       OpFlags = STI.ClassifyGlobalReference(GV, TM);
     }
 
@@ -3712,18 +3713,165 @@ bool AArch64InstructionSelector::selectJumpTable(MachineInstr &I,
   return true;
 }
 
-bool AArch64InstructionSelector::selectTLSGlobalValue(
-    MachineInstr &I, MachineRegisterInfo &MRI) {
-  if (!STI.isTargetMachO())
-    return false;
-  MachineFunction &MF = *I.getParent()->getParent();
-  MF.getFrameInfo().setAdjustsStack(true);
+bool AArch64InstructionSelector::selectTLSLocalExecELF(
+    const GlobalValue *GV, MachineInstr &I, MachineRegisterInfo &MRI) {
+  auto ConstrainRegOps = [&](MachineInstrBuilder MIB) {
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  };
+  Register ThreadBase = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+  ConstrainRegOps(MIB.buildInstr(AArch64::MOVbaseTLS, {ThreadBase}, {}));
 
+  switch (MF->getTarget().Options.TLSSize) {
+  default:
+    llvm_unreachable("Unexpected TLS size");
+  case 12: {
+    // add x0, x0, :tprel_lo12:a
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {I.getOperand(0).getReg()},
+                       {ThreadBase})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF)
+            .addImm(0));
+    break;
+  }
+  case 24: {
+    // add x0, x0, :tprel_hi12:a
+    // add x0, x0, :tprel_lo12_nc:a
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {Addr}, {ThreadBase})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_HI12)
+            .addImm(0));
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {I.getOperand(0).getReg()}, {Addr})
+            .addGlobalAddress(GV, 0,
+                              AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
+                                  AArch64II::MO_NC)
+            .addImm(0));
+    break;
+  }
+  case 32: {
+    // movz x0, #:tprel_g1:a
+    // movk x0, #:tprel_g0_nc:a
+    // add x0, x1, x0
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::MOVZXi, {Addr}, {})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_G1)
+            .addImm(16));
+    Register Addr2 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr2}, {Addr})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G0 |
+                                              AArch64II::MO_NC)
+                        .addImm(0));
+    ConstrainRegOps(MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                                   {ThreadBase, Addr2}));
+    break;
+  }
+  case 48: {
+    // movz x0, #:tprel_g2:a
+    // movk x0, #:tprel_g1_nc:a
+    // movk x0, #:tprel_g0_nc:a
+    // add x0, x1, x0
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::MOVZXi, {Addr}, {})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_G2)
+            .addImm(32));
+    Register Addr2 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr2}, {Addr})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G1 |
+                                              AArch64II::MO_NC)
+                        .addImm(16));
+    Register Addr3 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr3}, {Addr2})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G0 |
+                                              AArch64II::MO_NC)
+                        .addImm(0));
+    ConstrainRegOps(MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                                   {ThreadBase, Addr3}));
+    break;
+  }
+  }
+  I.eraseFromParent();
+  return true;
+}
+
+// TLS lowering below mirrors the corresponding DAGISel implementation.
+// See LowerELFTLSModel() for details.
+bool AArch64InstructionSelector::selectTLSGlobalValueELF(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  const GlobalValue *GV = I.getOperand(1).getGlobal();
+  auto *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  TLSModel::Model Model =
+      AArch64::getELFTLSModel(GV, TM, FuncInfo->hasELFSignedGOT());
+
+  Register TPOff = MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
+  switch (Model) {
+  case TLSModel::LocalExec:
+    return selectTLSLocalExecELF(GV, I, MRI);
+  case TLSModel::InitialExec:
+    MIB.buildInstr(AArch64::LOADgot, {TPOff}, {})
+        .addGlobalAddress(GV, 0, AArch64II::MO_TLS);
+    break;
+  case TLSModel::LocalDynamic:
+  case TLSModel::GeneralDynamic: {
+#ifndef NDEBUG
+    SMEAttrs Attrs = MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
+    assert(!Attrs.hasZAState() && !Attrs.hasStreamingInterfaceOrBody() &&
+           !Attrs.hasStreamingCompatibleInterface() &&
+           "unsupported SME features reached GlobalISel TLS lowering");
+#endif
+    unsigned Opcode = FuncInfo->hasELFSignedGOT()
+                          ? AArch64::TLSDESC_AUTH_CALLSEQ
+                          : AArch64::TLSDESC_CALLSEQ;
+
+    if (TLSModel::GeneralDynamic == Model) {
+      MIB.buildInstr(Opcode, {}, {}).addGlobalAddress(GV, 0, AArch64II::MO_TLS);
+      MIB.buildCopy(TPOff, Register(AArch64::X0));
+      break;
+    }
+    assert(TLSModel::LocalDynamic == Model);
+    // These accesses will need deduplicating if there's more than one.
+    FuncInfo->incNumLocalDynamicTLSAccesses();
+
+    MIB.buildInstr(Opcode, {}, {})
+        .addExternalSymbol("_TLS_MODULE_BASE_", AArch64II::MO_TLS);
+    auto Copy = MIB.buildCopy(LLT::scalar(64), Register(AArch64::X0));
+    auto Add1 =
+        MIB.buildInstr(AArch64::ADDXri, {LLT::scalar(64)}, {Copy.getReg(0)})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_HI12)
+            .addImm(0);
+    auto Add2 =
+        MIB.buildInstr(AArch64::ADDXri, {TPOff}, {Add1.getReg(0)})
+            .addGlobalAddress(GV, 0,
+                              AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
+                                  AArch64II::MO_NC)
+            .addImm(0);
+    constrainSelectedInstRegOperands(*Add1, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Add2, TII, TRI, RBI);
+  }
+  }
+  Register ThreadBase = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+  MIB.buildInstr(AArch64::MOVbaseTLS, {ThreadBase}, {});
+  auto Add = MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                            {ThreadBase, TPOff});
+  constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
   const auto &GlobalOp = I.getOperand(1);
   assert(GlobalOp.getOffset() == 0 &&
          "Shouldn't have an offset on TLS globals!");
-  const GlobalValue &GV = *GlobalOp.getGlobal();
 
+  const GlobalValue &GV = *GlobalOp.getGlobal();
+  MF->getFrameInfo().setAdjustsStack(true);
   auto LoadGOT =
       MIB.buildInstr(AArch64::LOADgot, {&AArch64::GPR64commonRegClass}, {})
           .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
@@ -3736,10 +3884,10 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
   // silly).
-  unsigned Opcode = getBLRCallOpcode(MF);
+  unsigned Opcode = getBLRCallOpcode(*MF);
 
   // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
-  if (MF.getFunction().hasFnAttribute("ptrauth-calls")) {
+  if (MF->getFunction().hasFnAttribute("ptrauth-calls")) {
     assert(Opcode == AArch64::BLR);
     Opcode = AArch64::BLRAAZ;
   }
@@ -3754,6 +3902,21 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
                                MRI);
   I.eraseFromParent();
   return true;
+}
+
+bool AArch64InstructionSelector::selectTLSGlobalValue(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  // We don't support instructions with emulated TLS variables yet.
+  if (TM.useEmulatedTLS())
+    return false;
+
+  if (STI.isTargetELF())
+    return selectTLSGlobalValueELF(I, MRI);
+
+  if (STI.isTargetMachO())
+    return selectTLSGlobalValueMachO(I, MRI);
+
+  return false;
 }
 
 MachineInstr *AArch64InstructionSelector::emitScalarToVector(

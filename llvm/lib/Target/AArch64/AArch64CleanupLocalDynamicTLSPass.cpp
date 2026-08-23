@@ -136,6 +136,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    getSelectionDAGFallbackAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
