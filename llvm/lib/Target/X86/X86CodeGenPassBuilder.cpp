@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
@@ -237,8 +238,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
-    // ported.
+    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addMachineFunctionPass(EHContGuardTargetsPass(), PMW);
   }
