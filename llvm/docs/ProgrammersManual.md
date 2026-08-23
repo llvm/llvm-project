@@ -2080,8 +2080,8 @@ Because the buckets are pointers, `FoldingSet` can support polymorphic objects i
 the set (for example, you can have `SDNode` instances mixed with `LoadSDNodes`).
 Because the elements are individually allocated, pointers to the elements are
 stable: inserting or removing elements does not invalidate any pointers to other
-elements.  Removing an element relocates other buckets, so it invalidates
-iterators.
+elements.  The iterators, however, are invalidated whenever an insertion or
+erasure occurs, as in `DenseMap` and `StringMap`.
 
 (dss_set)=
 

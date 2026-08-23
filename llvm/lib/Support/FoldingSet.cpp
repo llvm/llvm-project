@@ -133,9 +133,8 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 //
-// FoldingSet is an open-addressed hash set using linear probing. One
-// allocation holds the bucket array followed by a parallel array of the
-// buckets' 32-bit hashes:
+// FoldingSet is an open-addressed hash set. One allocation holds the bucket
+// array followed by a parallel array of the buckets' 32-bit hashes:
 //   [ Buckets (NumBuckets * sizeof(void *)) ][ Hashes (NumBuckets * 4) ]
 // A null bucket marks an empty slot, and the hash array rejects mismatches
 // before the profile compare, so walking a probe chain touches no nodes.
@@ -144,7 +143,9 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //
 // Removal uses Knuth TAOCP vol. 3 6.4 Algorithm R, as StringMap, DenseMap and
 // SmallPtrSet do: it closes the hole rather than leaving a tombstone, so the
-// table stays sized to the live node count under insert/erase churn.
+// table stays sized to the live node count under insert/erase churn. Probing
+// is therefore linear rather than quadratic, since Algorithm R requires every
+// node to sit on the contiguous run of slots starting at its home.
 
 /// Encode a hash into the non-null token FindNodeOrInsertPos hands back.
 /// Unlike a bucket address the token survives intervening insertions.
@@ -156,17 +157,12 @@ static uint32_t decodeHash(void *InsertPos) {
   return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos) - 1);
 }
 
-/// AllocateBuckets - Allocate zeroed bucket and hash arrays.
-static void **AllocateBuckets(unsigned NumBuckets) {
-  return static_cast<void **>(
-      safe_calloc(NumBuckets, sizeof(void *) + sizeof(uint32_t)));
-}
-
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
   NumBuckets = 1 << Log2InitSize;
-  Buckets = AllocateBuckets(NumBuckets);
+  Buckets = static_cast<void **>(
+      safe_calloc(NumBuckets, sizeof(void *) + sizeof(uint32_t)));
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
@@ -201,7 +197,6 @@ void FoldingSetBase::clear() {
 }
 
 void FoldingSetBase::insertImpl(Node *N, uint32_t Hash) {
-  incrementEpoch();
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
   while (Buckets[I])
@@ -212,8 +207,7 @@ void FoldingSetBase::insertImpl(Node *N, uint32_t Hash) {
   ++NumNodes;
 }
 
-void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
-                                     const FoldingSetInfo &Info) {
+void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
   assert((NewBucketCount > NumBuckets) &&
          "Can't shrink a folding set with GrowBucketCount");
   assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
@@ -227,13 +221,20 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   *this = std::move(Tmp);
 }
 
-void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
+void FoldingSetBase::reserve(unsigned EltCount) {
   if (EltCount <= capacity())
     return;
   uint64_t Required = divideCeil(uint64_t(EltCount) * 4, 3);
   GrowBucketCount(
-      static_cast<unsigned>(llvm::bit_ceil(std::max<uint64_t>(Required, 64))),
-      Info);
+      static_cast<unsigned>(llvm::bit_ceil(std::max<uint64_t>(Required, 64))));
+}
+
+LLVM_ATTRIBUTE_NOINLINE bool
+FoldingSetBase::nodeEquals(const FoldingSetInfo &Info,
+                           const FoldingSetBase *Self, Node *N,
+                           const FoldingSetNodeID &ID, unsigned IDHash) {
+  FoldingSetNodeID TempID;
+  return Info.NodeEquals(Self, N, ID, IDHash, TempID);
 }
 
 FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
@@ -241,19 +242,16 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   unsigned IDHash = ID.ComputeHash();
   const uint32_t *Hashes = getHashes();
   unsigned Mask = NumBuckets - 1;
-
-  FoldingSetNodeID TempID;
   for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
     // Reject on the hash first: the common case only reads the bucket and hash
     // arrays, which matters for cache locality.
     if (Hashes[I] != IDHash)
       continue;
     Node *N = static_cast<Node *>(Buckets[I]);
-    if (Info.NodeEquals(this, N, ID, IDHash, TempID)) {
+    if (nodeEquals(Info, this, N, ID, IDHash)) {
       InsertPos = nullptr;
       return N;
     }
-    TempID.clear();
   }
 
   // Didn't find the node, hand back the hash so that InsertNode can place it.
@@ -261,18 +259,17 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   return nullptr;
 }
 
-void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
-                                const FoldingSetInfo &Info) {
+void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
   assert(InsertPos && "Invalid InsertPos!");
-  if (NumNodes + 1 > capacity())
-    GrowBucketCount(NumBuckets * 2, Info);
+  incrementEpoch();
+  // capacity() rearranged to avoid the divide; keep the two in agreement.
+  if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
+    GrowBucketCount(NumBuckets * 2);
   insertImpl(N, decodeHash(InsertPos));
 }
 
 bool FoldingSetBase::RemoveNode(Node *N) {
-  uint32_t *Hashes = getHashes();
   unsigned Mask = NumBuckets - 1;
-
   unsigned I = N->getFoldingSetHash() & Mask;
   while (Buckets[I] != N) {
     if (!Buckets[I])
@@ -282,6 +279,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
 
   incrementEpoch();
 
+  uint32_t *Hashes = getHashes();
   // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
   // whose probe path crosses the hole.
   for (unsigned J = (I + 1) & Mask; Buckets[J]; J = (J + 1) & Mask) {
@@ -304,7 +302,7 @@ FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
   void *IP;
   if (Node *E = FindNodeOrInsertPos(ID, IP, Info))
     return E;
-  InsertNode(N, IP, Info);
+  InsertNode(N, IP);
   return N;
 }
 

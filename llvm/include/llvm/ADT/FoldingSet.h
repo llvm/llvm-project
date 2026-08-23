@@ -38,8 +38,8 @@ namespace llvm {
 ///      it, otherwise return the bucket it should be inserted into.
 ///   2. Given a node that has already been created, remove it from the set.
 ///
-/// This class is implemented as an open-addressed hash table using linear
-/// probing, with Knuth TAOCP 6.4 Algorithm R deletion.
+/// The hash table is linear-probing open addressing with tombstone-free
+/// deletion, power-of-two capacity, and a 0.75 maxiumum load factor.
 ///
 /// Any node that is to be included in the folding set must be a subclass of
 /// FoldingSetNode.  The node class must also define a Profile method used to
@@ -375,11 +375,16 @@ private:
   /// capacity.
   void insertImpl(Node *N, uint32_t Hash);
 
+  /// Compare \p N against \p ID. Kept out of line so that the scratch storage
+  /// (FoldingSetNodeID) stays off the probe loop's path.
+  static bool nodeEquals(const FoldingSetInfo &Info, const FoldingSetBase *Self,
+                         Node *N, const FoldingSetNodeID &ID, unsigned IDHash);
+
   friend class FoldingSetIteratorImpl;
 
   /// Resize the hash table and rehash everything. \p NewBucketCount must be a
   /// power of two, and must be greater than the old bucket count.
-  void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
+  void GrowBucketCount(unsigned NewBucketCount);
 
 protected:
   // The below methods are protected to encourage subclasses to provide a more
@@ -387,7 +392,7 @@ protected:
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
-  LLVM_ABI void reserve(unsigned EltCount, const FoldingSetInfo &Info);
+  LLVM_ABI void reserve(unsigned EltCount);
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -406,8 +411,7 @@ protected:
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
-  LLVM_ABI void InsertNode(Node *N, void *InsertPos,
-                           const FoldingSetInfo &Info);
+  LLVM_ABI void InsertNode(Node *N, void *InsertPos);
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -514,9 +518,7 @@ public:
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
-  void reserve(unsigned EltCount) {
-    FoldingSetBase::reserve(EltCount, getFoldingSetInfo());
-  }
+  void reserve(unsigned EltCount) { FoldingSetBase::reserve(EltCount); }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -540,7 +542,7 @@ public:
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
   void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos, getFoldingSetInfo());
+    FoldingSetBase::InsertNode(N, InsertPos);
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
