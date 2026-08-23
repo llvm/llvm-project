@@ -90,7 +90,7 @@ enum class __property : uint8_t {
 /// The entries of the indic conjunct break property table.
 ///
 /// The data is generated from
-/// -  https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
+/// -  https://www.unicode.org/Public/18.0.0/ucd/DerivedCoreProperties.txt
 ///
 /// The data has 3 values
 /// - bits [0, 1] The property. One of the values generated from the datafiles
@@ -107,7 +107,7 @@ enum class __property : uint8_t {
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
 // clang-format off
-_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[485] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[483] = {
     0x001801bd,
     0x00241819,
     0x002c88b1,
@@ -547,8 +547,6 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[485] = {
     0x0b096809,
     0x0b578011,
     0x0b598019,
-    0x0b6cc001,
-    0x0b6ce801,
     0x0b7a7801,
     0x0b7c780d,
     0x0b7f2001,
