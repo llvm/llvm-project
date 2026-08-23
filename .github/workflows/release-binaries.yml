@@ -240,6 +240,7 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Set Build Prefix
+      id: setup-stage
       background: true
       shell: bash
       run: |
