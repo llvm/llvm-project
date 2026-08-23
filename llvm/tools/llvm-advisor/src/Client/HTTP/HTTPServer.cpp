@@ -1544,8 +1544,7 @@ void HTTPServer::shutdown() {
 // --- Server Run ---
 
 Error llvm::advisor::HTTPServer::run() {
-  if (Port == 0)
-    return createStringError(inconvertibleErrorCode(), "invalid port");
+  // Port 0 is allowed: the OS will assign an ephemeral port and we log it.
 
   // Load optional auth token from environment
   if (const char *EnvTok = std::getenv("LLVM_ADVISOR_TOKEN"))
@@ -1576,6 +1575,16 @@ Error llvm::advisor::HTTPServer::run() {
     ::close(ListenFD);
     return createStringError(inconvertibleErrorCode(), "listen failed: %s",
                              std::strerror(errno));
+  }
+
+  // Log the actual bound port so tests can discover it when port 0 is used.
+  {
+    sockaddr_in BoundAddr{};
+    socklen_t BoundLen = sizeof(BoundAddr);
+    if (::getsockname(ListenFD, reinterpret_cast<sockaddr *>(&BoundAddr),
+                      &BoundLen) == 0)
+      errs() << formatv("llvm-advisor HTTP server listening on 127.0.0.1:{0}\n",
+                        ntohs(BoundAddr.sin_port));
   }
 
   // Self-pipe for graceful shutdown

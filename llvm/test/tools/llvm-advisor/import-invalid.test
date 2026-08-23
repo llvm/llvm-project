@@ -1,0 +1,6 @@
+# Test import error handling for a malformed remark file.
+# RUN: rm -rf %t.store
+# RUN: not llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/invalid.opt.yaml 2>&1 | FileCheck %s
+
+# CHECK: failed to parse remark file
+# CHECK: Automatic detection of remark format failed

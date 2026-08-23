@@ -1,0 +1,7 @@
+# Test that import infers the source root from remark paths when none is given.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities %S/Inputs/example.opt.yaml --store %t.store 2>&1 | FileCheck %s --check-prefix=CREATE
+# RUN: llvm-advisor list --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store | FileCheck %s --check-prefix=INFEROOT
+
+# CREATE: Snapshot {{[0-9a-f]+}} created — 1 file(s)
+# INFEROOT: {{[0-9a-f]+}} {{.*}}/Inputs

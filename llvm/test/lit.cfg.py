@@ -325,6 +325,7 @@ tools.extend(
         "sancov",
         "sanstats",
         "llvm-remarkutil",
+        "llvm-advisor",
     ]
 )
 

@@ -1,0 +1,8 @@
+# Test import error handling for missing and empty remark files.
+# RUN: rm -rf %t.store
+# RUN: not llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/does-not-exist.opt.yaml 2>&1 | FileCheck %s --check-prefix=MISSING
+# RUN: %python -c "open('%t.empty', 'w').close()"
+# RUN: not llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %t.empty 2>&1 | FileCheck %s --check-prefix=EMPTY
+
+# MISSING: remark file does not exist:
+# EMPTY: contains no remarks

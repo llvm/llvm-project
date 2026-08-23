@@ -1,0 +1,12 @@
+# Test snapshot compare via the CLI.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/example.opt.yaml >/dev/null 2>&1
+# RUN: llvm-advisor compare --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --before latest --after latest 2>&1 | FileCheck %s
+
+# CHECK: "base_snapshot_id":
+# CHECK: "candidate_snapshot_id":
+# CHECK: "match_summary":{
+# CHECK: "added":0
+# CHECK: "matched":1
+# CHECK: "unit_changes":[
+# CHECK: "match_type":"matched"
