@@ -113,7 +113,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
-* Added experimental MC support for the ACLIC v0.20 extensions.
+* Added experimental MC support for the ACLIC v0.20 extensions: `Smidctrl`,
+  `Ssidctrl`, `Smnip`, `Ssnip`, `Smijt`, `Ssijt`, `Smehv`, `Ssehv`, `Smcsps`,
+  `Sscsps`, `Smip`, and `Ssip`.
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
 * Bump Svukte extension to 1.0.
