@@ -14,15 +14,15 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_1]]
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_3]]
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
@@ -37,17 +37,17 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -6629298651489370112
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[S_MOV_B]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[S_MOV_B]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 9
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_]]
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
@@ -65,15 +65,15 @@ define amdgpu_ps ptr addrspace(8) @large_num_records_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_1]]
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_3]]
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
@@ -88,17 +88,17 @@ define amdgpu_ps ptr addrspace(8) @large_num_records_raw_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -6629298651489370112
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[S_MOV_B]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[S_MOV_B]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 33554441
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_]]
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
@@ -116,15 +116,15 @@ define amdgpu_ps ptr addrspace(8) @overflow_num_records_raw_buffer(ptr inreg %p)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_1]]
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_3]]
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
@@ -139,17 +139,17 @@ define amdgpu_ps ptr addrspace(8) @overflow_num_records_raw_buffer(ptr inreg %p)
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -144115188075855872
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[S_MOV_B]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[S_MOV_B]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_]]
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
@@ -169,13 +169,13 @@ define amdgpu_ps ptr addrspace(8) @num_records_i16_raw_buffer(ptr inreg %p, i16 
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_]], [[COPY1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_]], [[COPY1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], killed [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_1]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
@@ -186,42 +186,84 @@ define amdgpu_ps ptr addrspace(8) @num_records_i16_raw_buffer(ptr inreg %p, i16 
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
-  ; CHECK45-LABEL: name: num_records_i16_raw_buffer
-  ; CHECK45: bb.0 (%ir-block.0):
-  ; CHECK45-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
-  ; CHECK45-NEXT: {{  $}}
-  ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-  ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-  ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[COPY1]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY4]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK45-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_2]], [[COPY1]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; CHECK45-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[S_AND_B32_]], [[S_MOV_B32_3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_4]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_1]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
-  ; CHECK45-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
-  ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; FAKE16-LABEL: name: num_records_i16_raw_buffer
+  ; FAKE16: bb.0 (%ir-block.0):
+  ; FAKE16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; FAKE16-NEXT: {{  $}}
+  ; FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; FAKE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[COPY1]]
+  ; FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; FAKE16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY4]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE1]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
+  ; FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; FAKE16-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_2]], [[COPY1]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; FAKE16-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; FAKE16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_1]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+  ; FAKE16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY9]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY10]], implicit $exec
+  ; FAKE16-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; FAKE16-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; FAKE16-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; FAKE16-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; FAKE16-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ;
+  ; REAL16-LABEL: name: num_records_i16_raw_buffer
+  ; REAL16: bb.0 (%ir-block.0):
+  ; REAL16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; REAL16-NEXT: {{  $}}
+  ; REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; REAL16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; REAL16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; REAL16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; REAL16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; REAL16-NEXT:   [[COPY5:%[0-9]+]]:vgpr_16 = COPY [[COPY4]].lo16
+  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY5]], %subreg.lo16, killed [[DEF]], %subreg.hi16
+  ; REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]]
+  ; REAL16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY6]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE2]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
+  ; REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; REAL16-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_2]], [[COPY1]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; REAL16-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; REAL16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY8]], implicit $exec
+  ; REAL16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_1]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY9]], implicit $exec
+  ; REAL16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+  ; REAL16-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY11]], implicit $exec
+  ; REAL16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec
+  ; REAL16-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; REAL16-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; REAL16-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; REAL16-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; REAL16-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i16(ptr %p, i16 0, i16 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc
 }
@@ -236,9 +278,9 @@ define amdgpu_ps ptr addrspace(8) @num_records_i32_raw_buffer(ptr inreg %p, i32 
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
@@ -261,24 +303,24 @@ define amdgpu_ps ptr addrspace(8) @num_records_i32_raw_buffer(ptr inreg %p, i32 
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY1]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE1]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_2]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; CHECK45-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_3]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], killed [[S_MOV_B32_3]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
   ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_1]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
   ; CHECK45-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY9]], implicit $exec
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_1]]
@@ -296,10 +338,10 @@ define amdgpu_ps float @read_raw_buffer(ptr addrspace(1) inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_1]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed [[REG_SEQUENCE]], [[S_MOV_B32_1]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -313,8 +355,8 @@ define amdgpu_ps float @read_raw_buffer(ptr addrspace(1) inreg %p) {
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET [[REG_SEQUENCE1]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE1]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK45-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %p, i16 0, i64 0, i32 0)
@@ -330,17 +372,17 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_4]]
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_3]]
@@ -355,17 +397,17 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -6629298651489370112
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[S_MOV_B]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[S_MOV_B]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 9
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_]]
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536854528
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
@@ -386,16 +428,16 @@ define amdgpu_ps ptr addrspace(8) @variable_top_half(ptr inreg %p, i64 inreg %nu
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[DEF]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[DEF]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
@@ -418,34 +460,34 @@ define amdgpu_ps ptr addrspace(8) @variable_top_half(ptr inreg %p, i64 inreg %nu
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
   ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_]], %subreg.sub1
+  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; CHECK45-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], killed [[S_MOV_B32_2]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
-  ; CHECK45-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], [[S_MOV_B]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_AND_B64_]], [[REG_SEQUENCE2]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], killed [[S_MOV_B]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_AND_B64_]], killed [[REG_SEQUENCE2]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 70368744177664
-  ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY [[S_MOV_B1]]
-  ; CHECK45-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_OR_B64_]], [[COPY5]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY killed [[S_MOV_B1]]
+  ; CHECK45-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_OR_B64_]], killed [[COPY5]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
   ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
   ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY7]], [[S_MOV_B32_3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[REG_SEQUENCE3]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY7]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_1]], %subreg.sub1
+  ; CHECK45-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE3]], implicit-def dead $scc
   ; CHECK45-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
   ; CHECK45-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY9]], implicit $exec
   ; CHECK45-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY10]], implicit $exec
   ; CHECK45-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec
   ; CHECK45-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
   ; CHECK45-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY14]], implicit $exec
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
@@ -467,16 +509,16 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[DEF]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[DEF]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY3]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], 16, implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_LSHL_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY6]], implicit $exec
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
@@ -487,54 +529,108 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
-  ; CHECK45-LABEL: name: general_case
-  ; CHECK45: bb.0 (%ir-block.0):
-  ; CHECK45-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
-  ; CHECK45-NEXT: {{  $}}
-  ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
-  ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-  ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-  ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-  ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 12
-  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY6]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; CHECK45-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
-  ; CHECK45-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], [[S_MOV_B]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_AND_B64_]], [[REG_SEQUENCE2]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_OR_B64_]], [[REG_SEQUENCE3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
-  ; CHECK45-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; CHECK45-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; CHECK45-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY8]], [[S_MOV_B32_4]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_2]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[REG_SEQUENCE4]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
-  ; CHECK45-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
-  ; CHECK45-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
-  ; CHECK45-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
-  ; CHECK45-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY14]]
-  ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY15]], implicit $exec
-  ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
-  ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; FAKE16-LABEL: name: general_case
+  ; FAKE16: bb.0 (%ir-block.0):
+  ; FAKE16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
+  ; FAKE16-NEXT: {{  $}}
+  ; FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
+  ; FAKE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
+  ; FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY3]]
+  ; FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 12
+  ; FAKE16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY6]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; FAKE16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], killed [[S_MOV_B32_2]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
+  ; FAKE16-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], killed [[S_MOV_B]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_AND_B64_]], killed [[REG_SEQUENCE2]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; FAKE16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_1]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_OR_B64_]], killed [[REG_SEQUENCE3]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
+  ; FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; FAKE16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; FAKE16-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY8]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_2]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE4]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
+  ; FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY10]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY11]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+  ; FAKE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY12]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY13]], implicit $exec
+  ; FAKE16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; FAKE16-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY14]]
+  ; FAKE16-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY15]], implicit $exec
+  ; FAKE16-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; FAKE16-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; FAKE16-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; FAKE16-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; FAKE16-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ;
+  ; REAL16-LABEL: name: general_case
+  ; REAL16: bb.0 (%ir-block.0):
+  ; REAL16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
+  ; REAL16-NEXT: {{  $}}
+  ; REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
+  ; REAL16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
+  ; REAL16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; REAL16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; REAL16-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; REAL16-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; REAL16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; REAL16-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[COPY6]].lo16
+  ; REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; REAL16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
+  ; REAL16-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], killed [[S_MOV_B]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY7]], %subreg.lo16, killed [[DEF]], %subreg.hi16
+  ; REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 12
+  ; REAL16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]]
+  ; REAL16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY8]], killed [[S_MOV_B32_1]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_AND_B64_]], killed [[REG_SEQUENCE3]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; REAL16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, killed [[S_LSHL_B32_1]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_OR_B64_]], killed [[REG_SEQUENCE4]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
+  ; REAL16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; REAL16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; REAL16-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY10]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, killed [[S_LSHL_B32_2]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], killed [[REG_SEQUENCE5]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
+  ; REAL16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec
+  ; REAL16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY13]], implicit $exec
+  ; REAL16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+  ; REAL16-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY14]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY15]], implicit $exec
+  ; REAL16-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; REAL16-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY16]]
+  ; REAL16-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY17]], implicit $exec
+  ; REAL16-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; REAL16-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; REAL16-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; REAL16-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; REAL16-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 %stride, i64 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc
 }
@@ -551,59 +647,105 @@ define amdgpu_ps float @general_case_load(ptr inreg %p, i16 inreg %stride, i64 i
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[DEF]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[DEF]], %subreg.sub1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY3]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], 16, implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_LSHL_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY]], %subreg.sub3
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, killed [[S_OR_B32_]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[COPY6]], [[REG_SEQUENCE1]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[COPY6]], killed [[REG_SEQUENCE1]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
-  ; CHECK45-LABEL: name: general_case_load
-  ; CHECK45: bb.0 (%ir-block.0):
-  ; CHECK45-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
-  ; CHECK45-NEXT: {{  $}}
-  ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
-  ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-  ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-  ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-  ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY3]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 12
-  ; CHECK45-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY6]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; CHECK45-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
-  ; CHECK45-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_LSHR_B64_]], [[S_MOV_B]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_AND_B64_]], [[REG_SEQUENCE2]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; CHECK45-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_OR_B64_]], [[REG_SEQUENCE3]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
-  ; CHECK45-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub0
-  ; CHECK45-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; CHECK45-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; CHECK45-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY9]], [[S_MOV_B32_4]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_LSHL_B32_2]], %subreg.sub1
-  ; CHECK45-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 [[REG_SEQUENCE]], [[REG_SEQUENCE4]], implicit-def dead $scc
-  ; CHECK45-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
-  ; CHECK45-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY10]], %subreg.sub1, [[COPY8]], %subreg.sub2, [[COPY7]], %subreg.sub3
-  ; CHECK45-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
-  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY12]], [[REG_SEQUENCE5]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; CHECK45-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN]]
-  ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  ; FAKE16-LABEL: name: general_case_load
+  ; FAKE16: bb.0 (%ir-block.0):
+  ; FAKE16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
+  ; FAKE16-NEXT: {{  $}}
+  ; FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
+  ; FAKE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
+  ; FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY3]]
+  ; FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 12
+  ; FAKE16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY6]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; FAKE16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], killed [[S_MOV_B32_2]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
+  ; FAKE16-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 killed [[S_LSHR_B64_]], killed [[S_MOV_B]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_AND_B64_]], killed [[REG_SEQUENCE2]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; FAKE16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_1]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_OR_B64_]], killed [[REG_SEQUENCE3]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub1
+  ; FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_1]].sub0
+  ; FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; FAKE16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; FAKE16-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY9]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_2]], %subreg.sub1
+  ; FAKE16-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[REG_SEQUENCE]], killed [[REG_SEQUENCE4]], implicit-def dead $scc
+  ; FAKE16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
+  ; FAKE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub0
+  ; FAKE16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY11]], %subreg.sub0, killed [[COPY10]], %subreg.sub1, killed [[COPY8]], %subreg.sub2, killed [[COPY7]], %subreg.sub3
+  ; FAKE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+  ; FAKE16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY12]], killed [[REG_SEQUENCE5]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; FAKE16-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN]]
+  ; FAKE16-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  ;
+  ; REAL16-LABEL: name: general_case_load
+  ; REAL16: bb.0 (%ir-block.0):
+  ; REAL16-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
+  ; REAL16-NEXT: {{  $}}
+  ; REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr5
+  ; REAL16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr4
+  ; REAL16-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr3
+  ; REAL16-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+  ; REAL16-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; REAL16-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; REAL16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; REAL16-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[COPY6]].lo16
+  ; REAL16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
+  ; REAL16-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY8]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[REG_SEQUENCE]], killed [[REG_SEQUENCE2]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub1
+  ; REAL16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_]].sub0
+  ; REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
+  ; REAL16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[REG_SEQUENCE1]], killed [[S_MOV_B32_2]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 274877906943
+  ; REAL16-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 killed [[S_LSHR_B64_]], killed [[S_MOV_B]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY7]], %subreg.lo16, killed [[DEF]], %subreg.hi16
+  ; REAL16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 12
+  ; REAL16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE3]]
+  ; REAL16-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32 = S_LSHL_B32 killed [[COPY11]], killed [[S_MOV_B32_3]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_1]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_AND_B64_]], killed [[REG_SEQUENCE4]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 28
+  ; REAL16-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], killed [[S_MOV_B32_4]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, killed [[S_LSHL_B32_2]], %subreg.sub1
+  ; REAL16-NEXT:   [[S_OR_B64_2:%[0-9]+]]:sreg_64 = S_OR_B64 killed [[S_OR_B64_1]], killed [[REG_SEQUENCE5]], implicit-def dead $scc
+  ; REAL16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub1
+  ; REAL16-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[S_OR_B64_2]].sub0
+  ; REAL16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY10]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, killed [[COPY13]], %subreg.sub2, killed [[COPY12]], %subreg.sub3
+  ; REAL16-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+  ; REAL16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY14]], killed [[REG_SEQUENCE6]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; REAL16-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN]]
+  ; REAL16-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 %stride, i64 %numVals, i32 %flags)
   %value = call float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
   ret float %value
@@ -622,16 +764,16 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[DEF]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[DEF]], %subreg.sub1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY3]], [[S_MOV_B32_]], implicit $exec
-  ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[COPY2]], 16, [[V_AND_B32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY3]], killed [[S_MOV_B32_]], implicit $exec
+  ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[COPY2]], 16, killed [[V_AND_B32_e64_]], implicit $exec
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[V_LSHL_OR_B32_e64_]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY]], %subreg.sub3
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, killed [[V_LSHL_OR_B32_e64_]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_128 = COPY [[REG_SEQUENCE1]]
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[COPY6]], [[COPY7]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[COPY6]], killed [[COPY7]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -651,43 +793,43 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_]], [[COPY7]], implicit $exec
+  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_]], [[COPY7]], implicit $exec
   ; FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub1
-  ; FAKE16-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY8]], [[COPY9]], implicit $exec
+  ; FAKE16-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY8]], killed [[COPY9]], implicit $exec
   ; FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; FAKE16-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub0
-  ; FAKE16-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY10]], [[COPY11]], implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR_B32_e64_1]], %subreg.sub0, [[V_OR_B32_e64_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY10]], killed [[COPY11]], implicit $exec
+  ; FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_OR_B32_e64_1]], %subreg.sub0, killed [[V_OR_B32_e64_]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE3]].sub1
   ; FAKE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE3]].sub0
   ; FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 8191
-  ; FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY6]], [[S_MOV_B32_1]], implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed [[COPY6]], killed [[S_MOV_B32_1]], implicit $exec
+  ; FAKE16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY7]], %subreg.sub0, killed [[V_AND_B32_e64_]], %subreg.sub1
   ; FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; FAKE16-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[S_MOV_B32_2]], [[REG_SEQUENCE4]], implicit $exec
+  ; FAKE16-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_2]], killed [[REG_SEQUENCE4]], implicit $exec
   ; FAKE16-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub1
   ; FAKE16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_3]], [[COPY]], implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_1]], %subreg.sub1
+  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_3]], [[COPY]], implicit $exec
+  ; FAKE16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_1]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub1
   ; FAKE16-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; FAKE16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 12
-  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_4]], [[COPY16]], implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_2]], %subreg.sub1
+  ; FAKE16-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_4]], killed [[COPY16]], implicit $exec
+  ; FAKE16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_2]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE6]].sub1
-  ; FAKE16-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY14]], [[COPY17]], [[COPY15]], implicit $exec
+  ; FAKE16-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 killed [[COPY14]], killed [[COPY17]], killed [[COPY15]], implicit $exec
   ; FAKE16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; FAKE16-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub0
   ; FAKE16-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE6]].sub0
-  ; FAKE16-NEXT:   [[V_OR3_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY18]], [[COPY20]], [[COPY19]], implicit $exec
-  ; FAKE16-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR3_B32_e64_1]], %subreg.sub0, [[V_OR3_B32_e64_]], %subreg.sub1
+  ; FAKE16-NEXT:   [[V_OR3_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 killed [[COPY18]], killed [[COPY20]], killed [[COPY19]], implicit $exec
+  ; FAKE16-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_OR3_B32_e64_1]], %subreg.sub0, killed [[V_OR3_B32_e64_]], %subreg.sub1
   ; FAKE16-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE7]].sub1
   ; FAKE16-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE7]].sub0
-  ; FAKE16-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1, [[COPY22]], %subreg.sub2, [[COPY21]], %subreg.sub3
+  ; FAKE16-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY13]], %subreg.sub0, killed [[COPY12]], %subreg.sub1, killed [[COPY22]], %subreg.sub2, killed [[COPY21]], %subreg.sub3
   ; FAKE16-NEXT:   [[COPY23:%[0-9]+]]:sgpr_128 = COPY [[REG_SEQUENCE8]]
-  ; FAKE16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[V_MOV_B32_e32_]], [[COPY23]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; FAKE16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[V_MOV_B32_e32_]], killed [[COPY23]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; FAKE16-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN]]
   ; FAKE16-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -707,45 +849,45 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 25
-  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_]], [[COPY7]], implicit $exec
+  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_]], [[COPY7]], implicit $exec
   ; REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_]], %subreg.sub1
+  ; REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub1
-  ; REAL16-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY8]], [[COPY9]], implicit $exec
+  ; REAL16-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY8]], killed [[COPY9]], implicit $exec
   ; REAL16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; REAL16-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE2]].sub0
-  ; REAL16-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY10]], [[COPY11]], implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR_B32_e64_1]], %subreg.sub0, [[V_OR_B32_e64_]], %subreg.sub1
+  ; REAL16-NEXT:   [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[COPY10]], killed [[COPY11]], implicit $exec
+  ; REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_OR_B32_e64_1]], %subreg.sub0, killed [[V_OR_B32_e64_]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE3]].sub1
   ; REAL16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE3]].sub0
   ; REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 8191
-  ; REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY6]], [[S_MOV_B32_1]], implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
+  ; REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed [[COPY6]], killed [[S_MOV_B32_1]], implicit $exec
+  ; REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY7]], %subreg.sub0, killed [[V_AND_B32_e64_]], %subreg.sub1
   ; REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
-  ; REAL16-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[S_MOV_B32_2]], [[REG_SEQUENCE4]], implicit $exec
+  ; REAL16-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 killed [[S_MOV_B32_2]], killed [[REG_SEQUENCE4]], implicit $exec
   ; REAL16-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub1
   ; REAL16-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_3]], [[COPY]], implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_1]], %subreg.sub1
+  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_3]], [[COPY]], implicit $exec
+  ; REAL16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_1]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub1
-  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; REAL16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY3]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY3]], %subreg.lo16, killed [[DEF]], %subreg.hi16
   ; REAL16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 12
-  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_4]], [[REG_SEQUENCE6]], implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_LSHLREV_B32_e64_2]], %subreg.sub1
+  ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_4]], killed [[REG_SEQUENCE6]], implicit $exec
+  ; REAL16-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_2]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE7]].sub1
-  ; REAL16-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY14]], [[COPY16]], [[COPY15]], implicit $exec
+  ; REAL16-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 killed [[COPY14]], killed [[COPY16]], killed [[COPY15]], implicit $exec
   ; REAL16-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; REAL16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub0
   ; REAL16-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE7]].sub0
-  ; REAL16-NEXT:   [[V_OR3_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY17]], [[COPY19]], [[COPY18]], implicit $exec
-  ; REAL16-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR3_B32_e64_1]], %subreg.sub0, [[V_OR3_B32_e64_]], %subreg.sub1
+  ; REAL16-NEXT:   [[V_OR3_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 killed [[COPY17]], killed [[COPY19]], killed [[COPY18]], implicit $exec
+  ; REAL16-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_OR3_B32_e64_1]], %subreg.sub0, killed [[V_OR3_B32_e64_]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE8]].sub1
   ; REAL16-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE8]].sub0
-  ; REAL16-NEXT:   [[REG_SEQUENCE9:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1, [[COPY21]], %subreg.sub2, [[COPY20]], %subreg.sub3
+  ; REAL16-NEXT:   [[REG_SEQUENCE9:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY13]], %subreg.sub0, killed [[COPY12]], %subreg.sub1, killed [[COPY21]], %subreg.sub2, killed [[COPY20]], %subreg.sub3
   ; REAL16-NEXT:   [[COPY22:%[0-9]+]]:sgpr_128 = COPY [[REG_SEQUENCE9]]
-  ; REAL16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[V_MOV_B32_e32_]], [[COPY22]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; REAL16-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[V_MOV_B32_e32_]], killed [[COPY22]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; REAL16-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN]]
   ; REAL16-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 %stride, i64 %numVals, i32 %flags)
@@ -761,10 +903,10 @@ define amdgpu_ps float @read_buffer_fat_ptr_p0(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -778,8 +920,8 @@ define amdgpu_ps float @read_buffer_fat_ptr_p0(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET [[REG_SEQUENCE1]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE1]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
   ; CHECK45-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ptr = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p0.i64(ptr %p, i16 0, i64 0, i32 0)
@@ -795,10 +937,10 @@ define amdgpu_ps float @read_buffer_fat_ptr_p1(ptr addrspace(1) inreg %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, killed [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -812,8 +954,8 @@ define amdgpu_ps float @read_buffer_fat_ptr_p1(ptr addrspace(1) inreg %p) {
   ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET [[REG_SEQUENCE1]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE1]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
   ; CHECK45-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ptr = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %p, i16 0, i64 0, i32 0)

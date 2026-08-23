@@ -14,35 +14,35 @@ define amdgpu_kernel void @fma_v2f16_divergent(
   ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 68, 0 :: (dereferenceable invariant load (s32) from %ir.d.kernarg.offset, addrspace 4)
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
   ; GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
-  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
   ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
   ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
-  ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
   ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
-  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1
   ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
-  ; GFX11-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
+  ; GFX11-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), killed [[S_MOV_B32_]], implicit $exec
   ; GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; GFX11-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GFX11-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.f.gep, addrspace 1)
+  ; GFX11-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 killed [[REG_SEQUENCE1]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.f.gep, addrspace 1)
   ; GFX11-NEXT:   [[V_AND_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_AND_B16_t16_e64 0, 32767, 0, [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, implicit $exec
   ; GFX11-NEXT:   [[V_XOR_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_XOR_B16_t16_e64 0, -32768, 0, [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, implicit $exec
   ; GFX11-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX11-NEXT:   S_CMP_LG_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_2]], implicit-def $scc
+  ; GFX11-NEXT:   S_CMP_LG_U32 killed [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
-  ; GFX11-NEXT:   [[V_CNDMASK_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CNDMASK_B16_t16_e64 0, [[V_XOR_B16_t16_e64_]], 0, [[V_AND_B16_t16_e64_]], [[COPY10]], 0, implicit $exec
-  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CNDMASK_B16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
-  ; GFX11-NEXT:   [[V_PK_FMA_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_FMA_F16 0, [[REG_SEQUENCE4]], 8, [[S_LOAD_DWORD_IMM1]], 8, [[S_LOAD_DWORD_IMM2]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_PK_FMA_F16_]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-NEXT:   [[V_CNDMASK_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CNDMASK_B16_t16_e64 0, killed [[V_XOR_B16_t16_e64_]], 0, killed [[V_AND_B16_t16_e64_]], killed [[COPY10]], 0, implicit $exec
+  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_CNDMASK_B16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
+  ; GFX11-NEXT:   [[V_PK_FMA_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_FMA_F16 0, killed [[REG_SEQUENCE4]], 8, killed [[S_LOAD_DWORD_IMM1]], 8, killed [[S_LOAD_DWORD_IMM2]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_PK_FMA_F16_]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
       ptr addrspace(1) %r,
     ptr addrspace(1) %fptr,
@@ -77,25 +77,28 @@ define amdgpu_kernel void @fma_v2f16_uniform(
   ; GFX11-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.r.kernarg.offset, align 4, addrspace 4)
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
-  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY2]], %subreg.sub0, killed [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
   ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
   ; GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
-  ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
+  ; GFX11-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY6]], %subreg.sub0, killed [[COPY5]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
   ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
-  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX11-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.3, addrspace 1)
-  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]]
-  ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY9]]
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
-  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORD_IMM1]]
-  ; GFX11-NEXT:   [[V_PK_FMA_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_FMA_F16 0, [[S_MOV_B32_]], 8, [[S_LOAD_DWORD_IMM]], 8, [[COPY10]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_PK_FMA_F16_]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1
+  ; GFX11-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 killed [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.3, addrspace 1)
+  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
+  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:sgpr_32 = COPY killed [[REG_SEQUENCE4]]
+  ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[COPY9]]
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
+  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed [[S_LOAD_DWORD_IMM1]]
+  ; GFX11-NEXT:   [[V_PK_FMA_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_FMA_F16 0, killed [[S_MOV_B32_]], 8, killed [[S_LOAD_DWORD_IMM]], 8, [[COPY10]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], killed [[V_PK_FMA_F16_]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
       ptr addrspace(1) %r,
     ptr addrspace(1) %a,
