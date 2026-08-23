@@ -23,7 +23,7 @@ struct S {};
 template <>
 struct std::compare_three_way_result<S>; // expected-error {{cannot be specialized}}
 
-#  if TEST_STD_VER > 23
+#  if TEST_STD_VER > 23 && __has_builtin(__builtin_type_order)
 template <>
 struct std::type_order<int, int>; // expected-error {{cannot be specialized}}
 
