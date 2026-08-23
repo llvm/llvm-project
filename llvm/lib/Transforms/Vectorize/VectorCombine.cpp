@@ -1834,6 +1834,80 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   return ScalarizationResult::unsafe();
 }
 
+/// Return the GEP index type if the unsigned vector index \p Idx can be
+/// represented by an inbounds GEP. A null result means that the maximum byte
+/// offset cannot be represented by the pointer's signed GEP index type.
+///
+///   unsigned lane range
+///                |
+///                v
+///   MaxByteOffset = MaxLane * element store size
+///                |
+///                +-- unavailable or outside signed GEP range --> reject
+///                |
+///                v
+///   valid range --> use the pointer's GEP index type
+static IntegerType *getScalarizedGEPIndexInfo(VectorType *VecTy, Value *Idx,
+                                              Type *PtrTy,
+                                              const DataLayout &DL) {
+  auto *GEPIndexTy = cast<IntegerType>(DL.getIndexType(PtrTy));
+  unsigned GEPBits = GEPIndexTy->getBitWidth();
+  uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+
+  uint64_t MaxLane = NumElements - 1;
+  if (auto *C = dyn_cast<ConstantInt>(Idx)) {
+    if (C->getValue().uge(NumElements))
+      return nullptr;
+    MaxLane = C->getZExtValue();
+  }
+
+  Type *ElemTy = VecTy->getElementType();
+  if (!DL.typeSizeEqualsStoreSize(ElemTy))
+    return nullptr;
+
+  TypeSize ElemStride = DL.getTypeStoreSize(ElemTy);
+  if (ElemStride.isScalable())
+    return nullptr;
+
+  // Compare both values in a common width:
+  //
+  //   MaxLane (uint64_t) * ElemStride (uint64_t)   signed_max(GEPBits)
+  //                         |                               |
+  //                         v                               v
+  //             ByteOffset (up to 128 bits)        sext to WideBits
+  //                         \                               /
+  //                          +------------ ugt ------------+
+  //                                       |
+  //                                greater -> reject
+  //
+  // WideBits = max(GEPBits, 128) prevents the multiplication from wrapping
+  // and preserves the GEP limit during the comparison.
+  unsigned WideBits = std::max(GEPBits, 128u);
+  APInt MaxLaneValue(WideBits, MaxLane);
+  APInt ByteOffset = MaxLaneValue;
+  ByteOffset *= APInt(WideBits, ElemStride.getFixedValue());
+  APInt MaxGEPOffset = APInt::getSignedMaxValue(GEPBits).sext(WideBits);
+  // Reject offsets outside the GEP's positive signed range. Compare as
+  // unsigned because the full 128-bit product may set its sign bit.
+  if (ByteOffset.ugt(MaxGEPOffset))
+    return nullptr;
+
+  return GEPIndexTy;
+}
+
+/// Materialize an index for a scalarized GEP after profitability is known.
+/// Vector element indices are unsigned, but GEP sign-extends narrow integer
+/// indices. Widen a narrow index explicitly so its unsigned value is retained.
+static Value *materializeScalarizedGEPIndex(Value *Idx, IntegerType *GEPIndexTy,
+                                            IRBuilderBase &Builder) {
+  unsigned SrcBits = Idx->getType()->getIntegerBitWidth();
+  unsigned DstBits = GEPIndexTy->getBitWidth();
+  if (SrcBits >= DstBits)
+    return Idx;
+
+  return Builder.CreateZExt(Idx, GEPIndexTy, Idx->getName() + ".gepidx");
+}
+
 /// The memory operation on a vector of \p ScalarType had alignment of
 /// \p VectorAlignment. Compute the maximal, but conservatively correct,
 /// alignment that will be valid for the memory operation on a single scalar
@@ -1890,15 +1964,23 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     if (ScalarizableIdx.isUnsafe())
       return false;
 
+    auto GEPIndex =
+        getScalarizedGEPIndexInfo(VecTy, Idx, SI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarizableIdx.discard();
+      return false;
+    }
+
     // Ensure we add the load back to the worklist BEFORE its users so they can
     // erased in the correct order.
     Worklist.push(Load);
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndex, Builder);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
-        {ConstantInt::get(Idx->getType(), 0), Idx});
+        {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
     NSI->copyMetadata(*SI);
     // The new GEP may change the pointer operand, so !invariant.group cannot
@@ -1982,6 +2064,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     return false;
 
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  DenseMap<ExtractElementInst *, IntegerType *> GEPIndexInfos;
   llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
@@ -2000,6 +2083,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                                         SQ.getWithInstruction(LI));
     if (ScalarIdx.isUnsafe())
       return false;
+
+    IntegerType *GEPIndex = getScalarizedGEPIndexInfo(
+        VecTy, UI->getIndexOperand(), LI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarIdx.discard();
+      return false;
+    }
+
+    GEPIndexInfos.try_emplace(UI, GEPIndex);
+
     if (ScalarIdx.isSafeWithFreeze()) {
       NeedFreeze.try_emplace(UI, ScalarIdx);
       ScalarIdx.discard();
@@ -2014,6 +2107,11 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                             Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
                                                     nullptr, nullptr, CostKind);
+    if (!Index && UI->getIndexOperand()->getType()->getIntegerBitWidth() <
+                      GEPIndex->getBitWidth())
+      ScalarizedCost += TTI.getCastInstrCost(
+          Instruction::ZExt, GEPIndex, UI->getIndexOperand()->getType(),
+          TTI::CastContextHint::None, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << *LI
@@ -2035,13 +2133,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(EI);
-    if (It != NeedFreeze.end())
+    if (auto It = NeedFreeze.find(EI); It != NeedFreeze.end())
       It->second.freeze(Builder, *cast<Instruction>(Idx));
 
     Builder.SetInsertPoint(EI);
-    Value *GEP =
-        Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
+    auto It = GEPIndexInfos.find(EI);
+    assert(It != GEPIndexInfos.end() &&
+           "Missing scalarized GEP index information");
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, It->second, Builder);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        VecTy, Ptr, {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     auto *NewLoad = cast<LoadInst>(
         Builder.CreateLoad(ElemType, GEP, EI->getName() + ".scalar"));
 

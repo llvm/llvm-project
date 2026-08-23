@@ -9,8 +9,11 @@ define i16 @test_optsize(ptr %p, ptr %inc) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[E0:%.*]] = load i16, ptr [[P]], align 4
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[E0]], 13
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i16 [[E1]], 14
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[TMP0]], i16 [[E1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i16> [[TMP1]], <i16 13, i16 14>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[A:%.*]] = add i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i16 [[A]]
 ;
@@ -30,8 +33,11 @@ define i16 @testc_optsize(ptr %p, ptr %inc) #1 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[E0:%.*]] = load i16, ptr [[P]], align 4
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[E0]], 13
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i16 [[E1]], 14
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[TMP0]], i16 [[E1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i16> [[TMP1]], <i16 13, i16 14>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[A:%.*]] = add i16 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i16 [[A]]
 ;
