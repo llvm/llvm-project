@@ -924,7 +924,7 @@ public:
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
   int kind() const {
-    return common::visit([](auto v) -> int { return v.kind(); }, u);
+    return common::visit([](const auto &v) -> int { return v.kind(); }, u);
   }
 
   common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;

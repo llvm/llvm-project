@@ -31,7 +31,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdio>
 #include <optional>
@@ -58,7 +57,7 @@ public:
   template <typename U = T,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
   explicit Folder(FoldingContext &c, bool forOptionalArgument = false)
-      : Folder(0, c, forOptionalArgument) {}
+      : Folder(/*kind=*/0, c, forOptionalArgument) {}
 
   std::optional<Constant<T>> GetNamedConstant(const Symbol &);
   std::optional<Constant<T>> ApplySubscripts(const Constant<T> &array,
@@ -1919,8 +1918,7 @@ Expr<TO> FoldOperation(
           const int fromKind{value->kind()};
           if constexpr (TO::category == TypeCategory::Integer) {
             if constexpr (FromCat == TypeCategory::Integer) {
-              auto converted{
-                  Scalar<TO>::ConvertSigned(*value, Scalar<TO>::bits(toKind))};
+              auto converted{Scalar<TO>::ConvertSigned(toKind, *value)};
               if (converted.overflow) {
                 ctx.Warn(common::UsageWarning::FoldingException,
                     "conversion of %s_%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
@@ -1929,8 +1927,7 @@ Expr<TO> FoldOperation(
               }
               return MakeConstantExpr<TO>(toKind, std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Unsigned) {
-              auto converted{Scalar<TO>::ConvertUnsigned(
-                  *value, Scalar<TO>::bits(toKind))};
+              auto converted{Scalar<TO>::ConvertUnsigned(toKind, *value)};
               if ((converted.overflow || converted.value.IsNegative())) {
                 ctx.Warn(common::UsageWarning::FoldingException,
                     "conversion of %s_U%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
@@ -1955,9 +1952,8 @@ Expr<TO> FoldOperation(
           } else if constexpr (TO::category == TypeCategory::Unsigned) {
             if constexpr (FromCat == TypeCategory::Integer ||
                 FromCat == TypeCategory::Unsigned) {
-              return MakeConstantExpr<TO>(toKind,
-                  Scalar<TO>::ConvertUnsigned(*value, Scalar<TO>::bits(toKind))
-                      .value);
+              return MakeConstantExpr<TO>(
+                  toKind, Scalar<TO>::ConvertUnsigned(toKind, *value).value);
             } else if constexpr (FromCat == TypeCategory::Real) {
               return MakeConstantExpr<TO>(toKind,
                   value
@@ -2434,9 +2430,8 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
       auto maxLen{std::max(folded->first.length(), folded->second.length())};
       bool isFirst{x.ordering == Compare(folded->first, folded->second)};
       auto res{isFirst ? std::move(folded->first) : std::move(folded->second)};
-      if (res.length() != maxLen) {
-        res = CharacterUtils::Resize(res, maxLen);
-      }
+      res = res.length() == maxLen ? std::move(res)
+                                   : CharacterUtils::Resize(res, maxLen);
       return Expr<T>{Constant<T>{kind, std::move(res)}};
     }
     return Expr<T>{Constant<T>{kind, folded->second}};
@@ -2452,14 +2447,14 @@ inline Expr<Type<TypeCategory::Real>> ToReal(
       [&](auto &&x) {
         using From = std::decay_t<decltype(x)>;
         if constexpr (std::is_same_v<From, BOZLiteralConstant>) {
+          constexpr int fromKind{BOZLiteralConstantKind};
           // Move the bits without any integer->real conversion
-          BOZLiteralConstant original{x};
+          From original{x};
           result = ConvertToType<Result>(kind, std::move(x));
           const auto *constant{UnwrapExpr<Constant<Result>>(*result)};
           CHECK(constant);
           Scalar<Result> real{constant->GetScalarValue().value()};
-          BOZLiteralConstant converted{
-              BOZLiteralConstant::ConvertUnsigned(real.RawBits(), 128).value};
+          From converted{From::ConvertUnsigned(fromKind, real.RawBits()).value};
           if (original != converted) { // C1601
             context.Warn(common::UsageWarning::FoldingValueChecks,
                 "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);

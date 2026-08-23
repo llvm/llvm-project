@@ -25,7 +25,7 @@ namespace parser = Fortran::parser;
 namespace semantics = Fortran::semantics;
 using IntExpr = Expr<SubscriptInteger>;
 
-IntExpr Int(int n) { return IntExpr{n}; }
+IntExpr Int(int n) { return MakeSubscriptIntExpr(n); }
 
 Subscript Scalar(int n) { return Subscript{Int(n)}; }
 

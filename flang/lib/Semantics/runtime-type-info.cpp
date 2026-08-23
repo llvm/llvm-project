@@ -803,7 +803,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (const auto *clamped{evaluate::UnwrapExpr<
             evaluate::Extremum<evaluate::SubscriptInteger>>(*len)}) {
       if (clamped->ordering == evaluate::Ordering::Greater &&
-          clamped->left() == evaluate::MakeSubscriptIntExpr(0)) {
+          clamped->left() == MakeSubscriptIntExpr(0)) {
         len = common::Clone(clamped->right());
       }
     }

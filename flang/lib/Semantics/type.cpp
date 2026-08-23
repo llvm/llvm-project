@@ -23,7 +23,7 @@
 
 namespace Fortran::semantics {
 
-KindExpr MakeKindExpr(int v) { return evaluate::MakeSubscriptIntExpr(v); }
+KindExpr MakeKindExpr(int v) { return MakeSubscriptIntExpr(v); }
 
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
     : name_{name}, originalTypeSymbol_{typeSymbol},
@@ -834,7 +834,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
 }
 
 Bound::Bound(common::ConstantSubscript bound)
-    : expr_{evaluate::MakeSubscriptIntExpr(bound)} {}
+    : expr_{MakeSubscriptIntExpr(bound)} {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
   if (x.isStar()) {
@@ -884,7 +884,7 @@ ParamValue::ParamValue(SomeIntExpr &&expr, common::TypeParamAttr attr)
     : attr_{attr}, expr_{std::move(expr)} {}
 ParamValue::ParamValue(
     common::ConstantSubscript value, common::TypeParamAttr attr)
-    : ParamValue(SomeIntExpr{evaluate::MakeSubscriptIntExpr(value)}, attr) {}
+    : ParamValue(SomeIntExpr{MakeSubscriptIntExpr(value)}, attr) {}
 
 void ParamValue::SetExplicit(SomeIntExpr &&x) {
   category_ = Category::Explicit;

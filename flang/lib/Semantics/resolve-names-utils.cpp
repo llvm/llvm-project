@@ -599,7 +599,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
       }
     }
     Bound lb{lbExpr ? std::move(lbExpr)
-                    : MaybeSubscriptIntExpr{evaluate::MakeSubscriptIntExpr(1)}};
+                    : MaybeSubscriptIntExpr{MakeSubscriptIntExpr(1)}};
     Bound ub{std::move(ubExpr)};
     arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
   }

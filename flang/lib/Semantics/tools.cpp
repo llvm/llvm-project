@@ -46,10 +46,10 @@ AnalyzeSubscriptExpr(SemanticsContext &context, const A &expr) {
             evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
                 maybe)}) {
       if (auto value{evaluate::ToInt64(*intExpr)}) {
-        return evaluate::Expr<evaluate::SubscriptInteger>{*value};
+        return MakeSubscriptIntExpr(*value);
       }
       return evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*intExpr));
+          evaluate::SubscriptIntegerKind, std::move(*intExpr));
     }
   }
   return std::nullopt;

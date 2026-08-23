@@ -18,9 +18,8 @@ template <typename T>
 static std::optional<Expr<SomeType>> ZeroExtend(const Constant<T> &c) {
   std::vector<Scalar<LargestInt>> exts;
   for (const auto &v : c.values()) {
-    exts.push_back(Scalar<LargestInt>::ConvertUnsigned(
-        v, Scalar<LargestInt>::bits(LargestIntKind))
-            .value);
+    exts.push_back(
+        Scalar<LargestInt>::ConvertUnsigned(LargestIntKind, v).value);
   }
   return AsGenericExpr(Constant<LargestInt>{
       LargestIntKind, std::move(exts), ConstantSubscripts{c.shape()}});
@@ -110,7 +109,7 @@ public:
         constResult = AsCategoryExpr(Constant<T>{kind, std::move(diff.value)});
       }
       if (promote) {
-        int nextKind{kind < 4 ? 4 : kind == 4 ? 8 : 16};
+        const int nextKind{kind < 4 ? 4 : kind == 4 ? 8 : 16};
         using T2 = Type<TypeCategory::Real>;
         hi_ = Expr<SomeReal>{
             Fold(context_, ConvertToType<T2>(nextKind, std::move(hi_)))};
@@ -214,8 +213,7 @@ static std::optional<Expr<SomeInteger>> IntToIntBoundHelper(
     using MoldIType = Type<TypeCategory::Integer>;
     using MoldIntegerType = Scalar<MoldIType>;
     return AsCategoryExpr(Constant<XIType>{xIKind,
-        IntegerType::ConvertSigned(
-            MoldIntegerType::HUGE(moldIKind), Scalar<XIType>::bits(xIKind))
+        IntegerType::ConvertSigned(xIKind, MoldIntegerType::HUGE(moldIKind))
             .value});
   }
 }
@@ -666,8 +664,6 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "is_iostat_end") {
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
-      // Int64 used to be Type<Integer,8>; force the argument to that kind as
-      // before.
       using Int64 = Type<TypeCategory::Integer>;
       constexpr int Int64Kind{8};
       return FoldElementalIntrinsic<T, Int64>(kind, {Int64Kind}, context,

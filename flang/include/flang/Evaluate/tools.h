@@ -195,27 +195,6 @@ auto UnwrapExpr(B &x) -> common::Constify<A, B> * {
   }
   return nullptr;
 }
-template <typename A, typename B>
-auto UnwrapExpr(int kind, B &x) -> common::Constify<A, B> * {
-  using Ty = std::decay_t<B>;
-  if (x.kind() != kind)
-    return nullptr;
-  if constexpr (std::is_same_v<A, Ty>) {
-    return &x;
-  } else if constexpr (std::is_same_v<Ty, ActualArgument>) {
-    if (auto *expr{x.UnwrapExpr()}) {
-      return UnwrapExpr<A>(*expr);
-    }
-  } else if constexpr (std::is_same_v<Ty, Expr<SomeType>>) {
-    return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
-  } else if constexpr (!common::HasMember<A, TypelessExpression>) {
-    if constexpr (std::is_same_v<Ty, Expr<ResultType<A>>> ||
-        std::is_same_v<Ty, Expr<SomeKind<ResultType<A>::category>>>) {
-      return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
-    }
-  }
-  return nullptr;
-}
 
 template <typename A, typename B>
 const A *UnwrapExpr(const std::optional<B> &x) {
@@ -225,25 +204,10 @@ const A *UnwrapExpr(const std::optional<B> &x) {
     return nullptr;
   }
 }
-template <typename A, typename B>
-const A *UnwrapExpr(int kind, const std::optional<B> &x) {
-  if (x) {
-    return UnwrapExpr<A>(kind, *x);
-  } else {
-    return nullptr;
-  }
-}
 
 template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
   if (x) {
     return UnwrapExpr<A>(*x);
-  } else {
-    return nullptr;
-  }
-}
-template <typename A, typename B> A *UnwrapExpr(int kind, std::optional<B> &x) {
-  if (x) {
-    return UnwrapExpr<A>(kind, *x);
   } else {
     return nullptr;
   }
@@ -257,14 +221,6 @@ template <typename A, typename B> const A *UnwrapExpr(const B *x) {
   }
 }
 
-template <typename A, typename B> const A *UnwrapExpr(int kind, const B *x) {
-  if (x) {
-    return UnwrapExpr<A>(kind, *x);
-  } else {
-    return nullptr;
-  }
-}
-
 template <typename A, typename B> A *UnwrapExpr(B *x) {
   if (x) {
     return UnwrapExpr<A>(*x);
@@ -273,12 +229,14 @@ template <typename A, typename B> A *UnwrapExpr(B *x) {
   }
 }
 
-template <typename A, typename B> A *UnwrapExpr(int kind, B *x) {
-  if (x) {
-    return UnwrapExpr<A>(kind, *x);
-  } else {
-    return nullptr;
+/// A variant of UnwrapExpr that also requires a specific kind of the
+/// expression.
+template <typename A, typename B> const A *UnwrapExpr(int kind, const B &x) {
+  const A *result{UnwrapExpr<A>(x)};
+  if (result && result->kind() == kind) {
+    return result;
   }
+  return nullptr;
 }
 
 // A variant of UnwrapExpr above that also skips through (parentheses)
@@ -637,16 +595,13 @@ Expr<TO> ConvertToType(int toKind, BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (TO::category == TypeCategory::Integer ||
       TO::category == TypeCategory::Unsigned) {
-    return MakeConstantExpr<TO>(toKind,
-        Scalar<TO>::ConvertUnsigned(std::move(x), Scalar<TO>::bits(toKind))
-            .value);
+    return MakeConstantExpr<TO>(
+        toKind, Scalar<TO>::ConvertUnsigned(toKind, std::move(x)).value);
   } else {
     static_assert(TO::category == TypeCategory::Real);
     using Word = value::IntegerValue;
     return MakeConstantExpr<TO>(toKind,
-        Scalar<TO>{toKind,
-            Word::ConvertUnsigned(std::move(x), Scalar<TO>::bits(toKind))
-                .value});
+        Scalar<TO>{toKind, Word::ConvertUnsigned(toKind, std::move(x)).value});
   }
 }
 
@@ -957,7 +912,7 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
         dyType.kind(), std::move(x));
   case TypeCategory::Derived:
     return AsGenericExpr(
-        Expr<SomeDerived>{WRAPPER<SomeDerived>{0, std::move(x)}});
+        Expr<SomeDerived>{WRAPPER<SomeDerived>{/*kind=*/0, std::move(x)}});
   }
 }
 

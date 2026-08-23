@@ -52,6 +52,7 @@ using MaybeIntExpr = std::optional<SomeIntExpr>;
 using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
+using evaluate::MakeSubscriptIntExpr;
 
 KindExpr MakeKindExpr(int v);
 

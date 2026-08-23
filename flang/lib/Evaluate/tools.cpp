@@ -525,8 +525,6 @@ std::optional<Expr<SomeType>> NumericOperation(
           },
           // Operations with one typeless operand
           [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
-            // iy aliases y, so sequence the conversion before std::move(y)
-            // (argument order is unspecified)
             auto converted{ConvertTo(iy, std::move(bx))};
             return NumericOperation<OPR>(messages,
                 AsGenericExpr(std::move(converted)), std::move(y),
@@ -1375,9 +1373,9 @@ struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
   }
 };
 
-template <common::TypeCategory CAT, int KIND>
-static void flattenTopLevelAddSubtract(const NumericExpr<CAT, KIND> &expr,
-    llvm::SmallVectorImpl<SignedNumericTerm<CAT, KIND>> &terms,
+template <common::TypeCategory CAT>
+static void flattenTopLevelAddSubtract(const NumericExpr<CAT> &expr,
+    llvm::SmallVectorImpl<SignedNumericTerm<CAT>> &terms,
     bool isPositive = true) {
   // Only flatten Add and Subtract nodes. Every other node, including
   // Parentheses, is one opaque signed term whose tree is preserved.
@@ -1443,11 +1441,11 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
   return std::nullopt;
 }
 
-template <common::TypeCategory CAT, int KIND>
-static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
-    const NumericExpr<CAT, KIND> &expr) {
-  if (const auto *convert =
-          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
+template <common::TypeCategory CAT>
+static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
+    const NumericExpr<CAT> &expr) {
+  const int kind{expr.kind()};
+  if (const auto *convert = std::get_if<Convert<Numeric<CAT>, CAT>>(&expr.u)) {
     std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
           if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
@@ -1457,8 +1455,8 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
         convert->left().u);
     if (!rewritten)
       return std::nullopt;
-    return NumericExpr<CAT, KIND>{
-        Convert<Numeric<CAT, KIND>, CAT>{std::move(*rewritten)}};
+    return NumericExpr<CAT>{
+        Convert<Numeric<CAT>, CAT>{kind, std::move(*rewritten)}};
   }
 
   // Only a conversion around the complete expression is supported. Keep
@@ -1467,8 +1465,8 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   if (HasConversionHelper{}(expr))
     return std::nullopt;
 
-  if (!std::get_if<Add<Numeric<CAT, KIND>>>(&expr.u) &&
-      !std::get_if<Subtract<Numeric<CAT, KIND>>>(&expr.u))
+  if (!std::get_if<Add<Numeric<CAT>>>(&expr.u) &&
+      !std::get_if<Subtract<Numeric<CAT>>>(&expr.u))
     return std::nullopt;
 
   llvm::SmallVector<SignedNumericTerm<CAT>, 8> terms;
@@ -1531,9 +1529,9 @@ private:
     return std::nullopt;
   }
 
-  template <common::TypeCategory CAT, int KIND>
-  static std::optional<NumericExpr<CAT, KIND>> tryRewriteCurrent(
-      const NumericExpr<CAT, KIND> &expr) {
+  template <common::TypeCategory CAT>
+  static std::optional<NumericExpr<CAT>> tryRewriteCurrent(
+      const NumericExpr<CAT> &expr) {
     if constexpr (CAT == common::TypeCategory::Real ||
         CAT == common::TypeCategory::Complex)
       return tryBuildSplitSumExpressionTree(expr);
@@ -1542,7 +1540,8 @@ private:
 
   template <typename D, std::size_t... Is>
   D rewriteOperation(D &&op, std::index_sequence<Is...>) {
-    return D{rewriteExpr(std::move(op.template operand<Is>()))...};
+    const int kind{op.kind()};
+    return D{kind, rewriteExpr(std::move(op.template operand<Is>()))...};
   }
 
   template <typename T, std::size_t... Is>
@@ -1551,17 +1550,17 @@ private:
         op.ordering, rewriteExpr(std::move(op.template operand<Is>()))...};
   }
 
-  template <int KIND, std::size_t... Is>
-  ComplexComponent<KIND> rewriteOperation(
-      ComplexComponent<KIND> &&op, std::index_sequence<Is...>) {
-    return ComplexComponent<KIND>{op.isImaginaryPart,
+  template <std::size_t... Is>
+  ComplexComponent rewriteOperation(
+      ComplexComponent &&op, std::index_sequence<Is...>) {
+    return ComplexComponent{op.isImaginaryPart,
         rewriteExpr(std::move(op.template operand<Is>()))...};
   }
 
-  template <int KIND, std::size_t... Is>
-  LogicalOperation<KIND> rewriteOperation(
-      LogicalOperation<KIND> &&op, std::index_sequence<Is...>) {
-    return LogicalOperation<KIND>{op.logicalOperator,
+  template <std::size_t... Is>
+  LogicalOperation rewriteOperation(
+      LogicalOperation &&op, std::index_sequence<Is...>) {
+    return LogicalOperation{op.logicalOperator,
         rewriteExpr(std::move(op.template operand<Is>()))...};
   }
 
