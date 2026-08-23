@@ -531,6 +531,10 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Fixed an assertion failure when `#embed` was used in the braced initializer
+  of an array new-expression; codegen now expands the embedded data into the
+  individual array elements. (#GH128985)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
