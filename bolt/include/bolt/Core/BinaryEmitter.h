@@ -15,6 +15,7 @@
 #define BOLT_CORE_BINARY_EMITTER_H
 
 #include "llvm/ADT/StringRef.h"
+#include <cstddef>
 
 namespace llvm {
 class MCStreamer;
@@ -23,6 +24,11 @@ namespace bolt {
 class BinaryContext;
 class BinaryFunction;
 class FunctionFragment;
+
+/// Return whether BinaryEmitter::emitFunction() proceeds to select an output
+/// section for \p Function.
+bool shouldEmitFunctionFragment(const BinaryContext &BC,
+                                const BinaryFunction &Function);
 
 /// Emit all code and data from the BinaryContext \p BC into the \p Streamer.
 ///
@@ -39,5 +45,23 @@ void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
 
 } // namespace bolt
 } // namespace llvm
+
+namespace opts {
+
+/// Return the number of bytes emitted before each fragment of \p Function by
+/// --break-funcs.
+std::size_t breakFunctionSize(const llvm::bolt::BinaryFunction &Function);
+
+/// Return the bytes emitted after each fragment by --mark-funcs.
+llvm::StringRef
+markFunctionBytes(const llvm::bolt::BinaryContext &BinaryContext);
+
+/// Return the padding requested before each emitted fragment of \p Function.
+std::size_t padFunctionBefore(const llvm::bolt::BinaryFunction &Function);
+
+/// Return the padding requested after each emitted fragment of \p Function.
+std::size_t padFunctionAfter(const llvm::bolt::BinaryFunction &Function);
+
+} // namespace opts
 
 #endif
