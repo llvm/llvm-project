@@ -838,6 +838,7 @@ bool RISCVVectorPeepholeLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 RISCVVectorPeepholePass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   bool Changed = RISCVVectorPeepholeImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

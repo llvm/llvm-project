@@ -640,8 +640,7 @@ define void @header_postdec_negative_step_folds() {
 ; CHECK-NEXT:    call void @use(i1 [[ULE]])
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -685,8 +684,7 @@ define void @latch_postdec_negative_step_folds() {
 ; CHECK-NEXT:    call void @use(i1 [[ULE]])
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
