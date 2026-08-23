@@ -2023,10 +2023,8 @@ bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
   // distance from the other index. This preserves correlations such as
   // select(x + 1, x + 2) versus x + 3 that range analysis loses.
   auto IsNoAlias = [&](const Value *V0, const Value *V1) {
-    LinearExpression E0 =
-        GetLinearExpression(CastedValue(V0), DL, 0, AC, DT);
-    LinearExpression E1 =
-        GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
+    LinearExpression E0 = GetLinearExpression(CastedValue(V0), DL, 0, AC, DT);
+    LinearExpression E1 = GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
     if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
         !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI))
       return false;
