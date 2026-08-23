@@ -81,6 +81,17 @@
 
 # CHECK-NORELOC: BOLT-ERROR: --merge-text-sections requires relocation mode
 
+## Verify `--merge-text-sections` works with `--use-old-text`.
+# RUN: llvm-bolt %t.exe -o %t.uot --data %t.fdata --split-functions \
+# RUN:         --use-old-text --merge-text-sections --align-text=4
+# RUN: llvm-readelf -S %t.uot | FileCheck %s --check-prefix=CHECK-SEC
+# RUN: llvm-readelf -S %t.uot | FileCheck %s --check-prefix=CHECK-NOCOLD
+# RUN: llvm-readelf -S %t.uot | FileCheck %s --check-prefix=CHECK-ORG
+# RUN: llvm-readelf -s %t.uot | grep -E "bolt\.pre_merge|chain\.cold\." \
+# RUN:   | sort -k8 > %t.uot.markers
+# RUN: FileCheck %s --check-prefix=CHECK-SYMS --input-file=%t.uot.markers
+# RUN: FileCheck %s --check-prefix=CHECK-NOUND --input-file=%t.uot.markers
+
         .text
         .globl  _start
         .type   _start, %function
@@ -129,3 +140,14 @@ chain:
         ret
         .cfi_endproc
         .size   chain, .-chain
+
+## Filler so the original .text section has room for BOLT generated hot and
+## cold sections under `--use-old-text`.
+        .p2align 6
+        .globl  filler
+        .type   filler, %function
+filler:
+        .rept 32
+        ret
+        .endr
+        .size filler, .-filler
