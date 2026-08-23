@@ -75,6 +75,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -126,6 +127,9 @@ DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
 static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
+
+STATISTIC(NumSCEVCandidateBasisDifferences,
+          "Number of candidate-basis SCEV differences computed by SLSR");
 
 namespace {
 
@@ -709,6 +713,7 @@ Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
     const SCEV *BasisPart =
         (K == Candidate::BaseDelta) ? Basis.Base : Basis.StrideSCEV;
     const SCEV *CandPart = (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
+    ++NumSCEVCandidateBasisDifferences;
     const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
     return getNearestValueOfSCEV(Diff, C.Ins);
   }
@@ -1008,6 +1013,7 @@ auto StraightLineStrengthReduce::compressPath(Candidate &C,
                                 cast<GetElementPtrInst>(NextRoot->Ins), DL))
       break;
 
+    ++NumSCEVCandidateBasisDifferences;
     if (auto DeltaVal =
             dyn_cast<SCEVConstant>(SE->getMinusSCEV(CandPart, BasisPart))) {
       Root = NextRoot;
