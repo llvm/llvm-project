@@ -198,6 +198,13 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       Map->erase(Key);
   }
 
+  // Check if we need to clean up the IdResolver chain.
+  auto RemoveFromIdResolver = [&](NamedDecl *D) {
+    if (D->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
+        !D->getLangOpts().CPlusPlus)
+      S.IdResolver.RemoveDecl(D);
+  };
+
   ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
   if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
     for (auto &&[Key, List] : *Map) {
@@ -216,7 +223,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       }
       for (NamedDecl *D : NamedDeclsToRemove) {
         List.remove(D);
-        S.IdResolver.RemoveDecl(D);
+        RemoveFromIdResolver(D);
       }
     }
   }
@@ -226,10 +233,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName().isEmpty())
       continue;
-    // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
-        !D->getLangOpts().CPlusPlus)
-      S.IdResolver.RemoveDecl(ND);
+    RemoveFromIdResolver(ND);
   }
 }
 
