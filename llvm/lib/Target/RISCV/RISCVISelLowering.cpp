@@ -12289,16 +12289,22 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
+  case Intrinsic::riscv_mqacc_h00:
   case Intrinsic::riscv_pmqacc_h00:
     return RISCVISD::PMQACC_W_H00;
+  case Intrinsic::riscv_mqacc_h01:
   case Intrinsic::riscv_pmqacc_h01:
     return RISCVISD::PMQACC_W_H01;
+  case Intrinsic::riscv_mqacc_h11:
   case Intrinsic::riscv_pmqacc_h11:
     return RISCVISD::PMQACC_W_H11;
+  case Intrinsic::riscv_mqracc_h00:
   case Intrinsic::riscv_pmqracc_h00:
     return RISCVISD::PMQRACC_W_H00;
+  case Intrinsic::riscv_mqracc_h01:
   case Intrinsic::riscv_pmqracc_h01:
     return RISCVISD::PMQRACC_W_H01;
+  case Intrinsic::riscv_mqracc_h11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::PMQRACC_W_H11;
   }
@@ -12320,25 +12326,6 @@ static unsigned getRVPQFormatAccWordOpcode(Intrinsic::ID IntNo) {
     return RISCVISD::MQRACC_W01;
   case Intrinsic::riscv_mqracc_w11:
     return RISCVISD::MQRACC_W11;
-  }
-}
-
-static unsigned getRVPQFormatAccWideOpcode(Intrinsic::ID IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_h00:
-    return RISCVISD::PMQACC_W_H00_W;
-  case Intrinsic::riscv_mqacc_h01:
-    return RISCVISD::PMQACC_W_H01_W;
-  case Intrinsic::riscv_mqacc_h11:
-    return RISCVISD::PMQACC_W_H11_W;
-  case Intrinsic::riscv_mqracc_h00:
-    return RISCVISD::PMQRACC_W_H00_W;
-  case Intrinsic::riscv_mqracc_h01:
-    return RISCVISD::PMQRACC_W_H01_W;
-  case Intrinsic::riscv_mqracc_h11:
-    return RISCVISD::PMQRACC_W_H11_W;
   }
 }
 
@@ -12611,19 +12598,14 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue RdLo = DAG.getExtractVectorElt(DL, XLenVT, Rd, 0);
       SDValue RdHi = DAG.getExtractVectorElt(DL, XLenVT, Rd, 1);
       unsigned ScalarOpc = getRVPQFormatAccScalarOpcode(IntNo);
-      SDValue Lo = DAG.getNode(ScalarOpc, DL, XLenVT, RdLo,
-                               DAG.getBitcast(XLenVT, Rs1Lo),
-                               DAG.getBitcast(XLenVT, Rs2Lo));
-      SDValue Hi = DAG.getNode(ScalarOpc, DL, XLenVT, RdHi,
-                               DAG.getBitcast(XLenVT, Rs1Hi),
-                               DAG.getBitcast(XLenVT, Rs2Hi));
+      SDValue Lo = DAG.getNode(ScalarOpc, DL, XLenVT, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(ScalarOpc, DL, XLenVT, RdHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
     if (VT == MVT::i32 && !Subtarget.is64Bit()) {
       unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
-      return DAG.getNode(Opc, DL, XLenVT, Rd, DAG.getBitcast(XLenVT, Rs1),
-                         DAG.getBitcast(XLenVT, Rs2));
+      return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
 
     if (VT == MVT::i64 && Subtarget.is64Bit()) {
@@ -17138,22 +17120,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || VT != MVT::i32)
         return;
-      MVT XLenVT = Subtarget.getXLenVT();
-      // Widen a v2i16 source to XLenVT: bitcast to the 32-bit scalar it shares
-      // bits with, then zero-extend into the upper half of the GPR.
+      SDValue Rd =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
       auto WidenSrc = [&](SDValue V) {
-        if (V.getValueType() == XLenVT)
-          return V;
-        assert(V.getValueType() == MVT::v2i16);
-        return DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT,
-                           DAG.getBitcast(MVT::i32, V));
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                           {V, DAG.getUNDEF(MVT::v2i16)});
       };
-      SDValue Rd = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N->getOperand(1));
       SDValue Rs1 = WidenSrc(N->getOperand(2));
       SDValue Rs2 = WidenSrc(N->getOperand(3));
-      unsigned Opc = getRVPQFormatAccWideOpcode(IntNo);
-      SDValue Res = DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      unsigned Opc = getRVPQFormatAccOpcode(IntNo);
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_mqacc_w00:
