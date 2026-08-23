@@ -251,3 +251,41 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
 
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 declare void @use(i8)
+
+define i32 @adc_fold_with_used_flag(i32 %a0) nounwind {
+; X86-LABEL: adc_fold_with_used_flag:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    btl $11, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $55, %esi
+; X86-NEXT:    adcl $45, %esi
+; X86-NEXT:    setb %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_fold_with_used_flag:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    btl $11, %edi
+; X64-NEXT:    movl $55, %ebx
+; X64-NEXT:    adcl $45, %ebx
+; X64-NEXT:    setb %al
+; X64-NEXT:    movzbl %al, %edi
+; X64-NEXT:    callq use@PLT
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+  %bit = lshr i32 %a0, 11
+  %mask = and i32 %bit, 1
+  %isz = trunc i32 %mask to i8
+  %adc = tail call { i8, i32 } @llvm.x86.addcarry.32(i8 %isz, i32 55, i32 45)
+  %carry = extractvalue { i8, i32 } %adc, 0
+  call void @use(i8 %carry)
+  %sum = extractvalue { i8, i32 } %adc, 1
+  ret i32 %sum
+}
