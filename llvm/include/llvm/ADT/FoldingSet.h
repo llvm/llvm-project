@@ -38,9 +38,8 @@ namespace llvm {
 ///      it, otherwise return the bucket it should be inserted into.
 ///   2. Given a node that has already been created, remove it from the set.
 ///
-/// This class is implemented as a single-link chained hash table, where the
-/// "buckets" are actually the nodes themselves (the next pointer is in the
-/// node).  The last node points back to the bucket to simplify node removal.
+/// This class is implemented as an open-addressing Swiss Table hash set that
+/// uniques heap-allocated objects by computing and comparing their profile IDs.
 ///
 /// Any node that is to be included in the folding set must be a subclass of
 /// FoldingSetNode.  The node class must also define a Profile method used to
@@ -290,23 +289,33 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// Implements the folding set functionality. The main structure is an array of
-/// buckets.  Each bucket is indexed by the hash of the nodes it contains. The
-/// bucket itself points to the nodes contained in the bucket via a singly
-/// linked list.  The last node in the list points back to the bucket to
-/// facilitate node removal.
-///
+/// Non-templated base class for FoldingSet and ContextualFoldingSet to enable
+/// type erasure, shared memory management, and reduced template bloat.
 class FoldingSetBase : public DebugEpochBase {
+public:
+  static constexpr uint8_t Empty = 0x80;
+  static constexpr uint8_t Deleted = 0xFE;
+  static constexpr unsigned GroupWidth = 8;
+
 protected:
-  /// Array of bucket chains.
-  void **Buckets;
+  /// Sentinel control group used for empty and moved-from sets.
+  static constexpr uint8_t EmptyGroup[GroupWidth] = {
+      Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty};
+
+  /// Control bytes for Swiss Table probing.
+  uint8_t *Ctrl = const_cast<uint8_t *>(EmptyGroup);
+
+  /// Array of buckets.
+  void **Buckets = nullptr;
 
   /// Length of the Buckets array.  Always a power of 2.
-  unsigned NumBuckets;
+  unsigned NumBuckets = 0;
 
-  /// Number of nodes in the folding set. Growth occurs when NumNodes
-  /// is greater than twice the number of buckets.
-  unsigned NumNodes;
+  /// Number of nodes in the folding set.
+  unsigned NumNodes = 0;
+
+  /// Number of deleted nodes (tombstones) in the table.
+  unsigned NumDeleted = 0;
 
   LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
@@ -315,19 +324,18 @@ protected:
 
 public:
   //===--------------------------------------------------------------------===//
-  /// This class is used to maintain the singly linked bucket list in
-  /// a folding set.
+  /// This class is used to maintain node state in a folding set.
   class Node {
   private:
-    // NextInFoldingSetBucket - next link in the bucket list.
-    void *NextInFoldingSetBucket = nullptr;
+    // Cached 32-bit hash value to avoid re-profiling on growth and removal.
+    uint32_t FoldingSetHash = 0;
 
   public:
     Node() = default;
 
     // Accessors
-    void *getNextInBucket() const { return NextInFoldingSetBucket; }
-    void SetNextInBucket(void *N) { NextInFoldingSetBucket = N; }
+    uint32_t getFoldingSetHash() const { return FoldingSetHash; }
+    void setFoldingSetHash(uint32_t Hash) { FoldingSetHash = Hash; }
   };
 
   /// Remove all nodes from the folding set.
@@ -341,11 +349,7 @@ public:
 
   /// Returns the number of nodes permitted in the folding set
   /// before a rebucket operation is performed.
-  unsigned capacity() const {
-    // We allow a load factor of up to 2.0,
-    // so that means our capacity is NumBuckets * 2
-    return NumBuckets * 2;
-  }
+  unsigned capacity() const { return (NumBuckets * 7) / 8; }
 
 protected:
   /// Functions provided by the derived class to compute folding properties.
@@ -370,6 +374,22 @@ protected:
   };
 
 private:
+  // Set a control byte and mirror it at the end of the table if needed.
+  void setCtrlMirrored(unsigned Index, uint8_t Value) {
+    Ctrl[Index] = Value;
+    if (Index < GroupWidth)
+      Ctrl[NumBuckets + Index] = Value;
+  }
+
+  // Test if a control byte indicates an empty or deleted slot.
+  static bool isEmptyOrDeleted(uint8_t C) { return (C & 0x80) != 0; }
+
+  // Insert a node into an empty or deleted slot without checking capacity.
+  void insertImpl(void *N, uint32_t Hash);
+
+  // Allow the iterator to access the control bytes and bucket array.
+  friend class FoldingSetIteratorImpl;
+
   /// Resize the hash table and rehash everything. \p NewBucketCount must be a
   /// power of two, and must be greater than the old bucket count.
   void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
@@ -497,15 +517,13 @@ public:
 public:
   using iterator = FoldingSetIterator<T>;
 
-  iterator begin() { return iterator(this, Buckets); }
-  iterator end() { return iterator(this, Buckets + NumBuckets); }
+  iterator begin() { return iterator(this, this, 0); }
+  iterator end() { return iterator(this, this, NumBuckets); }
 
   using const_iterator = FoldingSetIterator<const T>;
 
-  const_iterator begin() const { return const_iterator(this, Buckets); }
-  const_iterator end() const {
-    return const_iterator(this, Buckets + NumBuckets);
-  }
+  const_iterator begin() const { return const_iterator(this, this, 0); }
+  const_iterator end() const { return const_iterator(this, this, NumBuckets); }
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
@@ -641,21 +659,23 @@ public:
 /// how to walk the folding set hash table.
 class FoldingSetIteratorImpl : DebugEpochBase::HandleBase {
 protected:
-  FoldingSetNode *NodePtr;
+  const FoldingSetBase *Set = nullptr;
+  unsigned Index = 0;
 
-  LLVM_ABI FoldingSetIteratorImpl(const DebugEpochBase *Epoch, void **Bucket);
+  LLVM_ABI FoldingSetIteratorImpl(const DebugEpochBase *Epoch,
+                                  const FoldingSetBase *Set, unsigned Index);
 
   LLVM_ABI void advance();
 
   FoldingSetNode *getNode() const {
     assert(isHandleInSync() && "invalid iterator access!");
-    return NodePtr;
+    return static_cast<FoldingSetNode *>(Set->Buckets[Index]);
   }
 
 public:
   bool operator==(const FoldingSetIteratorImpl &RHS) const {
     assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
-    return NodePtr == RHS.NodePtr;
+    return Index == RHS.Index;
   }
   bool operator!=(const FoldingSetIteratorImpl &RHS) const {
     return !(*this == RHS);
@@ -664,8 +684,9 @@ public:
 
 template <class T> class FoldingSetIterator : public FoldingSetIteratorImpl {
 public:
-  explicit FoldingSetIterator(const DebugEpochBase *Epoch, void **Bucket)
-      : FoldingSetIteratorImpl(Epoch, Bucket) {}
+  explicit FoldingSetIterator(const DebugEpochBase *Epoch,
+                              const FoldingSetBase *Set, unsigned Index)
+      : FoldingSetIteratorImpl(Epoch, Set, Index) {}
 
   T &operator*() const { return *static_cast<T *>(getNode()); }
 
