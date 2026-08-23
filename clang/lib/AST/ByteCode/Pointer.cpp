@@ -26,8 +26,8 @@ using namespace clang;
 using namespace clang::interp;
 
 Pointer::Pointer(Block *Pointee)
-    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
-              Pointee->getDescriptor()->getMetadataSize()) {}
+    : Pointer(Pointee, Pointee->getMetadataSize(), Pointee->getMetadataSize()) {
+}
 
 Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -36,7 +36,7 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert(Pointee);
   assert(Base % alignof(void *) == 0 && "wrong base");
-  assert(Base >= Pointee->getDescriptor()->getMetadataSize());
+  assert(Base >= Pointee->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
   Pointee->addPointer(this);
@@ -436,6 +436,8 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     const Record *R = P.getBase().getRecord();
     assert(R);
 
+    if (!ASTContext::hasLayout(R->getDecl()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
     Result += ASTCtx
                   .toCharUnitsFromBits(
@@ -494,8 +496,10 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   PtrView P = view();
   while (true) {
     if (P.isBaseClass()) {
-      const ASTRecordLayout &Layout =
-          ASTCtx.getASTRecordLayout(getRecordDecl(P.getBase()));
+      const CXXRecordDecl *BaseRD = getRecordDecl(P.getBase());
+      if (!ASTContext::hasLayout(BaseRD))
+        return std::nullopt;
+      const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(BaseRD);
       const CXXRecordDecl *RD = getRecordDecl(P);
       if (P.isVirtualBaseClass())
         Result += Layout.getVBaseClassOffset(RD).getQuantity();
@@ -535,6 +539,8 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
 
     assert(P.getField());
     const FieldDecl *F = P.getField();
+    if (!ASTContext::hasLayout(F->getParent()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(F->getParent());
     Result +=
         ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(F->getFieldIndex()))

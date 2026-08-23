@@ -1,7 +1,5 @@
 // RUN: mlir-opt -convert-scf-to-openmp -split-input-file %s | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
-
 // CHECK: omp.declare_reduction @[[$REDF:.*]] : f32
 
 // CHECK: init

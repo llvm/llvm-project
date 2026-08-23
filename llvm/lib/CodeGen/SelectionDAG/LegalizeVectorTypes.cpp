@@ -1120,13 +1120,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSELECT(SDNode *N) {
 }
 
 /// If the operand is a vector that needs to be scalarized then the
-/// result must be v1i1, so just convert to a scalar SETCC and wrap
-/// with a scalar_to_vector since the res type is legal if we got here
+/// result must be a single-element vector, so just convert to a scalar
+/// SETCC and wrap with a scalar_to_vector since the res type is legal
+/// if we got here
 SDValue DAGTypeLegalizer::ScalarizeVecOp_VSETCC(SDNode *N) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
          "Operand types must be vectors");
-  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Expected single-element vector type");
 
   EVT VT = N->getValueType(0);
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
@@ -1156,7 +1158,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N,
   assert(N->getValueType(0).isVector() &&
          N->getOperand(1).getValueType().isVector() &&
          "Operand types must be vectors");
-  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Expected single-element vector type");
 
   EVT VT = N->getValueType(0);
   SDValue Ch = N->getOperand(0);
@@ -6491,11 +6494,25 @@ SDValue DAGTypeLegalizer::WidenVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
+  SDLoc DL(N);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue InOp = GetWidenedVector(N->getOperand(0));
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
 
-  return DAG.getAddrSpaceCast(SDLoc(N), WidenVT, InOp,
+  // The source has the same number of elements as the result, so widen it to
+  // match WidenVT. It only lives in the widened-vector map if it is itself
+  // widened; otherwise pad it up to the widened element count.
+  SDValue InOp = N->getOperand(0);
+  EVT InVT = InOp.getValueType();
+  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+    InOp = GetWidenedVector(InOp);
+  } else {
+    EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
+                                     InVT.getVectorElementType(), WidenEC);
+    InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
+  }
+
+  return DAG.getAddrSpaceCast(DL, WidenVT, InOp,
                               AddrSpaceCastN->getSrcAddressSpace(),
                               AddrSpaceCastN->getDestAddressSpace());
 }
