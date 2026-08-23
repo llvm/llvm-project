@@ -756,7 +756,8 @@ feature_test_macros = [
                 # "c++29": 202606,  # P3428R4 Hazard Pointer Batches
             },
             "headers": ["hazard_pointer"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER",
         },
         {
             "name": "__cpp_lib_hypot",
@@ -1638,6 +1639,7 @@ lit_markup = {
     "barrier": ["UNSUPPORTED: no-threads"],
     "filesystem": ["UNSUPPORTED: no-filesystem"],
     "fstream": ["UNSUPPORTED: no-localization"],
+    "hazard_pointer": ["UNSUPPORTED: no-threads"],
     "iomanip": ["UNSUPPORTED: no-localization"],
     "ios": ["UNSUPPORTED: no-localization"],
     "iostream": ["UNSUPPORTED: no-localization"],

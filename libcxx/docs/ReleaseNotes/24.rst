@@ -52,6 +52,7 @@ Implemented Papers
 - P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
 - P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
 - P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
+- P2530R3: Hazard Pointers for C++26 (`Github <https://llvm.org/PR105362>`__)
 
 Improvements and New Features
 -----------------------------
