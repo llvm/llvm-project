@@ -416,6 +416,9 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- `-Wflag-enum` now warns if any of the bitwise operators for scoped enumeration types with
+  the `[[clang::flag_enum]]` attribute are not available, ambiguous or deleted.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

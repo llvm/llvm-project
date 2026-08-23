@@ -6721,6 +6721,9 @@ def ext_enumerator_increment_too_large : ExtWarn<
 def warn_flag_enum_constant_out_of_range : Warning<
   "enumeration value %0 is out of range of flags in enumeration type %1">,
   InGroup<FlagEnum>;
+def warn_flag_enum_operator : Warning<
+  "%1 is %select{|not available|ambiguous|deleted}2 for flag-like enumeration type %0%select{|: %4}3">,
+  InGroup<FlagEnum>;
 
 def err_vm_decl_in_file_scope : Error<
   "variably modified type declaration not allowed at file scope">;

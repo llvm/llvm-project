@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
@@ -38,6 +39,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/ObjCMethodList.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
@@ -1200,6 +1202,74 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+static void DiagnoseInvalidFlagEnumOperators(Sema &S, const EnumDecl *ED) {
+  assert(ED->hasAttr<FlagEnumAttr>() && "not a flag-like enum");
+  if (!ED->isScoped())
+    return;
+
+  QualType T = S.Context.getCanonicalTagType(ED);
+
+  Expr *LHS = new (S.Context) OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
+  Expr *RHS = new (S.Context) OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
+
+  OverloadedOperatorKind OPs[] = {OO_Pipe, OO_Amp, OO_Caret, OO_Tilde};
+  for (const auto OP : OPs) {
+    auto Name = S.Context.DeclarationNames.getCXXOperatorName(OP);
+    LookupResult R(S, Name, SourceLocation(), Sema::LookupOperatorName);
+
+    S.LookupName(R, S.TUScope);
+
+    OverloadCandidateSet CandidateSet{SourceLocation(),
+                                      OverloadCandidateSet::CSK_Operator};
+
+    SmallVector<Expr *, 2> Args;
+    if (OP == OO_Tilde) {
+      Args = {LHS};
+      S.LookupOverloadedUnaryOp(CandidateSet, OP, R.asUnresolvedSet(), Args);
+    } else {
+      Args = {LHS, RHS};
+      S.LookupOverloadedBinOp(CandidateSet, OP, R.asUnresolvedSet(), Args);
+    }
+
+    OverloadCandidateSet::iterator Best;
+    OverloadingResult Result =
+        CandidateSet.BestViableFunction(S, SourceLocation(), Best);
+
+    switch (Result) {
+    case OR_Success:
+      break;
+    case OR_No_Viable_Function: {
+      S.Diag(ED->getLocation(), diag::warn_flag_enum_operator)
+          << ED->getName() << Name.getAsString() << OR_No_Viable_Function
+          << false << "";
+      auto Cands = CandidateSet.CompleteCandidates(S, OCD_AllCandidates, Args);
+      CandidateSet.NoteCandidates(S, Args, Cands, Name.getAsString());
+      break;
+    }
+    case OR_Ambiguous: {
+      S.Diag(ED->getLocation(), diag::warn_flag_enum_operator)
+          << ED->getName() << Name.getAsString() << OR_Ambiguous << false << "";
+      auto Cands =
+          CandidateSet.CompleteCandidates(S, OCD_AmbiguousCandidates, Args);
+      CandidateSet.NoteCandidates(S, Args, Cands, Name.getAsString());
+      break;
+    }
+    case OR_Deleted: {
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
+
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(ED->getLocation(),
+                              S.PDiag(diag::warn_flag_enum_operator)
+                                  << ED->getName() << Name.getAsString()
+                                  << OR_Deleted << (Msg != nullptr)
+                                  << (Msg ? Msg->getString() : "")),
+          S, OCD_AllCandidates, Args, Name.getAsString());
+      break;
+    }
+    }
+  }
+}
+
 void Sema::getSortedUnusedLocalTypedefNameCandidates(
     SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
   // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
@@ -1711,6 +1781,10 @@ void Sema::ActOnEndOfTranslationUnit() {
       }
     }
   }
+
+  for (const auto &[ED, _] : FlagBitsCache)
+    if (!Diags.isIgnored(diag::warn_flag_enum_operator, ED->getLocation()))
+      DiagnoseInvalidFlagEnumOperators(*this, ED);
 
   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
 
