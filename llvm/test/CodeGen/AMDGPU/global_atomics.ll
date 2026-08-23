@@ -7594,9 +7594,8 @@ define amdgpu_kernel void @atomic_store_i8_offset(i8 %in, ptr addrspace(1) %out)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b8 v1, v0, s[0:1] offset:16
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -7653,9 +7652,8 @@ define amdgpu_kernel void @atomic_store_i8(i8 %in, ptr addrspace(1) %out) {
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b8 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -7865,9 +7863,8 @@ define amdgpu_kernel void @atomic_store_i16_offset(i16 %in, ptr addrspace(1) %ou
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] offset:16
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -7924,9 +7921,8 @@ define amdgpu_kernel void @atomic_store_i16(i16 %in, ptr addrspace(1) %out) {
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -7984,9 +7980,8 @@ define amdgpu_kernel void @atomic_store_f16_offset(half %in, ptr addrspace(1) %o
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] offset:16
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -8043,9 +8038,8 @@ define amdgpu_kernel void @atomic_store_f16(half %in, ptr addrspace(1) %out) {
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -8103,9 +8097,8 @@ define amdgpu_kernel void @atomic_store_bf16_offset(bfloat %in, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] offset:16
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -8161,9 +8154,8 @@ define amdgpu_kernel void @atomic_store_bf16(bfloat %in, ptr addrspace(1) %out) 
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
