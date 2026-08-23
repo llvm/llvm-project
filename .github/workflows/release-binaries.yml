@@ -259,10 +259,6 @@ jobs:
         # Add wix install directory to PATH.
         Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
-    - name: Debug
-      if: failure()
-      run: |
-        cat C:\ProgramData\chocolatey\logs\chocolatey.log
       # We need to hard code the python library path for Windows, so in order
       # to do that we need to specify a specific python version.  It's also
       # good practice to do this on other OSes so the version of python doesn't
@@ -324,6 +320,10 @@ jobs:
     - wait-all:
     # End of Parallel block.
 
+    - name: Debug
+      if: failure()
+      run: |
+        cat C:\ProgramData\chocolatey\logs\chocolatey.log
 
     - name: Configure Linux/MacOS
       id: build
