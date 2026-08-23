@@ -438,23 +438,23 @@ entry:
   call void @capture32(ptr %x)
   call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
-; CHECK-NEXT: Alive: <x>
+; CHECK-NEXT: Alive: <>
 
   br i1 %d, label %bb2, label %bb3
 
 bb2:                                              ; preds = %entry
 ; CHECK: bb2:
-; CHECK-NEXT: Alive: <x>
+; CHECK-NEXT: Alive: <>
   call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK: call void @llvm.lifetime.start.p0(ptr %y)
-; CHECK-NEXT: Alive: <x y>
+; CHECK-NEXT: Alive: <y>
 
   call void @capture32(ptr %y)
   ret void
 
 bb3:                                              ; preds = %entry
 ; CHECK: bb3:
-; CHECK-NEXT: Alive: <x>
+; CHECK-NEXT: Alive: <>
   ret void
 }
 
@@ -946,6 +946,52 @@ if.end:
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <x>
 
+  ret void
+}
+
+define void @end_only() {
+; CHECK-LABEL: define void @end_only()
+entry:
+  %x = alloca i8
+; CHECK: %x = alloca i8
+; CHECK-NEXT: Alive: <x>
+
+  call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK: call void @llvm.lifetime.end.p0(ptr %x)
+; CHECK-NEXT: Alive: <>
+
+  ret void
+}
+
+define void @end_only_propagates() {
+; CHECK-LABEL: define void @end_only_propagates()
+entry:
+  %x = alloca i8
+  call void @llvm.lifetime.end.p0(ptr %x)
+
+  br label %next
+; CHECK: br label %next
+; CHECK-NEXT: Alive: <>
+
+next:
+; CHECK: next:
+; CHECK-NEXT: Alive: <>
+  ret void
+}
+
+define void @start_propagates() {
+; CHECK-LABEL: define void @start_propagates()
+entry:
+  %x = alloca i8
+  call void @llvm.lifetime.start.p0(ptr %x)
+
+  br label %next
+; CHECK: br label %next
+; CHECK-NEXT: Alive: <x>
+
+next:
+; CHECK: next:
+; CHECK-NEXT: Alive: <x>
   ret void
 }
 
