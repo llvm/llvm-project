@@ -33,6 +33,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -128,7 +129,6 @@ private:
   bool foldBitOpOfCastConstant(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
-  bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
@@ -1185,128 +1185,6 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   return true;
 }
 
-/// VP Intrinsics whose vector operands are both splat values may be simplified
-/// into the scalar version of the operation and the result splatted. This
-/// can lead to scalarization down the line.
-bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
-  if (!isa<VPIntrinsic>(I))
-    return false;
-  VPIntrinsic &VPI = cast<VPIntrinsic>(I);
-  Value *Op0 = VPI.getArgOperand(0);
-  Value *Op1 = VPI.getArgOperand(1);
-
-  if (!isSplatValue(Op0) || !isSplatValue(Op1))
-    return false;
-
-  // Check getSplatValue early in this function, to avoid doing unnecessary
-  // work.
-  Value *ScalarOp0 = getSplatValue(Op0);
-  Value *ScalarOp1 = getSplatValue(Op1);
-  if (!ScalarOp0 || !ScalarOp1)
-    return false;
-
-  // For the binary VP intrinsics supported here, the result on disabled lanes
-  // is a poison value. For now, only do this simplification if all lanes
-  // are active.
-  // TODO: Relax the condition that all lanes are active by using insertelement
-  // on inactive lanes.
-  auto IsAllTrueMask = [](Value *MaskVal) {
-    if (Value *SplattedVal = getSplatValue(MaskVal))
-      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
-        return ConstValue->isAllOnesValue();
-    return false;
-  };
-  if (!IsAllTrueMask(VPI.getArgOperand(2)))
-    return false;
-
-  // Check to make sure we support scalarization of the intrinsic
-  Intrinsic::ID IntrID = VPI.getIntrinsicID();
-  if (!VPBinOpIntrinsic::isVPBinOp(IntrID))
-    return false;
-
-  // Calculate cost of splatting both operands into vectors and the vector
-  // intrinsic
-  VectorType *VecTy = cast<VectorType>(VPI.getType());
-  SmallVector<int> Mask;
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VecTy))
-    Mask.resize(FVTy->getNumElements(), 0);
-  InstructionCost SplatCost =
-      TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, VecTy, Mask,
-                         CostKind);
-
-  // Calculate the cost of the VP Intrinsic
-  SmallVector<Type *, 4> Args;
-  for (Value *V : VPI.args())
-    Args.push_back(V->getType());
-  IntrinsicCostAttributes Attrs(IntrID, VecTy, Args);
-  InstructionCost VectorOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
-  InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
-
-  // Determine scalar opcode
-  std::optional<unsigned> FunctionalOpcode =
-      VPI.getFunctionalOpcode();
-  std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
-  if (!FunctionalOpcode) {
-    ScalarIntrID = VPI.getFunctionalIntrinsicID();
-    if (!ScalarIntrID)
-      return false;
-  }
-
-  // Calculate cost of scalarizing
-  InstructionCost ScalarOpCost = 0;
-  if (ScalarIntrID) {
-    IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
-    ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
-  } else {
-    ScalarOpCost = TTI.getArithmeticInstrCost(*FunctionalOpcode,
-                                              VecTy->getScalarType(), CostKind);
-  }
-
-  // The existing splats may be kept around if other instructions use them.
-  InstructionCost CostToKeepSplats =
-      (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
-  InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
-
-  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
-                    << "\n");
-  LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
-                    << ", Cost of scalarizing:" << NewCost << "\n");
-
-  // We want to scalarize unless the vector variant actually has lower cost.
-  if (OldCost < NewCost || !NewCost.isValid())
-    return false;
-
-  // Scalarize the intrinsic
-  ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
-  Value *EVL = VPI.getArgOperand(3);
-
-  // If the VP op might introduce UB or poison, we can scalarize it provided
-  // that we know the EVL > 0: If the EVL is zero, then the original VP op
-  // becomes a no-op and thus won't be UB, so make sure we don't introduce UB by
-  // scalarizing it.
-  bool SafeToSpeculate;
-  if (ScalarIntrID)
-    SafeToSpeculate = Intrinsic::getFnAttributes(I.getContext(), *ScalarIntrID)
-                          .hasAttribute(Attribute::AttrKind::Speculatable);
-  else
-    SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
-        *FunctionalOpcode, &VPI, nullptr, SQ.AC, SQ.DT);
-  if (!SafeToSpeculate &&
-      !isKnownNonZero(EVL, SimplifyQuery(*DL, SQ.DT, SQ.AC, &VPI)))
-    return false;
-
-  Value *ScalarVal =
-      ScalarIntrID
-          ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
-                                    {ScalarOp0, ScalarOp1})
-          : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
-                                ScalarOp0, ScalarOp1);
-
-  replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
-  return true;
-}
-
 /// Match a vector op/compare/intrinsic with at least one
 /// inserted scalar operand and convert to scalar op/cmp/intrinsic followed
 /// by insertelement.
@@ -1956,6 +1834,80 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   return ScalarizationResult::unsafe();
 }
 
+/// Return the GEP index type if the unsigned vector index \p Idx can be
+/// represented by an inbounds GEP. A null result means that the maximum byte
+/// offset cannot be represented by the pointer's signed GEP index type.
+///
+///   unsigned lane range
+///                |
+///                v
+///   MaxByteOffset = MaxLane * element store size
+///                |
+///                +-- unavailable or outside signed GEP range --> reject
+///                |
+///                v
+///   valid range --> use the pointer's GEP index type
+static IntegerType *getScalarizedGEPIndexInfo(VectorType *VecTy, Value *Idx,
+                                              Type *PtrTy,
+                                              const DataLayout &DL) {
+  auto *GEPIndexTy = cast<IntegerType>(DL.getIndexType(PtrTy));
+  unsigned GEPBits = GEPIndexTy->getBitWidth();
+  uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+
+  uint64_t MaxLane = NumElements - 1;
+  if (auto *C = dyn_cast<ConstantInt>(Idx)) {
+    if (C->getValue().uge(NumElements))
+      return nullptr;
+    MaxLane = C->getZExtValue();
+  }
+
+  Type *ElemTy = VecTy->getElementType();
+  if (!DL.typeSizeEqualsStoreSize(ElemTy))
+    return nullptr;
+
+  TypeSize ElemStride = DL.getTypeStoreSize(ElemTy);
+  if (ElemStride.isScalable())
+    return nullptr;
+
+  // Compare both values in a common width:
+  //
+  //   MaxLane (uint64_t) * ElemStride (uint64_t)   signed_max(GEPBits)
+  //                         |                               |
+  //                         v                               v
+  //             ByteOffset (up to 128 bits)        sext to WideBits
+  //                         \                               /
+  //                          +------------ ugt ------------+
+  //                                       |
+  //                                greater -> reject
+  //
+  // WideBits = max(GEPBits, 128) prevents the multiplication from wrapping
+  // and preserves the GEP limit during the comparison.
+  unsigned WideBits = std::max(GEPBits, 128u);
+  APInt MaxLaneValue(WideBits, MaxLane);
+  APInt ByteOffset = MaxLaneValue;
+  ByteOffset *= APInt(WideBits, ElemStride.getFixedValue());
+  APInt MaxGEPOffset = APInt::getSignedMaxValue(GEPBits).sext(WideBits);
+  // Reject offsets outside the GEP's positive signed range. Compare as
+  // unsigned because the full 128-bit product may set its sign bit.
+  if (ByteOffset.ugt(MaxGEPOffset))
+    return nullptr;
+
+  return GEPIndexTy;
+}
+
+/// Materialize an index for a scalarized GEP after profitability is known.
+/// Vector element indices are unsigned, but GEP sign-extends narrow integer
+/// indices. Widen a narrow index explicitly so its unsigned value is retained.
+static Value *materializeScalarizedGEPIndex(Value *Idx, IntegerType *GEPIndexTy,
+                                            IRBuilderBase &Builder) {
+  unsigned SrcBits = Idx->getType()->getIntegerBitWidth();
+  unsigned DstBits = GEPIndexTy->getBitWidth();
+  if (SrcBits >= DstBits)
+    return Idx;
+
+  return Builder.CreateZExt(Idx, GEPIndexTy, Idx->getName() + ".gepidx");
+}
+
 /// The memory operation on a vector of \p ScalarType had alignment of
 /// \p VectorAlignment. Compute the maximal, but conservatively correct,
 /// alignment that will be valid for the memory operation on a single scalar
@@ -2012,15 +1964,23 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     if (ScalarizableIdx.isUnsafe())
       return false;
 
+    auto GEPIndex =
+        getScalarizedGEPIndexInfo(VecTy, Idx, SI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarizableIdx.discard();
+      return false;
+    }
+
     // Ensure we add the load back to the worklist BEFORE its users so they can
     // erased in the correct order.
     Worklist.push(Load);
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndex, Builder);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
-        {ConstantInt::get(Idx->getType(), 0), Idx});
+        {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
     NSI->copyMetadata(*SI);
     // The new GEP may change the pointer operand, so !invariant.group cannot
@@ -2104,6 +2064,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     return false;
 
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  DenseMap<ExtractElementInst *, IntegerType *> GEPIndexInfos;
   llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
@@ -2122,6 +2083,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                                         SQ.getWithInstruction(LI));
     if (ScalarIdx.isUnsafe())
       return false;
+
+    IntegerType *GEPIndex = getScalarizedGEPIndexInfo(
+        VecTy, UI->getIndexOperand(), LI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarIdx.discard();
+      return false;
+    }
+
+    GEPIndexInfos.try_emplace(UI, GEPIndex);
+
     if (ScalarIdx.isSafeWithFreeze()) {
       NeedFreeze.try_emplace(UI, ScalarIdx);
       ScalarIdx.discard();
@@ -2136,6 +2107,11 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                             Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
                                                     nullptr, nullptr, CostKind);
+    if (!Index && UI->getIndexOperand()->getType()->getIntegerBitWidth() <
+                      GEPIndex->getBitWidth())
+      ScalarizedCost += TTI.getCastInstrCost(
+          Instruction::ZExt, GEPIndex, UI->getIndexOperand()->getType(),
+          TTI::CastContextHint::None, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << *LI
@@ -2157,13 +2133,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(EI);
-    if (It != NeedFreeze.end())
+    if (auto It = NeedFreeze.find(EI); It != NeedFreeze.end())
       It->second.freeze(Builder, *cast<Instruction>(Idx));
 
     Builder.SetInsertPoint(EI);
-    Value *GEP =
-        Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
+    auto It = GEPIndexInfos.find(EI);
+    assert(It != GEPIndexInfos.end() &&
+           "Missing scalarized GEP index information");
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, It->second, Builder);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        VecTy, Ptr, {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     auto *NewLoad = cast<LoadInst>(
         Builder.CreateLoad(ElemType, GEP, EI->getName() + ".scalar"));
 
@@ -6092,8 +6071,9 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
                                NewOperands[1]);
     if (isa<SelectInst>(NarrowInst))
-      return Builder.CreateSelect(NewOperands[0], NewOperands[1],
-                                  NewOperands[2]);
+      return Builder.CreateSelect(
+          NewOperands[0], NewOperands[1], NewOperands[2], /*Name=*/"",
+          ProfcheckDisableMetadataFixes ? nullptr : NarrowInst);
     if (isa<FreezeInst>(NarrowInst))
       return Builder.CreateFreeze(NewOperands[0]);
     if (auto *II = dyn_cast<IntrinsicInst>(NarrowInst))
@@ -6791,8 +6771,6 @@ bool VectorCombine::run() {
       if (scalarizeLoad(I))
         return true;
       if (scalarizeExtExtract(I))
-        return true;
-      if (scalarizeVPIntrinsic(I))
         return true;
       if (foldInterleaveIntrinsics(I))
         return true;

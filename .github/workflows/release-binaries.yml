@@ -230,33 +230,18 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
-    # We need to hard code the python library path for Windows, so in order
-    # to do that we need to specify a specific python version.  It's also
-    # good practice to do this on other OSes so the version of python doesn't
-    # get changed unexpectedly.
-    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-      with:
-        python-version: '3.14.6'
-
-    # For some reason this is needed on Windows or else the build system can't find python3.lib.
-    - name: Setup Python library path
-      if: runner.os == 'Windows'
-      run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
-
+    # Start of parallel block
+    # Wix is not installed by default on Windows ARM64
     - name: Setup crlf
+      id: setup-crlf
+      background: true
       if: runner.os == 'Windows'
       run: |
         git config --global core.autocrlf false
 
-    - name: Checkout LLVM
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      with:
-        persist-credentials: false
-        ref: ${{ needs.prepare.outputs.ref }}
-
     - name: Set Build Prefix
       id: setup-stage
+      background: true
       shell: bash
       run: |
         build_prefix=`pwd`
@@ -265,6 +250,45 @@ jobs:
           build_prefix=/mnt/
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
+
+    - name: Install Wix (Windows ARM64)
+      background: true
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset --version 3.14.1.20250415
+        # Add wix install directory to PATH.
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+
+      # We need to hard code the python library path for Windows, so in order
+      # to do that we need to specify a specific python version.  It's also
+      # good practice to do this on other OSes so the version of python doesn't
+      # get changed unexpectedly.
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      id: setup-python
+      background: true
+      with:
+        python-version: '3.14.6'
+
+    - wait: setup-crlf
+
+    - name: Checkout LLVM
+      background: true
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        persist-credentials: false
+        ref: ${{ needs.prepare.outputs.ref }}
+
+    - wait: setup-python
+
+    # For some reason this is needed on Windows or else the build system can't find python3.lib.
+    - name: Setup Python library path
+      background: true
+      if: runner.os == 'Windows'
+      run: |
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+
+    - wait-all:
+    # End of Parallel block.
 
     - name: Configure Linux/MacOS
       id: build
@@ -362,6 +386,8 @@ jobs:
         cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
+      id: zstd
+      background: true
       shell: bash
       env:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
@@ -370,8 +396,27 @@ jobs:
       run: |
         xz -dc "$RELEASE_BINARY_FILENAME" | "$ZSTD" --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
+    - name: Install LLDB test Python dependencies
+      id: lldb-deps
+      if: runner.os == 'Linux'
+      run: |
+        python -m pip install -r lldb/test/requirements.txt
+
+    - name: Run Tests
+      background: true
+      # These almost always fail so don't let them fail the build and prevent the uploads.
+      if : runner.os != 'Windows'
+      continue-on-error: true
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+      run: |
+        ninja -C "$BUILD_PREFIX/build" stage2-check-all
+
+    - wait: zstd
+
     - name: Generate sha256 digest for binaries
       id: digest
+      background: true
       shell: bash
       env:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
@@ -387,13 +432,11 @@ jobs:
           fi
           echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME $RELEASE_BINARY_FILENAME_ZSTD | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - name: Install LLDB test Python dependencies
-      if: runner.os == 'Linux'
-      run: |
-        python -m pip install -r lldb/test/requirements.txt
+    - wait: [zstd, digest]
 
     - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       id: artifact-upload
+      background: true
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
@@ -404,14 +447,7 @@ jobs:
           ${{ needs.prepare.outputs.release-binary-filename-zstd }}
           ${{ steps.build-windows.outputs.windows-installer-filename }}
 
-    - name: Run Tests
-      # These almost always fail so don't let them fail the build and prevent the uploads.
-      if : runner.os != 'Windows'
-      continue-on-error: true
-      env:
-        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
-      run: |
-        ninja -C "$BUILD_PREFIX/build" stage2-check-all
+    - wait-all:
 
   upload-release-binaries:
     name: "Upload Release Binaries"

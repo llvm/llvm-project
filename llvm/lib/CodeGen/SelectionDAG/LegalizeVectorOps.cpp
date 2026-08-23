@@ -1831,14 +1831,14 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
 }
 
 SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
-  // Implement VP_SREM/UREM in terms of VP_SDIV/VP_UDIV, VP_MUL, VP_SUB.
+  // Implement VP_SREM/UREM in terms of VP_SDIV/VP_UDIV, MUL, SUB.
   EVT VT = Node->getValueType(0);
 
   unsigned DivOpc = Node->getOpcode() == ISD::VP_SREM ? ISD::VP_SDIV : ISD::VP_UDIV;
 
   if (!TLI.isOperationLegalOrCustom(DivOpc, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::VP_MUL, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::VP_SUB, VT))
+      !TLI.isOperationLegalOrCustom(ISD::MUL, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::SUB, VT))
     return SDValue();
 
   SDLoc DL(Node);
@@ -1850,8 +1850,8 @@ SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
 
   // X % Y -> X-X/Y*Y
   SDValue Div = DAG.getNode(DivOpc, DL, VT, Dividend, Divisor, Mask, EVL);
-  SDValue Mul = DAG.getNode(ISD::VP_MUL, DL, VT, Divisor, Div, Mask, EVL);
-  return DAG.getNode(ISD::VP_SUB, DL, VT, Dividend, Mul, Mask, EVL);
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Divisor, Div);
+  return DAG.getNode(ISD::SUB, DL, VT, Dividend, Mul);
 }
 
 SDValue VectorLegalizer::ExpandVP_FNEG(SDNode *Node) {
