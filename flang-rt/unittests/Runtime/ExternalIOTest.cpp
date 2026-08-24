@@ -332,6 +332,110 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
       << "EndIoStatement() for Close";
 }
 
+TEST(ExternalIOTests, TestSequentialUnformattedSubrecords) {
+  static constexpr const char *fileName{"subrecord_test.tmp"};
+
+  auto emitMarker{[](std::FILE *fp, std::int32_t marker) {
+    ASSERT_EQ(std::fwrite(&marker, sizeof marker, 1, fp), 1u);
+  }};
+  auto emitValue{[](std::FILE *fp, std::int64_t value) {
+    ASSERT_EQ(std::fwrite(&value, sizeof value, 1, fp), 1u);
+  }};
+
+  static constexpr std::int64_t kRecord1[]{100, 101, 102, 103, 104, 105};
+  static constexpr std::int64_t kRecord2{999};
+  static constexpr std::int32_t kSub{16};
+
+  {
+    std::FILE *fp{std::fopen(fileName, "wb")};
+    ASSERT_NE(fp, nullptr) << "fopen(" << fileName << ") for write";
+    emitMarker(fp, -kSub);
+    emitValue(fp, kRecord1[0]);
+    emitValue(fp, kRecord1[1]);
+    emitMarker(fp, kSub);
+    emitMarker(fp, -kSub);
+    emitValue(fp, kRecord1[2]);
+    emitValue(fp, kRecord1[3]);
+    emitMarker(fp, -kSub);
+    emitMarker(fp, kSub);
+    emitValue(fp, kRecord1[4]);
+    emitValue(fp, kRecord1[5]);
+    emitMarker(fp, -kSub);
+    emitMarker(fp, sizeof kRecord2);
+    emitValue(fp, kRecord2);
+    emitMarker(fp, sizeof kRecord2);
+    ASSERT_EQ(std::fclose(fp), 0) << "fclose after write";
+  }
+
+  // OPEN(UNIT=unit,FILE=fileName,ACCESS='SEQUENTIAL',ACTION='READ',&
+  //   FORM='UNFORMATTED',STATUS='OLD')
+  static constexpr int unit{20};
+  Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, fileName, std::strlen(fileName)))
+      << "SetFile()";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READ", 4)) << "SetAction(READ)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OPEN";
+
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+
+  auto readRecord1{[&](const char *what) {
+    std::int64_t buffer[6]{};
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    desc.Establish(TypeCode{sizeof buffer[0]}, sizeof buffer, buffer, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() " << what;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for READ record #1 " << what;
+    for (int k{0}; k < 6; ++k) {
+      ASSERT_EQ(buffer[k], kRecord1[k])
+          << "record #1 " << what << " element " << k << " read back "
+          << buffer[k] << ", expected " << kRecord1[k];
+    }
+  }};
+
+  auto readRecord2{[&](const char *what) {
+    std::int64_t value{0};
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    desc.Establish(TypeCode{sizeof value}, sizeof value, &value, 0);
+    desc.Check();
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
+        << "InputDescriptor() " << what;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for READ record #2 " << what;
+    ASSERT_EQ(value, kRecord2) << "record #2 " << what << " read back " << value
+                               << ", expected " << kRecord2;
+  }};
+
+  readRecord1("forward");
+  readRecord2("forward");
+
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #2";
+  readRecord2("after backspace");
+
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #2 (second time)";
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Backspace over record #1";
+  readRecord1("after backspace");
+
+  // CLOSE(UNIT=unit,STATUS='DELETE')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
 TEST(ExternalIOTests, TestDirectFormatted) {
   // OPEN(NEWUNIT=unit,ACCESS='DIRECT',ACTION='READWRITE',&
   //   FORM='FORMATTED',RECL=8,STATUS='SCRATCH')
