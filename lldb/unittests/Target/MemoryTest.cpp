@@ -97,8 +97,8 @@ public:
   void RefreshStateAfterStop() override {}
   // Required by Target::ReadMemory() to call Process::ReadMemory()
   bool IsAlive() override { return true; }
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     if (m_bytes_left == 0)
       return 0;
 
@@ -469,8 +469,9 @@ public:
   bool read_less_than_requested = false;
   bool read_more_than_requested = false;
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    lldb::addr_t vm_addr = process_addr.GetValue();
     if (read_less_than_requested && size > 0)
       size--;
     if (read_more_than_requested)
@@ -746,8 +747,9 @@ public:
     strcpy(&memory[300], long_str.data());
   }
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    lldb::addr_t vm_addr = process_addr.GetValue();
     if (vm_addr >= 1024) {
       error = Status::FromErrorString("out of bounds!");
       return 0;
@@ -911,7 +913,8 @@ public:
   void RefreshStateAfterStop() override {}
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
   llvm::StringRef GetPluginName() override { return "Dummy"; }
-  size_t DoReadMemory(addr_t, void *, size_t, Status &) override {
+  size_t DoReadMemory(const ProcessAddress &, void *, size_t,
+                      Status &) override {
     llvm_unreachable("don't call this");
   }
 };
