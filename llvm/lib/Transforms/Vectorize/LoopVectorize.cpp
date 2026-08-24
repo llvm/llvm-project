@@ -449,6 +449,119 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
   return ElementCount::getFixed(0);
 }
 
+/// Derives the maximum trip count for the "remainder after a strided main loop"
+/// pattern by examining the predecessors of \p StartVal (an LCSSA phi).
+/// This acts as a fallback when SCEV cannot trace bounds through LCSSA phis.
+/// Returns the derived maximum trip count (Stride - 1), or 0 if unproven.
+static unsigned getMaxTCForRemainderLoop(Value *StartVal, Value *Bound) {
+  using namespace PatternMatch;
+
+  auto *StartPhi = dyn_cast<PHINode>(StartVal);
+  if (!StartPhi)
+    return 0;
+
+  BasicBlock *PhiBB = StartPhi->getParent();
+  unsigned NumIncoming = StartPhi->getNumIncomingValues();
+  if (NumIncoming == 0)
+    return 0;
+
+  unsigned MaxTCBound = 0;
+
+  for (unsigned i = 0; i < NumIncoming; ++i) {
+    Value *InVal = StartPhi->getIncomingValue(i);
+    BasicBlock *CheckBB = StartPhi->getIncomingBlock(i);
+    BasicBlock *LastBB = PhiBB;
+    Value *CheckVal = InVal;
+    unsigned BoundForThisPred = 0;
+
+    // Trace through single-value LCSSA phis (up to a small depth).
+    for (unsigned Depth = 0; Depth < 4; ++Depth) {
+      auto *LCSSAPhi = dyn_cast<PHINode>(CheckVal);
+      if (!LCSSAPhi || LCSSAPhi->getNumIncomingValues() != 1)
+        break;
+      LastBB = CheckBB;
+      CheckVal = LCSSAPhi->getIncomingValue(0);
+      CheckBB = LCSSAPhi->getIncomingBlock(0);
+    }
+
+    // Walk up single-predecessor blocks to find the bounding condition.
+    for (unsigned Depth = 0; Depth < 4; ++Depth) {
+      if (auto *CBI = dyn_cast<CondBrInst>(CheckBB->getTerminator())) {
+        auto *ICmp = dyn_cast<ICmpInst>(CBI->getCondition());
+        if (!ICmp)
+          break;
+
+        ICmpInst::Predicate Pred = ICmp->getPredicate();
+        Value *Op0 = ICmp->getOperand(0);
+        Value *Op1 = ICmp->getOperand(1);
+
+        if (CBI->getSuccessor(1) == LastBB)
+          Pred = ICmpInst::getInversePredicate(Pred);
+        else if (CBI->getSuccessor(0) != LastBB)
+          break;
+
+        uint64_t Stride = 0;
+
+        // Pattern 1: entry path (Bound < Stride) and InVal == 0
+        if (match(InVal, m_Zero())) {
+          if ((Pred == ICmpInst::ICMP_ULT && Op0 == Bound &&
+               match(Op1, m_ConstantInt(Stride))) ||
+              (Pred == ICmpInst::ICMP_UGT && Op1 == Bound &&
+               match(Op0, m_ConstantInt(Stride)))) {
+            if (Stride >= 2 && Stride <= 4096) {
+              BoundForThisPred = Stride - 1;
+              break;
+            }
+          }
+        }
+
+        // Pattern 2: loop exit path
+        // Form A: CheckVal is (start + Stride) and condition is (CheckVal >
+        // Bound)
+        if ((Pred == ICmpInst::ICMP_UGT && Op0 == CheckVal && Op1 == Bound &&
+             match(CheckVal, m_c_Add(m_Value(), m_ConstantInt(Stride)))) ||
+            (Pred == ICmpInst::ICMP_ULT && Op1 == CheckVal && Op0 == Bound &&
+             match(CheckVal, m_c_Add(m_Value(), m_ConstantInt(Stride))))) {
+          if (Stride >= 2 && Stride <= 4096) {
+            BoundForThisPred = Stride - 1;
+            break;
+          }
+        }
+
+        // Form B: condition is (CheckVal + Stride > Bound)
+        if ((Pred == ICmpInst::ICMP_UGT && Op1 == Bound &&
+             match(Op0,
+                   m_c_Add(m_Specific(CheckVal), m_ConstantInt(Stride)))) ||
+            (Pred == ICmpInst::ICMP_ULT && Op0 == Bound &&
+             match(Op1,
+                   m_c_Add(m_Specific(CheckVal), m_ConstantInt(Stride))))) {
+          if (Stride >= 2 && Stride <= 4096) {
+            BoundForThisPred = Stride - 1;
+            break;
+          }
+        }
+
+        break; // Found a conditional branch but didn't match.
+      }
+
+      // Walk backward to the unique predecessor block.
+      LastBB = CheckBB;
+      CheckBB = CheckBB->getUniquePredecessor();
+      if (!CheckBB)
+        break;
+    }
+
+    if (BoundForThisPred == 0)
+      return 0; // Predecessor could not be bounded.
+
+    MaxTCBound = std::max(MaxTCBound, BoundForThisPred);
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: Derived max TC " << MaxTCBound
+                    << " from remainder-of-stride pattern\n");
+  return MaxTCBound;
+}
+
 /// Get the maximum trip count for \p L from the SCEV unsigned range, excluding
 /// zero from the range. Only valid when not folding the tail, as the minimum
 /// iteration count check guards against a zero trip count. Returns 0 if
@@ -464,6 +577,22 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
   APInt MaxTCFromRange = TCRange.getUnsignedMax();
   if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
     return MaxTCFromRange.getZExtValue();
+
+  // Fallback: detect the "remainder of a strided loop" pattern.
+  // Use Loop::getBounds to extract the IV start value and loop bound,
+  // then check if the start value is an LCSSA phi from a strided loop.
+  if (auto Bounds = L->getBounds(*SE)) {
+    if (Bounds->getDirection() == Loop::LoopBounds::Direction::Increasing &&
+        Bounds->getStepValue() &&
+        PatternMatch::match(Bounds->getStepValue(), PatternMatch::m_One())) {
+      Value *StartVal = &Bounds->getInitialIVValue();
+      Value *BoundVal = &Bounds->getFinalIVValue();
+      if (L->isLoopInvariant(BoundVal))
+        if (unsigned MaxTC = getMaxTCForRemainderLoop(StartVal, BoundVal))
+          return MaxTC;
+    }
+  }
+
   return 0;
 }
 
