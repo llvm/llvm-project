@@ -1268,14 +1268,29 @@ TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
            {"-x", "objective-c", "-fobjc-arc"});
 }
 
-TEST(WalkAST, ObjCImplicitPointerCast) {
+TEST(WalkAST, ObjCImplicitVoidPointerCast) {
   testWalk(R"objc(
     @interface $implicit^NSString
     @end
+    void cast(NSString *p);
   )objc",
            R"objc(
-    NSString *foo(void *p) {
-      return ^p;
+    void foo(void *p) {
+      cast(^p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplicitIdPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+    void cast(NSString *p);
+  )objc",
+           R"objc(
+   void foo(id p) {
+      cast(^p);
     }
   )objc",
            {"-x", "objective-c"});
@@ -1525,10 +1540,10 @@ TEST(WalkAST, ObjCEncodeExpr) {
            R"objc(
     void test() {
       const char *enc = @encode(struct ^MyStruct);
-     }
+    }
   )objc",
            {"-x", "objective-c"});
-}     
+}
 
 } // namespace
 } // namespace clang::include_cleaner
