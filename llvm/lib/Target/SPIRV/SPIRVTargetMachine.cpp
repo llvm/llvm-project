@@ -94,11 +94,6 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
-void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-}
-
 namespace {
 // SPIR-V Code Generator Pass Configuration Options.
 class SPIRVPassConfig : public TargetPassConfig {
