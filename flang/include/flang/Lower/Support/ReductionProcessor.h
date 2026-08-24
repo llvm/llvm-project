@@ -33,6 +33,7 @@ namespace lower {
 class AbstractConverter;
 } // namespace lower
 namespace semantics {
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 } // namespace Fortran
@@ -92,6 +93,13 @@ public:
 
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
+
+  /// Find a user-defined reduction that shadows a supported intrinsic
+  /// procedure reduction for \p type in \p scope.
+  static const semantics::Symbol *findUserDefinedReductionForIntrinsic(
+      const semantics::Scope &scope,
+      const omp::clause::ProcedureDesignator &reductionIntrinsic,
+      const semantics::DeclTypeSpec *type);
 
   static const semantics::SourceName
   getRealName(const semantics::Symbol *symbol);
