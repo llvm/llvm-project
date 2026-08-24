@@ -379,6 +379,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
+  // A scalar integer divide/remainder by a constant is not a hardware divide;
+  // it lowers to a magic-number multiply-high plus a few fixup ops. Cost it as
+  // that sequence rather than the generic single-instruction divide, so the
+  // vectorizers do not compare against an artificially cheap scalar lane. The
+  // power-of-two cases are handled above; negated powers of two are left to the
+  // generic handling.
+  if (!Ty->isVectorTy() && Op2Info.isConstant() && !Op2Info.isNegatedPowerOf2() &&
+      (ISD == ISD::UDIV || ISD == ISD::SDIV || ISD == ISD::UREM ||
+       ISD == ISD::SREM)) {
+    unsigned Cost = ISD == ISD::UREM || ISD == ISD::SREM ? 6 : 5;
+    if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
+      Cost += 2;
+    return LT.first * Cost;
+  }
+
   static const CostKindTblEntry GFNIUniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
     { ISD::SRL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
@@ -423,9 +438,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512DQUniformConstCostTable[] = {
-    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v4i64, { 15 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v4i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
-    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v8i64, { 15 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v8i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
     // The remainder's multiply-back is a single vpmullq with DQ, just like the
     // pmulld the vXi32 entries above rely on. Without DQ it is another
@@ -469,7 +484,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v8i64,  { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v8i64,  { 15 } }, // pmuludq-based MULHU sequence
     { ISD::UREM, MVT::v8i64,  { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
@@ -513,7 +528,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v4i64, { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v4i64, { 15 } }, // pmuludq-based MULHU sequence
     { ISD::UREM, MVT::v4i64, { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
@@ -616,9 +631,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512DQConstCostTable[] = {
-    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v4i64, { 19 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v4i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
-    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SDIV, MVT::v8i64, { 19 } }, // vpmullq-based MULHS sequence
     { ISD::SREM, MVT::v8i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
     // The remainder's multiply-back is a single vpmullq with DQ, whereas the
     // AVX512/AVX2 tables have to charge for another vpmuludq schoolbook.
@@ -648,7 +663,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v8i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v8i64,  { 22 } }, // vpmuludq-based MULHU sequence
     { ISD::UREM, MVT::v8i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
@@ -674,7 +689,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
 
-    { ISD::UDIV, MVT::v4i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UDIV, MVT::v4i64,  { 22 } }, // vpmuludq-based MULHU sequence
     { ISD::UREM, MVT::v4i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
@@ -1582,9 +1597,9 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
 
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
@@ -1610,8 +1625,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
     return getShuffleCost(TTI::SK_InsertSubvector,
                           VectorType::getDoubleElementsVectorType(SrcTy),
-                          VectorType::getDoubleElementsVectorType(SrcTy), Mask,
-                          CostKind, Mask.size() / 2, SrcTy);
+                          VectorType::getDoubleElementsVectorType(SrcTy),
+                          CostKind, Mask, Mask.size() / 2, SrcTy);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
@@ -1725,7 +1740,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            SubLT.second.getVectorNumElements());
         int ExtractIndex = alignDown((Index % NumElts), NumSubElts);
         InstructionCost ExtractCost =
-            getShuffleCost(TTI::SK_ExtractSubvector, VecTy, VecTy, {}, CostKind,
+            getShuffleCost(TTI::SK_ExtractSubvector, VecTy, VecTy, CostKind, {},
                            ExtractIndex, SubTy);
 
         // If the original size is 32-bits or more, we can use pshufd. Otherwise
@@ -1875,7 +1890,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                     PrevRegMask != RegMask)
                   Cost +=
                       getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                     SingleOpTy, RegMask, CostKind, 0, nullptr);
+                                     SingleOpTy, CostKind, RegMask, 0, nullptr);
                 else
                   // Just a copy of previous destination register.
                   Cost += TTI::TCC_Basic;
@@ -1893,18 +1908,18 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
              &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
                     unsigned /*Unused*/, bool /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
-                                     SingleOpTy, RegMask, CostKind, 0, nullptr);
+                                     SingleOpTy, CostKind, RegMask, 0, nullptr);
             });
         return Cost;
       }
 
       InstructionCost NumOfShuffles = (NumOfSrcs - 1) * NumOfDests;
       return NumOfShuffles * getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
-                                            SingleOpTy, {}, CostKind, 0,
+                                            SingleOpTy, CostKind, {}, 0,
                                             nullptr);
     }
 
-    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
   }
 
@@ -2402,7 +2417,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return LT.first * *KindCost;
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 
@@ -2413,6 +2428,37 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // A narrow (i8/i16) zero-extension used as a GEP *index* can be folded into
+  // the addressing mode of the consuming memory op, but only if the source is
+  // already materialised zero-extended in a full register. X86's SIB form
+  // [base + index*scale + disp] reads the index at full width and does NOT
+  // zero-extend a narrow index (unlike AArch64's uxtw-extended addressing), so
+  // a "dirty" narrow source (e.g. an i16 add result used only as an index)
+  // still needs a dedicated movzx and is not free. Price it as free only with
+  // positive evidence that no movzx is required.
+  if (ISD == ISD::ZERO_EXTEND && I && I->hasOneUse() && Src->isIntegerTy() &&
+      Src->getScalarSizeInBits() < 32) {
+    const Use &U = *I->use_begin();
+    if (isa<GetElementPtrInst>(U.getUser()) &&
+        U.getOperandNo() != GetElementPtrInst::getPointerOperandIndex()) {
+      const Value *Op = I->getOperand(0);
+      // Clean sources: an extending load, a zeroext argument, or a value whose
+      // high bits are provably zero (e.g. from a shift/mask). These mirror the
+      // proof-based reasoning the middle end uses elsewhere (ValueTracking and
+      // InstCombine's canEvaluateZExtd); we intentionally do NOT treat a merely
+      // multiply-used operand as clean, since that is a guess rather than
+      // proof.
+      if (isa<LoadInst>(Op))
+        return TTI::TCC_Free;
+      if (const auto *A = dyn_cast<Argument>(Op))
+        if (A->hasAttribute(Attribute::ZExt))
+          return TTI::TCC_Free;
+      if (computeKnownBits(Op, I->getDataLayout(), /*AC=*/nullptr, I)
+              .countMinLeadingZeros() > 0)
+        return TTI::TCC_Free;
+    }
+  }
 
   // The cost tables include both specific, custom (non-legal) src/dst type
   // conversions and generic, legalized types. We test for customs first, before
@@ -4496,6 +4542,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i16,     {  1,  1,  2,  2 } }, // popcnt(zext())
     { ISD::CTPOP,      MVT::i8,      {  1,  1,  2,  2 } }, // popcnt(zext())
   };
+  static const CostKindTblEntry PCLMULCostTbl[] = {
+    { ISD::CLMUL,      MVT::v2i64,   {  3, 12,  4,  8 } }, // MOV+2xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::v4i32,   {  8, 18, 12, 16 } }, // MOV+4xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::i64,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i32,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i16,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i8,      {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+  };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
@@ -4718,6 +4772,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
+  case Intrinsic::clmul:
+    ISD = ISD::CLMUL;
+    break;
   }
 
   if (ISD != ISD::DELETED_NODE) {
@@ -4888,6 +4945,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
+
+    // FIXME: PCLMUL w/ AVX/AVX512 and VPCLMULQDQ are not handled properly.
+    if (ST->hasPCLMUL())
+      if (const auto *Entry = CostTableLookup(PCLMULCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
@@ -5061,8 +5124,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(
       EVT VT = TLI->getValueType(DL, Val);
       if (VT.getScalarType() != MScalarTy || VT.getSizeInBits() >= 128)
         SubTy = FixedVectorType::get(ScalarType, SubNumElts);
-      ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, SubTy, {},
-                                   CostKind, 0, SubTy);
+      ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, SubTy,
+                                   CostKind, {}, 0, SubTy);
     }
     int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;
     return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
@@ -5159,8 +5222,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
           // FIXME: we don't need to extract if all non-demanded elements
           //        are legalization-inserted padding.
           if (!LaneEltMask.isAllOnes())
-            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
-                                   CostKind, I * NumEltsPerLane, LaneTy);
+            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, CostKind,
+                                   {}, I * NumEltsPerLane, LaneTy);
           Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, Insert,
                                                   /*Extract*/ false, CostKind);
         }
@@ -5177,8 +5240,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
             if (!AffectedLanes[I] ||
                 (Lane == 0 && FullyAffectedLegalVectors[LegalVec]))
               continue;
-            Cost += getShuffleCost(TTI::SK_InsertSubvector, Ty, Ty, {},
-                                   CostKind, I * NumEltsPerLane, LaneTy);
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, Ty, Ty, CostKind,
+                                   {}, I * NumEltsPerLane, LaneTy);
           }
         }
       }
@@ -5237,7 +5300,7 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
               NumEltsPerLane, I * NumEltsPerLane);
           if (LaneEltMask.isZero())
             continue;
-          Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {}, CostKind,
+          Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, CostKind, {},
                                  I * NumEltsPerLane, LaneTy);
           Cost += BaseT::getScalarizationOverhead(
               LaneTy, LaneEltMask, /*Insert*/ false, Extract, CostKind);
@@ -5357,7 +5420,7 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
 
   InstructionCost SingleShuffleCost =
       getShuffleCost(TTI::SK_PermuteSingleSrc, SingleDstVecTy, SingleDstVecTy,
-                     /*Mask=*/{}, CostKind,
+                     CostKind, /*Mask=*/{},
                      /*Index=*/0, /*SubTp=*/nullptr);
   return NumDstVectorsDemanded * SingleShuffleCost;
 }
@@ -5507,7 +5570,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
           Cost +=
               getShuffleCost(IsLoad ? TTI::ShuffleKind::SK_InsertSubvector
                                     : TTI::ShuffleKind::SK_ExtractSubvector,
-                             VTy, VTy, {}, CostKind, NumEltDone(), CurrVecTy);
+                             VTy, VTy, CostKind, {}, NumEltDone(), CurrVecTy);
       }
 
       // While we can directly load/store ZMM, YMM, and 64-bit halves of XMM,
@@ -5602,9 +5665,9 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT.isSimple() && Ty != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
-    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, SrcVTy, {}, CostKind,
+    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, SrcVTy, CostKind, {},
                            0, nullptr) +
-            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, MaskTy, {}, CostKind,
+            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, MaskTy, CostKind, {},
                            0, nullptr);
 
   else if (LT.first * Ty.getVectorNumElements() > NumElem) {
@@ -5612,8 +5675,8 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                            (unsigned)LT.first.getValue() *
                                                Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
-    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, NewMaskTy, {},
-                           CostKind, 0, MaskTy);
+    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, NewMaskTy,
+                           CostKind, {}, 0, MaskTy);
   }
 
   // Pre-AVX512 - each maskmov load costs 2 + store costs ~8.
@@ -5627,7 +5690,7 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
 InstructionCost X86TTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) const {
+    const TTI::TargetCostKind CostKind) const {
   if (Info.isSameBase() && Info.isKnownStride()) {
     // If all the pointers have known stride all the differences are translated
     // into constants. X86 memory addressing allows encoding it into
@@ -5679,51 +5742,127 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
+  // We use llvm-mca across all supported CPUs to measure the logic cost stats.
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
-  // and make it as the cost.
+  // and make it as the cost. TODO: Update old IACA numbers to llvm-mca.
 
-  static const CostTblEntry SLMCostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   3 },
-    { ISD::ADD,   MVT::v2i64,   5 },
+  static const CostKindTblEntry SLMCostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v2i64,   {5, 5, 5, 5} },
   };
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   2 },
-    { ISD::FADD,  MVT::v2f32,   2 },
-    { ISD::FADD,  MVT::v4f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.3".
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v2i8,    2 },
-    { ISD::ADD,   MVT::v4i8,    2 },
-    { ISD::ADD,   MVT::v8i8,    2 },
-    { ISD::ADD,   MVT::v16i8,   3 },
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v2f32,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v4f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "1.6".
+    { ISD::ADD,   MVT::v2i32,   {2, 2, 2, 2} }, // FIXME: chosen to be less than v4i32
+    { ISD::ADD,   MVT::v4i32,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "3.3".
+    { ISD::ADD,   MVT::v2i16,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v4i16,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v8i16,   {4, 4, 4, 4} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v2i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v4i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v8i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v16i8,   {3, 3, 3, 3} },
+
+    { ISD::AND,   MVT::v2i64,   {2, 2, 3, 3} },
+    { ISD::AND,   MVT::v4i32,   {3, 4, 5, 5} },
+    { ISD::AND,   MVT::v8i16,   {4, 7, 8, 8} },
+    { ISD::AND,   MVT::v16i8,   {6,10,11,11} },
+    { ISD::OR,    MVT::v2i64,   {2, 2, 3, 3} },
+    { ISD::OR,    MVT::v4i32,   {3, 4, 5, 5} },
+    { ISD::OR,    MVT::v8i16,   {4, 7, 8, 8} },
+    { ISD::OR,    MVT::v16i8,   {6,10,11,11} },
+    { ISD::XOR,   MVT::v2i64,   {2, 2, 3, 3} },
+    { ISD::XOR,   MVT::v4i32,   {3, 4, 5, 5} },
+    { ISD::XOR,   MVT::v8i16,   {4, 7, 8, 8} },
+    { ISD::XOR,   MVT::v16i8,   {6,10,11,11} },
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::FADD,  MVT::v4f64,   3 },
-    { ISD::FADD,  MVT::v4f32,   3 },
-    { ISD::FADD,  MVT::v8f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v8i32,   5 },
-    { ISD::ADD,   MVT::v16i16,  5 },
-    { ISD::ADD,   MVT::v32i8,   4 },
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::FADD,  MVT::v4f64,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v4f32,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v8f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {1, 1, 1, 1} },      // The data reported by the IACA tool is "1.5".
+    { ISD::ADD,   MVT::v4i64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v8i32,   {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v16i16,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v32i8,   {4, 4, 4, 4} },
+
+    { ISD::AND,   MVT::v4i64,   {3, 7, 5, 5} },
+    { ISD::AND,   MVT::v8i32,   {4, 9, 7, 7} },
+    { ISD::AND,   MVT::v16i16,  {5,11, 9, 9} },
+    { ISD::AND,   MVT::v8i16,   {4, 7, 7, 7} },
+    { ISD::AND,   MVT::v32i8,   {6,13,11,11} },
+    { ISD::AND,   MVT::v16i8,   {5,10, 9, 9} },
+    { ISD::OR,    MVT::v4i64,   {3, 7, 5, 5} },
+    { ISD::OR,    MVT::v8i32,   {4, 9, 7, 7} },
+    { ISD::OR,    MVT::v16i16,  {5,11, 9, 9} },
+    { ISD::OR,    MVT::v8i16,   {4, 7, 7, 7} },
+    { ISD::OR,    MVT::v32i8,   {6,13,11,11} },
+    { ISD::OR,    MVT::v16i8,   {5,10, 9, 9} },
+    { ISD::XOR,   MVT::v4i64,   {3, 7, 5, 5} },
+    { ISD::XOR,   MVT::v8i32,   {4, 9, 7, 7} },
+    { ISD::XOR,   MVT::v16i16,  {5,11, 9, 9} },
+    { ISD::XOR,   MVT::v8i16,   {4, 7, 7, 7} },
+    { ISD::XOR,   MVT::v32i8,   {6,13,11,11} },
+    { ISD::XOR,   MVT::v16i8,   {5,10, 9, 9} },
   };
 
-  static const CostTblEntry AVX512FCostTbl[] = {
-    { ISD::FADD,  MVT::v8f64,   4 },
-    { ISD::FADD,  MVT::v16f32,  5 },
-    { ISD::ADD,   MVT::v8i64,   4 },
-    { ISD::ADD,   MVT::v16i32,  6 },
+  static const CostKindTblEntry AVX2CostTbl[] = {
+    { ISD::AND,   MVT::v4i64,   {2, 7, 5, 5} },
+    { ISD::AND,   MVT::v2i64,   {1, 2, 3, 3} },
+    { ISD::AND,   MVT::v8i32,   {3, 9, 7, 7} },
+    { ISD::AND,   MVT::v4i32,   {2, 4, 5, 5} },
+    { ISD::AND,   MVT::v16i16,  {3,11, 9, 9} },
+    { ISD::AND,   MVT::v8i16,   {2, 6, 7, 7} },
+    { ISD::AND,   MVT::v32i8,   {3,13,11,11} },
+    { ISD::AND,   MVT::v16i8,   {3, 8, 9, 9} },
+    { ISD::OR,    MVT::v4i64,   {2, 7, 5, 5} },
+    { ISD::OR,    MVT::v2i64,   {1, 2, 3, 3} },
+    { ISD::OR,    MVT::v8i32,   {3, 9, 7, 7} },
+    { ISD::OR,    MVT::v4i32,   {2, 4, 5, 5} },
+    { ISD::OR,    MVT::v16i16,  {3,11, 9, 9} },
+    { ISD::OR,    MVT::v8i16,   {2, 6, 7, 7} },
+    { ISD::OR,    MVT::v32i8,   {3,13,11,11} },
+    { ISD::OR,    MVT::v16i8,   {3, 8, 9, 9} },
+    { ISD::XOR,   MVT::v4i64,   {2, 7, 5, 5} },
+    { ISD::XOR,   MVT::v2i64,   {1, 2, 3, 3} },
+    { ISD::XOR,   MVT::v8i32,   {3, 9, 7, 7} },
+    { ISD::XOR,   MVT::v4i32,   {2, 4, 5, 5} },
+    { ISD::XOR,   MVT::v16i16,  {3,11, 9, 9} },
+    { ISD::XOR,   MVT::v8i16,   {2, 6, 7, 7} },
+    { ISD::XOR,   MVT::v32i8,   {3,13,11,11} },
+    { ISD::XOR,   MVT::v16i8,   {3, 8, 9, 9} },
   };
 
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::ADD,   MVT::v32i16,  7 },
-    { ISD::ADD,   MVT::v64i8,   4 },
+  static const CostKindTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   {4, 4, 4, 4} },
+    { ISD::FADD,  MVT::v16f32,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v8i64,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v16i32,  {6, 6, 6, 6} },
+
+    { ISD::AND,   MVT::v8i64,   {3,10, 7, 7} },
+    { ISD::AND,   MVT::v16i32,  {4,12, 9, 9} },
+    { ISD::AND,   MVT::v32i16,  {4,14,11,11} },
+    { ISD::AND,   MVT::v64i8,   {4,16,13,13} },
+    { ISD::AND,   MVT::v16i8,   {2, 8, 9, 9} },
+    { ISD::OR,    MVT::v8i64,   {3,10, 7, 7} },
+    { ISD::OR,    MVT::v16i32,  {4,12, 9, 9} },
+    { ISD::OR,    MVT::v32i16,  {4,14,11,11} },
+    { ISD::OR,    MVT::v64i8,   {4,16,13,13} },
+    { ISD::OR,    MVT::v16i8,   {2, 8, 9, 9} },
+    { ISD::XOR,   MVT::v8i64,   {3,10, 7, 7} },
+    { ISD::XOR,   MVT::v16i32,  {4,12, 9, 9} },
+    { ISD::XOR,   MVT::v32i16,  {4,14,11,11} },
+    { ISD::XOR,   MVT::v64i8,   {4,16,13,13} },
+    { ISD::XOR,   MVT::v16i8,   {2, 8, 9, 9} },
+  };
+
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  {7, 7, 7, 7} },
+    { ISD::ADD,   MVT::v64i8,   {4, 4, 4, 4} },
   };
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -5737,23 +5876,33 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
   }
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -5761,16 +5910,6 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   MVT MTy = LT.second;
 
   auto *ValVTy = cast<FixedVectorType>(ValTy);
-
-  // Special case: vXi8 mul reductions are performed as vXi16.
-  if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
-    auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
-    auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
-    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
-                            TargetTransformInfo::CastContextHint::None,
-                            CostKind) +
-           getArithmeticReductionCost(Opcode, WideVecTy, FMF, CostKind);
-  }
 
   InstructionCost ArithmeticCost = 0;
   if (LT.first != 1 && MTy.isVector() &&
@@ -5782,65 +5921,53 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     ArithmeticCost *= LT.first - 1;
   }
 
-  if (ST->useSLMArithCosts())
-    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
-
-  if (ST->hasAVX())
-    if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
-
-  if (ST->hasSSE2())
-    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
-
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.
-  static const CostTblEntry AVX512BoolReduction[] = {
-    { ISD::AND,  MVT::v2i1,   3 },
-    { ISD::AND,  MVT::v4i1,   5 },
-    { ISD::AND,  MVT::v8i1,   7 },
-    { ISD::AND,  MVT::v16i1,  9 },
-    { ISD::AND,  MVT::v32i1, 11 },
-    { ISD::AND,  MVT::v64i1, 13 },
-    { ISD::OR,   MVT::v2i1,   3 },
-    { ISD::OR,   MVT::v4i1,   5 },
-    { ISD::OR,   MVT::v8i1,   7 },
-    { ISD::OR,   MVT::v16i1,  9 },
-    { ISD::OR,   MVT::v32i1, 11 },
-    { ISD::OR,   MVT::v64i1, 13 },
+  static const CostKindTblEntry AVX512BoolReduction[] = {
+    { ISD::AND,  MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::AND,  MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::AND,  MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::AND,  MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::AND,  MVT::v32i1,  {11,11,11,11} },
+    { ISD::AND,  MVT::v64i1,  {13,13,13,13} },
+    { ISD::OR,   MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::OR,   MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::OR,   MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::OR,   MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::OR,   MVT::v32i1,  {11,11,11,11} },
+    { ISD::OR,   MVT::v64i1,  {13,13,13,13} },
   };
 
-  static const CostTblEntry AVX2BoolReduction[] = {
-    { ISD::AND,  MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   2 }, // vpmovmskb + cmp
+  static const CostKindTblEntry AVX2BoolReduction[] = {
+    { ISD::AND,  MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
   };
 
-  static const CostTblEntry AVX1BoolReduction[] = {
-    { ISD::AND,  MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::AND,  MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::AND,  MVT::v16i16,  4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::OR,   MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::OR,   MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::OR,   MVT::v16i16,  4 }, // vextractf128 + vpor + vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   4 }, // vextractf128 + vpor + vpmovmskb + cmp
+  static const CostKindTblEntry AVX1BoolReduction[] = {
+    { ISD::AND,  MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::AND,  MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::AND,  MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::OR,   MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::OR,   MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::OR,   MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
   };
 
-  static const CostTblEntry SSE2BoolReduction[] = {
-    { ISD::AND,  MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::AND,  MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::AND,  MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::AND,  MVT::v16i8,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::OR,   MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::OR,   MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v16i8,   2 }, // pmovmskb + cmp
+  static const CostKindTblEntry SSE2BoolReduction[] = {
+    { ISD::AND,  MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::AND,  MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::AND,  MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::AND,  MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::OR,   MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::OR,   MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
   };
 
-  // Handle bool allof/anyof patterns.
+  // Handle bool allof/anyof vXi1 patterns before we check legal types.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
     if (ISD == ISD::ADD) {
       // vXi1 addition reduction will bitcast to scalar and perform a popcount.
@@ -5853,31 +5980,65 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
              getIntrinsicInstrCost(ICA, CostKind);
     }
 
-    InstructionCost ArithmeticCost = 0;
-    if (LT.first != 1 && MTy.isVector() &&
-        MTy.getVectorNumElements() < ValVTy->getNumElements()) {
-      // Type needs to be split. We need LT.first - 1 arithmetic ops.
-      auto *SingleOpTy = FixedVectorType::get(ValVTy->getElementType(),
-                                              MTy.getVectorNumElements());
-      ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
-      ArithmeticCost *= LT.first - 1;
-    }
-
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
 
     return BaseT::getArithmeticReductionCost(Opcode, ValVTy, FMF, CostKind);
   }
+
+  // Special case: vXi8 mul reductions are performed as vXi16.
+  if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
+    auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
+    auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
+    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
+           getArithmeticReductionCost(Opcode, WideVecTy, FMF, CostKind);
+  }
+
+  if (ST->useSLMArithCosts())
+    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX2())
+    if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX())
+    if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasSSE2())
+    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   unsigned NumVecElts = ValVTy->getNumElements();
   unsigned ScalarSize = ValVTy->getScalarSizeInBits();
@@ -5909,8 +6070,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     // If we're reducing from 256/512 bits, use an extract_subvector.
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
-      ReductionCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
-                                      CostKind, NumVecElts, SubTy);
+      ReductionCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty,
+                                      CostKind, {}, NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
@@ -5922,7 +6083,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         ShufTy =
             FixedVectorType::get(Type::getInt64Ty(ValVTy->getContext()), 2);
       ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
-                                      {}, CostKind, 0, nullptr);
+                                      CostKind, {}, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
       FixedVectorType *ShufTy;
@@ -5933,7 +6094,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         ShufTy =
             FixedVectorType::get(Type::getInt32Ty(ValVTy->getContext()), 4);
       ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
-                                      {}, CostKind, 0, nullptr);
+                                      CostKind, {}, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
       auto *ShiftTy = FixedVectorType::get(
@@ -6179,8 +6340,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
     // If we're reducing from 256/512 bits, use an extract_subvector.
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
-      MinMaxCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
-                                   CostKind, NumVecElts, SubTy);
+      MinMaxCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, CostKind,
+                                   {}, NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
@@ -6190,8 +6351,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
             FixedVectorType::get(Type::getDoubleTy(ValTy->getContext()), 2);
       else
         ShufTy = FixedVectorType::get(Type::getInt64Ty(ValTy->getContext()), 2);
-      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy, {},
-                                   CostKind, 0, nullptr);
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
+                                   CostKind, {}, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
       FixedVectorType *ShufTy;
@@ -6199,8 +6360,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
         ShufTy = FixedVectorType::get(Type::getFloatTy(ValTy->getContext()), 4);
       else
         ShufTy = FixedVectorType::get(Type::getInt32Ty(ValTy->getContext()), 4);
-      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy, {},
-                                   CostKind, 0, nullptr);
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
+                                   CostKind, {}, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
       auto *ShiftTy = FixedVectorType::get(
@@ -6898,6 +7059,9 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
   case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
@@ -6998,7 +7162,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         (NumOfMemOps > 1) ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc;
 
     InstructionCost ShuffleCost = getShuffleCost(
-        ShuffleKind, SingleMemOpTy, SingleMemOpTy, {}, CostKind, 0, nullptr);
+        ShuffleKind, SingleMemOpTy, SingleMemOpTy, CostKind, {}, 0, nullptr);
 
     unsigned NumOfLoadsInInterleaveGrp =
         Indices.size() ? Indices.size() : Factor;
@@ -7055,8 +7219,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   // shuffle.
   unsigned NumOfSources = Factor; // The number of values to be merged.
   InstructionCost ShuffleCost =
-      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, SingleMemOpTy, {},
-                     CostKind, 0, nullptr);
+      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, SingleMemOpTy,
+                     CostKind, {}, 0, nullptr);
   unsigned NumOfShufflesPerStore = NumOfSources - 1;
 
   // The SK_MergeTwoSrc shuffle clobbers one of src operands.

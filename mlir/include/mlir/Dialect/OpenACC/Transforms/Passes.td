@@ -68,8 +68,7 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
        - A copy clause if the compute construct is a kernels construct.
        - A firstprivate clause otherwise (parallel, serial).
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect",
-      "mlir::memref::MemRefDialect",
+  let dependentDialects = ["mlir::memref::MemRefDialect",
       "mlir::arith::ArithDialect"];
   let options = [
     Option<"enableImplicitReductionCopy", "enable-implicit-reduction-copy",
@@ -115,7 +114,6 @@ def ACCImplicitDeclare : Pass<"acc-implicit-declare", "mlir::ModuleOp"> {
     - Hoisting non-constant global references that can use implicit mapping
     - Only processing symbols that are not already valid in device regions
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
 def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
@@ -146,7 +144,6 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect"];
   let options = [ AccDeviceTypeOption ];
 }
 
@@ -156,7 +153,36 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
     Copies globals that have the `acc.declare` attribute into the GPU module so
     that device code can reference them.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+  let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", "false",
+           "Emit declaration-only device globals for CUDA unified memory.">
+  ];
+}
+
+def ACCDeclareCtorDtorConversion
+    : Pass<"acc-declare-ctor-dtor-conversion", "mlir::ModuleOp"> {
+  let summary = "Convert OpenACC declare global constructors and destructors "
+                "to LLVM functions";
+  let description = [{
+    Converts `acc.global_ctor` into `llvm.func` entry points and registers them
+    in `llvm.mlir.global_ctors`. When enabled, similarly converts
+    `acc.global_dtor` and registers the functions in `llvm.mlir.global_dtors`;
+    otherwise, removes the destructor operations.
+
+    The ctor/dtor priority defaults to 102 so declare constructors run after
+    libacctarget init (priority 101).
+
+    Nested OpenACC operations inside the ctor/dtor regions are left unchanged
+    for later lowering.
+  }];
+  let options = [
+    Option<"priority", "priority", "int32_t", /*default=*/"102",
+           "Priority for ACC declare global constructors and destructors">,
+    Option<"generateDtors", "generate-dtors", "bool", /*default=*/"true",
+           "Generate LLVM destructor functions and register them globally">
+  ];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -171,8 +197,7 @@ def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
     and vector), this conversion is semantically equivalent while enabling code
     reuse in later compilation stages.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect",
-      "mlir::arith::ArithDialect"];
+  let dependentDialects = ["mlir::arith::ArithDialect"];
 }
 
 
@@ -204,7 +229,14 @@ def ACCEmitRemarksPrivate
     reports the implicit and explicit `private` and `firstprivate` variables it
     carries.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def ACCEmitRemarksData : Pass<"acc-emit-remarks-data", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC data-mapping remarks";
+  let description = [{
+    This pass emits remarks describing the data clauses associated
+    with OpenACC data constructs and unstructured data directives.
+  }];
 }
 
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
@@ -240,8 +272,7 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
     - Collapsed loops with tile counts exceeding collapse count
     - Proper handling of loop attributes (gang, worker, vector)
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect",
-      "mlir::arith::ArithDialect"];
+  let dependentDialects = ["mlir::arith::ArithDialect"];
   let options = [
     Option<"defaultTileSize", "default-tile-size", "int32_t", "32",
            "Default tile size to use for wildcard ('*') tile sizes">
@@ -270,7 +301,6 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
                   (folded if known): acc.on_device
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect"];
   let options = [
     ListOption<"theDeviceTypes", "the-device-types", "int64_t",
                "List of integers which represent the device we are specializing for">
@@ -301,8 +331,7 @@ def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp">
     - Data entry ops (orphan): replaced with var operand
     - In host fallback mode: all data, compute, and runtime ops are removed
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect",
-      "mlir::scf::SCFDialect"];
+  let dependentDialects = ["mlir::scf::SCFDialect"];
   let options = [
     Option<"enableHostFallback", "enable-host-fallback", "bool", "false",
            "Enable host fallback mode which converts ALL ACC operations, "
@@ -342,8 +371,7 @@ def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
     - Data exit operations (acc.copyout, acc.delete, etc.) are cloned to device path
     - The host path uses `populateACCHostFallbackPatterns` to convert ACC ops
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect",
-      "mlir::scf::SCFDialect"];
+  let dependentDialects = ["mlir::scf::SCFDialect"];
 }
 
 def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicalization", "mlir::func::FuncOp"> {
@@ -431,7 +459,7 @@ def ACCRecipeMaterialization : Pass<"acc-recipe-materialization", "mlir::ModuleO
     acc.reduction_combine_region for reductions) and removes unused recipe
     symbols.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::arith::ArithDialect"];
+  let dependentDialects = ["mlir::arith::ArithDialect"];
 }
 
 def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
@@ -486,7 +514,6 @@ def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
        `acc.compute_region`.
   }];
   let dependentDialects = [
-    "mlir::acc::OpenACCDialect",
     "mlir::arith::ArithDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -506,12 +533,10 @@ def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
     expressed by one acc.par_width derived from the routine's clauses (seq,
     vector, worker, gang). The pass does not use acc.kernel_environment. It
     sets acc.specialized_routine on the new function and updates the
-    acc.routine's func_name to point to it. For nohost routines, all uses of
-    the host symbol are replaced with the device symbol and the host function
-    is erased. Routines with bind(name) and external functions are skipped.
+    acc.routine's func_name to point to it. Routines with bind(name) and
+    external functions are skipped.
   }];
   let dependentDialects = [
-    "mlir::acc::OpenACCDialect",
     "mlir::func::FuncDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -563,7 +588,6 @@ def ACCCGToGPU : InterfacePass<"acc-cg-to-gpu", "mlir::FunctionOpInterface"> {
     "mlir::arith::ArithDialect",
     "mlir::complex::ComplexDialect",
     "mlir::gpu::GPUDialect",
-    "mlir::acc::OpenACCDialect",
     "mlir::scf::SCFDialect",
     "mlir::NVVM::NVVMDialect",
     "mlir::memref::MemRefDialect"

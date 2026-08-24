@@ -881,6 +881,12 @@ void visitAllSymbols(const FunctionLikeUnit &funit,
 void visitAllSymbols(const Evaluation &eval,
                      std::function<void(const semantics::Symbol &)> callBack);
 
+/// Return true when \p eval is an unstructured DO or IF construct that can
+/// folded into a self-contained scf.execute_region. \p semaCtx is needed to
+/// determine how many loops a directive applies to.
+bool isWrappableConstruct(const Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx);
+
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {

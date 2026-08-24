@@ -407,6 +407,10 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_cgs_no_proto : Warning<
+  "indirect call to a function with no prototype; generating type metadata for assumed prototype %0 (type string: %1)">,
+  InGroup<DiagGroup<"call-graph-section-no-prototype">>;
+
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,
@@ -433,6 +437,35 @@ def warn_ssaf_write_tu_summary_failed :
 def warn_ssaf_tu_summary_requires_compilation_unit_id :
   Warning<"option '--ssaf-tu-summary-file=' requires "
           "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_unknown_name :
+  Warning<"no source transformation registered with name: %0">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_requires :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=}0' "
+          "to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_read_wpa_suite_failed :
+  Warning<"failed to read whole-program analysis result from '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_option_ignored_without_source_transformation :
+  Warning<"option '%select{--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=}0' is ignored without "
+          "'--ssaf-source-transformation='">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_src_edit_failed :
+  Warning<"failed to write source edits to '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_transformation_report_failed :
+  Warning<"failed to write transformation report to '%0': %1">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def err_extract_api_ignores_file_not_found :
@@ -521,11 +554,10 @@ def err_member_ptr_requires_complete_type
     : Error<"member pointer representation requires a complete class type for "
             "%0 to perform this expression">;
 
-// ClangIR frontend errors
-def err_cir_to_cir_transform_failed : Error<
-    "CIR-to-CIR transformation failed">, DefaultFatal;
+def warn_dyndbg_unable_to_create_target : Warning<
+    "ignoring -fdynamic-debugging: unable to create target: '%0'">,
+    InGroup<DynamicDebugging>;
 
-def err_cir_verification_failed_pre_passes : Error<
-    "CIR module verification error before running CIR-to-CIR passes">,
-    DefaultFatal;
+def err_dyndbg_no_instrumentation : Error<
+    "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
 }

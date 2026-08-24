@@ -84,7 +84,9 @@ static bool containsUnreachable(const Loop &L,
   SmallVector<const Instruction *, 16> Worklist(Roots);
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
-    Visited.insert(I);
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     if (isa<PHINode>(I))
       continue;
@@ -153,7 +155,8 @@ private:
 /// ConditionalRecurrence, \p SimpleRecurrence, depending on \p IsBigEndian. We
 /// check that ConditionalRecurrence.Step is a Select(Cmp()) where the compare
 /// is `>= 0` in the big-endian case, and `== 0` in the little-endian case (or
-/// the inverse, in which case the branches of the compare are swapped). We
+/// the inverse, in which case the branches of the compare are swapped). For
+/// little-endian, we also accept a trunc to i1 (extracting bit zero). We
 /// check that the LHS is (ConditionalRecurrence.Phi [xor SimpleRecurrence.Phi])
 /// in the big-endian case, and additionally check for an AND with one in the
 /// little-endian case. We then check AllowedByR against CheckAllowedByR, which
@@ -166,6 +169,22 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 const RecurrenceInfo &SimpleRecurrence,
                                 bool IsBigEndian) {
   auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
+
+  // Match predicate with or without a SimpleRecurrence (the corresponding data
+  // is LHSAux).
+  auto MatchPred = m_CombineOr(
+      m_Specific(ConditionalRecurrence.Phi),
+      m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
+              m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
+
+  BinaryOperator *BitShift = ConditionalRecurrence.BO;
+  auto MatchBitShiftXorGenPoly = m_c_Xor(
+      m_Specific(BitShift), m_SpecificInt(*ConditionalRecurrence.ExtraConst));
+  if (!IsBigEndian &&
+      match(SI, m_Select(m_Trunc(MatchPred), MatchBitShiftXorGenPoly,
+                         m_Specific(BitShift))))
+    return true;
+
   CmpPredicate Pred;
   const Value *L;
   const APInt *R;
@@ -174,12 +193,6 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                           m_Instruction(TV), m_Instruction(FV))))
     return false;
 
-  // Match predicate with or without a SimpleRecurrence (the corresponding data
-  // is LHSAux).
-  auto MatchPred = m_CombineOr(
-      m_Specific(ConditionalRecurrence.Phi),
-      m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
-              m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
   bool LWellFormed =
       IsBigEndian ? match(L, MatchPred) : match(L, m_c_And(MatchPred, m_One()));
   if (!LWellFormed)
@@ -193,15 +206,10 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 IsBigEndian ? APInt::getSignedMinValue(BW)
                                             : APInt(BW, 1));
 
-  BinaryOperator *BitShift = ConditionalRecurrence.BO;
   if (AllowedByR == CheckAllowedByR)
-    return TV == BitShift &&
-           match(FV, m_c_Xor(m_Specific(BitShift),
-                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
+    return TV == BitShift && match(FV, MatchBitShiftXorGenPoly);
   if (AllowedByR.inverse() == CheckAllowedByR)
-    return FV == BitShift &&
-           match(TV, m_c_Xor(m_Specific(BitShift),
-                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
+    return FV == BitShift && match(TV, MatchBitShiftXorGenPoly);
   return false;
 }
 
@@ -234,9 +242,13 @@ BinaryOperator *
 RecurrenceInfo::digRecurrence(Instruction *V,
                               Instruction::BinaryOps BOWithConstOpToMatch) {
   SmallVector<Instruction *> Worklist;
+  SmallPtrSet<Instruction *, 16> Visited;
   Worklist.push_back(V);
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
@@ -286,34 +298,35 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   if (Phi->getNumIncomingValues() != 2)
     return false;
 
-  for (unsigned Idx = 0; Idx != 2; ++Idx) {
-    Value *FoundStep = Phi->getIncomingValue(Idx);
-    Value *FoundStart = Phi->getIncomingValue(!Idx);
+  // Step comes from the loop latch, start comes from the other incoming value.
+  int LatchIdx = Phi->getBasicBlockIndex(L.getLoopLatch());
+  if (LatchIdx < 0)
+    return false;
+  Value *FoundStep = Phi->getIncomingValue(LatchIdx);
+  Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
-    Instruction *TV, *FV;
-    if (!match(FoundStep,
-               m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
-      continue;
+  Instruction *TV, *FV;
+  if (!match(FoundStep, m_Select(m_Isa<CmpInst, TruncInst>(), m_Instruction(TV),
+                                 m_Instruction(FV))))
+    return false;
 
-    // For a conditional recurrence, both the true and false values of the
-    // select must ultimately end up in the same recurrent BinOp.
-    BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
-    BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
-    if (!FoundBO || FoundBO != AltBO)
-      return false;
+  // For a conditional recurrence, both the true and false values of the
+  // select must ultimately end up in the same recurrent BinOp.
+  BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
+  BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
+  if (!FoundBO || FoundBO != AltBO)
+    return false;
 
-    if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
-      LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
-                           "with constant in conditional recurrence\n");
-      return false;
-    }
-
-    BO = FoundBO;
-    Start = FoundStart;
-    Step = FoundStep;
-    return true;
+  if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
+    LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
+                         "with constant in conditional recurrence\n");
+    return false;
   }
-  return false;
+
+  BO = FoundBO;
+  Start = FoundStart;
+  Step = FoundStep;
+  return true;
 }
 
 /// Iterates over all the phis in \p LoopLatch, and attempts to extract a
@@ -376,6 +389,71 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
+/// Perform polynomial (GF(2)) floor division. This is based on the
+/// floor_division(S, P) algorithm in
+/// https://www.corsix.org/content/barrett-reduction-polynomials. Note that the
+/// maximum degree of the returned polynomial is
+/// max(0, deg(Dividend) - deg(Divisor)), but the bit width will be the same as
+/// that of Dividend.
+static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
+  assert(!Divisor.isZero() && "Cannot divide by zero");
+
+  // Extend the divisor bit width to match the dividend.
+  Divisor = Divisor.zext(Dividend.getBitWidth());
+
+  // Note that getActiveBits returns deg+1, but the computation below
+  // still holds.
+  unsigned DivisorActiveBits = Divisor.getActiveBits();
+
+  // Q = 0
+  APInt Quotient = APInt::getZero(Dividend.getBitWidth());
+  // S != 0 and deg(S) >= deg(P)
+  // (S != 0 implied by DivisorActiveBits > 0)
+  while (Dividend.getActiveBits() >= DivisorActiveBits) {
+    // T = S[deg(S)] / P[deg(P)]
+    unsigned Shift = Dividend.getActiveBits() - DivisorActiveBits;
+    // Q = Q + T
+    Quotient.setBit(Shift);
+    // S = S - T * P
+    Dividend ^= Divisor.shl(Shift);
+  }
+  return Quotient;
+}
+
+/// Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
+/// according to Intel's Fast CRC Computation white paper with some adjustments
+/// to account for the fact that bit width and trip count can vary.
+std::pair<APInt, APInt>
+HashRecognize::genBarrettConstants(const PolynomialInfo &Info) {
+  unsigned BW = Info.RHS.getBitWidth();
+  unsigned TC = Info.TripCount;
+
+  // Recover the full generating polynomial in normal form by reflecting the LE
+  // case and adding the implied x^BW term.
+  // deg(P(x)) = BW due to the implied term, and thus P(x) must fit in exactly
+  // BW+1 bits.
+  APInt FullGenPoly =
+      (Info.IsBigEndian ? Info.RHS : Info.RHS.reverseBits()).zext(BW + 1);
+  FullGenPoly.setBit(BW);
+
+  // Calculate mu = floor(x^(BW+TC) / P(x)).
+  // deg(mu) <= deg(x^(BW+TC)) - deg(P(x)) = BW+TC - BW = TC, and thus mu must
+  // fit in at most TC+1 bits.
+  unsigned DivBW = BW + TC + 1;
+  APInt Mu = floorDivideGF2(APInt::getOneBitSet(DivBW, BW + TC), FullGenPoly)
+                 .trunc(TC + 1);
+
+  // In the bit-reflected (little-endian) case, mu and P(x) must be
+  // bit-reflected across their respective widths for the corresponding Barrett
+  // reduction steps.
+  if (!Info.IsBigEndian) {
+    Mu = Mu.reverseBits();
+    FullGenPoly = FullGenPoly.reverseBits();
+  }
+
+  return {Mu, FullGenPoly};
+}
+
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
 /// of \p SI's condition, ignoring any casts. The purpose of this function is to
 /// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
@@ -393,6 +471,7 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
                                      const PHINode *P2, const Loop &L) {
   SmallVector<const Instruction *> Worklist;
+  SmallPtrSet<const Instruction *, 16> Visited;
 
   // matchConditionalRecurrence has already ensured that the SelectInst's
   // condition is an Instruction.
@@ -400,6 +479,9 @@ static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
 
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
@@ -443,11 +525,12 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
-  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
+  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1 ||
+      !L.getLatchCmpInst())
     return "Loop not in canonical form";
   unsigned TC = SE.getSmallConstantTripCount(&L);
-  if (!TC || TC % 8)
-    return "Unable to find a small constant byte-multiple trip count";
+  if (!TC)
+    return "Unable to find a small constant trip count";
 
   auto R = getRecurrences(Latch, IndVar, L);
   if (!R)
@@ -501,15 +584,14 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
 
-  // Make sure that the computed value is used in the exit block: this should be
-  // true even if it is only really used in an outer loop's exit block, since
-  // the loop is in LCSSA form.
+  // Ensure nothing other than the computed value makes its way out of the loop.
+  // Since the loop is in LCSSA form, this is as simple as checking the PHI
+  // nodes in the exit block.
   auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
-  if (none_of(ComputedValue->users(), [Exit](User *U) {
-        auto *UI = dyn_cast<Instruction>(U);
-        return UI && UI->getParent() == Exit;
+  if (any_of(Exit->phis(), [Latch, ComputedValue](PHINode &PN) {
+        return PN.getIncomingValueForBlock(Latch) != ComputedValue;
       }))
-    return "Unable to find use of computed value in loop exit block";
+    return "Found stray incoming values in loop exit block";
 
   assert(ConditionalRecurrence.ExtraConst &&
          "Expected ExtraConst in conditional recurrence");
@@ -576,6 +658,13 @@ void HashRecognize::print(raw_ostream &OS) const {
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
+  OS.indent(2) << "Computed CRC Barrett constants:\n";
+  auto [Mu, FullGenPoly] = genBarrettConstants(Info);
+  OS << "Mu = ";
+  Mu.print(OS, false);
+  OS << ", FullGenPoly = ";
+  FullGenPoly.print(OS, false);
+  OS << "\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

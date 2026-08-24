@@ -15,7 +15,6 @@
 #include "flang/Common/indirection.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -241,6 +240,11 @@ public:
     return getHashValue(x.base()) * 139u -
            static_cast<unsigned>(x.field()) * 13u +
            static_cast<unsigned>(x.dimension());
+  }
+  static unsigned
+  getHashValue(const Fortran::evaluate::RankOneBoundElement &x) {
+    return getHashValue(x.base()) * 141u +
+           static_cast<unsigned>(x.dimension()) * 17u;
   }
   static unsigned
   getHashValue(const Fortran::evaluate::StructureConstructor &x) {
@@ -548,6 +552,10 @@ public:
     return isEqual(x.base(), y.base()) && x.field() == y.field() &&
            x.dimension() == y.dimension();
   }
+  static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
+                      const Fortran::evaluate::RankOneBoundElement &y) {
+    return x.dimension() == y.dimension() && isEqual(x.base(), y.base());
+  }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
     const auto &xValues = x.values();
@@ -620,11 +628,6 @@ unsigned getHashValue(const Fortran::lower::SomeExpr *x) {
   return HashEvaluateExpr::getHashValue(*x);
 }
 
-unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
-  return Fortran::common::visit(
-      [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
-}
-
 unsigned getHashValue(const Fortran::evaluate::Component *x) {
   return HashEvaluateExpr::getHashValue(*x);
 }
@@ -632,26 +635,6 @@ unsigned getHashValue(const Fortran::evaluate::Component *x) {
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
-}
-
-bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
-             const Fortran::lower::ExplicitIterSpace::ArrayBases &y) {
-  return Fortran::common::visit(
-      Fortran::common::visitors{
-          // Fortran::semantics::Symbol * are the exception here. These pointers
-          // have identity; if two Symbol * values are the same (different) then
-          // they are the same (different) logical symbol.
-          [&](Fortran::lower::FrontEndSymbol p,
-              Fortran::lower::FrontEndSymbol q) { return p == q; },
-          [&](const auto *p, const auto *q) {
-            if constexpr (std::is_same_v<decltype(p), decltype(q)>) {
-              return IsEqualEvaluateExpr::isEqual(*p, *q);
-            } else {
-              // Different subtree types are never equal.
-              return false;
-            }
-          }},
-      x, y);
 }
 
 bool isEqual(const Fortran::evaluate::Component *x,

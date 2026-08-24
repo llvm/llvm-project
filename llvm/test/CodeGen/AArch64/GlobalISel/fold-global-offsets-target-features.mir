@@ -43,8 +43,8 @@ body:             |
     ;
     ; LARGE-MACHO-LABEL: name: test_external_linkage
     ; LARGE-MACHO: %global:_(p0) = G_GLOBAL_VALUE @external_linkage
-    ; LARGE-MACHO-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; LARGE-MACHO-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; LARGE-MACHO-NEXT: $x0 = COPY %ptr_add(p0)
     ; LARGE-MACHO-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -68,8 +68,8 @@ body:             |
     ; WINDOWS-NEXT: $x0 = COPY [[GV]](p0)
     ; WINDOWS-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @external_linkage
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -90,8 +90,8 @@ body:             |
     ;
     ; LARGE-MACHO-LABEL: name: test_internal_linkage
     ; LARGE-MACHO: %global:_(p0) = G_GLOBAL_VALUE @internal_linkage
-    ; LARGE-MACHO-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; LARGE-MACHO-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; LARGE-MACHO-NEXT: $x0 = COPY %ptr_add(p0)
     ; LARGE-MACHO-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -115,8 +115,8 @@ body:             |
     ; WINDOWS-NEXT: $x0 = COPY [[GV]](p0)
     ; WINDOWS-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @internal_linkage
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -130,36 +130,36 @@ body:             |
   bb.0:
     ; DEFAULT-LABEL: name: test_common_linkage
     ; DEFAULT: %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    ; DEFAULT-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; DEFAULT-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; DEFAULT-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; DEFAULT-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; DEFAULT-NEXT: $x0 = COPY %ptr_add(p0)
     ; DEFAULT-NEXT: RET_ReallyLR implicit $x0
     ;
     ; LARGE-MACHO-LABEL: name: test_common_linkage
     ; LARGE-MACHO: %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    ; LARGE-MACHO-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; LARGE-MACHO-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; LARGE-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; LARGE-MACHO-NEXT: $x0 = COPY %ptr_add(p0)
     ; LARGE-MACHO-NEXT: RET_ReallyLR implicit $x0
     ;
     ; SMALL-MACHO-LABEL: name: test_common_linkage
     ; SMALL-MACHO: %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    ; SMALL-MACHO-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; SMALL-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; SMALL-MACHO-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; SMALL-MACHO-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; SMALL-MACHO-NEXT: $x0 = COPY %ptr_add(p0)
     ; SMALL-MACHO-NEXT: RET_ReallyLR implicit $x0
     ;
     ; LARGE-ELF-LABEL: name: test_common_linkage
     ; LARGE-ELF: %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    ; LARGE-ELF-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; LARGE-ELF-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; LARGE-ELF-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; LARGE-ELF-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; LARGE-ELF-NEXT: $x0 = COPY %ptr_add(p0)
     ; LARGE-ELF-NEXT: RET_ReallyLR implicit $x0
     ;
     ; TINY-LABEL: name: test_common_linkage
     ; TINY: %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    ; TINY-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; TINY-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; TINY-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; TINY-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; TINY-NEXT: $x0 = COPY %ptr_add(p0)
     ; TINY-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -168,8 +168,8 @@ body:             |
     ; WINDOWS-NEXT: $x0 = COPY [[GV]](p0)
     ; WINDOWS-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @common_linkage
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -183,13 +183,13 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_extern_weak_linkage
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @extern_weak_linkage
-    ; CHECK-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; CHECK-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @extern_weak_linkage
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -203,13 +203,13 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: never_fold_tagged_globals
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @external_linkage
-    ; CHECK-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; CHECK-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @external_linkage
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
 
@@ -223,12 +223,12 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_dll_import
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @dll_import
-    ; CHECK-NEXT: %imm:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    ; CHECK-NEXT: %imm:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @dll_import
-    %imm:_(s64) = G_CONSTANT i64 1
-    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(s64)
+    %imm:_(i64) = G_CONSTANT i64 1
+    %ptr_add:_(p0) = G_PTR_ADD %global, %imm(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0

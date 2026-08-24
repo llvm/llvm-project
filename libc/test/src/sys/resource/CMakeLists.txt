@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_resource_unittests)
 
-add_libc_unittest(
+add_libc_test(
   getrlimit_setrlimit_test
   SUITE
     libc_sys_resource_unittests

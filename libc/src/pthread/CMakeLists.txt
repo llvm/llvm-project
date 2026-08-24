@@ -941,3 +941,44 @@ add_entrypoint_object(
     libc.src.__support.threads.fork_callbacks
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  pthread_setschedparam
+  SRCS
+    pthread_setschedparam.cpp
+  HDRS
+    pthread_setschedparam.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_getschedparam
+  SRCS
+    pthread_getschedparam.cpp
+  HDRS
+    pthread_getschedparam.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_getstack_np
+  SRCS
+    pthread_getstack_np.cpp
+  HDRS
+    pthread_getstack_np.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)

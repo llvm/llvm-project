@@ -234,9 +234,9 @@ static const char *const opCommentHeader = R"(
 static const char *const inlineCreateBody = R"(
   ::mlir::OperationState __state__({0}, getOperationName());
   build(builder, __state__{1});
-  auto __res__ = ::llvm::dyn_cast<{2}>(builder.create(__state__));
-  assert(__res__ && "builder didn't return the right type");
-  return __res__;
+  auto __res__ = builder.create(__state__);
+  assert((::llvm::isa<{2}>(__res__)) && "builder didn't return the right type");
+  return ::llvm::cast<{2}>(__res__);
 )";
 
 static const char *const inlineCreateBodyImplicitLoc = R"(
@@ -2175,7 +2175,8 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
-  // Print the ods names so they don't need to be hardcoded in the source.
+  // Print the ODS indices of operands so they don't need to be hardcoded in the
+  // source.
   for (int i = 0; i != numOperands; ++i) {
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
@@ -2387,6 +2388,17 @@ void OpEmitter::genNamedResultGetters() {
     PrintFatalError(op.getLoc(),
                     "op cannot have both 'AttrSizedResultSegments' and "
                     "'SameVariadicResultSize' traits");
+  }
+
+  // Print the ODS indices of results so they don't need to be hardcoded in the
+  // source.
+  for (int i = 0; i != numResults; ++i) {
+    const auto &result = op.getResult(i);
+    if (result.name.empty())
+      continue;
+
+    opClass.declare<Field>("static constexpr int",
+                           Twine("odsIndex_") + result.name + " = " + Twine(i));
   }
 
   // Build the initializer string for the result segment size attribute.
@@ -3666,11 +3678,12 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   // The code used to add an effect instance.
   // {0}: The effect class.
   // {1}: Optional value or symbol reference.
-  // {2}: The side effect stage.
-  // {3}: Does this side effect act on every single value of resource.
-  // {4}: The resource class.
+  // {2}: Optional parameters attribute.
+  // {3}: The side effect stage.
+  // {4}: Does this side effect act on every single value of resource.
+  // {5}: The resource class.
   const char *addEffectCode =
-      "  effects.emplace_back({0}::get(), {1}{2}, {3}, {4}::get());\n";
+      "  effects.emplace_back({0}::get(), {1}{2}{3}, {4}, {5}::get());\n";
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
@@ -3687,11 +3700,14 @@ void OpEmitter::genSideEffectInterfaceMethods() {
     for (auto &location : it.second) {
       StringRef effect = location.effect.getName();
       StringRef resource = location.effect.getResource();
+      std::string parameters = location.effect.getParameters().str();
+      if (!parameters.empty())
+        parameters += ", ";
       int stage = (int)location.effect.getStage();
       bool effectOnFullRegion = (int)location.effect.getEffectOnfullRegion();
       if (location.kind == EffectKind::Static) {
         // A static instance has no attached value.
-        body << llvm::formatv(addEffectCode, effect, "", stage,
+        body << llvm::formatv(addEffectCode, effect, "", parameters, stage,
                               effectOnFullRegion, resource)
                     .str();
       } else if (location.kind == EffectKind::Symbol) {
@@ -3700,12 +3716,12 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
-               << llvm::formatv(addEffectCode, effect, "symbolRef, ", stage,
-                                effectOnFullRegion, resource)
+               << llvm::formatv(addEffectCode, effect, "symbolRef, ",
+                                parameters, stage, effectOnFullRegion, resource)
                       .str();
         } else {
           body << llvm::formatv(addEffectCode, effect, argName + "Attr(), ",
-                                stage, effectOnFullRegion, resource)
+                                parameters, stage, effectOnFullRegion, resource)
                       .str();
         }
       } else {
@@ -3720,7 +3736,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                               (location.kind == EffectKind::Operand
                                    ? "&getOperation()->getOpOperand(idx), "
                                    : "getOperation()->getOpResult(idx), "),
-                              stage, effectOnFullRegion, resource)
+                              parameters, stage, effectOnFullRegion, resource)
              << "    }\n  }\n";
       }
     }

@@ -50,6 +50,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -619,7 +620,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
       BB = Next;
     }
   }
@@ -658,7 +659,7 @@ bool CodeGenPrepare::_run(Function &F) {
            "Incorrect DominatorTree updates in CGP");
 
   if (VerifyLoopInfo)
-    LI->verify(getDT());
+    LI->verify();
 #endif
 
   // If we are optimzing huge function, we need to consider the build time.
@@ -722,7 +723,7 @@ bool CodeGenPrepare::_run(Function &F) {
              "Incorrect DominatorTree updates in CGP");
 
     if (VerifyLoopInfo)
-      LI->verify(getDT());
+      LI->verify();
 #endif
 
     // Really free removed instructions during promotion.
@@ -853,9 +854,10 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
-  LoopInfo NewLI(NewDT);
-  BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
-  BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
+  CycleInfo NewCI;
+  NewCI.compute(F);
+  BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
+  BlockFrequencyInfo NewBFI(F, NewBPI, NewCI);
   NewBFI.verifyMatch(*BFI);
 }
 
@@ -2918,10 +2920,9 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
       return false;
     }
 
-  LibFunc LF;
   Function *Callee = CI->getCalledFunction();
-  if (Callee && TLInfo && TLInfo->getLibFunc(*Callee, LF))
-    switch (LF) {
+  if (Callee && TLInfo)
+    switch (TLInfo->getLibFunc(*Callee)) {
     case LibFunc_strcpy:
     case LibFunc_strncpy:
     case LibFunc_strcat:

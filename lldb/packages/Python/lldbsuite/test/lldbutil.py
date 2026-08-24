@@ -22,6 +22,7 @@ import lldb
 from . import lldbtest_config
 from . import configuration
 from lldbsuite.test.gdbclientutils import escape_binary
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -979,6 +980,10 @@ def is_thread_crashed(test, thread):
         )
     elif test.getPlatform() == "windows":
         return "Exception 0xc0000005" in thread.GetStopDescription(200)
+    elif test.getPlatform() in ["wasip1", "wasi"]:
+        # Wasm has no signals. What a bad access raises is a trap, which a
+        # runtime reports as an exception described by the trap it hit.
+        return thread.GetStopReason() == lldb.eStopReasonException
     else:
         return "invalid address" in thread.GetStopDescription(100)
 
@@ -1932,6 +1937,7 @@ def get_latest_apple_simulator(platform_name, log=None):
 
 
 def launch_exe_in_apple_simulator(
+    test,
     device_uuid,
     exe_path,
     exe_args=[],
@@ -1939,17 +1945,20 @@ def launch_exe_in_apple_simulator(
     log=None,
 ):
     exe_path = os.path.realpath(exe_path)
-    cmd = [
-        "xcrun",
-        "simctl",
+    # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
+    simctl_path = (
+        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+    )
+    args = [
         "spawn",
         "-s",
         device_uuid,
         exe_path,
     ] + exe_args
     if log:
-        log(" ".join(cmd))
-    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        log(simctl_path + " " + " ".join(args))
+    # simctl itself gets terminated when the test finishes.
+    sim_launcher = test.spawnSubprocess(simctl_path, args, stderr=subprocess.PIPE)
 
     # Read stderr to try to find matches.
     # Each pattern will return the value of group[1] of the first match in the stderr.
@@ -1998,6 +2007,17 @@ def send_packet_get_reply(test, packet_str):
 def get_qsupported_capabilities(test):
     reply = send_packet_get_reply(test, "qSupported")
     return reply.strip().split(";")
+
+
+def require_qsupported_capability(test, capability):
+    """Require *capability* in the stub's qSupported reply.  Requires a live
+    process.  Our own stub must advertise it, so a miss is a failure; a stub we
+    did not build can lack the feature, and the test is UNSUPPORTED."""
+    if capability in get_qsupported_capabilities(test):
+        return
+    if not lldbtest_config.out_of_tree_debugserver:
+        test.fail(f"stub built from this tree does not advertise {capability}")
+    test.skipTest(UnsupportedReason(f"stub does not support {capability}"))
 
 
 def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):

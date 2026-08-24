@@ -64,7 +64,7 @@ ExprDependence clang::computeDependence(UnaryOperator *E,
       if (VD && VD->isTemplated()) {
         auto *VarD = dyn_cast<VarDecl>(VD);
         if (!VarD || !VarD->hasLocalStorage())
-          Dep |= ExprDependence::Value;
+          Dep |= ExprDependence::ValueInstantiation;
       }
     }
   }
@@ -616,6 +616,29 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
       Deps |= ExprDependence::ValueInstantiation;
   }
 
+  // The standard doesn't explicitly specify rules for when individial bindings
+  // a structured binding declaration are value-dependent. Handle them using a
+  // similar rule to the rule for variables:
+  //
+  // - An id-expression referring to a tuple binding is value-dependent if
+  //   an id-expression referring to the synthetic variable used to store the
+  //   result of get() would be value-dependent.
+  // - An id-expression referring to a non-tuple binding is value-dependent if
+  //   an id-expression referring to the synthetic variable used to store the
+  //   initializer would be value-dependent.
+  //
+  // Internally, this is equivalent to just checking whether the expression
+  // representing the binding is value-dependent.
+  if (const auto *BD = dyn_cast<BindingDecl>(Decl)) {
+    if (const Expr *Init = BD->getBinding()) {
+      if (Init->containsErrors())
+        Deps |= ExprDependence::Error;
+
+      if (Init->isValueDependent())
+        Deps |= ExprDependence::ValueInstantiation;
+    }
+  }
+
   return Deps;
 }
 
@@ -808,7 +831,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
                            ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
-        isa<UnresolvedUsingValueDecl>(D) || isa<TemplateTemplateParmDecl>(D))
+        isa<UnresolvedUsingValueDecl>(D))
       Deps |= ExprDependence::TypeValueInstantiation;
   }
   // If we have explicit template arguments, check for dependent
@@ -875,6 +898,17 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
     D |= E->getBase()->getDependence();
   D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
+  for (const auto &A : E->template_arguments())
+    D |= toExprDependence(A.getArgument().getDependence());
+  return D;
+}
+
+ExprDependence clang::computeDependence(DependentTemplateIdExpr *E) {
+  auto D = ExprDependence::TypeValueInstantiation;
+  if (E->getTemplateName().getDependence() &
+      TemplateNameDependence::UnexpandedPack)
+    D |= ExprDependence::UnexpandedPack;
+  D |= getDependenceInExpr(E->getNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;

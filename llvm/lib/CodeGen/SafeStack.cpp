@@ -970,7 +970,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -980,7 +980,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*Subtarget);
+      getLibcallLowering(*LibcallLowering, *Subtarget);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 

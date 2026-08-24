@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu cuda-descriptor-alloc-function=custom_alloc_desc" %s | FileCheck %s --check-prefix=CUSTOM
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @_QQmain() attributes {fir.bindc_name = "cufkernel_global"} {
@@ -18,7 +19,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
   }
 
   // CHECK-LABEL: llvm.func @_QQmain()
-  // CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor 
+  // CHECK-COUNT-1: llvm.call @_FortranACUFAllocDescriptor
 
   fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
     %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
@@ -125,7 +126,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-4: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -169,7 +170,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -187,6 +188,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
 // CHECK-LABEL: llvm.func @_QPouter
 // CHECK: _FortranACUFAllocDescriptor
+// CUSTOM-LABEL: llvm.func @_QPouter
+// CUSTOM: custom_alloc_desc
 
 // -----
 
@@ -198,6 +201,8 @@ func.func @_QMm1Psub1(%arg0: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.c
 
 // CHECK-LABEL: llvm.func @_QMm1Psub1
 // CHECK-COUNT-2: _FortranACUFAllocDescriptor
+// CUSTOM-LABEL: llvm.func @_QMm1Psub1
+// CUSTOM-COUNT-2: custom_alloc_desc
 
 // -----
 
@@ -479,8 +484,8 @@ module attributes {gpu.container_module} {
     %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
-    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "uf"}
-    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) {dataClause = #acc<data_clause acc_present>, name = "uf"}
+    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) name("uf") -> !fir.box<!fir.array<?x?xf32>>
+    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) dataClause(acc_present) name("uf")
     return
   }
   gpu.module @cuda_device_mod {

@@ -58,6 +58,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
+#include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
@@ -86,7 +87,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class vector {
+class _LIBCPP_WARN_UNUSED vector {
   using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
   using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
@@ -121,10 +122,10 @@ public:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
-      vector,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<allocator_type>,
+                      vector,
+                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -398,7 +399,7 @@ public:
     return __layout_.__capacity();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
-    return size() == 0;
+    return __layout_.__empty();
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
@@ -504,9 +505,14 @@ public:
     this->__destruct_at_end(__layout_.__end_ptr() - 1);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, const_reference __x);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, const_reference __x) {
+    return emplace(__position, __x);
+  }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, value_type&& __x);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, value_type&& __x) {
+    return emplace(__position, std::move(__x));
+  }
+
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator emplace(const_iterator __position, _Args&&... __args);
 
@@ -1126,49 +1132,6 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
     }
   }
   std::move_backward(__from_s, __from_s + __n, __old_last);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (size() != capacity()) {
-    pointer __end = __layout_.__end_ptr();
-    if (__p == __end) {
-      __emplace_back_assume_capacity(__x);
-    } else {
-      __move_range(__p, __end, __p + 1);
-      const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
-        ++__xr;
-      *__p = *__xr;
-    }
-  } else {
-    _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-    __v.emplace_back(__x);
-    __p = __layout_.__relocate_with_pivot(__v, __p);
-  }
-  return __make_iter(__p);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (size() != capacity()) {
-    pointer __end = __layout_.__end_ptr();
-    if (__p == __end) {
-      __emplace_back_assume_capacity(std::move(__x));
-    } else {
-      __move_range(__p, __end, __p + 1);
-      *__p = std::move(__x);
-    }
-  } else {
-    _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-    __v.emplace_back(std::move(__x));
-    __p = __layout_.__relocate_with_pivot(__v, __p);
-  }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>

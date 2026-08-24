@@ -63,7 +63,6 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   QualType T = VD->getType();
   this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                 !T->isObjCObjectPointerType();
-  EvalResult.setSource(VD);
 
   if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();
@@ -152,8 +151,10 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
+  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
+                                         Block::InlineDescMD);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                                     /*IsStatic=*/false);
   B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
@@ -253,7 +254,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(S, CodePtr(), Ptr);
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -323,7 +324,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;

@@ -159,7 +159,7 @@ function(builtin_default_target compiler_rt_path)
                                                 SANITIZER
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -183,7 +183,7 @@ function(builtin_register_target compiler_rt_path name)
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            USE_TOOLCHAIN
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
@@ -214,7 +214,7 @@ if(compiler_rt_path)
     add_custom_target(install-builtins-stripped)
     set_target_properties(
       builtins install-builtins install-builtins-stripped
-      PROPERTIES FOLDER "Compiler-RT"
+      PROPERTIES FOLDER "compiler-rt"
     )
   endif()
 
@@ -302,6 +302,7 @@ function(runtime_default_target)
     # OpenMP tests. install-libomp-mod is a separate distribution component
     # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
+    list(APPEND extra_targets "libomp-mod-barrier")
     list(APPEND extra_targets "install-libomp-mod")
     list(APPEND extra_targets "install-libomp-mod-stripped")
 
@@ -580,14 +581,19 @@ if(build_runtimes)
     endif()
   endif()
 
-  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # Forward user-provided system configuration to runtimes for requirement introspection.
+  # These are lists, so their separators have to survive being passed on the
+  # sub-build's command line; an unescaped ';' would split them into separate
+  # arguments.
   # CMAKE_PREFIX_PATH is the search path for CMake packages.
   if(CMAKE_PREFIX_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_prefix_path ${CMAKE_PREFIX_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${escaped_prefix_path}")
   endif()
   # CMAKE_PROGRAM_PATH is the search path for executables such as python.
   if(CMAKE_PROGRAM_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_program_path ${CMAKE_PROGRAM_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${escaped_program_path}")
   endif()
 
   set(libclc_enabled FALSE)
@@ -643,21 +649,21 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  if(LLVM_LIBC_GPU_BUILD)
-    set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
-    foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(name MATCHES "^(amdgcn|amdgpu|nvptx)")
-        set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+  set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
+  foreach(name ${LLVM_RUNTIME_TARGETS})
+    if(name MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv")
+      set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+      if(TARGET llvm-offload-binary)
+        list(APPEND extra_deps llvm-offload-binary)
       endif()
-    endforeach()
-    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET llvm-offload-binary)
-      list(APPEND extra_deps llvm-offload-binary)
+      if(TARGET clang-nvlink-wrapper)
+        list(APPEND extra_deps clang-nvlink-wrapper)
+      endif()
+      if(TARGET llvm-link)
+        list(APPEND extra_deps llvm-link)
+      endif()
     endif()
-    if(TARGET clang-nvlink-wrapper)
-      list(APPEND extra_deps clang-nvlink-wrapper)
-    endif()
-  endif()
+  endforeach()
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
@@ -715,7 +721,7 @@ if(build_runtimes)
         add_custom_target(check-builtins)
         set_target_properties(
           check-builtins
-          PROPERTIES FOLDER "Compiler-RT"
+          PROPERTIES FOLDER "compiler-rt"
         )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
@@ -867,6 +873,7 @@ ${_flag_values}\
     endif ()
     if (TARGET libomp-mod)
       add_dependencies(flang-rt-test-deps libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod-barrier)
     endif ()
   endif ()
 endif()

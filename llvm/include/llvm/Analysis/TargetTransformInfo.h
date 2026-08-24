@@ -430,10 +430,10 @@ public:
   /// chain of loads or stores within same block) operations set when lowered.
   /// \p AccessTy is the type of the loads/stores that will ultimately use the
   /// \p Ptrs.
-  LLVM_ABI InstructionCost getPointersChainCost(
-      ArrayRef<const Value *> Ptrs, const Value *Base,
-      const PointersChainInfo &Info, Type *AccessTy,
-      TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
+                       const PointersChainInfo &Info, Type *AccessTy,
+                       const TargetCostKind CostKind) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -686,11 +686,6 @@ public:
     /// OptSizeThreshold, but used for partial/runtime unrolling (set to
     /// UINT_MAX to disable).
     unsigned PartialOptSizeThreshold;
-    /// A forced unrolling factor (the number of concatenated bodies of the
-    /// original loop in the unrolled loop body). When set to 0, the unrolling
-    /// transformation will select an unrolling factor based on the current cost
-    /// threshold and other factors.
-    unsigned Count;
     /// Default unroll count for loops with run-time trip count.
     unsigned DefaultUnrollRuntimeCount;
     // Set the maximum unrolling factor. The unrolling factor may be selected
@@ -1193,6 +1188,10 @@ public:
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
 
+  /// Return true if the hardware has a fast carry-less multiplication
+  /// instruction.
+  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
+
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.
   /// This normally just wraps around a getInstructionCost() call, but some
@@ -1566,8 +1565,7 @@ public:
   /// estimation in some cases, like in broadcast loads.
   LLVM_ABI InstructionCost getShuffleCost(
       ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-      ArrayRef<int> Mask = {},
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
+      TTI::TargetCostKind CostKind, ArrayRef<int> Mask = {}, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
 
@@ -1945,8 +1943,7 @@ public:
   /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
-  /// \p IsEpilogue is true if the decision is for the epilogue loop.
-  LLVM_ABI bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const;
+  LLVM_ABI bool preferFixedOverScalableIfEqualCost() const;
 
   /// \returns True if target prefers SLP vectorizer with altermate opcode
   /// vectorization, false - otherwise.
