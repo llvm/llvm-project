@@ -17,6 +17,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -829,10 +830,20 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // exists, instead of depending on the DebugSymbols preferences being
       // set.
       Status kernel_search_error;
-      if (IsKernel() &&
-          (!m_module_sp || !m_module_sp->GetSymbolFileFileSpec())) {
-        if (PluginManager::DownloadObjectAndSymbolFile(
-                module_spec, kernel_search_error, true)) {
+      if (IsKernel()) {
+        bool download_kernel = true;
+        if (m_module_sp) {
+          bool user_interrupted = false;
+          SymbolFile *sym_file = m_module_sp->GetSymbolFile(
+              /*can_create=*/true,
+              /*feedback_strm=*/nullptr, &user_interrupted);
+          if (sym_file->GetAbilities() & SymbolFile::Abilities::CompileUnits)
+            download_kernel = false;
+          if (user_interrupted)
+            download_kernel = false;
+        }
+        if (download_kernel && PluginManager::DownloadObjectAndSymbolFile(
+                                   module_spec, kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());

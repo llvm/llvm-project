@@ -15,6 +15,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
@@ -265,7 +266,17 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
                               /*invoke_locate_callback=*/true,
                               /*invoke_symbol_locators=*/false);
-  if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFileFileSpec())
+  bool user_interrupted = false;
+  if (bin_spec.module_sp) {
+    SymbolFile *sym_file = bin_spec.module_sp->GetSymbolFile(
+        /*can_create=*/true, /*feedback_strm=*/nullptr, &user_interrupted);
+    if (sym_file &&
+        (sym_file->GetAbilities() & SymbolFile::Abilities::CompileUnits))
+      return std::nullopt;
+  }
+  // User interrupted, they do not want us to try other means to
+  // find the debug information.
+  if (user_interrupted)
     return std::nullopt;
 
   SymbolLocator::Request request;
