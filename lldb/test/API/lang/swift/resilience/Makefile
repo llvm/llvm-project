@@ -27,6 +27,11 @@ libmod.%.dylib: mod.%.swift \
 	mv mod.swift.o mod.$*.swift.o
 	$(call RM,mod.swift)
 
+# The tool dependencies belong on the concrete targets: main.% also matches
+# main.swift, and a pattern rule whose prerequisite is its own target is only
+# harmless as long as it has no prerequisite newer than that target.
+main.a main.b: $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
+
 main.%: main.swift
 	$(call RM_RF,main.$*.dSYM main main.dSYM)
 	$(call LN_SF,libmod.$*.dylib,libmod.dylib)
