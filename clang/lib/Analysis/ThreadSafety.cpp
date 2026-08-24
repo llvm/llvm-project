@@ -42,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1376,6 +1377,14 @@ class ThreadSafetyAnalyzer {
   ThreadSafetyHandler &Handler;
   const FunctionDecl *CurrentFunction;
   LocalVariableMap LocalVarMap;
+  // The beta unchecked-result diagnostics already emitted, keyed by
+  // "<join location>:<acquisition location>:<capability>". A join of three
+  // or more predecessors is intersected pairwise, and some predecessor
+  // orders lose the same fact twice -- e.g. (try-held, no-fact, try-held):
+  // the fact-free middle predecessor removes it from the entry set with a
+  // diagnostic, then the last predecessor re-supplies it one-sided and
+  // would diagnose the same leak again (intersectAndWarn()).
+  llvm::StringSet<> NeverCheckedWarned;
   // Maps constructed objects to `this` placeholder prior to initialization.
   llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
   /// The capabilities named by a try-acquire call's attributes, translated
@@ -3201,6 +3210,24 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
                                              EntryLEK, Handler);
   };
+  // Likewise for the beta diagnostic that a try-acquire's possible success
+  // is carried into the join (or out of the function) unchecked. Emitted
+  // once per (join, acquisition, capability): the pairwise intersection of
+  // a many-predecessor join can lose the same fact twice, and the leak it
+  // reports is one (see NeverCheckedWarned).
+  auto WarnNeverChecked = [&](const FactEntry &FE, SourceLocation Loc,
+                              bool AtEndOfFunction) {
+    if (!Handler.issueBetaWarnings())
+      return;
+    SmallString<64> Key;
+    llvm::raw_svector_ostream(Key)
+        << JoinLoc.getRawEncoding() << ':' << Loc.getRawEncoding() << ':'
+        << FE.toString();
+    if (!NeverCheckedWarned.insert(Key).second)
+      return;
+    Handler.handleTryAcquireNeverChecked(FE.getKind(), FE.toString(), Loc,
+                                         JoinLoc, AtEndOfFunction);
+  };
 
   // Find locks in ExitSet that conflict or are not in EntrySet, and warn.
   for (const auto &Fact : ExitSet) {
@@ -3230,16 +3257,32 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
         }
       }
       const Expr *EntryOrigin = EntryFact.tryLockCall();
+      const bool EntryTryHeld = EntryFact.tryHeld();
       if (join(EntryFact, ExitFact, JoinLoc, EntryLEK))
         *EntryIt = Fact;
       // If the two paths hold the capability via different origins, the
-      // merged fact is not determined by either try-acquire's result.
+      // merged fact is not determined by either try-acquire's result. When
+      // both sides were try-held, clearing the origin makes the state
+      // permanently unresolvable -- neither call's result can be checked any
+      // more -- so diagnose each discarded origin immediately (the mixed
+      // held/try-held case was already diagnosed above).
       if (const FactEntry &Merged = FactMan[*EntryIt];
           EntryLEK == LEK_LockedSomePredecessors && Merged.tryLockCall() &&
-          EntryOrigin != ExitFact.tryLockCall())
+          EntryOrigin != ExitFact.tryLockCall()) {
+        if (EntryTryHeld && ExitFact.tryHeld() && Handler.issueBetaWarnings()) {
+          if (EntryOrigin)
+            Handler.handleTryAcquireNeverChecked(
+                Merged.getKind(), Merged.toString(), EntryFact.loc(), JoinLoc,
+                /*AtEndOfFunction=*/false);
+          if (ExitFact.tryLockCall())
+            Handler.handleTryAcquireNeverChecked(
+                Merged.getKind(), Merged.toString(), ExitFact.loc(), JoinLoc,
+                /*AtEndOfFunction=*/false);
+        }
         EntrySet.replaceLock(
             FactMan, EntryIt,
             cloneWithTryLock(Merged, nullptr, Merged.tryHeld()));
+      }
     } else if (IsTrylockRebranched(ExitFact)) {
       // Held on this predecessor only, but the terminator re-branches on
       // the try-acquire that created the fact: demote it to try-held
@@ -3248,9 +3291,16 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
       if (EntryLEK != LEK_LockedSomeLoopIterations)
         EntrySet.addLock(FactMan, DemoteToTryHeld(ExitFact, EntryLEK));
     } else if (ExitFact.tryHeld()) {
-      // The analysis loses track of the try-held fact here: this predecessor
-      // carries a try-acquire result into the join (or to the end of the
-      // function) without its result having been checked.
+      // The analysis loses track of the try-held fact here -- this
+      // predecessor carries a try-acquire result into the join unchecked (or
+      // to the end of the function): the capability may be leaked. Only at
+      // branch joins and the end of the function: a try-held fact entering
+      // a loop join was or will be checked on the paths around the loop,
+      // which is not a leak (mirroring the EntryFact case below).
+      if (EntryLEK != LEK_LockedSomeLoopIterations)
+        WarnNeverChecked(ExitFact, ExitFact.loc(),
+                         /*AtEndOfFunction=*/EntryLEK ==
+                             LEK_LockedAtEndOfFunction);
     } else {
       WarnRemovedExitFact(ExitFact);
     }
@@ -3272,8 +3322,12 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
         continue;
       }
       if (EntryFact->tryHeld()) {
-        // As above, with the unchecked try-acquire on an earlier
-        // predecessor: it gets lost by the analysis.
+        // As above, with the unchecked try-acquire on an earlier predecessor.
+        // Only at branch joins: a try-held fact missing from a loop's back
+        // edge was checked inside the loop, which is not a leak.
+        if (ExitLEK == LEK_LockedSomePredecessors)
+          WarnNeverChecked(*EntryFact, EntryFact->loc(),
+                           /*AtEndOfFunction=*/false);
       } else {
         WarnRemovedEntryFact(*EntryFact);
       }

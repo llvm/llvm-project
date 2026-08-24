@@ -491,6 +491,11 @@ keeps one fact per capability and cannot track two unresolved try-acquires at
 once. Asserting the capability (`ASSERT_CAPABILITY`) upgrades it to held
 without a warning.
 
+Under `-Wthread-safety-beta`, a try-acquire whose result is never used to
+determine success additionally warns where the analysis loses track of it --
+at a merge with a path that does not hold the capability, or at the end of
+the function -- since the capability may then be leaked.
+
 ```c++
 Mutex mu;
 int a GUARDED_BY(mu);
