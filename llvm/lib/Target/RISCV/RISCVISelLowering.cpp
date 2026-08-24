@@ -12332,8 +12332,7 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
 static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
-    llvm_unreachable(
-        "Unexpected RISC-V packed horizontal multiply intrinsic");
+    llvm_unreachable("Unexpected RISC-V packed horizontal multiply intrinsic");
   case Intrinsic::riscv_pm4add:
     return RISCVISD::PM4ADD;
   case Intrinsic::riscv_pm2add:
