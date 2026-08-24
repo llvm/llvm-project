@@ -80,8 +80,9 @@ void discoverOffloadDevices() {
         if (Res != OL_SUCCESS)
           ContextGroupIndex = 0;
 
-        (*Data)[static_cast<size_t>(OlBackend)].push_back(
-            {Platform, Dev, ContextGroupIndex});
+        auto BackendIndex = static_cast<size_t>(OlBackend);
+        auto &DeviceDescVec = (*Data)[BackendIndex];
+        DeviceDescVec.push_back({Platform, Dev, ContextGroupIndex});
         return true;
       },
       &Mapping);

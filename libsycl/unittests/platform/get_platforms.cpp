@@ -17,7 +17,7 @@
 
 #include <array>
 #include <cstdint>
-#include <tuple>
+// #include <tuple>
 
 using namespace sycl;
 using namespace ::testing;
