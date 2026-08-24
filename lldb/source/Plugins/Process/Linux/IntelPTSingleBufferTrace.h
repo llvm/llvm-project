@@ -9,11 +9,15 @@
 #ifndef liblldb_IntelPTSingleBufferTrace_H_
 #define liblldb_IntelPTSingleBufferTrace_H_
 
-#include "Perf.h"
+#include "Plugins/Process/Linux/Perf.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
+
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace lldb_private {
 namespace process_linux {

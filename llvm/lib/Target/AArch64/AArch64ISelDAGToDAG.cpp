@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
@@ -1869,6 +1871,10 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool InsertTo64 = false;
+  bool UseLd1 =
+      (VT.is64BitVector() || VT.is128BitVector()) &&
+      (!Subtarget->isLittleEndian() || (Subtarget->requiresStrictAlign() &&
+                                        LD->getAlign() < VT.getStoreSize()));
   if (VT == MVT::i64)
     Opcode = IsPre ? AArch64::LDRXpre : AArch64::LDRXpost;
   else if (VT == MVT::i32) {
@@ -1915,12 +1921,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     Opcode = IsPre ? AArch64::LDRHpre : AArch64::LDRHpost;
   } else if (VT == MVT::f32) {
     Opcode = IsPre ? AArch64::LDRSpre : AArch64::LDRSpost;
-  } else if (VT == MVT::f64 ||
-             (VT.is64BitVector() && Subtarget->isLittleEndian())) {
+  } else if (VT == MVT::f64 || (VT.is64BitVector() && !UseLd1)) {
     Opcode = IsPre ? AArch64::LDRDpre : AArch64::LDRDpost;
-  } else if (VT.is128BitVector() && Subtarget->isLittleEndian()) {
+  } else if (VT.is128BitVector() && !UseLd1) {
     Opcode = IsPre ? AArch64::LDRQpre : AArch64::LDRQpost;
-  } else if (VT.is64BitVector()) {
+  } else if (VT.is64BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 8)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1939,7 +1944,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
-  } else if (VT.is128BitVector()) {
+  } else if (VT.is128BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 16)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1964,9 +1969,8 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue Base = LD->getBasePtr();
   SDLoc dl(N);
   // LD1 encodes an immediate offset by using XZR as the offset register.
-  SDValue Offset = (VT.isVector() && !Subtarget->isLittleEndian())
-                       ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
-                       : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
+  SDValue Offset = UseLd1 ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
+                          : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);
@@ -8298,6 +8302,24 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
           ScalarTy == N.getOperand(0).getValueType())
         Result = addBitcastHints(*CurDAG, N);
 
+      break;
+    }
+    case AArch64ISD::VSHL: {
+      // Undo mul(shl(A,C),B) -> shl(mul(A,B),C) canonicalisation when A is an
+      // extend that can be folded into the shift.
+      EVT VT = N.getValueType(0);
+      SDValue A, B, C = N.getOperand(1);
+      if (sd_match(N.getOperand(0),
+                   m_OneUse(m_Mul(m_Value(A, m_AnyOf(m_ZExt(m_Value()),
+                                                     m_SExt(m_Value()))),
+                                  m_Value(B))))) {
+        // If both mul operands are extended, preserve the smull/umull idiom.
+        if (B.getOpcode() == A.getOpcode())
+          break;
+        SDLoc DL(&N);
+        SDValue SHL = CurDAG->getNode(AArch64ISD::VSHL, DL, VT, A, C);
+        Result = CurDAG->getNode(ISD::MUL, DL, VT, SHL, B);
+      }
       break;
     }
     default:

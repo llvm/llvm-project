@@ -633,3 +633,87 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   StringRef Contents = SectionContent.get();
   EXPECT_EQ(Contents, "\x12\x34\x56\x78\x9a\xbc\xde\xf0");
 }
+
+TEST_F(GOFFObjectFileTest, GlobalSymbols) {
+  // HDR record.
+  addHdrRecord();
+
+  // ESD record 1: type SD
+  addEsdRecord(0x00, 0x01, {0xC1}); // A
+
+  // ESD record 2: type ED
+  addEsdRecord(0x01, 0x02, {0xC2}, 0x01); // B, parent=1
+
+  // ESD record 3: type LD (default binding scope = global)
+  addEsdRecord(0x02, 0x03, {0xC3}, 0x02); // C, parent=2
+
+  // ESD record 4: type PR
+  addEsdRecord(0x03, 0x04, {0xC4}, 0x02); // D, parent=2
+
+  // ESD record 5: type ErWx
+  addEsdRecord(0x04, 0x05, {0xC5}); // E
+
+  // ESD record 6: type LD + Section binding scope (BindingScope=1 -> lower
+  // nibble of BehavioralAttributes[5])
+  addEsdRecord(0x02, 0x06, {0xC6}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x01, 0, 0, 0, 0}); // F, parent=2
+
+  // ESD record 7: type LD + Module binding scope
+  addEsdRecord(0x02, 0x07, {0xC7}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x02, 0, 0, 0, 0}); // G, parent=2
+
+  // ESD record 8: type LD + Library binding scope
+  addEsdRecord(0x02, 0x08, {0xC8}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x03, 0, 0, 0, 0}); // H, parent=2
+
+  // ESD record 9: type LD + Import-Export binding scope
+  addEsdRecord(0x02, 0x09, {0xC9}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x04, 0, 0, 0, 0}); // I, parent=2
+
+  // ESD record 10: type LD + blank name
+  addEsdRecord(0x02, 0x0A, {0x40}, 0x02); // ' ', parent=2
+
+  // END record.
+  addEndRecord();
+
+  StringRef Data(GOFFData.data(), GOFFData.size());
+
+  Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
+      object::ObjectFile::createGOFFObjectFile(
+          MemoryBufferRef(Data, "dummyGOFF"));
+
+  ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
+
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+
+  object::GOFFObjectFile::symbol_iterator_range SymbolRange =
+      GOFFObj->symbols();
+  auto Symbol = SymbolRange.begin();
+  auto ValidateGlobal = [&](StringRef Name, bool IsGlobal) {
+    ASSERT_TRUE(Symbol != SymbolRange.end());
+
+    // Check Name.
+    Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(*Symbol);
+    ASSERT_THAT_EXPECTED(SymbolNameOrErr, Succeeded());
+    EXPECT_EQ(*SymbolNameOrErr, Name);
+
+    // Check flags.
+    Expected<uint32_t> SymbolFlagsOrErr = Symbol->getFlags();
+    ASSERT_THAT_EXPECTED(SymbolFlagsOrErr, Succeeded());
+    EXPECT_EQ((*SymbolFlagsOrErr & SymbolRef::SF_Global) != 0, IsGlobal);
+
+    ++Symbol;
+  };
+
+  // FIXME: ESD records 'A' and 'B' should be considered symbols, but are
+  // currently skipped by the iterators.
+  ValidateGlobal("C", true);
+  ValidateGlobal("D", true);
+  ValidateGlobal("E", true);
+  ValidateGlobal("F", false);
+  ValidateGlobal("G", false);
+  ValidateGlobal("H", true);
+  ValidateGlobal("I", true);
+  ValidateGlobal(" ", false);
+}

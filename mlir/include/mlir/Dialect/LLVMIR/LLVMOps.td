@@ -767,6 +767,11 @@ def LLVM_InvokeOp
   let extraClassDeclaration = [{
     /// Returns the callee function type.
     LLVMFunctionType getCalleeFunctionType();
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
   }];
 }
 
@@ -1123,6 +1128,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 def LLVM_CondBrOp
     : LLVM_TerminatorOp<
@@ -1160,6 +1171,12 @@ def LLVM_CondBrOp
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1277,6 +1294,11 @@ def LLVM_SwitchOp
     /// given index.
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
       return getCaseOperandsMutable()[index];
+    }
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
@@ -1937,6 +1959,12 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
       CArg<"BlockRange", "{}">:$successors
       )>
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
@@ -2077,6 +2105,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
+    OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
     OptionalAttr<BoolAttr>:$use_sample_profile
   );

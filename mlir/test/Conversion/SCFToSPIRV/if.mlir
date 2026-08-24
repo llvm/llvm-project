@@ -139,7 +139,7 @@ func.func @simple_if_yield_type_change(%arg2 : memref<10xf32, #spirv.storage_cla
   // CHECK:         spirv.mlir.merge
   // CHECK-NEXT:  }
   // CHECK:       %[[OUT:.*]] = spirv.Load "Function" %[[VAR]] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
-  // CHECK:       %[[ADD:.*]] = spirv.AccessChain %[[OUT]][{{%.*}}, {{%.*}}] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
+  // CHECK:       %[[ADD:.*]] = spirv.InBoundsAccessChain %[[OUT]][{{%.*}}, {{%.*}}] : !spirv.ptr<!spirv.struct<(!spirv.array<10 x f32, stride=4> [0])>, StorageBuffer>
   // CHECK:       spirv.Store "StorageBuffer" %[[ADD]], {{%.*}} : f32
   // CHECK:       spirv.Return
   %i = arith.constant 0 : index

@@ -71,71 +71,13 @@ struct ol_device_impl_t {
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
 
-  ~ol_device_impl_t() {
-    assert(!OutstandingQueues.size() &&
-           "Device object dropped with outstanding queues");
-  }
-
   int DeviceNum;
   GenericDeviceTy *Device;
   ol_platform_impl_t &Platform;
   InfoTreeNode Info;
-
-  llvm::SmallVector<__tgt_async_info *> OutstandingQueues;
-  std::mutex OutstandingQueuesMutex;
-
-  /// If the device has any outstanding queues that are now complete, remove it
-  /// from the list and return it.
-  ///
-  /// Queues may be added to the outstanding queue list by olDestroyQueue if
-  /// they are destroyed but not completed.
-  __tgt_async_info *getOutstandingQueue() {
-    // Not locking the `size()` access is fine here - In the worst case we
-    // either miss a queue that exists or loop through an empty array after
-    // taking the lock. Both are sub-optimal but not that bad.
-    if (OutstandingQueues.size()) {
-      std::lock_guard<std::mutex> Lock(OutstandingQueuesMutex);
-
-      // As queues are pulled and popped from this list, longer running queues
-      // naturally bubble to the start of the array. Hence looping backwards.
-      for (auto Q = OutstandingQueues.rbegin(); Q != OutstandingQueues.rend();
-           Q++) {
-        if (!Device->hasPendingWork(*Q)) {
-          auto OutstandingQueue = *Q;
-          *Q = OutstandingQueues.back();
-          OutstandingQueues.pop_back();
-          return OutstandingQueue;
-        }
-      }
-    }
-    return nullptr;
-  }
-
-  /// Complete all pending work for this device and perform any needed cleanup.
-  ///
-  /// After calling this function, no liboffload functions should be called with
-  /// this device handle.
-  llvm::Error destroy() {
-    llvm::Error Result = Plugin::success();
-    for (auto Q : OutstandingQueues)
-      if (auto Err = Device->synchronize(Q, /*Release=*/true))
-        Result = llvm::joinErrors(std::move(Result), std::move(Err));
-    OutstandingQueues.clear();
-    return Result;
-  }
 };
 
-llvm::Error ol_platform_impl_t::destroy() {
-  llvm::Error Result = Plugin::success();
-  for (auto &D : Devices)
-    if (auto Err = D->destroy())
-      Result = llvm::joinErrors(std::move(Result), std::move(Err));
-
-  if (auto Res = Plugin->deinit())
-    Result = llvm::joinErrors(std::move(Result), std::move(Res));
-
-  return Result;
-}
+llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
 
 llvm::Error ol_platform_impl_t::init() {
   if (!Plugin)
@@ -160,9 +102,12 @@ llvm::Error ol_platform_impl_t::init() {
 }
 
 struct ol_queue_impl_t {
-  ol_queue_impl_t(__tgt_async_info *AsyncInfo, ol_device_handle_t Device)
-      : AsyncInfo(AsyncInfo), Device(Device), Id(IdCounter++) {}
+  ol_queue_impl_t(__tgt_async_info *AsyncInfo, ol_context_handle_t Context,
+                  ol_device_handle_t Device)
+      : AsyncInfo(AsyncInfo), Context(Context), Device(Device),
+        Id(IdCounter++) {}
   __tgt_async_info *AsyncInfo;
+  ol_context_handle_t Context;
   ol_device_handle_t Device;
   // A unique identifier for the queue
   size_t Id;
@@ -220,6 +165,76 @@ struct ol_context_impl_t {
   ol_platform_impl_t *Platform;
   llvm::SmallVector<ol_device_handle_t> Devices;
   std::unique_ptr<plugin::PluginContextTy> PluginCtx;
+
+  bool contains(ol_device_handle_t Device) const {
+    return llvm::is_contained(Devices, Device);
+  }
+
+  /// Queues destroyed while still busy, keyed by owning device. Per-context
+  /// so their backend resources are not reused across native contexts.
+  llvm::DenseMap<ol_device_handle_t, llvm::SmallVector<__tgt_async_info *>>
+      OutstandingQueues;
+  std::mutex OutstandingQueuesMutex;
+
+  /// If the context has any outstanding queues for \p Device that are now
+  /// complete, remove it from the list and return it.
+  ///
+  /// Queues may be added to the outstanding queue list by olDestroyQueue if
+  /// they are destroyed but not completed.
+  __tgt_async_info *getOutstandingQueue(ol_device_handle_t Device) {
+    std::lock_guard<std::mutex> Lock(OutstandingQueuesMutex);
+    auto It = OutstandingQueues.find(Device);
+    if (It == OutstandingQueues.end() || It->second.empty())
+      return nullptr;
+    auto &Bucket = It->second;
+
+    // As queues are pulled and popped from this list, longer running queues
+    // naturally bubble to the start of the array. Hence looping backwards.
+    for (auto Q = Bucket.rbegin(); Q != Bucket.rend(); Q++) {
+      if (!Device->Device->hasPendingWork(*Q)) {
+        auto OutstandingQueue = *Q;
+        *Q = Bucket.back();
+        Bucket.pop_back();
+        return OutstandingQueue;
+      }
+    }
+    return nullptr;
+  }
+
+  /// Record \p AsyncInfo on the outstanding queue list for \p Device.
+  void addOutstandingQueue(ol_device_handle_t Device,
+                           __tgt_async_info *AsyncInfo) {
+    std::lock_guard<std::mutex> Lock(OutstandingQueuesMutex);
+    OutstandingQueues[Device].push_back(AsyncInfo);
+  }
+
+  /// Complete all pending work for this context. Called from olDestroyContext.
+  llvm::Error drainOutstandingQueues() {
+    llvm::Error Result = Plugin::success();
+    for (auto &Bucket : OutstandingQueues) {
+      auto *Device = Bucket.first;
+      for (auto *AI : Bucket.second)
+        if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
+          Result = llvm::joinErrors(std::move(Result), std::move(Err));
+    }
+    OutstandingQueues.clear();
+    return Result;
+  }
+
+  /// Drain outstanding queues and tear down the plugin-side context.
+  llvm::Error destroy() {
+    if (auto Err = drainOutstandingQueues())
+      return Err;
+    if (PluginCtx)
+      if (auto Err = PluginCtx->deinit())
+        return Err;
+    return llvm::Error::success();
+  }
+
+  ~ol_context_impl_t() {
+    assert(OutstandingQueues.empty() &&
+           "Context dropped with outstanding queues");
+  }
 };
 
 namespace llvm {
@@ -631,6 +646,8 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
 }
 
 Error olDestroyContext_impl(ol_context_handle_t Context) {
+  if (auto Err = Context->destroy())
+    return Err;
   return olDestroy(Context);
 }
 
@@ -847,10 +864,16 @@ Error olGetMemInfoSize_impl(const void *Ptr, ol_mem_info_t PropName,
   return olGetMemInfoImplDetail(Ptr, PropName, 0, nullptr, PropSizeRet);
 }
 
-Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
-  auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
+Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
+                         ol_queue_handle_t *Queue) {
+  if (!Context->contains(Device))
+    return createOffloadError(ErrorCode::INVALID_DEVICE,
+                              "device does not belong to the given context");
 
-  auto OutstandingQueue = Device->getOutstandingQueue();
+  auto CreatedQueue =
+      std::make_unique<ol_queue_impl_t>(nullptr, Context, Device);
+
+  auto OutstandingQueue = Context->getOutstandingQueue(Device);
   if (OutstandingQueue) {
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
@@ -858,8 +881,8 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
             Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
       return Err;
     CreatedQueue->AsyncInfo = OutstandingQueue;
-  } else if (auto Err =
-                 Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo))) {
+  } else if (auto Err = Context->PluginCtx->initAsyncInfo(
+                 *Device->Device, &(CreatedQueue->AsyncInfo))) {
     return Err;
   }
 
@@ -869,6 +892,7 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
 
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
   auto *Device = Queue->Device;
+  auto *Context = Queue->Context;
   // This is safe; as soon as olDestroyQueue is called it is not possible to add
   // any more work to the queue, so if it's finished now it will remain finished
   // forever.
@@ -883,8 +907,7 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
       return Err;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
-    std::lock_guard<std::mutex> Lock(Device->OutstandingQueuesMutex);
-    Device->OutstandingQueues.push_back(Queue->AsyncInfo);
+    Context->addOutstandingQueue(Device, Queue->AsyncInfo);
   }
 
   return olDestroy(Queue);
@@ -935,6 +958,8 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
   switch (PropName) {
   case OL_QUEUE_INFO_DEVICE:
     return Info.write<ol_device_handle_t>(Queue->Device);
+  case OL_QUEUE_INFO_CONTEXT:
+    return Info.write<ol_context_handle_t>(Queue->Context);
   case OL_QUEUE_INFO_EMPTY: {
     auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
     if (auto Err = Pending.takeError())
@@ -1239,8 +1264,11 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
                               "provided symbol is not a kernel");
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
-  KernelArgsTy LaunchArgs{};
+  KernelLaunchArgsTy LaunchArgs{};
   LaunchArgs.NumArgs = static_cast<uint32_t>(NumArgs);
+  LaunchArgs.Args = ArgPtrs;
+  LaunchArgs.ArgSizes =
+      reinterpret_cast<int64_t *>(const_cast<size_t *>(ArgSizes));
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
@@ -1248,7 +1276,8 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
-  LaunchArgs.Flags.StrictBlocksAndThreads = true;
+  LaunchArgs.Flags.StrictBlocks = true;
+  LaunchArgs.Flags.StrictThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
@@ -1265,14 +1294,9 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   }
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
-  LaunchArgs.ArgPtrs = ArgPtrs;
-  LaunchArgs.ArgSizes =
-      reinterpret_cast<int64_t *>(const_cast<size_t *>(ArgSizes));
-  LaunchArgs.Flags.IsPtrArgs = true;
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
-  auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
-                                LaunchArgs, nullptr, AsyncInfoWrapper);
+  auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)
