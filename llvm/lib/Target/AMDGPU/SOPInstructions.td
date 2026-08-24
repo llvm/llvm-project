@@ -2996,10 +2996,6 @@ multiclass SOPP_Real_With_Relaxation_gfx11<bits<7> op> {
 }
 
 defm S_INST_PREFETCH              : SOPP_Real_32_gfx11<0x004, "s_set_inst_prefetch_distance">;
-defm S_CBRANCH_CDBGSYS            : SOPP_Real_With_Relaxation_gfx11<0x027>;
-defm S_CBRANCH_CDBGUSER           : SOPP_Real_With_Relaxation_gfx11<0x028>;
-defm S_CBRANCH_CDBGSYS_OR_USER    : SOPP_Real_With_Relaxation_gfx11<0x029>;
-defm S_CBRANCH_CDBGSYS_AND_USER   : SOPP_Real_With_Relaxation_gfx11<0x02a>;
 defm S_ENDPGM_ORDERED_PS_DONE     : SOPP_Real_32_gfx11<0x032>;
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
 
@@ -3191,10 +3187,14 @@ multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
 }
 
 let isBranch = 1 in {
-defm S_CBRANCH_CDBGSYS          : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x017>;
-defm S_CBRANCH_CDBGUSER         : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x018>;
-defm S_CBRANCH_CDBGSYS_OR_USER  : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x019>;
-defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x01A>;
+defm S_CBRANCH_CDBGSYS :
+  SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x017>;
+defm S_CBRANCH_CDBGUSER :
+  SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x018>;
+defm S_CBRANCH_CDBGSYS_OR_USER :
+  SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x019>;
+defm S_CBRANCH_CDBGSYS_AND_USER :
+  SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10_gfx13<0x01A>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3245,6 +3245,10 @@ defm S_CBRANCH_VCCZ               : SOPP_Real_With_Relaxation_gfx11_gfx12<0x023>
 defm S_CBRANCH_VCCNZ              : SOPP_Real_With_Relaxation_gfx11_gfx12<0x024>;
 defm S_CBRANCH_EXECZ              : SOPP_Real_With_Relaxation_gfx11_gfx12<0x025>;
 defm S_CBRANCH_EXECNZ             : SOPP_Real_With_Relaxation_gfx11_gfx12<0x026>;
+defm S_CBRANCH_CDBGSYS            : SOPP_Real_With_Relaxation_gfx11_gfx12<0x027>;
+defm S_CBRANCH_CDBGUSER           : SOPP_Real_With_Relaxation_gfx11_gfx12<0x028>;
+defm S_CBRANCH_CDBGSYS_OR_USER    : SOPP_Real_With_Relaxation_gfx11_gfx12<0x029>;
+defm S_CBRANCH_CDBGSYS_AND_USER   : SOPP_Real_With_Relaxation_gfx11_gfx12<0x02a>;
 defm S_ENDPGM                     : SOPP_Real_32_gfx11_gfx12<0x030>;
 defm S_ENDPGM_SAVED               : SOPP_Real_32_gfx11_gfx12<0x031>;
 defm S_WAKEUP                     : SOPP_Real_32_gfx11_gfx12<0x034>;
