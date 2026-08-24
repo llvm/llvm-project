@@ -14,6 +14,11 @@
 
 namespace clang::ento {
 
+class BasicValueFactory;
+namespace nonloc {
+class ConcreteFloat;
+} // namespace nonloc
+
 /// A safe wrapper around APFloat objects allocated and owned by
 /// \c BasicValueFactory. This just wraps a common llvm::APFloat.
 class APFloatPtr {
@@ -25,14 +30,6 @@ public:
   APFloatPtr &operator=(const APFloatPtr &) & = default;
   ~APFloatPtr() = default;
 
-  /// You should not use this API.
-  /// If do, ensure that the \p Ptr is not going to dangle.
-  /// Prefer using \c BasicValueFactory::getFloatValue() to get an APFloatPtr
-  /// object.
-  static APFloatPtr unsafeConstructor(const APFloat *Ptr) {
-    return APFloatPtr(Ptr);
-  }
-
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const APFloat *get() const { return Ptr; }
   /*implicit*/ operator const APFloat &() const { return *get(); }
@@ -41,6 +38,12 @@ public:
   const APFloat *operator->() const { return Ptr; }
 
 private:
+  /// \p Ptr is owned by \c BasicValueFactory, and \c nonloc::ConcreteFloat
+  /// rewraps a pointer from that factory. Everyone else should use
+  /// \c BasicValueFactory::getFloatValue() to get an APFloatPtr object.
+  friend class BasicValueFactory;
+  friend class nonloc::ConcreteFloat;
+
   explicit APFloatPtr(const APFloat *Ptr) : Ptr(Ptr) {}
 
   /// Owned by \c BasicValueFactory.
