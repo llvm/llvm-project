@@ -149,6 +149,12 @@ defm TrapHandler: AMDGPUSubtargetFeature<"trap-handler",
   /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
+defm CDBGSysOrUserBranch : AMDGPUSubtargetFeature<
+  "cdbg-sys-or-user-branch",
+  "Support querying debugging state with s_cbranch_cdbgsys_or_user",
+  /*GenPredicate=*/1, /*GenAssemblerPredicate=*/0
+>;
+
 defm UnalignedScratchAccess : AMDGPUSubtargetFeature<"unaligned-scratch-access",
   "Support unaligned scratch loads and stores",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -2232,7 +2238,8 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 
 def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
+    [FeatureCDBGSysOrUserBranch,
+     FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
      FeatureDot5Insts,
@@ -2275,6 +2282,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureSupportsWave64, FeatureSupportsWGP,
+   FeatureCDBGSysOrUserBranch,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
    FeatureHalfAddressablePhysicalLocalMemory,
@@ -2343,6 +2351,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
+   FeatureCDBGSysOrUserBranch,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
@@ -2536,6 +2545,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
+   FeatureCDBGSysOrUserBranch,
    FeatureAddressableLocalMemorySize196608,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
