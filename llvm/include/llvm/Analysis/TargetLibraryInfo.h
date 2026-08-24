@@ -48,23 +48,33 @@ class VecDesc {
   ElementCount VectorizationFactor;
   bool Masked;
   StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC;
 
 public:
   VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
+  constexpr VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+                    ElementCount VectorizationFactor, bool Masked,
+                    StringRef VABIPrefix, std::optional<CallingConv::ID> Conv)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
+        VABIPrefix(VABIPrefix),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
   StringRef getVABIPrefix() const { return VABIPrefix; }
-  std::optional<CallingConv::ID> getCallingConv() const { return CC; }
+  std::optional<CallingConv::ID> getCallingConv() const {
+    if (CC == 0)
+      return std::nullopt;
+    return static_cast<CallingConv::ID>(CC - 1);
+  }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
@@ -89,6 +99,7 @@ class TargetLibraryInfoImpl {
 #include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
+  bool IsErrnoFunctionCall;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -260,6 +271,8 @@ public:
   /// conventions.
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
+
+  bool isErrnoFunctionCall() const { return IsErrnoFunctionCall; }
 };
 
 /// Provides information about what library functions are available for
@@ -599,6 +612,10 @@ public:
   bool isKnownVectorFunctionInLibrary(StringRef F) const {
     return this->isFunctionVectorizable(F);
   }
+
+  /// Returns whether `errno` is defined as a function call on known
+  /// environments.
+  bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

@@ -945,9 +945,23 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     VPValue *LHS = tryToExpand(UDiv->getLHS());
     if (!LHS)
       return nullptr;
-    VPValue *RHS = tryToExpand(UDiv->getRHS());
+    const SCEV *RHSExpr = UDiv->getRHS();
+    VPValue *RHS = tryToExpand(RHSExpr);
     if (!RHS)
       return nullptr;
+    if (SafeUDivMode) {
+      // Make sure the UDiv's divisor is guaranteed to not be zero/poison, to
+      // avoid UB.
+      Type *Ty = UDiv->getType();
+      bool GuaranteedNotPoison =
+          ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
+      if (!GuaranteedNotPoison)
+        RHS = Builder.createScalarFreeze(RHS, DL);
+      if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
+        RHS = Builder.createScalarIntrinsic(
+            Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
+            DL);
+    }
     return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
@@ -998,8 +1012,9 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
-  case scSMinExpr: {
-    auto *MinMax = cast<SCEVMinMaxExpr>(S);
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
+    auto *MinMax = cast<SCEVNAryExpr>(S);
     Intrinsic::ID IntrinsicID;
     switch (S->getSCEVType()) {
     case scUMaxExpr:
@@ -1009,6 +1024,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       IntrinsicID = Intrinsic::smax;
       break;
     case scUMinExpr:
+    case scSequentialUMinExpr:
       IntrinsicID = Intrinsic::umin;
       break;
     case scSMinExpr:
@@ -1018,15 +1034,25 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       llvm_unreachable("Unexpected min/max SCEV type");
     }
     // Chain operands in reverse order matching SCEVExpander's expansion of
-    // min/max expressions.
+    // min/max expressions. In SafeUDivMode freeze expansion results of operands
+    // other than the first for sequential UMins, to avoid short-circuiting
+    // divide-by-0/poison.
+    bool IsSequential = S->getSCEVType() == scSequentialUMinExpr;
+    Type *ResultTy = MinMax->getType();
+    bool PrevSafeMode = SafeUDivMode;
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : reverse(MinMax->operands())) {
-      VPValue *OpV = tryToExpand(Op);
+    for (const SCEV *SCEVOp : reverse(MinMax->operands())) {
+      bool MayShortCircuit =
+          IsSequential && Ops.size() != MinMax->getNumOperands() - 1;
+      SafeUDivMode = MayShortCircuit || PrevSafeMode;
+      VPValue *OpV = tryToExpand(SCEVOp);
+      SafeUDivMode = PrevSafeMode;
       if (!OpV)
         return nullptr;
+      if (MayShortCircuit)
+        OpV = Builder.createScalarFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
-    Type *ResultTy = MinMax->getType();
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},

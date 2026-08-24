@@ -360,5 +360,34 @@ gpu.module @test {
     gpu.return %0 : vector<32xf32>
   }
 
+//-----
+  // Unrolling a >2D nd desc keeps the whole memref as create_nd source.
+  // CHECK-LABEL: gpu.func @load_store_nd_3d
+  // CHECK-SAME: [[arg0:%.+]]: memref<4x8x16xf32>, [[z:%.+]]: index
+  // CHECK-NOT: memref.subview
+  // CHECK: [[t:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<4x8x16xf32> -> !xegpu.tensor_desc<1x8x16xf32>
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z]], {{.*}}] : !xegpu.tensor_desc<1x8x16xf32> -> vector<1x8x16xf32>
+  // CHECK: [[z1:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z1]], {{.*}}]
+  // CHECK: [[z2:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z2]], {{.*}}]
+  // CHECK: [[z3:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z3]], {{.*}}]
+  // CHECK: xegpu.store_nd {{%.+}}, [[t]]{{\[}}[[z]], {{.*}}]
+  // CHECK-COUNT-3: xegpu.store_nd {{%.+}}, [[t]]
+  // CHECK-NOT: memref.subview
+  gpu.func @load_store_nd_3d(%src: memref<4x8x16xf32>, %z: index) {
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<4x8x16xf32>
+      -> !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+    %v = xegpu.load_nd %t[%z, %c0, %c0]
+      : !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+      -> vector<4x8x16xf32>
+    xegpu.store_nd %v, %t[%z, %c0, %c0]
+      : vector<4x8x16xf32>,
+        !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+    gpu.return
+  }
+
 }
 
