@@ -35,6 +35,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -6434,6 +6435,23 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   return {TotalOffset, OffsetOverflows};
 }
 
+// OpenMP section maps pass `section - host_offset`. A GEP of an array-of-arrays
+// from that pointer is not inbounds of the allocation.
+static llvm::GEPNoWrapFlags
+inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
+                 llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
+  llvm::GEPNoWrapFlags NW;
+  auto *AT = dyn_cast<llvm::ArrayType>(SrcTy);
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice && AT &&
+                    AT->getElementType()->isArrayTy() &&
+                    !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
+  if (!SectionGEP)
+    NW = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NW |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 Value *
 CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         ArrayRef<Value *> IdxList,
@@ -6441,9 +6459,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
 
-  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-  if (!SignedIndices && !IsSubtraction)
-    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  llvm::GEPNoWrapFlags NWFlags =
+      inBoundsGEPFlags(*this, Ptr, ElemTy, SignedIndices, IsSubtraction);
 
   Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
@@ -6554,10 +6571,9 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
   if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-    if (!SignedIndices && !IsSubtraction)
-      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
-
+    llvm::GEPNoWrapFlags NWFlags =
+        inBoundsGEPFlags(*this, Addr.getBasePointer(), Addr.getElementType(),
+                         SignedIndices, IsSubtraction);
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 
