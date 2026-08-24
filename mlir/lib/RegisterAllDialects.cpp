@@ -13,6 +13,7 @@
 
 #include "mlir/InitAllDialects.h"
 
+#include "mlir/Dialect/AArch64MIR/IR/AArch64MIRDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -116,6 +117,7 @@
 void mlir::registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
+                  aarch64_mir::AArch64MIRDialect,
                   affine::AffineDialect,
                   amdgpu::AMDGPUDialect,
                   arith::ArithDialect,
