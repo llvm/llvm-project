@@ -140,7 +140,6 @@ static constexpr unsigned g_string_read_width = 256;
 enum {
 #define LLDB_PROPERTIES_process
 #include "TargetPropertiesEnum.inc"
-  ePropertyExperimental,
 };
 
 #define LLDB_PROPERTIES_process_experimental
@@ -176,6 +175,14 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
+
+    m_experimental_properties_up =
+        std::make_unique<ProcessExperimentalProperties>();
+    m_collection_sp->AppendProperty(
+        Properties::GetExperimentalSettingsName(),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
+        true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -186,14 +193,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
-
-  m_experimental_properties_up =
-      std::make_unique<ProcessExperimentalProperties>();
-  m_collection_sp->AppendProperty(
-      Properties::GetExperimentalSettingsName(),
-      "Experimental settings - setting these won't produce "
-      "errors if the setting is not present.",
-      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -370,26 +369,26 @@ Args ProcessProperties::GetAlwaysRunThreadNames() const {
   return args;
 }
 
+OptionValueProperties *ProcessProperties::GetExperimentalProperties() const {
+  const Property *exp_property =
+      m_collection_sp->GetProperty(Properties::GetExperimentalSettingsName());
+  if (!exp_property)
+    return nullptr;
+  return exp_property->GetValue()->GetAsProperties();
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
+  OptionValueProperties *exp_values = GetExperimentalProperties();
   if (!exp_values)
     return fail_value;
-
   return exp_values
       ->GetPropertyAtIndexAs<bool>(ePropertyOSPluginReportsAllThreads)
       .value_or(fail_value);
 }
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
+  if (OptionValueProperties *exp_values = GetExperimentalProperties())
     exp_values->SetPropertyAtIndex(ePropertyOSPluginReportsAllThreads,
                                    does_report);
 }
