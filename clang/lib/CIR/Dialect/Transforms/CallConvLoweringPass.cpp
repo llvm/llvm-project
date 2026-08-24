@@ -130,10 +130,13 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto ptrTy = dyn_cast<cir::PointerType>(ty))
     return !ptrTy.getAddrSpace() ||
            mlir::isa<cir::TargetAddressSpaceAttr>(ptrTy.getAddrSpace());
-  // A vtable pointer takes no address-space parameter, so unlike a
-  // cir::PointerType there is nothing here to reject.
-  if (isa<cir::VPtrType>(ty))
+  // cir::VPtrType carries no address-space parameter yet, so its target
+  // address space cannot be checked here even though it is not always the
+  // default one.
+  if (isa<cir::VPtrType>(ty)) {
+    assert(!cir::MissingFeatures::addressSpace());
     return true;
+  }
   if (isa<cir::VoidType, cir::BoolType>(ty))
     return true;
   // Every CIR floating-point type carries the semantics the classifier
@@ -296,8 +299,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                  addrSpace);
       })
       .Case([&](cir::VPtrType) {
-        // The default address space is the only one a vtable pointer can name,
-        // so there is none to read off the type.
+        // cir::VPtrType carries no address-space parameter yet, so this
+        // always maps into the default one until that gap closes.
+        assert(!cir::MissingFeatures::addressSpace());
         return tb.getPointerType(dl.getTypeSizeInBits(type),
                                  llvm::Align(dl.getTypeABIAlignment(type)));
       })
