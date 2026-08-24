@@ -65,12 +65,17 @@ static cl::opt<unsigned> MinBaseSwitch(
 
 namespace {
 
+// Number of operand slots an S_SET_VGPR_MSB covers: src0, src1, src2, dst.
+constexpr unsigned NumMSBSlots = 4;
 constexpr unsigned MSBGroupSize = 256;
 constexpr unsigned NumMSBGroups = 4;
 // Skip the plan when a group's planned load exceeds this percent of its cap.
 // Mild overflow is realizable (RA spills a few, most hints honored); severe
 // overflow is not.
 constexpr unsigned OverflowPct = 125;
+
+// Live-range segments of one value group.
+using SegmentVec = SmallVector<std::pair<SlotIndex, SlotIndex>, 2>;
 
 // Weighted, undirected affinity graph over virtual-register indices. An edge's
 // weight is the S_SET_VGPR_MSB cost paid if its two vregs land in different MSB
@@ -151,61 +156,7 @@ public:
   // delta, then earliest ordinal, then key for determinism), refusing a merge
   // that would push the merged footprint past MergeCap. Each refused edge is a
   // cut.
-  void clusterByWeight(const AffinityGraph &Graph, unsigned MergeCap) {
-    struct Item {
-      uint64_t Weight;
-      int Delta;
-      unsigned Ordinal;
-      uint64_t Key;
-      unsigned RootA, RootB;
-      uint64_t EpochA, EpochB;
-      // Max-heap ordering: an Item that should be processed first must compare
-      // "greater" than the others.
-      bool operator<(const Item &O) const {
-        if (Weight != O.Weight)
-          return Weight < O.Weight; // higher weight first
-        if (Delta != O.Delta)
-          return Delta > O.Delta; // smaller footprint delta first
-        if (Ordinal != O.Ordinal)
-          return Ordinal > O.Ordinal; // earlier program order first
-        return Key > O.Key;           // lower key first (determinism)
-      }
-    };
-    std::priority_queue<Item> Queue;
-    // (Re-)evaluate the merge for an edge against the current forest and
-    // enqueue it. Endpoints already in the same cluster are dropped.
-    auto PushEdge = [&](uint64_t Key, uint64_t Weight) {
-      unsigned RootA = find(AffinityGraph::lowEnd(Key));
-      unsigned RootB = find(AffinityGraph::highEnd(Key));
-      if (RootA == RootB)
-        return;
-      int Merged = unionFootprint(RootA, RootB);
-      int Delta = Merged - std::max(footprintOf(RootA), footprintOf(RootB));
-      Queue.push({Weight, Delta, Graph.firstOrdinal(Key), Key, RootA, RootB,
-                  Epoch[RootA], Epoch[RootB]});
-    };
-    for (auto &[Key, Weight] : Graph.edges())
-      PushEdge(Key, Weight);
-    while (!Queue.empty()) {
-      Item Top = Queue.top();
-      Queue.pop();
-      unsigned RootA = find(AffinityGraph::lowEnd(Top.Key));
-      unsigned RootB = find(AffinityGraph::highEnd(Top.Key));
-      if (RootA == RootB)
-        continue;
-      // A touched cluster changed since this item was pushed -> its delta/roots
-      // are stale, so re-evaluate and re-enqueue rather than act on it.
-      if (RootA != Top.RootA || RootB != Top.RootB ||
-          Epoch[RootA] != Top.EpochA || Epoch[RootB] != Top.EpochB) {
-        PushEdge(Top.Key, Top.Weight);
-        continue;
-      }
-      int Merged = unionFootprint(RootA, RootB);
-      if (Merged > static_cast<int>(MergeCap))
-        continue; // Refuse: this edge becomes a cut.
-      mergeInto(RootA, RootB, Merged);
-    }
-  }
+  void clusterByWeight(const AffinityGraph &Graph, unsigned MergeCap);
 
 private:
   // Exact union footprint of two clusters (time-aware peak of their nodes).
@@ -256,7 +207,7 @@ private:
   void processRegion(ArrayRef<MachineBasicBlock *> Blocks,
                      ArrayRef<Register> AllVGPRs, unsigned EffMSBGroups,
                      unsigned VGPRBudget, PackMode Mode, GateScope Scope,
-                     DenseSet<unsigned> &Assigned, SIMachineFunctionInfo *MFI);
+                     DenseSet<unsigned> &Assigned, SIMachineFunctionInfo &MFI);
 
   AffinityGraph buildAffinityGraph(ArrayRef<MachineBasicBlock *> Blocks) const;
 
@@ -311,8 +262,8 @@ private:
   // Record the MSB-group affinity and also a concrete physreg hint in that
   // group: the latter marks a known preference so greedy colors the vreg early
   // and it claims its group before contention. Existing (copy) hints win.
-  void recordMSB(SIMachineFunctionInfo *MFI, Register Reg, unsigned MSB) {
-    MFI->setVGPRMSBAffinity(Reg, MSB);
+  void recordMSB(SIMachineFunctionInfo &MFI, Register Reg, unsigned MSB) {
+    MFI.setVGPRMSBAffinity(Reg, MSB);
     if (MRI->getRegAllocationHint(Reg).second)
       return;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
@@ -332,173 +283,18 @@ private:
     return X;
   }
 
-  void buildValueGroups(MachineFunction &MF) {
-    unsigned N = MRI->getNumVirtRegs();
-    VGParent.resize(N);
-    for (unsigned I = 0; I < N; ++I)
-      VGParent[I] = I;
-    auto UnionVGroup = [&](Register A, Register B) {
-      if (!isVGPRVirtReg(A) || !isVGPRVirtReg(B))
-        return;
-      unsigned RootA = vgFind(A.virtRegIndex()),
-               RootB = vgFind(B.virtRegIndex());
-      if (RootA != RootB)
-        VGParent[RootA] = RootB;
-    };
-    for (MachineBasicBlock &MBB : MF) {
-      for (MachineInstr &MI : MBB) {
-        // Coalesce tied def/use pairs (e.g. the WMMA accumulator src2 tied to
-        // dst). General COPYs are intentionally *not* unioned: they connect
-        // distinct values and would collapse unrelated footprints.
-        for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
-          const MachineOperand &MO = MI.getOperand(I);
-          if (MO.isReg() && MO.isUse() && MO.isTied()) {
-            unsigned DefIdx = MI.findTiedOperandIdx(I);
-            const MachineOperand &Def = MI.getOperand(DefIdx);
-            if (Def.isReg())
-              UnionVGroup(MO.getReg(), Def.getReg());
-          }
-        }
-        // Coalesce the accumulator chain dst <- src2: across an unrolled K-loop
-        // this chains acc0->acc1->... into one value group so the footprint
-        // counts the accumulator once. Disjoint output tiles never merge.
-        if (SIInstrInfo::isWMMA(MI) || TII->isMAI(MI)) {
-          const MachineOperand *D =
-              TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-          const MachineOperand *S2 =
-              TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-          if (D && D->isReg() && S2 && S2->isReg())
-            UnionVGroup(D->getReg(), S2->getReg());
-        }
-      }
-    }
-  }
+  void buildValueGroups(MachineFunction &MF);
 
   // Peak simultaneously-live VGPR dwords in \p Regs, merging the live ranges of
   // a value group so a coalescing value is counted once.
-  unsigned maxSimultaneousDwords(ArrayRef<Register> Regs) const {
-    DenseMap<unsigned, SmallVector<std::pair<SlotIndex, SlotIndex>, 2>> ByGroup;
-    DenseMap<unsigned, int> GroupSize;
-    for (Register Reg : Regs) {
-      if (!LIS->hasInterval(Reg))
-        continue;
-      unsigned G = vgFind(Reg.virtRegIndex());
-      GroupSize[G] = std::max<int>(GroupSize[G], dwords(Reg));
-      auto &Segs = ByGroup[G];
-      for (const LiveRange::Segment &S : LIS->getInterval(Reg))
-        Segs.emplace_back(S.start, S.end);
-    }
-    SmallVector<std::pair<SlotIndex, int>, 64> Events;
-    for (auto &[G, Segs] : ByGroup) {
-      llvm::sort(Segs);
-      int Sz = GroupSize[G];
-      SlotIndex CurS, CurE;
-      bool Open = false;
-      auto Flush = [&] {
-        Events.emplace_back(CurS, Sz);
-        Events.emplace_back(CurE, -Sz);
-      };
-      for (auto &[S, E] : Segs) {
-        if (Open && S <= CurE) {
-          CurE = std::max(CurE, E); // overlaps: extend the open interval
-        } else {
-          if (Open) // gap: close the previous interval
-            Flush();
-          CurS = S;
-          CurE = E;
-          Open = true;
-        }
-      }
-      if (Open)
-        Flush();
-    }
-    llvm::sort(Events, [](const std::pair<SlotIndex, int> &A,
-                          const std::pair<SlotIndex, int> &B) {
-      return A.first < B.first || (A.first == B.first && A.second < B.second);
-    });
-    int Cur = 0, Max = 0;
-    for (auto &[Idx, Delta] : Events) {
-      Cur += Delta;
-      Max = std::max(Max, Cur);
-    }
-    return Max;
-  }
+  unsigned maxSimultaneousDwords(ArrayRef<Register> Regs) const;
 
   // Natural (no-hint) MSB-group assignment for the self-benefit baseline: a
   // linear scan placing each vreg in the lowest free column run and freeing
   // columns as live ranges end -- an approximation of what the allocator does
   // unhinted.
   DenseMap<unsigned, int> computeNaiveMSB(ArrayRef<Register> Regs,
-                                          unsigned EffMSBGroups) const {
-    DenseMap<unsigned, int> MSB;
-    const unsigned Cols = EffMSBGroups * MSBGroupSize;
-    SmallVector<Register, 0> Order(Regs.begin(), Regs.end());
-    llvm::stable_sort(Order, [&](Register A, Register B) {
-      return LIS->getInterval(A).beginIndex() <
-             LIS->getInterval(B).beginIndex();
-    });
-    SmallVector<bool, 0> Free(Cols, true);
-    // Active allocations: (endIndex, startCol, width) to reclaim columns.
-    SmallVector<std::tuple<SlotIndex, unsigned, unsigned>, 0> Active;
-    for (Register R : Order) {
-      SlotIndex Begin = LIS->getInterval(R).beginIndex();
-      // Reclaim columns of ranges that ended before this def.
-      for (unsigned I = 0; I < Active.size();) {
-        if (std::get<0>(Active[I]) <= Begin) {
-          unsigned StartCol = std::get<1>(Active[I]);
-          unsigned RunWidth = std::get<2>(Active[I]);
-          for (unsigned Col = StartCol; Col < StartCol + RunWidth; ++Col)
-            Free[Col] = true;
-          Active[I] = Active.back();
-          Active.pop_back();
-        } else
-          ++I;
-      }
-      unsigned Width = dwords(R);
-      // Lowest free run of Width columns.
-      int Start = -1;
-      for (unsigned Col = 0, Run = 0; Col < Cols; ++Col) {
-        Run = Free[Col] ? Run + 1 : 0;
-        if (Run == Width) {
-          Start = static_cast<int>(Col + 1 - Width);
-          break;
-        }
-      }
-      int Group;
-      if (Start < 0) {
-        // No contiguous run fits: reserve Width columns in the least-occupied
-        // MSB group so this vreg's footprint stays visible (otherwise the
-        // baseline looks artificially uncongested and skews the self-benefit
-        // comparison).
-        unsigned BestGroup = 0, BestFreeCount = 0;
-        for (unsigned Cand = 0; Cand < EffMSBGroups; ++Cand) {
-          unsigned FreeCount = 0;
-          for (unsigned Col = Cand * MSBGroupSize;
-               Col < (Cand + 1) * MSBGroupSize; ++Col)
-            FreeCount += Free[Col];
-          if (FreeCount >= BestFreeCount) {
-            BestFreeCount = FreeCount;
-            BestGroup = Cand;
-          }
-        }
-        for (unsigned Col = BestGroup * MSBGroupSize, Reserved = 0;
-             Col < (BestGroup + 1) * MSBGroupSize && Reserved < Width; ++Col)
-          if (Free[Col]) {
-            Free[Col] = false;
-            ++Reserved;
-          }
-        Group = static_cast<int>(BestGroup);
-      } else {
-        for (unsigned Col = Start; Col < Start + Width; ++Col)
-          Free[Col] = false;
-        Active.emplace_back(LIS->getInterval(R).endIndex(),
-                            static_cast<unsigned>(Start), Width);
-        Group = Start / static_cast<int>(MSBGroupSize);
-      }
-      MSB[R.virtRegIndex()] = Group;
-    }
-    return MSB;
-  }
+                                          unsigned EffMSBGroups) const;
 
   // Predicted freq-weighted s_set_vgpr_msb count for a vreg->MSB-group map,
   // simulated like AMDGPULowerVGPREncoding: walk the stream with sticky
@@ -506,84 +302,288 @@ private:
   // changes a slot's group.
   uint64_t simSwitchWeight(ArrayRef<MachineBasicBlock *> Blocks,
                            function_ref<int(Register)> MsbOf,
-                           bool LoopOnly = false) const {
-    uint64_t Sw = 0;
-    for (MachineBasicBlock *MBBp : Blocks) {
-      MachineBasicBlock &MBB = *MBBp;
-      // Realizability/relevance: only in-loop switches recur every iteration
-      // and dominate runtime cost; prologue/epilogue switches fire once.
-      // Scoring the gate on loop blocks only keeps the plan from trading a loop
-      // win for one-time out-of-loop churn (which the whole-function total
-      // misranks).
-      if (LoopOnly && (!MLI || MLI->getLoopDepth(&MBB) == 0))
-        continue;
-      uint64_t Freq = blockFreq(MBB);
-      // Mode is reset to group 0 at a block header (and again at a call /
-      // terminator / VGPR inline asm), matching AMDGPULowerVGPREncoding.
-      int Last[4] = {0, 0, 0, 0};
-      for (MachineInstr &MI : MBB) {
-        if (MI.isMetaInstruction())
-          continue;
-        if (MI.isTerminator() || MI.isCall() ||
-            (MI.isInlineAsm() && TII->hasVGPRUses(MI))) {
-          Last[0] = Last[1] = Last[2] = Last[3] = 0;
-          continue;
-        }
-        auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
-        if (!Ops.first)
-          continue;
-        int Need[4] = {-1, -1, -1, -1};
-        for (unsigned S = 0; S < 4; ++S) {
-          const MachineOperand *MO = TII->getNamedOperand(MI, Ops.first[S]);
-          if ((!MO || !MO->isReg() || !MO->getReg()) && Ops.second)
-            MO = TII->getNamedOperand(MI, Ops.second[S]);
-          if (!MO || !MO->isReg() || !MO->getReg())
-            continue;
-          Register R = MO->getReg();
-          if (isVGPRVirtReg(R))
-            Need[S] = std::max(0, MsbOf(R));
-          else if (R.isPhysical() && TRI->isVGPR(*MRI, R))
-            Need[S] = static_cast<int>(TRI->getHWRegIndex(R) >> 8);
-        }
-        bool Changed = false;
-        for (unsigned S = 0; S < 4; ++S)
-          if (Need[S] >= 0 && Last[S] != Need[S])
-            Changed = true;
-        if (Changed)
-          Sw += Freq;
-        for (unsigned S = 0; S < 4; ++S)
-          if (Need[S] >= 0)
-            Last[S] = Need[S];
-      }
-    }
-    return Sw;
-  }
-};
-
-class AMDGPUVGPRMSBAffinityLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-
-  AMDGPUVGPRMSBAffinityLegacy() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    auto *LISW = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-    auto *MLIW = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-    return AMDGPUVGPRMSBAffinity().run(MF, LISW ? &LISW->getLIS() : nullptr,
-                                       MLIW ? &MLIW->getLI() : nullptr);
-  }
-
-  StringRef getPassName() const override { return "AMDGPU VGPR MSB Affinity"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+                           bool LoopOnly = false) const;
 };
 
 } // namespace
+
+void ClusterForest::clusterByWeight(const AffinityGraph &Graph,
+                                    unsigned MergeCap) {
+  struct Item {
+    uint64_t Weight;
+    int Delta;
+    unsigned Ordinal;
+    uint64_t Key;
+    unsigned RootA, RootB;
+    uint64_t EpochA, EpochB;
+    // Max-heap ordering: an Item that should be processed first must compare
+    // "greater" than the others.
+    bool operator<(const Item &O) const {
+      if (Weight != O.Weight)
+        return Weight < O.Weight; // higher weight first
+      if (Delta != O.Delta)
+        return Delta > O.Delta; // smaller footprint delta first
+      if (Ordinal != O.Ordinal)
+        return Ordinal > O.Ordinal; // earlier program order first
+      return Key > O.Key;           // lower key first (determinism)
+    }
+  };
+  std::priority_queue<Item> Queue;
+  // (Re-)evaluate the merge for an edge against the current forest and
+  // enqueue it. Endpoints already in the same cluster are dropped.
+  auto PushEdge = [&](uint64_t Key, uint64_t Weight) {
+    unsigned RootA = find(AffinityGraph::lowEnd(Key));
+    unsigned RootB = find(AffinityGraph::highEnd(Key));
+    if (RootA == RootB)
+      return;
+    int Merged = unionFootprint(RootA, RootB);
+    int Delta = Merged - std::max(footprintOf(RootA), footprintOf(RootB));
+    Queue.push({Weight, Delta, Graph.firstOrdinal(Key), Key, RootA, RootB,
+                Epoch[RootA], Epoch[RootB]});
+  };
+  for (auto &[Key, Weight] : Graph.edges())
+    PushEdge(Key, Weight);
+  while (!Queue.empty()) {
+    Item Top = Queue.top();
+    Queue.pop();
+    unsigned RootA = find(AffinityGraph::lowEnd(Top.Key));
+    unsigned RootB = find(AffinityGraph::highEnd(Top.Key));
+    if (RootA == RootB)
+      continue;
+    // A touched cluster changed since this item was pushed -> its delta/roots
+    // are stale, so re-evaluate and re-enqueue rather than act on it.
+    if (RootA != Top.RootA || RootB != Top.RootB ||
+        Epoch[RootA] != Top.EpochA || Epoch[RootB] != Top.EpochB) {
+      PushEdge(Top.Key, Top.Weight);
+      continue;
+    }
+    int Merged = unionFootprint(RootA, RootB);
+    if (Merged > static_cast<int>(MergeCap))
+      continue; // Refuse: this edge becomes a cut.
+    mergeInto(RootA, RootB, Merged);
+  }
+}
+
+void AMDGPUVGPRMSBAffinity::buildValueGroups(MachineFunction &MF) {
+  unsigned N = MRI->getNumVirtRegs();
+  VGParent.resize(N);
+  for (unsigned I = 0; I < N; ++I)
+    VGParent[I] = I;
+  auto UnionVGroup = [&](Register A, Register B) {
+    if (!isVGPRVirtReg(A) || !isVGPRVirtReg(B))
+      return;
+    unsigned RootA = vgFind(A.virtRegIndex()), RootB = vgFind(B.virtRegIndex());
+    if (RootA != RootB)
+      VGParent[RootA] = RootB;
+  };
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // Coalesce tied def/use pairs (e.g. the WMMA accumulator src2 tied to
+      // dst). General COPYs are intentionally *not* unioned: they connect
+      // distinct values and would collapse unrelated footprints.
+      for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+        if (MO.isReg() && MO.isUse() && MO.isTied()) {
+          unsigned DefIdx = MI.findTiedOperandIdx(I);
+          const MachineOperand &Def = MI.getOperand(DefIdx);
+          if (Def.isReg())
+            UnionVGroup(MO.getReg(), Def.getReg());
+        }
+      }
+      // Coalesce the accumulator chain dst <- src2: across an unrolled K-loop
+      // this chains acc0->acc1->... into one value group so the footprint
+      // counts the accumulator once. Disjoint output tiles never merge.
+      if (SIInstrInfo::isWMMA(MI) || TII->isMAI(MI)) {
+        const MachineOperand *D =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        const MachineOperand *S2 =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (D && D->isReg() && S2 && S2->isReg())
+          UnionVGroup(D->getReg(), S2->getReg());
+      }
+    }
+  }
+}
+
+unsigned
+AMDGPUVGPRMSBAffinity::maxSimultaneousDwords(ArrayRef<Register> Regs) const {
+  DenseMap<unsigned, SegmentVec> ByGroup;
+  DenseMap<unsigned, int> GroupSize;
+  for (Register Reg : Regs) {
+    if (!LIS->hasInterval(Reg))
+      continue;
+    unsigned Group = vgFind(Reg.virtRegIndex());
+    GroupSize[Group] = std::max<int>(GroupSize[Group], dwords(Reg));
+    SegmentVec &Segs = ByGroup[Group];
+    for (const LiveRange::Segment &S : LIS->getInterval(Reg))
+      Segs.emplace_back(S.start, S.end);
+  }
+  // Coalesce each group's segments into maximal intervals and turn them into
+  // +Width/-Width events, so a group that is live across several of its
+  // members' ranges is still charged its width once.
+  SmallVector<std::pair<SlotIndex, int>, 64> Events;
+  for (auto &[Group, Segs] : ByGroup) {
+    llvm::sort(Segs);
+    int Width = GroupSize[Group];
+    SlotIndex CurStart, CurEnd;
+    bool Open = false;
+    auto Flush = [&] {
+      Events.emplace_back(CurStart, Width);
+      Events.emplace_back(CurEnd, -Width);
+    };
+    for (auto &[Start, End] : Segs) {
+      if (Open && Start <= CurEnd) {
+        CurEnd = std::max(CurEnd, End); // overlaps: extend the open interval
+      } else {
+        if (Open) // gap: close the previous interval
+          Flush();
+        CurStart = Start;
+        CurEnd = End;
+        Open = true;
+      }
+    }
+    if (Open)
+      Flush();
+  }
+  llvm::sort(Events, [](const std::pair<SlotIndex, int> &A,
+                        const std::pair<SlotIndex, int> &B) {
+    return A.first < B.first || (A.first == B.first && A.second < B.second);
+  });
+  int Cur = 0, Max = 0;
+  for (auto &[_, Delta] : Events) {
+    Cur += Delta;
+    Max = std::max(Max, Cur);
+  }
+  return Max;
+}
+
+DenseMap<unsigned, int>
+AMDGPUVGPRMSBAffinity::computeNaiveMSB(ArrayRef<Register> Regs,
+                                       unsigned EffMSBGroups) const {
+  DenseMap<unsigned, int> MSB;
+  const unsigned Cols = EffMSBGroups * MSBGroupSize;
+  SmallVector<Register, 0> Order(Regs.begin(), Regs.end());
+  llvm::stable_sort(Order, [&](Register A, Register B) {
+    return LIS->getInterval(A).beginIndex() < LIS->getInterval(B).beginIndex();
+  });
+  SmallVector<bool, 0> Free(Cols, true);
+  // Active allocations: (endIndex, startCol, width) to reclaim columns.
+  SmallVector<std::tuple<SlotIndex, unsigned, unsigned>, 0> Active;
+  for (Register R : Order) {
+    SlotIndex Begin = LIS->getInterval(R).beginIndex();
+    // Reclaim columns of ranges that ended before this def.
+    for (unsigned I = 0; I < Active.size();) {
+      if (std::get<0>(Active[I]) <= Begin) {
+        unsigned StartCol = std::get<1>(Active[I]);
+        unsigned RunWidth = std::get<2>(Active[I]);
+        for (unsigned Col = StartCol; Col < StartCol + RunWidth; ++Col)
+          Free[Col] = true;
+        Active[I] = Active.back();
+        Active.pop_back();
+      } else
+        ++I;
+    }
+    unsigned Width = dwords(R);
+    // Lowest free run of Width columns.
+    int Start = -1;
+    for (unsigned Col = 0, Run = 0; Col < Cols; ++Col) {
+      Run = Free[Col] ? Run + 1 : 0;
+      if (Run == Width) {
+        Start = static_cast<int>(Col + 1 - Width);
+        break;
+      }
+    }
+    int Group;
+    if (Start < 0) {
+      // No contiguous run fits: reserve Width columns in the least-occupied
+      // MSB group so this vreg's footprint stays visible (otherwise the
+      // baseline looks artificially uncongested and skews the self-benefit
+      // comparison).
+      unsigned BestGroup = 0, BestFreeCount = 0;
+      for (unsigned Cand = 0; Cand < EffMSBGroups; ++Cand) {
+        unsigned FreeCount = 0;
+        for (unsigned Col = Cand * MSBGroupSize;
+             Col < (Cand + 1) * MSBGroupSize; ++Col)
+          FreeCount += Free[Col];
+        if (FreeCount >= BestFreeCount) {
+          BestFreeCount = FreeCount;
+          BestGroup = Cand;
+        }
+      }
+      for (unsigned Col = BestGroup * MSBGroupSize, Reserved = 0;
+           Col < (BestGroup + 1) * MSBGroupSize && Reserved < Width; ++Col)
+        if (Free[Col]) {
+          Free[Col] = false;
+          ++Reserved;
+        }
+      Group = static_cast<int>(BestGroup);
+    } else {
+      for (unsigned Col = Start; Col < Start + Width; ++Col)
+        Free[Col] = false;
+      Active.emplace_back(LIS->getInterval(R).endIndex(),
+                          static_cast<unsigned>(Start), Width);
+      Group = Start / static_cast<int>(MSBGroupSize);
+    }
+    MSB[R.virtRegIndex()] = Group;
+  }
+  return MSB;
+}
+
+uint64_t
+AMDGPUVGPRMSBAffinity::simSwitchWeight(ArrayRef<MachineBasicBlock *> Blocks,
+                                       function_ref<int(Register)> MsbOf,
+                                       bool LoopOnly) const {
+  uint64_t Sw = 0;
+  for (MachineBasicBlock *MBBp : Blocks) {
+    MachineBasicBlock &MBB = *MBBp;
+    // Realizability/relevance: only in-loop switches recur every iteration
+    // and dominate runtime cost; prologue/epilogue switches fire once.
+    // Scoring the gate on loop blocks only keeps the plan from trading a loop
+    // win for one-time out-of-loop churn (which the whole-function total
+    // misranks).
+    if (LoopOnly && (!MLI || MLI->getLoopDepth(&MBB) == 0))
+      continue;
+    uint64_t Freq = blockFreq(MBB);
+    // Mode is reset to group 0 at a block header (and again at a call /
+    // terminator / VGPR inline asm), matching AMDGPULowerVGPREncoding.
+    int Last[NumMSBSlots] = {0, 0, 0, 0};
+    for (MachineInstr &MI : MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+      if (MI.isTerminator() || MI.isCall() ||
+          (MI.isInlineAsm() && TII->hasVGPRUses(MI))) {
+        Last[0] = Last[1] = Last[2] = Last[3] = 0;
+        continue;
+      }
+      auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
+      if (!Ops.first)
+        continue;
+      int Need[NumMSBSlots] = {-1, -1, -1, -1};
+      for (unsigned S = 0; S < NumMSBSlots; ++S) {
+        const MachineOperand *MO = TII->getNamedOperand(MI, Ops.first[S]);
+        if ((!MO || !MO->isReg() || !MO->getReg()) && Ops.second)
+          MO = TII->getNamedOperand(MI, Ops.second[S]);
+        if (!MO || !MO->isReg() || !MO->getReg())
+          continue;
+        Register R = MO->getReg();
+        if (isVGPRVirtReg(R))
+          Need[S] = std::max(0, MsbOf(R));
+        else if (R.isPhysical() && TRI->isVGPR(*MRI, R))
+          Need[S] = static_cast<int>(TRI->getHWRegIndex(R) >> 8);
+      }
+      bool Changed = false;
+      for (unsigned S = 0; S < NumMSBSlots; ++S)
+        if (Need[S] >= 0 && Last[S] != Need[S])
+          Changed = true;
+      if (Changed)
+        Sw += Freq;
+      for (unsigned S = 0; S < NumMSBSlots; ++S)
+        if (Need[S] >= 0)
+          Last[S] = Need[S];
+    }
+  }
+  return Sw;
+}
 
 bool AMDGPUVGPRMSBAffinity::run(MachineFunction &MF, LiveIntervals *LISIn,
                                 MachineLoopInfo *MLIIn) {
@@ -630,14 +630,13 @@ bool AMDGPUVGPRMSBAffinity::run(MachineFunction &MF, LiveIntervals *LISIn,
 
   // Baseline occupancy: min of the VGPR-limited estimate and MFI's non-VGPR
   // limit.
-  const SIMachineFunctionInfo *MFIOcc = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned VOcc = STI->getOccupancyWithNumVGPRs(
-      GlobalFP, MFIOcc->getDynamicVGPRBlockSize());
-  unsigned BaseOcc = std::min(VOcc, MFIOcc->getOccupancy());
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned VOcc =
+      STI->getOccupancyWithNumVGPRs(GlobalFP, MFI->getDynamicVGPRBlockSize());
+  unsigned BaseOcc = std::min(VOcc, MFI->getOccupancy());
   LLVM_DEBUG(dbgs() << "  early-check BaseOcc=" << BaseOcc << " (VOcc=" << VOcc
-                    << " MFIOcc=" << MFIOcc->getOccupancy() << ")\n");
-  if (BaseOcc == 0)
-    return false;
+                    << " MFI=" << MFI->getOccupancy() << ")\n");
+  assert(BaseOcc && "occupancy of a compute kernel is at least one");
 
   // As many MSB groups as occupancy allows (NumMSBGroups/BaseOcc), but at least
   // what the footprint needs; extra groups cost only VGPRs, free under the occ
@@ -647,13 +646,11 @@ bool AMDGPUVGPRMSBAffinity::run(MachineFunction &MF, LiveIntervals *LISIn,
       std::min(NumMSBGroups, std::max(Needed, NumMSBGroups / BaseOcc));
 
   unsigned VGPRBudget =
-      STI->getMaxNumVGPRs(BaseOcc, MFIOcc->getDynamicVGPRBlockSize());
+      STI->getMaxNumVGPRs(BaseOcc, MFI->getDynamicVGPRBlockSize());
 
   LLVM_DEBUG(dbgs() << "  GlobalFP(true RP)=" << GlobalFP << " BaseOcc="
                     << BaseOcc << " EffMSBGroups=" << EffMSBGroups
                     << " VGPRBudget=" << VGPRBudget << "\n");
-
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   DenseSet<unsigned> Assigned;
   SmallVector<MachineBasicBlock *, 16> Blocks;
@@ -662,7 +659,7 @@ bool AMDGPUVGPRMSBAffinity::run(MachineFunction &MF, LiveIntervals *LISIn,
 
   auto TryStage = [&](PackMode Mode, GateScope Scope) {
     processRegion(Blocks, AllVGPRs, EffMSBGroups, VGPRBudget, Mode, Scope,
-                  Assigned, MFI);
+                  Assigned, *MFI);
     return !Assigned.empty();
   };
 
@@ -701,7 +698,7 @@ AffinityGraph AMDGPUVGPRMSBAffinity::buildAffinityGraph(
 
     // Sticky per-slot state, reset at each block (the lowering pass resets the
     // mode at block boundaries).
-    Register LastInSlot[4];
+    Register LastInSlot[NumMSBSlots];
     bool PrevDsRead = false;   // Previous real instr was a ds_read.
     unsigned PrevDsDstLen = 0; // That ds_read's vdst tuple width (dwords).
 
@@ -742,7 +739,7 @@ AffinityGraph AMDGPUVGPRMSBAffinity::buildAffinityGraph(
       // and dst and so contributes 2*Freq to its pair, intentionally
       // emphasizing the accumulator/dst chain over single-slot src0/src1 edges.
       SmallVector<std::tuple<Register, Register, unsigned>, 4> Changed;
-      for (unsigned Slot = 0; Slot < 4; ++Slot) {
+      for (unsigned Slot = 0; Slot < NumMSBSlots; ++Slot) {
         const MachineOperand *MO = TII->getNamedOperand(MI, Ops.first[Slot]);
         if ((!MO || !MO->isReg() || !MO->getReg()) && Ops.second)
           MO = TII->getNamedOperand(MI, Ops.second[Slot]);
@@ -895,7 +892,7 @@ void AMDGPUVGPRMSBAffinity::packClusters(
 void AMDGPUVGPRMSBAffinity::processRegion(
     ArrayRef<MachineBasicBlock *> Blocks, ArrayRef<Register> AllVGPRs,
     unsigned EffMSBGroups, unsigned VGPRBudget, PackMode Mode, GateScope Scope,
-    DenseSet<unsigned> &Assigned, SIMachineFunctionInfo *MFI) {
+    DenseSet<unsigned> &Assigned, SIMachineFunctionInfo &MFI) {
   const unsigned N = MRI->getNumVirtRegs();
 
   // Cluster capacity: normally a full group (256). With balanced packing, when
@@ -904,8 +901,9 @@ void AMDGPUVGPRMSBAffinity::processRegion(
   // the soft hints.
   unsigned MergeCap = MSBGroupSize;
   if (Mode == PackMode::Balanced) {
+    assert(EffMSBGroups && "packing needs at least one MSB group");
     unsigned FP = maxSimultaneousDwords(AllVGPRs);
-    unsigned Balanced = (FP + EffMSBGroups - 1) / std::max(1u, EffMSBGroups);
+    unsigned Balanced = (FP + EffMSBGroups - 1) / EffMSBGroups;
     MergeCap = std::min<unsigned>(MSBGroupSize, std::max(1u, Balanced));
   }
 
@@ -917,11 +915,8 @@ void AMDGPUVGPRMSBAffinity::processRegion(
     return static_cast<int>(maxSimultaneousDwords(Regs));
   };
   ClusterForest Forest(N, ComputeFootprintFn);
-  for (unsigned I = 0; I < N; ++I) {
-    Register R = Register::index2VirtReg(I);
-    if (!MRI->reg_nodbg_empty(R) && isVGPRVirtReg(R))
-      Forest.addNode(I, R);
-  }
+  for (Register R : AllVGPRs)
+    Forest.addNode(R.virtRegIndex(), R);
   Forest.clusterByWeight(Graph, MergeCap);
 
   SmallVector<unsigned, 0> Roots = collectHotRoots(Forest, Graph);
@@ -1016,6 +1011,30 @@ void AMDGPUVGPRMSBAffinity::processRegion(
     dbgs() << "\n";
   });
 }
+
+namespace {
+class AMDGPUVGPRMSBAffinityLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUVGPRMSBAffinityLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+    MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    return AMDGPUVGPRMSBAffinity().run(MF, &LIS, &MLI);
+  }
+
+  StringRef getPassName() const override { return "AMDGPU VGPR MSB Affinity"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // namespace
 
 char AMDGPUVGPRMSBAffinityLegacy::ID = 0;
 
