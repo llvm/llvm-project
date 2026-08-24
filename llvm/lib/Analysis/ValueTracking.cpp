@@ -335,6 +335,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
                             unsigned Depth);
 
+static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
+                            const Value *RHS);
+
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const SimplifyQuery &Q, unsigned Depth) {
   // We don't support looking through casts.
@@ -4173,6 +4176,22 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
   return false;
 }
 
+static bool isNonEqualURem(const Value *X, const Value *Rem,
+                           const SimplifyQuery &Q) {
+  const Value *Y;
+  if (!match(Rem, m_URem(m_Specific(X), m_Value(Y))))
+    return false;
+
+  // For a defined urem, X != X urem Y exactly when X u>= Y.
+  // isTruePredicate does not handle UGE, so use the equivalent Y u<= X.
+  if (isTruePredicate(ICmpInst::ICMP_ULE, Y, X))
+    return true;
+
+  std::optional<bool> Implied =
+      isImpliedByDomCondition(ICmpInst::ICMP_UGE, X, Y, Q.CxtI, Q.DL);
+  return Implied && *Implied;
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
@@ -4243,6 +4262,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
   if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Q, Depth + 1);
+
+  if (isNonEqualURem(V1, V2, Q) || isNonEqualURem(V2, V1, Q))
+    return true;
 
   if (isKnownNonEqualFromContext(V1, V2, Q, Depth))
     return true;
@@ -4681,9 +4703,11 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   // We are going to infer semantics of a library function based on mapping it
   // to an LLVM intrinsic. Check that the library function is available from
   // this callbase and in this environment.
-  LibFunc Func;
-  if (F->hasLocalLinkage() || !TLI || !TLI->getLibFunc(CB, Func) ||
-      !CB.onlyReadsMemory())
+  if (F->hasLocalLinkage() || !TLI || !CB.onlyReadsMemory())
+    return Intrinsic::not_intrinsic;
+
+  LibFunc Func = TLI->getLibFunc(CB);
+  if (Func == NotLibFunc)
     return Intrinsic::not_intrinsic;
 
   switch (Func) {
@@ -5566,12 +5590,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
+      // The exponent is always a scalar, even when raising a vector to a power.
       const Value *Exp = II->getArgOperand(1);
-      Type *ExpTy = Exp->getType();
-      unsigned BitWidth = ExpTy->getScalarType()->getIntegerBitWidth();
+      unsigned BitWidth = Exp->getType()->getIntegerBitWidth();
       KnownBits ExponentKnownBits(BitWidth);
-      computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
-                       ExponentKnownBits, Q, Depth + 1);
+      computeKnownBits(Exp, APInt(1, 1), ExponentKnownBits, Q, Depth + 1);
 
       FPClassTest InterestedSrcs = fcNone;
       if (InterestedClasses & fcNan)
@@ -5659,7 +5682,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      Known.propagateNaN(KnownSrc);
+      Known.propagateNonNaN(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
 
@@ -5914,22 +5937,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
 
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive =
-        Opc == Instruction::FRem && (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
     KnownFPClass KnownLHS, KnownRHS;
+    const bool IsFDiv = Opc == Instruction::FDiv;
+    FPClassTest InterestedRHS =
+        IsFDiv ? fcAllFlags : fcNan | fcInf | fcZero | fcNegative;
 
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
+                        KnownRHS, Q, Depth + 1);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN();
+    if (IsFDiv) {
+      KnowSomethingUseful |=
+          KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+          KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    } else {
+      KnowSomethingUseful |= KnownRHS.isKnownNever(fcNegative) ||
+                             KnownRHS.isKnownNever(fcPositive);
+    }
 
-    if (KnowSomethingUseful || WantPositive) {
+    if (KnowSomethingUseful || (!IsFDiv && WantPositive)) {
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                           Q, Depth + 1);
     }
@@ -5938,7 +5968,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &FltSem =
         Op->getType()->getScalarType()->getFltSemantics();
 
-    if (Op->getOpcode() == Instruction::FDiv) {
+    if (IsFDiv) {
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
       Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
@@ -6403,8 +6433,7 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
-      case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass: {
+      case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
                 cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
@@ -6474,7 +6503,6 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
       case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass:
         return true;
       default:
         return false;
@@ -8964,8 +8992,17 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
 
   // Check if the constant operand can be safely incremented/decremented
   // without overflowing/underflowing.
-  auto ConstantIsOk = [WillIncrement, IsSigned](ConstantInt *C) {
-    return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
+  auto ConstantIsOk = [Pred, WillIncrement, IsSigned](ConstantInt *C) {
+    if (WillIncrement ? C->isMaxValue(IsSigned) : C->isMinValue(IsSigned))
+      return false;
+
+    if (!Pred.hasSameSign())
+      return true;
+
+    // Crossing the corresponding boundary in the other ordering changes the
+    // sign bit, and therefore changes the poison domain.
+    return WillIncrement ? !C->isMaxValue(!IsSigned)
+                         : !C->isMinValue(!IsSigned);
   };
 
   Constant *SafeReplacementConstant = nullptr;
@@ -9013,7 +9050,8 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
 
-  CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);
+  CmpPredicate NewPred(CmpInst::getFlippedStrictnessPredicate(Pred),
+                       Pred.hasSameSign());
 
   // Increment or decrement the constant.
   Constant *OneOrNegOne = ConstantInt::get(Type, WillIncrement ? 1 : -1, true);

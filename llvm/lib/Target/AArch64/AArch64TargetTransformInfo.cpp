@@ -588,7 +588,7 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
     unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
@@ -711,6 +711,14 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32,
                                         MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
+    // Type promotion for v2i8 and v2i16 types have a heavy cost when
+    // vectorising. Account for this cost to avoid vectorising unprofitable
+    // examples when vectorising loops with low trip counts.
+    bool IsSigned =
+        ICA.getID() == Intrinsic::smin || ICA.getID() == Intrinsic::smax;
+    EVT VT = TLI->getValueType(DL, RetTy, /*AllowUnknown=*/true);
+    if (VT == MVT::v2i8 || VT == MVT::v2i16 || VT == MVT::v4i8)
+      return LT.first * (IsSigned ? 5 : 3);
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
@@ -1149,18 +1157,30 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
     EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     unsigned SearchSize = NeedleTy->getNumElements();
-    if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize)) {
-      // Base cost for MATCH instructions. At least on the Neoverse V2 and
-      // Neoverse V3, these are cheap operations with the same latency as a
-      // vector ADD. In most cases, however, we also need to do an extra DUP.
-      // For fixed-length vectors we currently need an extra five--six
-      // instructions besides the MATCH.
-      InstructionCost Cost = 4;
-      if (isa<FixedVectorType>(RetTy))
-        Cost += 10;
-      return Cost;
-    }
-    break;
+    auto IsSupportedTypeAndSearchSize = [&]() {
+      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
+        return SearchSize == 8;
+
+      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
+          SearchVT == MVT::v8i8)
+        return SearchSize == 8 || SearchSize == 16;
+
+      return false;
+    };
+
+    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
+        !IsSupportedTypeAndSearchSize())
+      break;
+
+    // Base cost for MATCH instructions. At least on the Neoverse V2 and
+    // Neoverse V3, these are cheap operations with the same latency as a
+    // vector ADD. In most cases, however, we also need to do an extra DUP.
+    // For fixed-length vectors we currently need an extra five--six
+    // instructions besides the MATCH.
+    InstructionCost Cost = 4;
+    if (isa<FixedVectorType>(RetTy))
+      Cost += 10;
+    return Cost;
   }
   case Intrinsic::cttz: {
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
@@ -1173,7 +1193,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::experimental_cttz_elts: {
     EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
+    if (getTLI()->isOperationCustom(ISD::CTTZ_ELTS, ArgVT)) {
       // This will consist of a SVE brkb and a cntp instruction. These
       // typically have the same latency and half the throughput as a vector
       // add instruction.
@@ -3412,6 +3432,46 @@ static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NewUMin);
 }
 
+static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // and(cmphs(pg, ConstA, A), cmphs(pg, A, ConstB))
+  // ->
+  // cmphs(pg, ConstA - ConstB, sub(pg, A, ConstB))
+  constexpr Intrinsic::ID CmphsID = Intrinsic::aarch64_sve_cmphs;
+  Value *Pg = II.getOperand(0);
+  Value *LHS = II.getOperand(1);
+  Value *RHS = II.getOperand(2);
+
+  Value *A, *PgLHS, *PgRHS;
+  uint64_t ConstA, ConstB;
+  if (!match(LHS, m_Intrinsic<CmphsID>(m_Value(PgLHS), m_ConstantInt(ConstA),
+                                       m_Value(A))) ||
+      !match(RHS, m_Intrinsic<CmphsID>(m_Value(PgRHS), m_Specific(A),
+                                       m_ConstantInt(ConstB))) ||
+      !LHS->hasOneUser() || !RHS->hasOneUser())
+    return std::nullopt;
+
+  // Always false regardless of predication
+  if (ConstB > ConstA)
+    return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+
+  // The predicate for both CMPHSs must match.
+  // The predicate for the AND can either be equal to the CMPHS predicates, or
+  // either of the CMPHS values.
+  if (PgLHS != PgRHS || (Pg != LHS && Pg != RHS && Pg != PgLHS))
+    return std::nullopt;
+
+  Type *VecTy = A->getType();
+  Constant *Base = ConstantInt::get(VecTy, ConstB);
+  Value *Sub = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_sub_u, VecTy,
+                                          {PgLHS, A, Base});
+  Constant *Limit = ConstantInt::get(VecTy, ConstA - ConstB);
+  Value *NewCmphs =
+      IC.Builder.CreateIntrinsic(CmphsID, VecTy, {PgLHS, Limit, Sub});
+
+  return IC.replaceInstUsesWith(II, NewCmphs);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3535,6 +3595,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUMin(IC, II);
   case Intrinsic::aarch64_sve_orr_u:
     return instCombineSVEOrr(IC, II);
+  case Intrinsic::aarch64_sve_and_z:
+    return instCombineSVEAnd(IC, II);
   }
 
   return std::nullopt;
@@ -4509,15 +4571,15 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     const Instruction *I, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
     TTI::VectorInstrContext VIC) const {
-  assert(Val->isVectorTy() && "This must be a vector type");
+  assert(Ty->isVectorTy() && "This must be a vector type");
 
   if (Index != -1U) {
     // Legalize the type.
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
     // This type is legalized to a scalar type.
     if (!LT.second.isVector())
@@ -4534,7 +4596,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // - For a insert-element or extract-element
     // instruction that extracts integers, an explicit FPR -> GPR move is
     // needed. So it has non-zero cost.
-    if (Index == 0 && !Val->getScalarType()->isIntegerTy())
+    if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
 
     // This is recognising a LD1 single-element structure to one lane of one
@@ -4551,7 +4613,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.
-    if (Val->getScalarSizeInBits() == 1)
+    if (Ty->getScalarSizeInBits() == 1)
       return CostKind == TTI::TCK_CodeSize
                  ? 2
                  : ST->getVectorInsertExtractBaseCost() + 1;
@@ -4609,7 +4671,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 
     // Check if the type constraints on input vector type and result scalar type
     // of extractelement instruction are satisfied.
-    if (!isa<FixedVectorType>(Val) || !IsAllowedScalarTy(Val->getScalarType()))
+    if (!isa<FixedVectorType>(Ty) || !IsAllowedScalarTy(Ty->getScalarType()))
       return false;
 
     if (Scalar) {
@@ -4637,8 +4699,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         }
       }
       for (auto &[U, L] : UserToExtractIdx) {
-        if (!IsExtractLaneEquivalentToZero(Index, Val->getScalarSizeInBits()) &&
-            !IsExtractLaneEquivalentToZero(L, Val->getScalarSizeInBits()))
+        if (!IsExtractLaneEquivalentToZero(Index, Ty->getScalarSizeInBits()) &&
+            !IsExtractLaneEquivalentToZero(L, Ty->getScalarSizeInBits()))
           return false;
       }
     } else {
@@ -4683,7 +4745,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   // Treat insert at lane 0 into a poison vector as having zero cost. This
   // ensures vector broadcasts via an insert + shuffle (and will be lowered to a
@@ -4691,33 +4753,32 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
   if (Opcode == Instruction::InsertElement && Index == 0 && Op0 &&
       isa<PoisonValue>(Op0))
     return 0;
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, nullptr,
-                                  nullptr, {}, VIC);
+  return getVectorInstrCostHelper(Opcode, Ty, CostKind, Index, nullptr, nullptr,
+                                  {}, VIC);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
-    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
     TTI::VectorInstrContext VIC) const {
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, nullptr, Scalar,
+  return getVectorInstrCostHelper(Opcode, Ty, CostKind, Index, nullptr, Scalar,
                                   ScalarUserAndIdx, VIC);
 }
 
 InstructionCost
-AArch64TTIImpl::getVectorInstrCost(const Instruction &I, Type *Val,
+AArch64TTIImpl::getVectorInstrCost(const Instruction &I, Type *Ty,
                                    TTI::TargetCostKind CostKind, unsigned Index,
                                    TTI::VectorInstrContext VIC) const {
-  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I,
+  return getVectorInstrCostHelper(I.getOpcode(), Ty, CostKind, Index, &I,
                                   nullptr, {}, VIC);
 }
 
 InstructionCost
-AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+AArch64TTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Ty,
                                                  TTI::TargetCostKind CostKind,
                                                  unsigned Index) const {
-  if (isa<FixedVectorType>(Val))
-    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
-                                                   Index);
+  if (isa<FixedVectorType>(Ty))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Ty, CostKind, Index);
 
   // This typically requires both while and lastb instructions in order
   // to extract the last element. If this is in a loop the while
@@ -5103,12 +5164,26 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+    // TODO: revisit these costs as it's not accurate enough for non-uniform
+    // constant.
+    return LT.first;
   case ISD::SRL:
   case ISD::SRA:
-  case ISD::SHL:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See LowerAdd in ISelLowering.
+  case ISD::SHL: {
+    // Immediate vector shifts require uniform shift amounts. Non-uniform
+    // constants therefore use variable shifts and require materializing the
+    // shift vector. Account for a shift and materialization per legalized
+    // vector, together with shared setup.
+    // This cost is for (ldr, shl) + adrp
+    // TODO: These costs are based on CodeSize only, consider other CostKinds.
+    if (Op2Info.isConstant() && !Op2Info.isUniform() &&
+        LT.second.isFixedLengthVector())
+      return 2 * LT.first + 1;
+
+    // Marked 'custom' for combining purposes; a uniform shift amount still
+    // lowers to a single legal instruction.
     return LT.first;
+  }
 
   case ISD::FNEG:
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
@@ -5940,7 +6015,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     UP.AddAdditionalAccumulators = true;
   }
 
-  // Try to unroll small loops, of few-blocks with low budget, if they have
+  // Try to unroll small, single-block loops with low budget, if they have
   // load/store dependencies, to expose more parallel memory access streams,
   // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
@@ -6041,6 +6116,22 @@ void AArch64TTIImpl::getUnrollingPreferences(
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   UP.UpperBound = true;
+
+  // A loop can have a small maximum trip count while SCEV still cannot
+  // form an exact backedge count - typically a data-dependent exit, e.g.
+  // shifting a value until it reaches zero. Unlike for counted loops, the
+  // unrolled body keeps an exit test per iteration, and whether that pays
+  // off depends on how many iterations the loop usually runs, which is
+  // unknown at compile time; the code growth and extra branches are certain.
+  // Be conservative and hold such loops to a lower upper bound; 5 still lets
+  // smaller early-exit loops unroll. Also disable runtime unrolling, which
+  // would clamp the unroll count to the known maximum trip count and produce
+  // the same complete unroll.
+  if (L->getExitingBlock() && !SE.isBackedgeTakenCountMaxOrZero(L) &&
+      isa<SCEVCouldNotCompute>(SE.getBackedgeTakenCount(L))) {
+    UP.MaxUpperBound = 5;
+    UP.Runtime = false;
+  }
 
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
@@ -6726,10 +6817,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (Ratio == 2 && !IsUSDot) {
     MVT InVT = InputLT.second.getScalarType();
 
-    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
+    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2). A pure widening add with a
+    // ratio of 2 can use [SU]ADALP instead.
     if (IsSupported(ST->hasSVE2() || ST->hasSME(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
-      return Cost * 2;
+      return (BinOp || IsSub) ? Cost * 2 : Cost;
 
     // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
@@ -7143,15 +7235,9 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
-  // For cases like post-LTO vectorization, when we eventually know the trip
-  // count, epilogue with fixed-width vectorization can be deleted if the trip
-  // count is less than the epilogue iterations. That's why we prefer
-  // fixed-width vectorization in epilogue in case of equal costs.
-  if (IsEpilogue)
-    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

@@ -89,6 +89,7 @@ class TargetLibraryInfoImpl {
 #include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
+  bool IsErrnoFunctionCall;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -100,6 +101,8 @@ class TargetLibraryInfoImpl {
     AvailableArray[F/4] |= State << 2*(F&3);
   }
   AvailabilityState getState(LibFunc F) const {
+    if (F == NotLibFunc)
+      return Unavailable;
     return static_cast<AvailabilityState>((AvailableArray[F/4] >> 2*(F&3)) & 3);
   }
 
@@ -127,22 +130,24 @@ public:
 
   /// Searches for a particular function name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
-  LLVM_ABI bool getLibFunc(StringRef funcName, LibFunc &F) const;
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
+  LLVM_ABI LibFunc getLibFunc(StringRef funcName) const;
 
   /// Searches for a particular function name, also checking that its type is
   /// valid for the library function matching that name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
   ///
   /// FDecl is assumed to have a parent Module when using this function.
-  LLVM_ABI bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+  LLVM_ABI LibFunc getLibFunc(const Function &FDecl) const;
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  LLVM_ABI bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
+  ///
+  /// Returns NotLibFunc if there is no matching library function.
+  LLVM_ABI LibFunc getLibFunc(unsigned int Opcode, Type *Ty) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -256,6 +261,8 @@ public:
   /// conventions.
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
+
+  bool isErrnoFunctionCall() const { return IsErrnoFunctionCall; }
 };
 
 /// Provides information about what library functions are available for
@@ -286,7 +293,6 @@ public:
       disableAllFunctions();
     else {
       // Disable individual libc/libm calls in TargetLibraryInfo.
-      LibFunc LF;
       AttributeSet FnAttrs = (*F)->getAttributes().getFnAttrs();
       for (const Attribute &Attr : FnAttrs) {
         if (!Attr.isStringAttribute())
@@ -294,7 +300,7 @@ public:
         auto AttrStr = Attr.getKindAsString();
         if (!AttrStr.consume_front("no-builtin-"))
           continue;
-        if (getLibFunc(AttrStr, LF))
+        if (LibFunc LF = getLibFunc(AttrStr))
           setUnavailable(LF);
       }
     }
@@ -328,27 +334,30 @@ public:
 
   /// Searches for a particular function name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc &F) const {
-    return Impl->getLibFunc(funcName, F);
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
+  LibFunc getLibFunc(StringRef funcName) const {
+    return Impl->getLibFunc(funcName);
   }
 
-  bool getLibFunc(const Function &FDecl, LibFunc &F) const {
-    return Impl->getLibFunc(FDecl, F);
+  LibFunc getLibFunc(const Function &FDecl) const {
+    return Impl->getLibFunc(FDecl);
   }
 
-  /// If a callbase does not have the 'nobuiltin' attribute, return if the
-  /// called function is a known library function and set F to that function.
-  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
-    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
-           getLibFunc(*(CB.getCalledFunction()), F);
+  /// If a callbase does not have the 'nobuiltin' attribute, return the library
+  /// function the callee is, and NotLibFunc otherwise.
+  LibFunc getLibFunc(const CallBase &CB) const {
+    if (CB.isNoBuiltin() || !CB.getCalledFunction())
+      return NotLibFunc;
+    return getLibFunc(*CB.getCalledFunction());
   }
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
-    return Impl->getLibFunc(Opcode, Ty, F);
+  ///
+  /// Returns NotLibFunc if there is no matching library function.
+  LibFunc getLibFunc(unsigned int Opcode, Type *Ty) const {
+    return Impl->getLibFunc(Opcode, Ty);
   }
 
   /// Disables all builtins.
@@ -593,6 +602,10 @@ public:
   bool isKnownVectorFunctionInLibrary(StringRef F) const {
     return this->isFunctionVectorizable(F);
   }
+
+  /// Returns whether `errno` is defined as a function call on known
+  /// environments.
+  bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

@@ -862,12 +862,12 @@ in the `PARAMATTR_GROUP_BLOCK` block.
 
 #### PARAMATTR_CODE_ENTRY_OLD Record
 
-```{note}
+:::{note}
 This is a legacy encoding for attributes, produced by LLVM versions 3.2 and
 earlier. It is guaranteed to be understood by the current LLVM version, as
 specified in the {ref}`IR backwards compatibility` policy.
 
-```
+:::
 
 `[ENTRY, paramidx0, attr0, paramidx1, attr1...]`
 
@@ -971,21 +971,21 @@ Correspond to:
 The mappings between the enumeration and the attribute name string may be found
 in the file [Attributes.td](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/Attributes.td).
 
-```{note}
+:::{note}
 The `allocsize` attribute has a special encoding for its arguments. Its two
 arguments, which are 32-bit integers, are packed into one 64-bit integer value
 (i.e., `(EltSizeParam << 32) | NumEltsParam`), with `NumEltsParam` taking on
 the sentinel value -1 if it is not specified.
 
-```
+:::
 
-```{note}
+:::{note}
 The `vscale_range` attribute has a special encoding for its arguments. Its two
 arguments, which are 32-bit integers, are packed into one 64-bit integer value
 (i.e., `(Min << 32) | Max`), with `Max` taking on the value of `Min` if
 it is not specified.
 
-```
+:::
 
 (TYPE_BLOCK)=
 
@@ -1080,12 +1080,12 @@ operand fields are:
 
 #### TYPE_CODE_FUNCTION_OLD Record
 
-```{note}
+:::{note}
 This is a legacy encoding for functions, produced by LLVM versions 3.0 and
 earlier. It is guaranteed to be understood by the current LLVM version, as
 specified in the {ref}`IR backwards compatibility` policy.
 
-```
+:::
 
 `[FUNCTION_OLD, vararg, ignored, retty, ...paramty... ]`
 

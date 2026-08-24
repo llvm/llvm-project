@@ -101,11 +101,26 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     break;
   }
   // Zknd
-  case RISCV::BI__builtin_riscv_aes32dsi:
-  case RISCV::BI__builtin_riscv_aes32dsmi:
-  case RISCV::BI__builtin_riscv_aes64ds:
-  case RISCV::BI__builtin_riscv_aes64dsm:
-  case RISCV::BI__builtin_riscv_aes64im:
+  case RISCV::BI__builtin_riscv_aes32dsi: {
+    intrinsicName = "riscv.aes32dsi";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_aes32dsmi: {
+    intrinsicName = "riscv.aes32dsmi";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_aes64ds: {
+    intrinsicName = "riscv.aes64ds";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_aes64dsm: {
+    intrinsicName = "riscv.aes64dsm";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_aes64im: {
+    intrinsicName = "riscv.aes64im";
+    break;
+  }
   // Zknd & Zkne
   case RISCV::BI__builtin_riscv_aes64ks1i:
   case RISCV::BI__builtin_riscv_aes64ks2:

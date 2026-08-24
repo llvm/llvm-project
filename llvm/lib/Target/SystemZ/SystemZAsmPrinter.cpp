@@ -1254,8 +1254,8 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
   if (ExtraCode) {
-    if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
-        SystemZ::GR128BitRegClass.contains(MO.getReg()))
+    if ((ExtraCode[0] == 'N' || ExtraCode[0] == 'M') && !ExtraCode[1] &&
+        MO.isReg() && SystemZ::GR128BitRegClass.contains(MO.getReg()))
       MCOp =
           MCOperand::createReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
     else
@@ -1609,13 +1609,13 @@ void SystemZAsmPrinter::calculatePPA1() {
     const Function *Per = dyn_cast<Function>(
         MF->getFunction().getPersonalityFn()->stripPointerCasts());
     PersonalityRoutine = Per ? MF->getTarget().getSymbol(Per) : nullptr;
-    assert(PersonalityRoutine && "Missing personality routine");
-
-    GCCEH = MF->getContext().getOrCreateSymbol(Twine("GCC_except_table") +
-                                               Twine(MF->getFunctionNumber()));
-    PersonalityADADisp = ADATable.insert(PersonalityRoutine,
-                                         SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
-    GCCEHADADisp = ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR);
+    if (PersonalityRoutine) {
+      GCCEH = MF->getContext().getOrCreateSymbol(
+          Twine("GCC_except_table") + Twine(MF->getFunctionNumber()));
+      PersonalityADADisp = ADATable.insert(
+          PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
+      GCCEHADADisp = ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR);
+    }
   }
 
   // Get the name of the function, with suffix _.

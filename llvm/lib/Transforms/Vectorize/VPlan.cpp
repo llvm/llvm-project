@@ -778,6 +778,9 @@ VPRegionBlock *VPRegionBlock::clone() {
   if (getHeaderMask())
     NewRegion->createHeaderMask();
 
+  if (CanIV && !hasCanonicalIVNUW())
+    NewRegion->CanIVInfo->clearNUW();
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -1075,18 +1078,22 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 }
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
-  // TODO: Cache if possible.
-  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+  // Find the vector loop region by following the last successor of each block,
+  // starting from the plan's entry. The vector code path is always the last
+  // successor of the entry (and of the min-iters bypass block, if present), and
+  // every block on the path to the region has a single predecessor. Stop at the
+  // first block with multiple predecessors: in a plain CFG that is the loop
+  // header (no region exists yet), and in a rolled CFG it is the middle block
+  // following the region.
+  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
+       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R->isReplicator() ? nullptr : R;
   return nullptr;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
-  return nullptr;
+  return const_cast<VPlan *>(this)->getVectorLoopRegion();
 }
 
 bool VPlan::isOuterLoop() const {
@@ -1478,8 +1485,8 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
-  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
-                  DefR->getParent()->getEnclosingLoopRegion());
+  return DefR && (DefR->getParent()->getEnclosingLoopRegion() ||
+                  !DefR->getParent()->getPlan()->getVectorLoopRegion());
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {

@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -26,10 +28,6 @@ struct S {
 void test_destroying_delete(S *s) {
   delete s;
 }
-
-// S::operator delete(S *, std::destroying_delete_t)
-// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef}, !rec_std3A3Adestroying_delete_t)
-// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef, %"struct.std::destroying_delete_t")
 
 // The destroying operator delete takes over the entire delete operation:
 // no destructor call and no delete-cleanup are emitted in the caller; the
@@ -63,6 +61,10 @@ void test_destroying_delete(S *s) {
 // LLVM-NOT: call void @_ZN1SD{{[12]}}Ev
 // LLVM: [[END]]:
 // LLVM:   ret void
+
+// S::operator delete(S *, std::destroying_delete_t)
+// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef}, !rec_std3A3Adestroying_delete_t)
+// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef, %"struct.std::destroying_delete_t")
 
 // Classic codegen elides empty-class parameters at the ABI level, so the
 // destroying_delete_t tag disappears from both the declaration and the call.

@@ -13,6 +13,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -74,11 +75,10 @@ public:
   bool isBytes() const { return AsType.isNull(); }
 
   /// Return the element type that is "natural" for reporting out-of-bounds
-  /// memory access to 'Location'.
-  static SizeUnit forSVal(SVal Location, const ASTContext &ACtx) {
-    if (const auto *R = Location.getAsRegion()->getAs<TypedValueRegion>())
-      return SizeUnit(R->getValueType(), ACtx);
-    return bytes();
+  /// memory access to \p ER.
+  static SizeUnit forElementRegion(const ElementRegion *ER,
+                                   const ASTContext &ACtx) {
+    return SizeUnit(ER->getElementType(), ACtx);
   }
 
   /// If `E` is a "clean" array subscript expression, return the type of the
@@ -115,87 +115,6 @@ public:
   }
 };
 
-} // anonymous namespace
-
-namespace clang::ento::bounds {
-
-struct CheckFlags {
-  unsigned CheckUnderflow : 1;
-  unsigned OffsetObviouslyNonnegative : 1;
-  unsigned AcceptPastTheEnd : 1;
-};
-
-class CheckResult;
-
-/// Checks the validity of accessing a memory region with extent \p Extent at
-/// offset \p Offset. The \p Flags influence the semantics of the check, in
-/// particular if `AcceptPastTheEnd` is true, then Offset == Extent is also
-/// accepted as valid.
-CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
-                        std::optional<NonLoc> Extent, CheckFlags Flags);
-
-class CheckResult {
-public:
-  /// When true, the bounds check noticed that the value of an unsigned
-  /// expression is constrained to negative values (because the analyzer
-  /// skipped the modeling of a cast expression). This execution path must be
-  /// discarded because it does not represent a real possibility.
-  /// FIXME: This hack is currently needed to filter out many ugly false
-  /// positives; but it should be removed when we fix cast modeling.
-  bool isCorruptedState() const { return IsCorruptedState; }
-
-  /// When true, the checked offset may be in bounds.
-  /// As an exceptional case, this is also true for idiomatic expressions that
-  /// define a past-the-end pointer (and do not dereference it).
-  bool mayBeInBounds() const { return static_cast<bool>(InBoundsState); }
-
-  /// When true, the checked offset may be negative.
-  bool mayUnderflow() const { return MayUnderflow; }
-  /// When true, the checked offset may be >= the extent of the region.
-  /// As an exceptional case, this is also false for idiomatic expressions that
-  /// define a past-the-end pointer (and do not dereference it).
-  bool mayOverflow() const { return ExtentIfMayOverflow.has_value(); }
-  /// When true, the checked offset may be out of bounds.
-  bool mayBeInvalid() const { return MayUnderflow || ExtentIfMayOverflow; }
-
-  /// Returns the offset of the accessed location from the beginning of the
-  /// accessd region.
-  NonLoc getOffset() const { return Offset; }
-
-  /// Returns the extent of the accessed region if it is relevant (because the
-  /// offset may overflow it), otherwise returns std::nullopt.
-  std::optional<NonLoc> getExtentIfMayOverflow() const {
-    return ExtentIfMayOverflow;
-  }
-
-  /// Returns the program state that should be used for continuing the analysis
-  /// after this bounds check. This returns null if mayBeInBounds() is false, in
-  /// that case the state before the check should be used in the error node.
-  /// Note that we also have a valid state in the exception case when the
-  /// 'access' calculates the past-the-end pointer without dereferencing it.
-  ProgramStateRef getInBoundsState() const { return InBoundsState; }
-
-  friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                                 NonLoc Offset, std::optional<NonLoc> Extent,
-                                 CheckFlags Flags);
-
-private:
-  // Offset of the accessed location, measured from the start of the region.
-  // TODO: As of now, the offset and the extent are always measured in bytes,
-  // but we will probably need to allow other size units in the future.
-  const NonLoc Offset;
-
-  explicit CheckResult(NonLoc Offs) : Offset(Offs) {}
-
-  bool IsCorruptedState = false;
-  bool MayUnderflow = false;
-  std::optional<NonLoc> ExtentIfMayOverflow = std::nullopt;
-  ProgramStateRef InBoundsState = nullptr;
-};
-
-} // namespace clang::ento::bounds
-
-namespace {
 /// Strings that will be passed to the parameters 'desc' and 'fullDesc' of the
 /// constructor of 'PathSensitiveBugReport'.
 struct BugDescription {
@@ -281,13 +200,14 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
-/// For a given Location that can be represented as a symbolic expression
+/// For a given \p CurRegion that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
 /// NonLoc that specifies the number of CharUnits). Returns nullopt when these
 /// cannot be determined.
 static std::optional<std::pair<const SubRegion *, NonLoc>>
-computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
+computeOffset(ProgramStateRef State, SValBuilder &SVB,
+              const ElementRegion *CurRegion) {
   QualType T = SVB.getArrayIndexType();
   auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc L, NonLoc R) {
     // We will use this utility to add and multiply values.
@@ -296,9 +216,6 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 
   const SubRegion *OwnerRegion = nullptr;
   std::optional<NonLoc> Offset = SVB.makeZeroArrayIndex();
-
-  const ElementRegion *CurRegion =
-      dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
 
   while (CurRegion) {
     const auto Index = CurRegion->getIndex().getAs<NonLoc>();
@@ -335,124 +252,6 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
     return std::make_pair(OwnerRegion, *Offset);
 
   return std::nullopt;
-}
-
-// NOTE: This function is the "heart" of this checker. It simplifies
-// inequalities with transformations that are valid (and very elementary) in
-// pure mathematics, but become invalid if we use them in C++ number model
-// where the calculations may overflow.
-// Due to the overflow issues I think it's impossible (or at least not
-// practical) to integrate this kind of simplification into the resolution of
-// arbitrary inequalities (i.e. the code of `evalBinOp`); but this function
-// produces valid results when the calculations are handling memory offsets
-// and every value is well below SIZE_MAX.
-// TODO: This algorithm should be moved to a central location where it's
-// available for other checkers that need to compare memory offsets.
-// NOTE: the simplification preserves the order of the two operands in a
-// mathematical sense, but it may change the result produced by a C++
-// comparison operator (and the automatic type conversions).
-// For example, consider a comparison "X+1 < 0", where the LHS is stored as a
-// size_t and the RHS is stored in an int. (As size_t is unsigned, this
-// comparison is false for all values of "X".) However, the simplification may
-// turn it into "X < -1", which is still always false in a mathematical sense,
-// but can produce a true result when evaluated by `evalBinOp` (which follows
-// the rules of C++ and casts -1 to SIZE_MAX).
-static std::pair<NonLoc, nonloc::ConcreteInt>
-getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
-                     SValBuilder &svalBuilder) {
-  const llvm::APSInt &extentVal = extent.getValue();
-  std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
-  if (SymVal && SymVal->isExpression()) {
-    if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
-      switch (SIE->getOpcode()) {
-      case BO_Mul:
-        // The constant should never be 0 here, becasue multiplication by zero
-        // is simplified by the engine.
-        if ((extentVal % constant) != 0)
-          return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
-        else
-          return getSimplifiedOffsets(
-              nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
-      case BO_Add:
-        return getSimplifiedOffsets(
-            nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
-      default:
-        break;
-      }
-    }
-  }
-
-  return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
-}
-
-static bool isNegative(SValBuilder &SVB, ProgramStateRef State, NonLoc Value) {
-  const llvm::APSInt *MaxV = SVB.getMaxValue(State, Value);
-  return MaxV && MaxV->isNegative();
-}
-
-static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
-  QualType T = Value.getType(SVB.getContext());
-  return T->isUnsignedIntegerType();
-}
-
-// Evaluate the comparison Value < Threshold with the help of the custom
-// simplification algorithm defined for this checker. Return a pair of states,
-// where the first one corresponds to "value below threshold" and the second
-// corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
-// the case when the evaluation fails.
-// If the optional argument CheckEquality is true, then use BO_EQ instead of
-// the default BO_LT after consistently applying the same simplification steps.
-static std::pair<ProgramStateRef, ProgramStateRef>
-compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
-                        SValBuilder &SVB, bool CheckEquality = false) {
-  if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    std::tie(Value, Threshold) =
-        getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
-  }
-
-  // We want to perform a _mathematical_ comparison between the numbers `Value`
-  // and `Threshold`; but `evalBinOpNN` evaluates a C/C++ operator that may
-  // perform automatic conversions. For example the number -1 is less than the
-  // number 1000, but -1 < `1000ull` will evaluate to `false` because the `int`
-  // -1 is converted to ULONGLONG_MAX.
-  // To avoid automatic conversions, we evaluate the "obvious" cases without
-  // calling `evalBinOpNN`:
-  if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
-    if (CheckEquality) {
-      // negative_value == unsigned_threshold is always false
-      return {nullptr, State};
-    }
-    // negative_value < unsigned_threshold is always true
-    return {State, nullptr};
-  }
-  if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
-    // unsigned_value == negative_threshold and
-    // unsigned_value < negative_threshold are both always false
-    return {nullptr, State};
-  }
-  // FIXME: These special cases are sufficient for handling real-world
-  // comparisons, but in theory there could be contrived situations where
-  // automatic conversion of a symbolic value (which can be negative and can be
-  // positive) leads to incorrect results.
-  // NOTE: We NEED to use the `evalBinOpNN` call in the "common" case, because
-  // we want to ensure that assumptions coming from this precondition and
-  // assumptions coming from regular C/C++ operator calls are represented by
-  // constraints on the same symbolic expression. A solution that would
-  // evaluate these "mathematical" comparisons through a separate pathway would
-  // be a step backwards in this sense.
-
-  const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
-  auto BelowThreshold =
-      SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
-          .getAs<NonLoc>();
-
-  if (BelowThreshold)
-    return State->assume(*BelowThreshold);
-
-  return {nullptr, nullptr};
 }
 
 static std::optional<int64_t> getConcreteValue(NonLoc SV) {
@@ -609,21 +408,25 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
 
 void ArrayBoundChecker::handleAccessExpr(const Expr *E,
                                          CheckerContext &C) const {
-  const SVal Location = C.getSVal(E);
+  ASTContext &ACtx = C.getASTContext();
+  const ElementRegion *AccessedER =
+      dyn_cast_or_null<ElementRegion>(C.getSVal(E).getAsRegion());
+  if (!AccessedER)
+    return;
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
   //   #define isXXXXX(arg) (LOOKUP_TABLE[arg] & BITMASK_FOR_XXXXX)
   // and incomplete analysis of these leads to false positives. As even
   // accurate reports would be confusing for the users, just disable reports
   // from these macros:
-  if (isFromCtypeMacro(E, C.getASTContext()))
+  if (isFromCtypeMacro(E, ACtx))
     return;
 
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
 
   const std::optional<std::pair<const SubRegion *, NonLoc>> &RawOffset =
-      computeOffset(State, SVB, Location);
+      computeOffset(State, SVB, AccessedER);
 
   if (!RawOffset)
     return;
@@ -644,10 +447,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
-      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
-      /*AcceptPastTheEnd=*/isa<ArraySubscriptExpr>(E) &&
-          isInAddressOf(E, C.getASTContext()),
-  };
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C)};
 
   bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
@@ -662,7 +462,19 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeInBounds()) {
-      SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
+      if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, ACtx) && Extent) {
+        // Recognize and accept the idiomatic `&array[size]` expression that
+        // forms the past-the-end pointer without actually dereferencing it.
+        auto [EqualsToThreshold, NotEqualToThreshold] =
+            bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
+                                            /*CheckEquality=*/true);
+        if (EqualsToThreshold && !NotEqualToThreshold) {
+          C.addTransition(EqualsToThreshold);
+          return;
+        }
+      }
+
+      SizeUnit SU = SizeUnit::forElementRegion(AccessedER, ACtx);
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
       reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
       return;
@@ -694,101 +506,6 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   }
 
   C.addTransition(Res.getInBoundsState(), T);
-}
-
-bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                                        NonLoc Offset,
-                                        std::optional<NonLoc> Extent,
-                                        bounds::CheckFlags Flags) {
-
-  bounds::CheckResult Res(Offset);
-
-  // CHECK LOWER BOUND
-  if (Flags.CheckUnderflow) {
-    auto [PrecedesLowerBound, WithinLowerBound] =
-        compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
-
-    if (PrecedesLowerBound) {
-      // The analyzer thinks that the offset may be invalid (negative)...
-      if (Flags.OffsetObviouslyNonnegative) {
-        // ...but the offset is obviously non-negative (clear array subscript
-        // with an unsigned index), so we're in a buggy situation.
-
-        // TODO: Currently the analyzer ignores many casts (e.g. signed ->
-        // unsigned casts), so it can easily reach states where it will load a
-        // signed (and negative) value from an unsigned variable. This sanity
-        // check is a duct tape "solution" that silences most of the ugly false
-        // positives that are caused by this buggy behavior. Note that this is
-        // not a complete solution: this cannot silence reports where pointer
-        // arithmetic complicates the picture and cannot ensure modeling of the
-        // "unsigned index is positive with highest bit set" cases which are
-        // "usurped" by the nonsense "unsigned index is negative" case.
-        // For more information about this topic, see the umbrella ticket
-        // https://github.com/llvm/llvm-project/issues/39492
-        // TODO: Remove this hack once 'SymbolCast's are modeled properly.
-
-        if (!WithinLowerBound) {
-          // The state is completely nonsense -- let's just sink it!
-          Res.IsCorruptedState = true;
-          return Res;
-        }
-        // Otherwise continue on the 'WithinLowerBound' branch where the
-        // unsigned index _is_ non-negative. Don't mention this assumption as a
-        // note tag, because it would just confuse the users!
-      } else {
-        Res.MayUnderflow = true;
-
-        if (!WithinLowerBound) {
-          // ...and it cannot be valid (>= 0), so report an error.
-          return Res;
-        }
-      }
-    }
-
-    // Actually update the state. The "if" only fails in the extremely unlikely
-    // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
-    if (WithinLowerBound)
-      State = WithinLowerBound;
-  }
-
-  // CHECK UPPER BOUND
-  if (Extent) {
-    // In a situation where both underflow and overflow are possible (but the
-    // index is either tainted or known to be invalid), the logic of this
-    // checker will first assume that the offset is non-negative, and then
-    // (with this additional assumption) it will detect an overflow error.
-    // In this situation the warning message should mention both possibilities.
-
-    auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, Offset, *Extent, SVB);
-
-    if (ExceedsUpperBound) {
-      // The offset may be invalid (>= Size)...
-      Res.ExtentIfMayOverflow = Extent;
-
-      if (!WithinUpperBound) {
-        // ...and it cannot be within bounds, so report an error, unless we can
-        // definitely determine that this is an idiomatic `&array[size]`
-        // expression that calculates the past-the-end pointer.
-        if (Flags.AcceptPastTheEnd) {
-          auto [EqualsToThreshold, NotEqualToThreshold] =
-              compareValueToThreshold(State, Offset, *Extent, SVB,
-                                      /*CheckEquality=*/true);
-          if (EqualsToThreshold && !NotEqualToThreshold) {
-            Res.ExtentIfMayOverflow = std::nullopt;
-            Res.InBoundsState = EqualsToThreshold;
-          }
-        }
-        return Res;
-      }
-    }
-    if (WithinUpperBound)
-      State = WithinUpperBound;
-  }
-
-  Res.InBoundsState = State;
-  return Res;
 }
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
