@@ -5330,8 +5330,8 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr &&Src,
-                                                   PrimType Ty, bool IsConst,
+unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr Src, PrimType Ty,
+                                                   bool IsConst,
                                                    bool IsVolatile,
                                                    ScopeKind SC) {
   // FIXME: There are cases where Src.isExpr() is wrong, e.g.
@@ -5348,7 +5348,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr &&Src,
 }
 
 template <class Emitter>
-UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr &&Src, QualType Ty,
+UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr Src, QualType Ty,
                                                 ScopeKind SC) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
@@ -5832,10 +5832,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, Info);
-  if (Val.isFloat()) {
-    APFloat F = Val.getFloat();
-    return this->emitFloat(F, Info);
-  }
+  if (Val.isFloat())
+    return this->emitFloat(Val.getFloat(), Info);
 
   if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {
