@@ -2489,6 +2489,11 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
     return false;
 
   // i1 conditions come as i32 values, test the lowest bit with tb(n)z.
+  // However, that's not allowed with SLH.
+  if (FuncInfo.MF->getFunction().hasFnAttribute(
+          Attribute::SpeculativeLoadHardening))
+    return false;
+
   unsigned Opcode = AArch64::TBNZW;
   if (FuncInfo.MBB->isLayoutSuccessor(TBB)) {
     std::swap(TBB, FBB);
