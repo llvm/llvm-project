@@ -173,9 +173,9 @@ TEST_F(ExtraRematTest, TestCoroRematWithCallback) {
   Function *F = M->getFunction("f.resume");
   ASSERT_TRUE(F) << "could not find split function f.resume";
 
-  BasicBlock *Resume1 = getBasicBlockByName(F, "resume1");
+  BasicBlock *Resume1 = getBasicBlockByName(F, "resume1.after.spill");
   ASSERT_TRUE(Resume1)
-      << "could not find expected BB resume1 in split function";
+      << "could not find expected BB in split function";
 
   // With callback the extra rematerialization of the function should have
   // happened
@@ -259,9 +259,9 @@ TEST_F(ExtraRematTest, TestCoroRematWithCustomABI) {
   Function *F = M->getFunction("f.resume");
   ASSERT_TRUE(F) << "could not find split function f.resume";
 
-  BasicBlock *Resume1 = getBasicBlockByName(F, "resume1");
+  BasicBlock *Resume1 = getBasicBlockByName(F, "resume1.after.spill");
   ASSERT_TRUE(Resume1)
-      << "could not find expected BB resume1 in split function";
+      << "could not find expected BB in split function";
 
   // With callback the extra rematerialization of the function should have
   // happened
