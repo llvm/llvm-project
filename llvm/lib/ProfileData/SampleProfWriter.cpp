@@ -51,15 +51,6 @@ static cl::opt<uint64_t> RequestedVersion(
     "sample-profile-format-version", cl::init(DefaultVersion), cl::Hidden,
     cl::desc("Format version to write for extensible binary profiles"));
 
-static cl::opt<bool>
-    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
-                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
-                                 "64-bit MD5 hashes in Eytzinger layout"));
-
-static cl::opt<bool> WriteEytzingerNameTables(
-    "sample-profile-write-eytzinger-name-tables", cl::init(false), cl::Hidden,
-    cl::desc("Write Eytzinger 3-span layout for NameTable"));
-
 namespace llvm {
 namespace support {
 namespace endian {
@@ -277,7 +268,62 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
+std::error_code
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsNested) {
+  if (UseMD5IndexedTables) {
+    // Eytzinger layout requires MD5 representation and does not support
+    // multi-context Context-Sensitive profiles.
+    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
+    return writeEytzingerFuncOffsetTable(IsNested);
+  }
+  return writeLegacyFuncOffsetTable();
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsNested) {
+  assert((NumNested + NumFlat > 0 || FuncOffsetTable.empty()) &&
+         "SecNameTable must be written before SecFuncOffsetTable to establish "
+         "Eytzinger indices!");
+
+  size_t SpanSize = IsNested ? NumNested : NumFlat;
+  size_t BaseIdx = IsNested ? 0 : NumNested;
+
+  std::vector<support::ulittle32_t> FuncOffsets(
+      SpanSize, support::ulittle32_t(UINT32_MAX));
+
+  // Populate the function offset array parallel to the Eytzinger span.
+  for (const auto &[Context, RelativeOffset] : FuncOffsetTable) {
+    if (RelativeOffset >= UINT32_MAX)
+      return sampleprof_error::too_large;
+
+    FunctionId FId = Context.getFunction();
+    auto It = NameTable.find(FId);
+    if (It == NameTable.end())
+      continue;
+
+    size_t GlobalIdx = It->second;
+    if (GlobalIdx < BaseIdx || (GlobalIdx - BaseIdx) >= SpanSize)
+      continue;
+
+    size_t LocalIdx = GlobalIdx - BaseIdx;
+    assert(
+        FuncOffsets[LocalIdx] == UINT32_MAX &&
+        "Function offset slot already populated; duplicate GUID or collision!");
+    FuncOffsets[LocalIdx] = static_cast<uint32_t>(RelativeOffset);
+  }
+
+  assert(!llvm::is_contained(FuncOffsets, support::ulittle32_t(UINT32_MAX)) &&
+         "Unpopulated slot in Eytzinger function offset array!");
+
+  OutputStream->write(reinterpret_cast<const char *>(FuncOffsets.data()),
+                      SpanSize * sizeof(support::ulittle32_t));
+  addSectionFlag(SecFuncOffsetTable, SecFuncOffsetFlags::SecFlagEytzinger);
+  FuncOffsetTable.clear();
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinaryBase::writeLegacyFuncOffsetTable() {
   auto &OS = *OutputStream;
 
   // Write out the table size.
@@ -408,7 +454,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
-  if (UseMD5 && WriteEytzingerNameTables) {
+  if (UseMD5 && UseMD5IndexedTables) {
+    // Eytzinger name tables do not support CSSPGO profiles
+    // (FunctionSamples::ProfileIsCS).
+    if (FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
     if (auto EC = writeEytzingerNameTableSection(ProfileMap))
       return EC;
     return sampleprof_error::success;
@@ -426,11 +476,11 @@ namespace {
 //
 // The on-disk layout of the Eytzinger name table section consists of symbol
 // counts followed by three contiguous Eytzinger hash arrays:
-// - ULEB128 count of Context-Sensitive (CS) top-level profile symbol keys
+// - ULEB128 count of Nested top-level profile symbol keys
 // - ULEB128 count of Flat top-level profile symbol keys
 // - ULEB128 count of Inlinee and auxiliary profile symbol keys
-// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger
-//   order
+// - Array of 64-bit little-endian MD5 hash keys for Nested profiles in
+//   Eytzinger order
 // - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger
 //   order
 // - Array of 64-bit little-endian MD5 hash keys for Inlinees in Eytzinger order
@@ -439,10 +489,10 @@ class EytzingerNameTable {
   std::array<TableT, static_cast<size_t>(EytzingerSpan::NumSpans)> Spans;
 
 public:
-  EytzingerNameTable(std::vector<support::ulittle64_t> CSKeys,
+  EytzingerNameTable(std::vector<support::ulittle64_t> NestedKeys,
                      std::vector<support::ulittle64_t> FlatKeys,
                      std::vector<support::ulittle64_t> InlineeKeys)
-      : Spans{TableT::create(std::move(CSKeys)),
+      : Spans{TableT::create(std::move(NestedKeys)),
               TableT::create(std::move(FlatKeys)),
               TableT::create(std::move(InlineeKeys))} {}
 
@@ -464,6 +514,10 @@ public:
       OS.write(reinterpret_cast<const char *>(Table.data()),
                Table.size() * sizeof(support::ulittle64_t));
   }
+
+  size_t size(EytzingerSpan S) const {
+    return Spans[static_cast<size_t>(S)].size();
+  }
 };
 
 } // end anonymous namespace
@@ -472,15 +526,18 @@ std::error_code
 SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     const SampleProfileMap &ProfileMap) {
   DenseSet<uint64_t> TopLevelGUIDs;
-  std::vector<support::ulittle64_t> CSKeys, FlatKeys, InlineeKeys;
+  std::vector<support::ulittle64_t> NestedKeys, FlatKeys, InlineeKeys;
 
-  // Collect top-level CS and Flat keys directly from ProfileMap.
+  // Collect top-level Nested and Flat keys directly from ProfileMap.
   for (const auto &I : ProfileMap) {
     const SampleContext &Ctx = I.second.getContext();
     uint64_t GUID = Ctx.getFunction().getHashCode();
     if (TopLevelGUIDs.insert(GUID).second) {
-      if (Ctx.hasContext())
-        CSKeys.emplace_back(GUID);
+      // In single-table default layouts, unify all top-level symbols in the
+      // Nested partition so they match the single unflagged function offset
+      // table.
+      if (SecLayout != CtxSplitLayout || I.second.hasCallsiteSamples())
+        NestedKeys.emplace_back(GUID);
       else
         FlatKeys.emplace_back(GUID);
     }
@@ -494,7 +551,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
       InlineeKeys.emplace_back(GUID);
   }
 
-  EytzingerNameTable Tables(std::move(CSKeys), std::move(FlatKeys),
+  EytzingerNameTable Tables(std::move(NestedKeys), std::move(FlatKeys),
                             std::move(InlineeKeys));
 
   // Assign each symbol its corresponding index in the Eytzinger layout.
@@ -502,6 +559,8 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     Idx = Tables.findGlobalIdx(FId.getHashCode());
 
   Tables.write(*OutputStream);
+  NumNested = Tables.size(EytzingerSpan::Nested);
+  NumFlat = Tables.size(EytzingerSpan::Flat);
 
   return sampleprof_error::success;
 }
@@ -526,7 +585,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
-  if (WriteMD5ProfSymList)
+  if (UseMD5ProfSymList)
     return writeMD5ProfileSymbolListSection();
   return writeStringBasedProfileSymbolListSection();
 }
@@ -562,11 +621,21 @@ SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
   return sampleprof_error::success;
 }
 
+unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
+  auto WrittenIndices =
+      llvm::map_range(SecHdrTable, &SecHdrTableEntry::LayoutIndex);
+  for (auto [I, Entry] : llvm::enumerate(SectionHdrLayout))
+    if (Entry.Type == Type && !llvm::is_contained(WrittenIndices, I))
+      return I;
+  llvm_unreachable("Matching section not found in SectionHdrLayout");
+}
+
 std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
-    SecType Type, uint32_t LayoutIdx, const SampleProfileMap &ProfileMap) {
+    SecType Type, const SampleProfileMap &ProfileMap) {
+  unsigned LayoutIdx = findUnwrittenEntry(Type);
+  SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
+
   // The setting of SecFlagCompress should happen before markSectionStart.
-  if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
-    setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
   if (Type == SecFuncMetadata &&
@@ -581,9 +650,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
-  if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
+  if (Type == SecProfileSymbolList && UseMD5ProfSymList)
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
-  if (Type == SecNameTable && WriteEytzingerNameTables && UseMD5)
+  if (Type == SecNameTable && UseMD5IndexedTables && UseMD5)
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
@@ -606,10 +675,15 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     if (std::error_code EC = writeFuncProfiles(ProfileMap))
       return EC;
     break;
-  case SecFuncOffsetTable:
-    if (auto EC = writeFuncOffsetTable())
+  case SecFuncOffsetTable: {
+    bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
+    // An unflagged function offset table inherently indexes the primary
+    // Nested symbol span.
+    bool IsNested = !IsFlat;
+    if (auto EC = writeFuncOffsetTable(IsNested))
       return EC;
     break;
+  }
   case SecFuncMetadata:
     if (std::error_code EC = writeFuncMetadata(ProfileMap))
       return EC;
@@ -636,65 +710,45 @@ SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
     const SampleProfileMap &ProfileMap) {
-  // The const indices passed to writeOneSection below are specifying the
-  // positions of the sections in SectionHdrLayout. Look at
-  // initSectionHdrLayout to find out where each section is located in
-  // SectionHdrLayout.
-  if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecCSNameTable, 2, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 4, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecProfileSymbolList, 5, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 3, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncMetadata, 6, ProfileMap))
-    return EC;
+  static constexpr SecType Sections[] = {
+      SecProfSummary,       SecNameTable,       SecCSNameTable,  SecLBRProfile,
+      SecProfileSymbolList, SecFuncOffsetTable, SecFuncMetadata,
+  };
+  for (SecType Type : Sections)
+    if (std::error_code EC = writeOneSection(Type, ProfileMap))
+      return EC;
   return sampleprof_error::success;
 }
 
 static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
-                                 SampleProfileMap &ContextProfileMap,
-                                 SampleProfileMap &NoContextProfileMap) {
+                                 SampleProfileMap &NestedProfileMap,
+                                 SampleProfileMap &FlatProfileMap) {
   for (const auto &I : ProfileMap) {
-    if (I.second.getCallsiteSamples().size())
-      ContextProfileMap.insert({I.first, I.second});
+    if (I.second.hasCallsiteSamples())
+      NestedProfileMap.insert({I.first, I.second});
     else
-      NoContextProfileMap.insert({I.first, I.second});
+      FlatProfileMap.insert({I.first, I.second});
   }
 }
 
 std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
     const SampleProfileMap &ProfileMap) {
-  SampleProfileMap ContextProfileMap, NoContextProfileMap;
-  splitProfileMapToTwo(ProfileMap, ContextProfileMap, NoContextProfileMap);
+  SampleProfileMap NestedProfileMap, FlatProfileMap;
+  splitProfileMapToTwo(ProfileMap, NestedProfileMap, FlatProfileMap);
 
-  if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 3, ContextProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 2, ContextProfileMap))
-    return EC;
-  // Mark the section to have no context. Note section flag needs to be set
-  // before writing the section.
-  addSectionFlag(5, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecLBRProfile, 5, NoContextProfileMap))
-    return EC;
-  // Mark the section to have no context. Note section flag needs to be set
-  // before writing the section.
-  addSectionFlag(4, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 4, NoContextProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecProfileSymbolList, 6, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncMetadata, 7, ProfileMap))
-    return EC;
+  const std::pair<SecType, const SampleProfileMap &> Sections[] = {
+      {SecProfSummary, ProfileMap},
+      {SecNameTable, ProfileMap},
+      {SecLBRProfile, NestedProfileMap},
+      {SecFuncOffsetTable, NestedProfileMap},
+      {SecLBRProfile, FlatProfileMap},
+      {SecFuncOffsetTable, FlatProfileMap},
+      {SecProfileSymbolList, ProfileMap},
+      {SecFuncMetadata, ProfileMap},
+  };
+  for (const auto &[Type, Map] : Sections)
+    if (std::error_code EC = writeOneSection(Type, Map))
+      return EC;
 
   return sampleprof_error::success;
 }
@@ -731,10 +785,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   OS << "\n";
   LineCount++;
 
-  SampleSorter<LineLocation, SampleRecord> SortedSamples(S.getBodySamples());
-  for (const auto &I : SortedSamples.get()) {
-    LineLocation Loc = I->first;
-    const SampleRecord &Sample = I->second;
+  for (const auto &[Loc, Sample] : S.getBodySamples()) {
     OS.indent(Indent + 1);
     Loc.print(OS);
     OS << ": " << Sample.getSamples();
@@ -758,12 +809,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     }
   }
 
-  SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-      S.getCallsiteSamples());
   Indent += 1;
-  for (const auto *Element : SortedCallsiteSamples.get()) {
-    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
-    const auto &[Loc, FunctionSamplesMap] = *Element;
+  for (const auto &[Loc, FunctionSamplesMap] : S.getCallsiteSamples()) {
     for (const FunctionSamples &CalleeSamples :
          make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);

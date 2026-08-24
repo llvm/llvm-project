@@ -106,7 +106,7 @@ void UseTransparentFunctorsCheck::check(
   if (ArgNum == FunctorParentType->template_arguments().size())
     return;
   const TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
-  auto FunctorTypeLoc = getInnerTypeLocAs<TemplateSpecializationTypeLoc>(
+  const auto FunctorTypeLoc = getInnerTypeLocAs<TemplateSpecializationTypeLoc>(
       FunctorLoc.getTypeSourceInfo()->getTypeLoc());
   if (FunctorTypeLoc.isNull())
     return;

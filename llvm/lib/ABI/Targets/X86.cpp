@@ -111,7 +111,6 @@ private:
   ArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
-  const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
@@ -596,18 +595,6 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   Hi = NoClass;
 }
 
-const Type *
-X86_64TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
-  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion() && RT->isTransparentUnion()) {
-      auto Fields = RT->getFields();
-      assert(!Fields.empty() && "transparent union cannot be empty");
-      return Fields.front().FieldType;
-    }
-  }
-  return Ty;
-}
-
 ArgInfo
 X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
                                        unsigned &NeededInt, unsigned &NeededSSE,
@@ -948,36 +935,9 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     return true;
   }
 
-  // Handle structs - check all fields and base classes
+  // Handle records - check all fields and base classes.  getUnionType places a
+  // union's members at offset zero, so the field loop covers a union too.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion()) {
-      for (const auto &Field : RT->getFields()) {
-        if (Field.IsUnnamedBitfield)
-          continue;
-
-        unsigned FieldStart =
-            (Field.OffsetInBits < StartBit) ? StartBit - Field.OffsetInBits : 0;
-        unsigned FieldEnd =
-            FieldStart + Field.FieldType->getSizeInBits().getFixedValue();
-
-        // Check if field overlaps with the queried range
-        if (FieldStart < EndBit && FieldEnd > StartBit) {
-          // There's an overlap, so there is user data
-          unsigned RelativeStart =
-              (StartBit > FieldStart) ? StartBit - FieldStart : 0;
-          unsigned RelativeEnd =
-              (EndBit < FieldEnd)
-                  ? EndBit - FieldStart
-                  : Field.FieldType->getSizeInBits().getFixedValue();
-
-          if (!bitsContainNoUserData(Field.FieldType, RelativeStart,
-                                     RelativeEnd)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
     // Check base classes first (for C++ records)
     if (RT->isCXXRecord()) {
       for (unsigned I = 0; I < RT->getNumBaseClasses(); ++I) {
@@ -1007,7 +967,7 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     return true;
   }
 
-  // For unions, vectors, and primitives - assume all bits are user data
+  // For any other type - assume all bits are user data
   return false;
 }
 
@@ -1419,24 +1379,6 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 }
 
-static bool classifyCXXReturnType(FunctionInfo &FI) {
-  const abi::Type *Ty = FI.getReturnType();
-
-  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
-    if (!RT->canPassInRegisters()) {
-      // A C++ record that cannot pass in registers (non-trivial copy/dtor)
-      // is returned indirectly with ByVal=false, matching
-      // ItaniumCXXABI::classifyReturnType. This is the RAA path and is distinct
-      // from getIndirectReturnResult (plain aggregates), which uses ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   CallingConv::ID CallingConv = FI.getCallingConvention();
 
@@ -1455,7 +1397,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   unsigned FreeSSERegs = 8;
   unsigned NeededInt = 0, NeededSSE = 0;
 
-  if (!classifyCXXReturnType(FI)) {
+  if (!maybeCommonClassifyReturnType(FI)) {
     const Type *RetTy = FI.getReturnType();
     FI.getReturnInfo() = classifyReturnType(RetTy);
   }

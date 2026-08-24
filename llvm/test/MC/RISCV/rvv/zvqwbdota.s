@@ -17,22 +17,22 @@ vsetvli zero, zero, e8alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x70,0x80,0x1c]
 vsetvli zero, zero, e16alt, m1, ta, ma
 
-# CHECK-INST: vqwbdotau.vv v8, v16, v12, 1
+# CHECK-INST: vqwbdotau.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x04,0x16,0xbb]
 # CHECK-ERROR: instruction requires the following: 'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit integer batched dot-product extension){{$}}
-vqwbdotau.vv v8, v16, v12, 1
+vqwbdotau.vv v8, v16, v12, 8
 
-# CHECK-INST: vqwbdotau.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vqwbdotau.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x04,0x26,0xb9]
 # CHECK-ERROR: instruction requires the following: 'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit integer batched dot-product extension){{$}}
-vqwbdotau.vv v8, v16, v12, 2, v0.t
+vqwbdotau.vv v8, v16, v12, 16, v0.t
 
-# CHECK-INST: vqwbdotas.vv v8, v16, v12, 1
+# CHECK-INST: vqwbdotas.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x04,0x16,0xbf]
 # CHECK-ERROR: instruction requires the following: 'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit integer batched dot-product extension){{$}}
-vqwbdotas.vv v8, v16, v12, 1
+vqwbdotas.vv v8, v16, v12, 8
 
-# CHECK-INST: vqwbdotas.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vqwbdotas.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x04,0x26,0xbd]
 # CHECK-ERROR: instruction requires the following: 'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit integer batched dot-product extension){{$}}
-vqwbdotas.vv v8, v16, v12, 2, v0.t
+vqwbdotas.vv v8, v16, v12, 16, v0.t

@@ -39,6 +39,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -2429,10 +2430,10 @@ void CGOpenMPRuntime::emitOrderedRegion(CodeGenFunction &CGF,
                               CGM.getModule(), OMPRTL___kmpc_end_ordered),
                           Args);
     OrderedOpGen.setAction(Action);
-    emitInlinedDirective(CGF, OMPD_ordered, OrderedOpGen);
+    emitInlinedDirective(CGF, OMPD_ordered_blockassoc, OrderedOpGen);
     return;
   }
-  emitInlinedDirective(CGF, OMPD_ordered, OrderedOpGen);
+  emitInlinedDirective(CGF, OMPD_ordered_blockassoc, OrderedOpGen);
 }
 
 unsigned CGOpenMPRuntime::getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind) {
@@ -4620,9 +4621,9 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
                             Args);
 }
 
-void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
-                                       OpenMPDependClauseKind NewDepKind,
-                                       SourceLocation Loc) {
+void CGOpenMPRuntime::emitUpdateDependObjectsClause(
+    CodeGenFunction &CGF, LValue DepobjLVal, OpenMPDependClauseKind NewDepKind,
+    SourceLocation Loc) {
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
@@ -6353,7 +6354,8 @@ void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
   int32_t &MaxTeamsVal = Attrs.MaxTeams.front();
   int32_t &MaxThreadsVal = Attrs.MaxThreads.front();
 
-  getNumTeamsExprForTargetDirective(CGF, D, Attrs.MinTeams, MaxTeamsVal);
+  getNumTeamsExprForTargetDirective(CGF, D, Attrs.MinTeams.front(),
+                                    MaxTeamsVal);
   getNumThreadsExprForTargetDirective(CGF, D, MaxThreadsVal,
                                       /*UpperBoundOnly=*/true);
 
@@ -6371,12 +6373,14 @@ void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
       else
         continue;
 
-      Attrs.MinThreads = std::max(Attrs.MinThreads, AttrMinThreadsVal);
+      Attrs.MinThreads.front() =
+          std::max(Attrs.MinThreads.front(), AttrMinThreadsVal);
       if (AttrMaxThreadsVal > 0)
         MaxThreadsVal = MaxThreadsVal > 0
                             ? std::min(MaxThreadsVal, AttrMaxThreadsVal)
                             : AttrMaxThreadsVal;
-      Attrs.MinTeams = std::max(Attrs.MinTeams, AttrMinBlocksVal);
+      Attrs.MinTeams.front() =
+          std::max(Attrs.MinTeams.front(), AttrMinBlocksVal);
       if (AttrMaxBlocksVal > 0)
         MaxTeamsVal = MaxTeamsVal > 0 ? std::min(MaxTeamsVal, AttrMaxBlocksVal)
                                       : AttrMaxBlocksVal;
@@ -6545,7 +6549,8 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_parallel_for_simd:
   case OMPD_cancel:
   case OMPD_cancellation_point:
-  case OMPD_ordered:
+  case OMPD_ordered_standalone:
+  case OMPD_ordered_blockassoc:
   case OMPD_threadprivate:
   case OMPD_allocate:
   case OMPD_task:
@@ -7605,6 +7610,8 @@ private:
         AttachInfo.AttachPteeAddr.emitRawPointer(CGF));
     CombinedInfo.Sizes.push_back(PointerSize);
     CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    // ATTACH entries themselves don't "have" a base attach-ptr.
+    CombinedInfo.HasAttachPtr.push_back(false);
     CombinedInfo.Mappers.push_back(nullptr);
     CombinedInfo.NonContigInfo.Dims.push_back(1);
   }
@@ -7706,6 +7713,7 @@ private:
       CombinedInfo.Sizes.push_back(
           CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/false));
       CombinedInfo.Types.push_back(Flags);
+      CombinedInfo.HasAttachPtr.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
       CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
     }
@@ -8393,10 +8401,14 @@ private:
             }
           }
 
-          if (!IsMappingWholeStruct)
+          if (!IsMappingWholeStruct) {
             CombinedInfo.Types.push_back(Flags);
-          else
+            // HasAttachPtr marks pointee entries, which have a base attach-ptr.
+            CombinedInfo.HasAttachPtr.push_back(HasAttachPtr);
+          } else {
             StructBaseCombinedInfo.Types.push_back(Flags);
+            StructBaseCombinedInfo.HasAttachPtr.push_back(HasAttachPtr);
+          }
         }
 
         // If we have encountered a member expression so far, keep track of the
@@ -8997,6 +9009,7 @@ private:
           if (HasUdpFbNullify)
             Flags |= OpenMPOffloadMappingFlags::OMP_MAP_FB_NULLIFY;
           UseDeviceDataCombinedInfo.Types.push_back(Flags);
+          UseDeviceDataCombinedInfo.HasAttachPtr.push_back(false);
           UseDeviceDataCombinedInfo.Mappers.push_back(nullptr);
         };
 
@@ -9404,7 +9417,28 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
+    auto CollectAttachPtrExprsForClauseComponents = [this](const auto *C) {
+      for (auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
+        if (!Components.empty())
+          collectAttachPtrExprInfo(Components, CurDir);
+      }
+    };
+
+    // Populate the AttachPtrExprMap for all component lists from map-related
+    // clauses in the declare mapper directive, to enable attach-style mapping
+    // for mappers.
+    for (const auto *Cl : Dir.clauses()) {
+      if (const auto *C = dyn_cast<OMPMapClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+      else if (const auto *C = dyn_cast<OMPToClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+      else if (const auto *C = dyn_cast<OMPFromClause>(Cl))
+        CollectAttachPtrExprsForClauseComponents(C);
+    }
+  }
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
@@ -9478,6 +9512,14 @@ public:
         : !PartialStruct.PreliminaryMapData.BasePointers.empty()
             ? OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ
             : OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+    // A combined entry has a base attach-ptr if its constituents do. e.g.:
+    //   map(s2.s1p->x, s2.s1p->y)
+    // combined entry:
+    //   s2.s1p[0], s2.s1p->x, sizeof(s1p->x..y), ALLOC
+    // here s2.s1p is the attach-ptr for the combined entry.
+    // See the inline comments in emitUserDefinedMapper's definition for how
+    // entries with an attach-ptr are treated.
+    CombinedInfo.HasAttachPtr.push_back(AttachInfo.isValid());
     // If any element has the present modifier, then make sure the runtime
     // doesn't attempt to allocate the struct.
     if (CurTypes.end() !=
@@ -9593,6 +9635,7 @@ public:
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
           OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CombinedInfo.HasAttachPtr.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
     }
     for (const LambdaCapture &LC : RD->captures()) {
@@ -9633,6 +9676,7 @@ public:
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
           OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CombinedInfo.HasAttachPtr.push_back(false);
       CombinedInfo.Mappers.push_back(nullptr);
     }
   }
@@ -9925,6 +9969,7 @@ public:
       CurCaptureVarInfo.Types.push_back(
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+      CurCaptureVarInfo.HasAttachPtr.push_back(false);
       CurCaptureVarInfo.Mappers.push_back(nullptr);
       return;
     }
@@ -10323,6 +10368,7 @@ public:
     if (IsImplicit)
       CombinedInfo.Types.back() |= OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
+    CombinedInfo.HasAttachPtr.push_back(false);
     // No user-defined mapper for default mapping.
     CombinedInfo.Mappers.push_back(nullptr);
   }
@@ -10468,7 +10514,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:
@@ -10539,14 +10586,35 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.
 ///   for (unsigned i = 0; i < size; i++) {
+///     N = __tgt_mapper_num_components(rt_mapper_handle);
 ///     // For each component specified by this mapper:
 ///     for (auto c : begin[i]->all_components) {
+///       // MEMBER_OF grouping: tie this component to the current array element
+///       // (component N) by adding N<<48.  Exceptions:
+///       //   - ATTACH entries are not members of any struct storage range.
+///       //   - Pointee entries (reached via a pointer member) occupy separate
+///       //     storage; their inner MEMBER_OF bits are shifted by N instead.
+///       if (c.isAttach() || c.isPointee())
+///         member_type = c.arg_type + (c.hasInnerMemberOf() ? N<<48 : 0);
+///       else
+///         member_type = c.arg_type + N<<48;
+///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer map
+///       // clause are propagated to each component, except ATTACH entries
+///       // (ATTACH|ALWAYS is reserved for attach(always), and other modifier
+///       // bits have no meaning for ATTACH). PRESENT is additionally
+///       // propagated to components with HasAttachPtr (the pointee data) at
+///       // OpenMP >= 6.0.
+///       present_bit = (v60 && c.hasAttachPtr()) ? PRESENT : 0;
+///       imported_modifier_bits =
+///           type & (ALWAYS | DELETE | CLOSE | present_bit);
+///       effective_type = c.isAttach() ? member_type
+///                                     : member_type | imported_modifier_bits;
 ///       if (c.hasMapper())
 ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin, c.arg_size,
-///                       c.arg_type, c.arg_name);
+///                       effective_type, c.arg_name);
 ///       else
 ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-///                                     c.arg_begin, c.arg_size, c.arg_type,
+///                                     c.arg_begin, c.arg_size, effective_type,
 ///                                     c.arg_name);
 ///     }
 ///   }
@@ -10618,8 +10686,14 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
+  // Propagate the PRESENT modifier to the pointee entries (those with
+  // HasAttachPtr) only for OpenMP >= 6.0; before 6.0 the present modifier does
+  // not apply to the pointee (see the OpenMP 6.0 erratum on the present motion
+  // vs. map-type modifier divergence).
+  bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
-      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB));
+      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
+      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointee));
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
@@ -10762,6 +10836,7 @@ static void genMapInfoForCaptures(
       CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
                               OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
                               OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CurInfo.HasAttachPtr.push_back(false);
       CurInfo.Mappers.push_back(nullptr);
     } else {
       const ValueDecl *CapturedVD =
@@ -10919,6 +10994,7 @@ static void emitTargetCallKernelLaunch(
   CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
   CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
                                OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+  CombinedInfo.HasAttachPtr.push_back(false);
   if (!CombinedInfo.Names.empty())
     CombinedInfo.Names.push_back(NullPtr);
   CombinedInfo.Exprs.push_back(nullptr);
@@ -11002,8 +11078,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
-        DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocks=*/IsBare,
+        /*StrictThreads=*/IsBare, DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
@@ -11204,7 +11280,8 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:
@@ -11779,7 +11856,8 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:

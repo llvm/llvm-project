@@ -1176,48 +1176,59 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
   return 64;
 }
 
-unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
-  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
-
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". So the effective local memory size is doubled in
-  // WGP mode on gfx10.
-  if (isGFX10Plus(STI) && !STI.getFeatureBits().test(FeatureCuMode))
-    BytesPerCU *= 2;
-
-  return BytesPerCU;
-}
-
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+// Maximum LDS a single work-group can address. This is a fixed HW cap. It does
+// not depend on how many SIMDs a work-group runs on.
+static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
   return 32768;
 }
 
+// Total physical size of LDS on the block, in bytes. On targets with
+// FeatureHalfAddressablePhysicalLocalMemory the physical block is twice the
+// addressable size (gfx10/11/12, 128k physical and 64k addressable). On other
+// targets it is equal to the addressable size.
+static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
+  unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
+  if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
+    return 2 * Addressable;
+  return Addressable;
+}
+
+// Sizes in use, by generation (addressable / physical block):
+//   gfx6              :  32 KiB
+//   gfx7 / gfx8 / gfx9:  64 KiB
+//   gfx9.5 (gfx950)   : 160 KiB
+//   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block
+//   gfx12.5 (gfx1250) : 320 KiB (always runs on four SIMDs)
+//   gfx13             : 192 KiB on four SIMDs, 96 KiB on two
+// Total available in the current mode. The physical size is halved when a
+// work-group runs on two SIMDs.
+unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
+  unsigned Size = getPhysicalLocalMemorySize(STI);
+  if (!isFullSIMDMode(STI))
+    Size /= 2;
+  return Size;
+}
+
+// What one work-group can allocate in the current mode. This is the HW
+// addressable cap, but never more than the total available in the current mode.
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+  return std::min(getMaxHWAddressableLocalMemorySize(STI),
+                  getLocalMemorySize(STI));
+}
+
 unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share".
-
-  // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
-    assert(STI.getFeatureBits().test(FeatureCuMode));
-    return 4;
-  }
-
-  // For gfx10 in CU mode the functional block is the CU, which contains
-  // two SIMDs.
-  if (isGFX10Plus(STI) && STI.getFeatureBits().test(FeatureCuMode))
-    return 2;
-
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
-  // contains two CUs, so a total of four SIMDs.
-  return 4;
+  // Four SIMD32s when a work-group runs on all of them, two otherwise.
+  return isFullSIMDMode(STI) ? 4 : 2;
 }
 
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
@@ -2558,6 +2569,15 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
 
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
+}
+
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureApertureRegs) &&
+         !STI.hasFeature(AMDGPU::FeatureGloballyAddressableScratch);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
@@ -2590,6 +2610,10 @@ bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
+}
+
+bool isFullSIMDMode(const MCSubtargetInfo &STI) {
+  return isGFX1250(STI) || !STI.getFeatureBits().test(FeatureCuMode);
 }
 
 bool isGFX1250Plus(const MCSubtargetInfo &STI) {
@@ -3721,6 +3745,8 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 64;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 256;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
@@ -3728,21 +3754,21 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   return 64; // In sync with getAddressableLocalMemorySize
 }
 
-bool isPackedFP32Inst(unsigned Opc) {
+bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_ADD_F32_gfx12:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_MUL_F32_gfx12:
-  case AMDGPU::V_PK_FMA_F32:
-  case AMDGPU::V_PK_FMA_F32_gfx12:
+  case AMDGPU::V_PK_ADD_F32_gfx1250:
+  case AMDGPU::V_PK_ADD_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_MUL_F32_gfx1250:
+  case AMDGPU::V_PK_MUL_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_FMA_F32_gfx1250:
+  case AMDGPU::V_PK_FMA_F32_gfx1250_gfx12:
     return true;
   default:
     return false;
   }
 }
 
-bool isPacked64BitInst(unsigned Opc) {
+bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
   case AMDGPU::V_PK_ADD_F64_gfx1250:
@@ -3766,8 +3792,8 @@ bool isPacked64BitInst(unsigned Opc) {
   }
 }
 
-bool isPackedFP32or64BitInst(unsigned Opc) {
-  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
+bool isSingleSGPRReadInst(unsigned Opc) {
+  return isPackedSingleSGPRFP32Inst(Opc) || isPackedSingleSGPR64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {

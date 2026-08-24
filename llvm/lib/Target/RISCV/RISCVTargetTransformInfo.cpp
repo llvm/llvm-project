@@ -102,8 +102,11 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       break;
     }
     case RISCV::VMV_X_S:
-    case RISCV::VMV_S_X:
     case RISCV::VFMV_F_S:
+      // Domain crossings from vector -> scalar are usually more expensive.
+      Cost += 2;
+      break;
+    case RISCV::VMV_S_X:
     case RISCV::VFMV_S_F:
     case RISCV::VMOR_MM:
     case RISCV::VMXOR_MM:
@@ -350,17 +353,81 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
+  // vdot4a* reduces four i8 products into an i32 result; an i64 accumulator is
+  // additionally supported by widening the i32 partial sums to i64 (see
+  // lowerPARTIAL_REDUCE_MLA). VF is the number of i8 input elements, so the
+  // reduction factor is AccumBits / 8 (4 for i32, 8 for i64).
   if (!ST->hasStdExtZvdot4a8i() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
+      (!AccumType->isIntegerTy(32) && !AccumType->isIntegerTy(64)))
     return InstructionCost::getInvalid();
 
-  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  unsigned Ratio = AccumType->getScalarSizeInBits() / 8;
+  if (!VF.isKnownMultipleOf(Ratio))
+    return InstructionCost::getInvalid();
+
+  // Cost of the vdot4a* itself, which operates on the i32 intermediate type
+  // holding VF/4 elements.
+  Type *DotTp = VectorType::get(Type::getInt32Ty(AccumType->getContext()),
+                                VF.divideCoefficientBy(4));
+  std::pair<InstructionCost, MVT> DotLT = getTypeLegalizationCost(DotTp);
   // Note: Asuming all vdot4a* variants are equal cost
-  return LT.first *
-         getRISCVInstructionCost(RISCV::VDOT4A_VV, LT.second, CostKind);
+  InstructionCost Cost =
+      DotLT.first *
+      getRISCVInstructionCost(RISCV::VDOT4A_VV, DotLT.second, CostKind);
+
+  // Account for reducing the i32 partial sums down to the i64 accumulator's
+  // element count and accumulating into it (see lowerPARTIAL_REDUCE_MLA), which
+  // has two shapes depending on the accumulator's LMUL.
+  if (AccumType->isIntegerTy(64)) {
+    LLVMContext &Ctx = AccumType->getContext();
+    Type *I32Ty = Type::getInt32Ty(Ctx);
+    ElementCount AccVF = VF.divideCoefficientBy(Ratio);
+    std::pair<InstructionCost, MVT> AccLT =
+        getTypeLegalizationCost(VectorType::get(AccumType, AccVF));
+
+    // When the i32 subvectors of a single-vector scalable accumulator are a
+    // fractional LMUL, extracting the high subvector would need a vslidedown,
+    // so instead the i32 dot result is widened to i64 first (vsext.vf2 /
+    // vzext.vf2) and then reduced and accumulated with register-aligned i64
+    // vadd.vv.
+    bool WidenFirst = false;
+    if (VF.isScalable() && AccLT.second.isScalableVector()) {
+      MVT NarrowMVT = AccLT.second.changeVectorElementType(MVT::i32);
+      WidenFirst =
+          RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(NarrowMVT))
+              .second;
+    }
+
+    if (WidenFirst) {
+      // The widened i64 dot result has VF/4 elements, i.e. twice the
+      // accumulator's element count, so the reduction plus the accumulate are
+      // two i64 vadd.vv.
+      std::pair<InstructionCost, MVT> WideLT = getTypeLegalizationCost(
+          VectorType::get(AccumType, VF.divideCoefficientBy(4)));
+      Cost +=
+          WideLT.first * getRISCVInstructionCost(RISCV::VSEXT_VF2,
+                                                 WideLT.second, CostKind) +
+          2 * AccLT.first *
+              getRISCVInstructionCost(RISCV::VADD_VV, AccLT.second, CostKind);
+    } else {
+      // Otherwise the scale-4 i32 sums are halved with a single i32 vadd.vv,
+      // then widened and added into the i64 result with a vwadd.wv.
+      std::pair<InstructionCost, MVT> RedLT =
+          getTypeLegalizationCost(VectorType::get(I32Ty, AccVF));
+      Cost += RedLT.first * getRISCVInstructionCost(RISCV::VADD_VV,
+                                                    RedLT.second, CostKind) +
+              AccLT.first * getRISCVInstructionCost(RISCV::VWADD_WV,
+                                                    AccLT.second, CostKind);
+      // Fixed-length vectors extract the high i32 subvector with a vslidedown.
+      if (VF.isFixed())
+        Cost += DotLT.first * getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI,
+                                                      DotLT.second, CostKind);
+    }
+  }
+
+  return Cost;
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -1127,14 +1194,18 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Some processors optimize segment loads/stores as one wide memory op +
-        // Factor * LMUL shuffle ops.
+        // Some processors optimize segment loads/stores as N * DLEN sized
+        // load ops + Factor * LMUL shuffle ops.
         if (ST->hasOptimizedSegmentLoadStore(Factor)) {
-          InstructionCost Cost =
-              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          unsigned VecSizeInBits =
+              getEstimatedVLFor(VTy) * VTy->getScalarSizeInBits();
+          unsigned VLENForTuning =
+              *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
+          unsigned DLENForTuning = VLENForTuning / ST->getDLenFactor();
+          InstructionCost Cost = divideCeil(VecSizeInBits, DLENForTuning);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
           Cost += Factor * TLI->getLMULCost(SubVecVT);
-          return LT.first * Cost;
+          return Cost;
         }
 
         // Otherwise, the cost is proportional to the number of elements (VL *
@@ -1356,25 +1427,10 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::bswap, MVT::i16, 3},
     {Intrinsic::bswap, MVT::i32, 12},
     {Intrinsic::bswap, MVT::i64, 31},
-    {Intrinsic::vp_bswap, MVT::i16, 3},
-    {Intrinsic::vp_bswap, MVT::i32, 12},
-    {Intrinsic::vp_bswap, MVT::i64, 31},
-    {Intrinsic::vp_fshl, MVT::i8, 7},
-    {Intrinsic::vp_fshl, MVT::i16, 7},
-    {Intrinsic::vp_fshl, MVT::i32, 7},
-    {Intrinsic::vp_fshl, MVT::i64, 7},
-    {Intrinsic::vp_fshr, MVT::i8, 7},
-    {Intrinsic::vp_fshr, MVT::i16, 7},
-    {Intrinsic::vp_fshr, MVT::i32, 7},
-    {Intrinsic::vp_fshr, MVT::i64, 7},
     {Intrinsic::bitreverse, MVT::i8, 17},
     {Intrinsic::bitreverse, MVT::i16, 24},
     {Intrinsic::bitreverse, MVT::i32, 33},
     {Intrinsic::bitreverse, MVT::i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::i64, 52},
     {Intrinsic::ctpop, MVT::i8, 12},
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
@@ -1387,18 +1443,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::cttz, MVT::i16, 23},
     {Intrinsic::cttz, MVT::i32, 24},
     {Intrinsic::cttz, MVT::i64, 25},
-    {Intrinsic::vp_ctpop, MVT::i8, 12},
-    {Intrinsic::vp_ctpop, MVT::i16, 19},
-    {Intrinsic::vp_ctpop, MVT::i32, 20},
-    {Intrinsic::vp_ctpop, MVT::i64, 21},
-    {Intrinsic::vp_ctlz, MVT::i8, 19},
-    {Intrinsic::vp_ctlz, MVT::i16, 28},
-    {Intrinsic::vp_ctlz, MVT::i32, 31},
-    {Intrinsic::vp_ctlz, MVT::i64, 35},
-    {Intrinsic::vp_cttz, MVT::i8, 16},
-    {Intrinsic::vp_cttz, MVT::i16, 23},
-    {Intrinsic::vp_cttz, MVT::i32, 24},
-    {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
 InstructionCost
@@ -1641,6 +1685,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
+        !ST->hasStdExtZbkc()) {
+      // TODO: Once custom lowering in this case for RV32 is added, this guard
+      // should be removed and the cost model should be updated.
+      if (!ST->is64Bit() || LT.second != MVT::i64)
+        break;
+      // vmv.s.x v8, a0
+      // vclmul.vx v8, v8, a1
+      // vmv.x.s a0, v8
+      MVT VecVT = MVT::getScalableVectorVT(LT.second, 1);
+      return LT.first * getRISCVInstructionCost(
+                            {RISCV::VMV_S_X, RISCV::VCLMUL_VX, RISCV::VMV_X_S},
+                            VecVT, CostKind);
+    }
+    break;
+  }
   case Intrinsic::masked_udiv:
     return getArithmeticInstrCost(Instruction::UDiv, ICA.getReturnType(),
                                   CostKind);
@@ -1693,12 +1755,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
-    Type *ArgTy = ICA.getArgTypes()[0];
-    EVT ArgType = TLI->getValueType(DL, ArgTy, true);
-    if (getTLI()->shouldExpandCttzElements(ArgType))
+    if (!ST->hasVInstructions())
       break;
-    InstructionCost Cost = getRISCVInstructionCost(
-        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
+    InstructionCost Cost = 0;
+    Type *ArgTy = ICA.getArgTypes()[0];
+    auto LT = getTypeLegalizationCost(ArgTy);
+
+    // If the element type is not i1, do a comparison with all-zeros.
+    if (LT.second.getVectorElementType() != MVT::i1)
+      Cost += getRISCVInstructionCost(RISCV::VMSNE_VI, LT.second, CostKind);
+
+    Cost += getRISCVInstructionCost(RISCV::VFIRST_M, LT.second, CostKind);
 
     // If zero_is_poison is false, then we will generate additional
     // cmp + select instructions to convert -1 to EVL.
@@ -1710,7 +1777,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
               getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
                                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-    return Cost;
+    return LT.first * Cost;
   }
   case Intrinsic::experimental_vp_splice: {
     // To support type-based query from vectorizer, set the index to 0.
@@ -2409,7 +2476,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
     ConstantMatCost += GetConstantMatCost(Op2Info);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
-  if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
+  if (Opcode == Instruction::Select && LT.second.isVector()) {
     if (CondTy->isVectorTy()) {
       if (ValTy->getScalarSizeInBits() == 1) {
         // vmandn.mm v8, v8, v9
@@ -2617,9 +2684,17 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
 
   // In RVV, we could use vslidedown + vmv.x.s to extract element from vector
   // and vslideup + vmv.s.x to insert element to vector.
-  unsigned BaseCost = 1;
+  unsigned MoveOpc;
+  if (LT.second.isFloatingPoint())
+    MoveOpc = Opcode == Instruction::InsertElement ? RISCV::VFMV_S_F
+                                                   : RISCV::VFMV_F_S;
+  else
+    MoveOpc =
+        Opcode == Instruction::InsertElement ? RISCV::VMV_S_X : RISCV::VMV_X_S;
+  InstructionCost BaseCost =
+      getRISCVInstructionCost(MoveOpc, LT.second, CostKind);
   // When insertelement we should add the index with 1 as the input of vslideup.
-  unsigned SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
+  InstructionCost SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
 
   if (Index != -1U) {
     // The type may be split. For fixed-width vectors we can normalize the
@@ -2684,16 +2759,23 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     // vmv.x.s a1, v8
 
     // For insertelement, we need the following instructions:
-    // vsetivli zero, 2, e32, m4, ta, mu (not count)
-    // vmv.v.i v12, 0
-    // vslide1up.vx v16, v12, a1
-    // vslide1up.vx v12, v16, a0
+    // vsetivli zero, 2, e32, m4, ta, ma (don't count)
+    // vslide1down.vx v12, v8, a0
+    // vslide1down.vx v12, v12, a1
     // addi a0, a2, 1
-    // vsetvli zero, a0, e64, m4, tu, mu (not count)
+    // vsetvli zero, a0, e64, m4, tu, ma (don't count)
     // vslideup.vx v8, v12, a2
 
     // TODO: should we count these special vsetvlis?
-    BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
+    BaseCost =
+        Opcode == Instruction::InsertElement
+            ? getRISCVInstructionCost({RISCV::VSLIDE1DOWN_VX,
+                                       RISCV::VSLIDE1DOWN_VX,
+                                       RISCV::VSLIDEUP_VX},
+                                      LT.second, CostKind)
+            : getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX, RISCV::VMV_X_S,
+                                       RISCV::VSRL_VX, RISCV::VMV_X_S},
+                                      LT.second, CostKind);
   }
   return BaseCost + SlideCost;
 }
@@ -2891,7 +2973,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 InstructionCost RISCVTTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) const {
+    const TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTI::TCC_Free;
   // In the basic model we take into account GEP instructions only
   // (although here can come alloca instruction, a value, constants and/or
@@ -3012,10 +3094,6 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // taken cost of the backedge.
   if (Cost < 12)
     UP.Force = true;
-
-  // Set a lower runtime unrolling count for in-order models.
-  if (!ST->getSchedModel().isOutOfOrder())
-    UP.DefaultUnrollRuntimeCount = 4;
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -3502,49 +3580,22 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
-  case Intrinsic::vp_fma:
   case Intrinsic::fmuladd:
-  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_ashr:
   case Intrinsic::vp_udiv:
   case Intrinsic::vp_sdiv:
   case Intrinsic::vp_urem:
   case Intrinsic::vp_srem:
   case Intrinsic::ssub_sat:
-  case Intrinsic::vp_ssub_sat:
   case Intrinsic::usub_sat:
-  case Intrinsic::vp_usub_sat:
-  case Intrinsic::vp_select:
     return Operand == 1;
     // These intrinsics are commutative.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_xor:
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp:
   case Intrinsic::smin:
-  case Intrinsic::vp_smin:
   case Intrinsic::umin:
-  case Intrinsic::vp_umin:
   case Intrinsic::smax:
-  case Intrinsic::vp_smax:
   case Intrinsic::umax:
-  case Intrinsic::vp_umax:
   case Intrinsic::sadd_sat:
-  case Intrinsic::vp_sadd_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::vp_uadd_sat:
-    // These intrinsics have 'vr' versions.
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fdiv:
     return Operand == 0 || Operand == 1;
   default:
     return false;

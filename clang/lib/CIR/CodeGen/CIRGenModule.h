@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -45,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -191,12 +195,6 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
-  /// LabelOp. This provides the main lookup table used to resolve block
-  /// addresses into their label operations.
-  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
-  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
@@ -643,7 +641,7 @@ public:
                   bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
@@ -657,9 +655,18 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Emit the SYCL kernel caller offload entry point function generated for a
+  /// function declared with the sycl_kernel_entry_point attribute.
+  void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
+                            clang::ASTContext &ctx);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
@@ -814,12 +821,6 @@ public:
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,
                                     bool assumeConvergent = false);
-
-  static constexpr const char *builtinCoroId = "__builtin_coro_id";
-  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
-  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
-  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
-  static constexpr const char *builtinCoroFree = "__builtin_coro_free";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

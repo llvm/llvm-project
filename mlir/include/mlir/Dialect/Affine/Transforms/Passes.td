@@ -385,6 +385,8 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let options = [
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
+    Option<"useExpensiveMath", "use-expensive-math", "bool", /*default=*/"false",
+           "Use Presburger arithmetic to constantize loop upper bounds (higher analysis cost)">
   ];
 }
 
@@ -439,7 +441,7 @@ def SimplifyAffineWithBounds : Pass<"affine-simplify-with-bounds"> {
     comparisons, this pass can prove equality of dynamic basis products through
     `ValueBoundsConstraintSet`.
   }];
-  let dependentDialects = ["affine::AffineDialect", "arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
