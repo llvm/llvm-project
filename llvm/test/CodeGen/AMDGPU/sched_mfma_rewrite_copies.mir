@@ -216,20 +216,20 @@ name:            src2_singledef_singleuse_dst_singleuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_singleuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -269,7 +269,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -312,20 +312,20 @@ name:            src2_singledef_multiuse_dst_singleuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_singleuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -365,7 +365,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -409,20 +409,20 @@ name:            src2_multidef_singleuse_dst_singleuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_singleuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -473,7 +473,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -523,20 +523,20 @@ name:            src2_multidef_multiuse_dst_singleuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_singleuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -588,7 +588,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -641,20 +641,20 @@ name:            src2_singledef_singleuse_dst_singleuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_singleuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -711,7 +711,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -769,20 +769,20 @@ name:            src2_multidef_singleuse_dst_singleuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_singleuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -840,7 +840,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -900,20 +900,20 @@ name:            src2_singledef_multiuse_dst_singleuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_singleuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -987,7 +987,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1057,20 +1057,20 @@ name:            src2_multidef_multiuse_dst_singleuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_singleuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1145,7 +1145,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1216,20 +1216,20 @@ name:            src2_singledef_singleuse_dst_multiuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_multiuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1284,7 +1284,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1337,20 +1337,20 @@ name:            src2_multidef_singleuse_dst_multiuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_multiuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1409,7 +1409,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1466,20 +1466,20 @@ name:            src2_singledef_multiuse_dst_multiuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_multiuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1548,7 +1548,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1611,20 +1611,20 @@ name:            src2_multidef_multiuse_dst_multiuse_singledef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_multiuse_singledef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1695,7 +1695,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1759,20 +1759,20 @@ name:            src2_singledef_singleuse_dst_multiuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_multiuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -1850,7 +1850,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -1925,20 +1925,20 @@ name:            src2_singledef_multiuse_dst_multiuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_multiuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2014,7 +2014,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2085,20 +2085,20 @@ name:            src2_multidef_singleuse_dst_multiuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_multiuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2189,7 +2189,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2270,20 +2270,20 @@ name:            src2_multidef_multiuse_dst_multiuse_multidef_vgpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_multiuse_multidef_vgpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2365,7 +2365,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2439,20 +2439,20 @@ name:            src2_singledef_singleuse_dst_singleuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_singleuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2505,7 +2505,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2561,20 +2561,20 @@ name:            src2_multidef_singleuse_dst_singleuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_singleuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2627,7 +2627,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2683,20 +2683,20 @@ name:            src2_singledef_multiuse_dst_singleuse_singleedef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_singleuse_singleedef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2747,7 +2747,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2798,20 +2798,20 @@ name:            src2_multidef_multiuse_dst_singleuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_singleuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2863,7 +2863,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -2914,20 +2914,20 @@ name:            src2_singledef_singleuse_dst_singleuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_singleuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -2973,7 +2973,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3023,20 +3023,20 @@ name:            src2_multidef_singleuse_dst_singleuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_singleuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3083,7 +3083,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3134,20 +3134,20 @@ name:            src2_singledef_multiuse_dst_singleuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_singleuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3210,7 +3210,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3270,20 +3270,20 @@ name:            src2_multidef_multiuse_dst_singleuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_singleuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3347,7 +3347,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3410,20 +3410,20 @@ name:            src2_singledef_singleuse_dst_multiuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_multiuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3478,7 +3478,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3530,20 +3530,20 @@ name:            src2_multidef_singleuse_dst_multiuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_multiuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3602,7 +3602,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3660,20 +3660,20 @@ name:            src2_singledef_multiuse_dst_multiuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_multiuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3742,7 +3742,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3806,20 +3806,20 @@ name:            src2_multidef_multiuse_dst_multiuse_singledef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_multiuse_singledef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -3890,7 +3890,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -3954,20 +3954,20 @@ name:            src2_singledef_singleuse_dst_multiuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_multiuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4028,7 +4028,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4088,20 +4088,20 @@ name:            src2_multidef_singleuse_dst_multiuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_multiuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4166,7 +4166,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4230,20 +4230,20 @@ name:            src2_singledef_multiuse_dst_multiuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_multiuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4323,7 +4323,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4395,20 +4395,20 @@ name:            src2_multidef_multiuse_dst_multiuse_multidef_agpr
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_multiuse_multidef_agpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4490,7 +4490,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4564,20 +4564,20 @@ name:            src2_singledef_singleuse_dst_singleuse_singledef_mixed
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_singleuse_dst_singleuse_singledef_mixed
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4617,7 +4617,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4662,20 +4662,20 @@ name:            src2_multidef_singleuse_dst_multiuse_multidef_mixed
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_singleuse_dst_multiuse_multidef_mixed
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4756,7 +4756,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4829,20 +4829,20 @@ name:            src2_singledef_multiuse_dst_singleuse_multidef_mixed
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_singledef_multiuse_dst_singleuse_multidef_mixed
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -4900,7 +4900,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -4960,20 +4960,20 @@ name:            src2_multidef_multiuse_dst_multiuse_multidef_mixed
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_multidef_multiuse_dst_multiuse_multidef_mixed
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5043,7 +5043,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -5106,20 +5106,20 @@ name:            no_copy_for_mfma
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: no_copy_for_mfma
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5181,7 +5181,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -5243,20 +5243,20 @@ name:            src2_reaching_def_av_mov_b32_imm_pseudo
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_reaching_def_av_mov_b32_imm_pseudo
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5298,7 +5298,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -5343,20 +5343,20 @@ name:            src2_reaching_def_av_mov_b64_imm_pseudo
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: src2_reaching_def_av_mov_b64_imm_pseudo
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5396,7 +5396,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
@@ -5439,20 +5439,20 @@ name:            noncandidate_mfma_def_feeds_candidate_src2
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: noncandidate_mfma_def_feeds_candidate_src2
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5494,7 +5494,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %0:vreg_1024 = IMPLICIT_DEF
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
@@ -5537,20 +5537,20 @@ name:            av_mov_imm_src2_def_escapes_to_vgpr_user
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
     workGroupIDX:    { reg: '$sgpr6' }
     privateSegmentWaveByteOffset: { reg: '$sgpr7' }
     workItemIDX:     { reg: '$vgpr0' }
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
 body:             |
   ; CHECK-LABEL: name: av_mov_imm_src2_def_escapes_to_vgpr_user
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
@@ -5587,7 +5587,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit %9, implicit %10
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-   liveins: $vgpr0, $sgpr4_sgpr5
+   liveins: $vgpr0, $sgpr4_64
     %0:vreg_1024 = IMPLICIT_DEF
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF

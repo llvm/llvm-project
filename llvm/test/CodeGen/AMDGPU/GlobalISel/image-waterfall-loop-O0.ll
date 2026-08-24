@@ -94,7 +94,7 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
-; CHECK-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+; CHECK-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_256
 ; CHECK-NEXT:    s_mov_b32 s13, s10
 ; CHECK-NEXT:    s_mov_b32 s14, s9
 ; CHECK-NEXT:    s_mov_b32 s15, s8

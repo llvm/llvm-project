@@ -27,10 +27,10 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, s1
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; GFX6-NEXT:    s_mov_b32 s5, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX6-NEXT:    s_mov_b32 s1, s7
 ; GFX6-NEXT:    s_mov_b32 s2, s6
 ; GFX6-NEXT:    s_mov_b32 s3, s5
@@ -111,10 +111,10 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, s1
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s7
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, s6
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s5
@@ -229,10 +229,10 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s7, s1
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; GFX6-NEXT:    s_mov_b32 s5, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
-; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX6-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX6-NEXT:    s_mov_b32 s1, s7
 ; GFX6-NEXT:    s_mov_b32 s2, s6
 ; GFX6-NEXT:    s_mov_b32 s3, s5
@@ -321,10 +321,10 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, s1
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s7
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, s6
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s5

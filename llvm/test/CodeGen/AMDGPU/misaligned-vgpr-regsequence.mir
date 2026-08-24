@@ -19,9 +19,9 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64 = COPY $sgpr4_sgpr5
+    %0:sgpr_64 = COPY $sgpr4_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vreg_64_align2 = COPY %1

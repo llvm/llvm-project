@@ -6,7 +6,7 @@
 name:            splitkit_copy_bundle
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; RA-LABEL: name: splitkit_copy_bundle
@@ -103,17 +103,17 @@ body:             |
   ; VR-NEXT: {{  $}}
   ; VR-NEXT:   renamable $sgpr37 = S_MOV_B32 -1
   ; VR-NEXT:   renamable $sgpr36 = S_MOV_B32 -1
-  ; VR-NEXT:   SI_SPILL_S1024_SAVE renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE renamable $sgpr36_1024, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
   ; VR-NEXT:   renamable $sgpr36 = S_MOV_B32 0
-  ; VR-NEXT:   renamable $sgpr30_sgpr31 = IMPLICIT_DEF
-  ; VR-NEXT:   renamable $sgpr34_sgpr35 = IMPLICIT_DEF
-  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr30_64 = IMPLICIT_DEF
+  ; VR-NEXT:   renamable $sgpr34_64 = IMPLICIT_DEF
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_1024, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.1:
   ; VR-NEXT:   successors: %bb.2(0x80000000)
-  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35
+  ; VR-NEXT:   liveins: $sgpr30_64, $sgpr34_64
   ; VR-NEXT: {{  $}}
-  ; VR-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = SI_SPILL_S1024_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.0, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr36_1024 = SI_SPILL_S1024_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.0, align 4, addrspace 5)
   ; VR-NEXT:   renamable $sgpr38 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr39 = COPY renamable $sgpr37
   ; VR-NEXT:   renamable $sgpr40 = COPY renamable $sgpr36
@@ -142,8 +142,8 @@ body:             |
   ; VR-NEXT:   renamable $sgpr63 = COPY renamable $sgpr37
   ; VR-NEXT:   renamable $sgpr64 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr65 = COPY renamable $sgpr37
-  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
-  ; VR-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_1024, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr36_1024 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
   ; VR-NEXT:   renamable $sgpr37 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr38 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr39 = COPY renamable $sgpr36
@@ -175,13 +175,13 @@ body:             |
   ; VR-NEXT:   renamable $sgpr65 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr66 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr67 = COPY renamable $sgpr36
-  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_1024, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.2:
   ; VR-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35
+  ; VR-NEXT:   liveins: $sgpr30_64, $sgpr34_64
   ; VR-NEXT: {{  $}}
-  ; VR-NEXT:   S_NOP 0, csr_amdgpu, implicit renamable $sgpr30_sgpr31, implicit renamable $sgpr34_sgpr35
+  ; VR-NEXT:   S_NOP 0, csr_amdgpu, implicit renamable $sgpr30_64, implicit renamable $sgpr34_64
   ; VR-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; VR-NEXT:   S_BRANCH %bb.2
   bb.0:
@@ -263,7 +263,7 @@ body:             |
 name:            splitkit_copy_unbundle_reorder
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
@@ -321,7 +321,7 @@ body:             |
     ; RA-NEXT: S_NOP 0, implicit [[DEF]], implicit [[DEF1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR]], implicit [[S_BUFFER_LOAD_DWORD_SGPR1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR2]], implicit [[S_BUFFER_LOAD_DWORD_SGPR3]], implicit [[S_BUFFER_LOAD_DWORD_SGPR4]], implicit [[S_BUFFER_LOAD_DWORD_SGPR5]], implicit [[S_BUFFER_LOAD_DWORD_SGPR6]], implicit [[S_BUFFER_LOAD_DWORD_SGPR7]]
     ;
     ; VR-LABEL: name: splitkit_copy_unbundle_reorder
-    ; VR: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
+    ; VR: renamable $sgpr12_512 = IMPLICIT_DEF
     ; VR-NEXT: renamable $sgpr16 = S_MOV_B32 -1
     ; VR-NEXT: renamable $sgpr17 = S_MOV_B32 -1
     ; VR-NEXT: renamable $sgpr22 = S_MOV_B32 -1
@@ -330,26 +330,26 @@ body:             |
     ; VR-NEXT: renamable $sgpr20 = S_MOV_B32 -1
     ; VR-NEXT: renamable $sgpr25 = S_MOV_B32 -1
     ; VR-NEXT: renamable $sgpr26 = S_MOV_B32 -1
-    ; VR-NEXT: SI_SPILL_S512_SAVE killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
+    ; VR-NEXT: SI_SPILL_S512_SAVE killed renamable $sgpr12_512, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
     ; VR-NEXT: S_NOP 0, implicit-def $sgpr8, implicit-def $sgpr12, implicit-def $sgpr16, implicit-def $sgpr20, implicit-def $sgpr24, implicit-def $sgpr28, implicit-def $sgpr32, implicit-def $sgpr36, implicit-def $sgpr40, implicit-def $sgpr44, implicit-def $sgpr48, implicit-def $sgpr52, implicit-def $sgpr56, implicit-def $sgpr60, implicit-def $sgpr64, implicit-def $sgpr68, implicit-def $sgpr72, implicit-def $sgpr74, implicit-def $sgpr78, implicit-def $sgpr82, implicit-def $sgpr86, implicit-def $sgpr90, implicit-def $sgpr94, implicit-def $sgpr98
-    ; VR-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
-    ; VR-NEXT: renamable $sgpr12_sgpr13 = lr-split COPY killed renamable $sgpr16_sgpr17
+    ; VR-NEXT: renamable $sgpr12_512 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
+    ; VR-NEXT: renamable $sgpr12_64 = lr-split COPY killed renamable $sgpr16_64
     ; VR-NEXT: renamable $sgpr15 = lr-split COPY killed renamable $sgpr19
-    ; VR-NEXT: renamable $sgpr18_sgpr19 = lr-split COPY killed renamable $sgpr22_sgpr23
+    ; VR-NEXT: renamable $sgpr18_64 = lr-split COPY killed renamable $sgpr22_64
     ; VR-NEXT: renamable $sgpr16 = lr-split COPY killed renamable $sgpr20
     ; VR-NEXT: renamable $sgpr21 = lr-split COPY killed renamable $sgpr25
     ; VR-NEXT: renamable $sgpr22 = lr-split COPY killed renamable $sgpr26
-    ; VR-NEXT: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = IMPLICIT_DEF
-    ; VR-NEXT: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr12, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr13, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr15, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr10_sgpr11 = IMPLICIT_DEF
-    ; VR-NEXT: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21, 0 :: (dereferenceable invariant load (s32))
-    ; VR-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, implicit killed renamable $sgpr10_sgpr11, implicit killed renamable $sgpr8, implicit killed renamable $sgpr9, implicit killed renamable $sgpr12, implicit killed renamable $sgpr13, implicit killed renamable $sgpr14, implicit killed renamable $sgpr15, implicit killed renamable $sgpr16, implicit killed renamable $sgpr17
+    ; VR-NEXT: renamable $sgpr4_128 = IMPLICIT_DEF
+    ; VR-NEXT: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr12, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr13, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr15, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr10_64 = IMPLICIT_DEF
+    ; VR-NEXT: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr22, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr16, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr18, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr19, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_128, killed renamable $sgpr21, 0 :: (dereferenceable invariant load (s32))
+    ; VR-NEXT: S_NOP 0, implicit killed renamable $sgpr4_128, implicit killed renamable $sgpr10_64, implicit killed renamable $sgpr8, implicit killed renamable $sgpr9, implicit killed renamable $sgpr12, implicit killed renamable $sgpr13, implicit killed renamable $sgpr14, implicit killed renamable $sgpr15, implicit killed renamable $sgpr16, implicit killed renamable $sgpr17
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sreg_64 = IMPLICIT_DEF
     %2:sgpr_512 = IMPLICIT_DEF

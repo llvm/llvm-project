@@ -9,7 +9,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 
 stack:
@@ -23,9 +23,9 @@ body:             |
     ; CHECK: liveins: $sgpr4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, [[DEF]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, [[DEF]], implicit $sgpr4_sgpr5
-    SI_SPILL_S64_SAVE renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, [[DEF]], implicit-def $sgpr4_64, implicit $sgpr4_64
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, [[DEF]], implicit $sgpr4_64
+    SI_SPILL_S64_SAVE renamable $sgpr4_64, %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
 
 ...
 
@@ -35,7 +35,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 
 stack:
@@ -49,9 +49,9 @@ body:             |
     ; CHECK: liveins: $sgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, [[DEF]], implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, [[DEF]], implicit $sgpr4_sgpr5
-    SI_SPILL_S64_SAVE renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, [[DEF]], implicit-def $sgpr4_64, implicit $sgpr4_64
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, [[DEF]], implicit $sgpr4_64
+    SI_SPILL_S64_SAVE renamable $sgpr4_64, %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
 
 ...
 
@@ -61,7 +61,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
@@ -72,7 +72,7 @@ body:             |
     ; CHECK-NEXT: bb.0:
     ; CHECK-NOT: {{.+}}
     ; CHECK: ...
-    SI_SPILL_S32_SAVE undef $sgpr8, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s32) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S32_SAVE undef $sgpr8, %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32 :: (store (s32) into %stack.0, align 4, addrspace 5)
 
 ...
 
@@ -82,7 +82,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4, stack-id: sgpr-spill }
@@ -93,6 +93,6 @@ body:             |
     ; CHECK-NEXT: bb.0:
     ; CHECK-NOT: {{.+}}
     ; CHECK: ...
-    SI_SPILL_S64_SAVE undef $sgpr8_sgpr9, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S64_SAVE undef $sgpr8_64, %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
 
 ...

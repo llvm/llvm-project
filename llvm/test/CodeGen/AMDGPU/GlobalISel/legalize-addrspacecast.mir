@@ -9,7 +9,7 @@
 name: test_addrspacecast_p0_to_p1
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 
 body: |
   bb.0:
@@ -30,7 +30,7 @@ body: |
 name: test_addrspacecast_p1_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 
 body: |
   bb.0:
@@ -51,7 +51,7 @@ body: |
 name: test_addrspacecast_p0_to_p4
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -71,7 +71,7 @@ body: |
 name: test_addrspacecast_p4_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -91,7 +91,7 @@ body: |
 name: test_addrspacecast_p0_to_p999
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -111,7 +111,7 @@ body: |
 name: test_addrspacecast_p999_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -131,15 +131,15 @@ body: |
 name: test_addrspacecast_p5_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0
 
     ; SIVI-LABEL: name: test_addrspacecast_p5_to_p0
-    ; SIVI: liveins: $vgpr0, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0, $sgpr4_64
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
     ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p5)
     ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
@@ -175,7 +175,7 @@ body: |
 name: test_addrspacecast_p0_to_p5
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -201,16 +201,16 @@ body: |
 name: test_addrspacecast_p3_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 
 body: |
   bb.0:
     liveins: $vgpr0
 
     ; SIVI-LABEL: name: test_addrspacecast_p3_to_p0
-    ; SIVI: liveins: $vgpr0, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0, $sgpr4_64
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
     ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p3)
     ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
@@ -246,7 +246,7 @@ body: |
 name: test_addrspacecast_p0_to_p3
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -272,7 +272,7 @@ body: |
 name: test_addrspacecast_v2p0_to_v2p1
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -295,7 +295,7 @@ body: |
 name: test_addrspacecast_v2p1_to_v2p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -318,7 +318,7 @@ body: |
 name: test_addrspacecast_v2p0_to_v2p3
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -351,15 +351,15 @@ body: |
 name: test_addrspacecast_v2p3_to_v2p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
     ; SIVI-LABEL: name: test_addrspacecast_v2p3_to_v2p0
-    ; SIVI: liveins: $vgpr0_vgpr1, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0_vgpr1, $sgpr4_64
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
     ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
     ; SIVI-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<2 x p3>)
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[UV]](p3)
@@ -508,15 +508,15 @@ body: |
 name: test_addrspacecast_p5_fi_to_p0
 machineFunctionInfo:
   argumentInfo:
-    queuePtr: { reg: '$sgpr4_sgpr5' }
+    queuePtr: { reg: '$sgpr4_64' }
 stack:
   - { id: 0, size: 4, alignment: 4 }
 body: |
   bb.0:
     ; SIVI-LABEL: name: test_addrspacecast_p5_fi_to_p0
-    ; SIVI: liveins: $sgpr4_sgpr5
+    ; SIVI: liveins: $sgpr4_64
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
     ; SIVI-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[FRAME_INDEX]](p5)
     ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)

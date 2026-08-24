@@ -255,323 +255,323 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 
 ; GFX10: name:            without_global_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            without_global_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_global_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_global_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ; GFX10-NEXT:    privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ;
 ; GFX10: name:            without_region_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            without_region_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_region_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_region_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            without_group_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            without_group_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_group_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_group_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            without_constant_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            without_constant_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_constant_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_constant_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_with_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_with_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            call_both_with_and_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            call_call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_call_without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_call_with_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_call_with_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            call_call_both_with_and_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            with_cast_call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_cast_call_without_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            with_cast_call_with_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_cast_call_with_private_to_flat_addrspacecast_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
 ;
 ; GFX10: name:            with_indirect_call
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            with_indirect_call_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr12_sgpr13' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr8_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr12_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr14' }
 ;
 ; GFX10: name:            call_with_indirect_call
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_with_indirect_call_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr12_sgpr13' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr8_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
+; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr12_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr14' }
 
 ;
 ; GFX10: name:            use_intrinsic_workitem_id_x
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            use_intrinsic_workitem_id_x_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr4' }
 ;
 ; GFX10: name:            call_use_intrinsic_workitem_id_x
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_sgpr11' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
+; GFX10-NEXT:    dispatchPtr:     { reg: '$sgpr4_64' }
+; GFX10-NEXT:    queuePtr:        { reg: '$sgpr6_64' }
+; GFX10-NEXT:    dispatchID:      { reg: '$sgpr10_64' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr12' }
 ;
 ; GFX10: name:            call_use_intrinsic_workitem_id_x_cc_kernel
 ; GFX10:       argumentInfo:
-; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_128' }
 ; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr4' }

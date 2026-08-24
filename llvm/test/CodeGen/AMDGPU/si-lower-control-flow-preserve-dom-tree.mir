@@ -18,10 +18,10 @@ name:            preserve_dom_tree
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.4(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp9
+    liveins: $vgpr0, $sgpr0_64, $ttmp9
   
     %0:sreg_32 = COPY $ttmp9
-    %1:sgpr_64 = COPY killed $sgpr0_sgpr1
+    %1:sgpr_64 = COPY killed $sgpr0_64
     %2:vgpr_32 = COPY killed $vgpr0
     %3:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 0, 0
     %4:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %1, 28, 0

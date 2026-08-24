@@ -9,9 +9,9 @@ machineFunctionInfo:
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp7
+    liveins: $vgpr0, $sgpr0_64, $ttmp7
     ; GFX1250-LABEL: name: promote_async_load_offset
-    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
+    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_64
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -47,9 +47,9 @@ machineFunctionInfo:
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp7
+    liveins: $vgpr0, $sgpr0_64, $ttmp7
     ; GFX1250-LABEL: name: promote_async_load_offset_two_offsets
-    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
+    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_64
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -92,9 +92,9 @@ machineFunctionInfo:
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
     ; GFX1250-LABEL: name: promote_async_load_u64
-    ; GFX1250: liveins: $vgpr0, $sgpr4_sgpr5
+    ; GFX1250: liveins: $vgpr0, $sgpr4_64
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -105,17 +105,17 @@ body:             |
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
-    ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    ; GFX1250-NEXT: early-clobber renamable $sgpr0_64 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_64, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr4 = V_ADD_U32_e64 -256, 0, 0, implicit $exec
-    ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 $sgpr0_sgpr1, $vgpr0_vgpr1, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 $sgpr0_64, $vgpr0_vgpr1, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 256, killed $vgpr2_vgpr3, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR $vgpr1, killed $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR $vgpr1, killed $sgpr0_64, killed $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_vgpr3, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_vgpr3, 256, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     ; GFX1250-NEXT: S_ENDPGM 0
-    %3:sgpr_64 = COPY $sgpr4_sgpr5
+    %3:sgpr_64 = COPY $sgpr4_64
     %0:vgpr_32 = COPY $vgpr0
     early-clobber %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec %3, 36, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -141,9 +141,9 @@ machineFunctionInfo:
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp7
+    liveins: $vgpr0, $sgpr0_64, $ttmp7
     ; GFX1250-LABEL: name: promote_async_load_mi_is_anchor
-    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
+    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_64
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -190,9 +190,9 @@ machineFunctionInfo:
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr0_sgpr1, $ttmp7
+    liveins: $vgpr0, $sgpr0_64, $ttmp7
     ; GFX1250-LABEL: name: promote_async_store_offset
-    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
+    ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_64
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32

@@ -24,9 +24,9 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     ; W32-LABEL: name: one_block
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+    ; W32: liveins: $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $m0 = S_MOV_B32 9
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -49,10 +49,10 @@ body: |
     ; W32-NEXT: S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45
     ; W32-NEXT: $m0 = S_MOV_B32 9
     ; W32-NEXT: $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr43, implicit $vgpr44, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63, implicit $vgpr72, implicit $vgpr73 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: one_block
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+    ; W64: liveins: $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: $m0 = S_MOV_B32 9
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -75,9 +75,9 @@ body: |
     ; W64-NEXT: S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45
     ; W64-NEXT: $m0 = S_MOV_B32 9
     ; W64-NEXT: $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr43, implicit $vgpr44, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63, implicit $vgpr72, implicit $vgpr73 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Block load/store v40-47 and v56-63 (v48-55 and v64-71 are caller-saved). The
@@ -90,9 +90,9 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     ; W32-LABEL: name: one_block_csr_only
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W32: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $m0 = S_MOV_B32 16711935
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -115,10 +115,10 @@ body: |
     ; W32-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr42, implicit-def $vgpr43, implicit-def $vgpr44, implicit-def $vgpr45, implicit-def $vgpr46, implicit-def $vgpr47, implicit-def $vgpr48, implicit-def $vgpr49, implicit-def $vgpr50, implicit-def $vgpr51, implicit-def $vgpr52, implicit-def $vgpr53, implicit-def $vgpr54, implicit-def $vgpr55, implicit-def $vgpr56, implicit-def $vgpr57, implicit-def $vgpr58, implicit-def $vgpr59, implicit-def $vgpr60, implicit-def $vgpr61, implicit-def $vgpr62, implicit-def $vgpr63, implicit-def $vgpr64, implicit-def $vgpr65, implicit-def $vgpr66
     ; W32-NEXT: $m0 = S_MOV_B32 16711935
     ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: one_block_csr_only
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W64: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: $m0 = S_MOV_B32 16711935
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -141,9 +141,9 @@ body: |
     ; W64-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr42, implicit-def $vgpr43, implicit-def $vgpr44, implicit-def $vgpr45, implicit-def $vgpr46, implicit-def $vgpr47, implicit-def $vgpr48, implicit-def $vgpr49, implicit-def $vgpr50, implicit-def $vgpr51, implicit-def $vgpr52, implicit-def $vgpr53, implicit-def $vgpr54, implicit-def $vgpr55, implicit-def $vgpr56, implicit-def $vgpr57, implicit-def $vgpr58, implicit-def $vgpr59, implicit-def $vgpr60, implicit-def $vgpr61, implicit-def $vgpr62, implicit-def $vgpr63, implicit-def $vgpr64, implicit-def $vgpr65, implicit-def $vgpr66
     ; W64-NEXT: $m0 = S_MOV_B32 16711935
     ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr42, implicit-def $vgpr43, implicit-def $vgpr44, implicit-def $vgpr45, implicit-def $vgpr46, implicit-def $vgpr47, implicit-def $vgpr48, implicit-def $vgpr49, implicit-def $vgpr50, implicit-def $vgpr51, implicit-def $vgpr52, implicit-def $vgpr53, implicit-def $vgpr54, implicit-def $vgpr55, implicit-def $vgpr56, implicit-def $vgpr57, implicit-def $vgpr58, implicit-def $vgpr59, implicit-def $vgpr60, implicit-def $vgpr61, implicit-def $vgpr62, implicit-def $vgpr63, implicit-def $vgpr64, implicit-def $vgpr65, implicit-def $vgpr66
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Block load/store to/from different blocks.
@@ -160,9 +160,9 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     ; W32-LABEL: name: multiple_blocks
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
+    ; W32: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $m0 = S_MOV_B32 3
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -225,10 +225,10 @@ body: |
     ; W32-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: ("amdgpu-thread-private" load (s1024) from %stack.1, align 4, addrspace 5)
     ; W32-NEXT: $m0 = S_MOV_B32 3
     ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: multiple_blocks
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
+    ; W64: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: $m0 = S_MOV_B32 3
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -291,9 +291,9 @@ body: |
     ; W64-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: ("amdgpu-thread-private" load (s1024) from %stack.1, align 4, addrspace 5)
     ; W64-NEXT: $m0 = S_MOV_B32 3
     ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr104, implicit-def $vgpr110, implicit-def $vgpr232
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Make sure we handle register tuples correctly, even when they're straddling
@@ -308,9 +308,9 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     ; W32-LABEL: name: reg_tuples
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103
+    ; W32: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $m0 = S_MOV_B32 7
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -353,10 +353,10 @@ body: |
     ; W32-NEXT: $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr74, implicit $vgpr75, implicit $vgpr76, implicit $vgpr77, implicit $vgpr78, implicit $vgpr79, implicit $vgpr88, implicit $vgpr89, implicit $vgpr90, implicit $vgpr91, implicit $vgpr92, implicit $vgpr93, implicit $vgpr94, implicit $vgpr95 :: ("amdgpu-thread-private" load (s1024) from %stack.1, align 4, addrspace 5)
     ; W32-NEXT: $m0 = S_MOV_B32 7
     ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: reg_tuples
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103
+    ; W64: liveins: $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: $m0 = S_MOV_B32 7
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -399,9 +399,9 @@ body: |
     ; W64-NEXT: $vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr74, implicit $vgpr75, implicit $vgpr76, implicit $vgpr77, implicit $vgpr78, implicit $vgpr79, implicit $vgpr88, implicit $vgpr89, implicit $vgpr90, implicit $vgpr91, implicit $vgpr92, implicit $vgpr93, implicit $vgpr94, implicit $vgpr95 :: ("amdgpu-thread-private" load (s1024) from %stack.1, align 4, addrspace 5)
     ; W64-NEXT: $m0 = S_MOV_B32 7
     ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42, implicit-def $vgpr70_vgpr71_vgpr72_vgpr73
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Make sure we don't overwrite any stack variables.
@@ -422,9 +422,9 @@ stack:
     debug-info-location: '' }
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr48
+    liveins: $sgpr30_64, $vgpr48
     ; W32-LABEL: name: locals
-    ; W32: liveins: $vgpr48, $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W32: liveins: $vgpr48, $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $m0 = S_MOV_B32 1
     ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.2, align 4, addrspace 5)
@@ -449,10 +449,10 @@ body: |
     ; W32-NEXT: S_NOP 0, implicit-def $vgpr40
     ; W32-NEXT: $m0 = S_MOV_B32 1
     ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.2, align 4, addrspace 5)
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: locals
-    ; W64: liveins: $vgpr48, $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W64: liveins: $vgpr48, $sgpr30_64, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: $m0 = S_MOV_B32 1
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.2, align 4, addrspace 5)
@@ -477,11 +477,11 @@ body: |
     ; W64-NEXT: S_NOP 0, implicit-def $vgpr40
     ; W64-NEXT: $m0 = S_MOV_B32 1
     ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.2, align 4, addrspace 5)
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     S_NOP 0, implicit-def $vgpr40
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Make sure we don't break SGPR or WWM handling, and also that we don't
@@ -500,9 +500,9 @@ machineFunctionInfo:
     - '$vgpr42'
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
+    liveins: $sgpr30_64, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
     ; W32-LABEL: name: other_regs
-    ; W32: liveins: $sgpr48, $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W32: liveins: $sgpr48, $sgpr30_64, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: $sgpr0 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
@@ -539,16 +539,16 @@ body: |
     ; W32-NEXT: $vgpr42 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
     ; W32-NEXT: $vgpr44 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.3, addrspace 5)
     ; W32-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64
     ;
     ; W64-LABEL: name: other_regs
-    ; W64: liveins: $sgpr48, $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W64: liveins: $sgpr48, $sgpr30_64, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W64-NEXT: $sgpr0_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
     ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr42, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
     ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr44, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.3, addrspace 5)
-    ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1
+    ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_64
     ; W64-NEXT: $m0 = S_MOV_B32 9
     ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.4, align 4, addrspace 5)
     ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec, 64, 0
@@ -574,16 +574,16 @@ body: |
     ; W64-NEXT: $sgpr48 = SI_RESTORE_S32_FROM_VGPR $vgpr44, 0
     ; W64-NEXT: $m0 = S_MOV_B32 9
     ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: ("amdgpu-thread-private" load (s1024) from %stack.4, align 4, addrspace 5)
-    ; W64-NEXT: $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W64-NEXT: $sgpr0_64 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; W64-NEXT: $vgpr41 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
     ; W64-NEXT: $vgpr42 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
     ; W64-NEXT: $vgpr44 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.3, addrspace 5)
-    ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_64
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
     S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
 
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 # Make sure we don't break anything for entry functions.
@@ -595,14 +595,14 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     ; CHECK-LABEL: name: entry_func
-    ; CHECK: liveins: $sgpr30_sgpr31
+    ; CHECK: liveins: $sgpr30_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45, implicit-def $vgpr51
-    ; CHECK-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; CHECK-NEXT: S_SETPC_B64_return $sgpr30_64
     S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45, implicit-def $vgpr51
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 
 ---
@@ -614,7 +614,7 @@ body: |
   ; W32-LABEL: name: multiple_basic_blocks
   ; W32: bb.0:
   ; W32-NEXT:   successors: %bb.1(0x80000000)
-  ; W32-NEXT:   liveins: $vgpr44, $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+  ; W32-NEXT:   liveins: $vgpr44, $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
   ; W32-NEXT: {{  $}}
   ; W32-NEXT:   $m0 = S_MOV_B32 11
   ; W32-NEXT:   SCRATCH_STORE_BLOCK_SADDR $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -639,22 +639,22 @@ body: |
   ; W32-NEXT: {{  $}}
   ; W32-NEXT: bb.1:
   ; W32-NEXT:   successors: %bb.2(0x80000000)
-  ; W32-NEXT:   liveins: $vgpr44, $sgpr30_sgpr31
+  ; W32-NEXT:   liveins: $vgpr44, $sgpr30_64
   ; W32-NEXT: {{  $}}
   ; W32-NEXT:   S_NOP 0, implicit-def $vgpr43, implicit $vgpr44
   ; W32-NEXT:   S_BRANCH %bb.2
   ; W32-NEXT: {{  $}}
   ; W32-NEXT: bb.2:
-  ; W32-NEXT:   liveins: $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+  ; W32-NEXT:   liveins: $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
   ; W32-NEXT: {{  $}}
   ; W32-NEXT:   $m0 = S_MOV_B32 11
   ; W32-NEXT:   $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr44, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63, implicit $vgpr72, implicit $vgpr73 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-  ; W32-NEXT:   S_SETPC_B64_return $sgpr30_sgpr31
+  ; W32-NEXT:   S_SETPC_B64_return $sgpr30_64
   ;
   ; W64-LABEL: name: multiple_basic_blocks
   ; W64: bb.0:
   ; W64-NEXT:   successors: %bb.1(0x80000000)
-  ; W64-NEXT:   liveins: $vgpr44, $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+  ; W64-NEXT:   liveins: $vgpr44, $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
   ; W64-NEXT: {{  $}}
   ; W64-NEXT:   $m0 = S_MOV_B32 11
   ; W64-NEXT:   SCRATCH_STORE_BLOCK_SADDR $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: ("amdgpu-thread-private" store (s1024) into %stack.0, align 4, addrspace 5)
@@ -679,28 +679,28 @@ body: |
   ; W64-NEXT: {{  $}}
   ; W64-NEXT: bb.1:
   ; W64-NEXT:   successors: %bb.2(0x80000000)
-  ; W64-NEXT:   liveins: $vgpr44, $sgpr30_sgpr31
+  ; W64-NEXT:   liveins: $vgpr44, $sgpr30_64
   ; W64-NEXT: {{  $}}
   ; W64-NEXT:   S_NOP 0, implicit-def $vgpr43, implicit $vgpr44
   ; W64-NEXT:   S_BRANCH %bb.2
   ; W64-NEXT: {{  $}}
   ; W64-NEXT: bb.2:
-  ; W64-NEXT:   liveins: $sgpr30_sgpr31, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
+  ; W64-NEXT:   liveins: $sgpr30_64, $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73
   ; W64-NEXT: {{  $}}
   ; W64-NEXT:   $m0 = S_MOV_B32 11
   ; W64-NEXT:   $vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr44, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63, implicit $vgpr72, implicit $vgpr73 :: ("amdgpu-thread-private" load (s1024) from %stack.0, align 4, addrspace 5)
-  ; W64-NEXT:   S_SETPC_B64_return $sgpr30_sgpr31
+  ; W64-NEXT:   S_SETPC_B64_return $sgpr30_64
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr44
+    liveins: $sgpr30_64, $vgpr44
     S_NOP 0, implicit-def $vgpr42, implicit-def $vgpr45
     S_BRANCH %bb.1
 
   bb.1:
-    liveins: $sgpr30_sgpr31, $vgpr44
+    liveins: $sgpr30_64, $vgpr44
     S_NOP 0, implicit-def $vgpr43, implicit $vgpr44
     S_BRANCH %bb.2
 
   bb.2:
-    liveins: $sgpr30_sgpr31
-    S_SETPC_B64_return $sgpr30_sgpr31
+    liveins: $sgpr30_64
+    S_SETPC_B64_return $sgpr30_64
 ...

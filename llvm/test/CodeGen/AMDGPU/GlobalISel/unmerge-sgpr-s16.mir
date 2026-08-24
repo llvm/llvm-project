@@ -6,13 +6,13 @@ name: unmerge_sgprS16_from_V2S16
 legalized: true
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr2_sgpr3
+    liveins: $sgpr0, $sgpr2_64
 
     ; CHECK-LABEL: name: unmerge_sgprS16_from_V2S16
-    ; CHECK: liveins: $sgpr0, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:sgpr(i32) = G_LSHR [[BITCAST]], [[C]](i32)
@@ -23,7 +23,7 @@ body: |
     ; CHECK-NEXT: G_STORE [[COPY2]](<2 x s16>), [[COPY1]](p1) :: (store (<2 x s16>), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(p1) = COPY $sgpr2_sgpr3
+    %1:sgpr(p1) = COPY $sgpr2_64
     %2:sgpr(s16), %3:sgpr(s16) = G_UNMERGE_VALUES %0(<2 x s16>)
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR %3(s16), %2(s16)
     G_STORE %4(<2 x s16>), %1(p1) :: (store (<2 x s16>), addrspace 1)
@@ -35,13 +35,13 @@ name: unmerge_sgprS16_from_V4S16
 legalized: true
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    liveins: $sgpr0_64, $sgpr2, $sgpr3
 
     ; CHECK-LABEL: name: unmerge_sgprS16_from_V4S16
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(<2 x s16>), [[UV1:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
@@ -56,8 +56,8 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR]](<2 x s16>)
     ; CHECK-NEXT: G_STORE [[COPY2]](<2 x s16>), [[COPY1]](p1) :: (store (<2 x s16>), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
-    %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
-    %1:sgpr(p1) = COPY $sgpr2_sgpr3
+    %0:sgpr(<4 x s16>) = COPY $sgpr0_64
+    %1:sgpr(p1) = COPY $sgpr2_64
     %2:sgpr(s16), %3:sgpr(s16), %4:sgpr(s16), %5:sgpr(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
     %6:sgpr(<2 x s16>) = G_BUILD_VECTOR %2(s16), %5(s16)
     G_STORE %6(<2 x s16>), %1(p1) :: (store (<2 x s16>), addrspace 1)

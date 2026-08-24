@@ -10,10 +10,10 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr25
   ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    v_readfirstlane_b32 s17, v16
-  ; GCN-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+  ; GCN-NEXT:    ; implicit-def: $sgpr0_512
   ; GCN-NEXT:    ; implicit-def: $vgpr17
   ; GCN-NEXT:    ; implicit-def: $sgpr15
-  ; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9_sgpr10_sgpr11
+  ; GCN-NEXT:    ; implicit-def: $sgpr8_128
   ; GCN-NEXT:    s_lshl_b32 s18, s17, 7
   ; GCN-NEXT:    ; implicit-def: $vgpr18
   ; GCN-NEXT:    v_add_lshl_u32 v230, v18, s18, 1
@@ -40,7 +40,7 @@
   ; GCN-NEXT:    v_add_u32_e32 v227, 0xc0, v17
   ; GCN-NEXT:    v_add_u32_e32 v231, v19, v26
   ; GCN-NEXT:    v_add_u32_e32 v232, v19, v27
-  ; GCN-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GCN-NEXT:    ; implicit-def: $sgpr0_128
   ; GCN-NEXT:    ; implicit-def: $vgpr28
   ; GCN-NEXT:    ; implicit-def: $vgpr29
   ; GCN-NEXT:    v_add_u32_e32 v233, v19, v28
@@ -75,7 +75,7 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr128_vgpr129_vgpr130_vgpr131
   ; GCN-NEXT:    ; implicit-def: $sgpr14
   ; GCN-NEXT:    ; implicit-def: $vgpr196
-  ; GCN-NEXT:    ; implicit-def: $sgpr12_sgpr13
+  ; GCN-NEXT:    ; implicit-def: $sgpr12_64
   ; GCN-NEXT:    ; implicit-def: $vgpr211
   ; GCN-NEXT:    v_max_f32_e32 v212, v211, v211
   ; GCN-NEXT:    ; implicit-def: $vgpr198
@@ -1170,7 +1170,7 @@ machineFunctionInfo:
   occupancy:       7
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2, $sgpr3, $sgpr4
+    liveins: $vgpr0, $sgpr0_64, $sgpr2, $sgpr3, $sgpr4
     %11:vgpr_32 = IMPLICIT_DEF
     %1:sgpr_512 = IMPLICIT_DEF
     %16:vgpr_32 = IMPLICIT_DEF

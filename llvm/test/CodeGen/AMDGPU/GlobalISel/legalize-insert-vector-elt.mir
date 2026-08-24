@@ -183,10 +183,10 @@ name: insert_vector_elt_64_65_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $sgpr0_64, $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: insert_vector_elt_64_65_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $sgpr0_64, $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
@@ -268,7 +268,7 @@ body: |
     ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD28]](p1) :: (store (<4 x s32>) into unknown-address + 224, align 4, addrspace 1)
     ; CHECK-NEXT: [[PTR_ADD29:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C14]](i64)
     ; CHECK-NEXT: G_STORE [[DEF]](<4 x s32>), [[PTR_ADD29]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 64
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_CONSTANT i32 12345
@@ -286,12 +286,12 @@ name: insert_vector_elt_33_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    liveins: $sgpr0_64, $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: insert_vector_elt_33_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    ; CHECK: liveins: $sgpr0_64, $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
@@ -353,7 +353,7 @@ body: |
     ; CHECK-NEXT: [[C15:%[0-9]+]]:_(i64) = G_CONSTANT i64 240
     ; CHECK-NEXT: [[PTR_ADD17:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C15]](i64)
     ; CHECK-NEXT: G_STORE [[UV23]](<4 x s32>), [[PTR_ADD17]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 33
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_CONSTANT i32 12345
@@ -367,12 +367,12 @@ name: insert_vector_elt_varidx_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0_vgpr1
+    liveins: $sgpr0_64, $sgpr2, $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: insert_vector_elt_varidx_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0_vgpr1
+    ; CHECK: liveins: $sgpr0_64, $sgpr2, $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -773,7 +773,7 @@ body: |
     ; CHECK-NEXT: [[C80:%[0-9]+]]:_(i64) = G_CONSTANT i64 240
     ; CHECK-NEXT: [[PTR_ADD81:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY65]], [[C80]](i64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR15]](<4 x s32>), [[PTR_ADD81]](p1) :: (store (<4 x s32>) into unknown-address + 240, align 4, addrspace 1)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_CONSTANT i32 12345

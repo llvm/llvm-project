@@ -4,7 +4,7 @@
 
 ; Test whole-wave register spilling.
 
-; In this testcase, the return address registers, PC value (SGPR30_SGPR31) and the scratch SGPR used in
+; In this testcase, the return address registers, PC value (SGPR30_64) and the scratch SGPR used in
 ; the inline asm statements should be preserved across the call. Since the test limits the VGPR numbers,
 ; the PC will be spilled to the only available CSR VGPR (VGPR40) as we spill CSR SGPRs including the PC
 ; directly to the physical VGPR lane to correctly generate the CFIs. The SGPR20 will get spilled to the
@@ -105,7 +105,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[28:29]
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_readlane_b32 s4, v39, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-O0-NEXT:    ; implicit-def: $sgpr6_64
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s4

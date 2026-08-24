@@ -10,7 +10,7 @@ machineFunctionInfo:
   numKernargPreloadSGPRs: 1
   isEntryFunction: true
   argumentInfo:
-    kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+    kernargSegmentPtr: { reg: '$sgpr0_64' }
     firstKernArgPreloadReg: { reg: '$invalid_reg' }  # ERROR: Invalid register name
 body: |
   bb.0:

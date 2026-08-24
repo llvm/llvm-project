@@ -12,7 +12,7 @@
 
 name: flags
 liveins:
-  - { reg: '$sgpr0_sgpr1' }
+  - { reg: '$sgpr0_64' }
 frameInfo:
   maxAlignment:  8
 registers:
@@ -20,9 +20,9 @@ registers:
   - { id: 1, class: sreg_64, preferred-register: '' }
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; CHECK-LABEL: name: flags
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 12, implicit-def dead $scc
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo

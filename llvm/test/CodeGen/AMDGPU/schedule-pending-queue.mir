@@ -15,7 +15,7 @@ name:            pending_queue_ready_cycle
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
     %2:sgpr_128 = IMPLICIT_DEF
     %14:vgpr_32 = IMPLICIT_DEF

@@ -9,7 +9,7 @@
 name:            test src1-inlined
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:vgpr_32 = COPY $vgpr0
     %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
@@ -27,7 +27,7 @@ body:             |
 name:            test src0-inlined
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:vgpr_32 = COPY $vgpr0
     %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
@@ -44,7 +44,7 @@ body:             |
 name:            test none-inlined
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:vgpr_32 = COPY $vgpr0
     %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
@@ -61,7 +61,7 @@ body:             |
 name:            test src1-2vgprs-inlined
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:vgpr_32 = COPY $vgpr0
     %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
@@ -79,7 +79,7 @@ body:             |
 name:            test src0-2vgprs-inlined
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:vgpr_32 = COPY $vgpr0
     %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
@@ -96,7 +96,7 @@ body:             |
 name:            test src0-phys-vgpr
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
 
     $vgpr1 = COPY $vgpr0
@@ -114,7 +114,7 @@ body:             |
 name:            test src1-phys-vgpr
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
 
     %0:vgpr_32 = COPY $vgpr0
@@ -132,7 +132,7 @@ body:             |
 name:            test src0-phys-sgpr
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2
+    liveins: $vgpr0, $sgpr0_64, $sgpr2
 
 
     %0:vgpr_32 = COPY $vgpr0
@@ -149,7 +149,7 @@ body:             |
 name:            test src1-phys-sgpr
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2
+    liveins: $vgpr0, $sgpr0_64, $sgpr2
 
 
     %0:vgpr_32 = COPY $vgpr0
@@ -166,7 +166,7 @@ body:             |
 name:            test src1-phys-sgpr-move
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
 
     %0:vgpr_32 = COPY $vgpr0

@@ -24,8 +24,8 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    v_interp_p1_f32_e32 v0, v1, attr0.x
 ; ISA-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; ISA-NEXT:    s_mov_b64 s[0:1], 0
-; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; ISA-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; ISA-NEXT:    ; implicit-def: $sgpr4_64
+; ISA-NEXT:    ; implicit-def: $sgpr2_64
 ; ISA-NEXT:    s_branch .LBB0_3
 ; ISA-NEXT:  .LBB0_1: ; %Flow1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
@@ -131,8 +131,8 @@ define amdgpu_ps void @i1_copy_assert(i1 %v4) {
 ; ISA-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; ISA-NEXT:    s_mov_b32 s8, 0
 ; ISA-NEXT:    s_mov_b64 s[0:1], 0
-; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; ISA-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; ISA-NEXT:    ; implicit-def: $sgpr4_64
+; ISA-NEXT:    ; implicit-def: $sgpr2_64
 ; ISA-NEXT:    s_branch .LBB1_3
 ; ISA-NEXT:  .LBB1_1: ; %endif1
 ; ISA-NEXT:    ; in Loop: Header=BB1_3 Depth=1

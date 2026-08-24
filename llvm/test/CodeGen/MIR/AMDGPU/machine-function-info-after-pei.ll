@@ -18,14 +18,14 @@
 ; AFTER-PEI-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; AFTER-PEI-NEXT: numWaveDispatchSGPRs: 0
 ; AFTER-PEI-NEXT: numWaveDispatchVGPRs: 0
-; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_sgpr69_sgpr70_sgpr71'
+; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_128'
 ; AFTER-PEI-NEXT: frameOffsetReg:  '$fp_reg'
 ; AFTER-PEI-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; AFTER-PEI-NEXT: bytesInStackArgArea: 0
 ; AFTER-PEI-NEXT: returnsVoid: true
 ; AFTER-PEI-NEXT: argumentInfo:
-; AFTER-PEI-NEXT:   privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; AFTER-PEI-NEXT:   kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; AFTER-PEI-NEXT:   privateSegmentBuffer: { reg: '$sgpr0_128' }
+; AFTER-PEI-NEXT:   kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; AFTER-PEI-NEXT:   workGroupIDX:    { reg: '$sgpr6' }
 ; AFTER-PEI-NEXT:   privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ; AFTER-PEI-NEXT:   workItemIDX:     { reg: '$vgpr0' }

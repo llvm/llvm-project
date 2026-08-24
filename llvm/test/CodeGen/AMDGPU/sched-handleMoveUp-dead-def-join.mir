@@ -27,11 +27,11 @@ registers:
   - { id: 4, class: sreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
-  - { reg: '$sgpr8_sgpr9', virtual-reg: '%2' }
-  - { reg: '$sgpr10_sgpr11', virtual-reg: '%3' }
-  - { reg: '$sgpr12_sgpr13', virtual-reg: '%4' }
-  - { reg: '$sgpr14_sgpr15', virtual-reg: '%5' }
+  - { reg: '$sgpr4_64', virtual-reg: '%1' }
+  - { reg: '$sgpr8_64', virtual-reg: '%2' }
+  - { reg: '$sgpr10_64', virtual-reg: '%3' }
+  - { reg: '$sgpr12_64', virtual-reg: '%4' }
+  - { reg: '$sgpr14_64', virtual-reg: '%5' }
   - { reg: '$sgpr16', virtual-reg: '%6' }
 frameInfo:
   maxAlignment:    1
@@ -43,10 +43,10 @@ machineFunctionInfo:
   numWaveDispatchSGPRs: 16
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
-    dispatchPtr:     { reg: '$sgpr0_sgpr1' }
-    queuePtr:        { reg: '$sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-    dispatchID:      { reg: '$sgpr6_sgpr7' }
+    dispatchPtr:     { reg: '$sgpr0_64' }
+    queuePtr:        { reg: '$sgpr2_64' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
+    dispatchID:      { reg: '$sgpr6_64' }
     firstKernArgPreloadReg: { reg: '$sgpr8' }
     workGroupIDX:    { reg: '$sgpr16' }
     workGroupIDY:    { reg: '$sgpr17' }
@@ -55,18 +55,18 @@ machineFunctionInfo:
     workItemIDY:     { reg: '$vgpr0', mask: 1047552 }
     workItemIDZ:     { reg: '$vgpr0', mask: 1072693248 }
   occupancy:       1
-  sgprForEXECCopy: '$sgpr100_sgpr101'
+  sgprForEXECCopy: '$sgpr100_64'
   numKernargPreloadSGPRs: 8
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr14_sgpr15, $sgpr16
+    liveins: $vgpr0, $sgpr4_64, $sgpr8_64, $sgpr10_64, $sgpr12_64, $sgpr14_64, $sgpr16
 
     %6:sgpr_32 = COPY $sgpr16
-    %5:sreg_64_xexec_xnull = COPY $sgpr14_sgpr15
-    undef %7.sub0_sub1:sgpr_128 = COPY $sgpr12_sgpr13
-    undef %8.sub0_sub1:sgpr_128 = COPY $sgpr10_sgpr11
-    undef %9.sub0_sub1:sgpr_128 = COPY $sgpr8_sgpr9
-    %1:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %5:sreg_64_xexec_xnull = COPY $sgpr14_64
+    undef %7.sub0_sub1:sgpr_128 = COPY $sgpr12_64
+    undef %8.sub0_sub1:sgpr_128 = COPY $sgpr10_64
+    undef %9.sub0_sub1:sgpr_128 = COPY $sgpr8_64
+    %1:sgpr_64(p4) = COPY $sgpr4_64
     %0:vgpr_32(s32) = COPY $vgpr0
     %10:sgpr_128 = S_LOAD_DWORDX4_IMM %1(p4), 32, 0
     %11:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec

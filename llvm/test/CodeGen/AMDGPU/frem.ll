@@ -3639,7 +3639,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    s_branch .LBB6_3
 ; SI-NEXT:  .LBB6_2:
 ; SI-NEXT:    s_mov_b64 s[6:7], -1
-; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; SI-NEXT:    ; implicit-def: $sgpr0_64
 ; SI-NEXT:  .LBB6_3: ; %Flow16
 ; SI-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; SI-NEXT:    s_cselect_b32 s6, 1, 0
@@ -16459,7 +16459,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_branch .LBB13_3
 ; SI-NEXT:  .LBB13_2:
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
-; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; SI-NEXT:    ; implicit-def: $sgpr0_64
 ; SI-NEXT:  .LBB13_3: ; %Flow53
 ; SI-NEXT:    s_and_b64 s[12:13], s[12:13], exec
 ; SI-NEXT:    s_cselect_b32 s12, 1, 0
@@ -16586,7 +16586,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_branch .LBB13_13
 ; SI-NEXT:  .LBB13_12:
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
-; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; SI-NEXT:    ; implicit-def: $sgpr0_64
 ; SI-NEXT:  .LBB13_13: ; %Flow49
 ; SI-NEXT:    s_and_b64 s[12:13], s[12:13], exec
 ; SI-NEXT:    s_cselect_b32 s12, 1, 0
@@ -18308,7 +18308,7 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_branch .LBB15_3
 ; SI-NEXT:  .LBB15_2:
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
-; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; SI-NEXT:    ; implicit-def: $sgpr6_64
 ; SI-NEXT:  .LBB15_3: ; %Flow52
 ; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; SI-NEXT:    s_cselect_b32 s8, 1, 0
@@ -18398,7 +18398,7 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_branch .LBB15_13
 ; SI-NEXT:  .LBB15_12:
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
-; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; SI-NEXT:    ; implicit-def: $sgpr6_64
 ; SI-NEXT:  .LBB15_13: ; %Flow48
 ; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; SI-NEXT:    s_cselect_b32 s8, 1, 0

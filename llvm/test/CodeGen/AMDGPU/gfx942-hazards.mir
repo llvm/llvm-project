@@ -146,7 +146,7 @@ body:             |
 name:            valu_write_sgpr_writelane_read_as_laneselect
 body:             |
   bb.0:
-    $vgpr0, $sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr0, 1, 0, implicit $exec
+    $vgpr0, $sgpr0_64 = V_ADD_CO_U32_e64 $vgpr0, 1, 0, implicit $exec
     $vgpr1 = V_WRITELANE_B32 0, $sgpr0, $vgpr1, implicit $exec
 ...
 

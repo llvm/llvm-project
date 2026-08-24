@@ -197,7 +197,7 @@ define void @atomicrmw_rel_deepcopy(ptr %ptr) {
   ; CHECK-LABEL: name: atomicrmw_rel_deepcopy
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31
+  ; CHECK-NEXT:   liveins: $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -206,27 +206,27 @@ define void @atomicrmw_rel_deepcopy(ptr %ptr) {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr10_64
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr8_64
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sgpr_64 = COPY $sgpr6_64
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @f, target-flags(amdgpu-gotprel32-hi) @f, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]]
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY9]]
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY8]]
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY7]]
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
+  ; CHECK-NEXT:   $sgpr4_64 = COPY [[COPY10]]
+  ; CHECK-NEXT:   $sgpr6_64 = COPY [[COPY9]]
+  ; CHECK-NEXT:   $sgpr8_64 = COPY [[COPY8]]
+  ; CHECK-NEXT:   $sgpr10_64 = COPY [[COPY7]]
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY6]]
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY5]]
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY4]]
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY3]]
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY]]
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY12]]
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @f, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15
+  ; CHECK-NEXT:   $sgpr0_128 = COPY [[COPY12]]
+  ; CHECK-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @f, csr_amdgpu, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit $sgpr0_128, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY $vgpr1

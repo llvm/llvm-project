@@ -16,10 +16,10 @@ machineFunctionInfo:
   isEntryFunction: false
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
 
     ; GFX12-LABEL: name: func_global_inv_only
-    ; GFX12: liveins: $sgpr30_sgpr31
+    ; GFX12: liveins: $sgpr30_64
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
@@ -28,9 +28,9 @@ body: |
     ; GFX12-NEXT: S_WAIT_KMCNT 0
     ; GFX12-NEXT: GLOBAL_INV 16, implicit $exec
     ; GFX12-NOT: S_WAIT_LOADCNT
-    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_64
     GLOBAL_INV 16, implicit $exec
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...
 ---
 # Test 2: GLOBAL_INV with actual VGPR load - MUST wait for loadcnt
@@ -40,23 +40,23 @@ machineFunctionInfo:
   isEntryFunction: false
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    liveins: $vgpr0, $sgpr0_64, $sgpr30_64
 
     ; GFX12-LABEL: name: func_global_inv_with_vgpr_load
-    ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    ; GFX12: liveins: $vgpr0, $sgpr0_64, $sgpr30_64
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
     ; GFX12-NEXT: S_WAIT_KMCNT 0
-    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX12-NEXT: GLOBAL_INV 16, implicit $exec
     ; GFX12-NEXT: S_WAIT_LOADCNT 0
-    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     GLOBAL_INV 16, implicit $exec
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 ---
 # Test 3: Only VGPR load (no GLOBAL_INV) - MUST wait for loadcnt
@@ -66,21 +66,21 @@ machineFunctionInfo:
   isEntryFunction: false
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    liveins: $vgpr0, $sgpr0_64, $sgpr30_64
 
     ; GFX12-LABEL: name: func_vgpr_load_no_global_inv
-    ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    ; GFX12: liveins: $vgpr0, $sgpr0_64, $sgpr30_64
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
     ; GFX12-NEXT: S_WAIT_KMCNT 0
-    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX12-NEXT: S_WAIT_LOADCNT 0
-    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 ---
 # Test 4: GLOBAL_INV with load already waited on - should NOT need S_WAIT_LOADCNT at return
@@ -91,25 +91,25 @@ machineFunctionInfo:
   isEntryFunction: false
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    liveins: $vgpr0, $sgpr0_64, $sgpr30_64
 
     ; GFX12-LABEL: name: func_global_inv_load_already_waited
-    ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
+    ; GFX12: liveins: $vgpr0, $sgpr0_64, $sgpr30_64
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
     ; GFX12-NEXT: S_WAIT_KMCNT 0
-    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX12-NEXT: S_WAIT_LOADCNT 0
     ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     ; GFX12-NEXT: GLOBAL_INV 16, implicit $exec
     ; GFX12-NOT: S_WAIT_LOADCNT
-    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; GFX12-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0, implicit $vgpr1
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr0_64, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     GLOBAL_INV 16, implicit $exec
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0, implicit $vgpr1
 ...
 

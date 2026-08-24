@@ -14,16 +14,16 @@ registers:
   - { id: 1, class: sreg_32, preferred-register: '$vcc_lo' }
   - { id: 2, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo' }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%3' }
+  - { reg: '$sgpr4_64', virtual-reg: '%3' }
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr100_sgpr101_sgpr102_sgpr103'
+  scratchRSrcReg:  '$sgpr100_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0.entry:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
-    %3:sgpr_64 = COPY $sgpr4_sgpr5
+    %3:sgpr_64 = COPY $sgpr4_64
     %4:vgpr_32 = COPY $vgpr0
     %5:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %3, 16, 0
     S_BITCMP1_B32 %5, 0, implicit-def $scc

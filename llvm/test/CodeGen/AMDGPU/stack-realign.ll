@@ -351,7 +351,7 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-NEXT:    ; implicit-def: $sgpr6_64
 ; GCN-NEXT:    s_branch .LBB10_2
 ; GCN-NEXT:  .LBB10_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB10_2 Depth=1

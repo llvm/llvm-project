@@ -174,7 +174,7 @@ define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(ptr addrspace(1) %out, p
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr8_64
 ; SI-NEXT:    s_and_saveexec_b64 s[10:11], vcc
 ; SI-NEXT:    s_xor_b64 s[10:11], exec, s[10:11]
 ; SI-NEXT:    s_cbranch_execz .LBB3_2

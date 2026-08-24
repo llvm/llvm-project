@@ -34,7 +34,7 @@ tracksRegLiveness: true
 body:             |
     bb.0:
         successors: %bb.3, %bb.1
-        liveins: $sgpr4_sgpr5
+        liveins: $sgpr4_64
 
         %0:_(s32) = G_IMPLICIT_DEF
         %20:_(s32) = G_IMPLICIT_DEF

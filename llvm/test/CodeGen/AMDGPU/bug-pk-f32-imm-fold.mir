@@ -5,10 +5,10 @@
 name: pk_add_f32_imm_fold
 body: |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: pk_add_f32_imm_fold
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1065353216, implicit $exec
@@ -25,10 +25,10 @@ body: |
 name: pk_mul_f32_imm_fold
 body: |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: pk_mul_f32_imm_fold
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1065353216, implicit $exec
@@ -45,10 +45,10 @@ body: |
 name: pk_fma_f32_imm_fold
 body: |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: pk_fma_f32_imm_fold
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF

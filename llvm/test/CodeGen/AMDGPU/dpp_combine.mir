@@ -896,7 +896,7 @@ body:             |
   ; GCN-LABEL: name: mov_dpp_last_block_inst
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_64, $sgpr6_64, $sgpr8
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr8
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -920,7 +920,7 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8
+    liveins: $vgpr0, $sgpr4_64, $sgpr6_64, $sgpr8
 
     %0:sgpr_32 = COPY $sgpr8
     %1:vgpr_32 = IMPLICIT_DEF

@@ -7,18 +7,18 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; CHECK-LABEL: name: amdgpu_atomic_cmpxchg_global_i32_ss
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<2 x s32>) = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY3]](p1), [[COPY4]] :: (load store seq_cst (s32), addrspace 1)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = COPY $sgpr3
     %3:_(<2 x s32>) = G_BUILD_VECTOR %2, %1
@@ -67,18 +67,18 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; CHECK-LABEL: name: amdgpu_atomic_cmpxchg_flat_i32_ss
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(p0) = COPY [[COPY]](p0)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<2 x s32>) = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY3]](p0), [[COPY4]] :: (load store seq_cst (s32))
-    %0:_(p0) = COPY $sgpr0_sgpr1
+    %0:_(p0) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = COPY $sgpr3
     %3:_(<2 x s32>) = G_BUILD_VECTOR %2, %1

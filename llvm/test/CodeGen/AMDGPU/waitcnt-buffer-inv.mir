@@ -32,14 +32,14 @@ machineFunctionInfo:
   isEntryFunction: false
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
 
     ; GFX94-LABEL: name: buffer_inv_only_does_not_wait_at_return
     ; GFX94: S_WAITCNT
     ; GFX94-NEXT: BUFFER_INV 0, implicit $exec
     ; GFX94-NOT: S_WAITCNT
-    ; GFX94-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    ; GFX94-NEXT: S_SETPC_B64_return $sgpr30_64
     BUFFER_INV 0, implicit $exec
     S_WAITCNT_soft 0
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...

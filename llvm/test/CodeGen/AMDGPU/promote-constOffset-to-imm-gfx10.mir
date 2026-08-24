@@ -8,12 +8,12 @@
 name: diffoporder_add
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_128
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = COPY $vgpr0_vgpr1
@@ -71,12 +71,12 @@ body:             |
 name: LowestInMiddle
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_128
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = COPY $vgpr0_vgpr1
@@ -132,12 +132,12 @@ body:             |
 name: NegativeDistance
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_128
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = COPY $vgpr0_vgpr1
@@ -177,12 +177,12 @@ body:             |
 name: assert_hit
 body:             |
     bb.0.entry:
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_128
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = COPY $vgpr0_vgpr1

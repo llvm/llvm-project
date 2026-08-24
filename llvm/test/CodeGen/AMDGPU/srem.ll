@@ -1630,7 +1630,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GCN-NEXT:    s_branch .LBB8_3
 ; GCN-NEXT:  .LBB8_2:
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
-; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GCN-NEXT:    ; implicit-def: $sgpr8_64
 ; GCN-NEXT:  .LBB8_3: ; %Flow
 ; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_cselect_b32 s3, 1, 0
@@ -1967,7 +1967,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; TONGA-NEXT:    s_branch .LBB8_3
 ; TONGA-NEXT:  .LBB8_2:
 ; TONGA-NEXT:    s_mov_b64 s[8:9], -1
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; TONGA-NEXT:    ; implicit-def: $sgpr6_64
 ; TONGA-NEXT:  .LBB8_3: ; %Flow
 ; TONGA-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; TONGA-NEXT:    s_cselect_b32 s3, 1, 0
@@ -2850,7 +2850,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB10_3
 ; GCN-NEXT:  .LBB10_2:
 ; GCN-NEXT:    s_mov_b64 s[12:13], -1
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-NEXT:    ; implicit-def: $sgpr6_64
 ; GCN-NEXT:  .LBB10_3: ; %Flow5
 ; GCN-NEXT:    s_and_b64 s[12:13], s[12:13], exec
 ; GCN-NEXT:    s_cselect_b32 s9, 1, 0
@@ -3007,7 +3007,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB10_8
 ; GCN-NEXT:  .LBB10_7:
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
-; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
+; GCN-NEXT:    ; implicit-def: $sgpr10_64
 ; GCN-NEXT:  .LBB10_8: ; %Flow
 ; GCN-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; GCN-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3504,7 +3504,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    s_branch .LBB10_3
 ; TONGA-NEXT:  .LBB10_2:
 ; TONGA-NEXT:    s_mov_b64 s[8:9], -1
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; TONGA-NEXT:    ; implicit-def: $sgpr6_64
 ; TONGA-NEXT:  .LBB10_3: ; %Flow5
 ; TONGA-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; TONGA-NEXT:    s_cselect_b32 s1, 1, 0
@@ -5064,7 +5064,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB12_3
 ; GCN-NEXT:  .LBB12_2:
 ; GCN-NEXT:    s_mov_b64 s[20:21], -1
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-NEXT:    ; implicit-def: $sgpr6_64
 ; GCN-NEXT:  .LBB12_3: ; %Flow7
 ; GCN-NEXT:    s_and_b64 s[20:21], s[20:21], exec
 ; GCN-NEXT:    s_cselect_b32 s17, 1, 0
@@ -5221,7 +5221,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB12_8
 ; GCN-NEXT:  .LBB12_7:
 ; GCN-NEXT:    s_mov_b64 s[16:17], -1
-; GCN-NEXT:    ; implicit-def: $sgpr18_sgpr19
+; GCN-NEXT:    ; implicit-def: $sgpr18_64
 ; GCN-NEXT:  .LBB12_8: ; %Flow6
 ; GCN-NEXT:    s_and_b64 s[16:17], s[16:17], exec
 ; GCN-NEXT:    s_cselect_b32 s13, 1, 0
@@ -5381,7 +5381,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB12_14
 ; GCN-NEXT:  .LBB12_13:
 ; GCN-NEXT:    s_mov_b64 s[12:13], -1
-; GCN-NEXT:    ; implicit-def: $sgpr14_sgpr15
+; GCN-NEXT:    ; implicit-def: $sgpr14_64
 ; GCN-NEXT:  .LBB12_14: ; %Flow5
 ; GCN-NEXT:    s_and_b64 s[12:13], s[12:13], exec
 ; GCN-NEXT:    s_cselect_b32 s9, 1, 0
@@ -5541,7 +5541,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_branch .LBB12_20
 ; GCN-NEXT:  .LBB12_19:
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
-; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
+; GCN-NEXT:    ; implicit-def: $sgpr10_64
 ; GCN-NEXT:  .LBB12_20: ; %Flow
 ; GCN-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; GCN-NEXT:    s_cselect_b32 s3, 1, 0
@@ -6354,7 +6354,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    s_branch .LBB12_3
 ; TONGA-NEXT:  .LBB12_2:
 ; TONGA-NEXT:    s_mov_b64 s[8:9], -1
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; TONGA-NEXT:    ; implicit-def: $sgpr6_64
 ; TONGA-NEXT:  .LBB12_3: ; %Flow7
 ; TONGA-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; TONGA-NEXT:    s_cselect_b32 s1, 1, 0

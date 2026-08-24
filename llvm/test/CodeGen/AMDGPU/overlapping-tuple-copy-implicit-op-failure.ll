@@ -83,29 +83,29 @@ define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
 ; CHECK-NEXT:    s_cselect_b32 s23, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s23, 0
 ; CHECK-NEXT:    s_addc_u32 s22, s13, s22
-; CHECK-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
+; CHECK-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_64
 ; CHECK-NEXT:    s_mov_b32 s13, s22
 ; CHECK-NEXT:    s_add_u32 s10, s10, s21
 ; CHECK-NEXT:    s_cselect_b32 s21, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s21, 0
 ; CHECK-NEXT:    s_addc_u32 s20, s11, s20
-; CHECK-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; CHECK-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_64
 ; CHECK-NEXT:    s_mov_b32 s11, s20
 ; CHECK-NEXT:    s_add_u32 s8, s8, s19
 ; CHECK-NEXT:    s_cselect_b32 s19, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s19, 0
 ; CHECK-NEXT:    s_addc_u32 s18, s9, s18
-; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_64
 ; CHECK-NEXT:    s_mov_b32 s9, s18
 ; CHECK-NEXT:    s_add_u32 s16, s16, s17
 ; CHECK-NEXT:    s_cselect_b32 s17, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s17, 0
 ; CHECK-NEXT:    s_addc_u32 s14, s14, s15
-; CHECK-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
+; CHECK-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_64
 ; CHECK-NEXT:    s_mov_b32 s17, s14
-; CHECK-NEXT:    ; kill: def $sgpr12_sgpr13 killed $sgpr12_sgpr13 def $sgpr12_sgpr13_sgpr14_sgpr15
+; CHECK-NEXT:    ; kill: def $sgpr12_64 killed $sgpr12_64 def $sgpr12_128
 ; CHECK-NEXT:    s_mov_b64 s[14:15], s[10:11]
-; CHECK-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
+; CHECK-NEXT:    ; kill: def $sgpr8_64 killed $sgpr8_64 def $sgpr8_128
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s12
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s13

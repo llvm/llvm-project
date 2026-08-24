@@ -9,15 +9,15 @@ name: av_mov_b32_split
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  scratchRSrcReg:  '$sgpr72_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     ; CHECK-LABEL: name: av_mov_b32_split
-    ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_sgpr5
+    ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
@@ -60,15 +60,15 @@ name: v_mov_b32_split
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  scratchRSrcReg:  '$sgpr72_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     ; CHECK-LABEL: name: v_mov_b32_split
-    ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_sgpr5
+    ; CHECK: liveins: $agpr3, $agpr4, $vgpr0, $sgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
@@ -114,15 +114,15 @@ name: av_mov_b64_split
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  scratchRSrcReg:  '$sgpr72_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     ; CHECK-LABEL: name: av_mov_b64_split
-    ; CHECK: liveins: $agpr6, $agpr7, $agpr8, $agpr9, $vgpr0, $sgpr4_sgpr5
+    ; CHECK: liveins: $agpr6, $agpr7, $agpr8, $agpr9, $vgpr0, $sgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg

@@ -6,7 +6,7 @@ name:            undef_subreg_def_live_out_tailduplicate_vreg96_undef_sub1_sub2_
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; CHECK-LABEL: name: undef_subreg_def_live_out_tailduplicate_vreg96_undef_sub1_sub2_assigned_physreg_interference
@@ -29,9 +29,9 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $sgpr4_128
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   renamable $vgpr3_vgpr4_vgpr5 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed renamable $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
+  ; CHECK-NEXT:   renamable $vgpr3_vgpr4_vgpr5 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed renamable $vgpr0, $sgpr4_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
   ; CHECK-NEXT:   EXP 0, killed renamable $vgpr3, renamable $vgpr4, renamable $vgpr5, killed renamable $vgpr2, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -46,9 +46,9 @@ body:             |
     S_BRANCH %bb.3
 
   bb.2:
-    S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
+    S_NOP 0, implicit-def $sgpr4_128
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
+    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed %1, $sgpr4_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
 
   bb.3:
     EXP 0, killed %0.sub0, killed %0.sub1, killed %0.sub2, %2:vgpr_32, 0, 0, 0, implicit $exec

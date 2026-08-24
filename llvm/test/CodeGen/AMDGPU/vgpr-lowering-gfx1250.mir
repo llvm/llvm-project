@@ -119,7 +119,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0x140
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=0 src2=0
     ; GCN-NEXT: global_load_b32 v255 /*v511*/, v0, s[0:1]
-    $vgpr511 = GLOBAL_LOAD_DWORD_SADDR undef $sgpr0_sgpr1, $vgpr0, 0, 0, implicit $exec
+    $vgpr511 = GLOBAL_LOAD_DWORD_SADDR undef $sgpr0_64, $vgpr0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x4001
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
@@ -154,37 +154,37 @@ body:             |
     ; VBUFFER (vdata, vaddr operands)
 
     ; GCN-NEXT: buffer_load_b32 v1, v0, s[8:11], s3 offen
-    $vgpr1 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_128, undef $sgpr3, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=0 src1=0 src2=0
     ; GCN-NEXT: buffer_load_b32 v1 /*v257*/, v0, s[8:11], s3 offen
-    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr0, undef $sgpr8_128, undef $sgpr3, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x4041
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
     ; GCN-NEXT: buffer_load_b32 v1 /*v257*/, v0 /*v256*/, s[8:11], s3 offen
-    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr256, undef $sgpr8_sgpr9_sgpr10_sgpr11, undef $sgpr3, 0, 0, 0, implicit $exec
+    $vgpr257 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN $vgpr256, undef $sgpr8_128, undef $sgpr3, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x4100
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
     ; GCN-NEXT: buffer_store_b32 v0, v1, s[0:3], s3 offen
-    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_128, undef $sgpr3, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x41
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
     ; GCN-NEXT: buffer_store_b32 v0 /*v256*/, v1 /*v257*/, s[0:3], s3 offen
-    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_128, undef $sgpr3, 0, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x4100
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
     ; GCN-NEXT: buffer_atomic_add_f32 v0, v1, s[0:3], s3 offen
-    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, implicit $exec
+    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr0, $vgpr1, undef $sgpr0_128, undef $sgpr3, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 0x41
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
     ; GCN-NEXT: buffer_atomic_add_f32 v0 /*v256*/, v1 /*v257*/, s[0:3], s3 offen
-    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr3, 0, 0, implicit $exec
+    BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN $vgpr256, $vgpr257, undef $sgpr0_128, undef $sgpr3, 0, 0, implicit $exec
 
     ; VGPRs above 512
 
@@ -598,7 +598,7 @@ body:             |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
     ; GCN-NEXT: s_swap_pc_i64
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-    $exec = S_SWAPPC_B64 undef $sgpr0_sgpr1
+    $exec = S_SWAPPC_B64 undef $sgpr0_64
 
     ; Reset mode before a call
 
@@ -623,7 +623,7 @@ body:             |
     ; GCN-NEXT: s_set_pc_i64
     $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-    S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
+    S_SETPC_B64 undef $sgpr0_64, implicit-def $exec
 
     ; Assume mode zero at block begin even if we did not reset if before
     ; Reset mode before branch
@@ -631,7 +631,7 @@ body:             |
   bb.6:
     ; ASM-NEXT: %bb.6:
     ; GCN-NEXT: s_set_pc_i64
-    S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
+    S_SETPC_B64 undef $sgpr0_64, implicit-def $exec
 
     ; But do not reset mode before a branch if it was zero
 
@@ -664,7 +664,7 @@ body:             |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
     ; GCN-NEXT: s_set_pc_i64
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-    S_SETPC_B64_return undef $sgpr0_sgpr1, implicit-def $exec
+    S_SETPC_B64_return undef $sgpr0_64, implicit-def $exec
 
     ; ASM: NumVgprs: 257
 ...

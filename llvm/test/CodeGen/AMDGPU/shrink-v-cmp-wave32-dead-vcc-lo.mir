@@ -24,9 +24,9 @@ body:             |
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: V_CMP_LT_U32_e32 $vgpr0, $vgpr1, implicit-def dead $vcc_lo, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_64
     dead renamable $vcc_lo = V_CMP_LT_U32_e64 $vgpr0, $vgpr1, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31
+    S_SETPC_B64_return undef $sgpr30_64
 
 ...
 
@@ -48,8 +48,8 @@ body:             |
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: V_CMP_LT_U32_e32 $vgpr0, $vgpr1, implicit-def $vcc_lo, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vcc_lo
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit $vcc_lo
     renamable $vcc_lo = V_CMP_LT_U32_e64 $vgpr0, $vgpr1, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vcc_lo
+    S_SETPC_B64_return undef $sgpr30_64, implicit $vcc_lo
 
 ...

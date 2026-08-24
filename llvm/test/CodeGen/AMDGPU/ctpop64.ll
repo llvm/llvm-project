@@ -466,7 +466,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_branch .LBB7_3
 ; SI-NEXT:  .LBB7_2:
 ; SI-NEXT:    s_mov_b64 s[2:3], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; SI-NEXT:    ; implicit-def: $sgpr4_64
 ; SI-NEXT:  .LBB7_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; SI-NEXT:    s_cselect_b32 s2, 1, 0
@@ -499,7 +499,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_branch .LBB7_3
 ; VI-NEXT:  .LBB7_2:
 ; VI-NEXT:    s_mov_b64 s[2:3], -1
-; VI-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; VI-NEXT:    ; implicit-def: $sgpr4_64
 ; VI-NEXT:  .LBB7_3: ; %Flow
 ; VI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; VI-NEXT:    s_cselect_b32 s2, 1, 0
@@ -532,7 +532,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_mov_b32 s6, 0
 ; GFX12-NEXT:    s_branch .LBB7_3
 ; GFX12-NEXT:  .LBB7_2:
-; GFX12-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; GFX12-NEXT:    ; implicit-def: $sgpr2_64
 ; GFX12-NEXT:  .LBB7_3: ; %Flow
 ; GFX12-NEXT:    s_xor_b32 s6, s6, 1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

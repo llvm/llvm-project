@@ -370,17 +370,17 @@ name: sgpr_source_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_sgpr9
+    liveins: $sgpr8_64
     ; CHECK-LABEL: name: sgpr_source_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
-    ; CHECK: liveins: $sgpr8_sgpr9
+    ; CHECK: liveins: $sgpr8_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[COPY]]
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
-    %0:sreg_64 = COPY $sgpr8_sgpr9
+    %0:sreg_64 = COPY $sgpr8_64
     %1:vreg_64_align2 = COPY killed %0
     %2:vreg_128 = REG_SEQUENCE %1, %subreg.sub0_sub1, %1, %subreg.sub2_sub3
     %3:areg_128 = COPY %2
@@ -394,21 +394,21 @@ name: sgpr_source_copy_vgpr_reg_sequence_192_repeated_uses_elt64
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    liveins: $sgpr8_64, $sgpr10_64
 
     ; CHECK-LABEL: name: sgpr_source_copy_vgpr_reg_sequence_192_repeated_uses_elt64
-    ; CHECK: liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    ; CHECK: liveins: $sgpr8_64, $sgpr10_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr10_64
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_192 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3, [[COPY1]], %subreg.sub4_sub5
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_192 = REG_SEQUENCE [[COPY2]], %subreg.sub0_sub1, [[COPY3]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4_sub5
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    %0:sreg_64 = COPY $sgpr8_sgpr9
-    %1:sreg_64 = COPY $sgpr10_sgpr11
+    %0:sreg_64 = COPY $sgpr8_64
+    %1:sreg_64 = COPY $sgpr10_64
     %2:vreg_192 = REG_SEQUENCE %1, %subreg.sub0_sub1, %2, %subreg.sub2_sub3, %1, %subreg.sub4_sub5
     %3:areg_192 = COPY %2
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = COPY %3
@@ -421,12 +421,12 @@ name: sgpr_source_copy_vgpr_reg_sequence_192_mixed_subreg_size_uses
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    liveins: $sgpr8_64, $sgpr10_64
 
     ; CHECK-LABEL: name: sgpr_source_copy_vgpr_reg_sequence_192_mixed_subreg_size_uses
-    ; CHECK: liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    ; CHECK: liveins: $sgpr8_64, $sgpr10_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_192 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY2]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4, [[COPY2]], %subreg.sub5
@@ -435,7 +435,7 @@ body:             |
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_192 = REG_SEQUENCE [[COPY3]], %subreg.sub0_sub1, [[COPY4]], %subreg.sub2_sub3, [[COPY4]], %subreg.sub4, [[COPY4]], %subreg.sub5
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    %0:sreg_64 = COPY $sgpr8_sgpr9
+    %0:sreg_64 = COPY $sgpr8_64
     %1:sreg_32 = COPY $sgpr10
     %2:sreg_32 = COPY $sgpr11
     %3:vreg_192 = REG_SEQUENCE %1, %subreg.sub0_sub1, %2, %subreg.sub2_sub3, %2, %subreg.sub4, %2, %subreg.sub5
@@ -450,19 +450,19 @@ name: sgpr_source_copy_vgpr_reg_sequence_128_subreg_uses
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    liveins: $sgpr8_64, $sgpr10_64
 
     ; CHECK-LABEL: name: sgpr_source_copy_vgpr_reg_sequence_128_subreg_uses
-    ; CHECK: liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
+    ; CHECK: liveins: $sgpr8_64, $sgpr10_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr10_64
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub1, %subreg.sub0, [[COPY1]].sub1, %subreg.sub1, [[COPY]].sub0, %subreg.sub2, [[COPY1]].sub0, %subreg.sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:areg_192 = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[COPY2]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
-    %0:sreg_64 = COPY $sgpr8_sgpr9
-    %1:sreg_64 = COPY $sgpr10_sgpr11
+    %0:sreg_64 = COPY $sgpr8_64
+    %1:sreg_64 = COPY $sgpr10_64
     %2:vreg_128 = REG_SEQUENCE %0.sub1, %subreg.sub0, %1.sub1, %subreg.sub1, %0.sub0, %subreg.sub2, %1.sub0, %subreg.sub3
     %3:areg_192 = COPY %2
     $agpr0_agpr1_agpr2_agpr3 = COPY %3

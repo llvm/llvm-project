@@ -7,9 +7,9 @@
 define amdgpu_kernel void @constant_fold_vector_add() {
   ; CHECK-LABEL: name: constant_fold_vector_add
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64), [[C]](i64), [[C]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0

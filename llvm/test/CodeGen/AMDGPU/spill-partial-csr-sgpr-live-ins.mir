@@ -5,15 +5,15 @@
 name: spill_partial_live_csr_sgpr_test
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr50_sgpr51' }
-  - { reg: '$sgpr52_sgpr53' }
-  - { reg: '$sgpr54_sgpr55' }
+  - { reg: '$sgpr50_64' }
+  - { reg: '$sgpr52_64' }
+  - { reg: '$sgpr54_64' }
 body:             |
   bb.0:
-    liveins: $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55
+    liveins: $sgpr50_64, $sgpr52_64, $sgpr54_64
 
     ; CHECK-LABEL: name: spill_partial_live_csr_sgpr_test
-    ; CHECK: liveins: $sgpr50, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $vgpr63, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55
+    ; CHECK: liveins: $sgpr50, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $vgpr63, $sgpr50_64, $sgpr52_64, $sgpr54_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr50, 0, $vgpr63
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr50, $vgpr63, 0, 32
@@ -28,16 +28,16 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit $sgpr50
     ; CHECK-NEXT: $sgpr50 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit $sgpr52
-    ; CHECK-NEXT: $sgpr52_sgpr53 = S_MOV_B64 0
+    ; CHECK-NEXT: $sgpr52_64 = S_MOV_B64 0
     ; CHECK-NEXT: S_NOP 0, implicit $sgpr55
-    ; CHECK-NEXT: $sgpr54_sgpr55 = S_MOV_B64 0
+    ; CHECK-NEXT: $sgpr54_64 = S_MOV_B64 0
     ; CHECK-NEXT: $sgpr56 = S_MOV_B32 0
     S_NOP 0, implicit $sgpr50
     $sgpr50 = S_MOV_B32 0
     S_NOP 0, implicit $sgpr52
-    $sgpr52_sgpr53 = S_MOV_B64 0
+    $sgpr52_64 = S_MOV_B64 0
     S_NOP 0, implicit $sgpr55
-    $sgpr54_sgpr55 = S_MOV_B64 0
+    $sgpr54_64 = S_MOV_B64 0
     $sgpr56 = S_MOV_B32 0
 ...
 

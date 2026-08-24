@@ -221,7 +221,7 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; DAGISEL-NEXT:   $vgpr5 = COPY [[COPY4]]
   ; DAGISEL-NEXT:   $vgpr6 = COPY [[COPY3]]
   ; DAGISEL-NEXT:   $vgpr7 = COPY [[COPY2]]
-  ; DAGISEL-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
+  ; DAGISEL-NEXT:   $sgpr30_64 = SI_CALL killed [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
   ; DAGISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; DAGISEL-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
@@ -255,7 +255,7 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; GISEL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = SI_CALL [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
+  ; GISEL-NEXT:   $sgpr30_64 = SI_CALL [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
   ; GISEL-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.p)

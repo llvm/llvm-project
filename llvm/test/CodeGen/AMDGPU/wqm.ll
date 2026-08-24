@@ -3639,7 +3639,7 @@ define amdgpu_ps float @short_exact_regions_2(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX9-W64-NEXT:    global_load_dword v0, v[1:2], off
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-W64-NEXT:    image_sample v5, v3, s[0:7], s[8:11] dmask:0x4
-; GFX9-W64-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6 killed $sgpr7
+; GFX9-W64-NEXT:    ; kill: killed $sgpr0_224 killed $sgpr7
 ; GFX9-W64-NEXT:    ; kill: killed $vgpr3
 ; GFX9-W64-NEXT:    ; kill: killed $vgpr1 killed $vgpr2
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)

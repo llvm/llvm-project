@@ -31,7 +31,7 @@ noVRegs:         false
 hasFakeUses:     false
 tracksDebugUserValues: true
 registers:
-  - { id: 0, class: sgpr_64, preferred-register: '$sgpr8_sgpr9', flags: [  ] }
+  - { id: 0, class: sgpr_64, preferred-register: '$sgpr8_64', flags: [  ] }
   - { id: 1, class: areg_512, preferred-register: '%2', flags: [  ] }
   - { id: 2, class: vreg_512, preferred-register: '%1', flags: [  ] }
   - { id: 3, class: areg_512, preferred-register: '%4', flags: [  ] }
@@ -43,16 +43,16 @@ registers:
   - { id: 8, class: vgpr_32, preferred-register: '', flags: [  ] }
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr56_sgpr57_sgpr58_sgpr59'
+  scratchRSrcReg:  '$sgpr56_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       8
   vgprForAGPRCopy: '$vgpr23'
-  sgprForEXECCopy: '$sgpr58_sgpr59'
+  sgprForEXECCopy: '$sgpr58_64'
 body:             |
   bb.0:
-    liveins: $sgpr8_sgpr9
+    liveins: $sgpr8_64
 
-    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    renamable $sgpr0_64 = S_LOAD_DWORDX2_IMM killed renamable $sgpr8_64, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %6:vgpr_32 = COPY renamable $sgpr0
     INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $agpr0
     undef %4.sub0:av_512 = COPY $agpr0

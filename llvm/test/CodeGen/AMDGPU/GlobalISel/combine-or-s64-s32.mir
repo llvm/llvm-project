@@ -6,46 +6,46 @@ name: test_combine_or_s64_s32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2
+    liveins: $sgpr0_64, $sgpr2
     ; CHECK-LABEL: name: test_combine_or_s64_s32
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK: liveins: $sgpr0_64, $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[COPY1]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR]](s32), [[UV1]](s32)
-    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: $sgpr0_64 = COPY [[MV]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_64
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(s64) = G_ZEXT %1(s32)
     %3:_(s64) = G_OR %0, %2
-    $sgpr0_sgpr1 = COPY %3(s64)
-    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    $sgpr0_64 = COPY %3(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_64
 ...
 ---
 name: test_combine_or_s64_s32_rhs
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2
+    liveins: $sgpr0_64, $sgpr2
     ; CHECK-LABEL: name: test_combine_or_s64_s32_rhs
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK: liveins: $sgpr0_64, $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[COPY1]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR]](s32), [[UV1]](s32)
-    ; CHECK-NEXT: $sgpr0_sgpr1 = COPY [[MV]](s64)
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: $sgpr0_64 = COPY [[MV]](s64)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0_64
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(s64) = G_ZEXT %1(s32)
     %3:_(s64) = G_OR %2, %0
-    $sgpr0_sgpr1 = COPY %3(s64)
-    SI_RETURN_TO_EPILOG implicit $sgpr0_sgpr1
+    $sgpr0_64 = COPY %3(s64)
+    SI_RETURN_TO_EPILOG implicit $sgpr0_64
 ...
 ---
 name: test_combine_or_s64_s32_merge_unmerge

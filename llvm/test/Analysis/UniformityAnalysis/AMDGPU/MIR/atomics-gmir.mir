@@ -98,12 +98,12 @@ name: test_buffer_atomics_always_divergent
 tracksRegLiveness: true
 body: |
   bb.1:
-    liveins: $sgpr0, $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0, $sgpr2_64, $sgpr4_128
 
     %0:_(s32) = COPY $sgpr0
-    %1:sgpr(p0) = COPY $sgpr2_sgpr3
+    %1:sgpr(p0) = COPY $sgpr2_64
     %2:_(s32) = IMPLICIT_DEF
-    %3:_(<4 x s32>) = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    %3:_(<4 x s32>) = COPY $sgpr4_128
     %4:_(s32) = G_CONSTANT i32 0
     %ptr_lds:_(p3) = G_IMPLICIT_DEF
 

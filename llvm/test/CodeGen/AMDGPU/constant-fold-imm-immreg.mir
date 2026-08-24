@@ -8,7 +8,7 @@
 name:            s_fold_and_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -25,9 +25,9 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -53,17 +53,17 @@ body:             |
 name:            v_fold_and_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     ; GCN-LABEL: name: v_fold_and_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GCN: liveins: $sgpr0_64, $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY1]], 36, 0
     ; GCN-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.hi16, [[V_ASHRREV_I32_e64_]], %subreg.lo16
@@ -84,7 +84,7 @@ body:             |
     ; GCN-NEXT: FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[V_MOV_B32_e32_4]], 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     %3:vgpr_32 = COPY $vgpr0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
     %14:vreg_64 = REG_SEQUENCE %3, %subreg.hi16, %13, %subreg.lo16
@@ -122,15 +122,15 @@ body:             |
 name:            s_fold_shl_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_shl_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -140,7 +140,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %5:sreg_32_xm0_xexec = S_MOV_B32 1
     %6:sreg_32_xm0 = COPY %4.sub1
@@ -159,15 +159,15 @@ body:             |
 name:            s_fold_ashr_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_ashr_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -177,7 +177,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 243, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sreg_32_xm0_xexec = S_MOV_B32 999123
     %4:sreg_32_xm0 = COPY %2.sub1
@@ -227,14 +227,14 @@ name:            v_fold_ashr_imm_regimm_32
 tracksRegLiveness: true
 isSSA: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%2' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %2:vgpr_32 = COPY $vgpr0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
@@ -293,15 +293,15 @@ body:             |
 name:            s_fold_lshr_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_lshr_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -311,7 +311,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1048332, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %3:sreg_32_xm0_xexec = S_MOV_B32 -999123
     %4:sreg_32_xm0 = COPY %2.sub1
@@ -340,17 +340,17 @@ body:             |
 name:            v_fold_lshr_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%2' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     ; GCN-LABEL: name: v_fold_lshr_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GCN: liveins: $sgpr0_64, $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY1]], 36, 0
     ; GCN-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.hi16, [[V_ASHRREV_I32_e64_]], %subreg.lo16
@@ -381,7 +381,7 @@ body:             |
     ; GCN-NEXT: FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[V_MOV_B32_e32_9]], 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     %2:vgpr_32 = COPY $vgpr0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
@@ -460,7 +460,7 @@ body:             |
   ; GCN-LABEL: name: constant_fold_physreg_op
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[DEF]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -479,7 +479,7 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0, implicit $vcc
   bb.0:
     successors: %bb.1, %bb.3
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     %19:sreg_64 = IMPLICIT_DEF
     %0:sreg_64 = SI_IF killed %19, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -500,15 +500,15 @@ body:             |
 name:            s_fold_andn2_imm_regimm_32
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_andn2_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -518,7 +518,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1233024, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -543,15 +543,15 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_or_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -561,7 +561,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1243023, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -592,17 +592,17 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     ; GCN-LABEL: name: v_fold_or_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GCN: liveins: $sgpr0_64, $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY1]], 36, 0
     ; GCN-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_ASHRREV_I32_e64_]], %subreg.sub1
@@ -623,7 +623,7 @@ body:             |
     ; GCN-NEXT: FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[V_MOV_B32_e32_4]], 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     %3:vgpr_32 = COPY $vgpr0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
     %14:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %13, %subreg.sub1
@@ -659,15 +659,15 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_orn2_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -677,7 +677,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -8457, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -702,15 +702,15 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_nand_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -720,7 +720,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1544, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -745,15 +745,15 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_nor_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -763,7 +763,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1243024, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -788,15 +788,15 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GCN-LABEL: name: s_fold_xnor_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 36, 0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
@@ -806,7 +806,7 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1241481, implicit $exec
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sreg_32_xm0 = COPY %1.sub1
     %3:sreg_32_xm0 = COPY %1.sub0
@@ -842,17 +842,17 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%2' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     ; GCN-LABEL: name: v_fold_shl_imm_regimm_32
-    ; GCN: liveins: $sgpr0_sgpr1, $vgpr0
+    ; GCN: liveins: $sgpr0_64, $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY1]], 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     ; GCN-NEXT: [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[COPY]], implicit $exec
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_ASHRREV_I32_e64_]], %subreg.sub1
@@ -883,7 +883,7 @@ body:             |
     ; GCN-NEXT: FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[V_MOV_B32_e32_9]], 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     %2:vgpr_32 = COPY $vgpr0
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %15, %subreg.sub1

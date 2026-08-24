@@ -13,7 +13,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -59,7 +59,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -105,7 +105,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -151,7 +151,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -197,7 +197,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -277,7 +277,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 stack:
   - { id: 0, size: 4096, alignment: 4 }
@@ -316,7 +316,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -368,7 +368,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -420,7 +420,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -472,7 +472,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -524,7 +524,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -570,7 +570,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -616,7 +616,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -662,7 +662,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -708,7 +708,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |
@@ -764,7 +764,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   stackPtrOffsetReg: $sgpr32
 
 body: |

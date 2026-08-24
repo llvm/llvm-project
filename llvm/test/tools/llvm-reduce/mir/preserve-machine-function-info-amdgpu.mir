@@ -24,21 +24,21 @@
 # RESULT-NEXT: waveLimiter:     true
 # RESULT-NEXT: hasSpilledSGPRs: true
 # RESULT-NEXT: hasSpilledVGPRs: true
-# RESULT-NEXT: scratchRSrcReg:  '$sgpr48_sgpr49_sgpr50_sgpr51'
+# RESULT-NEXT: scratchRSrcReg:  '$sgpr48_128'
 # RESULT-NEXT: frameOffsetReg:  '$sgpr44'
 # RESULT-NEXT: stackPtrOffsetReg: '$sgpr45'
 # RESULT-NEXT: bytesInStackArgArea: 112
 # RESULT-NEXT: returnsVoid:     false
 # RESULT-NEXT: argumentInfo:
-# RESULT-NEXT: privateSegmentBuffer: { reg: '$sgpr60_sgpr61_sgpr62_sgpr63' }
-# RESULT-NEXT: dispatchPtr:     { reg: '$sgpr6_sgpr7' }
-# RESULT-NEXT: queuePtr:        { reg: '$sgpr4_sgpr5' }
-# RESULT-NEXT: dispatchID:      { reg: '$sgpr12_sgpr13' }
+# RESULT-NEXT: privateSegmentBuffer: { reg: '$sgpr60_128' }
+# RESULT-NEXT: dispatchPtr:     { reg: '$sgpr6_64' }
+# RESULT-NEXT: queuePtr:        { reg: '$sgpr4_64' }
+# RESULT-NEXT: dispatchID:      { reg: '$sgpr12_64' }
 # RESULT-NEXT: workGroupIDX:    { reg: '$sgpr20' }
 # RESULT-NEXT: workGroupIDY:    { reg: '$sgpr19' }
 # RESULT-NEXT: workGroupIDZ:    { reg: '$sgpr18' }
 # RESULT-NEXT: LDSKernelId:     { reg: '$sgpr15' }
-# RESULT-NEXT: implicitArgPtr:  { reg: '$sgpr10_sgpr11' }
+# RESULT-NEXT: implicitArgPtr:  { reg: '$sgpr10_64' }
 # RESULT-NEXT: workItemIDX:     { reg: '$vgpr34', mask: 1023 }
 # RESULT-NEXT: workItemIDY:     { reg: '$vgpr34', mask: 1047552 }
 # RESULT-NEXT: workItemIDZ:     { reg: '$vgpr34', mask: 1072693248 }
@@ -56,7 +56,7 @@
 # RESULT-NEXT: - '$vgpr3'
 # RESULT-NEXT: vgprForAGPRCopy: '$vgpr33'
 
-# RESULT: S_NOP 0, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+# RESULT: S_NOP 0, implicit $sgpr48_128
 # RESULT: S_NOP 0, implicit $vgpr33
 # RESULT: S_NOP 0, implicit $sgpr44
 # RESULT: S_NOP 0, implicit $sgpr45
@@ -77,20 +77,20 @@ machineFunctionInfo:
   waveLimiter:     true
   hasSpilledSGPRs: true
   hasSpilledVGPRs: true
-  scratchRSrcReg:  '$sgpr48_sgpr49_sgpr50_sgpr51'
+  scratchRSrcReg:  '$sgpr48_128'
   frameOffsetReg:  '$sgpr44'
   stackPtrOffsetReg: '$sgpr45'
   bytesInStackArgArea: 112
   returnsVoid:     false
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr60_sgpr61_sgpr62_sgpr63' }
-    dispatchPtr:     { reg: '$sgpr6_sgpr7' }
-    queuePtr:        { reg: '$sgpr4_sgpr5' }
-    dispatchID:      { reg: '$sgpr12_sgpr13' }
+    privateSegmentBuffer: { reg: '$sgpr60_128' }
+    dispatchPtr:     { reg: '$sgpr6_64' }
+    queuePtr:        { reg: '$sgpr4_64' }
+    dispatchID:      { reg: '$sgpr12_64' }
     workGroupIDX:    { reg: '$sgpr20' }
     workGroupIDY:    { reg: '$sgpr19' }
     workGroupIDZ:    { reg: '$sgpr18' }
-    implicitArgPtr:  { reg: '$sgpr10_sgpr11' }
+    implicitArgPtr:  { reg: '$sgpr10_64' }
     workItemIDX:     { reg: '$vgpr34', mask: 1023 }
     workItemIDY:     { reg: '$vgpr34', mask: 1047552 }
     workItemIDZ:     { reg: '$vgpr34', mask: 1072693248 }
@@ -114,7 +114,7 @@ body:             |
 
     ; Test some register uses that are undef unless the reserved
     ; registers are respected.
-    S_NOP 0, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    S_NOP 0, implicit $sgpr48_128
     S_NOP 0, implicit $vgpr33
     S_NOP 0, implicit $sgpr44
     S_NOP 0, implicit $sgpr45

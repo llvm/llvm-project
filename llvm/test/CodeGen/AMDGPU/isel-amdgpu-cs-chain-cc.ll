@@ -36,7 +36,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; GISEL-GFX11-NEXT:   $vgpr7 = COPY [[COPY7]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -61,11 +61,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; GISEL-GFX10-NEXT:   $vgpr5 = COPY [[COPY5]]
   ; GISEL-GFX10-NEXT:   $vgpr6 = COPY [[COPY6]]
   ; GISEL-GFX10-NEXT:   $vgpr7 = COPY [[COPY7]]
-  ; GISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY8]]
+  ; GISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY8]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -92,7 +92,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX11-NEXT:   $vgpr5 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr6 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr7 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -111,8 +111,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY8]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY8]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY7]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY5]]
@@ -121,7 +121,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX10-NEXT:   $vgpr5 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr6 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr7 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<4 x i32> %a, <4 x i32> %b)
@@ -160,7 +160,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; GISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY11]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -193,11 +193,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; GISEL-GFX10-NEXT:   $vgpr9 = COPY [[COPY9]]
   ; GISEL-GFX10-NEXT:   $vgpr10 = COPY [[COPY10]]
   ; GISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY11]]
-  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY12]]
+  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY12]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -232,7 +232,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX11-NEXT:   $vgpr9 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr10 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -255,8 +255,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY12]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY12]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY11]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY10]]
   ; DAGISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY9]]
@@ -269,7 +269,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX10-NEXT:   $vgpr9 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr10 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(ptr %a, ptr %b, ptr addrspace(1) %a1, ptr addrspace(1) %b1, ptr addrspace(3) %a3, ptr addrspace(3) %b3, ptr addrspace(5) %a5, ptr addrspace(5) %b5)
@@ -312,7 +312,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; GISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY13]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -349,11 +349,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; GISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY11]]
   ; GISEL-GFX10-NEXT:   $vgpr12 = COPY [[COPY12]]
   ; GISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY13]]
-  ; GISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY14]]
+  ; GISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY14]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -398,7 +398,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr12 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -429,8 +429,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY18:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY18:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY18]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY16]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY14]]
   ; DAGISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY11]]
@@ -445,7 +445,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr12 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use({ptr, i32, <4 x i32>} %a, {ptr, i32, <4 x i32>} %b)
@@ -464,7 +464,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -477,11 +477,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY1]]
-  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -496,7 +496,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -509,11 +509,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(float %a, float %b)
@@ -534,7 +534,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY3]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -547,11 +547,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY1]]
-  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -566,7 +566,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -579,11 +579,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(half %a, half %b)
@@ -604,7 +604,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY3]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -617,11 +617,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY1]]
-  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -636,7 +636,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -649,11 +649,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(bfloat %a, bfloat %b)
@@ -672,7 +672,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -685,11 +685,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY1]]
-  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -704,7 +704,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -717,11 +717,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(i16 %a, i16 %b)
@@ -768,7 +768,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; GISEL-GFX11-NEXT:   $vgpr15 = COPY [[COPY15]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -809,11 +809,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; GISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY13]]
   ; GISEL-GFX10-NEXT:   $vgpr14 = COPY [[COPY14]]
   ; GISEL-GFX10-NEXT:   $vgpr15 = COPY [[COPY15]]
-  ; GISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]]
+  ; GISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY16]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -856,7 +856,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr14 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr15 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -883,8 +883,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]]
+  ; DAGISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY16]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY15]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY14]]
   ; DAGISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY13]]
@@ -901,7 +901,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr14 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr15 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<16 x i16> %a, <16 x i16> %b)
@@ -1513,7 +1513,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; GISEL-GFX11-NEXT:   $vgpr31 = COPY [[COPY31]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; GISEL-GFX11-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -1687,141 +1687,141 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; GISEL-GFX10-NEXT:   [[COPY163:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   [[COPY164:%[0-9]+]]:vgpr_32 = COPY [[COPY32]]
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY164]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 0, 0, 0, implicit $exec :: (store (i32) into stack, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY164]], $sgpr48_128, $sgpr32, 0, 0, 0, implicit $exec :: (store (i32) into stack, align 16, addrspace 5)
   ; GISEL-GFX10-NEXT:   [[COPY165:%[0-9]+]]:vgpr_32 = COPY [[COPY33]]
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY165]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 4, 0, 0, implicit $exec :: (store (i32) into stack + 4, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY165]], $sgpr48_128, $sgpr32, 4, 0, 0, implicit $exec :: (store (i32) into stack + 4, addrspace 5)
   ; GISEL-GFX10-NEXT:   [[COPY166:%[0-9]+]]:vgpr_32 = COPY [[COPY34]]
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY166]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 8, 0, 0, implicit $exec :: (store (i32) into stack + 8, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY166]], $sgpr48_128, $sgpr32, 8, 0, 0, implicit $exec :: (store (i32) into stack + 8, align 8, addrspace 5)
   ; GISEL-GFX10-NEXT:   [[COPY167:%[0-9]+]]:vgpr_32 = COPY [[COPY35]]
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY167]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 12, 0, 0, implicit $exec :: (store (i32) into stack + 12, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY36]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 16, 0, 0, implicit $exec :: (store (i32) into stack + 16, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY37]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 20, 0, 0, implicit $exec :: (store (i32) into stack + 20, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY38]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 24, 0, 0, implicit $exec :: (store (i32) into stack + 24, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY39]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 28, 0, 0, implicit $exec :: (store (i32) into stack + 28, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY40]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 32, 0, 0, implicit $exec :: (store (i32) into stack + 32, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY41]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 36, 0, 0, implicit $exec :: (store (i32) into stack + 36, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY42]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 40, 0, 0, implicit $exec :: (store (i32) into stack + 40, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY43]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 44, 0, 0, implicit $exec :: (store (i32) into stack + 44, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY44]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 48, 0, 0, implicit $exec :: (store (i32) into stack + 48, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY45]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 52, 0, 0, implicit $exec :: (store (i32) into stack + 52, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY46]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 56, 0, 0, implicit $exec :: (store (i32) into stack + 56, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY47]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 60, 0, 0, implicit $exec :: (store (i32) into stack + 60, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY48]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 64, 0, 0, implicit $exec :: (store (i32) into stack + 64, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY49]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 68, 0, 0, implicit $exec :: (store (i32) into stack + 68, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY50]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 72, 0, 0, implicit $exec :: (store (i32) into stack + 72, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY51]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 76, 0, 0, implicit $exec :: (store (i32) into stack + 76, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY52]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 80, 0, 0, implicit $exec :: (store (i32) into stack + 80, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY53]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 84, 0, 0, implicit $exec :: (store (i32) into stack + 84, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY54]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 88, 0, 0, implicit $exec :: (store (i32) into stack + 88, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY55]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 92, 0, 0, implicit $exec :: (store (i32) into stack + 92, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY56]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 96, 0, 0, implicit $exec :: (store (i32) into stack + 96, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY57]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 100, 0, 0, implicit $exec :: (store (i32) into stack + 100, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY58]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 104, 0, 0, implicit $exec :: (store (i32) into stack + 104, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY59]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 108, 0, 0, implicit $exec :: (store (i32) into stack + 108, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY60]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 112, 0, 0, implicit $exec :: (store (i32) into stack + 112, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY61]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 116, 0, 0, implicit $exec :: (store (i32) into stack + 116, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY62]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 120, 0, 0, implicit $exec :: (store (i32) into stack + 120, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY63]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 124, 0, 0, implicit $exec :: (store (i32) into stack + 124, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY64]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 128, 0, 0, implicit $exec :: (store (i32) into stack + 128, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY65]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 132, 0, 0, implicit $exec :: (store (i32) into stack + 132, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY66]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 136, 0, 0, implicit $exec :: (store (i32) into stack + 136, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY67]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 140, 0, 0, implicit $exec :: (store (i32) into stack + 140, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY68]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 144, 0, 0, implicit $exec :: (store (i32) into stack + 144, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY69]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 148, 0, 0, implicit $exec :: (store (i32) into stack + 148, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY70]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 152, 0, 0, implicit $exec :: (store (i32) into stack + 152, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY71]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 156, 0, 0, implicit $exec :: (store (i32) into stack + 156, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY72]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 160, 0, 0, implicit $exec :: (store (i32) into stack + 160, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY73]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 164, 0, 0, implicit $exec :: (store (i32) into stack + 164, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY74]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 168, 0, 0, implicit $exec :: (store (i32) into stack + 168, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY75]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 172, 0, 0, implicit $exec :: (store (i32) into stack + 172, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY76]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 176, 0, 0, implicit $exec :: (store (i32) into stack + 176, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY77]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 180, 0, 0, implicit $exec :: (store (i32) into stack + 180, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY78]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 184, 0, 0, implicit $exec :: (store (i32) into stack + 184, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY79]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 188, 0, 0, implicit $exec :: (store (i32) into stack + 188, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY80]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 192, 0, 0, implicit $exec :: (store (i32) into stack + 192, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY81]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 196, 0, 0, implicit $exec :: (store (i32) into stack + 196, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY82]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 200, 0, 0, implicit $exec :: (store (i32) into stack + 200, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY83]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 204, 0, 0, implicit $exec :: (store (i32) into stack + 204, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY84]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 208, 0, 0, implicit $exec :: (store (i32) into stack + 208, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY85]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 212, 0, 0, implicit $exec :: (store (i32) into stack + 212, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY86]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 216, 0, 0, implicit $exec :: (store (i32) into stack + 216, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY87]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 220, 0, 0, implicit $exec :: (store (i32) into stack + 220, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY88]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 224, 0, 0, implicit $exec :: (store (i32) into stack + 224, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY89]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 228, 0, 0, implicit $exec :: (store (i32) into stack + 228, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY90]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 232, 0, 0, implicit $exec :: (store (i32) into stack + 232, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY91]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 236, 0, 0, implicit $exec :: (store (i32) into stack + 236, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY92]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 240, 0, 0, implicit $exec :: (store (i32) into stack + 240, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY93]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 244, 0, 0, implicit $exec :: (store (i32) into stack + 244, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY94]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 248, 0, 0, implicit $exec :: (store (i32) into stack + 248, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY95]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 252, 0, 0, implicit $exec :: (store (i32) into stack + 252, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY96]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 256, 0, 0, implicit $exec :: (store (i32) into stack + 256, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY97]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 260, 0, 0, implicit $exec :: (store (i32) into stack + 260, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY98]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 264, 0, 0, implicit $exec :: (store (i32) into stack + 264, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY99]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 268, 0, 0, implicit $exec :: (store (i32) into stack + 268, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY100]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 272, 0, 0, implicit $exec :: (store (i32) into stack + 272, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY101]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 276, 0, 0, implicit $exec :: (store (i32) into stack + 276, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY102]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 280, 0, 0, implicit $exec :: (store (i32) into stack + 280, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY103]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 284, 0, 0, implicit $exec :: (store (i32) into stack + 284, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY104]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 288, 0, 0, implicit $exec :: (store (i32) into stack + 288, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY105]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 292, 0, 0, implicit $exec :: (store (i32) into stack + 292, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY106]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 296, 0, 0, implicit $exec :: (store (i32) into stack + 296, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY107]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 300, 0, 0, implicit $exec :: (store (i32) into stack + 300, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY108]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 304, 0, 0, implicit $exec :: (store (i32) into stack + 304, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY109]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 308, 0, 0, implicit $exec :: (store (i32) into stack + 308, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY110]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 312, 0, 0, implicit $exec :: (store (i32) into stack + 312, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY111]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 316, 0, 0, implicit $exec :: (store (i32) into stack + 316, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY112]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 320, 0, 0, implicit $exec :: (store (i32) into stack + 320, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY113]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 324, 0, 0, implicit $exec :: (store (i32) into stack + 324, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY114]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 328, 0, 0, implicit $exec :: (store (i32) into stack + 328, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY115]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 332, 0, 0, implicit $exec :: (store (i32) into stack + 332, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY116]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 336, 0, 0, implicit $exec :: (store (i32) into stack + 336, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY117]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 340, 0, 0, implicit $exec :: (store (i32) into stack + 340, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY118]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 344, 0, 0, implicit $exec :: (store (i32) into stack + 344, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY119]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 348, 0, 0, implicit $exec :: (store (i32) into stack + 348, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY120]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 352, 0, 0, implicit $exec :: (store (i32) into stack + 352, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY121]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 356, 0, 0, implicit $exec :: (store (i32) into stack + 356, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY122]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 360, 0, 0, implicit $exec :: (store (i32) into stack + 360, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY123]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 364, 0, 0, implicit $exec :: (store (i32) into stack + 364, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY124]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 368, 0, 0, implicit $exec :: (store (i32) into stack + 368, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY125]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 372, 0, 0, implicit $exec :: (store (i32) into stack + 372, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY126]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 376, 0, 0, implicit $exec :: (store (i32) into stack + 376, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY127]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 380, 0, 0, implicit $exec :: (store (i32) into stack + 380, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY128]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 384, 0, 0, implicit $exec :: (store (i32) into stack + 384, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY129]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 388, 0, 0, implicit $exec :: (store (i32) into stack + 388, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY130]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 392, 0, 0, implicit $exec :: (store (i32) into stack + 392, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY131]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 396, 0, 0, implicit $exec :: (store (i32) into stack + 396, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY132]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 400, 0, 0, implicit $exec :: (store (i32) into stack + 400, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY133]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 404, 0, 0, implicit $exec :: (store (i32) into stack + 404, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY134]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 408, 0, 0, implicit $exec :: (store (i32) into stack + 408, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY135]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 412, 0, 0, implicit $exec :: (store (i32) into stack + 412, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY136]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 416, 0, 0, implicit $exec :: (store (i32) into stack + 416, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY137]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 420, 0, 0, implicit $exec :: (store (i32) into stack + 420, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY138]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 424, 0, 0, implicit $exec :: (store (i32) into stack + 424, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY139]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 428, 0, 0, implicit $exec :: (store (i32) into stack + 428, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY140]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 432, 0, 0, implicit $exec :: (store (i32) into stack + 432, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY141]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 436, 0, 0, implicit $exec :: (store (i32) into stack + 436, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY142]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 440, 0, 0, implicit $exec :: (store (i32) into stack + 440, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY143]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 444, 0, 0, implicit $exec :: (store (i32) into stack + 444, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY144]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 448, 0, 0, implicit $exec :: (store (i32) into stack + 448, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY145]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 452, 0, 0, implicit $exec :: (store (i32) into stack + 452, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY146]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 456, 0, 0, implicit $exec :: (store (i32) into stack + 456, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY147]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 460, 0, 0, implicit $exec :: (store (i32) into stack + 460, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY148]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 464, 0, 0, implicit $exec :: (store (i32) into stack + 464, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY149]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 468, 0, 0, implicit $exec :: (store (i32) into stack + 468, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY150]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 472, 0, 0, implicit $exec :: (store (i32) into stack + 472, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY151]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 476, 0, 0, implicit $exec :: (store (i32) into stack + 476, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY152]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 480, 0, 0, implicit $exec :: (store (i32) into stack + 480, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY153]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 484, 0, 0, implicit $exec :: (store (i32) into stack + 484, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY154]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 488, 0, 0, implicit $exec :: (store (i32) into stack + 488, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY155]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 492, 0, 0, implicit $exec :: (store (i32) into stack + 492, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY156]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 496, 0, 0, implicit $exec :: (store (i32) into stack + 496, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY157]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 500, 0, 0, implicit $exec :: (store (i32) into stack + 500, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY158]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 504, 0, 0, implicit $exec :: (store (i32) into stack + 504, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY159]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 508, 0, 0, implicit $exec :: (store (i32) into stack + 508, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY160]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 512, 0, 0, implicit $exec :: (store (i32) into stack + 512, align 16, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY161]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 516, 0, 0, implicit $exec :: (store (i32) into stack + 516, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY162]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 520, 0, 0, implicit $exec :: (store (i32) into stack + 520, align 8, addrspace 5)
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY163]], $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr32, 524, 0, 0, implicit $exec :: (store (i32) into stack + 524, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY167]], $sgpr48_128, $sgpr32, 12, 0, 0, implicit $exec :: (store (i32) into stack + 12, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY36]], $sgpr48_128, $sgpr32, 16, 0, 0, implicit $exec :: (store (i32) into stack + 16, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY37]], $sgpr48_128, $sgpr32, 20, 0, 0, implicit $exec :: (store (i32) into stack + 20, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY38]], $sgpr48_128, $sgpr32, 24, 0, 0, implicit $exec :: (store (i32) into stack + 24, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY39]], $sgpr48_128, $sgpr32, 28, 0, 0, implicit $exec :: (store (i32) into stack + 28, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY40]], $sgpr48_128, $sgpr32, 32, 0, 0, implicit $exec :: (store (i32) into stack + 32, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY41]], $sgpr48_128, $sgpr32, 36, 0, 0, implicit $exec :: (store (i32) into stack + 36, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY42]], $sgpr48_128, $sgpr32, 40, 0, 0, implicit $exec :: (store (i32) into stack + 40, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY43]], $sgpr48_128, $sgpr32, 44, 0, 0, implicit $exec :: (store (i32) into stack + 44, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY44]], $sgpr48_128, $sgpr32, 48, 0, 0, implicit $exec :: (store (i32) into stack + 48, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY45]], $sgpr48_128, $sgpr32, 52, 0, 0, implicit $exec :: (store (i32) into stack + 52, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY46]], $sgpr48_128, $sgpr32, 56, 0, 0, implicit $exec :: (store (i32) into stack + 56, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY47]], $sgpr48_128, $sgpr32, 60, 0, 0, implicit $exec :: (store (i32) into stack + 60, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY48]], $sgpr48_128, $sgpr32, 64, 0, 0, implicit $exec :: (store (i32) into stack + 64, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY49]], $sgpr48_128, $sgpr32, 68, 0, 0, implicit $exec :: (store (i32) into stack + 68, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY50]], $sgpr48_128, $sgpr32, 72, 0, 0, implicit $exec :: (store (i32) into stack + 72, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY51]], $sgpr48_128, $sgpr32, 76, 0, 0, implicit $exec :: (store (i32) into stack + 76, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY52]], $sgpr48_128, $sgpr32, 80, 0, 0, implicit $exec :: (store (i32) into stack + 80, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY53]], $sgpr48_128, $sgpr32, 84, 0, 0, implicit $exec :: (store (i32) into stack + 84, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY54]], $sgpr48_128, $sgpr32, 88, 0, 0, implicit $exec :: (store (i32) into stack + 88, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY55]], $sgpr48_128, $sgpr32, 92, 0, 0, implicit $exec :: (store (i32) into stack + 92, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY56]], $sgpr48_128, $sgpr32, 96, 0, 0, implicit $exec :: (store (i32) into stack + 96, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY57]], $sgpr48_128, $sgpr32, 100, 0, 0, implicit $exec :: (store (i32) into stack + 100, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY58]], $sgpr48_128, $sgpr32, 104, 0, 0, implicit $exec :: (store (i32) into stack + 104, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY59]], $sgpr48_128, $sgpr32, 108, 0, 0, implicit $exec :: (store (i32) into stack + 108, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY60]], $sgpr48_128, $sgpr32, 112, 0, 0, implicit $exec :: (store (i32) into stack + 112, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY61]], $sgpr48_128, $sgpr32, 116, 0, 0, implicit $exec :: (store (i32) into stack + 116, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY62]], $sgpr48_128, $sgpr32, 120, 0, 0, implicit $exec :: (store (i32) into stack + 120, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY63]], $sgpr48_128, $sgpr32, 124, 0, 0, implicit $exec :: (store (i32) into stack + 124, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY64]], $sgpr48_128, $sgpr32, 128, 0, 0, implicit $exec :: (store (i32) into stack + 128, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY65]], $sgpr48_128, $sgpr32, 132, 0, 0, implicit $exec :: (store (i32) into stack + 132, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY66]], $sgpr48_128, $sgpr32, 136, 0, 0, implicit $exec :: (store (i32) into stack + 136, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY67]], $sgpr48_128, $sgpr32, 140, 0, 0, implicit $exec :: (store (i32) into stack + 140, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY68]], $sgpr48_128, $sgpr32, 144, 0, 0, implicit $exec :: (store (i32) into stack + 144, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY69]], $sgpr48_128, $sgpr32, 148, 0, 0, implicit $exec :: (store (i32) into stack + 148, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY70]], $sgpr48_128, $sgpr32, 152, 0, 0, implicit $exec :: (store (i32) into stack + 152, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY71]], $sgpr48_128, $sgpr32, 156, 0, 0, implicit $exec :: (store (i32) into stack + 156, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY72]], $sgpr48_128, $sgpr32, 160, 0, 0, implicit $exec :: (store (i32) into stack + 160, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY73]], $sgpr48_128, $sgpr32, 164, 0, 0, implicit $exec :: (store (i32) into stack + 164, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY74]], $sgpr48_128, $sgpr32, 168, 0, 0, implicit $exec :: (store (i32) into stack + 168, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY75]], $sgpr48_128, $sgpr32, 172, 0, 0, implicit $exec :: (store (i32) into stack + 172, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY76]], $sgpr48_128, $sgpr32, 176, 0, 0, implicit $exec :: (store (i32) into stack + 176, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY77]], $sgpr48_128, $sgpr32, 180, 0, 0, implicit $exec :: (store (i32) into stack + 180, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY78]], $sgpr48_128, $sgpr32, 184, 0, 0, implicit $exec :: (store (i32) into stack + 184, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY79]], $sgpr48_128, $sgpr32, 188, 0, 0, implicit $exec :: (store (i32) into stack + 188, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY80]], $sgpr48_128, $sgpr32, 192, 0, 0, implicit $exec :: (store (i32) into stack + 192, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY81]], $sgpr48_128, $sgpr32, 196, 0, 0, implicit $exec :: (store (i32) into stack + 196, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY82]], $sgpr48_128, $sgpr32, 200, 0, 0, implicit $exec :: (store (i32) into stack + 200, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY83]], $sgpr48_128, $sgpr32, 204, 0, 0, implicit $exec :: (store (i32) into stack + 204, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY84]], $sgpr48_128, $sgpr32, 208, 0, 0, implicit $exec :: (store (i32) into stack + 208, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY85]], $sgpr48_128, $sgpr32, 212, 0, 0, implicit $exec :: (store (i32) into stack + 212, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY86]], $sgpr48_128, $sgpr32, 216, 0, 0, implicit $exec :: (store (i32) into stack + 216, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY87]], $sgpr48_128, $sgpr32, 220, 0, 0, implicit $exec :: (store (i32) into stack + 220, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY88]], $sgpr48_128, $sgpr32, 224, 0, 0, implicit $exec :: (store (i32) into stack + 224, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY89]], $sgpr48_128, $sgpr32, 228, 0, 0, implicit $exec :: (store (i32) into stack + 228, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY90]], $sgpr48_128, $sgpr32, 232, 0, 0, implicit $exec :: (store (i32) into stack + 232, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY91]], $sgpr48_128, $sgpr32, 236, 0, 0, implicit $exec :: (store (i32) into stack + 236, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY92]], $sgpr48_128, $sgpr32, 240, 0, 0, implicit $exec :: (store (i32) into stack + 240, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY93]], $sgpr48_128, $sgpr32, 244, 0, 0, implicit $exec :: (store (i32) into stack + 244, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY94]], $sgpr48_128, $sgpr32, 248, 0, 0, implicit $exec :: (store (i32) into stack + 248, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY95]], $sgpr48_128, $sgpr32, 252, 0, 0, implicit $exec :: (store (i32) into stack + 252, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY96]], $sgpr48_128, $sgpr32, 256, 0, 0, implicit $exec :: (store (i32) into stack + 256, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY97]], $sgpr48_128, $sgpr32, 260, 0, 0, implicit $exec :: (store (i32) into stack + 260, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY98]], $sgpr48_128, $sgpr32, 264, 0, 0, implicit $exec :: (store (i32) into stack + 264, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY99]], $sgpr48_128, $sgpr32, 268, 0, 0, implicit $exec :: (store (i32) into stack + 268, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY100]], $sgpr48_128, $sgpr32, 272, 0, 0, implicit $exec :: (store (i32) into stack + 272, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY101]], $sgpr48_128, $sgpr32, 276, 0, 0, implicit $exec :: (store (i32) into stack + 276, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY102]], $sgpr48_128, $sgpr32, 280, 0, 0, implicit $exec :: (store (i32) into stack + 280, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY103]], $sgpr48_128, $sgpr32, 284, 0, 0, implicit $exec :: (store (i32) into stack + 284, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY104]], $sgpr48_128, $sgpr32, 288, 0, 0, implicit $exec :: (store (i32) into stack + 288, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY105]], $sgpr48_128, $sgpr32, 292, 0, 0, implicit $exec :: (store (i32) into stack + 292, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY106]], $sgpr48_128, $sgpr32, 296, 0, 0, implicit $exec :: (store (i32) into stack + 296, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY107]], $sgpr48_128, $sgpr32, 300, 0, 0, implicit $exec :: (store (i32) into stack + 300, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY108]], $sgpr48_128, $sgpr32, 304, 0, 0, implicit $exec :: (store (i32) into stack + 304, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY109]], $sgpr48_128, $sgpr32, 308, 0, 0, implicit $exec :: (store (i32) into stack + 308, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY110]], $sgpr48_128, $sgpr32, 312, 0, 0, implicit $exec :: (store (i32) into stack + 312, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY111]], $sgpr48_128, $sgpr32, 316, 0, 0, implicit $exec :: (store (i32) into stack + 316, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY112]], $sgpr48_128, $sgpr32, 320, 0, 0, implicit $exec :: (store (i32) into stack + 320, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY113]], $sgpr48_128, $sgpr32, 324, 0, 0, implicit $exec :: (store (i32) into stack + 324, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY114]], $sgpr48_128, $sgpr32, 328, 0, 0, implicit $exec :: (store (i32) into stack + 328, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY115]], $sgpr48_128, $sgpr32, 332, 0, 0, implicit $exec :: (store (i32) into stack + 332, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY116]], $sgpr48_128, $sgpr32, 336, 0, 0, implicit $exec :: (store (i32) into stack + 336, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY117]], $sgpr48_128, $sgpr32, 340, 0, 0, implicit $exec :: (store (i32) into stack + 340, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY118]], $sgpr48_128, $sgpr32, 344, 0, 0, implicit $exec :: (store (i32) into stack + 344, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY119]], $sgpr48_128, $sgpr32, 348, 0, 0, implicit $exec :: (store (i32) into stack + 348, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY120]], $sgpr48_128, $sgpr32, 352, 0, 0, implicit $exec :: (store (i32) into stack + 352, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY121]], $sgpr48_128, $sgpr32, 356, 0, 0, implicit $exec :: (store (i32) into stack + 356, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY122]], $sgpr48_128, $sgpr32, 360, 0, 0, implicit $exec :: (store (i32) into stack + 360, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY123]], $sgpr48_128, $sgpr32, 364, 0, 0, implicit $exec :: (store (i32) into stack + 364, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY124]], $sgpr48_128, $sgpr32, 368, 0, 0, implicit $exec :: (store (i32) into stack + 368, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY125]], $sgpr48_128, $sgpr32, 372, 0, 0, implicit $exec :: (store (i32) into stack + 372, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY126]], $sgpr48_128, $sgpr32, 376, 0, 0, implicit $exec :: (store (i32) into stack + 376, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY127]], $sgpr48_128, $sgpr32, 380, 0, 0, implicit $exec :: (store (i32) into stack + 380, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY128]], $sgpr48_128, $sgpr32, 384, 0, 0, implicit $exec :: (store (i32) into stack + 384, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY129]], $sgpr48_128, $sgpr32, 388, 0, 0, implicit $exec :: (store (i32) into stack + 388, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY130]], $sgpr48_128, $sgpr32, 392, 0, 0, implicit $exec :: (store (i32) into stack + 392, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY131]], $sgpr48_128, $sgpr32, 396, 0, 0, implicit $exec :: (store (i32) into stack + 396, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY132]], $sgpr48_128, $sgpr32, 400, 0, 0, implicit $exec :: (store (i32) into stack + 400, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY133]], $sgpr48_128, $sgpr32, 404, 0, 0, implicit $exec :: (store (i32) into stack + 404, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY134]], $sgpr48_128, $sgpr32, 408, 0, 0, implicit $exec :: (store (i32) into stack + 408, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY135]], $sgpr48_128, $sgpr32, 412, 0, 0, implicit $exec :: (store (i32) into stack + 412, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY136]], $sgpr48_128, $sgpr32, 416, 0, 0, implicit $exec :: (store (i32) into stack + 416, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY137]], $sgpr48_128, $sgpr32, 420, 0, 0, implicit $exec :: (store (i32) into stack + 420, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY138]], $sgpr48_128, $sgpr32, 424, 0, 0, implicit $exec :: (store (i32) into stack + 424, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY139]], $sgpr48_128, $sgpr32, 428, 0, 0, implicit $exec :: (store (i32) into stack + 428, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY140]], $sgpr48_128, $sgpr32, 432, 0, 0, implicit $exec :: (store (i32) into stack + 432, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY141]], $sgpr48_128, $sgpr32, 436, 0, 0, implicit $exec :: (store (i32) into stack + 436, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY142]], $sgpr48_128, $sgpr32, 440, 0, 0, implicit $exec :: (store (i32) into stack + 440, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY143]], $sgpr48_128, $sgpr32, 444, 0, 0, implicit $exec :: (store (i32) into stack + 444, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY144]], $sgpr48_128, $sgpr32, 448, 0, 0, implicit $exec :: (store (i32) into stack + 448, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY145]], $sgpr48_128, $sgpr32, 452, 0, 0, implicit $exec :: (store (i32) into stack + 452, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY146]], $sgpr48_128, $sgpr32, 456, 0, 0, implicit $exec :: (store (i32) into stack + 456, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY147]], $sgpr48_128, $sgpr32, 460, 0, 0, implicit $exec :: (store (i32) into stack + 460, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY148]], $sgpr48_128, $sgpr32, 464, 0, 0, implicit $exec :: (store (i32) into stack + 464, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY149]], $sgpr48_128, $sgpr32, 468, 0, 0, implicit $exec :: (store (i32) into stack + 468, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY150]], $sgpr48_128, $sgpr32, 472, 0, 0, implicit $exec :: (store (i32) into stack + 472, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY151]], $sgpr48_128, $sgpr32, 476, 0, 0, implicit $exec :: (store (i32) into stack + 476, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY152]], $sgpr48_128, $sgpr32, 480, 0, 0, implicit $exec :: (store (i32) into stack + 480, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY153]], $sgpr48_128, $sgpr32, 484, 0, 0, implicit $exec :: (store (i32) into stack + 484, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY154]], $sgpr48_128, $sgpr32, 488, 0, 0, implicit $exec :: (store (i32) into stack + 488, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY155]], $sgpr48_128, $sgpr32, 492, 0, 0, implicit $exec :: (store (i32) into stack + 492, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY156]], $sgpr48_128, $sgpr32, 496, 0, 0, implicit $exec :: (store (i32) into stack + 496, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY157]], $sgpr48_128, $sgpr32, 500, 0, 0, implicit $exec :: (store (i32) into stack + 500, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY158]], $sgpr48_128, $sgpr32, 504, 0, 0, implicit $exec :: (store (i32) into stack + 504, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY159]], $sgpr48_128, $sgpr32, 508, 0, 0, implicit $exec :: (store (i32) into stack + 508, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY160]], $sgpr48_128, $sgpr32, 512, 0, 0, implicit $exec :: (store (i32) into stack + 512, align 16, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY161]], $sgpr48_128, $sgpr32, 516, 0, 0, implicit $exec :: (store (i32) into stack + 516, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY162]], $sgpr48_128, $sgpr32, 520, 0, 0, implicit $exec :: (store (i32) into stack + 520, align 8, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY163]], $sgpr48_128, $sgpr32, 524, 0, 0, implicit $exec :: (store (i32) into stack + 524, addrspace 5)
   ; GISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY1]]
   ; GISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY2]]
@@ -1854,11 +1854,11 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; GISEL-GFX10-NEXT:   $vgpr29 = COPY [[COPY29]]
   ; GISEL-GFX10-NEXT:   $vgpr30 = COPY [[COPY30]]
   ; GISEL-GFX10-NEXT:   $vgpr31 = COPY [[COPY31]]
-  ; GISEL-GFX10-NEXT:   [[COPY168:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY168]]
+  ; GISEL-GFX10-NEXT:   [[COPY168:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
+  ; GISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY168]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31, implicit $sgpr0_128
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -2464,7 +2464,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX11-NEXT:   $vgpr29 = COPY [[COPY134]]
   ; DAGISEL-GFX11-NEXT:   $vgpr30 = COPY [[COPY133]]
   ; DAGISEL-GFX11-NEXT:   $vgpr31 = COPY [[COPY132]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; DAGISEL-GFX11-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -2637,147 +2637,147 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX10-NEXT:   [[COPY162:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX10-NEXT:   [[COPY163:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; DAGISEL-GFX10-NEXT:   [[COPY164:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; DAGISEL-GFX10-NEXT:   [[COPY164:%[0-9]+]]:sgpr_128 = COPY $sgpr48_128
   ; DAGISEL-GFX10-NEXT:   [[COPY165:%[0-9]+]]:sreg_32 = COPY $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[COPY166:%[0-9]+]]:vgpr_32 = COPY [[COPY131]]
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY166]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 0, 0, 0, implicit $exec :: (store (s32) into stack, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY166]], $sgpr48_128, [[COPY165]], 0, 0, 0, implicit $exec :: (store (s32) into stack, align 16, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   [[COPY167:%[0-9]+]]:vgpr_32 = COPY [[COPY130]]
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY167]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 4, 0, 0, implicit $exec :: (store (s32) into stack + 4, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY167]], $sgpr48_128, [[COPY165]], 4, 0, 0, implicit $exec :: (store (s32) into stack + 4, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   [[COPY168:%[0-9]+]]:vgpr_32 = COPY [[COPY129]]
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY168]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 8, 0, 0, implicit $exec :: (store (s32) into stack + 8, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY168]], $sgpr48_128, [[COPY165]], 8, 0, 0, implicit $exec :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   [[COPY169:%[0-9]+]]:vgpr_32 = COPY [[COPY128]]
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY169]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 12, 0, 0, implicit $exec :: (store (s32) into stack + 12, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY127]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 16, 0, 0, implicit $exec :: (store (s32) into stack + 16, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY126]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 20, 0, 0, implicit $exec :: (store (s32) into stack + 20, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY125]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 24, 0, 0, implicit $exec :: (store (s32) into stack + 24, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY124]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 28, 0, 0, implicit $exec :: (store (s32) into stack + 28, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY123]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 32, 0, 0, implicit $exec :: (store (s32) into stack + 32, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY122]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 36, 0, 0, implicit $exec :: (store (s32) into stack + 36, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY121]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 40, 0, 0, implicit $exec :: (store (s32) into stack + 40, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY120]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 44, 0, 0, implicit $exec :: (store (s32) into stack + 44, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY119]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 48, 0, 0, implicit $exec :: (store (s32) into stack + 48, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY118]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 52, 0, 0, implicit $exec :: (store (s32) into stack + 52, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY117]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 56, 0, 0, implicit $exec :: (store (s32) into stack + 56, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY116]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 60, 0, 0, implicit $exec :: (store (s32) into stack + 60, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY115]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 64, 0, 0, implicit $exec :: (store (s32) into stack + 64, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY114]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 68, 0, 0, implicit $exec :: (store (s32) into stack + 68, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY113]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 72, 0, 0, implicit $exec :: (store (s32) into stack + 72, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY112]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 76, 0, 0, implicit $exec :: (store (s32) into stack + 76, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY111]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 80, 0, 0, implicit $exec :: (store (s32) into stack + 80, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY110]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 84, 0, 0, implicit $exec :: (store (s32) into stack + 84, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY109]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 88, 0, 0, implicit $exec :: (store (s32) into stack + 88, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY108]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 92, 0, 0, implicit $exec :: (store (s32) into stack + 92, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY107]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 96, 0, 0, implicit $exec :: (store (s32) into stack + 96, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY106]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 100, 0, 0, implicit $exec :: (store (s32) into stack + 100, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY105]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 104, 0, 0, implicit $exec :: (store (s32) into stack + 104, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY104]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 108, 0, 0, implicit $exec :: (store (s32) into stack + 108, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY103]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 112, 0, 0, implicit $exec :: (store (s32) into stack + 112, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY102]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 116, 0, 0, implicit $exec :: (store (s32) into stack + 116, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY101]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 120, 0, 0, implicit $exec :: (store (s32) into stack + 120, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY100]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 124, 0, 0, implicit $exec :: (store (s32) into stack + 124, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY99]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 128, 0, 0, implicit $exec :: (store (s32) into stack + 128, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY98]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 132, 0, 0, implicit $exec :: (store (s32) into stack + 132, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY97]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 136, 0, 0, implicit $exec :: (store (s32) into stack + 136, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY96]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 140, 0, 0, implicit $exec :: (store (s32) into stack + 140, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY95]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 144, 0, 0, implicit $exec :: (store (s32) into stack + 144, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY94]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 148, 0, 0, implicit $exec :: (store (s32) into stack + 148, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY93]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 152, 0, 0, implicit $exec :: (store (s32) into stack + 152, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY92]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 156, 0, 0, implicit $exec :: (store (s32) into stack + 156, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY91]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 160, 0, 0, implicit $exec :: (store (s32) into stack + 160, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY90]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 164, 0, 0, implicit $exec :: (store (s32) into stack + 164, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY89]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 168, 0, 0, implicit $exec :: (store (s32) into stack + 168, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY88]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 172, 0, 0, implicit $exec :: (store (s32) into stack + 172, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY87]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 176, 0, 0, implicit $exec :: (store (s32) into stack + 176, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY86]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 180, 0, 0, implicit $exec :: (store (s32) into stack + 180, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY85]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 184, 0, 0, implicit $exec :: (store (s32) into stack + 184, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY84]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 188, 0, 0, implicit $exec :: (store (s32) into stack + 188, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY83]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 192, 0, 0, implicit $exec :: (store (s32) into stack + 192, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY82]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 196, 0, 0, implicit $exec :: (store (s32) into stack + 196, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY81]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 200, 0, 0, implicit $exec :: (store (s32) into stack + 200, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY80]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 204, 0, 0, implicit $exec :: (store (s32) into stack + 204, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY79]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 208, 0, 0, implicit $exec :: (store (s32) into stack + 208, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY78]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 212, 0, 0, implicit $exec :: (store (s32) into stack + 212, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY77]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 216, 0, 0, implicit $exec :: (store (s32) into stack + 216, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY76]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 220, 0, 0, implicit $exec :: (store (s32) into stack + 220, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY75]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 224, 0, 0, implicit $exec :: (store (s32) into stack + 224, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY74]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 228, 0, 0, implicit $exec :: (store (s32) into stack + 228, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY73]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 232, 0, 0, implicit $exec :: (store (s32) into stack + 232, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY72]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 236, 0, 0, implicit $exec :: (store (s32) into stack + 236, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY71]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 240, 0, 0, implicit $exec :: (store (s32) into stack + 240, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY70]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 244, 0, 0, implicit $exec :: (store (s32) into stack + 244, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY69]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 248, 0, 0, implicit $exec :: (store (s32) into stack + 248, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY68]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 252, 0, 0, implicit $exec :: (store (s32) into stack + 252, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY67]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 256, 0, 0, implicit $exec :: (store (s32) into stack + 256, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY66]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 260, 0, 0, implicit $exec :: (store (s32) into stack + 260, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY65]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 264, 0, 0, implicit $exec :: (store (s32) into stack + 264, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY64]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 268, 0, 0, implicit $exec :: (store (s32) into stack + 268, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY63]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 272, 0, 0, implicit $exec :: (store (s32) into stack + 272, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY62]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 276, 0, 0, implicit $exec :: (store (s32) into stack + 276, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY61]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 280, 0, 0, implicit $exec :: (store (s32) into stack + 280, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY60]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 284, 0, 0, implicit $exec :: (store (s32) into stack + 284, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY59]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 288, 0, 0, implicit $exec :: (store (s32) into stack + 288, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY58]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 292, 0, 0, implicit $exec :: (store (s32) into stack + 292, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY57]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 296, 0, 0, implicit $exec :: (store (s32) into stack + 296, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY56]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 300, 0, 0, implicit $exec :: (store (s32) into stack + 300, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY55]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 304, 0, 0, implicit $exec :: (store (s32) into stack + 304, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY54]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 308, 0, 0, implicit $exec :: (store (s32) into stack + 308, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY53]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 312, 0, 0, implicit $exec :: (store (s32) into stack + 312, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY52]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 316, 0, 0, implicit $exec :: (store (s32) into stack + 316, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY51]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 320, 0, 0, implicit $exec :: (store (s32) into stack + 320, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY50]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 324, 0, 0, implicit $exec :: (store (s32) into stack + 324, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY49]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 328, 0, 0, implicit $exec :: (store (s32) into stack + 328, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY48]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 332, 0, 0, implicit $exec :: (store (s32) into stack + 332, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY47]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 336, 0, 0, implicit $exec :: (store (s32) into stack + 336, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY46]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 340, 0, 0, implicit $exec :: (store (s32) into stack + 340, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY45]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 344, 0, 0, implicit $exec :: (store (s32) into stack + 344, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY44]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 348, 0, 0, implicit $exec :: (store (s32) into stack + 348, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY43]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 352, 0, 0, implicit $exec :: (store (s32) into stack + 352, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY42]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 356, 0, 0, implicit $exec :: (store (s32) into stack + 356, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY41]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 360, 0, 0, implicit $exec :: (store (s32) into stack + 360, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY40]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 364, 0, 0, implicit $exec :: (store (s32) into stack + 364, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY39]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 368, 0, 0, implicit $exec :: (store (s32) into stack + 368, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY38]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 372, 0, 0, implicit $exec :: (store (s32) into stack + 372, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY37]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 376, 0, 0, implicit $exec :: (store (s32) into stack + 376, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY36]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 380, 0, 0, implicit $exec :: (store (s32) into stack + 380, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY35]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 384, 0, 0, implicit $exec :: (store (s32) into stack + 384, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY34]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 388, 0, 0, implicit $exec :: (store (s32) into stack + 388, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY33]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 392, 0, 0, implicit $exec :: (store (s32) into stack + 392, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY32]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 396, 0, 0, implicit $exec :: (store (s32) into stack + 396, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY31]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 400, 0, 0, implicit $exec :: (store (s32) into stack + 400, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY30]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 404, 0, 0, implicit $exec :: (store (s32) into stack + 404, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY29]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 408, 0, 0, implicit $exec :: (store (s32) into stack + 408, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY28]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 412, 0, 0, implicit $exec :: (store (s32) into stack + 412, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY27]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 416, 0, 0, implicit $exec :: (store (s32) into stack + 416, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY26]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 420, 0, 0, implicit $exec :: (store (s32) into stack + 420, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY25]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 424, 0, 0, implicit $exec :: (store (s32) into stack + 424, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY24]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 428, 0, 0, implicit $exec :: (store (s32) into stack + 428, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY23]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 432, 0, 0, implicit $exec :: (store (s32) into stack + 432, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY22]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 436, 0, 0, implicit $exec :: (store (s32) into stack + 436, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY21]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 440, 0, 0, implicit $exec :: (store (s32) into stack + 440, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY20]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 444, 0, 0, implicit $exec :: (store (s32) into stack + 444, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY19]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 448, 0, 0, implicit $exec :: (store (s32) into stack + 448, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY18]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 452, 0, 0, implicit $exec :: (store (s32) into stack + 452, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY17]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 456, 0, 0, implicit $exec :: (store (s32) into stack + 456, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY16]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 460, 0, 0, implicit $exec :: (store (s32) into stack + 460, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY15]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 464, 0, 0, implicit $exec :: (store (s32) into stack + 464, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY14]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 468, 0, 0, implicit $exec :: (store (s32) into stack + 468, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY13]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 472, 0, 0, implicit $exec :: (store (s32) into stack + 472, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY12]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 476, 0, 0, implicit $exec :: (store (s32) into stack + 476, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY11]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 480, 0, 0, implicit $exec :: (store (s32) into stack + 480, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY10]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 484, 0, 0, implicit $exec :: (store (s32) into stack + 484, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY9]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 488, 0, 0, implicit $exec :: (store (s32) into stack + 488, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY8]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 492, 0, 0, implicit $exec :: (store (s32) into stack + 492, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY7]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 496, 0, 0, implicit $exec :: (store (s32) into stack + 496, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY6]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 500, 0, 0, implicit $exec :: (store (s32) into stack + 500, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY5]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 504, 0, 0, implicit $exec :: (store (s32) into stack + 504, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY4]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 508, 0, 0, implicit $exec :: (store (s32) into stack + 508, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY3]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 512, 0, 0, implicit $exec :: (store (s32) into stack + 512, align 16, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY2]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 516, 0, 0, implicit $exec :: (store (s32) into stack + 516, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY1]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 520, 0, 0, implicit $exec :: (store (s32) into stack + 520, align 8, addrspace 5)
-  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 524, 0, 0, implicit $exec :: (store (s32) into stack + 524, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY169]], $sgpr48_128, [[COPY165]], 12, 0, 0, implicit $exec :: (store (s32) into stack + 12, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY127]], $sgpr48_128, [[COPY165]], 16, 0, 0, implicit $exec :: (store (s32) into stack + 16, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY126]], $sgpr48_128, [[COPY165]], 20, 0, 0, implicit $exec :: (store (s32) into stack + 20, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY125]], $sgpr48_128, [[COPY165]], 24, 0, 0, implicit $exec :: (store (s32) into stack + 24, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY124]], $sgpr48_128, [[COPY165]], 28, 0, 0, implicit $exec :: (store (s32) into stack + 28, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY123]], $sgpr48_128, [[COPY165]], 32, 0, 0, implicit $exec :: (store (s32) into stack + 32, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY122]], $sgpr48_128, [[COPY165]], 36, 0, 0, implicit $exec :: (store (s32) into stack + 36, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY121]], $sgpr48_128, [[COPY165]], 40, 0, 0, implicit $exec :: (store (s32) into stack + 40, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY120]], $sgpr48_128, [[COPY165]], 44, 0, 0, implicit $exec :: (store (s32) into stack + 44, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY119]], $sgpr48_128, [[COPY165]], 48, 0, 0, implicit $exec :: (store (s32) into stack + 48, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY118]], $sgpr48_128, [[COPY165]], 52, 0, 0, implicit $exec :: (store (s32) into stack + 52, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY117]], $sgpr48_128, [[COPY165]], 56, 0, 0, implicit $exec :: (store (s32) into stack + 56, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY116]], $sgpr48_128, [[COPY165]], 60, 0, 0, implicit $exec :: (store (s32) into stack + 60, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY115]], $sgpr48_128, [[COPY165]], 64, 0, 0, implicit $exec :: (store (s32) into stack + 64, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY114]], $sgpr48_128, [[COPY165]], 68, 0, 0, implicit $exec :: (store (s32) into stack + 68, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY113]], $sgpr48_128, [[COPY165]], 72, 0, 0, implicit $exec :: (store (s32) into stack + 72, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY112]], $sgpr48_128, [[COPY165]], 76, 0, 0, implicit $exec :: (store (s32) into stack + 76, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY111]], $sgpr48_128, [[COPY165]], 80, 0, 0, implicit $exec :: (store (s32) into stack + 80, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY110]], $sgpr48_128, [[COPY165]], 84, 0, 0, implicit $exec :: (store (s32) into stack + 84, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY109]], $sgpr48_128, [[COPY165]], 88, 0, 0, implicit $exec :: (store (s32) into stack + 88, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY108]], $sgpr48_128, [[COPY165]], 92, 0, 0, implicit $exec :: (store (s32) into stack + 92, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY107]], $sgpr48_128, [[COPY165]], 96, 0, 0, implicit $exec :: (store (s32) into stack + 96, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY106]], $sgpr48_128, [[COPY165]], 100, 0, 0, implicit $exec :: (store (s32) into stack + 100, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY105]], $sgpr48_128, [[COPY165]], 104, 0, 0, implicit $exec :: (store (s32) into stack + 104, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY104]], $sgpr48_128, [[COPY165]], 108, 0, 0, implicit $exec :: (store (s32) into stack + 108, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY103]], $sgpr48_128, [[COPY165]], 112, 0, 0, implicit $exec :: (store (s32) into stack + 112, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY102]], $sgpr48_128, [[COPY165]], 116, 0, 0, implicit $exec :: (store (s32) into stack + 116, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY101]], $sgpr48_128, [[COPY165]], 120, 0, 0, implicit $exec :: (store (s32) into stack + 120, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY100]], $sgpr48_128, [[COPY165]], 124, 0, 0, implicit $exec :: (store (s32) into stack + 124, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY99]], $sgpr48_128, [[COPY165]], 128, 0, 0, implicit $exec :: (store (s32) into stack + 128, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY98]], $sgpr48_128, [[COPY165]], 132, 0, 0, implicit $exec :: (store (s32) into stack + 132, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY97]], $sgpr48_128, [[COPY165]], 136, 0, 0, implicit $exec :: (store (s32) into stack + 136, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY96]], $sgpr48_128, [[COPY165]], 140, 0, 0, implicit $exec :: (store (s32) into stack + 140, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY95]], $sgpr48_128, [[COPY165]], 144, 0, 0, implicit $exec :: (store (s32) into stack + 144, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY94]], $sgpr48_128, [[COPY165]], 148, 0, 0, implicit $exec :: (store (s32) into stack + 148, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY93]], $sgpr48_128, [[COPY165]], 152, 0, 0, implicit $exec :: (store (s32) into stack + 152, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY92]], $sgpr48_128, [[COPY165]], 156, 0, 0, implicit $exec :: (store (s32) into stack + 156, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY91]], $sgpr48_128, [[COPY165]], 160, 0, 0, implicit $exec :: (store (s32) into stack + 160, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY90]], $sgpr48_128, [[COPY165]], 164, 0, 0, implicit $exec :: (store (s32) into stack + 164, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY89]], $sgpr48_128, [[COPY165]], 168, 0, 0, implicit $exec :: (store (s32) into stack + 168, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY88]], $sgpr48_128, [[COPY165]], 172, 0, 0, implicit $exec :: (store (s32) into stack + 172, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY87]], $sgpr48_128, [[COPY165]], 176, 0, 0, implicit $exec :: (store (s32) into stack + 176, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY86]], $sgpr48_128, [[COPY165]], 180, 0, 0, implicit $exec :: (store (s32) into stack + 180, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY85]], $sgpr48_128, [[COPY165]], 184, 0, 0, implicit $exec :: (store (s32) into stack + 184, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY84]], $sgpr48_128, [[COPY165]], 188, 0, 0, implicit $exec :: (store (s32) into stack + 188, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY83]], $sgpr48_128, [[COPY165]], 192, 0, 0, implicit $exec :: (store (s32) into stack + 192, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY82]], $sgpr48_128, [[COPY165]], 196, 0, 0, implicit $exec :: (store (s32) into stack + 196, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY81]], $sgpr48_128, [[COPY165]], 200, 0, 0, implicit $exec :: (store (s32) into stack + 200, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY80]], $sgpr48_128, [[COPY165]], 204, 0, 0, implicit $exec :: (store (s32) into stack + 204, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY79]], $sgpr48_128, [[COPY165]], 208, 0, 0, implicit $exec :: (store (s32) into stack + 208, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY78]], $sgpr48_128, [[COPY165]], 212, 0, 0, implicit $exec :: (store (s32) into stack + 212, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY77]], $sgpr48_128, [[COPY165]], 216, 0, 0, implicit $exec :: (store (s32) into stack + 216, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY76]], $sgpr48_128, [[COPY165]], 220, 0, 0, implicit $exec :: (store (s32) into stack + 220, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY75]], $sgpr48_128, [[COPY165]], 224, 0, 0, implicit $exec :: (store (s32) into stack + 224, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY74]], $sgpr48_128, [[COPY165]], 228, 0, 0, implicit $exec :: (store (s32) into stack + 228, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY73]], $sgpr48_128, [[COPY165]], 232, 0, 0, implicit $exec :: (store (s32) into stack + 232, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY72]], $sgpr48_128, [[COPY165]], 236, 0, 0, implicit $exec :: (store (s32) into stack + 236, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY71]], $sgpr48_128, [[COPY165]], 240, 0, 0, implicit $exec :: (store (s32) into stack + 240, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY70]], $sgpr48_128, [[COPY165]], 244, 0, 0, implicit $exec :: (store (s32) into stack + 244, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY69]], $sgpr48_128, [[COPY165]], 248, 0, 0, implicit $exec :: (store (s32) into stack + 248, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY68]], $sgpr48_128, [[COPY165]], 252, 0, 0, implicit $exec :: (store (s32) into stack + 252, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY67]], $sgpr48_128, [[COPY165]], 256, 0, 0, implicit $exec :: (store (s32) into stack + 256, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY66]], $sgpr48_128, [[COPY165]], 260, 0, 0, implicit $exec :: (store (s32) into stack + 260, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY65]], $sgpr48_128, [[COPY165]], 264, 0, 0, implicit $exec :: (store (s32) into stack + 264, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY64]], $sgpr48_128, [[COPY165]], 268, 0, 0, implicit $exec :: (store (s32) into stack + 268, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY63]], $sgpr48_128, [[COPY165]], 272, 0, 0, implicit $exec :: (store (s32) into stack + 272, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY62]], $sgpr48_128, [[COPY165]], 276, 0, 0, implicit $exec :: (store (s32) into stack + 276, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY61]], $sgpr48_128, [[COPY165]], 280, 0, 0, implicit $exec :: (store (s32) into stack + 280, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY60]], $sgpr48_128, [[COPY165]], 284, 0, 0, implicit $exec :: (store (s32) into stack + 284, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY59]], $sgpr48_128, [[COPY165]], 288, 0, 0, implicit $exec :: (store (s32) into stack + 288, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY58]], $sgpr48_128, [[COPY165]], 292, 0, 0, implicit $exec :: (store (s32) into stack + 292, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY57]], $sgpr48_128, [[COPY165]], 296, 0, 0, implicit $exec :: (store (s32) into stack + 296, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY56]], $sgpr48_128, [[COPY165]], 300, 0, 0, implicit $exec :: (store (s32) into stack + 300, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY55]], $sgpr48_128, [[COPY165]], 304, 0, 0, implicit $exec :: (store (s32) into stack + 304, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY54]], $sgpr48_128, [[COPY165]], 308, 0, 0, implicit $exec :: (store (s32) into stack + 308, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY53]], $sgpr48_128, [[COPY165]], 312, 0, 0, implicit $exec :: (store (s32) into stack + 312, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY52]], $sgpr48_128, [[COPY165]], 316, 0, 0, implicit $exec :: (store (s32) into stack + 316, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY51]], $sgpr48_128, [[COPY165]], 320, 0, 0, implicit $exec :: (store (s32) into stack + 320, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY50]], $sgpr48_128, [[COPY165]], 324, 0, 0, implicit $exec :: (store (s32) into stack + 324, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY49]], $sgpr48_128, [[COPY165]], 328, 0, 0, implicit $exec :: (store (s32) into stack + 328, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY48]], $sgpr48_128, [[COPY165]], 332, 0, 0, implicit $exec :: (store (s32) into stack + 332, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY47]], $sgpr48_128, [[COPY165]], 336, 0, 0, implicit $exec :: (store (s32) into stack + 336, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY46]], $sgpr48_128, [[COPY165]], 340, 0, 0, implicit $exec :: (store (s32) into stack + 340, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY45]], $sgpr48_128, [[COPY165]], 344, 0, 0, implicit $exec :: (store (s32) into stack + 344, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY44]], $sgpr48_128, [[COPY165]], 348, 0, 0, implicit $exec :: (store (s32) into stack + 348, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY43]], $sgpr48_128, [[COPY165]], 352, 0, 0, implicit $exec :: (store (s32) into stack + 352, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY42]], $sgpr48_128, [[COPY165]], 356, 0, 0, implicit $exec :: (store (s32) into stack + 356, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY41]], $sgpr48_128, [[COPY165]], 360, 0, 0, implicit $exec :: (store (s32) into stack + 360, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY40]], $sgpr48_128, [[COPY165]], 364, 0, 0, implicit $exec :: (store (s32) into stack + 364, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY39]], $sgpr48_128, [[COPY165]], 368, 0, 0, implicit $exec :: (store (s32) into stack + 368, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY38]], $sgpr48_128, [[COPY165]], 372, 0, 0, implicit $exec :: (store (s32) into stack + 372, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY37]], $sgpr48_128, [[COPY165]], 376, 0, 0, implicit $exec :: (store (s32) into stack + 376, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY36]], $sgpr48_128, [[COPY165]], 380, 0, 0, implicit $exec :: (store (s32) into stack + 380, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY35]], $sgpr48_128, [[COPY165]], 384, 0, 0, implicit $exec :: (store (s32) into stack + 384, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY34]], $sgpr48_128, [[COPY165]], 388, 0, 0, implicit $exec :: (store (s32) into stack + 388, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY33]], $sgpr48_128, [[COPY165]], 392, 0, 0, implicit $exec :: (store (s32) into stack + 392, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY32]], $sgpr48_128, [[COPY165]], 396, 0, 0, implicit $exec :: (store (s32) into stack + 396, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY31]], $sgpr48_128, [[COPY165]], 400, 0, 0, implicit $exec :: (store (s32) into stack + 400, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY30]], $sgpr48_128, [[COPY165]], 404, 0, 0, implicit $exec :: (store (s32) into stack + 404, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY29]], $sgpr48_128, [[COPY165]], 408, 0, 0, implicit $exec :: (store (s32) into stack + 408, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY28]], $sgpr48_128, [[COPY165]], 412, 0, 0, implicit $exec :: (store (s32) into stack + 412, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY27]], $sgpr48_128, [[COPY165]], 416, 0, 0, implicit $exec :: (store (s32) into stack + 416, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY26]], $sgpr48_128, [[COPY165]], 420, 0, 0, implicit $exec :: (store (s32) into stack + 420, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY25]], $sgpr48_128, [[COPY165]], 424, 0, 0, implicit $exec :: (store (s32) into stack + 424, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY24]], $sgpr48_128, [[COPY165]], 428, 0, 0, implicit $exec :: (store (s32) into stack + 428, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY23]], $sgpr48_128, [[COPY165]], 432, 0, 0, implicit $exec :: (store (s32) into stack + 432, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY22]], $sgpr48_128, [[COPY165]], 436, 0, 0, implicit $exec :: (store (s32) into stack + 436, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY21]], $sgpr48_128, [[COPY165]], 440, 0, 0, implicit $exec :: (store (s32) into stack + 440, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY20]], $sgpr48_128, [[COPY165]], 444, 0, 0, implicit $exec :: (store (s32) into stack + 444, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY19]], $sgpr48_128, [[COPY165]], 448, 0, 0, implicit $exec :: (store (s32) into stack + 448, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY18]], $sgpr48_128, [[COPY165]], 452, 0, 0, implicit $exec :: (store (s32) into stack + 452, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY17]], $sgpr48_128, [[COPY165]], 456, 0, 0, implicit $exec :: (store (s32) into stack + 456, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY16]], $sgpr48_128, [[COPY165]], 460, 0, 0, implicit $exec :: (store (s32) into stack + 460, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY15]], $sgpr48_128, [[COPY165]], 464, 0, 0, implicit $exec :: (store (s32) into stack + 464, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY14]], $sgpr48_128, [[COPY165]], 468, 0, 0, implicit $exec :: (store (s32) into stack + 468, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY13]], $sgpr48_128, [[COPY165]], 472, 0, 0, implicit $exec :: (store (s32) into stack + 472, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY12]], $sgpr48_128, [[COPY165]], 476, 0, 0, implicit $exec :: (store (s32) into stack + 476, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY11]], $sgpr48_128, [[COPY165]], 480, 0, 0, implicit $exec :: (store (s32) into stack + 480, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY10]], $sgpr48_128, [[COPY165]], 484, 0, 0, implicit $exec :: (store (s32) into stack + 484, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY9]], $sgpr48_128, [[COPY165]], 488, 0, 0, implicit $exec :: (store (s32) into stack + 488, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY8]], $sgpr48_128, [[COPY165]], 492, 0, 0, implicit $exec :: (store (s32) into stack + 492, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY7]], $sgpr48_128, [[COPY165]], 496, 0, 0, implicit $exec :: (store (s32) into stack + 496, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY6]], $sgpr48_128, [[COPY165]], 500, 0, 0, implicit $exec :: (store (s32) into stack + 500, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY5]], $sgpr48_128, [[COPY165]], 504, 0, 0, implicit $exec :: (store (s32) into stack + 504, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY4]], $sgpr48_128, [[COPY165]], 508, 0, 0, implicit $exec :: (store (s32) into stack + 508, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY3]], $sgpr48_128, [[COPY165]], 512, 0, 0, implicit $exec :: (store (s32) into stack + 512, align 16, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY2]], $sgpr48_128, [[COPY165]], 516, 0, 0, implicit $exec :: (store (s32) into stack + 516, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY1]], $sgpr48_128, [[COPY165]], 520, 0, 0, implicit $exec :: (store (s32) into stack + 520, align 8, addrspace 5)
+  ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY]], $sgpr48_128, [[COPY165]], 524, 0, 0, implicit $exec :: (store (s32) into stack + 524, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
   ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY164]]
+  ; DAGISEL-GFX10-NEXT:   $sgpr0_128 = COPY [[COPY164]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY163]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY162]]
   ; DAGISEL-GFX10-NEXT:   $vgpr2 = COPY [[COPY161]]
@@ -2810,7 +2810,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX10-NEXT:   $vgpr29 = COPY [[COPY134]]
   ; DAGISEL-GFX10-NEXT:   $vgpr30 = COPY [[COPY133]]
   ; DAGISEL-GFX10-NEXT:   $vgpr31 = COPY [[COPY132]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; DAGISEL-GFX10-NEXT:   $sgpr30_64 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_128, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<36 x i32> %a, <128 x i32> %b)

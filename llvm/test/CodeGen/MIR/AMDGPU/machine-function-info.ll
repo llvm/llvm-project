@@ -22,17 +22,17 @@
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
-; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_128'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: bytesInStackArgArea: 0
 ; CHECK-NEXT: returnsVoid: true
 ; CHECK-NEXT: argumentInfo:
-; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; CHECK-NEXT: dispatchPtr: { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: queuePtr: { reg: '$sgpr6_sgpr7' }
-; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr8_sgpr9' }
-; CHECK-NEXT: dispatchID: { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_128' }
+; CHECK-NEXT: dispatchPtr: { reg: '$sgpr4_64' }
+; CHECK-NEXT: queuePtr: { reg: '$sgpr6_64' }
+; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr8_64' }
+; CHECK-NEXT: dispatchID: { reg: '$sgpr10_64' }
 ; CHECK-NEXT: workGroupIDX: { reg: '$sgpr12' }
 ; CHECK-NEXT: workGroupIDY: { reg: '$sgpr13' }
 ; CHECK-NEXT: workGroupIDZ: { reg: '$sgpr14' }
@@ -53,7 +53,7 @@
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy: 8
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
@@ -86,14 +86,14 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 3
 ; CHECK-NEXT: numWaveDispatchVGPRs: 1
-; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_128'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: bytesInStackArgArea: 0
 ; CHECK-NEXT: returnsVoid: true
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr3' }
-; CHECK-NEXT: implicitBufferPtr: { reg: '$sgpr0_sgpr1' }
+; CHECK-NEXT: implicitBufferPtr: { reg: '$sgpr0_64' }
 ; CHECK-NEXT: psInputAddr: 1
 ; CHECK-NEXT: psInputEnable: 1
 ; CHECK-NEXT: maxMemoryClusterDWords: 8
@@ -107,7 +107,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
@@ -154,21 +154,21 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 16
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
-; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+; CHECK-NEXT: scratchRSrcReg: '$sgpr0_128'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: bytesInStackArgArea: 0
 ; CHECK-NEXT: returnsVoid: true
 ; CHECK-NEXT: argumentInfo:
-; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_128' }
+; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_64' }
+; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_64' }
+; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_64' }
 ; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 ; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 ; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
 ; CHECK-NEXT: LDSKernelId:     { reg: '$sgpr15' }
-; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_64' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
@@ -185,7 +185,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
@@ -214,21 +214,21 @@ define void @function() {
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 16
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
-; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+; CHECK-NEXT: scratchRSrcReg: '$sgpr0_128'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: bytesInStackArgArea: 0
 ; CHECK-NEXT: returnsVoid: true
 ; CHECK-NEXT: argumentInfo:
-; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_128' }
+; CHECK-NEXT: dispatchPtr:     { reg: '$sgpr4_64' }
+; CHECK-NEXT: queuePtr:        { reg: '$sgpr6_64' }
+; CHECK-NEXT: dispatchID:      { reg: '$sgpr10_64' }
 ; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 ; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 ; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
 ; CHECK-NEXT: LDSKernelId:     { reg: '$sgpr15' }
-; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_64' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
@@ -245,7 +245,7 @@ define void @function() {
 ; CHECK-NEXT: highBitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0

@@ -135,8 +135,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_and_b64 s[4:5], s[64:65], exec
 ; GLOBALNESS1-NEXT:    s_cselect_b32 s4, 1, 0
 ; GLOBALNESS1-NEXT:    s_cmp_lg_u32 s4, 1
-; GLOBALNESS1-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GLOBALNESS1-NEXT:    ; kill: killed $sgpr4_sgpr5
+; GLOBALNESS1-NEXT:    ; implicit-def: $sgpr4_64
+; GLOBALNESS1-NEXT:    ; kill: killed $sgpr4_64
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[4:5], -1
 ; GLOBALNESS1-NEXT:    s_cbranch_scc1 .LBB1_10
 ; GLOBALNESS1-NEXT:  ; %bb.5: ; %NodeBlock
@@ -463,8 +463,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_and_b64 s[4:5], s[64:65], exec
 ; GLOBALNESS0-NEXT:    s_cselect_b32 s4, 1, 0
 ; GLOBALNESS0-NEXT:    s_cmp_lg_u32 s4, 1
-; GLOBALNESS0-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GLOBALNESS0-NEXT:    ; kill: killed $sgpr4_sgpr5
+; GLOBALNESS0-NEXT:    ; implicit-def: $sgpr4_64
+; GLOBALNESS0-NEXT:    ; kill: killed $sgpr4_64
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[4:5], -1
 ; GLOBALNESS0-NEXT:    s_cbranch_scc1 .LBB1_10
 ; GLOBALNESS0-NEXT:  ; %bb.5: ; %NodeBlock

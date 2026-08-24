@@ -27,15 +27,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_s_s64_1
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s64) = G_SEXT_INREG [[COPY]], 1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 1
     S_ENDPGM 0, implicit %1
 
@@ -47,15 +47,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_s_s64_31
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s64) = G_SEXT_INREG [[COPY]], 31
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 31
     S_ENDPGM 0, implicit %1
 
@@ -67,15 +67,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_s_s64_32
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s64) = G_SEXT_INREG [[COPY]], 32
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 32
     S_ENDPGM 0, implicit %1
 
@@ -87,15 +87,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_s_s64_33
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s64) = G_SEXT_INREG [[COPY]], 32
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 32
     S_ENDPGM 0, implicit %1
 

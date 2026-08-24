@@ -8,9 +8,9 @@ body:             |
   ; GCN-LABEL: name: kernel_i1_copy_phi_with_phi_incoming_value
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORD_IMM]]
@@ -75,9 +75,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.5
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
-    %1:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %1:sgpr_64(p4) = COPY $sgpr4_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1:sgpr_64(p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %8:sreg_32 = COPY %3:sreg_32_xm0_xexec

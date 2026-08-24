@@ -43,9 +43,9 @@ body: |
     ; CHECK-LABEL: name: bitreverse_i64_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:sgpr(s64) = G_BITREVERSE [[COPY]]
-    %0:_(s64) = COPY $sgpr0_sgpr1
+    %0:_(s64) = COPY $sgpr0_64
     %1:_(s64) = G_BITREVERSE %0
 ...
 

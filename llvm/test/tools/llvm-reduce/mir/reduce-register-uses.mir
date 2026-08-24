@@ -13,8 +13,8 @@
 # RESULT: %mul1:vgpr_32 = V_MUL_F32_e32 undef %vgpr1, %vgpr0, implicit $mode, implicit $exec
 # RESULT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 # RESULT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-# RESULT: $sgpr30_sgpr31 = SI_CALL undef %call_target, @callee, csr_amdgpu, implicit $vgpr0
-# RESULT: $sgpr30_sgpr31 = SI_CALL undef %call_target, @callee, csr_amdgpu, implicit $vgpr3
+# RESULT: $sgpr30_64 = SI_CALL undef %call_target, @callee, csr_amdgpu, implicit $vgpr0
+# RESULT: $sgpr30_64 = SI_CALL undef %call_target, @callee, csr_amdgpu, implicit $vgpr3
 # RESULT: %impdef:vreg_64 = IMPLICIT_DEF
 # RESULT: GLOBAL_STORE_DWORD undef %ptr, undef %impdef.sub1, 0, 0, implicit $exec
 # RESULT: undef %impdef.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
@@ -45,10 +45,10 @@ body:             |
     %call_target:sreg_64 = IMPLICIT_DEF
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $sgpr30_sgpr31 = SI_CALL %call_target, @callee, csr_amdgpu, implicit $vgpr0, implicit $vgpr1
+    $sgpr30_64 = SI_CALL %call_target, @callee, csr_amdgpu, implicit $vgpr0, implicit $vgpr1
     $vgpr2 = V_MOV_B32_e32 2, implicit $exec
     $vgpr3 = V_MOV_B32_e32 3, implicit $exec
-    $sgpr30_sgpr31 = SI_CALL %call_target, @callee, csr_amdgpu, implicit $vgpr2, implicit $vgpr3
+    $sgpr30_64 = SI_CALL %call_target, @callee, csr_amdgpu, implicit $vgpr2, implicit $vgpr3
     %impdef:vreg_64 = IMPLICIT_DEF
     %ptr:vreg_64 = IMPLICIT_DEF
     GLOBAL_STORE_DWORD %ptr, %impdef.sub1, 0, 0, implicit $exec

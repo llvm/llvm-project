@@ -6,12 +6,12 @@ name: fold-imm-copy
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
     ; GCN-LABEL: name: fold-imm-copy
-    ; GCN: liveins: $vgpr0, $sgpr0_sgpr1
+    ; GCN: liveins: $vgpr0, $sgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY1]], 9, 0
     ; GCN-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 2, [[COPY]], implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -19,7 +19,7 @@ body:             |
     ; GCN-NEXT: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[REG_SEQUENCE]], [[S_LOAD_DWORDX4_IMM]], 0, 4, 0, 0, implicit $exec
     ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[BUFFER_LOAD_DWORD_ADDR64_]], implicit $exec
     %0:vgpr_32 = COPY $vgpr0
-    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sgpr_64 = COPY $sgpr0_64
     %2:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 9, 0
     %3:sreg_32_xm0 = S_MOV_B32 2
     %4:vgpr_32 = V_LSHLREV_B32_e64 killed %3, %0, implicit $exec

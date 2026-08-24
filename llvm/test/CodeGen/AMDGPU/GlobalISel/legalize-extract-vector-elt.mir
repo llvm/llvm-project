@@ -1034,17 +1034,17 @@ name: extract_vector_elt_7_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: extract_vector_elt_7_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<16 x s32>)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[UV7]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s32)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 7
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
@@ -1056,19 +1056,19 @@ name: extract_vector_elt_33_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: extract_vector_elt_33_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 128
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x s32>) from unknown-address + 128, align 4, addrspace 4)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<16 x s32>)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s32)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 33
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
@@ -1081,15 +1081,15 @@ name: extract_vector_elt_64_65_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: extract_vector_elt_64_65_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]](s32), implicit [[DEF]](s32)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 64
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
@@ -1103,12 +1103,12 @@ name: extract_vector_elt_33_v64p3
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: extract_vector_elt_33_v64p3
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 128
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x i32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x i32>) from unknown-address + 128, align 4, addrspace 4)
@@ -1116,7 +1116,7 @@ body: |
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3), [[UV2:%[0-9]+]]:_(p3), [[UV3:%[0-9]+]]:_(p3), [[UV4:%[0-9]+]]:_(p3), [[UV5:%[0-9]+]]:_(p3), [[UV6:%[0-9]+]]:_(p3), [[UV7:%[0-9]+]]:_(p3), [[UV8:%[0-9]+]]:_(p3), [[UV9:%[0-9]+]]:_(p3), [[UV10:%[0-9]+]]:_(p3), [[UV11:%[0-9]+]]:_(p3), [[UV12:%[0-9]+]]:_(p3), [[UV13:%[0-9]+]]:_(p3), [[UV14:%[0-9]+]]:_(p3), [[UV15:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST]](<16 x p3>)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY [[UV1]](p3)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](p3)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = G_CONSTANT i32 33
     %2:_(<64 x p3>) = G_LOAD %0 :: (load (<64 x p3>), align 4, addrspace 4)
     %3:_(p3) = G_EXTRACT_VECTOR_ELT %2, %1
@@ -1128,12 +1128,12 @@ name: extract_vector_elt_varidx_v64s32
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2
+    liveins: $sgpr0_64, $sgpr2
 
     ; CHECK-LABEL: name: extract_vector_elt_varidx_v64s32
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK: liveins: $sgpr0_64, $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -1347,7 +1347,7 @@ body: |
     ; CHECK-NEXT: [[PTR_ADD66:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[MUL]](s32)
     ; CHECK-NEXT: [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD66]](p5) :: (load (s32), addrspace 5)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[LOAD4]](s32)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s32) = COPY $sgpr2
     %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1

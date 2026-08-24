@@ -6,9 +6,9 @@ name:            test_xnull_256
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_xnull_256
-    ; CHECK: IMAGE_STORE_V4_V2_gfx90a $vgpr0_vgpr1_vgpr2_vgpr3, killed $vgpr8_vgpr9, killed $sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, 15, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; CHECK: IMAGE_STORE_V4_V2_gfx90a $vgpr0_vgpr1_vgpr2_vgpr3, killed $vgpr8_vgpr9, killed $sgpr24_256, 15, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     ; CHECK-NEXT: $vgpr2 = V_LSHRREV_B32_e32 4, killed $vgpr2, implicit $exec
-  IMAGE_STORE_V4_V2_gfx90a $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr8_vgpr9, $sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, 15, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+  IMAGE_STORE_V4_V2_gfx90a $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr8_vgpr9, $sgpr24_256, 15, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
   $vgpr2 = V_LSHRREV_B32_e32 4, $vgpr2, implicit $exec
 ...
 

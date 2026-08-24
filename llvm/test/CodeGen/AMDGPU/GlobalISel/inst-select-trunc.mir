@@ -45,14 +45,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s32
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:sgpr(s32) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -64,14 +64,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s16
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:sgpr(s16) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -83,14 +83,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s1
-    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN: liveins: $sgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:sgpr(s1) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -102,14 +102,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2
+    liveins: $sgpr0_96
     ; GCN-LABEL: name: trunc_sgpr_s96_to_s16
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2
+    ; GCN: liveins: $sgpr0_96
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_96
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
+    %0:sgpr(s96) = COPY $sgpr0_96
     %1:sgpr(s16) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -121,14 +121,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2
+    liveins: $sgpr0_96
     ; GCN-LABEL: name: trunc_sgpr_s96_to_s64
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2
+    ; GCN: liveins: $sgpr0_96
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_96
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[COPY]].sub0_sub1
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
+    %0:sgpr(s96) = COPY $sgpr0_96
     %1:sgpr(s64) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -140,14 +140,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    liveins: $sgpr0_128
     ; GCN-LABEL: name: trunc_sgpr_s128_to_s16
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_128
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:sgpr(s128) = COPY $sgpr0_128
     %1:sgpr(s16) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -159,14 +159,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    liveins: $sgpr0_128
     ; GCN-LABEL: name: trunc_sgpr_s128_to_s96
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_128
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY [[COPY]].sub0_sub1_sub2
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:sgpr(s128) = COPY $sgpr0_128
     %1:sgpr(s96) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -178,14 +178,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    liveins: $sgpr0_256
     ; GCN-LABEL: name: trunc_sgpr_s256_to_s128
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: liveins: $sgpr0_256
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_128 = COPY [[COPY]].sub0_sub1_sub2_sub3
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s256) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %0:sgpr(s256) = COPY $sgpr0_256
     %1:sgpr(s128) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -197,14 +197,14 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    liveins: $sgpr0_512
     ; GCN-LABEL: name: trunc_sgpr_s512_to_s256
-    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN: liveins: $sgpr0_512
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_512
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_256 = COPY [[COPY]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s512) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:sgpr(s512) = COPY $sgpr0_512
     %1:sgpr(s256) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...

@@ -39,9 +39,9 @@ stack:
 # CHECK: hasSpilledVGPRs: true
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr48
+    liveins: $sgpr30_64, $vgpr48
     SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     SCRATCH_STORE_DWORD_SADDR $vgpr48, %stack.1, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr43
-    S_SETPC_B64_return $sgpr30_sgpr31
+    S_SETPC_B64_return $sgpr30_64
 ...

@@ -23,17 +23,17 @@ declare align 8 ptr addrspace(1) @returns_ptr_align8()
 define void @call_result_align_1() {
   ; CHECK-LABEL: name: call_result_align_1
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_64
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_64
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_64
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
@@ -46,18 +46,18 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_128
+  ; CHECK-NEXT:   $sgpr0_128 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   $sgpr4_64 = COPY [[COPY9]](p4)
+  ; CHECK-NEXT:   $sgpr6_64 = COPY [[COPY10]](p4)
+  ; CHECK-NEXT:   $sgpr8_64 = COPY [[COPY11]](p4)
+  ; CHECK-NEXT:   $sgpr10_64 = COPY [[COPY12]](s64)
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_64 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
@@ -72,17 +72,17 @@ define void @call_result_align_1() {
 define void @call_result_align_8() {
   ; CHECK-LABEL: name: call_result_align_8
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_64
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_64
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_64
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr
@@ -95,18 +95,18 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_128
+  ; CHECK-NEXT:   $sgpr0_128 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   $sgpr4_64 = COPY [[COPY9]](p4)
+  ; CHECK-NEXT:   $sgpr6_64 = COPY [[COPY10]](p4)
+  ; CHECK-NEXT:   $sgpr8_64 = COPY [[COPY11]](p4)
+  ; CHECK-NEXT:   $sgpr10_64 = COPY [[COPY12]](s64)
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_64 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
@@ -122,17 +122,17 @@ define void @call_result_align_8() {
 define void @declaration_result_align_8() {
   ; CHECK-LABEL: name: declaration_result_align_8
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_64
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_64
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_64
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @returns_ptr_align8
@@ -145,18 +145,18 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_128
+  ; CHECK-NEXT:   $sgpr0_128 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   $sgpr4_64 = COPY [[COPY9]](p4)
+  ; CHECK-NEXT:   $sgpr6_64 = COPY [[COPY10]](p4)
+  ; CHECK-NEXT:   $sgpr8_64 = COPY [[COPY11]](p4)
+  ; CHECK-NEXT:   $sgpr10_64 = COPY [[COPY12]](s64)
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr_align8, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_64 = noconvergent G_SI_CALL [[GV]](p0), @returns_ptr_align8, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY19]](i32), [[COPY20]](i32)
@@ -172,17 +172,17 @@ define void @declaration_result_align_8() {
 define ptr addrspace(1) @tail_call_assert_align() {
   ; CHECK-LABEL: name: tail_call_assert_align
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31, $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_64
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_64
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_64
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @returns_ptr_align8
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -193,18 +193,18 @@ define ptr addrspace(1) @tail_call_assert_align() {
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]](s64)
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_128
+  ; CHECK-NEXT:   $sgpr0_128 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   $sgpr4_64 = COPY [[COPY9]](p4)
+  ; CHECK-NEXT:   $sgpr6_64 = COPY [[COPY10]](p4)
+  ; CHECK-NEXT:   $sgpr8_64 = COPY [[COPY11]](p4)
+  ; CHECK-NEXT:   $sgpr10_64 = COPY [[COPY12]](s64)
   ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](i32)
-  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @returns_ptr_align8, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @returns_ptr_align8, 0, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %call = tail call ptr addrspace(1) @returns_ptr_align8()
   ret ptr addrspace(1) %call

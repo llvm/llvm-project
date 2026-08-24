@@ -7,9 +7,9 @@
 define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) {
   ; GFX11-REAL16-LABEL: name: fma_mix_f16
   ; GFX11-REAL16: bb.0.entry:
-  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GFX11-REAL16-NEXT: {{  $}}
-  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
@@ -43,9 +43,9 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ;
   ; GFX11-FAKE16-LABEL: name: fma_mix_f16
   ; GFX11-FAKE16: bb.0.entry:
-  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GFX11-FAKE16-NEXT: {{  $}}
-  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1

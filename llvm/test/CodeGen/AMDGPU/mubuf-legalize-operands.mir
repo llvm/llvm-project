@@ -23,16 +23,16 @@ liveins:
   - { reg: '$vgpr2', virtual-reg: '%2' }
   - { reg: '$vgpr3', virtual-reg: '%3' }
   - { reg: '$vgpr4', virtual-reg: '%4' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
 
     ; W64-PRE-GFX10-LABEL: name: idxen
     ; W64-PRE-GFX10: successors: %bb.1(0x80000000)
-    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-NEXT: {{  $}}
-    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W64-PRE-GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -65,15 +65,15 @@ body:             |
     ; W64-PRE-GFX10-NEXT: {{  $}}
     ; W64-PRE-GFX10-NEXT: .3:
     ; W64-PRE-GFX10-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-PRE-GFX10-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
-    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-LABEL: name: idxen
     ; W64: successors: %bb.1(0x80000000)
-    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -106,15 +106,15 @@ body:             |
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
     ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W32-LABEL: name: idxen
     ; W32: successors: %bb.1(0x80000000)
-    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -147,10 +147,10 @@ body:             |
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
     ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-    ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W32-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    %5:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    %5:sreg_64 = COPY $sgpr30_64
     %4:vgpr_32 = COPY $vgpr4
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
@@ -158,9 +158,9 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %4, killed %6, 0, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
+    $sgpr30_64 = COPY %5
     $vgpr0 = COPY %7
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 
 
@@ -173,16 +173,16 @@ liveins:
   - { reg: '$vgpr2', virtual-reg: '%2' }
   - { reg: '$vgpr3', virtual-reg: '%3' }
   - { reg: '$vgpr4', virtual-reg: '%4' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
 
     ; W64-PRE-GFX10-LABEL: name: offen
     ; W64-PRE-GFX10: successors: %bb.1(0x80000000)
-    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-NEXT: {{  $}}
-    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W64-PRE-GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -215,15 +215,15 @@ body:             |
     ; W64-PRE-GFX10-NEXT: {{  $}}
     ; W64-PRE-GFX10-NEXT: .3:
     ; W64-PRE-GFX10-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-PRE-GFX10-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
-    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-LABEL: name: offen
     ; W64: successors: %bb.1(0x80000000)
-    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -256,15 +256,15 @@ body:             |
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
     ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W32-LABEL: name: offen
     ; W32: successors: %bb.1(0x80000000)
-    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; W32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -297,10 +297,10 @@ body:             |
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
     ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-    ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W32-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    %5:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    %5:sreg_64 = COPY $sgpr30_64
     %4:vgpr_32 = COPY $vgpr4
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
@@ -308,9 +308,9 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN %4, killed %6, 0, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
+    $sgpr30_64 = COPY %5
     $vgpr0 = COPY %7
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 
 
@@ -323,17 +323,17 @@ liveins:
   - { reg: '$vgpr2', virtual-reg: '%2' }
   - { reg: '$vgpr3', virtual-reg: '%3' }
   - { reg: '$vgpr4_vgpr5', virtual-reg: '%4' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
 
 
     ; W64-PRE-GFX10-LABEL: name: bothen
     ; W64-PRE-GFX10: successors: %bb.1(0x80000000)
-    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-NEXT: {{  $}}
-    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-PRE-GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -366,15 +366,15 @@ body:             |
     ; W64-PRE-GFX10-NEXT: {{  $}}
     ; W64-PRE-GFX10-NEXT: .3:
     ; W64-PRE-GFX10-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-PRE-GFX10-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
-    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-LABEL: name: bothen
     ; W64: successors: %bb.1(0x80000000)
-    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -407,15 +407,15 @@ body:             |
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
     ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W32-LABEL: name: bothen
     ; W32: successors: %bb.1(0x80000000)
-    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -448,10 +448,10 @@ body:             |
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
     ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-    ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W32-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    %5:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    %5:sreg_64 = COPY $sgpr30_64
     %4:vreg_64 = COPY $vgpr4_vgpr5
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
@@ -459,9 +459,9 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN %4, killed %6, 0, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
+    $sgpr30_64 = COPY %5
     $vgpr0 = COPY %7
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 
 
@@ -474,15 +474,15 @@ liveins:
   - { reg: '$vgpr2', virtual-reg: '%2' }
   - { reg: '$vgpr3', virtual-reg: '%3' }
   - { reg: '$vgpr4_vgpr5', virtual-reg: '%4' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
 
     ; W64-PRE-GFX10-LABEL: name: addr64
-    ; W64-PRE-GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-NEXT: {{  $}}
-    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-PRE-GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -498,14 +498,14 @@ body:             |
     ; W64-PRE-GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY6]].sub1, [[COPY1]].sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; W64-PRE-GFX10-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
     ; W64-PRE-GFX10-NEXT: [[BUFFER_LOAD_FORMAT_X_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 [[REG_SEQUENCE2]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec
-    ; W64-PRE-GFX10-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
-    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-LABEL: name: addr64
-    ; W64: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -521,14 +521,14 @@ body:             |
     ; W64-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY6]].sub1, [[COPY1]].sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; W64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 [[REG_SEQUENCE2]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W32-LABEL: name: addr64
-    ; W32: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W32: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -544,10 +544,10 @@ body:             |
     ; W32-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY6]].sub1, [[COPY1]].sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; W32-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 [[REG_SEQUENCE2]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W32-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    %5:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    %5:sreg_64 = COPY $sgpr30_64
     %4:vreg_64 = COPY $vgpr4_vgpr5
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
@@ -555,9 +555,9 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 %4, killed %6, 0, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
+    $sgpr30_64 = COPY %5
     $vgpr0 = COPY %7
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...
 
 
@@ -571,16 +571,16 @@ liveins:
   - { reg: '$vgpr2', virtual-reg: '%2' }
   - { reg: '$vgpr3', virtual-reg: '%3' }
   - { reg: '$vgpr4_vgpr5', virtual-reg: '%4' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
 
 
     ; W64-PRE-GFX10-ADDR64-LABEL: name: offset
-    ; W64-PRE-GFX10-ADDR64: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10-ADDR64: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-ADDR64-NEXT: {{  $}}
-    ; W64-PRE-GFX10-ADDR64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-ADDR64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-ADDR64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-PRE-GFX10-ADDR64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-ADDR64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -594,15 +594,15 @@ body:             |
     ; W64-PRE-GFX10-ADDR64-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
     ; W64-PRE-GFX10-ADDR64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]].sub0, %subreg.sub0, [[COPY6]].sub1, %subreg.sub1
     ; W64-PRE-GFX10-ADDR64-NEXT: [[BUFFER_LOAD_FORMAT_X_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec
-    ; W64-PRE-GFX10-ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-ADDR64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_ADDR64_]]
-    ; W64-PRE-GFX10-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-PRE-GFX10-NO-ADDR64-LABEL: name: offset
     ; W64-PRE-GFX10-NO-ADDR64: successors: %bb.1(0x80000000)
-    ; W64-PRE-GFX10-NO-ADDR64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NO-ADDR64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: {{  $}}
-    ; W64-PRE-GFX10-NO-ADDR64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-PRE-GFX10-NO-ADDR64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -635,15 +635,15 @@ body:             |
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: {{  $}}
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: .3:
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-PRE-GFX10-NO-ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-PRE-GFX10-NO-ADDR64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-PRE-GFX10-NO-ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
-    ; W64-PRE-GFX10-NO-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-PRE-GFX10-NO-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W64-LABEL: name: offset
     ; W64: successors: %bb.1(0x80000000)
-    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W64-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -676,15 +676,15 @@ body:             |
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
     ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
-    ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W64-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
-    ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    ; W64-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
     ;
     ; W32-LABEL: name: offset
     ; W32: successors: %bb.1(0x80000000)
-    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_sgpr31
+    ; W32-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr30_64
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
     ; W32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
     ; W32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -717,10 +717,10 @@ body:             |
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
     ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
-    ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
+    ; W32-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
-    ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
-    %5:sreg_64 = COPY $sgpr30_sgpr31
+    ; W32-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
+    %5:sreg_64 = COPY $sgpr30_64
     %4:vreg_64 = COPY $vgpr4_vgpr5
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
@@ -728,7 +728,7 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed %6, 0, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
+    $sgpr30_64 = COPY %5
     $vgpr0 = COPY %7
-    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
+    S_SETPC_B64_return $sgpr30_64, implicit $vgpr0
 ...

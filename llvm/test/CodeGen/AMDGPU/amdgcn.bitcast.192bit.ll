@@ -1874,7 +1874,7 @@ define inreg <6 x i32> @bitcast_v12i16_to_v6i32_scalar(<12 x i16> inreg %a, i32 
 ; SI-NEXT:    s_branch .LBB15_3
 ; SI-NEXT:  .LBB15_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB15_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -2589,7 +2589,7 @@ define inreg <6 x i32> @bitcast_v12f16_to_v6i32_scalar(<12 x half> inreg %a, i32
 ; SI-NEXT:    s_branch .LBB19_3
 ; SI-NEXT:  .LBB19_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB19_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -4218,7 +4218,7 @@ define inreg <6 x float> @bitcast_v12i16_to_v6f32_scalar(<12 x i16> inreg %a, i3
 ; SI-NEXT:    s_branch .LBB31_3
 ; SI-NEXT:  .LBB31_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB31_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -4947,7 +4947,7 @@ define inreg <6 x float> @bitcast_v12f16_to_v6f32_scalar(<12 x half> inreg %a, i
 ; SI-NEXT:    s_branch .LBB35_3
 ; SI-NEXT:  .LBB35_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB35_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -6103,7 +6103,7 @@ define inreg <3 x i64> @bitcast_v12i16_to_v3i64_scalar(<12 x i16> inreg %a, i32 
 ; SI-NEXT:    s_branch .LBB43_3
 ; SI-NEXT:  .LBB43_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB43_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -6820,7 +6820,7 @@ define inreg <3 x i64> @bitcast_v12f16_to_v3i64_scalar(<12 x half> inreg %a, i32
 ; SI-NEXT:    s_branch .LBB47_3
 ; SI-NEXT:  .LBB47_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB47_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -7529,7 +7529,7 @@ define inreg <3 x double> @bitcast_v12i16_to_v3f64_scalar(<12 x i16> inreg %a, i
 ; SI-NEXT:    s_branch .LBB51_3
 ; SI-NEXT:  .LBB51_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB51_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0
@@ -8240,7 +8240,7 @@ define inreg <3 x double> @bitcast_v12f16_to_v3f64_scalar(<12 x half> inreg %a, 
 ; SI-NEXT:    s_branch .LBB55_3
 ; SI-NEXT:  .LBB55_2:
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr4_192
 ; SI-NEXT:  .LBB55_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
 ; SI-NEXT:    s_cselect_b32 s10, 1, 0

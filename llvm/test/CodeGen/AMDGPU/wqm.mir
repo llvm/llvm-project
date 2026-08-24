@@ -379,11 +379,11 @@ name:            test_wwm_set_inactive_propagation
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
+    liveins: $sgpr0_128, $vgpr0
     ; CHECK-LABEL: name: test_wwm_set_inactive_propagation
-    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
+    ; CHECK: liveins: $sgpr0_128, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY1]], [[COPY]], 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64_xexec = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
@@ -395,7 +395,7 @@ body:             |
     ; CHECK-NEXT: early-clobber $vgpr0 = V_MOV_B32_e32 [[V_MAX_F64_e64_]].sub0, implicit $exec
     ; CHECK-NEXT: early-clobber $vgpr1 = V_MOV_B32_e32 [[V_MAX_F64_e64_]].sub1, implicit $exec
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
-    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:sgpr_128 = COPY $sgpr0_128
     %1:vgpr_32 = COPY $vgpr0
     %2:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN %1:vgpr_32, %0:sgpr_128, 0, 0, 0, 0, implicit $exec
     %4:sreg_64_xexec = IMPLICIT_DEF

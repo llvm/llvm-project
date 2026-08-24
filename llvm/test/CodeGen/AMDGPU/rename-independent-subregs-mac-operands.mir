@@ -13,7 +13,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr4'
 
 registers:
@@ -98,7 +98,7 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr4'
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
@@ -110,13 +110,13 @@ registers:
   - { id: 6, class: vreg_128, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
+  - { reg: '$sgpr30_64', virtual-reg: '%5' }
 body:             |
   bb.0:
     successors: %bb.2, %bb.1
-    liveins: $vgpr0, $sgpr30_sgpr31, $sgpr5
+    liveins: $vgpr0, $sgpr30_64, $sgpr5
 
-    %5 = COPY $sgpr30_sgpr31
+    %5 = COPY $sgpr30_64
     %0 = COPY $vgpr0
     undef %6.sub1 = nofpexcept V_MAC_F32_e32 undef %2, undef %1, undef %6.sub1, implicit $mode, implicit $exec
     %6.sub0 = V_MOV_B32_e32 0, implicit $exec
@@ -133,12 +133,12 @@ body:             |
     %6.sub2 = COPY %6.sub0
 
   bb.2:
-    BUFFER_STORE_DWORD_OFFEN %6.sub3, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 12, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub2, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub1, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN %6.sub0, %0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
-    $sgpr30_sgpr31 = COPY %5
-    S_SETPC_B64_return $sgpr30_sgpr31
+    BUFFER_STORE_DWORD_OFFEN %6.sub3, %0, $sgpr0_128, $sgpr4, 12, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub2, %0, $sgpr0_128, $sgpr4, 8, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub1, %0, $sgpr0_128, $sgpr4, 4, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN %6.sub0, %0, $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
+    $sgpr30_64 = COPY %5
+    S_SETPC_B64_return $sgpr30_64
 
 ...
 

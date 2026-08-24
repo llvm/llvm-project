@@ -10,14 +10,14 @@ define void @test_ds_atomic_barrier_arrive_rtn_b64(i64 %data, ptr addrspace(3) %
   ; SDAG-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; SDAG-NEXT: {{  $}}
   ; SDAG-NEXT:   dead renamable $vgpr0_vgpr1 = DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load store monotonic (s64) on %ir.bar, addrspace 3)
-  ; SDAG-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
+  ; SDAG-NEXT:   S_SETPC_B64_return undef $sgpr30_64
   ;
   ; GISEL-LABEL: name: test_ds_atomic_barrier_arrive_rtn_b64
   ; GISEL: bb.0.entry:
   ; GISEL-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   dead renamable $vgpr0_vgpr1 = DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load store monotonic (i64) on %ir.bar, addrspace 3)
-  ; GISEL-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
+  ; GISEL-NEXT:   S_SETPC_B64_return undef $sgpr30_64
 entry:
   %ret = call i64 @llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64(ptr addrspace(3) %bar, i64 %data)
   ret void
@@ -29,14 +29,14 @@ define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) #0 {
   ; SDAG-NEXT:   liveins: $vgpr0
   ; SDAG-NEXT: {{  $}}
   ; SDAG-NEXT:   DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 killed renamable $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store monotonic (s64) on %ir.bar, addrspace 3)
-  ; SDAG-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
+  ; SDAG-NEXT:   S_SETPC_B64_return undef $sgpr30_64
   ;
   ; GISEL-LABEL: name: test_ds_atomic_async_barrier_arrive_b64
   ; GISEL: bb.0.entry:
   ; GISEL-NEXT:   liveins: $vgpr0
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 killed renamable $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store monotonic (i64) on %ir.bar, addrspace 3)
-  ; GISEL-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
+  ; GISEL-NEXT:   S_SETPC_B64_return undef $sgpr30_64
 entry:
   call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) %bar)
   ret void

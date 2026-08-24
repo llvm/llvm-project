@@ -11,7 +11,7 @@ body:             |
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_32_xm0 = S_MOV_B32 61440
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_32_xm0 = S_MOV_B32 0
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:vgpr_32 = COPY $vgpr0
-    ; CHECK: %bb0_{{[0-9a-f]+}}__1:sgpr_64 = COPY $sgpr0_sgpr1
+    ; CHECK: %bb0_{{[0-9a-f]+}}__1:sgpr_64 = COPY $sgpr0_64
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9a-f]+}}__1, 9, 0
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9a-f]+}}__1, 11, 0
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:vgpr_32 = COPY %bb0_{{[0-9a-f]+}}__1
@@ -26,7 +26,7 @@ body:             |
     %3:vgpr_32 = COPY $vgpr0
 
     %vreg123_0:vgpr_32 = COPY %3
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %vreg123_1:vgpr_32 = COPY %11
     %27:vreg_64 = REG_SEQUENCE %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0

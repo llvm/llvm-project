@@ -357,37 +357,37 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_v2s16_ss
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; SI-NEXT: [[FNEG:%[0-9]+]]:sreg_32(<2 x s16>) = G_FNEG [[COPY]]
     ; SI-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; VI-LABEL: name: fneg_v2s16_ss
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; VI-NEXT: [[FNEG:%[0-9]+]]:sreg_32(<2 x s16>) = G_FNEG [[COPY]]
     ; VI-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: fneg_v2s16_ss
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX9-NEXT: [[FNEG:%[0-9]+]]:sreg_32(<2 x s16>) = G_FNEG [[COPY]]
     ; GFX9-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX10-LABEL: name: fneg_v2s16_ss
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX10-NEXT: [[FNEG:%[0-9]+]]:sreg_32(<2 x s16>) = G_FNEG [[COPY]]
     ; GFX10-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX11-LABEL: name: fneg_v2s16_ss
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX11-NEXT: [[FNEG:%[0-9]+]]:sreg_32(<2 x s16>) = G_FNEG [[COPY]]
@@ -501,11 +501,11 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_s64_ss
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; SI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -514,9 +514,9 @@ body: |
     ; SI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; VI-LABEL: name: fneg_s64_ss
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; VI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -525,9 +525,9 @@ body: |
     ; VI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX9-LABEL: name: fneg_s64_ss
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -536,9 +536,9 @@ body: |
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX10-LABEL: name: fneg_s64_ss
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -547,16 +547,16 @@ body: |
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX11-LABEL: name: fneg_s64_ss
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GFX11-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:sgpr(s64) = G_FNEG %0
     S_ENDPGM 0, implicit %1
 ...
@@ -617,42 +617,42 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_s64_vs
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; SI-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
     ; SI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; VI-LABEL: name: fneg_s64_vs
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; VI-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
     ; VI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX9-LABEL: name: fneg_s64_vs
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX9-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX10-LABEL: name: fneg_s64_vs
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX10-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX11-LABEL: name: fneg_s64_vs
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX11-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[COPY]]
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:vgpr(s64) = G_FNEG %0
     S_ENDPGM 0, implicit %1
 
@@ -666,9 +666,9 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_fabs_s32_ss
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; SI-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
@@ -676,7 +676,7 @@ body: |
     ; SI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s32)
     ;
     ; VI-LABEL: name: fneg_fabs_s32_ss
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; VI-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
@@ -684,7 +684,7 @@ body: |
     ; VI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s32)
     ;
     ; GFX9-LABEL: name: fneg_fabs_s32_ss
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX9-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
@@ -692,7 +692,7 @@ body: |
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[FNEG]](s32)
     ;
     ; GFX10-LABEL: name: fneg_fabs_s32_ss
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX10-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
@@ -700,7 +700,7 @@ body: |
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[FNEG]](s32)
     ;
     ; GFX11-LABEL: name: fneg_fabs_s32_ss
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX11-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
@@ -1047,9 +1047,9 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_fabs_v2s16_ss
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; SI-NEXT: [[FABS:%[0-9]+]]:sgpr(<2 x s16>) = G_FABS [[COPY]]
@@ -1057,7 +1057,7 @@ body: |
     ; SI-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; VI-LABEL: name: fneg_fabs_v2s16_ss
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; VI-NEXT: [[FABS:%[0-9]+]]:sgpr(<2 x s16>) = G_FABS [[COPY]]
@@ -1065,7 +1065,7 @@ body: |
     ; VI-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: fneg_fabs_v2s16_ss
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX9-NEXT: [[FABS:%[0-9]+]]:sgpr(<2 x s16>) = G_FABS [[COPY]]
@@ -1073,7 +1073,7 @@ body: |
     ; GFX9-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX10-LABEL: name: fneg_fabs_v2s16_ss
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX10-NEXT: [[FABS:%[0-9]+]]:sgpr(<2 x s16>) = G_FABS [[COPY]]
@@ -1081,7 +1081,7 @@ body: |
     ; GFX10-NEXT: $sgpr0 = COPY [[FNEG]](<2 x s16>)
     ;
     ; GFX11-LABEL: name: fneg_fabs_v2s16_ss
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; GFX11-NEXT: [[FABS:%[0-9]+]]:sgpr(<2 x s16>) = G_FABS [[COPY]]
@@ -1209,11 +1209,11 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_fabs_s64_ss
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; SI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; SI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; SI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -1222,9 +1222,9 @@ body: |
     ; SI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; VI-LABEL: name: fneg_fabs_s64_ss
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; VI-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -1233,9 +1233,9 @@ body: |
     ; VI-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX9-LABEL: name: fneg_fabs_s64_ss
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -1244,9 +1244,9 @@ body: |
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX10-LABEL: name: fneg_fabs_s64_ss
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
@@ -1255,16 +1255,16 @@ body: |
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     ;
     ; GFX11-LABEL: name: fneg_fabs_s64_ss
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GFX11-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:sgpr(s64) = G_FABS %0
     %2:sgpr(s64) = G_FNEG %1
     S_ENDPGM 0, implicit %2
@@ -1332,47 +1332,47 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; SI-LABEL: name: fneg_fabs_s64_vs
-    ; SI: liveins: $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; SI-NEXT: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[FABS]]
     ; SI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; VI-LABEL: name: fneg_fabs_s64_vs
-    ; VI: liveins: $sgpr0_sgpr1
+    ; VI: liveins: $sgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; VI-NEXT: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
     ; VI-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[FABS]]
     ; VI-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX9-LABEL: name: fneg_fabs_s64_vs
-    ; GFX9: liveins: $sgpr0_sgpr1
+    ; GFX9: liveins: $sgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX9-NEXT: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
     ; GFX9-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[FABS]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX10-LABEL: name: fneg_fabs_s64_vs
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX10-NEXT: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
     ; GFX10-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[FABS]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
     ;
     ; GFX11-LABEL: name: fneg_fabs_s64_vs
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; GFX11-NEXT: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
     ; GFX11-NEXT: [[FNEG:%[0-9]+]]:vgpr(s64) = G_FNEG [[FABS]]
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[FNEG]](s64)
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:vgpr(s64) = G_FABS %0
     %2:vgpr(s64) = G_FNEG %1
     S_ENDPGM 0, implicit %2

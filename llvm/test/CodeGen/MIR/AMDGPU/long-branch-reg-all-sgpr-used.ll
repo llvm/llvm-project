@@ -19,13 +19,13 @@
 ; CHECK-NEXT:   hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT:   numWaveDispatchSGPRs: 0
 ; CHECK-NEXT:   numWaveDispatchVGPRs: 0
-; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_128'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT:   bytesInStackArgArea: 0
 ; CHECK-NEXT:   returnsVoid:     true
 ; CHECK-NEXT:   argumentInfo:
-; CHECK-NEXT:     kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+; CHECK-NEXT:     kernargSegmentPtr: { reg: '$sgpr0_64' }
 ; CHECK-NEXT:     workGroupIDX:    { reg: '$sgpr2' }
 ; CHECK-NEXT:     privateSegmentWaveByteOffset: { reg: '$sgpr3' }
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
@@ -43,7 +43,7 @@
 ; CHECK-NEXT:   occupancy:       4
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
-; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
@@ -293,13 +293,13 @@
 ; CHECK-NEXT:   hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT:   numWaveDispatchSGPRs: 0
 ; CHECK-NEXT:   numWaveDispatchVGPRs: 0
-; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_128'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT:   bytesInStackArgArea: 0
 ; CHECK-NEXT:   returnsVoid:     true
 ; CHECK-NEXT:   argumentInfo:
-; CHECK-NEXT:     kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+; CHECK-NEXT:     kernargSegmentPtr: { reg: '$sgpr0_64' }
 ; CHECK-NEXT:     workGroupIDX:    { reg: '$sgpr2' }
 ; CHECK-NEXT:     privateSegmentWaveByteOffset: { reg: '$sgpr3' }
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
@@ -317,7 +317,7 @@
 ; CHECK-NEXT:   occupancy:       4
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
-; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_64'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0

@@ -165,8 +165,8 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14 = IMPLICIT_DEF
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+  ; CHECK-NEXT:   $sgpr0_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -178,8 +178,8 @@ body: |
     successors: %bb.2
     V_NOP_e32 implicit $exec
     $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14 = IMPLICIT_DEF
-    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    $sgpr0_128 = IMPLICIT_DEF
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
 
   bb.2:
     S_ENDPGM 0

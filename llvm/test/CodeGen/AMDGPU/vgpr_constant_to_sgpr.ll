@@ -36,7 +36,7 @@ define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id 
 ; CHECK-NEXT:    s_mov_b32 s15, s19
 ; CHECK-NEXT:    s_add_u32 s8, s8, s16
 ; CHECK-NEXT:    s_addc_u32 s15, s9, s15
-; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_64
 ; CHECK-NEXT:    s_mov_b32 s9, s15
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, unknown_call@gotpcrel32@lo+4

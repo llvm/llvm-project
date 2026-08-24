@@ -786,7 +786,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    v_mov_b32_e32 v1, s5
 ; CI-NEXT:    v_cmp_ngt_f64_e64 s[6:7], |s[2:3]|, |v[0:1]|
 ; CI-NEXT:    s_or_b64 s[6:7], s[6:7], s[6:7]
-; CI-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; CI-NEXT:    ; implicit-def: $sgpr6_64
 ; CI-NEXT:    s_cbranch_scc0 .LBB6_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
@@ -913,7 +913,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_cmp_ngt_f64_e64 s[6:7], |s[2:3]|, |v[0:1]|
 ; VI-NEXT:    s_cmp_lg_u64 s[6:7], 0
-; VI-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; VI-NEXT:    ; implicit-def: $sgpr6_64
 ; VI-NEXT:    s_cbranch_scc0 .LBB6_2
 ; VI-NEXT:  ; %bb.1: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
@@ -3788,7 +3788,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mov_b32_e32 v1, s9
 ; CI-NEXT:    v_cmp_ngt_f64_e64 s[2:3], |s[4:5]|, |v[0:1]|
 ; CI-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
-; CI-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; CI-NEXT:    ; implicit-def: $sgpr2_64
 ; CI-NEXT:    s_cbranch_scc0 .LBB13_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else16
 ; CI-NEXT:    v_mov_b32_e32 v0, s8
@@ -3890,7 +3890,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_cmp_ngt_f64_e64 s[12:13], |s[6:7]|, |v[0:1]|
 ; CI-NEXT:    s_mov_b32 s14, 1
 ; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
-; CI-NEXT:    ; implicit-def: $sgpr12_sgpr13
+; CI-NEXT:    ; implicit-def: $sgpr12_64
 ; CI-NEXT:    s_cbranch_scc0 .LBB13_10
 ; CI-NEXT:  ; %bb.9: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s10
@@ -4025,7 +4025,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
 ; VI-NEXT:    v_cmp_ngt_f64_e64 s[2:3], |s[4:5]|, |v[0:1]|
 ; VI-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; VI-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; VI-NEXT:    ; implicit-def: $sgpr2_64
 ; VI-NEXT:    s_cbranch_scc0 .LBB13_2
 ; VI-NEXT:  ; %bb.1: ; %frem.else16
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
@@ -4127,7 +4127,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_cmp_ngt_f64_e64 s[12:13], |s[6:7]|, |v[0:1]|
 ; VI-NEXT:    s_mov_b32 s14, 1
 ; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
-; VI-NEXT:    ; implicit-def: $sgpr12_sgpr13
+; VI-NEXT:    ; implicit-def: $sgpr12_64
 ; VI-NEXT:    s_cbranch_scc0 .LBB13_10
 ; VI-NEXT:  ; %bb.9: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s10

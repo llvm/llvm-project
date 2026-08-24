@@ -20,7 +20,7 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec
-# GCN:        $sgpr0_sgpr1 = S_MOV_B64 $exec
+# GCN:        $sgpr0_64 = S_MOV_B64 $exec
 # GFX10-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
@@ -29,7 +29,7 @@ body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $sgpr0_sgpr1 = S_MOV_B64 $exec
+    $sgpr0_64 = S_MOV_B64 $exec
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
@@ -90,7 +90,7 @@ body:            |
 
 # GCN-LABEL: name: no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
 # GCN:      $sgpr0 = S_MOV_B32 $exec_lo
-# GCN-NEXT: $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
+# GCN-NEXT: $sgpr0_64 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
@@ -99,7 +99,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
-    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
+    $sgpr0_64 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 

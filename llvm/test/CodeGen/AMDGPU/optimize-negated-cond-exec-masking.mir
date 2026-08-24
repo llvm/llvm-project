@@ -238,7 +238,7 @@ body:             |
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
 # GCN-NEXT: V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
-# GCN-NEXT: $sgpr0_sgpr1 = COPY $vcc
+# GCN-NEXT: $sgpr0_64 = COPY $vcc
 # GCN-NEXT: $vcc = S_ANDN2_B64 $exec, %0, implicit-def dead $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc
 ---
@@ -248,7 +248,7 @@ body:             |
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
-    $sgpr0_sgpr1 = COPY $vcc
+    $sgpr0_64 = COPY $vcc
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
     S_BRANCH %bb.1

@@ -114,7 +114,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 -1
+  ; CHECK-NEXT:   $sgpr4_64 = S_MOV_B64 -1
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -123,21 +123,21 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_64, implicit $exec
   ; CHECK-NEXT:   V_CMP_NE_U32_e32 1, [[V_CNDMASK_B32_e64_]], implicit-def $vcc, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = COPY [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 0
+  ; CHECK-NEXT:   $sgpr4_64 = S_MOV_B64 0
   ; CHECK-NEXT:   $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   bb.0:
     successors: %bb.2
 
-    $sgpr4_sgpr5 = S_MOV_B64 -1
+    $sgpr4_64 = S_MOV_B64 -1
     undef %5.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.2
 
@@ -146,14 +146,14 @@ body:             |
 
   bb.2:
     successors: %bb.1, %bb.2
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_64, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
     DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
-    $sgpr4_sgpr5 = S_MOV_B64 0
+    $sgpr4_64 = S_MOV_B64 0
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
     S_BRANCH %bb.2
@@ -168,7 +168,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 -1
+  ; CHECK-NEXT:   $sgpr4_64 = S_MOV_B64 -1
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -177,19 +177,19 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = COPY [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, $sgpr4_sgpr5, implicit-def dead $scc
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 0
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, $sgpr4_64, implicit-def dead $scc
+  ; CHECK-NEXT:   $sgpr4_64 = S_MOV_B64 0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   bb.0:
     successors: %bb.2
 
-    $sgpr4_sgpr5 = S_MOV_B64 -1
+    $sgpr4_64 = S_MOV_B64 -1
     undef %5.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.2
 
@@ -198,15 +198,15 @@ body:             |
 
   bb.2:
     successors: %bb.1, %bb.2
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
+    %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_64, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
     DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
-    $sgpr4_sgpr5 = S_MOV_B64 0
+    $sgpr4_64 = S_MOV_B64 0
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
     S_BRANCH %bb.2
 

@@ -33,7 +33,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; SDAG-NEXT:    ; kill: killed $sgpr0_sgpr1
+; SDAG-NEXT:    ; kill: killed $sgpr0_64
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; SDAG-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; GISEL-NEXT:    ; kill: killed $sgpr0_sgpr1
+; GISEL-NEXT:    ; kill: killed $sgpr0_64
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; GISEL-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
@@ -169,7 +169,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr
 ; EXACTCUTOFF-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_sgpr1
+; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr0_64
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
 ; EXACTCUTOFF-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
@@ -2016,7 +2016,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v5, v3, a[0:31]
 ; SDAG-NEXT:    s_load_dword s8, s[4:5], 0x54
-; SDAG-NEXT:    ; kill: killed $sgpr4_sgpr5
+; SDAG-NEXT:    ; kill: killed $sgpr4_64
 ; SDAG-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
 ; SDAG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; SDAG-NEXT:    s_nop 15
@@ -2202,7 +2202,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_mov_b32_e32 v37, 0x42b17218
 ; GISEL-NEXT:    v_mov_b32_e32 v38, 1.0
 ; GISEL-NEXT:    s_load_dword s8, s[4:5], 0x54
-; GISEL-NEXT:    ; kill: killed $sgpr4_sgpr5
+; GISEL-NEXT:    ; kill: killed $sgpr4_64
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
 ; GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v37
@@ -2578,7 +2578,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v5, v3, a[0:31]
 ; EXACTCUTOFF-NEXT:    s_load_dword s8, s[4:5], 0x54
-; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr4_sgpr5
+; EXACTCUTOFF-NEXT:    ; kill: killed $sgpr4_64
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000400) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_nop 15

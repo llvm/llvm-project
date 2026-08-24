@@ -144,9 +144,9 @@ define amdgpu_kernel void @sadd64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: sadd64rr
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -289,9 +289,9 @@ define amdgpu_kernel void @sadd64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: sadd64ri
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
@@ -425,9 +425,9 @@ define amdgpu_kernel void @vadd64rr(ptr addrspace(1) %out, i64 %a) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vadd64rr
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
@@ -560,9 +560,9 @@ define amdgpu_kernel void @vadd64ri(ptr addrspace(1) %out) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vadd64ri
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -699,9 +699,9 @@ define amdgpu_kernel void @suaddo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: suaddo32
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -881,9 +881,9 @@ define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: uaddo32_vcc_user
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
@@ -1088,9 +1088,9 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: suaddo64
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s256) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
@@ -1289,9 +1289,9 @@ define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vuaddo64
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
@@ -1467,9 +1467,9 @@ define amdgpu_kernel void @ssub64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: ssub64rr
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -1612,9 +1612,9 @@ define amdgpu_kernel void @ssub64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: ssub64ri
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
@@ -1748,9 +1748,9 @@ define amdgpu_kernel void @vsub64rr(ptr addrspace(1) %out, i64 %a) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vsub64rr
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
@@ -1883,9 +1883,9 @@ define amdgpu_kernel void @vsub64ri(ptr addrspace(1) %out) {
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vsub64ri
 ; GCN-ISEL: bb.0.entry:
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -2022,9 +2022,9 @@ define amdgpu_kernel void @susubo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: susubo32
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -2205,9 +2205,9 @@ define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: usubo32_vcc_user
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
@@ -2412,9 +2412,9 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: susubo64
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s256) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
 ; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
@@ -2613,9 +2613,9 @@ define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX13-NEXT:    s_endpgm
 ; GCN-ISEL-LABEL: name: vusubo64
 ; GCN-ISEL: bb.0 (%ir-block.0):
-; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $vgpr0, $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
@@ -2933,7 +2933,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; VI-NEXT:    s_branch .LBB16_3
 ; VI-NEXT:  .LBB16_2:
 ; VI-NEXT:    s_mov_b64 s[6:7], -1
-; VI-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; VI-NEXT:    ; implicit-def: $sgpr8_64
 ; VI-NEXT:  .LBB16_3: ; %Flow
 ; VI-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; VI-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3094,7 +3094,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_branch .LBB16_3
 ; GFX9-NEXT:  .LBB16_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX9-NEXT:    ; implicit-def: $sgpr8_64
 ; GFX9-NEXT:  .LBB16_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3251,7 +3251,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1010-NEXT:    s_branch .LBB16_3
 ; GFX1010-NEXT:  .LBB16_2:
 ; GFX1010-NEXT:    s_mov_b32 s8, -1
-; GFX1010-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX1010-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX1010-NEXT:  .LBB16_3: ; %Flow
 ; GFX1010-NEXT:    s_and_b32 s3, s8, exec_lo
 ; GFX1010-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3408,7 +3408,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W32-NEXT:    s_branch .LBB16_3
 ; GFX1030W32-NEXT:  .LBB16_2:
 ; GFX1030W32-NEXT:    s_mov_b32 s8, -1
-; GFX1030W32-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GFX1030W32-NEXT:    ; implicit-def: $sgpr6_64
 ; GFX1030W32-NEXT:  .LBB16_3: ; %Flow
 ; GFX1030W32-NEXT:    s_and_b32 s3, s8, exec_lo
 ; GFX1030W32-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3565,7 +3565,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W64-NEXT:    s_branch .LBB16_3
 ; GFX1030W64-NEXT:  .LBB16_2:
 ; GFX1030W64-NEXT:    s_mov_b64 s[8:9], -1
-; GFX1030W64-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GFX1030W64-NEXT:    ; implicit-def: $sgpr6_64
 ; GFX1030W64-NEXT:  .LBB16_3: ; %Flow
 ; GFX1030W64-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; GFX1030W64-NEXT:    s_cselect_b32 s3, 1, 0
@@ -3732,7 +3732,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_branch .LBB16_3
 ; GFX11-NEXT:  .LBB16_2:
 ; GFX11-NEXT:    s_mov_b32 s8, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GFX11-NEXT:    ; implicit-def: $sgpr6_64
 ; GFX11-NEXT:  .LBB16_3: ; %Flow
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s3, s8, exec_lo
@@ -3890,7 +3890,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_branch .LBB16_3
 ; GFX1250-NEXT:  .LBB16_2:
 ; GFX1250-NEXT:    s_mov_b32 s5, -1
-; GFX1250-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX1250-NEXT:    ; implicit-def: $sgpr8_64
 ; GFX1250-NEXT:  .LBB16_3: ; %Flow
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_b32 s3, s5, exec_lo
@@ -4046,7 +4046,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_branch .LBB16_3
 ; GFX13-NEXT:  .LBB16_2:
 ; GFX13-NEXT:    s_mov_b32 s7, -1
-; GFX13-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GFX13-NEXT:    ; implicit-def: $sgpr8_64
 ; GFX13-NEXT:  .LBB16_3: ; %Flow
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_b32 s3, s7, exec_lo
@@ -4089,9 +4089,9 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-LABEL: name: sudiv64
 ; GCN-ISEL: bb.0 (%ir-block.0):
 ; GCN-ISEL-NEXT:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
-; GCN-ISEL-NEXT:   liveins: $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   liveins: $sgpr4_64
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
 ; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1

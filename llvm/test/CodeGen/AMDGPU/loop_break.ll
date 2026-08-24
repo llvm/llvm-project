@@ -35,7 +35,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_load_dword s3, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
@@ -122,7 +122,7 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:  .LBB1_1: ; %bb1
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_cmp_gt_i32 s6, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCN-NEXT:  ; %bb.2: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB1_1 Depth=1
@@ -205,7 +205,7 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_load_dword s3, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
@@ -296,7 +296,7 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_load_dword s3, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
@@ -386,7 +386,7 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_load_dword s3, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
@@ -480,7 +480,7 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_load_dword s3, s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0

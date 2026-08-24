@@ -143,10 +143,10 @@ name: fold-copy-readfirstlane-cross-block-exec-def
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr10_sgpr11, $sgpr12
+    liveins: $sgpr10_64, $sgpr12
     %0:sreg_32_xm0 = COPY $sgpr12
     %1:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
-    $exec = S_MOV_B64_term $sgpr10_sgpr11
+    $exec = S_MOV_B64_term $sgpr10_64
 
   bb.1:
     %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
@@ -162,10 +162,10 @@ name: fold-copy-readfirstlane-same-block-exec-def
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr10_sgpr11, $sgpr12
+    liveins: $sgpr10_64, $sgpr12
     %0:sreg_32_xm0 = COPY $sgpr12
     %1:vgpr_32 = COPY %0, implicit $exec
-    $exec = S_MOV_B64 $sgpr10_sgpr11
+    $exec = S_MOV_B64 $sgpr10_64
     %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
 
 ...
@@ -180,9 +180,9 @@ name: fold-imm-readfirstlane-cross-block-exec-def
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
+    liveins: $sgpr10_64, $sgpr12_64
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-    $exec = S_MOV_B64_term $sgpr10_sgpr11
+    $exec = S_MOV_B64_term $sgpr10_64
 
   bb.1:
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
@@ -197,9 +197,9 @@ name: fold-imm-readfirstlane-same-block-exec-def
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr10_sgpr11
+    liveins: $sgpr10_64
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-    $exec = S_MOV_B64 $sgpr10_sgpr11
+    $exec = S_MOV_B64 $sgpr10_64
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
 
 ...
@@ -213,9 +213,9 @@ name: fold-sgpr-copy-readfirstlane-same-block-exec-def
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr10_sgpr11, $sgpr12
+    liveins: $sgpr10_64, $sgpr12
     %0:vgpr_32 = COPY $sgpr12
-    $exec = S_MOV_B64 $sgpr10_sgpr11
+    $exec = S_MOV_B64 $sgpr10_64
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
 ...
 
@@ -226,7 +226,7 @@ name: fold-imm-readfirstlane-user
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
     %2:sreg_32_xm0 = COPY %1
@@ -241,7 +241,7 @@ name: fold-imm-readlane
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
     %1:sreg_32_xm0 = V_READLANE_B32 %0, 0, implicit $exec
     S_NOP 0, implicit %1

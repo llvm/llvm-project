@@ -10,9 +10,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $sgpr8_sgpr9
+    liveins: $vgpr0, $sgpr8_64
   
-    %129:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %129:sgpr_64(p4) = COPY $sgpr8_64
     %411:vgpr_32 = COPY $vgpr0
     early-clobber %140:sgpr_256 = S_LOAD_DWORDX8_IMM_ec %129(p4), 0, 0 :: (dereferenceable invariant load (s256) from `ptr addrspace(3) null`, addrspace 4)
     %141:sreg_64_xexec = S_LOAD_DWORDX2_IMM %129(p4), 32, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(3) null` + 32, addrspace 4)

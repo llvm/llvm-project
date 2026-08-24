@@ -143,12 +143,12 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: s_bitset0_b64
-    ; GCN: $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN: $sgpr0_64 = IMPLICIT_DEF
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $src_flat_scratch_base_hi
-    ; GCN-NEXT: $sgpr0_sgpr1 = S_BITSET0_B64 $sgpr2, $sgpr0_sgpr1, implicit-def $scc
-    $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: $sgpr0_64 = S_BITSET0_B64 $sgpr2, $sgpr0_64, implicit-def $scc
+    $sgpr0_64 = IMPLICIT_DEF
     $sgpr2 = S_MOV_B32 $src_flat_scratch_base_hi
-    $sgpr0_sgpr1 = S_BITSET0_B64 $sgpr2, $sgpr0_sgpr1, implicit-def $scc
+    $sgpr0_64 = S_BITSET0_B64 $sgpr2, $sgpr0_64, implicit-def $scc
 ...
 
 ---
@@ -158,12 +158,12 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: s_bitset1_b64
-    ; GCN: $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN: $sgpr0_64 = IMPLICIT_DEF
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $src_flat_scratch_base_hi
-    ; GCN-NEXT: $sgpr0_sgpr1 = S_BITSET1_B64 $sgpr2, $sgpr0_sgpr1, implicit-def $scc
-    $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: $sgpr0_64 = S_BITSET1_B64 $sgpr2, $sgpr0_64, implicit-def $scc
+    $sgpr0_64 = IMPLICIT_DEF
     $sgpr2 = S_MOV_B32 $src_flat_scratch_base_hi
-    $sgpr0_sgpr1 = S_BITSET1_B64 $sgpr2, $sgpr0_sgpr1, implicit-def $scc
+    $sgpr0_64 = S_BITSET1_B64 $sgpr2, $sgpr0_64, implicit-def $scc
 ...
 
 ---
@@ -173,11 +173,11 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: s_ashr_i64_phys_dst
-    ; GCN: $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN: $sgpr0_64 = IMPLICIT_DEF
     ; GCN-NEXT: $sgpr2 = COPY $src_flat_scratch_base_hi
-    ; GCN-NEXT: $sgpr0_sgpr1 = S_ASHR_I64 $sgpr0_sgpr1, $sgpr2, implicit-def $scc
-    $sgpr0_sgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: $sgpr0_64 = S_ASHR_I64 $sgpr0_64, $sgpr2, implicit-def $scc
+    $sgpr0_64 = IMPLICIT_DEF
     $sgpr2 = COPY $src_flat_scratch_base_hi
     %0:sreg_32 = COPY $src_flat_scratch_base_hi
-    $sgpr0_sgpr1 = S_ASHR_I64 $sgpr0_sgpr1, $sgpr2, implicit-def $scc
+    $sgpr0_64 = S_ASHR_I64 $sgpr0_64, $sgpr2, implicit-def $scc
 ...

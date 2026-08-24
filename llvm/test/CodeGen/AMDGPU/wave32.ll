@@ -556,7 +556,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB11_2
 ; GFX1032-NEXT:  ; %bb.5: ; in Loop: Header=BB11_4 Depth=1
 ; GFX1032-NEXT:    ; implicit-def: $sgpr3
-; GFX1032-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX1032-NEXT:    ; implicit-def: $sgpr0_64
 ; GFX1032-NEXT:    s_branch .LBB11_3
 ; GFX1032-NEXT:  .LBB11_6: ; %.loopexit
 ; GFX1032-NEXT:    s_endpgm
@@ -572,7 +572,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    v_min_u32_e32 v1, 0x100, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1064-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX1064-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX1064-NEXT:    s_branch .LBB11_4
 ; GFX1064-NEXT:  .LBB11_2: ; %bb8
 ; GFX1064-NEXT:    ; in Loop: Header=BB11_4 Depth=1
@@ -600,7 +600,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    s_cbranch_vccz .LBB11_2
 ; GFX1064-NEXT:  ; %bb.5: ; in Loop: Header=BB11_4 Depth=1
 ; GFX1064-NEXT:    ; implicit-def: $sgpr6
-; GFX1064-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX1064-NEXT:    ; implicit-def: $sgpr0_64
 ; GFX1064-NEXT:    s_branch .LBB11_3
 ; GFX1064-NEXT:  .LBB11_6: ; %.loopexit
 ; GFX1064-NEXT:    s_endpgm
@@ -854,7 +854,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_branch .LBB15_3
 ; GFX1032-NEXT:  .LBB15_2:
 ; GFX1032-NEXT:    s_mov_b32 s8, -1
-; GFX1032-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX1032-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX1032-NEXT:  .LBB15_3: ; %Flow
 ; GFX1032-NEXT:    s_and_b32 s1, s8, exec_lo
 ; GFX1032-NEXT:    s_cselect_b32 s1, 1, 0
@@ -1011,7 +1011,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_branch .LBB15_3
 ; GFX1064-NEXT:  .LBB15_2:
 ; GFX1064-NEXT:    s_mov_b64 s[8:9], -1
-; GFX1064-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX1064-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX1064-NEXT:  .LBB15_3: ; %Flow
 ; GFX1064-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; GFX1064-NEXT:    s_cselect_b32 s1, 1, 0
@@ -1565,7 +1565,7 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1064-LABEL: test_invert_true_phi_cond_break_loop:
 ; GFX1064:       ; %bb.0: ; %bb
 ; GFX1064-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX1064-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; GFX1064-NEXT:    ; implicit-def: $sgpr2_64
 ; GFX1064-NEXT:    ; implicit-def: $sgpr4
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_subrev_nc_u32_e32 v0, s0, v0

@@ -11,7 +11,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -23,7 +23,7 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX900-NEXT: S_NOP 0, implicit $vgpr0
     ;
     ; GFX90A-LABEL: name: spill_v32
@@ -31,7 +31,7 @@ body:             |
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0
     ;
     ; GFX942-LABEL: name: spill_v32
@@ -59,7 +59,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -71,14 +71,14 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v32_kill
     ; GFX90A: liveins: $vgpr0
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v32_kill
     ; GFX942: liveins: $vgpr0
@@ -102,7 +102,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -114,8 +114,8 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; GFX900-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
     ;
     ; GFX90A-LABEL: name: spill_v64
@@ -123,8 +123,8 @@ body:             |
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
     ;
     ; GFX942-LABEL: name: spill_v64
@@ -152,7 +152,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -164,16 +164,16 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v64_kill
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v64_kill
     ; GFX942: liveins: $vgpr0_vgpr1
@@ -199,7 +199,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -211,16 +211,16 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v64_undef_sub1_killed
     ; GFX90A: liveins: $vgpr0
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v64_undef_sub1_killed
     ; GFX942: liveins: $vgpr0
@@ -244,7 +244,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -256,16 +256,16 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v64_undef_sub0_killed
     ; GFX90A: liveins: $vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v64_undef_sub0_killed
     ; GFX942: liveins: $vgpr1
@@ -289,7 +289,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -301,20 +301,20 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v128_kill
     ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v128_kill
     ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -338,7 +338,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -372,7 +372,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -406,7 +406,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -418,20 +418,20 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v128_kill_unaligned
     ; GFX90A: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v128_kill_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -464,7 +464,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -476,22 +476,22 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v128_unaligned
     ; GFX90A: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v128_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
@@ -525,7 +525,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -537,28 +537,28 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v256_aligned
     ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v256_aligned
     ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
@@ -584,7 +584,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
 body:             |
@@ -596,28 +596,28 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr8, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
+    ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr8, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ;
     ; GFX90A-LABEL: name: spill_v256_unaligned
     ; GFX90A: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr8, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr4, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr5, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr6, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr7, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
+    ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr8, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ;
     ; GFX942-LABEL: name: spill_v256_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8

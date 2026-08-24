@@ -182,7 +182,7 @@ registers:
   - { id: 82, class: vgpr_32 }
   - { id: 83, class: vgpr_32 }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%4' }
+  - { reg: '$sgpr4_64', virtual-reg: '%4' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -199,9 +199,9 @@ frameInfo:
 body:             |
   bb.0.bb:
     successors: %bb.2.bb2(0x80000000)
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %4 = COPY $sgpr4_sgpr5
+    %4 = COPY $sgpr4_64
     %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %8 = S_MOV_B64 0
     %7 = COPY %9
@@ -344,7 +344,7 @@ registers:
   - { id: 83, class: vgpr_32 }
   - { id: 84, class: sreg_32_xm0 }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%4' }
+  - { reg: '$sgpr4_64', virtual-reg: '%4' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -361,9 +361,9 @@ frameInfo:
 body:             |
   bb.0.bb:
     successors: %bb.2.bb2(0x80000000)
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %4 = COPY $sgpr4_sgpr5
+    %4 = COPY $sgpr4_64
     %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %8 = S_MOV_B64 0
     %7 = COPY %9

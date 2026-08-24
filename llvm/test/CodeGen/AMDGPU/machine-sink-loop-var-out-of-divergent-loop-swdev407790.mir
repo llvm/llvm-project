@@ -8,7 +8,7 @@
 name:            machinesink_loop_vgpr_out_of_divergent_loop
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -119,7 +119,7 @@ body:             |
 name:            machinesink_loop_sgpr_out_of_divergent_loop
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
 body:             |

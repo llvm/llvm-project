@@ -2,7 +2,7 @@
 
 ; HSA-LABEL: name: default_kernel
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -14,7 +14,7 @@ define amdgpu_kernel void @default_kernel() {
 
 ; HSA-LABEL: name: workgroup_id_x{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -27,7 +27,7 @@ define amdgpu_kernel void @workgroup_id_x() {
 
 ; HSA-LABEL: name: workgroup_id_y{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -41,7 +41,7 @@ define amdgpu_kernel void @workgroup_id_y() {
 
 ; HSA-LABEL: name: workgroup_id_z{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -55,7 +55,7 @@ define amdgpu_kernel void @workgroup_id_z() {
 
 ; HSA-LABEL: name: workgroup_id_xy{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -71,7 +71,7 @@ define amdgpu_kernel void @workgroup_id_xy() {
 
 ; HSA-LABEL: name: workgroup_id_xyz{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -89,7 +89,7 @@ define amdgpu_kernel void @workgroup_id_xyz() {
 
 ; HSA-LABEL: name: workgroup_id_yz{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }
@@ -105,7 +105,7 @@ define amdgpu_kernel void @workgroup_id_yz() {
 
 ; HSA-LABEL: name: workgroup_id_xz{{$}}
 ; HSA: liveins:
-; HSA-NEXT: - { reg: '$sgpr0_sgpr1_sgpr2_sgpr3', virtual-reg: '%0' }
+; HSA-NEXT: - { reg: '$sgpr0_128', virtual-reg: '%0' }
 ; HSA-NEXT: - { reg: '$vgpr0', virtual-reg: '%1' }
 ; HSA-NEXT: - { reg: '$sgpr4', virtual-reg: '%2' }
 ; HSA-NEXT: - { reg: '$sgpr5', virtual-reg: '%3' }

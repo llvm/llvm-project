@@ -26,7 +26,7 @@ body:             |
     ; GCN-LABEL: name: copy_sgpr_allocation
     ; GCN: liveins: $sgpr0, $sgpr1, $sgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: S_STORE_DWORD_SGPR killed $sgpr4, killed renamable $sgpr0_sgpr1, undef $m0, 0
-    %14:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: S_STORE_DWORD_SGPR killed $sgpr4, killed renamable $sgpr0_64, undef $m0, 0
+    %14:sreg_64 = COPY $sgpr0_64
     S_STORE_DWORD_SGPR $sgpr4, %14:sreg_64, undef $m0, 0
 ...

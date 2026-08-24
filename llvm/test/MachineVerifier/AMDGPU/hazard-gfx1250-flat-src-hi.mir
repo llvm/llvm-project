@@ -7,7 +7,7 @@ body:             |
   bb.0:
 
     %0:sreg_64 = IMPLICIT_DEF
-    $sgpr0_sgpr1 = IMPLICIT_DEF
+    $sgpr0_64 = IMPLICIT_DEF
 
     ; CHECK: *** Bad machine code: Instruction cannot read flat_scratch_base_hi ***
     ; CHECK: S_ASHR_I64
@@ -57,10 +57,10 @@ body:             |
     ; CHECK: *** Bad machine code: Instruction cannot read flat_scratch_base_hi ***
     ; CHECK: S_BITSET0_B64
 
-    $sgpr0_sgpr1 = S_BITSET0_B64 $src_flat_scratch_base_hi, $sgpr0_sgpr1, implicit-def $scc
+    $sgpr0_64 = S_BITSET0_B64 $src_flat_scratch_base_hi, $sgpr0_64, implicit-def $scc
 
     ; CHECK: *** Bad machine code: Instruction cannot read flat_scratch_base_hi ***
     ; CHECK: S_BITSET1_B64
 
-    $sgpr0_sgpr1 = S_BITSET1_B64 $src_flat_scratch_base_hi, $sgpr0_sgpr1, implicit-def $scc
+    $sgpr0_64 = S_BITSET1_B64 $src_flat_scratch_base_hi, $sgpr0_64, implicit-def $scc
 ...

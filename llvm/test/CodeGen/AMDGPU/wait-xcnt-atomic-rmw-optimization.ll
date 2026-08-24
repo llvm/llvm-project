@@ -687,7 +687,7 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_load(ptr addrspace(1) %ptr, 
 ; GFX1250-NEXT:    s_mov_b32 s3, s6
 ; GFX1250-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s3
-; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -760,7 +760,7 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_store(ptr addrspace(1) %ptr,
 ; GFX1250-NEXT:    s_mov_b32 s3, s6
 ; GFX1250-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s3
-; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3]

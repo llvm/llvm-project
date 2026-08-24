@@ -70,7 +70,7 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) #0 {
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s8
 ; CHECK-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[4:5], v[0:1]
-; CHECK-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; CHECK-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; CHECK-NEXT:    s_mov_b32 s7, s8
 ; CHECK-NEXT:    v_writelane_b32 v41, s6, 14
 ; CHECK-NEXT:    v_writelane_b32 v41, s7, 15

@@ -75,9 +75,9 @@ registers:
   - { id: 100, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
 
-    %2 = COPY $sgpr30_sgpr31
+    %2 = COPY $sgpr30_64
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
     %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
@@ -131,8 +131,8 @@ body:             |
     %100 = V_MOV_B32_e32 %48, implicit $exec
 
     FLAT_STORE_DWORD %0, %100, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
-    $sgpr30_sgpr31 = COPY %2
-    S_SETPC_B64_return $sgpr30_sgpr31
+    $sgpr30_64 = COPY %2
+    S_SETPC_B64_return $sgpr30_64
 
 ...
 ---
@@ -222,9 +222,9 @@ registers:
   - { id: 100, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
 
-    %2 = COPY $sgpr30_sgpr31
+    %2 = COPY $sgpr30_64
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
     %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
@@ -287,8 +287,8 @@ body:             |
     %100 = V_MOV_B32_e32 %60, implicit $exec
 
     FLAT_STORE_DWORD %0, %100, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
-    $sgpr30_sgpr31 = COPY %2
-    S_SETPC_B64_return $sgpr30_sgpr31
+    $sgpr30_64 = COPY %2
+    S_SETPC_B64_return $sgpr30_64
 
 ...
 

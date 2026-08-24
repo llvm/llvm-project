@@ -42,7 +42,7 @@ registers:
   - { id: 7, class: vgpr_32 }
   - { id: 8, class: vgpr_32 }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
+  - { reg: '$sgpr4_64', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -59,9 +59,9 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %1 = COPY $sgpr4_sgpr5
+    %1 = COPY $sgpr4_64
     %5 = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
     $m0 = S_MOV_B32 -1
     %7 = COPY %5

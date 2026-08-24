@@ -9,8 +9,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -22,35 +22,35 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_AND_B64 killed $vcc, $exec, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_AND_B64 killed $vcc, $exec, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: reduce_and_saveexec_liveout
-# GCN:      $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc
+# GCN:      $sgpr0_64 = S_AND_B64 $exec, killed $vcc
 # GCN-NEXT: $exec = COPY
 name: reduce_and_saveexec_liveout
 tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY $sgpr0_sgpr1
+    $sgpr0_64 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY $sgpr0_64
     S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: and_saveexec
-# GCN:      $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 $vcc
+# GCN:      $sgpr0_64 = S_AND_SAVEEXEC_B64 $vcc
 # GCN-NEXT: S_ENDPGM 0
 name: and_saveexec
 tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = COPY $exec
-    $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
-    $exec = S_MOV_B64_term $sgpr2_sgpr3
+    $sgpr0_64 = COPY $exec
+    $sgpr2_64 = S_AND_B64 $sgpr0_64, killed $vcc, implicit-def $scc
+    $exec = S_MOV_B64_term $sgpr2_64
     S_ENDPGM 0
 ...
 ---
@@ -62,8 +62,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -75,8 +75,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_XOR_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_XOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -88,8 +88,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_ANDN2_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_ANDN2_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -101,8 +101,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_ORN2_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_ORN2_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -114,8 +114,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_NAND_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_NAND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -127,8 +127,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_NOR_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_NOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---
@@ -140,8 +140,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
-    $sgpr0_sgpr1 = S_XNOR_B64 $exec, killed $vcc, implicit-def $scc
-    $exec = COPY killed $sgpr0_sgpr1
+    $sgpr0_64 = S_XNOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_64
     S_ENDPGM 0
 ...
 ---

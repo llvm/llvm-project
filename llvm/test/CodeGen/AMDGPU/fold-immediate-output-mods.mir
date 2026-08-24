@@ -39,14 +39,14 @@ registers:
   - { id: 28, class: vreg_64 }
   - { id: 29, class: vreg_64 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %3 = COPY $vgpr0
-    %0 = COPY $sgpr0_sgpr1
+    %0 = COPY $sgpr0_64
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
@@ -110,14 +110,14 @@ registers:
   - { id: 28, class: vreg_64 }
   - { id: 29, class: vreg_64 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %3 = COPY $vgpr0
-    %0 = COPY $sgpr0_sgpr1
+    %0 = COPY $sgpr0_64
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
@@ -181,14 +181,14 @@ registers:
   - { id: 28, class: vreg_64 }
   - { id: 29, class: vreg_64 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %3 = COPY $vgpr0
-    %0 = COPY $sgpr0_sgpr1
+    %0 = COPY $sgpr0_64
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
@@ -252,14 +252,14 @@ registers:
   - { id: 28, class: vreg_64 }
   - { id: 29, class: vreg_64 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %3 = COPY $vgpr0
-    %0 = COPY $sgpr0_sgpr1
+    %0 = COPY $sgpr0_64
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %6 = S_LOAD_DWORDX2_IMM %0, 13, 0

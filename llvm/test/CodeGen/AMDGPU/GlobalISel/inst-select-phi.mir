@@ -31,7 +31,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
   ; GCN-NEXT:   $sgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2
 
@@ -50,7 +50,7 @@ body:             |
   bb.2:
     %6:sgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $sgpr0 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -85,7 +85,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[COPY4]], %bb.1
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr2
 
@@ -104,7 +104,7 @@ body:             |
   bb.2:
     %6:vgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $vgpr0 = COPY %6(s32)
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -138,7 +138,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $sgpr0, $vgpr0, $sgpr1, $sgpr2
 
@@ -157,7 +157,7 @@ body:             |
   bb.2:
     %6:vgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $vgpr0 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -192,7 +192,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[COPY4]], %bb.1
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $sgpr0, $vgpr0, $sgpr1
 
@@ -211,7 +211,7 @@ body:             |
   bb.2:
     %6:vgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $vgpr0 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -225,10 +225,10 @@ body:             |
   ; GCN-LABEL: name: g_phi_s64_ss_sbranch
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4
+  ; GCN-NEXT:   liveins: $sgpr0_64, $sgpr2_64, $sgpr4
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
@@ -244,13 +244,13 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
-  ; GCN-NEXT:   $sgpr0_sgpr1 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   $sgpr0_64 = COPY [[PHI]]
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4
+    liveins: $sgpr0_64, $sgpr2_64, $sgpr4
 
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
+    %0:sgpr(s64) = COPY $sgpr0_64
+    %1:sgpr(s64) = COPY $sgpr2_64
     %2:sgpr(s32) = COPY $sgpr4
     %3:sgpr(s32) = G_CONSTANT i32 0
     %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
@@ -263,8 +263,8 @@ body:             |
 
   bb.2:
     %6:sgpr(s64) = G_PHI %0(s64), %bb.0, %5(s64), %bb.1
-    $sgpr0_sgpr1 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    $sgpr0_64 = COPY %6
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 ---
@@ -298,7 +298,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[COPY4]], %bb.1
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr2
 
@@ -317,7 +317,7 @@ body:             |
   bb.2:
     %6:vgpr(<2 x s16>) = G_PHI %0(<2 x s16>), %bb.0, %5(<2 x s16>), %bb.1
     $vgpr0 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -351,7 +351,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
   ; GCN-NEXT:   $sgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2
 
@@ -370,7 +370,7 @@ body:             |
   bb.2:
     %6:sgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $sgpr0 = COPY %6(s32)
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...
 
@@ -405,7 +405,7 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[COPY4]], %bb.1
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
-  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31
+  ; GCN-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr2
 
@@ -424,6 +424,6 @@ body:             |
   bb.2:
     %6:vgpr(s32) = G_PHI %0(s32), %bb.0, %5(s32), %bb.1
     $vgpr0 = COPY %6
-    S_SETPC_B64 undef $sgpr30_sgpr31
+    S_SETPC_B64 undef $sgpr30_64
 
 ...

@@ -16,13 +16,13 @@ body: |
     ; GCN-NEXT: S_BARRIER_WAIT -1
     ; GCN-NEXT: renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     ; GCN-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_CMP_EQ_U32 0, 0, implicit-def $scc
     S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
     S_BARRIER_WAIT -1
     renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
 
 ---
@@ -41,13 +41,13 @@ body: |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     ; GCN-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_CMP_EQ_U32 0, 0, implicit-def $scc
     S_BARRIER_SIGNAL_ISFIRST_IMM -1, implicit-def $scc, implicit killed $scc
     S_BARRIER_WAIT 0
     renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
 
 ---
@@ -67,14 +67,14 @@ body: |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     ; GCN-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_CMP_EQ_U32 0, 0, implicit-def $scc
     $m0 = S_MOV_B32 -1
     S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc, implicit killed $scc
     S_BARRIER_WAIT -1
     renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
 
 ---
@@ -94,12 +94,12 @@ body: |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     ; GCN-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_CMP_EQ_U32 0, 0, implicit-def $scc
     $m0 = S_MOV_B32 -1
     S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc, implicit killed $scc
     S_BARRIER_WAIT 0
     renamable $sgpr0 = S_CSELECT_B32 -1, 0, implicit killed $scc
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr0, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed $vgpr0
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...

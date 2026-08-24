@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; CHECK-NEXT:    s_mov_b32 s4, s7
 ; CHECK-NEXT:    s_add_u32 s2, s2, s5
 ; CHECK-NEXT:    s_addc_u32 s4, s3, s4
-; CHECK-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; CHECK-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; CHECK-NEXT:    s_mov_b32 s3, s4
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[2:3] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v19

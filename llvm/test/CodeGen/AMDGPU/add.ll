@@ -1168,7 +1168,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-NEXT:    s_branch .LBB9_3
 ; GFX6-NEXT:  .LBB9_2:
 ; GFX6-NEXT:    s_mov_b64 s[8:9], -1
-; GFX6-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX6-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX6-NEXT:  .LBB9_3: ; %Flow
 ; GFX6-NEXT:    s_and_b64 s[6:7], s[8:9], exec
 ; GFX6-NEXT:    s_cselect_b32 s6, 1, 0
@@ -1198,7 +1198,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    s_branch .LBB9_3
 ; GFX8-NEXT:  .LBB9_2:
 ; GFX8-NEXT:    s_mov_b64 s[8:9], -1
-; GFX8-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX8-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX8-NEXT:  .LBB9_3: ; %Flow
 ; GFX8-NEXT:    s_and_b64 s[6:7], s[8:9], exec
 ; GFX8-NEXT:    s_cselect_b32 s6, 1, 0
@@ -1228,7 +1228,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    s_branch .LBB9_3
 ; GFX9-NEXT:  .LBB9_2:
 ; GFX9-NEXT:    s_mov_b64 s[2:3], -1
-; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX9-NEXT:    ; implicit-def: $sgpr0_64
 ; GFX9-NEXT:  .LBB9_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1257,7 +1257,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    s_branch .LBB9_3
 ; GFX10-NEXT:  .LBB9_2:
 ; GFX10-NEXT:    s_mov_b32 s2, -1
-; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX10-NEXT:    ; implicit-def: $sgpr0_64
 ; GFX10-NEXT:  .LBB9_3: ; %Flow
 ; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX10-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1286,7 +1286,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_branch .LBB9_3
 ; GFX11-NEXT:  .LBB9_2:
 ; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX11-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX11-NEXT:  .LBB9_3: ; %Flow
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -1314,7 +1314,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_branch .LBB9_3
 ; GFX12-NEXT:  .LBB9_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX12-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX12-NEXT:  .LBB9_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo

@@ -616,8 +616,45 @@ struct TupleExpander : SetTheory::Expander {
   // Track all synthesized tuple names in order to detect duplicate definitions.
   llvm::StringSet<> TupleNames;
 
-  TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
-      : SynthDefs(SynthDefs) {}
+  // Maps each register to the one that follows it. Registers that end a
+  // sequence, or that belong to none, are absent.
+  DenseMap<const Record *, const Record *> NextRegister;
+
+  TupleExpander(const RecordKeeper &Records,
+                std::vector<std::unique_ptr<Record>> &SynthDefs)
+      : SynthDefs(SynthDefs) {
+    for (const Record *Seq :
+         Records.getAllDerivedDefinitionsIfDefined("RegisterSequence")) {
+      std::vector<const Record *> Members =
+          Seq->getValueAsListOfDefs("MemberList");
+      for (const auto &[Reg, Next] : zip_equal(
+               ArrayRef(Members).drop_back(), ArrayRef(Members).drop_front())) {
+        const Record *&NextReg = NextRegister[Reg];
+        if (NextReg) {
+          PrintFatalError(Seq->getLoc(), "Register '" + Reg->getName() +
+                                             "' is already followed by '" +
+                                             NextReg->getName() + "'.");
+        }
+        NextReg = Next;
+      }
+    }
+  }
+
+  // Returns whether each of the given registers is followed by the next one,
+  // so that stating the first of them and how many there are describes them
+  // all. A lone register follows nothing, so it is not a sequence.
+  bool isSequence(ArrayRef<const Record *> Regs) const {
+    if (Regs.size() < 2)
+      return false;
+
+    for (const auto &[Reg, Next] :
+         zip_equal(Regs.drop_back(), Regs.drop_front())) {
+      if (NextRegister.lookup(Reg) != Next)
+        return false;
+    }
+
+    return true;
+  }
 
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
@@ -646,15 +683,32 @@ struct TupleExpander : SetTheory::Expander {
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
-      std::string Name;
       const Record *Proto = Lists[0][n];
       std::vector<Init *> Tuple;
+      SmallVector<const Record *, 8> Regs;
       for (unsigned i = 0; i != Dim; ++i) {
         const Record *Reg = Lists[i][n];
-        if (i)
-          Name += '_';
-        Name += Reg->getName();
+        Regs.push_back(Reg);
         Tuple.push_back(Reg->getDefInit());
+      }
+
+      // Name the tuple after the registers it holds. Consecutive registers are
+      // described by the first of them and the total width in bits, so name
+      // the tuple after those rather than after every register in turn. Sum
+      // the sub-register sizes rather than assuming they are all the same, so
+      // that mixed-size index lists work.
+      std::string Name;
+      if (isSequence(Regs)) {
+        int64_t Width = 0;
+        for (const Record *Idx : Indices)
+          Width += Idx->getValueAsInt("Size");
+        Name = (Regs.front()->getName() + "_" + Twine(Width)).str();
+      } else {
+        for (const auto &[i, Reg] : enumerate(Regs)) {
+          if (i)
+            Name += '_';
+          Name += Reg->getName();
+        }
       }
 
       // Take the cost list of the first register in the tuple.
@@ -1228,7 +1282,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
   Sets.addExpander("RegisterTuples",
-                   std::make_unique<TupleExpander>(SynthDefs));
+                   std::make_unique<TupleExpander>(Records, SynthDefs));
 
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.

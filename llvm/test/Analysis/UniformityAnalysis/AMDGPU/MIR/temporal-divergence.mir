@@ -13,13 +13,13 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     %15:_(s64) = G_CONSTANT i64 0
 
@@ -52,16 +52,16 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
     successors: %bb.2, %bb.3
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %7:_(p4) = COPY %3(p4)
     %8:_(s64) = G_CONSTANT i64 40
     %9:_(p4) = G_PTR_ADD %7, %8(s64)
@@ -110,16 +110,16 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
     successors: %bb.2, %bb.3
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %7:_(p4) = COPY %3(p4)
     %8:_(s64) = G_CONSTANT i64 40
     %9:_(p4) = G_PTR_ADD %7, %8(s64)
@@ -168,15 +168,15 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %7:_(p4) = COPY %3(p4)
     %8:_(s64) = G_CONSTANT i64 40
     %9:_(p4) = G_PTR_ADD %7, %8(s64)
@@ -222,15 +222,15 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %19:_(s64) = G_CONSTANT i64 0
     %7:_(p4) = COPY %3(p4)
     %8:_(s64) = G_CONSTANT i64 40
@@ -276,15 +276,15 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %19:_(s64) = G_CONSTANT i64 0
 
   bb.2:
@@ -331,15 +331,15 @@ registers:
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
   - { reg: '$vgpr0', virtual-reg: '%4' }
   - { reg: '$sgpr2', virtual-reg: '%5' }
   - { reg: '$sgpr3', virtual-reg: '%6' }
 body:             |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    %3:_(p4) = COPY $sgpr0_sgpr1
+    %3:_(p4) = COPY $sgpr0_64
     %7:_(p4) = COPY %3(p4)
     %8:_(s64) = G_CONSTANT i64 40
     %9:_(p4) = G_PTR_ADD %7, %8(s64)

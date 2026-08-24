@@ -48,12 +48,12 @@ registers:
   - { id: 13, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
+  - { reg: '$sgpr4_64', virtual-reg: '%1' }
 body:             |
   bb.0.bb:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
-    %1 = COPY $sgpr4_sgpr5
+    %1 = COPY $sgpr4_64
     %0 = COPY $vgpr0
     %3 = S_LOAD_DWORDX2_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %4 = S_LOAD_DWORDX2_IMM %1, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)

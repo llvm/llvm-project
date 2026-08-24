@@ -3219,8 +3219,8 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     // SGPR spill.
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
-    TRI->spillEmergencySGPR(GetPC, RestoreBB, AMDGPU::SGPR0_SGPR1, RS);
-    MRI.replaceRegWith(PCReg, AMDGPU::SGPR0_SGPR1);
+    TRI->spillEmergencySGPR(GetPC, RestoreBB, AMDGPU::SGPR0_64, RS);
+    MRI.replaceRegWith(PCReg, AMDGPU::SGPR0_64);
     MRI.clearVirtRegs();
   }
 

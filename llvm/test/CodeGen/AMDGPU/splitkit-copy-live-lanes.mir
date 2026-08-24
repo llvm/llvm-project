@@ -5,16 +5,16 @@
 name: zextload_global_v64i16_to_v64i64
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: zextload_global_v64i16_to_v64i64
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
     ; CHECK-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
     ; CHECK-NEXT: undef [[S_MOV_B32_:%[0-9]+]].sub3:sgpr_128 = S_MOV_B32 61440
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 -1
@@ -460,7 +460,7 @@ body:             |
     ; CHECK-NEXT: [[COPY97:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY97]], [[S_MOV_B32_]], 0, 16, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
-    %0:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %0:sgpr_64(p4) = COPY $sgpr0_64
     %1:sgpr_128 = S_LOAD_DWORDX4_IMM %0(p4), 9, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
     undef %2.sub3:sgpr_128 = S_MOV_B32 61440
     %2.sub2:sgpr_128 = S_MOV_B32 -1

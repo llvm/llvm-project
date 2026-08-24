@@ -65,9 +65,9 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-LABEL: name: test_spill_cost_reset
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; CHECK-NEXT:   early-clobber %1891:sgpr_256 = S_LOAD_DWORDX8_IMM_ec [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s256) from %ir.a0.kernarg.offset, align 16, addrspace 4)
   ; CHECK-NEXT:   early-clobber %1892:sgpr_256 = S_LOAD_DWORDX8_IMM_ec [[COPY]](p4), 48, 0 :: (dereferenceable invariant load (s256) from %ir.b0.kernarg.offset, align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 80, 0 :: (dereferenceable invariant load (s32) from %ir.n.kernarg.offset, align 16, addrspace 4)

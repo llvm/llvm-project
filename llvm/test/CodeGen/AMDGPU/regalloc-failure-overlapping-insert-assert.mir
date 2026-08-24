@@ -37,7 +37,7 @@ registers:
   - { id: 13, class: sgpr_64 }
   - { id: 14, class: vgpr_32 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
 body:             |

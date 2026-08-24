@@ -1399,11 +1399,11 @@ body:             |
     ; CHECK-LABEL: name: copy_sgpr32_to_areg64_align2_whole_reg
     ; CHECK: liveins: $sgpr8, $sgpr9
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:areg_64_align2 = COPY [[COPY]]
     ; CHECK-NEXT: INLINEASM &"; use $0", attdialect, reguse:AReg_64_Align2, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
-    %0:sreg_64 = COPY $sgpr8_sgpr9
+    %0:sreg_64 = COPY $sgpr8_64
     %2:areg_64_align2 = COPY %0
     INLINEASM &"; use $0", attdialect, reguse:AReg_64_Align2, %2
     SI_RETURN
@@ -2742,11 +2742,11 @@ body:             |
     ; CHECK-LABEL: name: copy_sgpr32_to_areg64_align2_whole_reg_snop
     ; CHECK: liveins: $sgpr8, $sgpr9
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:areg_64_align2 = COPY [[COPY]]
     ; CHECK-NEXT: S_NOP 0, implicit [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
-    %0:sreg_64 = COPY $sgpr8_sgpr9
+    %0:sreg_64 = COPY $sgpr8_64
     %2:areg_64_align2 = COPY %0
     S_NOP 0, implicit %2
     SI_RETURN

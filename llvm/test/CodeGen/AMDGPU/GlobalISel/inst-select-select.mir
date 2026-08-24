@@ -39,15 +39,15 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    liveins:  $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
 
     ; GCN-LABEL: name: select_i64_scc
-    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN-NEXT: $scc = COPY [[COPY4]]
@@ -55,8 +55,8 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
-    %2:sgpr(i64) = COPY $sgpr2_sgpr3
-    %3:sgpr(i64) = COPY $sgpr4_sgpr5
+    %2:sgpr(i64) = COPY $sgpr2_64
+    %3:sgpr(i64) = COPY $sgpr4_64
     %4:sgpr(i32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(i64) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5
@@ -70,15 +70,15 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    liveins:  $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
 
     ; GCN-LABEL: name: select_p0_scc
-    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN-NEXT: $scc = COPY [[COPY4]]
@@ -86,8 +86,8 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
-    %2:sgpr(p0) = COPY $sgpr2_sgpr3
-    %3:sgpr(p0) = COPY $sgpr4_sgpr5
+    %2:sgpr(p0) = COPY $sgpr2_64
+    %3:sgpr(p0) = COPY $sgpr4_64
     %4:sgpr(i32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(p0) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5
@@ -101,15 +101,15 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    liveins:  $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
 
     ; GCN-LABEL: name: select_p1_scc
-    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN-NEXT: $scc = COPY [[COPY4]]
@@ -117,8 +117,8 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
-    %2:sgpr(p1) = COPY $sgpr2_sgpr3
-    %3:sgpr(p1) = COPY $sgpr4_sgpr5
+    %2:sgpr(p1) = COPY $sgpr2_64
+    %3:sgpr(p1) = COPY $sgpr4_64
     %4:sgpr(i32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(p1) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5
@@ -132,15 +132,15 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    liveins:  $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
 
     ; GCN-LABEL: name: select_p999_scc
-    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN-NEXT: $scc = COPY [[COPY4]]
@@ -148,8 +148,8 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
-    %2:sgpr(p999) = COPY $sgpr2_sgpr3
-    %3:sgpr(p999) = COPY $sgpr4_sgpr5
+    %2:sgpr(p999) = COPY $sgpr2_64
+    %3:sgpr(p999) = COPY $sgpr4_64
     %4:sgpr(i32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(p999) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5
@@ -163,15 +163,15 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    liveins:  $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
 
     ; GCN-LABEL: name: select_v4i16_scc
-    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2_64, $sgpr4_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN-NEXT: $scc = COPY [[COPY4]]
@@ -179,8 +179,8 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
-    %2:sgpr(<4 x i16>) = COPY $sgpr2_sgpr3
-    %3:sgpr(<4 x i16>) = COPY $sgpr4_sgpr5
+    %2:sgpr(<4 x i16>) = COPY $sgpr2_64
+    %3:sgpr(<4 x i16>) = COPY $sgpr4_64
     %4:sgpr(i32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(<4 x i16>) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5

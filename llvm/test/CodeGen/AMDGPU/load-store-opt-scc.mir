@@ -37,10 +37,10 @@
 ---
 name: test1
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr0_64', virtual-reg: '' }
 body: |
   bb.0 (%ir-block.0):
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     $vgpr0 = V_MOV_B32_e32 123, implicit $exec
     $vgpr1 = V_MOV_B32_e32 456, implicit $exec
@@ -48,7 +48,7 @@ body: |
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
@@ -68,10 +68,10 @@ body: |
 ---
 name: test2
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr0_64', virtual-reg: '' }
 body: |
   bb.0 (%ir-block.0):
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     $vgpr0 = V_MOV_B32_e32 123, implicit $exec
     $vgpr1 = V_MOV_B32_e32 456, implicit $exec
@@ -79,7 +79,7 @@ body: |
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
@@ -99,10 +99,10 @@ body: |
 ---
 name: test3
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr0_64', virtual-reg: '' }
 body: |
   bb.0 (%ir-block.0):
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     $vgpr0 = V_MOV_B32_e32 123, implicit $exec
     $vgpr1 = V_MOV_B32_e32 456, implicit $exec
@@ -110,7 +110,7 @@ body: |
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
@@ -129,10 +129,10 @@ body: |
 ---
 name: test4
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr0_64', virtual-reg: '' }
 body: |
   bb.0 (%ir-block.0):
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     $vgpr0 = V_MOV_B32_e32 123, implicit $exec
     $vgpr1 = V_MOV_B32_e32 456, implicit $exec
@@ -140,7 +140,7 @@ body: |
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3

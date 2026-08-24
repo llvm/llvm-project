@@ -10,24 +10,24 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    liveins: $sgpr0_512, $sgpr16
 
     ; WAVE64-LABEL: name: extract_vector_elt_v16s32_ss
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    ; WAVE64: liveins: $sgpr0_512, $sgpr16
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr16
     ; WAVE64-NEXT: [[EVEC:%[0-9]+]]:sgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[COPY1]](s32)
     ; WAVE64-NEXT: $vgpr0 = COPY [[EVEC]](s32)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_ss
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    ; WAVE32: liveins: $sgpr0_512, $sgpr16
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr16
     ; WAVE32-NEXT: [[EVEC:%[0-9]+]]:sgpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<16 x s32>), [[COPY1]](s32)
     ; WAVE32-NEXT: $vgpr0 = COPY [[EVEC]](s32)
-    %0:_(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:_(<16 x s32>) = COPY $sgpr0_512
     %1:_(s32) = COPY $sgpr16
     %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %1
     $vgpr0 = COPY %2
@@ -40,12 +40,12 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    liveins: $sgpr0_512, $vgpr0
 
     ; WAVE64-LABEL: name: extract_vector_elt_v16s32_sv
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE64: liveins: $sgpr0_512, $vgpr0
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(<16 x s32>) = COPY [[COPY]](<16 x s32>)
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<16 x s32>)
@@ -98,9 +98,9 @@ body: |
     ; WAVE64-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_sv
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE32: liveins: $sgpr0_512, $vgpr0
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(<16 x s32>) = COPY [[COPY]](<16 x s32>)
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<16 x s32>)
@@ -151,7 +151,7 @@ body: |
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
     ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
     ; WAVE32-NEXT: $vgpr0 = COPY [[COPY3]](s32)
-    %0:_(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:_(<16 x s32>) = COPY $sgpr0_512
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %1
     $vgpr0 = COPY %2
@@ -316,27 +316,27 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    liveins: $sgpr0_512, $sgpr16
 
     ; WAVE64-LABEL: name: extract_vector_elt_v8s64_ss
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    ; WAVE64: liveins: $sgpr0_512, $sgpr16
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr16
     ; WAVE64-NEXT: [[EVEC:%[0-9]+]]:sgpr(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<8 x s64>), [[COPY1]](s32)
-    ; WAVE64-NEXT: $sgpr0_sgpr1 = COPY [[EVEC]](s64)
+    ; WAVE64-NEXT: $sgpr0_64 = COPY [[EVEC]](s64)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_ss
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16
+    ; WAVE32: liveins: $sgpr0_512, $sgpr16
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr16
     ; WAVE32-NEXT: [[EVEC:%[0-9]+]]:sgpr(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<8 x s64>), [[COPY1]](s32)
-    ; WAVE32-NEXT: $sgpr0_sgpr1 = COPY [[EVEC]](s64)
-    %0:_(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: $sgpr0_64 = COPY [[EVEC]](s64)
+    %0:_(<8 x s64>) = COPY $sgpr0_512
     %1:_(s32) = COPY $sgpr16
     %2:_(s64) = G_EXTRACT_VECTOR_ELT %0, %1
-    $sgpr0_sgpr1 = COPY %2
+    $sgpr0_64 = COPY %2
 ...
 
 ---
@@ -388,12 +388,12 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    liveins: $sgpr0_512, $vgpr0
 
     ; WAVE64-LABEL: name: extract_vector_elt_v8s64_sv
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE64: liveins: $sgpr0_512, $vgpr0
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(<8 x s64>) = COPY [[COPY]](<8 x s64>)
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[COPY2]](<8 x s64>)
@@ -437,9 +437,9 @@ body: |
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_sv
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE32: liveins: $sgpr0_512, $vgpr0
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(<8 x s64>) = COPY [[COPY]](<8 x s64>)
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[COPY2]](<8 x s64>)
@@ -481,7 +481,7 @@ body: |
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(i32) = G_SELECT [[ICMP6]](s1), [[UV23]], [[SELECT11]]
     ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT12]](i32), [[SELECT13]](i32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
-    %0:_(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:_(<8 x s64>) = COPY $sgpr0_512
     %1:_(s32) = COPY $vgpr0
     %2:_(s64) = G_EXTRACT_VECTOR_ELT %0, %1
     $vgpr0_vgpr1 = COPY %2
@@ -1096,12 +1096,12 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    liveins: $sgpr0_512, $vgpr0
 
     ; WAVE64-LABEL: name: extract_vector_elt_v16s32_sv_idx_add1
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE64: liveins: $sgpr0_512, $vgpr0
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
@@ -1156,9 +1156,9 @@ body: |
     ; WAVE64-NEXT: $vgpr0 = COPY [[COPY4]](s32)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_sv_idx_add1
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE32: liveins: $sgpr0_512, $vgpr0
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
@@ -1211,7 +1211,7 @@ body: |
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
     ; WAVE32-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
     ; WAVE32-NEXT: $vgpr0 = COPY [[COPY4]](s32)
-    %0:_(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:_(<16 x s32>) = COPY $sgpr0_512
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_ADD %1, %2
@@ -1226,12 +1226,12 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    liveins: $sgpr0_512, $vgpr0
 
     ; WAVE64-LABEL: name: extract_vector_elt_v8s64_sv_add1
-    ; WAVE64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE64: liveins: $sgpr0_512, $vgpr0
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
@@ -1277,9 +1277,9 @@ body: |
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ;
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_sv_add1
-    ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
+    ; WAVE32: liveins: $sgpr0_512, $vgpr0
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_512
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
@@ -1323,7 +1323,7 @@ body: |
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(i32) = G_SELECT [[ICMP6]](s1), [[UV23]], [[SELECT11]]
     ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT12]](i32), [[SELECT13]](i32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
-    %0:_(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:_(<8 x s64>) = COPY $sgpr0_512
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_ADD %1, %2

@@ -10,9 +10,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr20
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
+  ; CHECK-NEXT:   $sgpr0_64 = S_MOV_B64 $exec
   ; CHECK-NEXT:   V_CMPX_LT_I16_t16_nosdst_e64 0, 15, 0, $vgpr20_lo16, 0, implicit-def $exec, implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = S_XOR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr0_64 = S_XOR_B64 $exec, killed renamable $sgpr0_64, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -21,10 +21,10 @@ body:             |
   bb.1:
     liveins: $vgpr20
     $vcc = V_CMP_LT_I16_t16_e64 0, 15, 0, $vgpr20_lo16, 0, implicit $exec
-    renamable $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
-    renamable $sgpr2_sgpr3 = S_AND_B64 renamable $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
-    renamable $sgpr0_sgpr1 = S_XOR_B64 renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    renamable $sgpr0_64 = COPY $exec, implicit-def $exec
+    renamable $sgpr2_64 = S_AND_B64 renamable $sgpr0_64, killed $vcc, implicit-def dead $scc
+    renamable $sgpr0_64 = S_XOR_B64 renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.2
 
@@ -41,9 +41,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr20
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
+  ; CHECK-NEXT:   $sgpr0_64 = S_MOV_B64 $exec
   ; CHECK-NEXT:   V_CMPX_LT_F16_t16_nosdst_e64 0, 15, 0, $vgpr20_lo16, 1, 0, implicit-def $exec, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = S_XOR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr0_64 = S_XOR_B64 $exec, killed renamable $sgpr0_64, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -52,10 +52,10 @@ body:             |
   bb.1:
     liveins: $vgpr20
     $vcc = V_CMP_LT_F16_t16_e64 0, 15, 0, $vgpr20_lo16, 1, 0, implicit $exec, implicit $mode
-    renamable $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
-    renamable $sgpr2_sgpr3 = S_AND_B64 renamable $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
-    renamable $sgpr0_sgpr1 = S_XOR_B64 renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    renamable $sgpr0_64 = COPY $exec, implicit-def $exec
+    renamable $sgpr2_64 = S_AND_B64 renamable $sgpr0_64, killed $vcc, implicit-def dead $scc
+    renamable $sgpr0_64 = S_XOR_B64 renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.2
 

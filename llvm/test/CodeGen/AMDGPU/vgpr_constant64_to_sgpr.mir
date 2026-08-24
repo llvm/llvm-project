@@ -6,14 +6,14 @@ name:            test_64imm
 registers:
   - { id: 1, class: vreg_64_align2 }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
+  - { reg: '$sgpr4_64', virtual-reg: '%1' }
 body:             |
   bb.0:
 
     ; GCN-LABEL: name: test_64imm
-    ; GCN: $sgpr8_sgpr9 = S_MOV_B64_IMM_PSEUDO 4607182418800017408
+    ; GCN: $sgpr8_64 = S_MOV_B64_IMM_PSEUDO 4607182418800017408
     %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    $sgpr8_sgpr9 = COPY %1
+    $sgpr8_64 = COPY %1
 ...
 
 # A non-inline 64-bit immediate (both halves non-zero) feeding a uniform-result
@@ -27,9 +27,9 @@ body:             |
   ; GCN-LABEL: name: test_b64_imm_phi
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr8_sgpr9, $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr8_64, $sgpr10
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr10
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -65,9 +65,9 @@ body:             |
   ; GCN-NEXT:   [[S_LSHR_B64_2:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], killed [[S_OR_B32_]], implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   bb.0:
-    liveins: $sgpr8_sgpr9, $sgpr10
+    liveins: $sgpr8_64, $sgpr10
 
-    %1:sreg_64 = COPY $sgpr8_sgpr9
+    %1:sreg_64 = COPY $sgpr8_64
     %3:sreg_32 = COPY $sgpr10
     %2:vreg_64 = V_MOV_B64_PSEUDO 1311768467463790320, implicit $exec
     S_BRANCH %bb.3

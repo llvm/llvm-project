@@ -10,8 +10,8 @@ name: remat_shrink_s_mov_b64
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr8_sgpr9
-    %0:sreg_64_xexec = COPY $sgpr8_sgpr9
+    liveins: $sgpr8_64
+    %0:sreg_64_xexec = COPY $sgpr8_64
 
     ; 0x0000002A_00000539: Lo_32 = 1337, Hi_32 = 42
     undef %1.sub0_sub1:sgpr_128 = S_MOV_B64 180388627769
@@ -25,17 +25,17 @@ body: |
     S_NOP 0, implicit %1.sub0
     S_NOP 0, implicit %1.sub1
 
-    ; CHECK: S_NOP 0, implicit-def $sgpr0_sgpr1
-    S_NOP 0, implicit-def $sgpr0_sgpr1, implicit-def $sgpr2_sgpr3, implicit-def $sgpr4_sgpr5, implicit-def $sgpr6_sgpr7
+    ; CHECK: S_NOP 0, implicit-def $sgpr0_64
+    S_NOP 0, implicit-def $sgpr0_64, implicit-def $sgpr2_64, implicit-def $sgpr4_64, implicit-def $sgpr6_64
 
     ; %2: uses both sub0 and sub1 - no shrink expected.
     S_NOP 0, implicit %2.sub0
     S_NOP 0, implicit %2.sub1
 
     ; %1: both lanes used after barrier, rematerialized as S_MOV_B64, not shrunk.
-    ; CHECK: renamable $[[REG1LO:sgpr[0-9]+]]_[[REG1HI:sgpr[0-9]+]] = S_MOV_B64 180388627769
-    ; CHECK-NEXT: S_NOP 0, implicit renamable $[[REG1HI]]
-    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG1LO]]
+    ; CHECK: renamable $sgpr[[#REG1:]]_64 = S_MOV_B64 180388627769
+    ; CHECK-NEXT: S_NOP 0, implicit renamable $sgpr[[#REG1+1]]
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $sgpr[[#REG1]]
     S_NOP 0, implicit %1.sub1
     S_NOP 0, implicit %1.sub0
 

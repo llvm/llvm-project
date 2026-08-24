@@ -349,6 +349,10 @@ foreach Index = 0...105 in {
                    !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
 }
 
+defvar SGPRMembers = !listconcat(
+    !foreach(i, !range(0, 106), !cast<Register>("SGPR"#i)), [VCC_LO, VCC_HI]);
+def : RegisterSequence<SGPRMembers>;
+
 // VGPR registers
 foreach Index = 0...1023 in {
   defm VGPR#Index :
@@ -390,7 +394,7 @@ def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
 
 // SGPR 32-bit registers
 def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                              (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)> {
+                              !dag(add, SGPRMembers, ?)> {
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 0;

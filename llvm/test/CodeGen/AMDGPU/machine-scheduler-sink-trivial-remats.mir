@@ -1030,9 +1030,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_9_high_rp_in_loop
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -1110,9 +1110,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_9_high_rp_in_loop
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -1187,9 +1187,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_22]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -1577,9 +1577,9 @@ body:             |
   ; GFX908-LABEL: name: test_sink_vgpr_regs_gives_8_occ_not_limited_by_sgprs
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -1793,9 +1793,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_sink_vgpr_regs_gives_8_occ_not_limited_by_sgprs
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -2006,9 +2006,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[S_MOV_B32_81]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -2388,9 +2388,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_9_no_sink_vgprs_and_sgprs
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -2590,9 +2590,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_9_no_sink_vgprs_and_sgprs
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -2789,9 +2789,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[S_MOV_B32_73]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -2996,9 +2996,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_8_sink_vgprs_and_sgprs
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -3204,9 +3204,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_8_sink_vgprs_and_sgprs
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -3409,9 +3409,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_22]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -4134,9 +4134,9 @@ body:             |
   ; GFX908-LABEL: name: test_no_sink_multiple_defs_clobber
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4215,9 +4215,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_no_sink_multiple_defs_clobber
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4293,9 +4293,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_22]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -4377,9 +4377,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_8_sink_for_9_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4464,9 +4464,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_8_sink_for_9_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4548,9 +4548,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_26]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -4638,9 +4638,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_7_sink_for_8_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4731,9 +4731,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_7_sink_for_8_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -4821,9 +4821,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_30]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -4917,9 +4917,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_6_sink_for_7_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -5016,9 +5016,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_6_sink_for_7_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
@@ -5112,9 +5112,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_34]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -5732,9 +5732,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_3_sink_for_4_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -5873,9 +5873,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_3_sink_for_4_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -6011,9 +6011,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_62]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -6155,9 +6155,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_2_sink_for_3_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -6326,9 +6326,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_2_sink_for_3_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -6494,9 +6494,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_82]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -6668,9 +6668,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_1_sink_for_2_occ
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -6905,9 +6905,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_1_sink_for_2_occ
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -7139,9 +7139,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_126]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -9878,9 +9878,9 @@ body:             |
   ; GFX908-LABEL: name: test_remat_over_exec_modif
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $sgpr2_sgpr3
+  ; GFX908-NEXT:   liveins: $sgpr2_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+  ; GFX908-NEXT:   %new_exec:sgpr_64 = COPY $sgpr2_64
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
@@ -9941,9 +9941,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_remat_over_exec_modif
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $sgpr2_sgpr3
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $sgpr2_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+  ; GFX908-GCNTRACKERS-NEXT:   %new_exec:sgpr_64 = COPY $sgpr2_64
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
@@ -10001,7 +10001,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   $exec = S_MOV_B64 %save_exec
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $sgpr2_sgpr3
+    liveins: $sgpr2_64
 
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
@@ -10038,7 +10038,7 @@ body:             |
     %32:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode
 
     %save_exec:sreg_64 = S_MOV_B64 $exec
-    %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+    %new_exec:sgpr_64 = COPY $sgpr2_64
     $exec = S_MOV_B64 %new_exec
 
   bb.1:
@@ -10071,12 +10071,12 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    liveins: $sgpr2_sgpr3
+    liveins: $sgpr2_64
 
     ; GFX908-LABEL: name: test_remat_same_block
-    ; GFX908: liveins: $sgpr2_sgpr3
+    ; GFX908: liveins: $sgpr2_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+    ; GFX908-NEXT: %new_exec:sgpr_64 = COPY $sgpr2_64
     ; GFX908-NEXT: [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
     ; GFX908-NEXT: [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
     ; GFX908-NEXT: [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
@@ -10133,9 +10133,9 @@ body:             |
     ; GFX908-NEXT: S_ENDPGM 0
     ;
     ; GFX908-GCNTRACKERS-LABEL: name: test_remat_same_block
-    ; GFX908-GCNTRACKERS: liveins: $sgpr2_sgpr3
+    ; GFX908-GCNTRACKERS: liveins: $sgpr2_64
     ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-    ; GFX908-GCNTRACKERS-NEXT: %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+    ; GFX908-GCNTRACKERS-NEXT: %new_exec:sgpr_64 = COPY $sgpr2_64
     ; GFX908-GCNTRACKERS-NEXT: [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
     ; GFX908-GCNTRACKERS-NEXT: [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
     ; GFX908-GCNTRACKERS-NEXT: [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
@@ -10225,7 +10225,7 @@ body:             |
     %32:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode
 
     %save_exec:sreg_64 = S_MOV_B64 $exec
-    %new_exec:sgpr_64 = COPY $sgpr2_sgpr3
+    %new_exec:sgpr_64 = COPY $sgpr2_64
     $exec = S_MOV_B64 %new_exec
 
     S_NOP 0, implicit %0, implicit %16
@@ -11040,9 +11040,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_8_physreg_use
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -11138,9 +11138,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_8_physreg_use
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -11233,9 +11233,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_27]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -11338,9 +11338,9 @@ body:             |
   ; GFX908-LABEL: name: test_occ_8_exec_use
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -11439,9 +11439,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: test_occ_8_exec_use
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -11537,9 +11537,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   $exec = S_MOV_B64 [[S_AND_SAVEEXEC_B64_]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -11645,9 +11645,9 @@ body:             |
   ; GFX908-LABEL: name: remat_virtual_vgpr_occ_6
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -11742,9 +11742,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: remat_virtual_vgpr_occ_6
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -11836,9 +11836,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_21]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -11940,9 +11940,9 @@ body:             |
   ; GFX908-LABEL: name: remat_virtual_vgpr_uses_not_available
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -12037,9 +12037,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: remat_virtual_vgpr_uses_not_available
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -12131,9 +12131,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_21]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -12235,9 +12235,9 @@ body:             |
   ; GFX908-LABEL: name: remat_virtual_vgpr_subreg_occ_6
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -12335,9 +12335,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: remat_virtual_vgpr_subreg_occ_6
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -12432,9 +12432,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_21]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -12539,9 +12539,9 @@ body:             |
   ; GFX908-LABEL: name: remat_virtual_vgpr_subreg_uses_not_available
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -12639,9 +12639,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: remat_virtual_vgpr_subreg_uses_not_available
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[DEF:%[0-9]+]].sub0:vreg_512 = IMPLICIT_DEF
@@ -12736,9 +12736,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_23]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec
@@ -12844,9 +12844,9 @@ body:             |
   ; GFX908-LABEL: name: remat_virtual_vgpr_subreg_def
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
@@ -12944,9 +12944,9 @@ body:             |
   ; GFX908-GCNTRACKERS-LABEL: name: remat_virtual_vgpr_subreg_def
   ; GFX908-GCNTRACKERS: bb.0:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GFX908-GCNTRACKERS-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_64
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -13039,9 +13039,9 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_22]]
   ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr_64(p4) = COPY $sgpr0_64
     %2:vgpr_32(s32) = COPY $vgpr0
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     %4:sreg_64 = V_CMP_GT_U32_e64 %3.sub0, %2(s32), implicit $exec

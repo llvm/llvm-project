@@ -72,15 +72,15 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: cttz_zero_poison_s64_ss
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; CHECK-NEXT: [[S_FF1_I32_B64_:%[0-9]+]]:sreg_32 = S_FF1_I32_B64 [[COPY]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_FF1_I32_B64_]]
-    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %0:sgpr(i64) = COPY $sgpr0_64
     %1:sgpr(i32) = G_CTTZ_ZERO_POISON %0
     S_ENDPGM 0, implicit %1
 ...

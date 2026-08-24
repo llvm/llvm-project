@@ -140,29 +140,29 @@ define amdgpu_kernel void @double4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x40100a3d
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0x70a3d70a
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s3, s5
 ; GCN-O0-NEXT:    s_mov_b32 s12, s4
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0x4000147a
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0xe147ae14
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s6
 ; GCN-O0-NEXT:    s_mov_b32 s13, s5
 ; GCN-O0-NEXT:    s_mov_b32 s14, s4
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0x3ff028f5
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0xc28f5c29
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s6
 ; GCN-O0-NEXT:    s_mov_b32 s15, s5
 ; GCN-O0-NEXT:    s_mov_b32 s16, s4
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0x3f847ae1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0x47ae147b
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s6
 ; GCN-O0-NEXT:    s_mov_b32 s17, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_256
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s16
 ; GCN-O0-NEXT:    s_mov_b32 s7, s15
@@ -254,28 +254,28 @@ define amdgpu_kernel void @double5_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s25, s7
 ; GCN-O0-NEXT:    s_mov_b32 s26, s6
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x40100a3d
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s27, s5
 ; GCN-O0-NEXT:    s_mov_b32 s28, s4
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x4000147a
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0xe147ae14
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s29, s5
 ; GCN-O0-NEXT:    s_mov_b32 s30, s4
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x3ff028f5
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0xc28f5c29
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s31, s5
 ; GCN-O0-NEXT:    s_mov_b32 s33, s4
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x3f847ae1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0x47ae147b
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s34, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr24
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr23
@@ -288,7 +288,7 @@ define amdgpu_kernel void @double5_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_512
 ; GCN-O0-NEXT:    s_mov_b32 s5, s34
 ; GCN-O0-NEXT:    s_mov_b32 s6, s33
 ; GCN-O0-NEXT:    s_mov_b32 s7, s31
@@ -383,12 +383,12 @@ define amdgpu_kernel void @half4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s5, 0x44004200
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s0, 0x40003c00
-; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; GCN-O0-NEXT:    s_mov_b32 s1, s5
 ; GCN-O0-NEXT:    s_mov_b32 s5, 4
 ; GCN-O0-NEXT:    s_lshl_b32 s4, s4, s5
 ; GCN-O0-NEXT:    s_lshr_b64 s[0:1], s[0:1], s4
-; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
@@ -469,17 +469,17 @@ define amdgpu_kernel void @double2_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN-O0-NEXT:    s_mov_b32 s3, 0x3ff028f5
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0xc28f5c29
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s3
 ; GCN-O0-NEXT:    s_mov_b32 s3, s5
 ; GCN-O0-NEXT:    s_mov_b32 s8, s4
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0x3f847ae1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0x47ae147b
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s5, s6
 ; GCN-O0-NEXT:    s_mov_b32 s9, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_128
 ; GCN-O0-NEXT:    s_mov_b32 s5, s9
 ; GCN-O0-NEXT:    s_mov_b32 s6, s8
 ; GCN-O0-NEXT:    s_mov_b32 s7, s3
@@ -831,8 +831,8 @@ define amdgpu_kernel void @double8_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s33, s4
 ; GCN-O0-NEXT:    s_mov_b64 s[4:5], 1.0
 ; GCN-O0-NEXT:    s_mov_b32 s34, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_512
 ; GCN-O0-NEXT:    s_mov_b32 s5, s34
 ; GCN-O0-NEXT:    s_mov_b32 s6, s33
 ; GCN-O0-NEXT:    s_mov_b32 s7, s31
@@ -977,12 +977,12 @@ define amdgpu_kernel void @double7_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s33, s4
 ; GCN-O0-NEXT:    s_mov_b64 s[4:5], 1.0
 ; GCN-O0-NEXT:    s_mov_b32 s34, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr20
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_512
 ; GCN-O0-NEXT:    s_mov_b32 s5, s34
 ; GCN-O0-NEXT:    s_mov_b32 s6, s33
 ; GCN-O0-NEXT:    s_mov_b32 s7, s31
@@ -1236,65 +1236,65 @@ define amdgpu_kernel void @double15_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0
 ; GCN-O0-NEXT:    s_mov_b32 s7, 0x402e0000
 ; GCN-O0-NEXT:    s_mov_b32 s5, s7
-; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_sgpr7
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_64
 ; GCN-O0-NEXT:    s_mov_b32 s8, 0
 ; GCN-O0-NEXT:    s_mov_b32 s9, 0x402c0000
 ; GCN-O0-NEXT:    s_mov_b32 s7, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_64
 ; GCN-O0-NEXT:    s_mov_b32 s10, 0
 ; GCN-O0-NEXT:    s_mov_b32 s11, 0x402a0000
 ; GCN-O0-NEXT:    s_mov_b32 s9, s11
-; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 killed $sgpr10_sgpr11
+; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 killed $sgpr10_64
 ; GCN-O0-NEXT:    s_mov_b32 s12, 0
 ; GCN-O0-NEXT:    s_mov_b32 s13, 0x40280000
 ; GCN-O0-NEXT:    s_mov_b32 s11, s13
-; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 killed $sgpr12_sgpr13
+; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 killed $sgpr12_64
 ; GCN-O0-NEXT:    s_mov_b32 s14, 0
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0x40260000
 ; GCN-O0-NEXT:    s_mov_b32 s13, s15
-; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 killed $sgpr14_sgpr15
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 killed $sgpr14_64
 ; GCN-O0-NEXT:    s_mov_b32 s16, 0
 ; GCN-O0-NEXT:    s_mov_b32 s17, 0x40240000
 ; GCN-O0-NEXT:    s_mov_b32 s15, s17
-; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 killed $sgpr16_sgpr17
+; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 killed $sgpr16_64
 ; GCN-O0-NEXT:    s_mov_b32 s18, 0
 ; GCN-O0-NEXT:    s_mov_b32 s19, 0x40220000
 ; GCN-O0-NEXT:    s_mov_b32 s17, s19
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 killed $sgpr18_sgpr19
+; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 killed $sgpr18_64
 ; GCN-O0-NEXT:    s_mov_b32 s20, 0
 ; GCN-O0-NEXT:    s_mov_b32 s21, 0x40200000
 ; GCN-O0-NEXT:    s_mov_b32 s19, s21
-; GCN-O0-NEXT:    ; kill: def $sgpr20 killed $sgpr20 killed $sgpr20_sgpr21
+; GCN-O0-NEXT:    ; kill: def $sgpr20 killed $sgpr20 killed $sgpr20_64
 ; GCN-O0-NEXT:    s_mov_b32 s22, 0
 ; GCN-O0-NEXT:    s_mov_b32 s23, 0x401c0000
 ; GCN-O0-NEXT:    s_mov_b32 s21, s23
-; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 killed $sgpr22_sgpr23
+; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 killed $sgpr22_64
 ; GCN-O0-NEXT:    s_mov_b32 s24, 0
 ; GCN-O0-NEXT:    s_mov_b32 s25, 0x40180000
 ; GCN-O0-NEXT:    s_mov_b32 s23, s25
-; GCN-O0-NEXT:    ; kill: def $sgpr24 killed $sgpr24 killed $sgpr24_sgpr25
+; GCN-O0-NEXT:    ; kill: def $sgpr24 killed $sgpr24 killed $sgpr24_64
 ; GCN-O0-NEXT:    s_mov_b32 s26, 0
 ; GCN-O0-NEXT:    s_mov_b32 s27, 0x40140000
 ; GCN-O0-NEXT:    s_mov_b32 s25, s27
-; GCN-O0-NEXT:    ; kill: def $sgpr26 killed $sgpr26 killed $sgpr26_sgpr27
+; GCN-O0-NEXT:    ; kill: def $sgpr26 killed $sgpr26 killed $sgpr26_64
 ; GCN-O0-NEXT:    s_mov_b64 s[28:29], 4.0
 ; GCN-O0-NEXT:    s_mov_b32 s27, s29
-; GCN-O0-NEXT:    ; kill: def $sgpr28 killed $sgpr28 killed $sgpr28_sgpr29
+; GCN-O0-NEXT:    ; kill: def $sgpr28 killed $sgpr28 killed $sgpr28_64
 ; GCN-O0-NEXT:    s_mov_b32 s30, 0
 ; GCN-O0-NEXT:    s_mov_b32 s31, 0x40080000
 ; GCN-O0-NEXT:    s_mov_b32 s29, s31
-; GCN-O0-NEXT:    ; kill: def $sgpr30 killed $sgpr30 killed $sgpr30_sgpr31
+; GCN-O0-NEXT:    ; kill: def $sgpr30 killed $sgpr30 killed $sgpr30_64
 ; GCN-O0-NEXT:    s_mov_b64 s[34:35], 2.0
 ; GCN-O0-NEXT:    s_mov_b32 s31, s35
 ; GCN-O0-NEXT:    s_mov_b32 s33, s34
 ; GCN-O0-NEXT:    s_mov_b64 s[36:37], 1.0
 ; GCN-O0-NEXT:    s_mov_b32 s34, s37
-; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 killed $sgpr36_sgpr37
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 killed $sgpr36_64
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr35
-; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_1024
 ; GCN-O0-NEXT:    s_mov_b32 s37, s34
 ; GCN-O0-NEXT:    s_mov_b32 s38, s33
 ; GCN-O0-NEXT:    s_mov_b32 s39, s31
@@ -1500,65 +1500,65 @@ define amdgpu_kernel void @double16_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0
 ; GCN-O0-NEXT:    s_mov_b32 s5, 0x40300000
 ; GCN-O0-NEXT:    s_mov_b32 s3, s5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_64
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0
 ; GCN-O0-NEXT:    s_mov_b32 s7, 0x402e0000
 ; GCN-O0-NEXT:    s_mov_b32 s5, s7
-; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_sgpr7
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_64
 ; GCN-O0-NEXT:    s_mov_b32 s8, 0
 ; GCN-O0-NEXT:    s_mov_b32 s9, 0x402c0000
 ; GCN-O0-NEXT:    s_mov_b32 s7, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_64
 ; GCN-O0-NEXT:    s_mov_b32 s10, 0
 ; GCN-O0-NEXT:    s_mov_b32 s11, 0x402a0000
 ; GCN-O0-NEXT:    s_mov_b32 s9, s11
-; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 killed $sgpr10_sgpr11
+; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 killed $sgpr10_64
 ; GCN-O0-NEXT:    s_mov_b32 s12, 0
 ; GCN-O0-NEXT:    s_mov_b32 s13, 0x40280000
 ; GCN-O0-NEXT:    s_mov_b32 s11, s13
-; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 killed $sgpr12_sgpr13
+; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 killed $sgpr12_64
 ; GCN-O0-NEXT:    s_mov_b32 s14, 0
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0x40260000
 ; GCN-O0-NEXT:    s_mov_b32 s13, s15
-; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 killed $sgpr14_sgpr15
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 killed $sgpr14_64
 ; GCN-O0-NEXT:    s_mov_b32 s16, 0
 ; GCN-O0-NEXT:    s_mov_b32 s17, 0x40240000
 ; GCN-O0-NEXT:    s_mov_b32 s15, s17
-; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 killed $sgpr16_sgpr17
+; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 killed $sgpr16_64
 ; GCN-O0-NEXT:    s_mov_b32 s18, 0
 ; GCN-O0-NEXT:    s_mov_b32 s19, 0x40220000
 ; GCN-O0-NEXT:    s_mov_b32 s17, s19
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 killed $sgpr18_sgpr19
+; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 killed $sgpr18_64
 ; GCN-O0-NEXT:    s_mov_b32 s20, 0
 ; GCN-O0-NEXT:    s_mov_b32 s21, 0x40200000
 ; GCN-O0-NEXT:    s_mov_b32 s19, s21
-; GCN-O0-NEXT:    ; kill: def $sgpr20 killed $sgpr20 killed $sgpr20_sgpr21
+; GCN-O0-NEXT:    ; kill: def $sgpr20 killed $sgpr20 killed $sgpr20_64
 ; GCN-O0-NEXT:    s_mov_b32 s22, 0
 ; GCN-O0-NEXT:    s_mov_b32 s23, 0x401c0000
 ; GCN-O0-NEXT:    s_mov_b32 s21, s23
-; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 killed $sgpr22_sgpr23
+; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 killed $sgpr22_64
 ; GCN-O0-NEXT:    s_mov_b32 s24, 0
 ; GCN-O0-NEXT:    s_mov_b32 s25, 0x40180000
 ; GCN-O0-NEXT:    s_mov_b32 s23, s25
-; GCN-O0-NEXT:    ; kill: def $sgpr24 killed $sgpr24 killed $sgpr24_sgpr25
+; GCN-O0-NEXT:    ; kill: def $sgpr24 killed $sgpr24 killed $sgpr24_64
 ; GCN-O0-NEXT:    s_mov_b32 s26, 0
 ; GCN-O0-NEXT:    s_mov_b32 s27, 0x40140000
 ; GCN-O0-NEXT:    s_mov_b32 s25, s27
-; GCN-O0-NEXT:    ; kill: def $sgpr26 killed $sgpr26 killed $sgpr26_sgpr27
+; GCN-O0-NEXT:    ; kill: def $sgpr26 killed $sgpr26 killed $sgpr26_64
 ; GCN-O0-NEXT:    s_mov_b64 s[28:29], 4.0
 ; GCN-O0-NEXT:    s_mov_b32 s27, s29
-; GCN-O0-NEXT:    ; kill: def $sgpr28 killed $sgpr28 killed $sgpr28_sgpr29
+; GCN-O0-NEXT:    ; kill: def $sgpr28 killed $sgpr28 killed $sgpr28_64
 ; GCN-O0-NEXT:    s_mov_b32 s30, 0
 ; GCN-O0-NEXT:    s_mov_b32 s31, 0x40080000
 ; GCN-O0-NEXT:    s_mov_b32 s29, s31
-; GCN-O0-NEXT:    ; kill: def $sgpr30 killed $sgpr30 killed $sgpr30_sgpr31
+; GCN-O0-NEXT:    ; kill: def $sgpr30 killed $sgpr30 killed $sgpr30_64
 ; GCN-O0-NEXT:    s_mov_b64 s[34:35], 2.0
 ; GCN-O0-NEXT:    s_mov_b32 s31, s35
 ; GCN-O0-NEXT:    s_mov_b32 s33, s34
 ; GCN-O0-NEXT:    s_mov_b64 s[36:37], 1.0
 ; GCN-O0-NEXT:    s_mov_b32 s34, s37
-; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 killed $sgpr36_sgpr37
-; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 killed $sgpr36_64
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_1024
 ; GCN-O0-NEXT:    s_mov_b32 s37, s34
 ; GCN-O0-NEXT:    s_mov_b32 s38, s33
 ; GCN-O0-NEXT:    s_mov_b32 s39, s31
@@ -1873,7 +1873,7 @@ define amdgpu_kernel void @byte8_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_lshl_b32 s1, s1, s8
 ; GCN-O0-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-O0-NEXT:    s_mov_b32 s7, 0
-; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; GCN-O0-NEXT:    s_mov_b32 s1, s7
 ; GCN-O0-NEXT:    s_mov_b32 s7, 0x600
 ; GCN-O0-NEXT:    s_mov_b32 s9, 5
@@ -1886,14 +1886,14 @@ define amdgpu_kernel void @byte8_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_or_b32 s6, s6, s7
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr8
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr7
-; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GCN-O0-NEXT:    s_mov_b32 s7, s8
 ; GCN-O0-NEXT:    s_mov_b32 s8, 32
 ; GCN-O0-NEXT:    s_lshl_b64 s[6:7], s[6:7], s8
 ; GCN-O0-NEXT:    s_or_b64 s[0:1], s[0:1], s[6:7]
 ; GCN-O0-NEXT:    s_lshl_b32 s4, s4, s5
 ; GCN-O0-NEXT:    s_lshr_b64 s[0:1], s[0:1], s4
-; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
@@ -2961,7 +2961,7 @@ define float @float32_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[46:47]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB20_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[46:47], -1
 ; GCN-O0-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
@@ -3191,7 +3191,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s18, s21
 ; GCN-O0-NEXT:    s_mov_b32 s19, s20
 ; GCN-O0-NEXT:    s_mov_b32 s20, 0x40203333
-; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 def $sgpr22_sgpr23
+; GCN-O0-NEXT:    ; kill: def $sgpr22 killed $sgpr22 def $sgpr22_64
 ; GCN-O0-NEXT:    s_mov_b32 s23, s20
 ; GCN-O0-NEXT:    s_mov_b32 s20, s23
 ; GCN-O0-NEXT:    s_mov_b32 s21, s22
@@ -3212,7 +3212,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s26, s29
 ; GCN-O0-NEXT:    s_mov_b32 s27, s28
 ; GCN-O0-NEXT:    s_mov_b32 s28, 0x40106666
-; GCN-O0-NEXT:    ; kill: def $sgpr42 killed $sgpr42 def $sgpr42_sgpr43
+; GCN-O0-NEXT:    ; kill: def $sgpr42 killed $sgpr42 def $sgpr42_64
 ; GCN-O0-NEXT:    s_mov_b32 s43, s28
 ; GCN-O0-NEXT:    s_mov_b32 s28, s43
 ; GCN-O0-NEXT:    s_mov_b32 s29, s42
@@ -3223,16 +3223,16 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s72, s45
 ; GCN-O0-NEXT:    s_mov_b32 s73, s44
 ; GCN-O0-NEXT:    s_mov_b32 s41, 0x4000cccc
-; GCN-O0-NEXT:    ; kill: def $sgpr42 killed $sgpr42 def $sgpr42_sgpr43
+; GCN-O0-NEXT:    ; kill: def $sgpr42 killed $sgpr42 def $sgpr42_64
 ; GCN-O0-NEXT:    s_mov_b32 s43, s41
 ; GCN-O0-NEXT:    s_mov_b32 s74, s43
 ; GCN-O0-NEXT:    s_mov_b32 s75, s42
 ; GCN-O0-NEXT:    s_mov_b32 s42, 0x3ff19999
-; GCN-O0-NEXT:    ; kill: def $sgpr40 killed $sgpr40 def $sgpr40_sgpr41
+; GCN-O0-NEXT:    ; kill: def $sgpr40 killed $sgpr40 def $sgpr40_64
 ; GCN-O0-NEXT:    s_mov_b32 s41, s42
 ; GCN-O0-NEXT:    s_mov_b32 s76, s41
 ; GCN-O0-NEXT:    s_mov_b32 s36, s40
-; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_1024
 ; GCN-O0-NEXT:    s_mov_b32 s37, s76
 ; GCN-O0-NEXT:    s_mov_b32 s38, s75
 ; GCN-O0-NEXT:    s_mov_b32 s39, s74
@@ -3373,7 +3373,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[78:79]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB21_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[78:79], -1
 ; GCN-O0-NEXT:    buffer_load_dword v34, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -3545,7 +3545,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[78:79]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB21_4: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[78:79], -1
 ; GCN-O0-NEXT:    buffer_load_dword v34, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -3668,7 +3668,7 @@ define i32 @extract_dyn_i32_3(<3 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_96
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
@@ -3685,7 +3685,7 @@ define i32 @extract_dyn_i32_3(<3 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[10:11]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB22_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GCN-O0-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -3746,7 +3746,7 @@ define i32 @extract_dyn_inreg_i32_3(<3 x i32> inreg %arg, i32 inreg %idx) {
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_96
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
@@ -3780,7 +3780,7 @@ define float @extract_dyn_float_3(<3 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_96
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
@@ -3797,7 +3797,7 @@ define float @extract_dyn_float_3(<3 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[10:11]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB24_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GCN-O0-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -3862,7 +3862,7 @@ define float @extract_dyn_inreg_float_3(<3 x float> inreg %arg, i32 inreg %idx) 
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_96
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
@@ -3902,7 +3902,7 @@ define i32 @extract_dyn_i32_5(<5 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_160
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -3925,7 +3925,7 @@ define i32 @extract_dyn_i32_5(<5 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[12:13]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB26_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -3992,7 +3992,7 @@ define i32 @extract_dyn_inreg_i32_5(<5 x i32> inreg %arg, i32 inreg %idx) {
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_160
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4036,7 +4036,7 @@ define float @extract_dyn_float_5(<5 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_160
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4059,7 +4059,7 @@ define float @extract_dyn_float_5(<5 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v6, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[12:13]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB28_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -4134,7 +4134,7 @@ define float @extract_dyn_inreg_float_5(<5 x float> inreg %arg, i32 inreg %idx) 
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_160
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4181,7 +4181,7 @@ define i32 @extract_dyn_i32_6(<6 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_192
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4207,7 +4207,7 @@ define i32 @extract_dyn_i32_6(<6 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v7, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[12:13]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB30_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GCN-O0-NEXT:    buffer_load_dword v7, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -4278,7 +4278,7 @@ define i32 @extract_dyn_inreg_i32_6(<6 x i32> inreg %arg, i32 inreg %idx) {
 ; GCN-O0:       ; %bb.0: ; %entry
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_192
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4328,7 +4328,7 @@ define float @extract_dyn_float_6(<6 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_192
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4354,7 +4354,7 @@ define float @extract_dyn_float_6(<6 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v7, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[12:13]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB32_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; GCN-O0-NEXT:    buffer_load_dword v7, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -4435,7 +4435,7 @@ define float @extract_dyn_inreg_float_6(<6 x float> inreg %arg, i32 inreg %idx) 
 ; GCN-O0:       ; %bb.0: ; %entry
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_192
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4488,7 +4488,7 @@ define i32 @extract_dyn_i32_7(<7 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_224
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4517,7 +4517,7 @@ define i32 @extract_dyn_i32_7(<7 x i32> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[14:15]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB34_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[14:15], -1
 ; GCN-O0-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -4590,7 +4590,7 @@ define i32 @extract_dyn_inreg_i32_7(<7 x i32> inreg %arg, i32 inreg %idx) {
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_224
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4644,7 +4644,7 @@ define float @extract_dyn_float_7(<7 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_224
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19
@@ -4673,7 +4673,7 @@ define float @extract_dyn_float_7(<7 x float> inreg %arg, i32 %idx) {
 ; GCN-O0-NEXT:    buffer_store_dword v8, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[14:15]
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GCN-O0-NEXT:    ; implicit-def: $sgpr4_64
 ; GCN-O0-NEXT:  .LBB36_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[14:15], -1
 ; GCN-O0-NEXT:    buffer_load_dword v8, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -4758,7 +4758,7 @@ define float @extract_dyn_inreg_float_7(<7 x float> inreg %arg, i32 inreg %idx) 
 ; GCN-O0:       ; %bb.0:
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s4, s16
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_224
 ; GCN-O0-NEXT:    s_mov_b32 s5, s17
 ; GCN-O0-NEXT:    s_mov_b32 s6, s18
 ; GCN-O0-NEXT:    s_mov_b32 s7, s19

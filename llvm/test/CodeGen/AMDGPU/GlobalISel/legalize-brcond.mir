@@ -202,11 +202,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -220,11 +220,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_brcond
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -236,10 +236,10 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2
@@ -261,11 +261,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_back
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -279,11 +279,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_back
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -295,10 +295,10 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2
@@ -320,11 +320,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_back_fallthrough
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -337,11 +337,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_back_fallthrough
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -352,10 +352,10 @@ body:             |
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2
@@ -420,11 +420,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_need_terminator_insert_point
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -440,11 +440,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_need_terminator_insert_point
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -458,10 +458,10 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2
@@ -611,11 +611,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_negated
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -629,11 +629,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -645,10 +645,10 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2
@@ -669,11 +669,11 @@ body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_br_negated
   ; WAVE64: bb.0:
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_64
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -687,11 +687,11 @@ body:             |
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_br_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
-  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+  ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_64
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -703,10 +703,10 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0, $vgpr1, $sgpr0_64
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = COPY $sgpr0_64
 
   bb.1:
     successors: %bb.1, %bb.2

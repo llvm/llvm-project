@@ -7159,7 +7159,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
-  if (MRI.regsOverlap(SGPR104_SGPR105, Reg))
+  if (MRI.regsOverlap(SGPR104_64, Reg))
     return hasSGPR104_SGPR105();
 
   switch (Reg.id()) {
@@ -7218,7 +7218,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  if (MRI.regsOverlap(SGPR102_SGPR103, Reg))
+  if (MRI.regsOverlap(SGPR102_64, Reg))
     return hasSGPR102_SGPR103();
 
   return true;

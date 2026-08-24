@@ -7,15 +7,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p0_s_k
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-    %0:_(p0) = COPY $sgpr0_sgpr1
+    %0:_(p0) = COPY $sgpr0_64
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(p0) = G_PTR_ADD %0, %1
 ...
@@ -26,16 +26,16 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
 
     ; CHECK-LABEL: name: gep_p0_s_s
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p0) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
-    %0:_(p0) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(p0) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(p0) = G_PTR_ADD %0, %1
 ...
 
@@ -65,17 +65,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0_vgpr1, $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p0_v_s
-    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p0) = G_PTR_ADD [[COPY]], [[COPY2]](s64)
     %0:_(p0) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $sgpr0_64
     %2:_(p0) = G_PTR_ADD %0, %1
 ...
 
@@ -104,15 +104,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p1_s_k
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    %0:_(p1) = COPY $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_64
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(p1) = G_PTR_ADD %0, %1
 ...
@@ -123,16 +123,16 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
 
     ; CHECK-LABEL: name: gep_p1_s_s
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
-    %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(p1) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
@@ -162,17 +162,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0_vgpr1, $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p1_v_s
-    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[COPY2]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $sgpr0_64
     %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
@@ -298,15 +298,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p4_s_k
-    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    %0:_(p4) = COPY $sgpr0_sgpr1
+    %0:_(p4) = COPY $sgpr0_64
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(p4) = G_PTR_ADD %0, %1
 ...
@@ -317,16 +317,16 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
 
     ; CHECK-LABEL: name: gep_p4_s_s
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
-    %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(p4) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(p4) = G_PTR_ADD %0, %1
 ...
 
@@ -356,17 +356,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    liveins: $vgpr0_vgpr1, $sgpr0_64
 
     ; CHECK-LABEL: name: gep_p4_v_s
-    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[COPY2]](s64)
     %0:_(p4) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $sgpr0_64
     %2:_(p4) = G_PTR_ADD %0, %1
 ...
 

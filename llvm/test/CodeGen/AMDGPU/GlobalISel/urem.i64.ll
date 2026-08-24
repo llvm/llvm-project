@@ -347,7 +347,7 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; CHECK-NEXT:    ; implicit-def: $sgpr4_64
 ; CHECK-NEXT:  .LBB1_3: ; %Flow
 ; CHECK-NEXT:    s_xor_b32 s1, s6, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0

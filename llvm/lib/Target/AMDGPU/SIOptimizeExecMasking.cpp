@@ -545,9 +545,9 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
         // will be rewritten by the saveexec, i.e. hasOneUse. There may have
         // been another use, such as an inserted spill. For example:
         //
-        // %sgpr0_sgpr1 = COPY %exec
-        // spill %sgpr0_sgpr1
-        // %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1
+        // %sgpr0_64 = COPY %exec
+        // spill %sgpr0_64
+        // %sgpr2_64 = S_AND_B64 %sgpr0_64
         //
         LLVM_DEBUG(dbgs() << "Found second use of save inst candidate: " << *J
                           << '\n');

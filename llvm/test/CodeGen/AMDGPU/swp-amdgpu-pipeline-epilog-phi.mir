@@ -10,18 +10,18 @@ name:            swp_amdgpu_pipeline_epilog_phi
 tracksRegLiveness: true
 isSSA:           true
 liveins:
-  - { reg: '$sgpr4_sgpr5' }
+  - { reg: '$sgpr4_64' }
 machineFunctionInfo:
   isEntryFunction: true
   argumentInfo:
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
 body:             |
   ; CHECK-LABEL: name: swp_amdgpu_pipeline_epilog_phi
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[S_LOAD_DWORDX4_IMM]].sub0, %subreg.sub0, [[S_LOAD_DWORDX4_IMM]].sub1, %subreg.sub1
@@ -92,9 +92,9 @@ body:             |
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[AV_MOV_2]], [[V_MUL_F32_e32_1]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %0:sgpr_64(p4) = COPY $sgpr4_64
     %1:sgpr_128 = S_LOAD_DWORDX4_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
     %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 16, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %3:sreg_64_xexec_xnull = REG_SEQUENCE %1.sub0, %subreg.sub0, %1.sub1, %subreg.sub1

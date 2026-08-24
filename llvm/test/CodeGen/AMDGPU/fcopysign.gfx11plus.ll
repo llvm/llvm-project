@@ -7,9 +7,9 @@
 define amdgpu_kernel void @f_copy_sign (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %out) {
   ; GFX11-REAL16-LABEL: name: f_copy_sign
   ; GFX11-REAL16: bb.0.entry:
-  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GFX11-REAL16-NEXT: {{  $}}
-  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset + 16, align 4, addrspace 4)
@@ -43,9 +43,9 @@ define amdgpu_kernel void @f_copy_sign (ptr addrspace(1) %a, ptr addrspace(1) %b
   ;
   ; GFX11-FAKE16-LABEL: name: f_copy_sign
   ; GFX11-FAKE16: bb.0.entry:
-  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GFX11-FAKE16-NEXT: {{  $}}
-  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset + 16, align 4, addrspace 4)

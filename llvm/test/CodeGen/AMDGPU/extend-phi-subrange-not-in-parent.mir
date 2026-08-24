@@ -11,7 +11,7 @@
 name: subrange_for_this_mask_not_found
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
 body:             |

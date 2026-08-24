@@ -4,9 +4,9 @@
 define amdgpu_kernel void @asm_convergent() convergent{
   ; CHECK-LABEL: name: asm_convergent
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &s_barrier, sideeffect isconvergent attdialect, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "s_barrier", ""() convergent, !srcloc !0
@@ -16,9 +16,9 @@ define amdgpu_kernel void @asm_convergent() convergent{
 define amdgpu_kernel void @asm_simple_memory_clobber() {
   ; CHECK-LABEL: name: asm_simple_memory_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, !1
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, !1
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -30,9 +30,9 @@ define amdgpu_kernel void @asm_simple_memory_clobber() {
 define amdgpu_kernel void @asm_simple_vgpr_clobber() {
   ; CHECK-LABEL: name: asm_simple_vgpr_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"v_mov_b32 v0, 7", sideeffect attdialect, clobber, implicit-def early-clobber $vgpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "v_mov_b32 v0, 7", "~{v0}"(), !srcloc !0
@@ -42,9 +42,9 @@ define amdgpu_kernel void @asm_simple_vgpr_clobber() {
 define amdgpu_kernel void @asm_simple_sgpr_clobber() {
   ; CHECK-LABEL: name: asm_simple_sgpr_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, 7", sideeffect attdialect, clobber, implicit-def early-clobber $sgpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "s_mov_b32 s0, 7", "~{s0}"(), !srcloc !0
@@ -54,9 +54,9 @@ define amdgpu_kernel void @asm_simple_sgpr_clobber() {
 define amdgpu_kernel void @asm_simple_agpr_clobber() {
   ; CHECK-LABEL: name: asm_simple_agpr_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"; def a0", sideeffect attdialect, clobber, implicit-def early-clobber $agpr0, !1
   ; CHECK-NEXT:   S_ENDPGM 0
   call void asm sideeffect "; def a0", "~{a0}"(), !srcloc !0
@@ -166,9 +166,9 @@ define float @test_vector_output() nounwind {
 define amdgpu_kernel void @test_input_vgpr_imm() {
   ; CHECK-LABEL: name: test_input_vgpr_imm
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[C]](i32)
   ; CHECK-NEXT:   INLINEASM &"v_mov_b32 v0, $0", sideeffect attdialect, reguse:VGPR_32, [[COPY1]]
@@ -180,9 +180,9 @@ define amdgpu_kernel void @test_input_vgpr_imm() {
 define amdgpu_kernel void @test_input_sgpr_imm() {
   ; CHECK-LABEL: name: test_input_sgpr_imm
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[C]](i32)
   ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, $0", sideeffect attdialect, reguse:SReg_32, [[COPY1]]
@@ -194,9 +194,9 @@ define amdgpu_kernel void @test_input_sgpr_imm() {
 define amdgpu_kernel void @test_input_imm() {
   ; CHECK-LABEL: name: test_input_imm
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"s_mov_b32 s0, $0", sideeffect mayload attdialect, imm, 42
   ; CHECK-NEXT:   INLINEASM &"s_mov_b64 s[0:1], $0", sideeffect mayload attdialect, imm, 42
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -322,9 +322,9 @@ entry:
 define amdgpu_kernel void @asm_constraint_n_n()  {
   ; CHECK-LABEL: name: asm_constraint_n_n
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr8_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_64
   ; CHECK-NEXT:   INLINEASM &"s_trap ${0:n}", sideeffect attdialect, imm, 10
   ; CHECK-NEXT:   S_ENDPGM 0
   tail call void asm sideeffect "s_trap ${0:n}", "n"(i32 10) #1

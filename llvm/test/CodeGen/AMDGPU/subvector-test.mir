@@ -7,15 +7,15 @@
 name:            subvector-basic-bb
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   frameOffsetReg: $sgpr5
   stackPtrOffsetReg: $sgpr32
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     successors: %bb.1, %bb.2
 
-    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sgpr_64 = COPY $sgpr0_64
     %4:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 36, 0
     %11:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4.sub2_sub3, 0, 0
     undef %15.sub0:vreg_64 = COPY %4.sub0

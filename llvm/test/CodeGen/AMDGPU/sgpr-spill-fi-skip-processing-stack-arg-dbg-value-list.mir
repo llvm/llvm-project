@@ -28,14 +28,14 @@ machineFunctionInfo:
   maxKernArgAlign: 4
   isEntryFunction: true
   waveLimiter:     true
-  scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+  scratchRSrcReg:  '$sgpr96_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
   hasSpilledSGPRs: true
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-    kernargSegmentPtr: { reg: '$sgpr6_sgpr7' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
+    dispatchPtr:     { reg: '$sgpr4_64' }
+    kernargSegmentPtr: { reg: '$sgpr6_64' }
     workGroupIDX:    { reg: '$sgpr8' }
     privateSegmentWaveByteOffset: { reg: '$sgpr9' }
 body:             |
@@ -48,9 +48,9 @@ body:             |
 
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32
     DBG_VALUE_LIST !1, !8, %stack.0, 0, debug-location !9
 
   bb.1:
-    renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_128, implicit $sgpr32
     S_ENDPGM 0

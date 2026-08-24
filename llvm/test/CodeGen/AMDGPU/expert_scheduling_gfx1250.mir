@@ -116,17 +116,17 @@ name: buffer_load_vsrc_war
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
+    liveins: $vgpr0, $vgpr1, $sgpr0_128
     ; CHECK-LABEL: name: buffer_load_vsrc_war
-    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr0_128
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; CHECK-NEXT: S_WAIT_KMCNT 0
-    ; CHECK-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_128, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: S_WAIT_XCNT 0
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_128, 0, 0, 0, 0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
 ...

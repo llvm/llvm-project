@@ -58,7 +58,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_MOV_B:%[0-9]+]].sub0_sub1:vreg_192_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B:%[0-9]+]].sub2_sub3:vreg_192_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -76,7 +76,7 @@ body: |
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
     %1:vreg_64_align2 = COPY %0:vreg_64_align2
     %2:vreg_64_align2 = COPY %0:vreg_64_align2
-    %3:sreg_64 = COPY $sgpr0_sgpr1
+    %3:sreg_64 = COPY $sgpr0_64
     $exec = S_MOV_B64_term %3:sreg_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1
@@ -143,11 +143,11 @@ body: |
   ; CHECK-LABEL: name: av_mov_imm_b64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0_sub1:vreg_192 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
   ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub2_sub3:vreg_192 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -161,11 +161,11 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[AV_MOV_]]
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     %0:av_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
     %1:vreg_64 = COPY %0
     %2:vreg_64 = COPY %0
-    %3:sreg_64 = COPY $sgpr0_sgpr1
+    %3:sreg_64 = COPY $sgpr0_64
     $exec = S_MOV_B64_term %3:sreg_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1

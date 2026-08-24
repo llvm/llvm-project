@@ -32,16 +32,16 @@ body:             |
   ; CHECK-LABEL: name: setpc_with_successors
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr30_sgpr31
+  ; CHECK-NEXT:   liveins: $sgpr30_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SETPC_B64 $sgpr30_sgpr31
+  ; CHECK-NEXT:   S_SETPC_B64 $sgpr30_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_64
     successors: %bb.1
-    S_SETPC_B64 $sgpr30_sgpr31
+    S_SETPC_B64 $sgpr30_64
 
   bb.1:
     S_NOP 0

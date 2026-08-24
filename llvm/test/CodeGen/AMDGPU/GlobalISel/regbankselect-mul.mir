@@ -81,15 +81,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-LABEL: name: mul_s64_ss
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:sgpr(s64) = G_MUL [[COPY]], [[COPY1]]
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(s64) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(s64) = G_MUL %0, %1
 ...
 
@@ -125,15 +125,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-LABEL: name: mul_s64_zext_ss
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:sgpr(s64) = G_MUL [[COPY]], [[COPY1]]
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(s64) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(s64) = G_AMDGPU_S_MUL_U64_U32 %0, %1
 ...
 
@@ -164,15 +164,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-LABEL: name: mul_s64_sext_ss
-    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK: liveins: $sgpr0_64, $sgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_64
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:sgpr(s64) = G_MUL [[COPY]], [[COPY1]]
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s64) = COPY $sgpr2_sgpr3
+    %0:_(s64) = COPY $sgpr0_64
+    %1:_(s64) = COPY $sgpr2_64
     %2:_(s64) = G_AMDGPU_S_MUL_I64_I32 %0, %1
 ...
 

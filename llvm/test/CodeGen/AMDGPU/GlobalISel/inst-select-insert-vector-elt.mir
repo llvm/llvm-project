@@ -11,12 +11,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    liveins: $sgpr0_64, $sgpr2, $sgpr3
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v2s32
-    ; MOVREL: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    ; MOVREL: liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -24,15 +24,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V2_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v2s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
+    ; GPRIDX: liveins: $sgpr0_64, $sgpr2, $sgpr3
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V2_:%[0-9]+]]:sreg_64 = S_INDIRECT_REG_WRITE_MOVREL_B32_V2 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V2_]]
-    %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
+    %0:sgpr(<2 x s32>) = COPY $sgpr0_64
     %1:sgpr(s32) = COPY $sgpr2
     %2:sgpr(s32) = COPY $sgpr3
     %3:sgpr(<2 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -46,12 +46,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2, $sgpr3, $sgpr4
+    liveins: $sgpr0_96, $sgpr3, $sgpr4
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v3s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2, $sgpr3, $sgpr4
+    ; MOVREL: liveins: $sgpr0_96, $sgpr3, $sgpr4
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_96
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -59,15 +59,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V3_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v3s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2, $sgpr3, $sgpr4
+    ; GPRIDX: liveins: $sgpr0_96, $sgpr3, $sgpr4
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_96
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V3_:%[0-9]+]]:sgpr_96 = S_INDIRECT_REG_WRITE_MOVREL_B32_V3 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V3_]]
-    %0:sgpr(<3 x s32>) = COPY $sgpr0_sgpr1_sgpr2
+    %0:sgpr(<3 x s32>) = COPY $sgpr0_96
     %1:sgpr(s32) = COPY $sgpr3
     %2:sgpr(s32) = COPY $sgpr4
     %3:sgpr(<3 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -81,12 +81,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
+    liveins: $sgpr0_128, $sgpr4, $sgpr5
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v4s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
+    ; MOVREL: liveins: $sgpr0_128, $sgpr4, $sgpr5
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -94,15 +94,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v4s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
+    ; GPRIDX: liveins: $sgpr0_128, $sgpr4, $sgpr5
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_:%[0-9]+]]:sgpr_128 = S_INDIRECT_REG_WRITE_MOVREL_B32_V4 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
-    %0:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:sgpr(<4 x s32>) = COPY $sgpr0_128
     %1:sgpr(s32) = COPY $sgpr3
     %2:sgpr(s32) = COPY $sgpr4
     %3:sgpr(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -116,12 +116,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr5, $sgpr6
+    liveins: $sgpr0_160, $sgpr5, $sgpr6
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v5s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr5, $sgpr6
+    ; MOVREL: liveins: $sgpr0_160, $sgpr5, $sgpr6
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_160 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_160 = COPY $sgpr0_160
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -129,15 +129,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V5_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v5s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr5, $sgpr6
+    ; GPRIDX: liveins: $sgpr0_160, $sgpr5, $sgpr6
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_160 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_160 = COPY $sgpr0_160
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr5
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V5_:%[0-9]+]]:sgpr_160 = S_INDIRECT_REG_WRITE_MOVREL_B32_V5 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V5_]]
-    %0:sgpr(<5 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    %0:sgpr(<5 x s32>) = COPY $sgpr0_160
     %1:sgpr(s32) = COPY $sgpr5
     %2:sgpr(s32) = COPY $sgpr6
     %3:sgpr(<5 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -151,12 +151,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    liveins: $sgpr0_256, $sgpr8, $sgpr9
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v8s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; MOVREL: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -164,15 +164,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v8s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; GPRIDX: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_:%[0-9]+]]:sgpr_256 = S_INDIRECT_REG_WRITE_MOVREL_B32_V8 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %0:sgpr(<8 x s32>) = COPY $sgpr0_256
     %1:sgpr(s32) = COPY $sgpr8
     %2:sgpr(s32) = COPY $sgpr9
     %3:sgpr(<8 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -186,12 +186,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8, $sgpr9, $sgpr10
+    liveins: $sgpr0_288, $sgpr9, $sgpr10
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v9s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8, $sgpr9, $sgpr10
+    ; MOVREL: liveins: $sgpr0_288, $sgpr9, $sgpr10
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_288 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_288 = COPY $sgpr0_288
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -199,15 +199,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V9_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v9s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8, $sgpr9, $sgpr10
+    ; GPRIDX: liveins: $sgpr0_288, $sgpr9, $sgpr10
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_288 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_288 = COPY $sgpr0_288
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V9_:%[0-9]+]]:sgpr_288 = S_INDIRECT_REG_WRITE_MOVREL_B32_V9 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V9_]]
-    %0:sgpr(<9 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8
+    %0:sgpr(<9 x s32>) = COPY $sgpr0_288
     %1:sgpr(s32) = COPY $sgpr9
     %2:sgpr(s32) = COPY $sgpr10
     %3:sgpr(<9 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -221,12 +221,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9, $sgpr10, $sgpr11
+    liveins: $sgpr0_320, $sgpr10, $sgpr11
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v10s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9, $sgpr10, $sgpr11
+    ; MOVREL: liveins: $sgpr0_320, $sgpr10, $sgpr11
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_320 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_320 = COPY $sgpr0_320
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -234,15 +234,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V10_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v10s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9, $sgpr10, $sgpr11
+    ; GPRIDX: liveins: $sgpr0_320, $sgpr10, $sgpr11
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_320 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_320 = COPY $sgpr0_320
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V10_:%[0-9]+]]:sgpr_320 = S_INDIRECT_REG_WRITE_MOVREL_B32_V10 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V10_]]
-    %0:sgpr(<10 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
+    %0:sgpr(<10 x s32>) = COPY $sgpr0_320
     %1:sgpr(s32) = COPY $sgpr10
     %2:sgpr(s32) = COPY $sgpr11
     %3:sgpr(<10 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -256,12 +256,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10, $sgpr11, $sgpr12
+    liveins: $sgpr0_352, $sgpr11, $sgpr12
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v11s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10, $sgpr11, $sgpr12
+    ; MOVREL: liveins: $sgpr0_352, $sgpr11, $sgpr12
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_352 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_352 = COPY $sgpr0_352
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr12
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -269,15 +269,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V11_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v11s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10, $sgpr11, $sgpr12
+    ; GPRIDX: liveins: $sgpr0_352, $sgpr11, $sgpr12
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_352 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_352 = COPY $sgpr0_352
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr12
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V11_:%[0-9]+]]:sgpr_352 = S_INDIRECT_REG_WRITE_MOVREL_B32_V11 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V11_]]
-    %0:sgpr(<11 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
+    %0:sgpr(<11 x s32>) = COPY $sgpr0_352
     %1:sgpr(s32) = COPY $sgpr11
     %2:sgpr(s32) = COPY $sgpr12
     %3:sgpr(<11 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -291,12 +291,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12, $sgpr13
+    liveins: $sgpr0_384, $sgpr12, $sgpr13
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v12s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12, $sgpr13
+    ; MOVREL: liveins: $sgpr0_384, $sgpr12, $sgpr13
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_384 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_384 = COPY $sgpr0_384
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr12
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr13
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -304,15 +304,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V12_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v12s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12, $sgpr13
+    ; GPRIDX: liveins: $sgpr0_384, $sgpr12, $sgpr13
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_384 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_384 = COPY $sgpr0_384
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr12
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr13
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V12_:%[0-9]+]]:sgpr_384 = S_INDIRECT_REG_WRITE_MOVREL_B32_V12 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V12_]]
-    %0:sgpr(<12 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11
+    %0:sgpr(<12 x s32>) = COPY $sgpr0_384
     %1:sgpr(s32) = COPY $sgpr12
     %2:sgpr(s32) = COPY $sgpr13
     %3:sgpr(<12 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -326,12 +326,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16, $sgpr17
+    liveins: $sgpr0_512, $sgpr16, $sgpr17
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v16s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16, $sgpr17
+    ; MOVREL: liveins: $sgpr0_512, $sgpr16, $sgpr17
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_512
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr16
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr17
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -339,15 +339,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V16_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v16s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16, $sgpr17
+    ; GPRIDX: liveins: $sgpr0_512, $sgpr16, $sgpr17
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_512
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr16
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr17
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V16_:%[0-9]+]]:sgpr_512 = S_INDIRECT_REG_WRITE_MOVREL_B32_V16 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V16_]]
-    %0:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %0:sgpr(<16 x s32>) = COPY $sgpr0_512
     %1:sgpr(s32) = COPY $sgpr16
     %2:sgpr(s32) = COPY $sgpr17
     %3:sgpr(<16 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -361,12 +361,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40, $sgpr41
+    liveins: $sgpr0_1024, $sgpr40, $sgpr41
 
     ; MOVREL-LABEL: name: extract_vector_elt_s_s32_v32s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40, $sgpr41
+    ; MOVREL: liveins: $sgpr0_1024, $sgpr40, $sgpr41
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_1024
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr40
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr41
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -374,15 +374,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V32_]]
     ;
     ; GPRIDX-LABEL: name: extract_vector_elt_s_s32_v32s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40, $sgpr41
+    ; GPRIDX: liveins: $sgpr0_1024, $sgpr40, $sgpr41
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_1024
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr40
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr41
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V32_:%[0-9]+]]:sgpr_1024 = S_INDIRECT_REG_WRITE_MOVREL_B32_V32 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V32_]]
-    %0:sgpr(<32 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
+    %0:sgpr(<32 x s32>) = COPY $sgpr0_1024
     %1:sgpr(s32) = COPY $sgpr40
     %2:sgpr(s32) = COPY $sgpr41
     %3:sgpr(<32 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -396,29 +396,29 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6
+    liveins: $sgpr0_128, $sgpr4_64, $sgpr6
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s64_v2s64
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6
+    ; MOVREL: liveins: $sgpr0_128, $sgpr4_64, $sgpr6
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
+    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
     ; MOVREL-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V2_:%[0-9]+]]:sgpr_128 = S_INDIRECT_REG_WRITE_MOVREL_B64_V2 [[COPY]], [[COPY1]], 4, implicit $m0
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V2_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s64_v2s64
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6
+    ; GPRIDX: liveins: $sgpr0_128, $sgpr4_64, $sgpr6
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
+    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_64
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V2_:%[0-9]+]]:sgpr_128 = S_INDIRECT_REG_WRITE_MOVREL_B64_V2 [[COPY]], [[COPY1]], 4, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V2_]]
-    %0:sgpr(<2 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s64) = COPY $sgpr4_sgpr5
+    %0:sgpr(<2 x s64>) = COPY $sgpr0_128
+    %1:sgpr(s64) = COPY $sgpr4_64
     %2:sgpr(s32) = COPY $sgpr6
     %3:sgpr(<2 x s64>) = G_INSERT_VECTOR_ELT %0, %1, %2
     S_ENDPGM 0, implicit %3
@@ -431,29 +431,29 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10
+    liveins: $sgpr0_256, $sgpr8_64, $sgpr10
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s64_v4s64
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10
+    ; MOVREL: liveins: $sgpr0_256, $sgpr8_64, $sgpr10
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
+    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
     ; MOVREL-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V4_:%[0-9]+]]:sgpr_256 = S_INDIRECT_REG_WRITE_MOVREL_B64_V4 [[COPY]], [[COPY1]], 4, implicit $m0
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s64_v4s64
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10
+    ; GPRIDX: liveins: $sgpr0_256, $sgpr8_64, $sgpr10
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
+    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V4_:%[0-9]+]]:sgpr_256 = S_INDIRECT_REG_WRITE_MOVREL_B64_V4 [[COPY]], [[COPY1]], 4, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V4_]]
-    %0:sgpr(<4 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s64) = COPY $sgpr8_sgpr9
+    %0:sgpr(<4 x s64>) = COPY $sgpr0_256
+    %1:sgpr(s64) = COPY $sgpr8_64
     %2:sgpr(s32) = COPY $sgpr10
     %3:sgpr(<4 x s64>) = G_INSERT_VECTOR_ELT %0, %1, %2
     S_ENDPGM 0, implicit %3
@@ -466,29 +466,29 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17, $sgpr18
+    liveins: $sgpr0_512, $sgpr16_64, $sgpr18
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s64_v8s64
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17, $sgpr18
+    ; MOVREL: liveins: $sgpr0_512, $sgpr16_64, $sgpr18
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr16_sgpr17
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_512
+    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr16_64
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr18
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
     ; MOVREL-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V8_:%[0-9]+]]:sgpr_512 = S_INDIRECT_REG_WRITE_MOVREL_B64_V8 [[COPY]], [[COPY1]], 4, implicit $m0
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V8_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s64_v8s64
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17, $sgpr18
+    ; GPRIDX: liveins: $sgpr0_512, $sgpr16_64, $sgpr18
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr16_sgpr17
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_512
+    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr16_64
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr18
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V8_:%[0-9]+]]:sgpr_512 = S_INDIRECT_REG_WRITE_MOVREL_B64_V8 [[COPY]], [[COPY1]], 4, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V8_]]
-    %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s64) = COPY $sgpr16_sgpr17
+    %0:sgpr(<8 x s64>) = COPY $sgpr0_512
+    %1:sgpr(s64) = COPY $sgpr16_64
     %2:sgpr(s32) = COPY $sgpr18
     %3:sgpr(<8 x s64>) = G_INSERT_VECTOR_ELT %0, %1, %2
     S_ENDPGM 0, implicit %3
@@ -501,29 +501,29 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40_sgpr41, $sgpr42
+    liveins: $sgpr0_1024, $sgpr40_64, $sgpr42
 
     ; MOVREL-LABEL: name: extract_vector_elt_s_s64_v16s64
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40_sgpr41, $sgpr42
+    ; MOVREL: liveins: $sgpr0_1024, $sgpr40_64, $sgpr42
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
-    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr40_sgpr41
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_1024
+    ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr40_64
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr42
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
     ; MOVREL-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V16_:%[0-9]+]]:sgpr_1024 = S_INDIRECT_REG_WRITE_MOVREL_B64_V16 [[COPY]], [[COPY1]], 4, implicit $m0
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V16_]]
     ;
     ; GPRIDX-LABEL: name: extract_vector_elt_s_s64_v16s64
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, $sgpr40_sgpr41, $sgpr42
+    ; GPRIDX: liveins: $sgpr0_1024, $sgpr40_64, $sgpr42
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
-    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr40_sgpr41
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_1024 = COPY $sgpr0_1024
+    ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr40_64
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr42
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B64_V16_:%[0-9]+]]:sgpr_1024 = S_INDIRECT_REG_WRITE_MOVREL_B64_V16 [[COPY]], [[COPY1]], 4, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B64_V16_]]
-    %0:sgpr(<16 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
-    %1:sgpr(s64) = COPY $sgpr40_sgpr41
+    %0:sgpr(<16 x s64>) = COPY $sgpr0_1024
+    %1:sgpr(s64) = COPY $sgpr40_64
     %2:sgpr(s32) = COPY $sgpr42
     %3:sgpr(<16 x s64>) = G_INSERT_VECTOR_ELT %0, %1, %2
     S_ENDPGM 0, implicit %3
@@ -782,12 +782,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    liveins: $sgpr0_256, $sgpr8, $sgpr9
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v8s32_add_1
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; MOVREL: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -795,15 +795,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v8s32_add_1
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; GPRIDX: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_:%[0-9]+]]:sgpr_256 = S_INDIRECT_REG_WRITE_MOVREL_B32_V8 [[COPY]], [[COPY1]], 11, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %0:sgpr(<8 x s32>) = COPY $sgpr0_256
     %1:sgpr(s32) = COPY $sgpr8
     %2:sgpr(s32) = COPY $sgpr9
     %3:sgpr(s32) = G_CONSTANT i32 1
@@ -819,12 +819,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    liveins: $sgpr0_256, $sgpr8, $sgpr9
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v8s32_add_8
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; MOVREL: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
@@ -834,9 +834,9 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v8s32_add_8
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8, $sgpr9
+    ; GPRIDX: liveins: $sgpr0_256, $sgpr8, $sgpr9
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_256
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr9
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
@@ -844,7 +844,7 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_:%[0-9]+]]:sgpr_256 = S_INDIRECT_REG_WRITE_MOVREL_B32_V8 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V8_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %0:sgpr(<8 x s32>) = COPY $sgpr0_256
     %1:sgpr(s32) = COPY $sgpr8
     %2:sgpr(s32) = COPY $sgpr9
     %3:sgpr(s32) = G_CONSTANT i32 8
@@ -862,12 +862,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    liveins: $sgpr0_128, $sgpr4
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v4s32_const_idx
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    ; MOVREL: liveins: $sgpr0_128, $sgpr4
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; MOVREL-NEXT: $m0 = COPY [[S_MOV_B32_]]
@@ -875,15 +875,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v4s32_const_idx
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    ; GPRIDX: liveins: $sgpr0_128, $sgpr4
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; GPRIDX-NEXT: $m0 = COPY [[S_MOV_B32_]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_:%[0-9]+]]:sgpr_128 = S_INDIRECT_REG_WRITE_MOVREL_B32_V4 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
-    %0:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:sgpr(<4 x s32>) = COPY $sgpr0_128
     %1:sgpr(s32) = COPY $sgpr4
     %2:sgpr(s32) = G_CONSTANT i32 0
     %3:sgpr(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -897,12 +897,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    liveins: $sgpr0_128, $sgpr4
 
     ; MOVREL-LABEL: name: insert_vector_elt_v_s32_v4s32_const_idx
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    ; MOVREL: liveins: $sgpr0_128, $sgpr4
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $sgpr0_128
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; MOVREL-NEXT: $m0 = COPY [[S_MOV_B32_]]
@@ -910,14 +910,14 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_v_s32_v4s32_const_idx
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+    ; GPRIDX: liveins: $sgpr0_128, $sgpr4
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $sgpr0_128
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_WRITE_GPR_IDX_B32_V4_:%[0-9]+]]:vreg_128 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V4 [[COPY]], [[COPY1]], [[S_MOV_B32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_WRITE_GPR_IDX_B32_V4_]]
-    %0:vgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %0:vgpr(<4 x s32>) = COPY $sgpr0_128
     %1:sgpr(s32) = COPY $sgpr4
     %2:sgpr(s32) = G_CONSTANT i32 0
     %3:vgpr(<4 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -931,12 +931,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5, $sgpr6, $sgpr7
+    liveins: $sgpr0_192, $sgpr6, $sgpr7
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v6s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5, $sgpr6, $sgpr7
+    ; MOVREL: liveins: $sgpr0_192, $sgpr6, $sgpr7
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_192 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_192 = COPY $sgpr0_192
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr7
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -944,15 +944,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V6_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v6s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5, $sgpr6, $sgpr7
+    ; GPRIDX: liveins: $sgpr0_192, $sgpr6, $sgpr7
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_192 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_192 = COPY $sgpr0_192
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr6
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr7
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V6_:%[0-9]+]]:sgpr_192 = S_INDIRECT_REG_WRITE_MOVREL_B32_V6 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V6_]]
-    %0:sgpr(<6 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5
+    %0:sgpr(<6 x s32>) = COPY $sgpr0_192
     %1:sgpr(s32) = COPY $sgpr6
     %2:sgpr(s32) = COPY $sgpr7
     %3:sgpr(<6 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2
@@ -966,12 +966,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6, $sgpr7, $sgpr8
+    liveins: $sgpr0_224, $sgpr7, $sgpr8
 
     ; MOVREL-LABEL: name: insert_vector_elt_s_s32_v7s32
-    ; MOVREL: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6, $sgpr7, $sgpr8
+    ; MOVREL: liveins: $sgpr0_224, $sgpr7, $sgpr8
     ; MOVREL-NEXT: {{  $}}
-    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_224 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6
+    ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_224 = COPY $sgpr0_224
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr7
     ; MOVREL-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: $m0 = COPY [[COPY2]]
@@ -979,15 +979,15 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V7_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_s_s32_v7s32
-    ; GPRIDX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6, $sgpr7, $sgpr8
+    ; GPRIDX: liveins: $sgpr0_224, $sgpr7, $sgpr8
     ; GPRIDX-NEXT: {{  $}}
-    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_224 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6
+    ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_224 = COPY $sgpr0_224
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr7
     ; GPRIDX-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: $m0 = COPY [[COPY2]]
     ; GPRIDX-NEXT: [[S_INDIRECT_REG_WRITE_MOVREL_B32_V7_:%[0-9]+]]:sgpr_224 = S_INDIRECT_REG_WRITE_MOVREL_B32_V7 [[COPY]], [[COPY1]], 3, implicit $m0
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_INDIRECT_REG_WRITE_MOVREL_B32_V7_]]
-    %0:sgpr(<7 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6
+    %0:sgpr(<7 x s32>) = COPY $sgpr0_224
     %1:sgpr(s32) = COPY $sgpr7
     %2:sgpr(s32) = COPY $sgpr8
     %3:sgpr(<7 x s32>) = G_INSERT_VECTOR_ELT %0, %1, %2

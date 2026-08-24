@@ -5,11 +5,11 @@
 name: target_memoperands_noclobber
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; CHECK-LABEL: name: target_memoperands
-    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: ("amdgpu-noclobber" load (s32))
-    %0:_(p4) = COPY $sgpr0_sgpr1
+    %0:_(p4) = COPY $sgpr0_64
     %1:_(s32) = G_LOAD %0 :: ("amdgpu-noclobber" load (s32))
 ...
 
@@ -17,10 +17,10 @@ body: |
 name: target_memoperands_last_use
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
     ; CHECK-LABEL: name: target_memoperands
-    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: ("amdgpu-last-use" load (s32))
-    %0:_(p4) = COPY $sgpr0_sgpr1
+    %0:_(p4) = COPY $sgpr0_64
     %1:_(s32) = G_LOAD %0 :: ("amdgpu-last-use" load (s32))
 ...

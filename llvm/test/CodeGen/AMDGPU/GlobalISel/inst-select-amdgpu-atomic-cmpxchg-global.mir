@@ -690,12 +690,12 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    liveins: $sgpr0_64, $vgpr2, $vgpr3
 
     ; GFX6-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX6: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX6: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -708,9 +708,9 @@ body:             |
     ; GFX6-NEXT: $vgpr0 = COPY [[COPY3]]
     ;
     ; GFX7-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX7: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX7: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX7-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -723,9 +723,9 @@ body:             |
     ; GFX7-NEXT: $vgpr0 = COPY [[COPY3]]
     ;
     ; GFX7-FLAT-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX7-FLAT: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX7-FLAT: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX7-FLAT-NEXT: {{  $}}
-    ; GFX7-FLAT-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX7-FLAT-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX7-FLAT-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX7-FLAT-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX7-FLAT-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -734,9 +734,9 @@ body:             |
     ; GFX7-FLAT-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_CMPSWAP_RTN]]
     ;
     ; GFX8-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX8: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX8: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX8-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -745,9 +745,9 @@ body:             |
     ; GFX8-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_CMPSWAP_RTN]]
     ;
     ; GFX9-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX9: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX9: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_64
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -756,16 +756,16 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN]]
     ;
     ; GFX10-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
-    ; GFX10: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX10: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_64
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX10-NEXT: [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], [[COPY]], 0, 1, implicit $exec :: (load store seq_cst (s32), addrspace 1)
     ; GFX10-NEXT: $vgpr0 = COPY [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN]]
-    %0:sgpr(p1) = COPY $sgpr0_sgpr1
+    %0:sgpr(p1) = COPY $sgpr0_64
     %1:vgpr(i32) = COPY $vgpr2
     %2:vgpr(i32) = COPY $vgpr3
     %3:vgpr(<2 x i32>) = G_BUILD_VECTOR %1, %2
@@ -781,12 +781,12 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    liveins: $sgpr0_64, $vgpr2, $vgpr3
 
     ; GFX6-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX6: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX6: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -799,9 +799,9 @@ body:             |
     ; GFX6-NEXT: $vgpr0 = COPY [[COPY3]]
     ;
     ; GFX7-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX7: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX7: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX7-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -814,9 +814,9 @@ body:             |
     ; GFX7-NEXT: $vgpr0 = COPY [[COPY3]]
     ;
     ; GFX7-FLAT-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX7-FLAT: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX7-FLAT: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX7-FLAT-NEXT: {{  $}}
-    ; GFX7-FLAT-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX7-FLAT-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX7-FLAT-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX7-FLAT-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX7-FLAT-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4095
@@ -833,9 +833,9 @@ body:             |
     ; GFX7-FLAT-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_CMPSWAP_RTN]]
     ;
     ; GFX8-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX8: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX8: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX8-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4095
@@ -852,9 +852,9 @@ body:             |
     ; GFX8-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_CMPSWAP_RTN]]
     ;
     ; GFX9-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX9: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX9: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_64
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
@@ -863,16 +863,16 @@ body:             |
     ; GFX9-NEXT: $vgpr0 = COPY [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN]]
     ;
     ; GFX10-LABEL: name: amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
-    ; GFX10: liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
+    ; GFX10: liveins: $sgpr0_64, $vgpr2, $vgpr3
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr0_64
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2048, implicit $exec
     ; GFX10-NEXT: [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], [[COPY]], 2047, 1, implicit $exec :: (load store seq_cst (s32), addrspace 1)
     ; GFX10-NEXT: $vgpr0 = COPY [[GLOBAL_ATOMIC_CMPSWAP_SADDR_RTN]]
-    %0:sgpr(p1) = COPY $sgpr0_sgpr1
+    %0:sgpr(p1) = COPY $sgpr0_64
     %1:vgpr(i32) = COPY $vgpr2
     %2:vgpr(i32) = COPY $vgpr3
     %3:sgpr(i64) = G_CONSTANT i64 4095

@@ -10,12 +10,12 @@ tracksRegLiveness: true
 
 body: |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GFX10-LABEL: name: fract_f64_neg
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
@@ -32,9 +32,9 @@ body: |
     ; GFX10-NEXT: S_ENDPGM 0
     ;
     ; GFX11-LABEL: name: fract_f64_neg
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
@@ -49,7 +49,7 @@ body: |
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
-    %2:sgpr(p4) = COPY $sgpr0_sgpr1
+    %2:sgpr(p4) = COPY $sgpr0_64
     %7:sgpr(i64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(i64)
     %9:sgpr(<2 x i64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
@@ -78,12 +78,12 @@ tracksRegLiveness: true
 
 body: |
   bb.1:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
     ; GFX10-LABEL: name: fract_f64_neg_abs
-    ; GFX10: liveins: $sgpr0_sgpr1
+    ; GFX10: liveins: $sgpr0_64
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
@@ -100,9 +100,9 @@ body: |
     ; GFX10-NEXT: S_ENDPGM 0
     ;
     ; GFX11-LABEL: name: fract_f64_neg_abs
-    ; GFX11: liveins: $sgpr0_sgpr1
+    ; GFX11: liveins: $sgpr0_64
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
     ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
@@ -117,7 +117,7 @@ body: |
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
-    %2:sgpr(p4) = COPY $sgpr0_sgpr1
+    %2:sgpr(p4) = COPY $sgpr0_64
     %7:sgpr(i64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(i64)
     %9:sgpr(<2 x i64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)

@@ -52,8 +52,8 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    ; Child Loop BB0_11 Depth 4
 ; CHECK-NEXT:    ; Child Loop BB0_13 Depth 5
 ; CHECK-NEXT:    s_mov_b64 s[46:47], 0
-; CHECK-NEXT:    ; implicit-def: $sgpr44_sgpr45
-; CHECK-NEXT:    ; implicit-def: $sgpr56_sgpr57
+; CHECK-NEXT:    ; implicit-def: $sgpr44_64
+; CHECK-NEXT:    ; implicit-def: $sgpr56_64
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: ; %Flow11
 ; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=2
@@ -80,9 +80,9 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    v_fma_f64 v[2:3], v[0:1], s[24:25], 0
 ; CHECK-NEXT:    v_fmac_f64_e64 v[2:3], 0, s[26:27]
 ; CHECK-NEXT:    s_mov_b64 s[62:63], 0
-; CHECK-NEXT:    ; implicit-def: $sgpr72_sgpr73
-; CHECK-NEXT:    ; implicit-def: $sgpr74_sgpr75
-; CHECK-NEXT:    ; implicit-def: $sgpr76_sgpr77
+; CHECK-NEXT:    ; implicit-def: $sgpr72_64
+; CHECK-NEXT:    ; implicit-def: $sgpr74_64
+; CHECK-NEXT:    ; implicit-def: $sgpr76_64
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_6: ; %Flow9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_8 Depth=3
@@ -116,7 +116,7 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:  ; %bb.9: ; %sgpr_pressure_loop.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_8 Depth=3
 ; CHECK-NEXT:    s_mov_b64 s[90:91], 0
-; CHECK-NEXT:    ; implicit-def: $sgpr88_sgpr89
+; CHECK-NEXT:    ; implicit-def: $sgpr88_64
 ; CHECK-NEXT:    s_branch .LBB0_11
 ; CHECK-NEXT:  .LBB0_10: ; %Flow7
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=4

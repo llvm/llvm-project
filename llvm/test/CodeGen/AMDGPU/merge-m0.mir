@@ -202,9 +202,9 @@ registers:
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_OR_B64 $exec, killed $sgpr0_64, implicit-def $scc
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
     S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
@@ -242,7 +242,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: move-m0-with-prologue
-# GCN: $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+# GCN: $exec = S_OR_B64 $exec, killed $sgpr0_64, implicit-def $scc
 # GCN: $m0 = S_MOV_B32 -1
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
@@ -250,9 +250,9 @@ body:             |
 name: move-m0-with-prologue
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_OR_B64 $exec, killed $sgpr0_64, implicit-def $scc
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec

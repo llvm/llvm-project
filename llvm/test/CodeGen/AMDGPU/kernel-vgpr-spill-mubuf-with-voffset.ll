@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-NEXT:    s_mov_b32 s15, s19
 ; CHECK-NEXT:    s_add_u32 s8, s8, s16
 ; CHECK-NEXT:    s_addc_u32 s15, s9, s15
-; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; CHECK-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_64
 ; CHECK-NEXT:    s_mov_b32 s9, s15
 ; CHECK-NEXT:    s_mov_b32 s15, 0x2000
 ; CHECK-NEXT:    s_mov_b32 s18, s15

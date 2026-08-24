@@ -15,7 +15,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -49,29 +49,29 @@ stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
   isEntryFunction: true
 body:             |
   bb.0:
     ; MUBUFW64-LABEL: name: s_add_u32__kernel__literal__fi_offset96__offset_literal
-    ; MUBUFW64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64: liveins: $sgpr0_128
     ; MUBUFW64-NEXT: {{  $}}
     ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_128
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_128
     ; MUBUFW64-NEXT: renamable $sgpr7 = S_MOV_B32 164
     ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr7
     ;
     ; MUBUFW32-LABEL: name: s_add_u32__kernel__literal__fi_offset96__offset_literal
-    ; MUBUFW32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32: liveins: $sgpr0_128
     ; MUBUFW32-NEXT: {{  $}}
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_128
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_128
     ; MUBUFW32-NEXT: renamable $sgpr7 = S_MOV_B32 164
     ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr7
     ;
@@ -97,29 +97,29 @@ stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   frameOffsetReg:  '$sgpr33'
   stackPtrOffsetReg: '$sgpr32'
   isEntryFunction: true
 body:             |
   bb.0:
     ; MUBUFW64-LABEL: name: s_add_u32__kernel__literal__fi_offset96__offset_literal_live_scc
-    ; MUBUFW64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64: liveins: $sgpr0_128
     ; MUBUFW64-NEXT: {{  $}}
     ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_128
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_128
     ; MUBUFW64-NEXT: renamable $sgpr7 = S_ADD_U32 164, 0, implicit-def $scc
     ; MUBUFW64-NEXT: SI_RETURN implicit $sgpr7, implicit $scc
     ;
     ; MUBUFW32-LABEL: name: s_add_u32__kernel__literal__fi_offset96__offset_literal_live_scc
-    ; MUBUFW32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32: liveins: $sgpr0_128
     ; MUBUFW32-NEXT: {{  $}}
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_128
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_128
     ; MUBUFW32-NEXT: renamable $sgpr7 = S_ADD_U32 164, 0, implicit-def $scc
     ; MUBUFW32-NEXT: SI_RETURN implicit $sgpr7, implicit $scc
     ;

@@ -12,11 +12,11 @@ body:              |
   ; CHECK-LABEL: name: v_cmp_cse_across_loop
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0, $sgpr2_sgpr3
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0, $sgpr2_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_64
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -39,11 +39,11 @@ body:              |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $sgpr0, $sgpr2_sgpr3
+    liveins: $vgpr0, $sgpr0, $sgpr2_64
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = COPY $sgpr0
-    %2:sreg_64 = COPY $sgpr2_sgpr3
+    %2:sreg_64 = COPY $sgpr2_64
     S_BRANCH %bb.1
 
   bb.1:

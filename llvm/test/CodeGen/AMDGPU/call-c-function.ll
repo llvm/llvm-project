@@ -16,20 +16,20 @@ define amdgpu_ps void @amdgpu_ps_call_default_cc() {
   ; GISEL-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GISEL-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GISEL-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
-  ; GISEL-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]]
-  ; GISEL-NEXT:   $sgpr4_sgpr5 = COPY [[DEF]]
-  ; GISEL-NEXT:   $sgpr6_sgpr7 = COPY [[DEF]]
+  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr96_128
+  ; GISEL-NEXT:   $sgpr0_128 = COPY [[COPY]]
+  ; GISEL-NEXT:   $sgpr4_64 = COPY [[DEF]]
+  ; GISEL-NEXT:   $sgpr6_64 = COPY [[DEF]]
   ; GISEL-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr8_sgpr9 = COPY [[S_MOV_B]]
-  ; GISEL-NEXT:   $sgpr10_sgpr11 = COPY [[DEF1]]
+  ; GISEL-NEXT:   $sgpr8_64 = COPY [[S_MOV_B]]
+  ; GISEL-NEXT:   $sgpr10_64 = COPY [[DEF1]]
   ; GISEL-NEXT:   $sgpr12 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr13 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr14 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr15 = COPY [[DEF2]]
   ; GISEL-NEXT:   $vgpr31 = COPY [[DEF3]]
   ; GISEL-NEXT:   [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; GISEL-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   S_ENDPGM 0
 main_body:
@@ -49,20 +49,20 @@ define amdgpu_gfx void @amdgpu_gfx_call_default_cc() {
   ; GISEL-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GISEL-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GISEL-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GISEL-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]]
-  ; GISEL-NEXT:   $sgpr4_sgpr5 = COPY [[DEF]]
-  ; GISEL-NEXT:   $sgpr6_sgpr7 = COPY [[DEF]]
+  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_128
+  ; GISEL-NEXT:   $sgpr0_128 = COPY [[COPY]]
+  ; GISEL-NEXT:   $sgpr4_64 = COPY [[DEF]]
+  ; GISEL-NEXT:   $sgpr6_64 = COPY [[DEF]]
   ; GISEL-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr8_sgpr9 = COPY [[S_MOV_B]]
-  ; GISEL-NEXT:   $sgpr10_sgpr11 = COPY [[DEF1]]
+  ; GISEL-NEXT:   $sgpr8_64 = COPY [[S_MOV_B]]
+  ; GISEL-NEXT:   $sgpr10_64 = COPY [[DEF1]]
   ; GISEL-NEXT:   $sgpr12 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr13 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr14 = COPY [[DEF2]]
   ; GISEL-NEXT:   $sgpr15 = COPY [[DEF2]]
   ; GISEL-NEXT:   $vgpr31 = COPY [[DEF3]]
   ; GISEL-NEXT:   [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; GISEL-NEXT:   $sgpr30_64 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_128, implicit $sgpr4_64, implicit $sgpr6_64, implicit $sgpr8_64, implicit $sgpr10_64, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   SI_RETURN
 main_body:

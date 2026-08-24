@@ -6,8 +6,8 @@
 # CHECK-LABEL: bb.0:
 # CHECK: renamable $sgpr1 = COPY renamable $sgpr2
 # CHECK-LABEL: bb.1:
-# CHECK: liveins: $sgpr0_sgpr1
-# CHECK: renamable $vgpr1_vgpr2 = COPY renamable $sgpr0_sgpr1
+# CHECK: liveins: $sgpr0_64
+# CHECK: renamable $vgpr1_vgpr2 = COPY renamable $sgpr0_64
 
 ---
 name: donotsinkcopy
@@ -17,11 +17,11 @@ body: |
     liveins: $sgpr0, $sgpr2, $vgpr3
     S_CMP_LT_U32 renamable $sgpr2, target-flags(amdgpu-gotprel32-lo) 2, implicit-def $scc
     renamable $sgpr1 = COPY renamable $sgpr2
-    renamable $vgpr1_vgpr2 = COPY renamable $sgpr0_sgpr1
+    renamable $vgpr1_vgpr2 = COPY renamable $sgpr0_64
     S_CBRANCH_SCC0 %bb.2, implicit $scc
 
   bb.1:
-    liveins: $vgpr2, $sgpr0_sgpr1:0x00000003
+    liveins: $vgpr2, $sgpr0_64:0x00000003
     S_BRANCH %bb.4
 
   bb.2:

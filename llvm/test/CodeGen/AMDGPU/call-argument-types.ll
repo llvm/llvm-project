@@ -5544,8 +5544,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    buffer_store_dword v0, off, s[52:55], s32 offset:4
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s23
-; GISEL-NEXT:    ; kill: killed $sgpr0_sgpr1
-; GISEL-NEXT:    ; kill: killed $sgpr0_sgpr1
+; GISEL-NEXT:    ; kill: killed $sgpr0_64
+; GISEL-NEXT:    ; kill: killed $sgpr0_64
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, external_void_func_v32i32_i32@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, external_void_func_v32i32_i32@rel32@hi+12

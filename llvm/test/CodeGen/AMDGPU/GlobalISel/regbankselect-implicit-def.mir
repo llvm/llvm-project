@@ -102,9 +102,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test_implicit_def_s64_sgpr_use
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $sgpr8_sgpr9 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: $sgpr8_64 = COPY [[DEF]](s64)
     %0:_(s64) = G_IMPLICIT_DEF
-    $sgpr8_sgpr9 = COPY %0
+    $sgpr8_64 = COPY %0
 
 ...
 
@@ -115,9 +115,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test_implicit_def_s128_sgpr_use
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(s128) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $sgpr8_sgpr9_sgpr10_sgpr11 = COPY [[DEF]](s128)
+    ; CHECK-NEXT: $sgpr8_128 = COPY [[DEF]](s128)
     %0:_(s128) = G_IMPLICIT_DEF
-    $sgpr8_sgpr9_sgpr10_sgpr11 = COPY %0
+    $sgpr8_128 = COPY %0
 
 ...
 

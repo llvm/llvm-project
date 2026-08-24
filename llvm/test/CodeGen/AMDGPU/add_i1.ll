@@ -120,7 +120,7 @@ define amdgpu_kernel void @add_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GFX9-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v0
-; GFX9-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX9-NEXT:    ; implicit-def: $sgpr4_64
 ; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX9-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX9-NEXT:    s_cbranch_execz .LBB2_2

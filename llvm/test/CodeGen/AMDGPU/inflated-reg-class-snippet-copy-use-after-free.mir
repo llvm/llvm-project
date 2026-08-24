@@ -58,17 +58,17 @@ name:            inflated_reg_class_copy_use_after_free
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  scratchRSrcReg:  '$sgpr72_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
   vgprForAGPRCopy: '$vgpr255'
-  sgprForEXECCopy: '$sgpr74_sgpr75'
+  sgprForEXECCopy: '$sgpr74_64'
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     %0:vgpr_32 = IMPLICIT_DEF
-    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_sgpr5, 0, 0 :: (load (s64), addrspace 4)
+    renamable $sgpr0_64 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_64, 0, 0 :: (load (s64), addrspace 4)
     S_NOP 0, implicit-def undef %1.sub12_sub13_sub14_sub15:vreg_512_align2
     S_NOP 0, implicit-def %1.sub8_sub9_sub10_sub11:vreg_512_align2
     S_NOP 0, implicit-def %1.sub4_sub5_sub6_sub7:vreg_512_align2
@@ -89,7 +89,7 @@ body:             |
     %1.sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
     %1.sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
     %1:vreg_512_align2 = V_MFMA_F32_16X16X1F32_mac_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, %1, 0, 0, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_sgpr1, 96, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_64, 96, 0, implicit $exec :: (store (s128), addrspace 1)
     S_ENDPGM 0
 
 ...
@@ -149,17 +149,17 @@ name:            inflated_reg_class_copy_use_after_free_lane_subset
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  scratchRSrcReg:  '$sgpr72_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
   vgprForAGPRCopy: '$vgpr255'
-  sgprForEXECCopy: '$sgpr74_sgpr75'
+  sgprForEXECCopy: '$sgpr74_64'
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
     %0:vgpr_32 = IMPLICIT_DEF
-    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_sgpr5, 0, 0 :: (load (s64), addrspace 4)
+    renamable $sgpr0_64 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_64, 0, 0 :: (load (s64), addrspace 4)
     S_NOP 0, implicit-def undef %1.sub12_sub13_sub14_sub15:vreg_512_align2
     S_NOP 0, implicit-def %1.sub8_sub9_sub10_sub11:vreg_512_align2
     S_NOP 0, implicit-def %1.sub4_sub5_sub6_sub7:vreg_512_align2
@@ -180,7 +180,7 @@ body:             |
     %1.sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
     %1.sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
     S_NOP 0, implicit-def %1:vreg_512_align2, implicit %1.sub0_sub1_sub2_sub3, implicit %1.sub4_sub5_sub6_sub7, implicit %1.sub8_sub9_sub10_sub11
-    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_sgpr1, 96, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_64, 96, 0, implicit $exec :: (store (s128), addrspace 1)
     S_ENDPGM 0
 
 ...

@@ -36,7 +36,7 @@ stack:
       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 machineFunctionInfo:
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
@@ -45,13 +45,13 @@ body:             |
     renamable $vgpr41 = COPY $vgpr2, implicit $exec
     renamable $vgpr40 = COPY $vgpr1, implicit $exec
     renamable $vcc = V_CMP_NE_U32_e64 42, killed $vgpr0, implicit $exec
-    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
-    renamable $sgpr34_sgpr35 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+    $sgpr4_64 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr34_64 = S_XOR_B64 $exec, killed renamable $sgpr4_64, implicit-def dead $scc
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @foo + 4, target-flags(amdgpu-gotprel32-hi) @foo + 12, implicit-def dead $scc
-    renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0
-    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @foo, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+    renamable $sgpr4_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @foo + 4, target-flags(amdgpu-gotprel32-hi) @foo + 12, implicit-def dead $scc
+    renamable $sgpr4_64 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_64, 0, 0
+    dead $sgpr30_64 = SI_CALL killed renamable $sgpr4_64, @foo, csr_amdgpu, implicit $sgpr0_128
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
 
     SI_RETURN

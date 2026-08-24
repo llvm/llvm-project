@@ -25,14 +25,14 @@ liveins:
   - { reg: '$vgpr14', virtual-reg: '%14' }
   - { reg: '$vgpr15', virtual-reg: '%15' }
   - { reg: '$vgpr16', virtual-reg: '%16' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%17' }
+  - { reg: '$sgpr30_64', virtual-reg: '%17' }
 body:             |
   ; GFX9-LABEL: name: index_vgpr_waterfall_loop
   ; GFX9: bb.0:
   ; GFX9-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31
+  ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_64
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
   ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
   ; GFX9-NEXT:   undef [[COPY2:%[0-9]+]].sub15:vreg_512 = COPY $vgpr15
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub14:vreg_512 = COPY $vgpr14
@@ -67,14 +67,14 @@ body:             |
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
   ; GFX9-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX9-NEXT:   $sgpr30_sgpr31 = COPY [[COPY]]
+  ; GFX9-NEXT:   $sgpr30_64 = COPY [[COPY]]
   ; GFX9-NEXT:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
-  ; GFX9-NEXT:   S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
+  ; GFX9-NEXT:   S_SETPC_B64_return $sgpr30_64, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
   bb.0:
     successors: %bb.1
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_64
 
-    %17:sreg_64 = COPY killed $sgpr30_sgpr31
+    %17:sreg_64 = COPY killed $sgpr30_64
     %16:vgpr_32 = COPY killed $vgpr16
     %15:vgpr_32 = COPY killed $vgpr15
     %14:vgpr_32 = COPY killed $vgpr14
@@ -110,8 +110,8 @@ body:             |
 
   bb.2:
     $exec = S_MOV_B64 killed %20
-    $sgpr30_sgpr31 = COPY killed %17
+    $sgpr30_64 = COPY killed %17
     $vgpr0 = COPY killed %24
-    S_SETPC_B64_return killed $sgpr30_sgpr31, implicit killed $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
+    S_SETPC_B64_return killed $sgpr30_64, implicit killed $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
 
 ...

@@ -19,11 +19,11 @@ body:             |
 name:            ballot
 body:             |
   bb.1:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
     ; CHECK-LABEL: MachineUniformityInfo for function:  @ballot
     ; CHECK: ALL VALUES UNIFORM
 
-    %2:_(p4) = COPY $sgpr4_sgpr5
+    %2:_(p4) = COPY $sgpr4_64
     %10:_(p1) = G_IMPLICIT_DEF
     %6:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
     %7:_(s32) = G_LOAD %6(p4) :: (dereferenceable invariant load (s32), align 16, addrspace 4)

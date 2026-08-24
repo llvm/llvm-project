@@ -12,14 +12,14 @@
 name:            export_cluster_postra
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr4, $vgpr5, $vgpr6, $sgpr8_sgpr9_sgpr10_sgpr11
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr4, $vgpr5, $vgpr6, $sgpr8_128
 
     ; CHECK-LABEL: name: export_cluster_postra
-    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr4, $vgpr5, $vgpr6, $sgpr8_sgpr9_sgpr10_sgpr11
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr4, $vgpr5, $vgpr6, $sgpr8_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit killed $sgpr8_sgpr9_sgpr10_sgpr11 {
-    ; CHECK-NEXT:   $sgpr0 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_sgpr9_sgpr10_sgpr11, 20, 0 :: (dereferenceable invariant load (s32))
-    ; CHECK-NEXT:   $sgpr1 = S_BUFFER_LOAD_DWORD_IMM killed $sgpr8_sgpr9_sgpr10_sgpr11, 28, 0 :: (dereferenceable invariant load (s32))
+    ; CHECK-NEXT: BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit killed $sgpr8_128 {
+    ; CHECK-NEXT:   $sgpr0 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_128, 20, 0 :: (dereferenceable invariant load (s32))
+    ; CHECK-NEXT:   $sgpr1 = S_BUFFER_LOAD_DWORD_IMM killed $sgpr8_128, 28, 0 :: (dereferenceable invariant load (s32))
     ; CHECK-NEXT: }
     ; CHECK-NEXT: $vgpr6 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, killed $vgpr6, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr5 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, killed $vgpr5, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -30,9 +30,9 @@ body: |
     ; CHECK-NEXT: EXP 0, killed $vgpr0, killed $vgpr6, undef $vgpr0, undef $vgpr0, -1, 0, 3, implicit $exec
     ; CHECK-NEXT: EXP 1, killed $vgpr1, killed $vgpr5, undef $vgpr0, undef $vgpr0, -1, 0, 3, implicit $exec
     ; CHECK-NEXT: EXP_DONE 2, killed $vgpr3, killed $vgpr2, undef $vgpr0, undef $vgpr0, -1, 0, 3, implicit $exec
-    BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit $sgpr8_sgpr9_sgpr10_sgpr11 {
-      $sgpr0 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_sgpr9_sgpr10_sgpr11, 20, 0 :: (dereferenceable invariant load (s32))
-      $sgpr1 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_sgpr9_sgpr10_sgpr11, 28, 0 :: (dereferenceable invariant load (s32))
+    BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit $sgpr8_128 {
+      $sgpr0 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_128, 20, 0 :: (dereferenceable invariant load (s32))
+      $sgpr1 = S_BUFFER_LOAD_DWORD_IMM $sgpr8_128, 28, 0 :: (dereferenceable invariant load (s32))
     }
     $vgpr6 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, $vgpr6, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     $vgpr5 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, $vgpr5, 0, 1065353216, 0, 0, implicit $mode, implicit $exec

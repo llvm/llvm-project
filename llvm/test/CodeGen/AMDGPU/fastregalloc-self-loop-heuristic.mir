@@ -7,7 +7,7 @@ name: self_loop_single_def_use
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; GCN-LABEL: name: self_loop_single_def_use
@@ -46,7 +46,7 @@ name: self_loop_multi_def
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; GCN-LABEL: name: self_loop_multi_def
@@ -92,7 +92,7 @@ name: self_loop_def_use_same_inst
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; GCN-LABEL: name: self_loop_def_use_same_inst
@@ -132,7 +132,7 @@ name: self_loop_def_after_use
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; GCN-LABEL: name: self_loop_def_after_use
@@ -172,7 +172,7 @@ name: self_loop_single_subreg_def_use
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   ; GCN-LABEL: name: self_loop_single_subreg_def_use

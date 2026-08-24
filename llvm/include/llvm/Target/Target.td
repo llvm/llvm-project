@@ -490,6 +490,19 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
   int PositionOrder = 0;
 }
 
+// RegisterSequence - Declares that the given registers follow one another,
+// thus forming a sequence, in the specified order:
+//
+//   def : RegisterSequence<[R0, R1, R2, R3]>;
+//
+// Register tuples whose sub-registers are consecutive members of a sequence are
+// named after the first of those members and their total width in bits, for
+// example SGPR0_128, rather than after every sub-register they contain.
+class RegisterSequence<list<Register> Regs> {
+  list<Register> MemberList = Regs;
+  assert !ge(!size(MemberList), 2), "Sequences must have at least 2 registers";
+}
+
 // RegisterCategory - This class is a list of RegisterClasses that belong to a
 // general cateogry --- e.g. "general purpose" or "fixed" registers. This is
 // useful for identifying registers in a generic way instead of having

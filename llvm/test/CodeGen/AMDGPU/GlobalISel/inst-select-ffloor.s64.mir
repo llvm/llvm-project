@@ -31,9 +31,9 @@ body: |
 
 # body: |
 #   bb.0:
-#     liveins: $sgpr0_sgpr1
+#     liveins: $sgpr0_64
 
-#     %0:sgpr(s64) = COPY $sgpr0_sgpr1
+#     %0:sgpr(s64) = COPY $sgpr0_64
 #     %1:vgpr(s64) = G_FFLOOR %0
 #     $vgpr0_vgpr1 = COPY %1
 # ...

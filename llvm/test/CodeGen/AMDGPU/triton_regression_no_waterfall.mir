@@ -48,7 +48,7 @@ registers:
   - { id: 21, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 22, class: vgpr_32, preferred-register: '', flags: [  ] }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%3' }
+  - { reg: '$sgpr4_64', virtual-reg: '%3' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -81,12 +81,12 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
     ; GCN-LABEL: name: test_should_convert_to_v_readfirstlane_b32
-    ; GCN: liveins: $sgpr4_sgpr5
+    ; GCN: liveins: $sgpr4_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
     ; GCN-NEXT: early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY %8.sub2
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY %8.sub1
@@ -104,7 +104,7 @@ body:             |
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET_exact [[COPY4]], killed [[REG_SEQUENCE]], killed [[S_MOV_B32_2]], 0, 2, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
     ; GCN-NEXT: S_ENDPGM 0
-    %3:sgpr_64 = COPY $sgpr4_sgpr5
+    %3:sgpr_64 = COPY $sgpr4_64
     early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec %3, 36, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
     %9:sreg_32 = COPY %8.sub2
     %10:sreg_32 = COPY %8.sub1

@@ -53,7 +53,7 @@ machineFunctionInfo:
   hasSpilledSGPRs: true
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       16
-  sgprForEXECCopy: '$sgpr12_sgpr13'
+  sgprForEXECCopy: '$sgpr12_64'
 body:             |
   bb.0 (%ir-block.0):
     liveins: $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2

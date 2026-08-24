@@ -10,7 +10,7 @@ machineFunctionInfo:
   numKernargPreloadSGPRs: 1
   isEntryFunction: true
   argumentInfo:
-    kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+    kernargSegmentPtr: { reg: '$sgpr0_64' }
     firstKernArgPreloadReg: { reg: '$vgpr0' }  # ERROR: VGPR instead of SGPR
 body: |
   bb.0:

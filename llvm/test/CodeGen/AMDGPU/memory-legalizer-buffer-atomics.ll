@@ -8,15 +8,15 @@ define void @buffer_fat_ptr_agent_atomic_add_noret_i32(ptr addrspace(7) inreg %p
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
@@ -35,15 +35,15 @@ define i32 @buffer_fat_ptr_agent_atomic_add_ret_i32(ptr addrspace(7) inreg %ptr,
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
@@ -64,7 +64,7 @@ define void @raw_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i32> inreg 
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -83,7 +83,7 @@ define <2 x half> @raw_buffer_atomic_add_v2f16_ret(<2 x half> %val, <4 x i32> in
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -107,7 +107,7 @@ define float @struct_buffer_atomic_add_v2f16_ret(<2 x half> %val, <4 x i32> inre
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -135,7 +135,7 @@ define void @struct_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i32> inr
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -157,7 +157,7 @@ define void @raw_buffer_store_i32(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -175,7 +175,7 @@ define void @raw_buffer_store_i32_volatile(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -195,7 +195,7 @@ define void @struct_buffer_store_i32(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -214,7 +214,7 @@ define void @struct_buffer_store_i32_volatile(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -235,7 +235,7 @@ define i32 @raw_buffer_load_i32(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -255,7 +255,7 @@ define i32 @raw_buffer_load_i32_volatile(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -274,7 +274,7 @@ define i32 @struct_buffer_load_i32(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -295,7 +295,7 @@ define i32 @struct_buffer_load_i32_volatile(<4 x i32> inreg %rsrc, i32 %v) {
 ; GFX1250-NEXT:    s_mov_b32 s4, s3
 ; GFX1250-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-NEXT:    s_mov_b32 s6, s1
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -314,15 +314,15 @@ define void @buffer_fat_ptr_store_i32(ptr addrspace(7) inreg %ptr, i32 %val) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
@@ -340,15 +340,15 @@ define void @buffer_fat_ptr_store_i32_volatile(ptr addrspace(7) inreg %ptr, i32 
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
@@ -368,15 +368,15 @@ define i32 @buffer_fat_ptr_load_i32(ptr addrspace(7) inreg %ptr) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
@@ -395,15 +395,15 @@ define i32 @buffer_fat_ptr_load_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s6, s2
 ; GFX1250-NEXT:    s_mov_b32 s4, s0
-; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s8, s7
 ; GFX1250-NEXT:    s_mov_b32 s9, s6
-; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_mov_b32 s10, s5
 ; GFX1250-NEXT:    s_mov_b32 s0, s4
-; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_128
 ; GFX1250-NEXT:    s_mov_b32 s1, s10
 ; GFX1250-NEXT:    s_mov_b32 s2, s9
 ; GFX1250-NEXT:    s_mov_b32 s3, s8

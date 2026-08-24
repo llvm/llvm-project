@@ -16,7 +16,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64, $sgpr14, $sgpr15, $sgpr16
 
     %0:sreg_32 = IMPLICIT_DEF
     %2:vgpr_32 = COPY $vgpr0

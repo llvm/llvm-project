@@ -29,7 +29,7 @@ body:             |
 
   bb.1:
     successors: %bb.2
-    liveins: $sgpr16_sgpr17_sgpr18_sgpr19:0x0000000000000003
+    liveins: $sgpr16_128:0x0000000000000003
 
     $sgpr18 = S_MOV_B32 -1
     $sgpr17 = S_MOV_B32 -2097152000
@@ -37,9 +37,9 @@ body:             |
     renamable $sgpr42 = COPY renamable $sgpr16
 
   bb.2:
-    liveins: $sgpr16_sgpr17_sgpr18_sgpr19:0x00000000000000FF, $sgpr42
+    liveins: $sgpr16_128:0x00000000000000FF, $sgpr42
 
-    $sgpr2 = S_BUFFER_LOAD_DWORD_IMM $sgpr16_sgpr17_sgpr18_sgpr19, 3780, 0 :: (dereferenceable invariant load (s32))
+    $sgpr2 = S_BUFFER_LOAD_DWORD_IMM $sgpr16_128, 3780, 0 :: (dereferenceable invariant load (s32))
     $sgpr0 = S_AND_B32 $sgpr42, $sgpr2, implicit-def $scc
     S_ENDPGM 0, implicit $sgpr0
 ...
@@ -56,10 +56,10 @@ body:             |
 
   bb.1:
     successors: %bb.2
-    liveins: $sgpr2_sgpr3:0x0000000000000003, $sgpr7
+    liveins: $sgpr2_64:0x0000000000000003, $sgpr7
 
     $sgpr3 = COPY $sgpr7
-    $sgpr0 = S_LOAD_DWORD_IMM $sgpr2_sgpr3, 0, 0 :: (dereferenceable invariant load (s32))
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr2_64, 0, 0 :: (dereferenceable invariant load (s32))
 
   bb.2:
     liveins: $sgpr0

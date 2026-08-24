@@ -110,9 +110,9 @@ body: |
   ; GFX908-LABEL: name: test_sgpr_init_multiuse_agprtuple
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-NEXT:   liveins: $sgpr0_sgpr1, $scc
+  ; GFX908-NEXT:   liveins: $sgpr0_64, $scc
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]]
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:areg_64_align2 = COPY [[COPY1]]
   ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:areg_64_align2 = COPY [[COPY1]]
@@ -137,9 +137,9 @@ body: |
   ; GFX90A-LABEL: name: test_sgpr_init_multiuse_agprtuple
   ; GFX90A: bb.0:
   ; GFX90A-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr0_sgpr1, $scc
+  ; GFX90A-NEXT:   liveins: $sgpr0_64, $scc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
   ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]]
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:areg_64_align2 = COPY [[COPY1]]
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:areg_64_align2 = COPY [[COPY1]]
@@ -162,9 +162,9 @@ body: |
   ; GFX90A-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
-    liveins: $sgpr0_sgpr1, $scc
+    liveins: $sgpr0_64, $scc
 
-    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_64
     %1:vreg_64_align2 = COPY %0:sgpr_64
 
   bb.1:

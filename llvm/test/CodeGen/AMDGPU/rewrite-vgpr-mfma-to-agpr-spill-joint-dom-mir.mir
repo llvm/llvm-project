@@ -24,13 +24,13 @@ tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%0' }
+  - { reg: '$sgpr4_64', virtual-reg: '%0' }
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64 = COPY killed $sgpr4_sgpr5
+    %0:sgpr_64 = COPY killed $sgpr4_64
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     S_BITCMP1_B32 killed %1, 0, implicit-def $scc
     %2:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc

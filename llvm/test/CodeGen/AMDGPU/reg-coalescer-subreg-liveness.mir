@@ -11,9 +11,9 @@ body:             |
   ; CHECK-LABEL: name: reg_coalescer_subreg_liveness
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   undef [[S_LOAD_DWORD_IMM:%[0-9]+]].sub1:sgpr_128 = S_LOAD_DWORD_IMM [[COPY]], 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 1
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 0
@@ -39,9 +39,9 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64 = COPY killed $sgpr4_sgpr5
+    %0:sgpr_64 = COPY killed $sgpr4_64
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %2:sreg_32 = S_MOV_B32 1
     undef %3.sub0:sgpr_128 = COPY %2
@@ -84,9 +84,9 @@ body:             |
   ; CHECK-LABEL: name: reg_coalescer_subreg_liveness_2
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_64
   ; CHECK-NEXT:   undef [[S_LOAD_DWORD_IMM:%[0-9]+]].sub2:sgpr_128 = S_LOAD_DWORD_IMM [[COPY]], 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub1:sgpr_128 = S_LOAD_DWORD_IMM [[COPY]], 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 1
@@ -102,9 +102,9 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64 = COPY killed $sgpr4_sgpr5
+    %0:sgpr_64 = COPY killed $sgpr4_64
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
     %3:sreg_32 = S_MOV_B32 1

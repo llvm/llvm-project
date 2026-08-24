@@ -4443,9 +4443,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
+      RegsToPass.emplace_back(IsChainCallConv ? AMDGPU::SGPR48_128
+                                              : AMDGPU::SGPR0_128,
                               ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
@@ -9213,7 +9212,7 @@ SDValue SITargetLowering::lowerTrapHsaQueuePtr(SDValue Op,
     }
   }
 
-  SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
+  SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_64, MVT::i64);
   SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01, QueuePtr, SDValue());
 
   uint64_t TrapID = static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSATrap);

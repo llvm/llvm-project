@@ -17,7 +17,7 @@ frameInfo:
 machineFunctionInfo:
   maxKernArgAlign: 1
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr100_sgpr101_sgpr102_sgpr103'
+  scratchRSrcReg:  '$sgpr100_128'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
     workGroupIDX:    { reg: '$sgpr0' }

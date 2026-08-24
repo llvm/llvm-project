@@ -9,7 +9,7 @@
 name:            scalar_store_soffset_sgpr
 body:             |
   bb.0:
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $sgpr10, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_64, undef $sgpr10, 0
     S_ENDPGM 0
 
 ...

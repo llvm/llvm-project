@@ -59,9 +59,9 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB0_4 Depth 2
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    ; implicit-def: $sgpr2_sgpr3
-; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-NEXT:    ; implicit-def: $sgpr2_64
+; GCN-NEXT:    ; implicit-def: $sgpr8_64
+; GCN-NEXT:    ; implicit-def: $sgpr6_64
 ; GCN-NEXT:    s_branch .LBB0_4
 ; GCN-NEXT:  .LBB0_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2

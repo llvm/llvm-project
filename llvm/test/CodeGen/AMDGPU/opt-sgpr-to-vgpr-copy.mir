@@ -80,14 +80,14 @@ registers:
   - { id: 30, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
 body:             |
   ; GCN-LABEL: name: const_to_sgpr
   ; GCN: bb.0.bb:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 11, 0
@@ -121,9 +121,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %3 = COPY $sgpr0_sgpr1
+    %3 = COPY $sgpr0_64
     %2 = COPY $vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
@@ -215,14 +215,14 @@ registers:
   - { id: 39, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
 body:             |
   ; GCN-LABEL: name: const_to_sgpr_multiple_use
   ; GCN: bb.0.bb:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 11, 0
@@ -263,9 +263,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %3 = COPY $sgpr0_sgpr1
+    %3 = COPY $sgpr0_64
     %2 = COPY $vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
@@ -356,14 +356,14 @@ registers:
   - { id: 30, class: vreg_64 }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '$sgpr0_64', virtual-reg: '%3' }
 body:             |
   ; GCN-LABEL: name: const_to_sgpr_subreg
   ; GCN: bb.0.bb:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_64
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 9, 0
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 11, 0
@@ -394,9 +394,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
-    %3 = COPY $sgpr0_sgpr1
+    %3 = COPY $sgpr0_64
     %2 = COPY $vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0

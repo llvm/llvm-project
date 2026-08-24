@@ -178,7 +178,7 @@ body:             |
   ; GCN-LABEL: name: skip_salu_and_meta_insts_find_first
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], undef %1:sreg_64, implicit-def dead $scc
@@ -208,7 +208,7 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.4
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: $vgpr0, $sgpr0_64
 
     %0:sreg_64 = SI_IF undef %1:sreg_64, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 

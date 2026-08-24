@@ -11,9 +11,9 @@ body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; CHECK-NEXT:   S_BITCMP1_B32 killed [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
@@ -73,9 +73,9 @@ body:             |
   ; COALESCE-LABEL: name: test
   ; COALESCE: bb.0:
   ; COALESCE-NEXT:   successors: %bb.1(0x80000000)
-  ; COALESCE-NEXT:   liveins: $sgpr4_sgpr5
+  ; COALESCE-NEXT:   liveins: $sgpr4_64
   ; COALESCE-NEXT: {{  $}}
-  ; COALESCE-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; COALESCE-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; COALESCE-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 0
@@ -127,9 +127,9 @@ body:             |
   ; GFX908-COALESCE-LABEL: name: test
   ; GFX908-COALESCE: bb.0:
   ; GFX908-COALESCE-NEXT:   successors: %bb.1(0x80000000)
-  ; GFX908-COALESCE-NEXT:   liveins: $sgpr4_sgpr5
+  ; GFX908-COALESCE-NEXT:   liveins: $sgpr4_64
   ; GFX908-COALESCE-NEXT: {{  $}}
-  ; GFX908-COALESCE-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX908-COALESCE-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX908-COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; GFX908-COALESCE-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; GFX908-COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 0
@@ -179,9 +179,9 @@ body:             |
   ; GFX908-COALESCE-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %0:sgpr_64(p4) = COPY $sgpr4_64
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     S_BITCMP1_B32 killed %1, 0, implicit-def $scc
     %2:sgpr_32 = S_MOV_B32 0

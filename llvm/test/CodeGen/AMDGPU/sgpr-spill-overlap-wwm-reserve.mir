@@ -28,7 +28,7 @@ body:             |
   ; GCN-LABEL: name: test_main
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vcc_hi, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $vgpr0, $sgpr30_sgpr31
+  ; GCN-NEXT:   liveins: $vcc_hi, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $vgpr0, $sgpr30_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $vcc_hi = frame-setup COPY $sgpr33
   ; GCN-NEXT:   $sgpr33 = frame-setup COPY $sgpr32
@@ -172,8 +172,8 @@ body:             |
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr102, $vgpr4, 0, 32
   ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr103, 1, $vgpr4
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr103, $vgpr4, 1, 32
-  ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr30, 2, $vgpr4, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
-  ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr31, 3, $vgpr4, implicit $sgpr30_sgpr31
+  ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr30, 2, $vgpr4, implicit-def $sgpr30_64, implicit $sgpr30_64
+  ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr31, 3, $vgpr4, implicit $sgpr30_64
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr4, 2, 32, $vgpr4, 3, 32
   ; GCN-NEXT:   $sgpr22 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr5 = IMPLICIT_DEF
@@ -186,7 +186,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $vcc_hi
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   KILL implicit-def $vcc_lo, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, implicit-def $sgpr32_sgpr33_sgpr34_sgpr35_sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99_sgpr100_sgpr101_sgpr102_sgpr103
+  ; GCN-NEXT:   KILL implicit-def $vcc_lo, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr64_1024, implicit-def $sgpr96_256
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
@@ -197,7 +197,7 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   liveins: $vcc_hi
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr30 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 2, implicit-def $sgpr30_sgpr31
+  ; GCN-NEXT:   $sgpr30 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 2, implicit-def $sgpr30_64
   ; GCN-NEXT:   $sgpr31 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 3
   ; GCN-NEXT:   $sgpr103 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 1
   ; GCN-NEXT:   $sgpr102 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 0
@@ -285,7 +285,7 @@ body:             |
     $exec_lo = EXIT_STRICT_WWM $sgpr0
 
   bb.1:
-    KILL implicit-def $vcc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, implicit-def $sgpr32_sgpr33_sgpr34_sgpr35_sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99_sgpr100_sgpr101_sgpr102_sgpr103
+    KILL implicit-def $vcc, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr64_1024, implicit-def $sgpr96_256
 
   bb.2:
     renamable $sgpr22 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.0, addrspace 5)

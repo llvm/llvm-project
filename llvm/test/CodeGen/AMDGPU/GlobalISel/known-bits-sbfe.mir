@@ -35,7 +35,7 @@ body: |
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:0000000000000000000000000000000000000000000000000000000000001111 SignBits:60
     %cst:sgpr_64(s64) = G_CONSTANT i64 65535
     %bfe:sgpr_64(s64) = S_BFE_U64 %cst, 262156, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_i64_constants
@@ -47,7 +47,7 @@ body: |
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:1111111111111111111111111111111111111111111111111111111111111111 SignBits:64
     %cst:sgpr_64(s64) = G_CONSTANT i64 65535
     %bfe:sgpr_64(s64) = S_BFE_I64 %cst, 262156, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_u32_middle_bits_unknown
@@ -98,7 +98,7 @@ name: test_s_bfe_u64_middle_bits_unknown
 body: |
   bb.0:
   ; Extract [8:16) but the middle 4 bits are ????
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
   ; CHECK-LABEL: name: @test_s_bfe_u64_middle_bits_unknown
   ; CHECK-NEXT: %input:sgpr_64 KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
@@ -107,20 +107,20 @@ body: |
   ; CHECK-NEXT: %masked_input:sgpr_64 KnownBits:00000000000000000000000000000000000000000000000000????0000000000 SignBits:50
   ; CHECK-NEXT: %merged:sgpr_64 KnownBits:00000000000000000000000000000000000000000000000011????1111111111 SignBits:48
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:0000000000000000000000000000000000000000000000000000000011????11 SignBits:56
-    %input:sgpr_64(s64) = COPY $sgpr0_sgpr1
+    %input:sgpr_64(s64) = COPY $sgpr0_64
     %cst:sgpr_64(s64) = G_CONSTANT i64 50175
     %mask:sgpr_64(s64) = G_CONSTANT i64 15360
     %masked_input:sgpr_64(s64) = G_AND %input, %mask
     %merged:sgpr_64(s64) = G_OR %masked_input, %cst
     %bfe:sgpr_64(s64) = S_BFE_U64 %merged, 524296, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_i64_middle_bits_unknown
 body: |
   bb.0:
   ; Extract [8:16) but the middle 4 bits are ????
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_64
 
   ; CHECK-LABEL: name: @test_s_bfe_i64_middle_bits_unknown
   ; CHECK-NEXT: %input:sgpr_64 KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
@@ -129,13 +129,13 @@ body: |
   ; CHECK-NEXT: %masked_input:sgpr_64 KnownBits:00000000000000000000000000000000000000000000000000????0000000000 SignBits:50
   ; CHECK-NEXT: %merged:sgpr_64 KnownBits:00000000000000000000000000000000000000000000000011????1111111111 SignBits:48
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:1111111111111111111111111111111111111111111111111111111111????11 SignBits:58
-    %input:sgpr_64(s64) = COPY $sgpr0_sgpr1
+    %input:sgpr_64(s64) = COPY $sgpr0_64
     %cst:sgpr_64(s64) = G_CONSTANT i64 50175
     %mask:sgpr_64(s64) = G_CONSTANT i64 15360
     %masked_input:sgpr_64(s64) = G_AND %input, %mask
     %merged:sgpr_64(s64) = G_OR %masked_input, %cst
     %bfe:sgpr_64(s64) = S_BFE_I64 %merged, 524296, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_i32_g_constants
@@ -163,7 +163,7 @@ body: |
     %src0:sgpr_64(s64) = G_CONSTANT i64 65535
     %src1:sgpr_32(s32) = G_CONSTANT i32 262156
     %bfe:sgpr_64(s64) = S_BFE_U64 %src0, %src1, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_i32_g_constants_lookthrough
@@ -195,7 +195,7 @@ body: |
     %src1:sgpr_32(s24) = G_CONSTANT i24 262156
     %src1_ext:sgpr_32(s32) = G_ZEXT %src1
     %bfe:sgpr_64(s64) = S_BFE_U64 %src0, %src1, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_u32_trash_bits
@@ -236,7 +236,7 @@ body: |
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:0000000000000000000000000000000000000000000000001111111111111111 SignBits:48
     %cst:sgpr_64(s64) = G_CONSTANT i64 281470681743360
     %bfe:sgpr_64(s64) = S_BFE_U64 %cst, 1048608, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...
 ---
 name: test_s_bfe_i64_constants_sixth_bit
@@ -249,5 +249,5 @@ body: |
   ; CHECK-NEXT: %bfe:sgpr_64 KnownBits:1111111111111111111111111111111111111111111111111111111111111111 SignBits:64
     %cst:sgpr_64(s64) = G_CONSTANT i64 281470681743360
     %bfe:sgpr_64(s64) = S_BFE_I64 %cst, 1048608, implicit-def $scc
-    $sgpr0_sgpr1 = COPY %bfe
+    $sgpr0_64 = COPY %bfe
 ...

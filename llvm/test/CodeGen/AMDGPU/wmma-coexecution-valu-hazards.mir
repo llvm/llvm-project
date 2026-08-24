@@ -2479,18 +2479,18 @@ body: |
   bb.0:
     ; GFX125X-LABEL: name: test_wmma_tdm_load_D0_overlaps_Use1
     ; GFX125X: early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
-    ; GFX125X-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_sgpr1, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX125X-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_64, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; GFX1250-LABEL: name: test_wmma_tdm_load_D0_overlaps_Use1
     ; GFX1250: early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_sgpr1, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_64, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ;
     ; GFX1251-LABEL: name: test_wmma_tdm_load_D0_overlaps_Use1
     ; GFX1251: early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
-    ; GFX1251-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_sgpr1, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX1251-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_64, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ;
     ; GFX1310-LABEL: name: test_wmma_tdm_load_D0_overlaps_Use1
     ; GFX1310: early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
-    ; GFX1310-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_sgpr1, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX1310-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_64, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
-    GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_sgpr1, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR killed $sgpr0_64, killed $vgpr24, killed $vgpr0, 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
 ...

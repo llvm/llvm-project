@@ -9,7 +9,7 @@ name: fold_reg_sequence_of_copy_from_physreg_0
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       8
 body:             |
@@ -41,7 +41,7 @@ name: fold_reg_sequence_of_copy_from_physreg_1
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       8
 body:             |
@@ -74,7 +74,7 @@ name: fold_reg_sequence_of_copy_from_physreg_2
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       8
 body:             |

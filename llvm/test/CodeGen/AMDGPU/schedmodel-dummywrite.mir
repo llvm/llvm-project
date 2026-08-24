@@ -31,7 +31,7 @@ body:             |
     ; GCN-NEXT: renamable $vgpr25 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     ; GCN-NEXT: renamable $vgpr26 = V_ADD_U32_e32 $vgpr8, killed $vgpr9, implicit $exec
     ; GCN-NEXT: renamable $vgpr27 = V_ADD_U32_e32 killed $vgpr8, killed $vgpr40, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
     renamable $vgpr4 = IMPLICIT_DEF
     renamable $vgpr5 = IMPLICIT_DEF
     renamable $vgpr0_vgpr1 = IMPLICIT_DEF
@@ -55,5 +55,5 @@ body:             |
     renamable $vgpr25 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     renamable $vgpr26 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     renamable $vgpr27 = V_ADD_U32_e32 killed $vgpr8, killed $vgpr40, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
 ...

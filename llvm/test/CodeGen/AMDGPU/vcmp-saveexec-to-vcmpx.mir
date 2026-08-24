@@ -18,10 +18,10 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $sgpr2
-    renamable $sgpr0_sgpr1 = V_CMP_GT_U32_e64 $sgpr2, killed $vgpr0, implicit $exec
-    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
-    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    renamable $sgpr0_64 = V_CMP_GT_U32_e64 $sgpr2, killed $vgpr0, implicit $exec
+    $sgpr2_64 = COPY $exec, implicit-def $exec
+    $sgpr2_64 = S_AND_B64 killed renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64
 ...
 
 ---
@@ -37,11 +37,11 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr2
-    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr1, 0, implicit $mode, implicit $exec
+    renamable $sgpr0_64 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr1, 0, implicit $mode, implicit $exec
     $vgpr0 = V_WRITELANE_B32 0, $sgpr0, $vgpr0
-    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
-    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    $sgpr2_64 = COPY $exec, implicit-def $exec
+    $sgpr2_64 = S_AND_B64 killed renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64
 ...
 
 ---
@@ -58,10 +58,10 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
-    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
-    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
-    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    renamable $sgpr0_64 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
+    $sgpr2_64 = COPY $exec, implicit-def $exec
+    $sgpr2_64 = S_AND_B64 killed renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64
 ...
 
 ---
@@ -78,13 +78,13 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $sgpr2, $vgpr1
-    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
+    renamable $sgpr0_64 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
     $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
-    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
-    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    $sgpr2_64 = COPY $exec, implicit-def $exec
+    $sgpr2_64 = S_AND_B64 killed renamable $sgpr2_64, killed renamable $sgpr0_64, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_64

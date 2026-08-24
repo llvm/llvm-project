@@ -23,18 +23,18 @@ stack:
   - { id: 2, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr34, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99
+    liveins: $sgpr34, $sgpr36_1024, $sgpr68_1024
     %0:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = EXIT_STRICT_WWM killed %0
-    SI_SPILL_S1024_SAVE killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S1024_SAVE killed $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr36_1024, %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr68_1024, %stack.1, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     S_ENDPGM 0
 ...
 
@@ -56,16 +56,16 @@ stack:
   - { id: 2, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr34, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99
-    SI_SPILL_S1024_SAVE killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S1024_SAVE killed $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    liveins: $sgpr34, $sgpr36_1024, $sgpr68_1024
+    SI_SPILL_S1024_SAVE killed $sgpr36_1024, %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr68_1024, %stack.1, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     S_ENDPGM 0
 ...
 
@@ -87,15 +87,15 @@ stack:
   - { id: 2, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
 machineFunctionInfo:
   isEntryFunction: true
-  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'
   frameOffsetReg: '$sgpr33'
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr34, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99
-    SI_SPILL_S1024_SAVE killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S1024_SAVE killed $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    liveins: $sgpr34, $sgpr36_1024, $sgpr68_1024
+    SI_SPILL_S1024_SAVE killed $sgpr36_1024, %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr68_1024, %stack.1, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     S_ENDPGM 0
 ...

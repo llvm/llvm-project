@@ -7,7 +7,7 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: inttoptr
-# GCN: [[S64:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+# GCN: [[S64:%[0-9]+]]:sreg_64 = COPY $sgpr0_64
 # GCN: [[V64:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
 # GCN: [[VAL:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S64]], 0, 0
 # GCN: [[V_VAL:%[0-9]+]]:vgpr_32 = COPY [[VAL]]
@@ -16,8 +16,8 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    liveins: $sgpr0_64, $vgpr0_vgpr1
+    %0:sgpr(s64) = COPY $sgpr0_64
     %1:vgpr(s64) = COPY $vgpr0_vgpr1
     %2:sgpr(p4) = G_INTTOPTR %0
     %3:sgpr(s32) = G_LOAD %2 :: (load (s32), addrspace 1)

@@ -32,16 +32,16 @@ name:            swp_amdgpu_pipeline_gen_structure
 tracksRegLiveness: true
 isSSA:           true
 liveins:
-  - { reg: '$sgpr4_sgpr5' }
+  - { reg: '$sgpr4_64' }
 machineFunctionInfo:
   isEntryFunction: true
   argumentInfo:
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    kernargSegmentPtr: { reg: '$sgpr4_64' }
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: $sgpr4_64
 
-    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %0:sgpr_64(p4) = COPY $sgpr4_64
     %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
     %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 8, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
     %3:sreg_32 = S_MOV_B32 0

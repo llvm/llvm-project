@@ -16,9 +16,9 @@ body:             |
   ; CHECK-LABEL: name: live_variable_update
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY killed $sgpr4_sgpr5
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY killed $sgpr4_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 0, [[COPY1]], implicit $exec
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
@@ -79,9 +79,9 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.2(0x40000000), %bb.5(0x40000000)
-    liveins: $vgpr0, $sgpr4_sgpr5
+    liveins: $vgpr0, $sgpr4_64
 
-    %0:sgpr_64 = COPY $sgpr4_sgpr5
+    %0:sgpr_64 = COPY $sgpr4_64
     %1:vgpr_32 = COPY $vgpr0
     %2:sreg_32 = V_CMP_NE_U32_e64 0, %1, implicit $exec
     %3:sreg_32 = SI_IF killed %2, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

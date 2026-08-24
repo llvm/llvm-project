@@ -157,7 +157,7 @@ body: |
     ; GFX11-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY1]]
     ; GFX11-NEXT: [[S_PACK_LL_B32_B16_1:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY2]], [[COPY3]]
     ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_PACK_LL_B32_B16_]], %subreg.sub0, [[S_PACK_LL_B32_B16_1]], %subreg.sub1
-    ; GFX11-NEXT: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
+    ; GFX11-NEXT: $sgpr0_64 = COPY [[REG_SEQUENCE]]
     ;
     ; GFX12-LABEL: name: test_merge_values_s16_into_s64_sgpr
     ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
@@ -169,7 +169,7 @@ body: |
     ; GFX12-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY1]]
     ; GFX12-NEXT: [[S_PACK_LL_B32_B16_1:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY2]], [[COPY3]]
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_PACK_LL_B32_B16_]], %subreg.sub0, [[S_PACK_LL_B32_B16_1]], %subreg.sub1
-    ; GFX12-NEXT: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
+    ; GFX12-NEXT: $sgpr0_64 = COPY [[REG_SEQUENCE]]
     %0:sreg_32(s32) = COPY $sgpr0
     %1:sreg_32(s32) = COPY $sgpr1
     %2:sreg_32(s32) = COPY $sgpr2
@@ -179,7 +179,7 @@ body: |
     %6:sreg_32(s16) = G_TRUNC %2:sreg_32(s32)
     %7:sreg_32(s16) = G_TRUNC %3:sreg_32(s32)
     %8:sreg_64(s64) = G_MERGE_VALUES %4:sreg_32(s16), %5:sreg_32(s16), %6:sreg_32(s16), %7:sreg_32(s16)
-    $sgpr0_sgpr1 = COPY %8:sreg_64(s64)
+    $sgpr0_64 = COPY %8:sreg_64(s64)
 ...
 
 ---

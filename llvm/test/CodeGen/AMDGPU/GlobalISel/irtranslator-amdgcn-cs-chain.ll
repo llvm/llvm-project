@@ -63,9 +63,9 @@ define amdgpu_cs_chain void @chain_call(<3 x i32> inreg %sgpr, { i32, ptr addrsp
   ; GFX10-NEXT:   $vgpr9 = COPY [[COPY4]](p5)
   ; GFX10-NEXT:   $vgpr10 = COPY [[COPY5]](i32)
   ; GFX10-NEXT:   $vgpr11 = COPY [[COPY6]](i32)
-  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY7]](<4 x s32>)
-  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_128
+  ; GFX10-NEXT:   $sgpr48_128 = COPY [[COPY7]](<4 x s32>)
+  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_128
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee, i32 -1, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 0)
   unreachable
 }
@@ -127,9 +127,9 @@ define amdgpu_cs_chain void @chain_preserve_call(<3 x i32> inreg %sgpr, { i32, p
   ; GFX10-NEXT:   $vgpr9 = COPY [[COPY4]](p5)
   ; GFX10-NEXT:   $vgpr10 = COPY [[COPY5]](i32)
   ; GFX10-NEXT:   $vgpr11 = COPY [[COPY6]](i32)
-  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY7]](<4 x s32>)
-  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee_preserve, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_128
+  ; GFX10-NEXT:   $sgpr48_128 = COPY [[COPY7]](<4 x s32>)
+  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee_preserve, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_128
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee_preserve, i32 -1, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 0)
   unreachable
 }
@@ -199,9 +199,9 @@ define amdgpu_cs_chain void @chain_call_exec_from_extract(<2 x i32> inreg %vec, 
   ; GFX10-NEXT:   $vgpr9 = COPY [[COPY6]](p5)
   ; GFX10-NEXT:   $vgpr10 = COPY [[COPY7]](i32)
   ; GFX10-NEXT:   $vgpr11 = COPY [[COPY8]](i32)
-  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY10]](<4 x s32>)
-  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee, 0, [[COPY9]](i32), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_128
+  ; GFX10-NEXT:   $sgpr48_128 = COPY [[COPY10]](<4 x s32>)
+  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[GV1]](p0), @callee, 0, [[COPY9]](i32), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_128
   %exec = extractelement <2 x i32> %vec, i64 0
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee, i32 %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 0)
   unreachable

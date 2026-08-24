@@ -114,10 +114,10 @@ machineFunctionInfo:
     ieee: false
 body: |
   bb.1:
-    liveins: $vgpr0, $sgpr30_sgpr31
+    liveins: $vgpr0, $sgpr30_64
 
     ; CHECK-LABEL: name: test_min_K1max_K0Val_f16
-    ; CHECK: liveins: $vgpr0, $sgpr30_sgpr31
+    ; CHECK: liveins: $vgpr0, $sgpr30_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
@@ -250,10 +250,10 @@ machineFunctionInfo:
     ieee: false
 body: |
   bb.1:
-    liveins: $vgpr0, $sgpr30_sgpr31
+    liveins: $vgpr0, $sgpr30_64
 
     ; CHECK-LABEL: name: test_max_K0min_K1Val_f16
-    ; CHECK: liveins: $vgpr0, $sgpr30_sgpr31
+    ; CHECK: liveins: $vgpr0, $sgpr30_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)

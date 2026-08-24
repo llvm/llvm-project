@@ -504,12 +504,12 @@ name:            test0
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
-  - { reg: '$sgpr30_sgpr31', virtual-reg: '%2' }
+  - { reg: '$sgpr30_64', virtual-reg: '%2' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1, $sgpr30_64
 
-    %2:sreg_64 = COPY $sgpr30_sgpr31
+    %2:sreg_64 = COPY $sgpr30_64
     %1:vgpr_32 = COPY $vgpr1
     %0:vgpr_32 = COPY $vgpr0
     %8:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1

@@ -186,7 +186,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
 ; W64-O0-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], v[2:3]
 ; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[10:11]
-; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
+; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_128
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
@@ -556,7 +556,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
 ; W64-O0-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], v[2:3]
 ; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[10:11]
-; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
+; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_128
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
@@ -627,7 +627,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
 ; W64-O0-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], v[2:3]
 ; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[10:11]
-; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
+; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_128
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
@@ -1063,7 +1063,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
 ; W64-O0-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], v[2:3]
 ; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[10:11]
-; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
+; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_128
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
@@ -1161,7 +1161,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
 ; W64-O0-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], v[2:3]
 ; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[10:11]
-; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11
+; W64-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_128
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6

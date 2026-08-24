@@ -99,7 +99,7 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 1
 ; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; CHECK-NEXT:    ; implicit-def: $sgpr2_64
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2

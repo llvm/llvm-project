@@ -74,7 +74,7 @@ body:             |
   ; GCN-LABEL: name: copy_observed_outside_loop
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31
+  ; GCN-NEXT:   liveins: $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -111,7 +111,7 @@ body:             |
   ; GCN-NEXT:   S_BRANCH %bb.3
   bb.0:
     successors: %bb.1
-    liveins: $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31
+    liveins: $sgpr4_64, $sgpr6_64, $sgpr8_64, $sgpr10_64, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31
 
     %42:sreg_64 = IMPLICIT_DEF
 

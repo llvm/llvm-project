@@ -48,14 +48,14 @@ registers:
   - { id: 19, class: vreg_64 }
   - { id: 20, class: vreg_64 }
 liveins:
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$sgpr0_64', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr0
+    liveins: $sgpr0_64, $vgpr0
 
     %3 = COPY killed $vgpr0
-    %0 = COPY killed $sgpr0_sgpr1
+    %0 = COPY killed $sgpr0_64
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORD_IMM killed %0, 13, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
     %18 = V_ASHRREV_I32_e32 31, %3, implicit $exec

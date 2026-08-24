@@ -209,7 +209,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-LABEL: break_loop:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
-; CHECK-NEXT:    ; implicit-def: $sgpr2_sgpr3
+; CHECK-NEXT:    ; implicit-def: $sgpr2_64
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_subrev_u32_e32 v0, s0, v0

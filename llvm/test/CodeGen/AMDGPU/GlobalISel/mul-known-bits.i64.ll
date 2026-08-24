@@ -202,12 +202,12 @@ define amdgpu_kernel void @v_mul_i64_masked_src0_hi(ptr addrspace(1) %out, ptr a
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX10-NEXT:    ; kill: killed $vgpr0
-; GFX10-NEXT:    ; kill: killed $sgpr2_sgpr3
+; GFX10-NEXT:    ; kill: killed $sgpr2_64
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v0, s[2:3]
 ; GFX10-NEXT:    global_load_dwordx2 v[3:4], v0, s[6:7]
-; GFX10-NEXT:    ; kill: killed $sgpr6_sgpr7
+; GFX10-NEXT:    ; kill: killed $sgpr6_64
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, v2, v3, 0
 ; GFX10-NEXT:    v_mad_u64_u32 v[1:2], s2, v2, v4, v[1:2]
@@ -302,12 +302,12 @@ define amdgpu_kernel void @v_mul_i64_masked_src1_lo(ptr addrspace(1) %out, ptr a
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX10-NEXT:    ; kill: killed $vgpr3
-; GFX10-NEXT:    ; kill: killed $sgpr2_sgpr3
+; GFX10-NEXT:    ; kill: killed $sgpr2_64
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v3, s[2:3]
 ; GFX10-NEXT:    global_load_dwordx2 v[1:2], v3, s[6:7]
-; GFX10-NEXT:    ; kill: killed $sgpr6_sgpr7
+; GFX10-NEXT:    ; kill: killed $sgpr6_64
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v0, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0

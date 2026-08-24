@@ -24,10 +24,10 @@ machineFunctionInfo:
   occupancy:       4
 body:             |
   bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr15
+    liveins: $vgpr0, $sgpr0_64, $sgpr15
 
     %0:sgpr_32 = COPY $sgpr15
-    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sgpr_64 = COPY $sgpr0_64
     %2:vgpr_32 = COPY $vgpr0
     %3:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
     undef %4.sub0_sub1:sgpr_128 = S_LOAD_DWORDX2_IMM %1, 16, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)

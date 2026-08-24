@@ -10,19 +10,19 @@ name: overlapping_copy_kill_undef_reg_after_copy
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr1_vgpr2_vgpr3
+    liveins: $sgpr30_64, $vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: overlapping_copy_kill_undef_reg_after_copy
-    ; CHECK: liveins: $sgpr30_sgpr31, $vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $sgpr30_64, $vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     renamable $vgpr0_vgpr1_vgpr2 = COPY killed renamable $vgpr1_vgpr2_vgpr3
     renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
 
 ...
 
@@ -31,19 +31,19 @@ name: overlapping_copy_kill_undef_reg_after_copy_1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr2_vgpr3_vgpr4
+    liveins: $sgpr30_64, $vgpr2_vgpr3_vgpr4
 
     ; CHECK-LABEL: name: overlapping_copy_kill_undef_reg_after_copy_1
-    ; CHECK: liveins: $sgpr30_sgpr31, $vgpr2_vgpr3_vgpr4
+    ; CHECK: liveins: $sgpr30_64, $vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     renamable $vgpr0_vgpr1_vgpr2 = COPY killed renamable $vgpr2_vgpr3_vgpr4
     renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
 
 ...
 
@@ -52,19 +52,19 @@ name: nonoverlapping_copy_kill
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr3_vgpr4_vgpr5
+    liveins: $sgpr30_64, $vgpr3_vgpr4_vgpr5
 
     ; CHECK-LABEL: name: nonoverlapping_copy_kill
-    ; CHECK: liveins: $sgpr30_sgpr31, $vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $sgpr30_64, $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit killed $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
     renamable $vgpr0_vgpr1_vgpr2 = COPY killed renamable $vgpr3_vgpr4_vgpr5
     renamable $vgpr1 = nofpexcept V_MUL_F32_e32 0, $vgpr1, implicit $mode, implicit $exec
-    S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+    S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
 
 ...
 
@@ -73,19 +73,19 @@ name: overlapping_copy_kill_half_s128
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31, $vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $sgpr30_64, $vgpr2_vgpr3_vgpr4_vgpr5
 
     ; CHECK-LABEL: name: overlapping_copy_kill_half_s128
-    ; CHECK: liveins: $sgpr30_sgpr31, $vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $sgpr30_64, $vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: renamable $vgpr1 = V_OR_B32_e32 1, $vgpr1, implicit $exec
-    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    ; CHECK-NEXT: S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $vgpr2_vgpr3_vgpr4_vgpr5
     renamable $vgpr1 = V_OR_B32_e32 1, $vgpr1, implicit $exec
-    S_SETPC_B64 $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    S_SETPC_B64 $sgpr30_64, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 
 ...

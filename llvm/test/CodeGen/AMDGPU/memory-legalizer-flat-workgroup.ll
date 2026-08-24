@@ -4054,7 +4054,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4089,7 +4089,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4124,7 +4124,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4155,7 +4155,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4389,7 +4389,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4425,7 +4425,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4463,7 +4463,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4495,7 +4495,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4744,7 +4744,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4780,7 +4780,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4817,7 +4817,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4850,7 +4850,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5103,7 +5103,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5140,7 +5140,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5180,7 +5180,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5215,7 +5215,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5484,7 +5484,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5521,7 +5521,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5561,7 +5561,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5596,7 +5596,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5865,7 +5865,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5901,7 +5901,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5939,7 +5939,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5971,7 +5971,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6220,7 +6220,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6256,7 +6256,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6294,7 +6294,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6326,7 +6326,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6575,7 +6575,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6612,7 +6612,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6652,7 +6652,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6687,7 +6687,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6956,7 +6956,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6993,7 +6993,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7033,7 +7033,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7068,7 +7068,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7337,7 +7337,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7374,7 +7374,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7414,7 +7414,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7449,7 +7449,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7718,7 +7718,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7755,7 +7755,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7795,7 +7795,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7830,7 +7830,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8100,7 +8100,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -8139,7 +8139,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -8178,7 +8178,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -8213,7 +8213,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -8483,7 +8483,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -8523,7 +8523,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -8563,7 +8563,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -8599,7 +8599,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -8878,7 +8878,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -8918,7 +8918,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -8959,7 +8959,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -8996,7 +8996,7 @@ define amdgpu_kernel void @flat_workgroup_release_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -9285,7 +9285,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -9326,7 +9326,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -9368,7 +9368,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -9405,7 +9405,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -9701,7 +9701,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -9742,7 +9742,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -9784,7 +9784,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -9821,7 +9821,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -10117,7 +10117,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -10157,7 +10157,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -10197,7 +10197,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -10233,7 +10233,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -10512,7 +10512,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -10552,7 +10552,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -10592,7 +10592,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -10628,7 +10628,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -10907,7 +10907,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -10948,7 +10948,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -10990,7 +10990,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -11027,7 +11027,7 @@ define amdgpu_kernel void @flat_workgroup_release_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -11323,7 +11323,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -11364,7 +11364,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -11406,7 +11406,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -11443,7 +11443,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -11739,7 +11739,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -11780,7 +11780,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -11822,7 +11822,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -11859,7 +11859,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -12155,7 +12155,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -12196,7 +12196,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -12238,7 +12238,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -12276,7 +12276,7 @@ define amdgpu_kernel void @flat_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -12574,7 +12574,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -12615,7 +12615,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -12657,7 +12657,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -12695,7 +12695,7 @@ define amdgpu_kernel void @flat_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -12993,7 +12993,7 @@ define amdgpu_kernel void @flat_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -13034,7 +13034,7 @@ define amdgpu_kernel void @flat_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -13076,7 +13076,7 @@ define amdgpu_kernel void @flat_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -13113,7 +13113,7 @@ define amdgpu_kernel void @flat_workgroup_release_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -13409,7 +13409,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -13450,7 +13450,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -13492,7 +13492,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -13529,7 +13529,7 @@ define amdgpu_kernel void @flat_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -13825,7 +13825,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -13866,7 +13866,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -13908,7 +13908,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -13945,7 +13945,7 @@ define amdgpu_kernel void @flat_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -18209,7 +18209,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18244,7 +18244,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18279,7 +18279,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18310,7 +18310,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18544,7 +18544,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18579,7 +18579,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18616,7 +18616,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18647,7 +18647,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18890,7 +18890,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18925,7 +18925,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18962,7 +18962,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -18995,7 +18995,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19245,7 +19245,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19280,7 +19280,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19319,7 +19319,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19353,7 +19353,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19614,7 +19614,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19649,7 +19649,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19688,7 +19688,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19722,7 +19722,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -19983,7 +19983,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20018,7 +20018,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20055,7 +20055,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20086,7 +20086,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20329,7 +20329,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20364,7 +20364,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20401,7 +20401,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20432,7 +20432,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20675,7 +20675,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20710,7 +20710,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20749,7 +20749,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -20783,7 +20783,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21044,7 +21044,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21079,7 +21079,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21118,7 +21118,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21152,7 +21152,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21413,7 +21413,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21448,7 +21448,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21487,7 +21487,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21521,7 +21521,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21782,7 +21782,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21817,7 +21817,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21856,7 +21856,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21889,7 +21889,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22148,7 +22148,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22183,7 +22183,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22222,7 +22222,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22255,7 +22255,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22514,7 +22514,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22549,7 +22549,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22588,7 +22588,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22622,7 +22622,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22883,7 +22883,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22918,7 +22918,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22957,7 +22957,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22991,7 +22991,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -23252,7 +23252,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s8, s11
 ; GFX7-NEXT:    s_add_u32 s4, s4, s9
 ; GFX7-NEXT:    s_addc_u32 s8, s5, s8
-; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX7-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX7-NEXT:    s_mov_b32 s5, s8
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -23287,7 +23287,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s8, s11
 ; GFX10-WGP-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-WGP-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-WGP-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s5, s8
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -23326,7 +23326,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s8, s11
 ; GFX10-CU-NEXT:    s_add_u32 s4, s4, s9
 ; GFX10-CU-NEXT:    s_addc_u32 s8, s5, s8
-; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-CU-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_64
 ; GFX10-CU-NEXT:    s_mov_b32 s5, s8
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -23360,7 +23360,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s7
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s0, s0, s5
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s4, s1, s4
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s1, s4
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -23622,7 +23622,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonicmonotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -23661,7 +23661,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonicmonotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -23700,7 +23700,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonicmonotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -23735,7 +23735,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonicmonotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -24005,7 +24005,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -24044,7 +24044,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -24085,7 +24085,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -24120,7 +24120,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -24396,7 +24396,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -24435,7 +24435,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -24476,7 +24476,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -24513,7 +24513,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -24799,7 +24799,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -24838,7 +24838,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -24881,7 +24881,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -24919,7 +24919,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -25213,7 +25213,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -25252,7 +25252,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -25295,7 +25295,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -25333,7 +25333,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -25627,7 +25627,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -25666,7 +25666,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -25707,7 +25707,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -25742,7 +25742,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -26018,7 +26018,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -26057,7 +26057,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -26098,7 +26098,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -26133,7 +26133,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -26409,7 +26409,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -26448,7 +26448,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -26491,7 +26491,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -26529,7 +26529,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -26823,7 +26823,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -26862,7 +26862,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -26905,7 +26905,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -26943,7 +26943,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -27237,7 +27237,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -27276,7 +27276,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -27319,7 +27319,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -27357,7 +27357,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -27651,7 +27651,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -27690,7 +27690,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -27733,7 +27733,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -27770,7 +27770,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -28062,7 +28062,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -28101,7 +28101,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -28144,7 +28144,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -28181,7 +28181,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -28473,7 +28473,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -28512,7 +28512,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -28555,7 +28555,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -28593,7 +28593,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -28887,7 +28887,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -28926,7 +28926,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -28969,7 +28969,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -29007,7 +29007,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
@@ -29301,7 +29301,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    s_mov_b32 s10, s13
 ; GFX7-NEXT:    s_add_u32 s6, s6, s11
 ; GFX7-NEXT:    s_addc_u32 s10, s7, s10
-; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX7-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX7-NEXT:    s_mov_b32 s7, s10
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s8
@@ -29340,7 +29340,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_mov_b32 s10, s13
 ; GFX10-WGP-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-WGP-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-WGP-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-WGP-NEXT:    s_mov_b32 s7, s10
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s8
@@ -29383,7 +29383,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_mov_b32 s10, s13
 ; GFX10-CU-NEXT:    s_add_u32 s6, s6, s11
 ; GFX10-CU-NEXT:    s_addc_u32 s10, s7, s10
-; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-CU-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_64
 ; GFX10-CU-NEXT:    s_mov_b32 s7, s10
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s9
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s8
@@ -29421,7 +29421,7 @@ define amdgpu_kernel void @flat_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, s9
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s2, s2, s7
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s6, s3, s6
-; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; SKIP-CACHE-INV-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_64
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, s6
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4

@@ -15,7 +15,7 @@
 name: no_merge_sgpr_vgpr_spill_slot
 tracksRegLiveness: true
 machineFunctionInfo:
-  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg: $sgpr0_128
   frameOffsetReg: $sgpr4
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -23,7 +23,7 @@ body: |
     %2:vgpr_32 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, implicit $flat_scr, implicit $exec
     %0:vgpr_32 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, implicit $flat_scr, implicit $exec
     S_NOP 0, implicit %0
-    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0
-    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0
+    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef $sgpr0_64, 0, 0
+    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef $sgpr0_64, 0, 0
     S_NOP 0, implicit %1
 ...

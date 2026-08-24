@@ -19,14 +19,14 @@
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
-; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
+; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_128'
 ; CHECK-NEXT: frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: bytesInStackArgArea: 0
 ; CHECK-NEXT: returnsVoid:     true
 ; CHECK-NEXT: argumentInfo:
-; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_128' }
+; CHECK-NEXT: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr6' }
 ; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr0' }
@@ -43,8 +43,8 @@
 ; CHECK-NEXT: BitsOf32BitAddress: 0
 ; CHECK-NEXT: occupancy:       10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
-; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
-; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
+; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_64'
+; CHECK-NEXT: longBranchReservedReg: '$sgpr2_64'
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0

@@ -218,7 +218,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; GISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY8]]
   ; GISEL-GFX10-NEXT:   DS_WRITE_B32_gfx9 [[COPY9]], [[COPY14]], 0, 0, implicit $exec :: (store (p3) into %ir.b3, addrspace 3)
   ; GISEL-GFX10-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
-  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY15]], [[COPY11]], $sgpr48_sgpr49_sgpr50_sgpr51, 0, 0, 0, 0, implicit $exec :: (store (p5) into %ir.b5, addrspace 5)
+  ; GISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY15]], [[COPY11]], $sgpr48_128, 0, 0, 0, 0, implicit $exec :: (store (p5) into %ir.b5, addrspace 5)
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF32-LABEL: name: amdgpu_cs_chain_preserve_cc_ptr
@@ -320,7 +320,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; DAGISEL-GFX10-WF32-NEXT:   DS_WRITE_B32_gfx9 [[COPY2]], [[COPY18]], 0, 0, implicit $exec :: (store (s32) into %ir.b3, addrspace 3)
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-  ; DAGISEL-GFX10-WF32-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY19]], [[COPY]], $sgpr48_sgpr49_sgpr50_sgpr51, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.b5, addrspace 5)
+  ; DAGISEL-GFX10-WF32-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY19]], [[COPY]], $sgpr48_128, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.b5, addrspace 5)
   ; DAGISEL-GFX10-WF32-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX10-WF64-LABEL: name: amdgpu_cs_chain_preserve_cc_ptr
@@ -354,7 +354,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_ptr(ptr inreg 
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; DAGISEL-GFX10-WF64-NEXT:   DS_WRITE_B32_gfx9 [[COPY2]], [[COPY18]], 0, 0, implicit $exec :: (store (s32) into %ir.b3, addrspace 3)
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-  ; DAGISEL-GFX10-WF64-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY19]], [[COPY]], $sgpr48_sgpr49_sgpr50_sgpr51, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.b5, addrspace 5)
+  ; DAGISEL-GFX10-WF64-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY19]], [[COPY]], $sgpr48_128, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.b5, addrspace 5)
   ; DAGISEL-GFX10-WF64-NEXT:   S_ENDPGM 0
   store ptr %a, ptr %b
   store ptr addrspace(1) %a1, ptr addrspace(1) %b1

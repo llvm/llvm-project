@@ -213,11 +213,11 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $sgpr0_64 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
     %2:sgpr(s64) = G_ANYEXT %1
-    $sgpr0_sgpr1 = COPY %2
+    $sgpr0_64 = COPY %2
 ...
 
 ---

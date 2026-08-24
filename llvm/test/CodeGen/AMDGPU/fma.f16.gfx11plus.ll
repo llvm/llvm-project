@@ -6,9 +6,9 @@
 define amdgpu_kernel void @fma_v2f16_divergent(
   ; GFX11-LABEL: name: fma_v2f16_divergent
   ; GFX11: bb.0 (%ir-block.0):
-  ; GFX11-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-NEXT:   liveins: $vgpr0, $sgpr4_64
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX11-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.r.kernarg.offset, align 4, addrspace 4)
   ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 68, 0 :: (dereferenceable invariant load (s32) from %ir.d.kernarg.offset, addrspace 4)
@@ -71,9 +71,9 @@ define amdgpu_kernel void @fma_v2f16_divergent(
 define amdgpu_kernel void @fma_v2f16_uniform(
   ; GFX11-LABEL: name: fma_v2f16_uniform
   ; GFX11: bb.0 (%ir-block.0):
-  ; GFX11-NEXT:   liveins: $sgpr4_sgpr5
+  ; GFX11-NEXT:   liveins: $sgpr4_64
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_64
   ; GFX11-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.r.kernarg.offset, align 4, addrspace 4)
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0

@@ -11,7 +11,7 @@ registers:
   - { id: 2, class: sreg_32_xm0, preferred-register: '%1' }
 machineFunctionInfo:
   argumentInfo:
-    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    privateSegmentBuffer: { reg: '$sgpr0_128' }
     privateSegmentWaveByteOffset: { reg: '$sgpr33' }
 body:             |
   ; GCN-LABEL: name: _amdgpu_ps_main

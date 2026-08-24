@@ -35,16 +35,16 @@ define void @fshl_scalar_const_shift0(ptr addrspace(1) %out, i32 %x) {
 ; CHECK-NEXT:    s_mov_b32 s3, 1
 ; CHECK-NEXT:    s_lshr_b32 s2, s4, s3
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040305
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; CHECK-NEXT:    s_mov_b32 s1, s4
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s3
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_and_b32 s2, s2, 31
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -67,12 +67,12 @@ define void @fshl_scalar_const_shift1(ptr addrspace(1) %out, i32 %x) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    s_mov_b32 s0, 0xf2f2f2f2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_and_b32 s2, s2, 31
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -94,12 +94,12 @@ define void @fshl_scalar_const_shift16(ptr addrspace(1) %out, i32 %x) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    s_mov_b32 s0, 0xf2f2f2f2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, -16
 ; CHECK-NEXT:    s_and_b32 s2, s2, 31
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -121,12 +121,12 @@ define void @fshl_scalar_scalar_shift8(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_64
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, -8
 ; CHECK-NEXT:    s_and_b32 s2, s2, 31
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
+; CHECK-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_64
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

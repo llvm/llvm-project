@@ -44,7 +44,7 @@ tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
-  scratchRSrcReg:  $sgpr0_sgpr1_sgpr2_sgpr3
+  scratchRSrcReg:  $sgpr0_128
   stackPtrOffsetReg: '$sgpr32'
   hasSpilledVGPRs: true
 body:             |

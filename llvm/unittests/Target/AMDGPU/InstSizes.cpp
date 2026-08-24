@@ -31,8 +31,8 @@ TEST_F(InstSizesTest, BufferLoadLdsIsNotOverSized) {
 name: buffer_load_lds
 body: |
   bb.0:
-    BUFFER_LOAD_DWORD_LDS_OFFEN $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
-    BUFFER_LOAD_DWORD_LDS_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORD_LDS_OFFEN $vgpr1, $sgpr8_128, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORD_LDS_OFFSET $sgpr8_128, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
     $vgpr0 = V_MOV_B32_e32 12345, implicit $exec
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     S_ENDPGM 0

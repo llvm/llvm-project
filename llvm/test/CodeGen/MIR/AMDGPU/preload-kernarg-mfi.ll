@@ -8,7 +8,7 @@
 ; MIR-LABEL: name: kernarg_preload_single_arg
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 1
 
@@ -25,7 +25,7 @@ entry:
 ; MIR-LABEL: name: kernarg_preload_multiple_args_unaligned
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 5
 
@@ -42,7 +42,7 @@ entry:
 ; MIR-LABEL: name: kernarg_preload_multiple_args_aligned
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 4
 
@@ -59,7 +59,7 @@ entry:
 ; MIR-LABEL: name: kernarg_preload_with_ptr
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 2
 
@@ -77,7 +77,7 @@ entry:
 ; MIR-LABEL: name: kernarg_no_preload
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR-NOT: firstKernArgPreloadReg
 ; MIR: numKernargPreloadSGPRs: 0
 
@@ -93,7 +93,7 @@ entry:
 ; MIR-LABEL: name: kernarg_preload_mixed
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 2
 
@@ -110,8 +110,8 @@ entry:
 ; MIR-LABEL: name: kernarg_preload_with_dispatch_ptr
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: dispatchPtr: { reg: '$sgpr0_sgpr1' }
-; MIR: kernargSegmentPtr: { reg: '$sgpr2_sgpr3' }
+; MIR: dispatchPtr: { reg: '$sgpr0_64' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr2_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr4' }
 ; MIR: numKernargPreloadSGPRs: 2
 
@@ -131,8 +131,8 @@ attributes #0 = { "amdgpu-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-dispatc
 ; MIR-LABEL: name: kernarg_preload_with_queue_ptr
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: queuePtr: { reg: '$sgpr0_sgpr1' }
-; MIR: kernargSegmentPtr: { reg: '$sgpr2_sgpr3' }
+; MIR: queuePtr: { reg: '$sgpr0_64' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr2_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr4' }
 ; MIR: numKernargPreloadSGPRs: 1
 
@@ -152,10 +152,10 @@ attributes #1 = { "amdgpu-queue-ptr" "amdgpu-no-dispatch-ptr" "amdgpu-no-dispatc
 ; MIR-LABEL: name: kernarg_preload_with_multiple_user_sgprs
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: dispatchPtr: { reg: '$sgpr0_sgpr1' }
-; MIR: queuePtr: { reg: '$sgpr2_sgpr3' }
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; MIR: dispatchID: { reg: '$sgpr6_sgpr7' }
+; MIR: dispatchPtr: { reg: '$sgpr0_64' }
+; MIR: queuePtr: { reg: '$sgpr2_64' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
+; MIR: dispatchID: { reg: '$sgpr6_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 2
 
@@ -177,7 +177,7 @@ attributes #2 = { "amdgpu-dispatch-ptr" "amdgpu-queue-ptr" "amdgpu-dispatch-id" 
 ; MIR-LABEL: name: kernarg_preload_without_user_sgprs
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr0_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr2' }
 ; MIR: numKernargPreloadSGPRs: 1
 
@@ -196,10 +196,10 @@ attributes #3 = { "amdgpu-no-queue-ptr" "amdgpu-no-dispatch-ptr" "amdgpu-no-disp
 ; MIR-LABEL: name: kernarg_preload_max_args
 ; MIR: machineFunctionInfo:
 ; MIR: argumentInfo:
-; MIR: dispatchPtr: { reg: '$sgpr0_sgpr1' }
-; MIR: queuePtr: { reg: '$sgpr2_sgpr3' }
-; MIR: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; MIR: dispatchID: { reg: '$sgpr6_sgpr7' }
+; MIR: dispatchPtr: { reg: '$sgpr0_64' }
+; MIR: queuePtr: { reg: '$sgpr2_64' }
+; MIR: kernargSegmentPtr: { reg: '$sgpr4_64' }
+; MIR: dispatchID: { reg: '$sgpr6_64' }
 ; MIR: firstKernArgPreloadReg: { reg: '$sgpr8' }
 ; MIR: numKernargPreloadSGPRs: 8
 

@@ -92,8 +92,8 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
-; ISA-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; ISA-NEXT:    ; implicit-def: $sgpr6_64
+; ISA-NEXT:    ; implicit-def: $sgpr4_64
 ; ISA-NEXT:  .LBB1_1: ; %BB1
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ISA-NEXT:    ;;#ASMSTART
