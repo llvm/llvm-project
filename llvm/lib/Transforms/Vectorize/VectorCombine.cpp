@@ -6473,6 +6473,7 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   if (NewCost > OldCost || !NewCost.isValid())
     return false;
 
+  Builder.SetInsertPoint(II);
   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());

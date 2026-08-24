@@ -89,8 +89,8 @@ define <vscale x 32 x i1> @bitcast_vp_load_i1(ptr %p) {
 define <vscale x 8 x i16> @bitcast_vp_load_insertpoint(ptr %p) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @bitcast_vp_load_insertpoint(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 16 [[P]], <vscale x 8 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %l = call <vscale x 4 x i32> @llvm.vp.load(ptr %p, <vscale x 4 x i1> splat (i1 true), i32 2)
