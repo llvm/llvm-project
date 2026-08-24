@@ -428,6 +428,8 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
 
   // Either then-path or else-path should be empty.
   bool InvertCond2 = false;
+  BasicBlock *Body1;
+  BasicBlock *Body2;
   BinaryOperator::BinaryOps CombineOp;
   if (IfFalse1 == FirstEntryBlock) {
     // The else-path is empty, so we must use "or" operation to combine the
@@ -443,6 +445,8 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
 
     if (!CompareIfRegionBlock(IfTrue1, IfTrue2, SecondEntryBlock))
       return false;
+    Body1 = IfTrue1;
+    Body2 = IfTrue2;
   } else if (IfTrue1 == FirstEntryBlock) {
     // The then-path is empty, so we must use "and" operation to combine the
     // conditions.
@@ -457,6 +461,8 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
 
     if (!CompareIfRegionBlock(IfFalse1, IfFalse2, SecondEntryBlock))
       return false;
+    Body1 = IfFalse1;
+    Body2 = IfFalse2;
   } else
     return false;
 
@@ -471,6 +477,14 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
         !isSafeToSpeculativelyExecute(CI))
       return false;
   }
+
+  // The merged body represents either source path. Keep a common source
+  // location for each retained instruction instead of selecting one path's
+  // location unconditionally.
+  auto I1 = Body1->begin();
+  auto I2 = Body2->begin();
+  for (; I1 != Body1->end(); ++I1, ++I2)
+    I2->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
 
   // Merge \param SecondEntryBlock into \param FirstEntryBlock.
   FirstEntryBlock->back().eraseFromParent();

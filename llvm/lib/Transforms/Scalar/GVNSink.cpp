@@ -536,7 +536,7 @@ private:
   bool shouldAvoidSinkingInstruction(Instruction *I) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
-        I->getType()->isTokenTy())
+        I->getType()->isTokenTy() || I->isUsedByMetadata())
       return true;
     return false;
   }
