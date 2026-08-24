@@ -14,6 +14,16 @@ _start:
 /// through ra, so f returns to whatever t0 happens to hold.
 // CHECK-NEXT: jal 0x{{.*}} <f>
   call t0, f
+/// A jal in direct range is rewritten on its own, with no auipc to nop out.
+/// FIXME: the link register is dropped here too.
+// CHECK-NEXT: jal 0x{{.*}} <f>
+  jal t0, f
+/// A call that already links through ra keeps ra.
+// CHECK-NEXT: nop
+// CHECK-NEXT: jal 0x{{.*}} <f>
+  call f
+// CHECK-NEXT: jal 0x{{.*}} <f>
+  jal ra, f
   ret
   .size _start, .-_start
 
