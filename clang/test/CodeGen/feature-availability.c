@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN -DALWAYS_ENABLED %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN -Werror=unused-variable %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN -DALWAYS_ENABLED -Werror=unused-variable %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
 
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -include-pch %t -emit-llvm -o - %s | FileCheck %s

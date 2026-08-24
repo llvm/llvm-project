@@ -31,21 +31,32 @@ struct __AvailabilityDomain {
   int (*const runtimeQuery)(void);
 };
 
+/// The name of the global variable that represents `domain`. Like the layout of
+/// `__AvailabilityDomain`, this name is an implementation detail of the
+/// compiler and is subject to change, so don't reference it directly. It is
+/// prefixed to keep the name of the domain itself available for other
+/// declarations.
+#define __CLANG_AVAILABILITY_DOMAIN_VAR(domain)                                \
+  __clang_availability_domain_##domain
+
 #define CLANG_DYNAMIC_AVAILABILITY_DOMAIN(domain, query)                       \
-  static struct __AvailabilityDomain domain __attribute__((                    \
-      availability_domain(domain))) = {__AVAILABILITY_DOMAIN_DYNAMIC, query}
+  static struct __AvailabilityDomain __CLANG_AVAILABILITY_DOMAIN_VAR(domain)   \
+      __attribute__((availability_domain(domain), unused)) = {                 \
+          __AVAILABILITY_DOMAIN_DYNAMIC, query}
 
 #define CLANG_ENABLED_AVAILABILITY_DOMAIN(domain)                              \
-  static struct __AvailabilityDomain domain __attribute__((                    \
-      availability_domain(domain))) = {__AVAILABILITY_DOMAIN_ENABLED, 0}
+  static struct __AvailabilityDomain __CLANG_AVAILABILITY_DOMAIN_VAR(domain)   \
+      __attribute__((availability_domain(domain), unused)) = {                 \
+          __AVAILABILITY_DOMAIN_ENABLED, 0}
 
 #define CLANG_DISABLED_AVAILABILITY_DOMAIN(domain)                             \
-  static struct __AvailabilityDomain domain __attribute__((                    \
-      availability_domain(domain))) = {__AVAILABILITY_DOMAIN_DISABLED, 0}
+  static struct __AvailabilityDomain __CLANG_AVAILABILITY_DOMAIN_VAR(domain)   \
+      __attribute__((availability_domain(domain), unused)) = {                 \
+          __AVAILABILITY_DOMAIN_DISABLED, 0}
 
 #define CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(domain)                       \
-  static struct __AvailabilityDomain domain                                    \
-      __attribute__((availability_domain(domain))) = {                         \
+  static struct __AvailabilityDomain __CLANG_AVAILABILITY_DOMAIN_VAR(domain)   \
+      __attribute__((availability_domain(domain), unused)) = {                 \
           __AVAILABILITY_DOMAIN_ALWAYS_ENABLED, 0}
 
 #endif /* __AVAILABILITY_DOMAIN_H */
