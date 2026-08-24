@@ -12362,6 +12362,70 @@ static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
   }
 }
 
+static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
+                                        SDValue Rs2, const SDLoc &DL,
+                                        SelectionDAG &DAG) {
+  if (Rs1.getSimpleValueType() == MVT::v4i16) {
+    auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+    auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+    unsigned MulOpc, AccOpc;
+    switch (IntNo) {
+    default:
+      llvm_unreachable("Unexpected RV32 horizontal multiply intrinsic");
+    case Intrinsic::riscv_pm4add:
+      MulOpc = RISCVISD::PM2WADD;
+      AccOpc = RISCVISD::PM2WADDA;
+      break;
+    case Intrinsic::riscv_pm4addu:
+      MulOpc = RISCVISD::PM2WADDU;
+      AccOpc = RISCVISD::PM2WADDAU;
+      break;
+    case Intrinsic::riscv_pm4addsu:
+      MulOpc = RISCVISD::PM2WADDSU;
+      AccOpc = RISCVISD::PM2WADDASU;
+      break;
+    }
+    SDValue Acc = DAG.getNode(MulOpc, DL, MVT::v2i32, Rs1Lo, Rs2Lo);
+    return DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Hi, Rs2Hi);
+  }
+
+  assert(Rs1.getSimpleValueType() == MVT::v2i32 &&
+         "Unexpected RV32 horizontal multiply source type");
+  auto Extract = [&](SDValue V, unsigned Idx) {
+    return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+  };
+  SDValue Rs1Lo = Extract(Rs1, 0);
+  SDValue Rs1Hi = Extract(Rs1, 1);
+  SDValue Rs2Lo = Extract(Rs2, 0);
+  SDValue Rs2Hi = Extract(Rs2, 1);
+
+  if (IntNo == Intrinsic::riscv_pmq2add || IntNo == Intrinsic::riscv_pmqr2add) {
+    unsigned AccOpc = IntNo == Intrinsic::riscv_pmq2add ? RISCVISD::MQWACC
+                                                        : RISCVISD::MQRWACC;
+    SDValue Acc = DAG.getConstant(0, DL, MVT::v2i32);
+    Acc = DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Lo, Rs2Lo);
+    return DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Hi, Rs2Hi);
+  }
+
+  unsigned MulOpc = ISD::SMUL_LOHI;
+  if (IntNo == Intrinsic::riscv_pm2addu)
+    MulOpc = ISD::UMUL_LOHI;
+  else if (IntNo == Intrinsic::riscv_pm2addsu)
+    MulOpc = RISCVISD::WMULSU;
+  bool IsSub =
+      IntNo == Intrinsic::riscv_pm2sub || IntNo == Intrinsic::riscv_pm2sub_x;
+  if (IntNo == Intrinsic::riscv_pm2add_x || IntNo == Intrinsic::riscv_pm2sub_x)
+    std::swap(Rs2Lo, Rs2Hi);
+
+  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+  SDValue LoMul = DAG.getNode(MulOpc, DL, VTs, Rs1Lo, Rs2Lo);
+  SDValue HiMul = DAG.getNode(MulOpc, DL, VTs, Rs1Hi, Rs2Hi);
+  unsigned Opc = IsSub ? RISCVISD::SUBD : RISCVISD::ADDD;
+  SDValue Res = DAG.getNode(Opc, DL, VTs, LoMul, LoMul.getValue(1), HiMul,
+                            HiMul.getValue(1));
+  return DAG.getBuildVector(MVT::v2i32, DL, {Res, Res.getValue(1)});
+}
+
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -16952,8 +17016,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Rs2 = N->getOperand(2);
 
       if (!Subtarget.is64Bit() && VT == MVT::i64) {
-        SDValue Pair = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
-        Results.push_back(DAG.getBitcast(MVT::i64, Pair));
+        SDValue Res = lowerRV32HorizontalMul64(IntNo, Rs1, Rs2, DL, DAG);
+        Results.push_back(DAG.getBitcast(MVT::i64, Res));
         return;
       }
 

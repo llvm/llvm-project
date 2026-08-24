@@ -1879,6 +1879,28 @@ def riscv_pmulsu_halves_00
 def riscv_pmulsu_halves_11
     : RVSDNode<"PMULSU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
 
+// Packed multiplication with widening horizontal addition.
+def SDT_RISCVPackedWideningHorizontalAdd
+    : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>, SDTCisVT<1, v2i16>,
+                           SDTCisSameAs<1, 2>]>;
+def riscv_pm2wadd
+    : RVSDNode<"PM2WADD", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2waddu
+    : RVSDNode<"PM2WADDU", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2waddsu
+    : RVSDNode<"PM2WADDSU", SDT_RISCVPackedWideningHorizontalAdd>;
+
+// Packed multiplication with widening horizontal addition and accumulate.
+def SDT_RISCVPackedWideningHorizontalAddAcc
+    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
+def riscv_pm2wadda
+    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningHorizontalAddAcc>;
+def riscv_pm2waddau
+    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+def riscv_pm2waddasu
+    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisSameAs<0, 2>,
@@ -1955,6 +1977,13 @@ def riscv_pm2addsu  : RVSDNode<"PM2ADDSU", SDT_RISCVHorizontalMul>;
 // "Q-format" multiplication
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
+
+// "Q-format" multiply with widening accumulate.
+def SDT_RISCVQWideningMulAcc
+    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, i32>, SDTCisSameAs<2, 3>]>;
+def riscv_mqwacc  : RVSDNode<"MQWACC", SDT_RISCVQWideningMulAcc>;
+def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVQWideningMulAcc>;
 
 def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -2362,6 +2391,12 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
+  // "Q-format" multiply with widening accumulate patterns.
+  def : Pat<(v2i32 (riscv_mqwacc (v2i32 GPRPair:$rd), GPR:$rs1, GPR:$rs2)),
+            (MQWACC GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_mqrwacc (v2i32 GPRPair:$rd), GPR:$rs1, GPR:$rs2)),
+            (MQRWACC GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+
   // Packed multiplication with horizontal addition patterns.
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
@@ -2376,82 +2411,6 @@ let append Predicates = [IsRV32] in {
   def : PatHorizontalMul<riscv_pm2sub_x, PM2SUB_HX, i32, v2i16>;
   def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2addsu, PM2ADDSU_H, i32, v2i16>;
-
-  // Select the RV32 v2i32 result produced by type legalization into the
-  // instruction sequences specified for the 64-bit intrinsics.
-  def : Pat<(v2i32 (riscv_pm2add (v2i32 GPRPair:$rs1),
-                                 (v2i32 GPRPair:$rs2))),
-            (WMACC (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                          (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                   (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                   (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pm2add_x (v2i32 GPRPair:$rs1),
-                                   (v2i32 GPRPair:$rs2))),
-            (WMACC (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                          (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd)),
-                   (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                   (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even))>;
-  def : Pat<(v2i32 (riscv_pm2addu (v2i32 GPRPair:$rs1),
-                                  (v2i32 GPRPair:$rs2))),
-            (WMACCU (WMULU (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                            (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                    (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                    (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pmq2add (v2i32 GPRPair:$rs1),
-                                  (v2i32 GPRPair:$rs2))),
-            (MQWACC (v2i32 (MQWACC
-                       (v2i32 (BuildGPRPair (i32 X0), (i32 X0))),
-                       (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                       (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even))),
-                    (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                    (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pmqr2add (v2i32 GPRPair:$rs1),
-                                   (v2i32 GPRPair:$rs2))),
-            (MQRWACC (v2i32 (MQRWACC
-                        (v2i32 (BuildGPRPair (i32 X0), (i32 X0))),
-                        (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                        (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even))),
-                     (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                     (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pm2sub (v2i32 GPRPair:$rs1),
-                                 (v2i32 GPRPair:$rs2))),
-            (SUBD (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                         (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                  (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                         (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd)))>;
-  def : Pat<(v2i32 (riscv_pm2sub_x (v2i32 GPRPair:$rs1),
-                                   (v2i32 GPRPair:$rs2))),
-            (SUBD (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                         (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd)),
-                  (WMUL (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                         (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
-  def : Pat<(v2i32 (riscv_pm2addsu (v2i32 GPRPair:$rs1),
-                                   (v2i32 GPRPair:$rs2))),
-            (WMACCSU (WMULSU (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                              (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                      (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                      (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pm4add (v4i16 GPRPair:$rs1),
-                                 (v4i16 GPRPair:$rs2))),
-            (PM2WADDA_H
-                (PM2WADD_H (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                            (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pm4addu (v4i16 GPRPair:$rs1),
-                                  (v4i16 GPRPair:$rs2))),
-            (PM2WADDAU_H
-                (PM2WADDU_H (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                             (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(v2i32 (riscv_pm4addsu (v4i16 GPRPair:$rs1),
-                                   (v4i16 GPRPair:$rs2))),
-            (PM2WADDASU_H
-                (PM2WADDSU_H (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                              (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
 
   // Halfword multiply patterns where one operand is a sext.h or zext.h and
   // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
@@ -2517,6 +2476,26 @@ let append Predicates = [IsRV32] in {
             (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed multiplication with widening horizontal addition patterns.
+  def : Pat<(v2i32 (riscv_pm2wadd (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDSU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed multiplication with widening horizontal addition and accumulate
+  // patterns.
+  def : Pat<(v2i32 (riscv_pm2wadda (v2i32 GPRPair:$rd),
+                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddau (v2i32 GPRPair:$rd),
+                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
