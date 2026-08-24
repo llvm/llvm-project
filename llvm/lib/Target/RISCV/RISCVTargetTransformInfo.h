@@ -224,6 +224,11 @@ public:
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getActiveLaneMaskCost(Type *ResTy, Type *ArgTy,
+                                        FastMathFlags FMF,
+                                        TTI::TargetCostKind CostKind,
+                                        unsigned NumResults) const override;
+
   std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
       unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
