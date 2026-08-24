@@ -1574,7 +1574,7 @@ public:
     if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
       return RD->isLocalClass();
 
-    return getDeclContext()->getAsFunctionDecl();
+    return getDeclContext()->getEnclosingFunction();
   }
 
   FunctionDecl *isLocalClass() {

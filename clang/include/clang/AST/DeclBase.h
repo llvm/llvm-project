@@ -2194,19 +2194,23 @@ public:
 
   /// Cast this to a FunctionDecl if it is one, ignoring any intervening
   /// expansion statements. Returns nullptr if this is not a function.
-  FunctionDecl *getAsFunctionDecl() {
+  ///
+  /// In particular, this will return nullptr if the *nearest* enclosing
+  /// DeclContext that is not an expansion statement is something other
+  /// than a function (e.g. a CXXRecordDecl, even if it is a local class).
+  FunctionDecl *getEnclosingFunction() {
     return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
   }
 
-  const FunctionDecl *getAsFunctionDecl() const {
+  const FunctionDecl *getEnclosingFunction() const {
     return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
   }
 
-  FunctionDecl *castAsFunctionDecl() {
+  FunctionDecl *castEnclosingFunction() {
     return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
   }
 
-  const FunctionDecl *castAsFunctionDecl() const {
+  const FunctionDecl *castEnclosingFunction() const {
     return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
   }
 
