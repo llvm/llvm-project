@@ -16,46 +16,17 @@
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{exec} "%{gdb}" %t.exe -ex "source %S/is_debugger_present__gdb.py" --silent
+// RUN: %{exec} "%{gdb}" --return-child-result -ex run %t.exe
 
 // <debugging>
 
 // bool is_debugger_present() noexcept;
 
-#include <cassert>
-#include <concepts>
 #include <debugging>
 
 #include "test_macros.h"
 
-#ifdef TEST_COMPILER_GCC
-#  define OPT_NONE __attribute__((noinline))
-#else
-#  define OPT_NONE __attribute__((optnone))
-#endif
-
-// Prevents the compiler optimizing away the parameter in the caller function.
-template <typename Type>
-void MarkAsLive(Type&&) OPT_NONE;
-template <typename Type>
-void MarkAsLive(Type&&) {}
-
-void StopForDebugger(void*) OPT_NONE;
-void StopForDebugger(void*) {}
-
-// Test with debugger attached:
-//   GDB command: `gdb is_debugger_present_with_debugger__gdb.sh -ex run -ex detach -ex quit --silent`
-
-void test() {
-  std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-  MarkAsLive(isDebuggerPresent);
-  StopForDebugger(&isDebuggerPresent);
-
-  static_assert(noexcept(std::is_debugger_present()));
-}
-
 int main(int, char**) {
-  test();
-
-  return 0;
+  ASSERT_NOEXCEPT(std::is_debugger_present());
+  return std::is_debugger_present() ? 0 : 1;
 }

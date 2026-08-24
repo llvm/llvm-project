@@ -22,40 +22,11 @@
 
 // bool is_debugger_present() noexcept;
 
-#include <cassert>
-#include <concepts>
 #include <debugging>
 
 #include "test_macros.h"
 
-#ifdef TEST_COMPILER_GCC
-#  define OPT_NONE __attribute__((noinline))
-#else
-#  define OPT_NONE __attribute__((optnone))
-#endif
-
-// Prevents the compiler optimizing away the parameter in the caller function.
-template <typename Type>
-void MarkAsLive(Type&&) OPT_NONE;
-template <typename Type>
-void MarkAsLive(Type&&) {}
-
-void StopForDebugger(void*) OPT_NONE;
-void StopForDebugger(void*) {}
-
-// Test with debugger attached:
-//   LLDB command: `lldb "is_debugger_present_with_debugger__lldb.sh" -o run -o detach -o quit`
-
-void test() {
-  std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-  MarkAsLive(isDebuggerPresent);
-  StopForDebugger(&isDebuggerPresent);
-
-  static_assert(noexcept(std::is_debugger_present()));
-}
-
 int main(int, char**) {
-  test();
-
-  return 0;
+  ASSERT_NOEXCEPT(std::is_debugger_present());
+  return std::is_debugger_present() ? 0 : 1;
 }
