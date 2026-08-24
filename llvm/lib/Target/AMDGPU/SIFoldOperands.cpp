@@ -2217,7 +2217,8 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       OpToFold.getSubReg()) {
     if (DstRC == &AMDGPU::SReg_32RegClass &&
         DstRC == MRI->getRegClass(OpToFold.getReg())) {
-      assert(OpToFold.getSubReg() == AMDGPU::lo16);
+      if (OpToFold.getSubReg() != AMDGPU::lo16)
+        return false;
       OpToFold.setSubReg(0);
     }
   }

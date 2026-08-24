@@ -626,6 +626,53 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   return Changed;
 }
 
+static bool tryLegalizeHi16SGPRCopy(MachineInstr &MI, const SIRegisterInfo *TRI,
+                                    const SIInstrInfo *TII,
+                                    const GCNSubtarget &ST,
+                                    const TargetRegisterClass *SrcRC,
+                                    const TargetRegisterClass *DstRC) {
+  MachineOperand &Src = MI.getOperand(1);
+  unsigned SubReg = Src.getSubReg();
+  if (SubReg == AMDGPU::NoSubRegister || !ST.hasScalarPackInsts() ||
+      MI.getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
+      !TRI->isSGPRClass(SrcRC) || !TRI->isSGPRClass(DstRC) ||
+      TRI->getRegSizeInBits(*DstRC) != 32 ||
+      TRI->getSubRegIdxSize(SubReg) != 16)
+    return false;
+
+  unsigned SubRegOffset = TRI->getSubRegIdxOffset(SubReg);
+  if (SubRegOffset % 32 != 16)
+    return false;
+
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  bool IsKill = Src.isKill();
+  bool IsUndef = Src.isUndef();
+  // Copy out the 32-bit channel first: movePackToVALU drops subreg sources
+  // if the pack is later forced to VALU.
+  if (TRI->getRegSizeInBits(*SrcRC) != 32) {
+    unsigned Channel = SubRegOffset / 32;
+    Register Chan32 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+            Chan32)
+        .addReg(Src.getReg(),
+                getKillRegState(IsKill) | getUndefRegState(IsUndef),
+                TRI->getSubRegFromChannel(Channel));
+    Src.setReg(Chan32);
+    IsKill = true;
+    IsUndef = false;
+  }
+  // Cache the register: addReg below may reallocate MI's operands and
+  // invalidate Src.
+  Register SrcReg = Src.getReg();
+  MI.setDesc(TII->get(AMDGPU::S_PACK_HH_B32_B16));
+  Src.setSubReg(AMDGPU::NoSubRegister);
+  Src.setIsKill(false);
+  Src.setIsUndef(IsUndef);
+  MachineInstrBuilder(*MI.getMF(), MI)
+      .addReg(SrcReg, getKillRegState(IsKill) | getUndefRegState(IsUndef));
+  return true;
+}
+
 bool SIFixSGPRCopies::run(MachineFunction &MF) {
   // Only need to run this in SelectionDAG path.
   if (MF.getProperties().hasSelected())
@@ -655,6 +702,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
       case AMDGPU::COPY: {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, *MRI);
+
+        if (tryLegalizeHi16SGPRCopy(MI, TRI, TII, ST, SrcRC, DstRC))
+          continue;
 
         if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI)) {
           // Since VGPR to SGPR copies affect VGPR to SGPR copy

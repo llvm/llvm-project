@@ -464,3 +464,33 @@ body:             |
     %2:sreg_32 = COPY %1.hi16
     %3:vgpr_16 = V_OR_B16_t16_e64 0, %0.lo16, 0, killed %2, 0, implicit $exec
 ...
+
+# SGPR hi16 is an artificial register that cannot be allocated; must become
+# S_PACK_HH.
+
+---
+name: sgpr32_hi16_to_sgpr32
+body: |
+  bb.0:
+    ; GCN-LABEL: name: sgpr32_hi16_to_sgpr32
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[DEF]], [[DEF]]
+    ; GCN-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_PACK_HH_B32_B16_]], [[S_PACK_HH_B32_B16_]], implicit-def dead $scc
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.hi16
+    %2:sreg_32 = S_PACK_LL_B32_B16 %1:sreg_32, %1:sreg_32, implicit-def dead $scc
+...
+
+---
+name: sgpr64_sub1_hi16_to_sgpr32
+body: |
+  bb.0:
+    ; GCN-LABEL: name: sgpr64_sub1_hi16_to_sgpr32
+    ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
+    ; GCN-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], killed [[COPY]]
+    ; GCN-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_PACK_HH_B32_B16_]], [[S_PACK_HH_B32_B16_]], implicit-def dead $scc
+    %0:sreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.sub1_hi16
+    %2:sreg_32 = S_PACK_LL_B32_B16 %1:sreg_32, %1:sreg_32, implicit-def dead $scc
+...
