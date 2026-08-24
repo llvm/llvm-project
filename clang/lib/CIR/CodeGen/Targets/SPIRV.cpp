@@ -50,9 +50,7 @@ public:
       return;
     }
 
-    if (cgm.getLangOpts().HIP &&
-        cgm.getTriple().getVendor() == llvm::Triple::AMD &&
-        fd->hasAttr<CUDAGlobalAttr>())
+    if (cgm.getLangOpts().HIP && fd->hasAttr<CUDAGlobalAttr>())
       func.setCallingConv(cir::CallingConv::SpirKernel);
   }
 };
