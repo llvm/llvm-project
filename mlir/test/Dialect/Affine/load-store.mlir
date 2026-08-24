@@ -198,6 +198,20 @@ func.func @test_prefetch(%arg0 : index, %arg1 : index) {
 
 // -----
 
+// Test with load affine map with same SSA name. 
+func.func @test_load_same_ssa_name() {
+  %0 = memref.alloc() : memref<10x10xf32>
+  affine.for %i0 = 0 to 100 {
+    %i2:2 = affine.delinearize_index %i0 into (10, 10) : index, index
+    %1 = affine.load %0[%i2#0, %i2#1] : memref<10x10xf32>
+    // CHECK: %{{.*}} = affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+    affine.store %1, %0[%i2#0, %i2#1] : memref<10x10xf32>
+  }
+  return
+}
+
+// -----
+
 // Test with just loop IVs.
 func.func @vector_load_vector_store_iv() {
   %0 = memref.alloc() : memref<100x100xf32>
