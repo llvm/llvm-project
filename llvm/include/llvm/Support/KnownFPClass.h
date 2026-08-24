@@ -241,6 +241,9 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
                                        const KnownBits &Bits);
 
+  /// Report known bits for a float with provided semantics.
+  LLVM_ABI KnownBits toKnownBits(const fltSemantics &FltSemantics) const;
+
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,

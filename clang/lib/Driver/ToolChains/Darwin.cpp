@@ -2057,7 +2057,7 @@ struct DarwinPlatform {
                                           const DarwinSDKInfo &SDKInfo) {
     const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
     const llvm::Triple::OSType OS = PlatformTriple.getOS();
-    VersionTuple Version = SDKInfo.getVersion();
+    VersionTuple Version = SDKInfo.getDefaultDeploymentTarget();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));

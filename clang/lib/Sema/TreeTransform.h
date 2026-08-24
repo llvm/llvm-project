@@ -1145,8 +1145,9 @@ public:
                            AutoTypeKeyword Keyword,
                            ConceptDecl *TypeConstraintConcept,
                            ArrayRef<TemplateArgument> TypeConstraintArgs) {
-    return SemaRef.Context.getAutoType(
-        DK, DeducedAsType, Keyword, TypeConstraintConcept, TypeConstraintArgs);
+    return SemaRef.Context.getAutoType(DK, DeducedAsType, Keyword,
+                                       TemplateName(TypeConstraintConcept),
+                                       TypeConstraintArgs);
   }
 
   /// By default, builds a new DeducedTemplateSpecializationType with the given
@@ -7123,6 +7124,10 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
 
   for (QualType T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
+      // A pack indexing type can appear in a larger pack expansion,
+      // e.g. `Pack...[pack_of_indexes]...`
+      // so we need to temporarily disable substitution of pack elements
+      Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
       QualType Transformed = getDerived().TransformType(T);
       if (Transformed.isNull())
         return QualType();
@@ -7568,7 +7573,8 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   if (T->isConstrained()) {
     assert(TL.getConceptReference());
     NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
-        TL.getConceptNameLoc(), T->getTypeConstraintConcept()));
+        TL.getConceptNameLoc(),
+        T->getTypeConstraintConcept().getAsTemplateDecl()));
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
@@ -7608,10 +7614,12 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   NewTL.setConceptReference(nullptr);
 
   if (T->isConstrained()) {
-    DeclarationNameInfo DNI = DeclarationNameInfo(
-        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
-        TL.getConceptNameLoc(),
-        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName());
+    DeclarationName ConceptName = TL.getTypePtr()
+                                      ->getTypeConstraintConcept()
+                                      .getAsTemplateDecl()
+                                      ->getDeclName();
+    DeclarationNameInfo DNI =
+        DeclarationNameInfo(ConceptName, TL.getConceptNameLoc(), ConceptName);
     auto *CR = ConceptReference::Create(
         SemaRef.Context, NewNestedNameSpec, TL.getTemplateKWLoc(), DNI,
         TL.getFoundDecl(), TL.getTypePtr()->getTypeConstraintConcept(),
@@ -15639,7 +15647,7 @@ TreeTransform<Derived>::TransformConceptSpecializationExpr(
 
   return getDerived().RebuildConceptSpecializationExpr(
       E->getNestedNameSpecifierLoc(), E->getTemplateKWLoc(),
-      E->getConceptNameInfo(), E->getFoundDecl(), E->getNamedConcept(),
+      E->getConceptNameInfo(), E->getFoundDecl(), E->getConceptDecl(),
       &TransArgs);
 }
 
