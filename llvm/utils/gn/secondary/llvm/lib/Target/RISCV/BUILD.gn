@@ -132,6 +132,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandPseudoAtomics.cpp",
+    "RISCVExpandPseudoBase.cpp",
     "RISCVExpandPseudoPostRA.cpp",
     "RISCVExpandPseudoPreEmit.cpp",
     "RISCVExpandPseudoPreRA.cpp",
