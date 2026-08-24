@@ -984,6 +984,15 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
   return BEConsumer->getCodeGenerator();
 }
 
+void CodeGenAction::reloadLinkModules(CompilerInstance &CI) {
+  if (!BEConsumer)
+    return;
+  SmallVector<LinkModule, 4> LMs;
+  if (clang::loadLinkModules(CI, *VMContext, LMs))
+    return;
+  BEConsumer->setLinkModules(std::move(LMs));
+}
+
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
