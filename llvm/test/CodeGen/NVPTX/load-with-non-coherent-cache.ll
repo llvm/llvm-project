@@ -611,8 +611,8 @@ define ptx_kernel void @foo19(ptr noalias readonly %from, ptr %to, i32 %n) {
 ; SM20-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM20-NEXT:    ld.global.b32 %r1, [%rd4];
 ; SM20-NEXT:    add.rn.f32 %r3, %r1, %r3;
-; SM20-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM20-NEXT:    add.s32 %r2, %r2, -1;
+; SM20-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM20-NEXT:    setp.ne.b32 %p1, %r2, 0;
 ; SM20-NEXT:    @%p1 bra $L__BB18_1;
 ; SM20-NEXT:  // %bb.2: // %exit
@@ -636,8 +636,8 @@ define ptx_kernel void @foo19(ptr noalias readonly %from, ptr %to, i32 %n) {
 ; SM35-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM35-NEXT:    ld.global.nc.b32 %r1, [%rd4];
 ; SM35-NEXT:    add.rn.f32 %r3, %r1, %r3;
-; SM35-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM35-NEXT:    add.s32 %r2, %r2, -1;
+; SM35-NEXT:    add.s64 %rd4, %rd4, 4;
 ; SM35-NEXT:    setp.ne.b32 %p1, %r2, 0;
 ; SM35-NEXT:    @%p1 bra $L__BB18_1;
 ; SM35-NEXT:  // %bb.2: // %exit

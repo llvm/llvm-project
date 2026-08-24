@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IVUsers.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -170,12 +171,32 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
   if (!isInteresting(ISE, I, L, SE, LI))
     return false;
 
-  SmallPtrSet<Instruction *, 4> UniqueUsers;
-  for (Use &U : I->uses()) {
-    Instruction *User = cast<Instruction>(U.getUser());
-    if (!UniqueUsers.insert(User).second)
-      continue;
+  // Visit the users of I in a canonical order rather than in use-list
+  // order: use-list order depends on the IR's construction and mutation
+  // history, which printed IR does not preserve. The traversal order
+  // affects both which IV uses are collected (the Processed short-circuit
+  // and the non-invertible-normalization early return below are
+  // order-sensitive) and which solution LSR picks (both its cost-tie
+  // breaking and its search-space pruning follow enumeration order).
+  // Descending order of block number and in-block position is used because
+  // it closely matches the use-list order of freshly parsed IR, where uses
+  // are prepended on creation.
+  SmallVector<Instruction *, 8> Users;
+  {
+    SmallPtrSet<Instruction *, 4> UniqueUsers;
+    for (Use &U : I->uses()) {
+      Instruction *User = cast<Instruction>(U.getUser());
+      if (UniqueUsers.insert(User).second)
+        Users.push_back(User);
+    }
+  }
+  llvm::sort(Users, [](Instruction *A, Instruction *B) {
+    if (A->getParent() != B->getParent())
+      return A->getParent()->getNumber() > B->getParent()->getNumber();
+    return B->comesBefore(A);
+  });
 
+  for (Instruction *User : Users) {
     // Do not infinitely recurse on PHI nodes.
     if (isa<PHINode>(User) && Processed.count(User))
       continue;

@@ -48,8 +48,8 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    ds_load_b64 v[18:19], v11
 ; CHECK-NEXT:    ds_load_b64 v[6:7], v14
 ; CHECK-NEXT:    ds_load_b64 v[4:5], v13
-; CHECK-NEXT:    v_dual_add_nc_u32 v12, 8, v12 :: v_dual_add_nc_u32 v11, 8, v11
 ; CHECK-NEXT:    v_dual_add_nc_u32 v13, 8, v13 :: v_dual_add_nc_u32 v14, 8, v14
+; CHECK-NEXT:    v_dual_add_nc_u32 v11, 8, v11 :: v_dual_add_nc_u32 v12, 8, v12
 ; CHECK-NEXT:    s_wait_dscnt 0x2
 ; CHECK-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[18:19]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)

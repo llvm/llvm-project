@@ -461,18 +461,17 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v3
 ; GISEL-NEXT:    s_add_co_i32 s8, s8, s17
-; GISEL-NEXT:    s_wait_xcnt 0x0
-; GISEL-NEXT:    s_add_co_u32 s0, s0, 4
-; GISEL-NEXT:    v_mov_b32_e32 v3, s8
-; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
-; GISEL-NEXT:    s_add_co_u32 s6, s6, 4
-; GISEL-NEXT:    s_add_co_ci_u32 s7, s7, 0
 ; GISEL-NEXT:    s_mov_b32 s17, s16
+; GISEL-NEXT:    v_mov_b32_e32 v3, s8
 ; GISEL-NEXT:    global_store_b32 v0, v3, s[4:5]
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_add_co_u32 s4, s4, 4
 ; GISEL-NEXT:    s_add_co_ci_u32 s5, s5, 0
 ; GISEL-NEXT:    s_add_co_u32 s14, s14, 4
+; GISEL-NEXT:    s_add_co_u32 s0, s0, 4
+; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GISEL-NEXT:    s_add_co_u32 s6, s6, 4
+; GISEL-NEXT:    s_add_co_ci_u32 s7, s7, 0
 ; GISEL-NEXT:    s_cmp_lt_i32 s13, s11
 ; GISEL-NEXT:    s_wait_loadcnt 0x1
 ; GISEL-NEXT:    v_readfirstlane_b32 s8, v1
