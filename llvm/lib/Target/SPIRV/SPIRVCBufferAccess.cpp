@@ -29,7 +29,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVCBufferAccess.h"
 #include "SPIRV.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
 #include "llvm/IR/IRBuilder.h"

@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"

@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPushConstantAccess.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"

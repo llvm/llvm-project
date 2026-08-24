@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareGlobals.h"
 #include "SPIRV.h"
 #include "SPIRVUtils.h"
 

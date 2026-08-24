@@ -10,7 +10,6 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
