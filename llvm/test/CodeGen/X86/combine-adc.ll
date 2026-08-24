@@ -249,8 +249,6 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
   ret i32 %13
 }
 
-declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
-declare void @use(i8)
 
 define i32 @adc_shl(i32 %a, i32 %b) {
 ; X86-LABEL: adc_shl:
@@ -295,3 +293,6 @@ define i32 @adc_test(i32 %a, i32 %b) {
   %add1 = add i32 %add, %conv
   ret i32 %add1
 }
+
+declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
+declare void @use(i8)
