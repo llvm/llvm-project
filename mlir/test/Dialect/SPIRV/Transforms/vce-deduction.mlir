@@ -181,7 +181,7 @@ spirv.module Logical GLSL450 attributes {
 // Test deducing minimal extensions.
 // spirv.KHR.SubgroupBallot requires the SPV_KHR_shader_ballot extension.
 
-// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader, Matrix], [SPV_KHR_shader_ballot]>
+// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, SubgroupBallotKHR],
@@ -457,4 +457,39 @@ spirv.module Logical GLSL450 attributes {
       linkage_name = "weak_var",
       linkage_type = <Weak>>
   } : !spirv.ptr<i32, Private>
+}
+
+// The `BuiltIn` decoration's operand has its own capability requirement per the
+// SPIR-V spec BuiltIn table: `SubgroupId` needs `GroupNonUniform` or `Kernel`.
+// See https://github.com/llvm/llvm-project/issues/213193.
+
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniform, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, GroupNonUniform], []>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @subgroup_id built_in("SubgroupId") : !spirv.ptr<i32, Input>
+
+  spirv.func @kernel() "None" attributes {kernel} {
+    %address = spirv.mlir.addressof @subgroup_id : !spirv.ptr<i32, Input>
+    %id = spirv.Load "Input" %address : i32
+    spirv.Return
+  }
+
+  spirv.EntryPoint "GLCompute" @kernel, @subgroup_id
+  spirv.ExecutionMode @kernel "LocalSize", 1, 1, 1
+}
+
+// `SubgroupEqMask` requires min version v1.3. Prefer `SubgroupBallotKHR` (no
+// capability min-version) so the deduced version comes from the BuiltIn itself.
+
+// CHECK: requires #spirv.vce<v1.3, [SubgroupBallotKHR, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, SubgroupBallotKHR], [SPV_KHR_shader_ballot]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @subgroup_eq_mask built_in("SubgroupEqMask")
+      : !spirv.ptr<vector<4xi32>, Input>
 }
