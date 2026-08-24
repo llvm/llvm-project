@@ -7897,10 +7897,12 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
-  // Is non-HSA path or trap-handler disabled? Then, report a warning
-  // accordingly
+  // Is this an unsupported ABI, or is the trap handler disabled? Then report
+  // a warning accordingly.
+  const GCNSubtarget::TrapHandlerAbi Abi = ST.getTrapHandlerAbi();
   if (!ST.hasTrapHandler() ||
-      ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
+      (Abi != GCNSubtarget::TrapHandlerAbi::AMDHSA &&
+       Abi != GCNSubtarget::TrapHandlerAbi::AMDPAL)) {
     Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
         Fn, "debugtrap handler not supported", MI.getDebugLoc(), DS_Warning));

@@ -9342,8 +9342,10 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   MachineFunction &MF = DAG.getMachineFunction();
 
+  const GCNSubtarget::TrapHandlerAbi Abi = Subtarget->getTrapHandlerAbi();
   if (!Subtarget->hasTrapHandler() ||
-      Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
+      (Abi != GCNSubtarget::TrapHandlerAbi::AMDHSA &&
+       Abi != GCNSubtarget::TrapHandlerAbi::AMDPAL)) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     Ctx.diagnose(DiagnosticInfoUnsupported(MF.getFunction(),
                                            "debugtrap handler not supported",
