@@ -15,7 +15,6 @@
         ! CHECK: addcc %g1, %g2, %g3  ! encoding: [0x86,0x80,0x40,0x02]
         addcc %g1, %g2, %g3
 
-
         ! CHECK: addxcc %g1, %g2, %g3 ! encoding: [0x86,0xc0,0x40,0x02]
         addxcc %g1, %g2, %g3
 
