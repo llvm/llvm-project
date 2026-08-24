@@ -124,7 +124,8 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
     return std::nullopt;
   /// As this operation can be potentially slow, we limit the total time spent
   /// fetching children to a few ms.
-  const auto max_evaluation_time = std::chrono::milliseconds(10);
+  constexpr auto max_evaluation_time =
+      std::chrono::milliseconds(lldb_dap::k_evaluate_timeout_ms / 10);
   /// We don't want to generate a extremely long summary string, so we limit its
   /// length.
   const size_t max_length = 32;
