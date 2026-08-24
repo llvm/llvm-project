@@ -52,13 +52,18 @@ using namespace Fortran::parser::omp;
 // Accept the standard "!$omp" sentinel as well as the implementation-defined
 // extension sentinels "!$omx" (fixed form) and "!$ompx" (free form) defined in
 // OpenMP 5.2, section 3.1.  The prescanner normalizes the comment character of
-// fixed-form sentinels (c$omx, *$omx) to '!'.  The sentinels are matched with
-// the "_id" literal (not "_sptok") so that a sentinel is not accepted as a
-// prefix of a longer one: "!$OMP" must not match the "!$omp" that begins
-// "!$ompx".  The "_id" match fails when the token is immediately followed by
-// another identifier character.
-constexpr auto ompxSentinel = "!$OMPX"_id || "!$OMX"_id;
-constexpr auto ompSentinel = "!$OMP"_id;
+// fixed-form sentinels (c$omx, *$omx) to '!'.
+//
+// The extension sentinels are tried before "!$omp".  Because "omp" is a prefix
+// of "ompx", matching "!$omp" first would consume the start of an "!$ompx" line
+// and leave a stray "x" ahead of the directive name; trying "!$ompx"/"!$omx"
+// first avoids that.  "_sptok" (rather than "_id") is required because in fixed
+// form the prescanner can emit the sentinel immediately followed by the
+// directive name with no intervening space (e.g. "c$omp0parallel" becomes
+// "!$ompparallel"); "_id" would reject such a token because it is followed by
+// an identifier character.
+constexpr auto ompxSentinel = "!$OMPX "_sptok || "!$OMX "_sptok;
+constexpr auto ompSentinel = "!$OMP "_sptok;
 constexpr auto startOmpLine =
     skipStuffBeforeStatement >> (ompxSentinel || ompSentinel);
 constexpr auto endOmpLine = space >> endOfLine;
@@ -2849,11 +2854,18 @@ TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
 // the node is flagged (true) so that semantics ignores it with a warning rather
 // than reporting an error, allowing portable use of vendor extensions
 // (OpenMP 5.2, section 3.1).
+//
+// This is a fallback that is attempted before the enclosing program unit is
+// reparsed as an execution-part construct, so the standard "!$omp" branch uses
+// the strict "_id" spelling: it must not prefix-match the "!$omp" that begins an
+// "!$ompx" line, otherwise a valid extension directive such as "!$ompx barrier"
+// would be misreported as an invalid "!$omp" directive instead of being handled
+// as a real construct.
 TYPE_PARSER(skipStuffBeforeStatement >>
     ((ompxSentinel >>
          sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
              !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(true)))) ||
-        (ompSentinel >>
+        ("!$OMP"_id >>
             sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
                 !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(false))))))
 } // namespace Fortran::parser
