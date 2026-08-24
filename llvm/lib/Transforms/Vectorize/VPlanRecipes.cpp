@@ -3585,12 +3585,11 @@ VPExpressionRecipe::VPExpressionRecipe(
 }
 
 SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
-  for (auto *R : ExpressionRecipes) {
+  for (auto *R : ExpressionRecipes)
     // Since the list could contain duplicates, make sure the recipe hasn't
     // already been inserted.
     if (!R->getParent())
       R->insertBefore(this);
-  }
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);

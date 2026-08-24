@@ -19,6 +19,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -253,15 +254,17 @@ optimizeExpressionRecipeToEVL(VPValue *HeaderMask, VPRecipeBase &CurRecipe,
 
   // Decompose first and construct with EVL recipes later.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes(Expr->decompose());
+  SmallSetVector<VPSingleDefRecipe *, 4> UniqueExpressionRecipes(
+      ExpressionRecipes.begin(), ExpressionRecipes.end());
 
   // Convert recipes to EVL recipes.
-  for (auto [Idx, R] : enumerate(ExpressionRecipes))
+  for (auto *R : UniqueExpressionRecipes)
     if (auto *EVLR = cast_if_present<VPSingleDefRecipe>(
             optimizeMaskToEVL(HeaderMask, *R, EVL))) {
       EVLR->insertBefore(R);
       R->replaceAllUsesWith(EVLR);
       OldRecipes.push_back(R);
-      ExpressionRecipes[Idx] = EVLR;
+      replace(ExpressionRecipes, R, EVLR);
     }
 
   auto *NewExpr =
