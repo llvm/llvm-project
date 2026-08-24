@@ -76,7 +76,7 @@ jobs:
 
     - name: Validate Release Version
       if: inputs.release-version != ''
-      uses: ./.github/workflows/validate-release-version
+      uses: $/.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
 
