@@ -1415,8 +1415,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            InitDecl && !InitDecl->hasConstantInitialization() ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
