@@ -664,7 +664,10 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
                                     /*OneUseOnly=*/true, &TrueCopies);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
     return false;
-  MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
+  MachineInstr *TrueDef = MRI->getVRegDef(TrueReg);
+  if (!TrueDef)
+    return false;
+  MachineInstr &True = *TrueDef;
   if (True.getParent() != MI.getParent())
     return false;
   const MachineOperand &MaskOp = MI.getOperand(4);
