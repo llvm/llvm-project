@@ -898,11 +898,10 @@ public:
                                     SourceLocation EndLoc);
   /// Called on well-formed 'num_threads' clause.
   OMPClause *ActOnOpenMPNumThreadsClause(
-      ArrayRef<Expr *> VarList,
-      OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
-      SourceLocation PrescriptivenessModifierLoc,
-      OpenMPNumThreadsClauseModifier DimsModifier, Expr *DimsModifierExpr,
-      SourceLocation DimsModifierLoc, SourceLocation StartLoc,
+      ArrayRef<Expr *> VarList, OpenMPNumThreadsClauseModifier SimpleModifier,
+      SourceLocation SimpleModifierLoc,
+      OpenMPNumThreadsClauseModifier ComplexModifier, Expr *ComplexModifierExpr,
+      SourceLocation ComplexModifierLoc, SourceLocation StartLoc,
       SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'align' clause.
   OMPClause *ActOnOpenMPAlignClause(Expr *Alignment, SourceLocation StartLoc,

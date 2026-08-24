@@ -14,7 +14,7 @@ void bar(int N) { // expected-note 2 {{declared here}}
 #pragma omp target teams num_teams(dims 2: 4) // expected-error {{use of undeclared identifier 'dims'}}
   foo();
 
-#pragma omp parallel num_threads(dims 2: 4) // expected-error {{use of undeclared identifier 'dims'}}
+#pragma omp parallel num_threads(dims 2: 4) // expected-error {{missing ':' after num_threads modifier}}
   foo();
 
 #pragma omp target thread_limit(dim(2) 4, 5)
@@ -63,7 +63,12 @@ void bar(int N) { // expected-note 2 {{declared here}}
 #pragma omp target teams distribute num_teams(dims(): 4) // expected-error {{expected expression}}
   for (int i = 0; i < 10; ++i) {}
 
-#pragma omp parallel num_threads(dims(): 4) // expected-error {{expected expression}}
+#pragma omp parallel num_threads(dims(): 4)
+  // expected-error@-1 {{expected expression}}
+  // expected-error@-2 {{malformed 'dims' complex modifier in 'num_threads' clause}}
+  foo();
+
+#pragma omp parallel num_threads(dims: 4) // expected-error {{malformed 'dims' complex modifier in 'num_threads' clause}}
   foo();
 
   // 3. Incompatible modifiers.

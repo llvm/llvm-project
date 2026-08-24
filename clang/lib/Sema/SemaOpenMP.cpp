@@ -17446,20 +17446,32 @@ static std::string getListOfPossibleValues(OpenMPClauseKind K, unsigned First,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
-    ArrayRef<Expr *> VarList,
-    OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
-    SourceLocation PrescriptivenessModifierLoc,
-    OpenMPNumThreadsClauseModifier DimsModifier, Expr *DimsModifierExpr,
-    SourceLocation DimsModifierLoc, SourceLocation StartLoc,
+    ArrayRef<Expr *> VarList, OpenMPNumThreadsClauseModifier SimpleModifier,
+    SourceLocation SimpleModifierLoc,
+    OpenMPNumThreadsClauseModifier ComplexModifier, Expr *ComplexModifierExpr,
+    SourceLocation ComplexModifierLoc, SourceLocation StartLoc,
     SourceLocation LParenLoc, SourceLocation EndLoc) {
-  assert((PrescriptivenessModifier == (PrescriptivenessModifierLoc.isValid()
-                                           ? OMPC_NUMTHREADS_strict
-                                           : OMPC_NUMTHREADS_unknown)) &&
-         "Unexpected num_threads prescriptiveness modifier.");
-  assert(
-      (DimsModifier == (DimsModifierLoc.isValid() ? OMPC_NUMTHREADS_dims
-                                                  : OMPC_NUMTHREADS_unknown)) &&
-      "Unexpected num_threads dims modifier.");
+  // Check that modifiers were correctly specified.
+  if (ComplexModifierLoc.isValid() &&
+      (ComplexModifier != OMPC_NUMTHREADS_dims || !ComplexModifierExpr)) {
+    Diag(ComplexModifierLoc, diag::err_omp_malformed_complex_modifier)
+        << getOpenMPSimpleClauseTypeName(OMPC_num_threads, OMPC_NUMTHREADS_dims)
+        << getOpenMPClauseName(OMPC_num_threads);
+    return nullptr;
+  }
+  if (SimpleModifierLoc.isValid() && SimpleModifier == OMPC_NUMTHREADS_dims) {
+    Diag(SimpleModifierLoc, diag::err_omp_malformed_complex_modifier)
+        << getOpenMPSimpleClauseTypeName(OMPC_num_threads, OMPC_NUMTHREADS_dims)
+        << getOpenMPClauseName(OMPC_num_threads);
+    return nullptr;
+  }
+  if (SimpleModifierLoc.isValid() && SimpleModifier != OMPC_NUMTHREADS_strict) {
+    Diag(SimpleModifierLoc, diag::err_omp_unexpected_clause_value)
+        << getOpenMPSimpleClauseTypeName(OMPC_num_threads,
+                                         OMPC_NUMTHREADS_strict)
+        << getOpenMPClauseName(OMPC_num_threads);
+    return nullptr;
+  }
 
   if (VarList.empty())
     return nullptr;
@@ -17473,24 +17485,22 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
       return nullptr;
   }
 
-  if (DimsModifier == OMPC_NUMTHREADS_dims) {
-    ExprResult Res = ActOnOpenMPDimsModifier(OMPC_num_threads, DimsModifier,
-                                             DimsModifierExpr, DimsModifierLoc,
-                                             Vars, EndLoc);
+  if (ComplexModifier == OMPC_NUMTHREADS_dims) {
+    ExprResult Res = ActOnOpenMPDimsModifier(OMPC_num_threads, ComplexModifier,
+                                             ComplexModifierExpr,
+                                             ComplexModifierLoc, Vars, EndLoc);
     if (Res.isInvalid())
       return nullptr;
-    DimsModifierExpr = Res.get();
+    ComplexModifierExpr = Res.get();
 
     if (validateMultidimClauseExprs(*this, OMPC_num_threads, StartLoc, Vars,
-                                    DimsModifierExpr))
+                                    ComplexModifierExpr))
       return nullptr;
   }
-  if (PrescriptivenessModifier == OMPC_NUMTHREADS_strict &&
-      getLangOpts().OpenMP < 60) {
-    Diag(PrescriptivenessModifierLoc, diag::err_omp_modifier_requires_version)
-        << getOpenMPSimpleClauseTypeName(llvm::omp::OMPC_num_threads,
-                                         PrescriptivenessModifier)
-        << getOpenMPClauseName(llvm::omp::OMPC_num_threads) << "6.0";
+  if (SimpleModifier == OMPC_NUMTHREADS_strict && getLangOpts().OpenMP < 60) {
+    Diag(SimpleModifierLoc, diag::err_omp_modifier_requires_version)
+        << getOpenMPSimpleClauseTypeName(OMPC_num_threads, SimpleModifier)
+        << getOpenMPClauseName(OMPC_num_threads) << "6.0";
     return nullptr;
   }
 
@@ -17500,25 +17510,25 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
   if (CaptureRegion == OMPD_unknown || SemaRef.CurContext->isDependentContext())
     return OMPNumThreadsClause::Create(
         getASTContext(), CaptureRegion, StartLoc, LParenLoc, EndLoc, Vars,
-        PrescriptivenessModifier, DimsModifier, PrescriptivenessModifierLoc,
-        DimsModifierLoc, DimsModifierExpr, /*PreInit=*/nullptr);
+        SimpleModifier, ComplexModifier, SimpleModifierLoc, ComplexModifierLoc,
+        ComplexModifierExpr, /*PreInit=*/nullptr);
 
   llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
   for (Expr *&ValExpr : Vars) {
     ValExpr = SemaRef.MakeFullExpr(ValExpr).get();
     ValExpr = tryBuildCapture(SemaRef, ValExpr, Captures).get();
   }
-  if (DimsModifierExpr) {
-    DimsModifierExpr = SemaRef.MakeFullExpr(DimsModifierExpr).get();
-    DimsModifierExpr =
-        tryBuildCapture(SemaRef, DimsModifierExpr, Captures).get();
+  if (ComplexModifierExpr) {
+    ComplexModifierExpr = SemaRef.MakeFullExpr(ComplexModifierExpr).get();
+    ComplexModifierExpr =
+        tryBuildCapture(SemaRef, ComplexModifierExpr, Captures).get();
   }
   Stmt *PreInit = buildPreInits(getASTContext(), Captures);
 
   return OMPNumThreadsClause::Create(
       getASTContext(), CaptureRegion, StartLoc, LParenLoc, EndLoc, Vars,
-      PrescriptivenessModifier, DimsModifier, PrescriptivenessModifierLoc,
-      DimsModifierLoc, DimsModifierExpr, PreInit);
+      SimpleModifier, ComplexModifier, SimpleModifierLoc, ComplexModifierLoc,
+      ComplexModifierExpr, PreInit);
 }
 
 ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(

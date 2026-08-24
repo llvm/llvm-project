@@ -5389,38 +5389,34 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         ExprResult ExprR =
             ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
 
-        if (Data.ExtraModifierArray[1] != OMPC_NUMTHREADS_unknown) {
-          Diag(TLoc, diag::err_omp_duplicate_modifier)
+        if (Data.ExtraModifierArray[1] != OMPC_NUMTHREADS_unknown)
+          Diag(TLoc, diag::err_omp_incompatible_modifiers)
               << getOpenMPSimpleClauseTypeName(Kind, OMPC_NUMTHREADS_dims)
+              << getOpenMPSimpleClauseTypeName(Kind, Data.ExtraModifierArray[1])
               << getOpenMPClauseName(Kind);
-        } else if (ExprR.isUsable()) {
-          Data.ExtraModifierArray[1] = static_cast<int>(OMPC_NUMTHREADS_dims);
-          Data.ExtraModifierExprArray[1] = ExprR.get();
-          Data.ExtraModifierLocArray[1] = TLoc;
-        }
+
+        Data.ExtraModifierArray[1] = static_cast<int>(OMPC_NUMTHREADS_dims);
+        Data.ExtraModifierExprArray[1] =
+            (ExprR.isUsable()) ? ExprR.get() : nullptr;
+        Data.ExtraModifierLocArray[1] = TLoc;
         HasModifier = true;
       } else {
-        // Parse any modifier other than dims.
+        // Parse any other modifier.
         OpenMPNumThreadsClauseModifier Modifier =
             static_cast<OpenMPNumThreadsClauseModifier>(
                 getOpenMPSimpleClauseType(
                     Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok),
                     getLangOpts()));
 
-        // The dims modifier is a complex modifier that must be parsed above.
-        if (Modifier == OMPC_NUMTHREADS_dims)
-          Modifier = OMPC_NUMTHREADS_unknown;
-
         if (Modifier != OMPC_NUMTHREADS_unknown) {
-          // Only prescriptiveness modifiers should enter this part.
-          if (Data.ExtraModifierArray[0] != OMPC_NUMTHREADS_unknown) {
-            Diag(Tok, diag::err_omp_duplicate_modifier)
+          if (Data.ExtraModifierArray[0] != OMPC_NUMTHREADS_unknown)
+            Diag(Tok, diag::err_omp_incompatible_modifiers)
                 << getOpenMPSimpleClauseTypeName(Kind, Modifier)
+                << getOpenMPSimpleClauseTypeName(Kind,
+                                                 Data.ExtraModifierArray[0])
                 << getOpenMPClauseName(Kind);
-          } else {
-            Data.ExtraModifierArray[0] = Modifier;
-            Data.ExtraModifierLocArray[0] = Tok.getLocation();
-          }
+          Data.ExtraModifierArray[0] = Modifier;
+          Data.ExtraModifierLocArray[0] = Tok.getLocation();
           ConsumeAnyToken();
           HasModifier = true;
         } else {
@@ -5438,9 +5434,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     // If any modifier was parsed, the next token must be a colon.
     if (HasModifier) {
-      if (Tok.is(tok::colon)) {
-        ConsumeToken();
-      } else {
+      if (!Tok.is(tok::colon)) {
         Diag(Tok, diag::err_modifier_expected_colon)
             << getOpenMPClauseName(Kind);
         SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
@@ -5449,6 +5443,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Data.RLoc = T.getCloseLocation();
         return true;
       }
+      ConsumeToken();
     }
   }
 
