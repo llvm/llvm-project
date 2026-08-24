@@ -1553,7 +1553,7 @@ public:
   LLVM_ABI InstructionCost getAltInstrCost(
       VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
       const SmallBitVector &OpcodeMask,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind) const;
 
   /// \return The cost of a shuffle instruction of kind Kind with inputs of type
   /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
@@ -1609,7 +1609,7 @@ public:
   /// may be passed in the 'I' parameter.
   LLVM_ABI InstructionCost getCastInstrCost(
       unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
-      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      TTI::TargetCostKind CostKind,
       const Instruction *I = nullptr) const;
 
   /// \return The expected cost of a sign- or zero-extended vector extract. Use
@@ -1621,7 +1621,7 @@ public:
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
   LLVM_ABI InstructionCost getCFInstrCost(
-      unsigned Opcode, TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      unsigned Opcode, TTI::TargetCostKind CostKind,
       const Instruction *I = nullptr) const;
 
   /// \returns The expected cost of compare and select instructions. If there
@@ -1633,7 +1633,7 @@ public:
   /// two operands are the *value* operands, not the condition operand.
   LLVM_ABI InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::TargetCostKind CostKind,
       OperandValueInfo Op1Info = {OK_AnyValue, OP_None},
       OperandValueInfo Op2Info = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
@@ -1720,7 +1720,7 @@ public:
   LLVM_ABI InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   /// A helper function to determine the type of reduction algorithm used
@@ -1755,7 +1755,7 @@ public:
   ///
   LLVM_ABI InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind) const;
 
   LLVM_ABI InstructionCost getMinMaxReductionCost(
       Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
@@ -1768,7 +1768,7 @@ public:
   /// * ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
   LLVM_ABI InstructionCost getMulAccReductionCost(
       bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.
@@ -1777,7 +1777,7 @@ public:
   LLVM_ABI InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
@@ -1794,7 +1794,7 @@ public:
   /// \returns The cost of Call instructions.
   LLVM_ABI InstructionCost getCallInstrCost(
       Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+      TTI::TargetCostKind CostKind) const;
 
   /// \returns The number of pieces into which the provided type must be
   /// split during legalization. Zero is returned when the answer is unknown.
