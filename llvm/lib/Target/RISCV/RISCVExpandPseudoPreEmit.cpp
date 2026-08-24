@@ -1,4 +1,4 @@
-//===-- RISCVExpandPseudoInsts.cpp - Expand pseudo instructions -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,11 +22,12 @@
 
 using namespace llvm;
 
-#define RISCV_EXPAND_PSEUDO_NAME "RISC-V pseudo instruction expansion pass"
+#define RISCV_EXPAND_PSEUDO_PRE_EMIT_NAME                                      \
+  "RISC-V Pseudo Instruction Expansion - Pre-Emit"
 
 namespace {
 
-class RISCVExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
+class RISCVExpandPseudoPreEmitImpl final : public RISCVExpandPseudoImplBase {
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI) const override;
 
@@ -60,22 +61,24 @@ class RISCVExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
                               MachineBasicBlock::iterator MBBI) const;
 };
 
-class RISCVExpandPseudoLegacy : public MachineFunctionPass {
+class RISCVExpandPseudoPreEmitLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+  RISCVExpandPseudoPreEmitLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return RISCVExpandPseudoImpl().run(MF);
+    return RISCVExpandPseudoPreEmitImpl().run(MF);
   }
 
-  StringRef getPassName() const override { return RISCV_EXPAND_PSEUDO_NAME; }
+  StringRef getPassName() const override {
+    return RISCV_EXPAND_PSEUDO_PRE_EMIT_NAME;
+  }
 };
 
 } // anonymous namespace
 
-bool RISCVExpandPseudoImpl::expandMI(
+bool RISCVExpandPseudoPreEmitImpl::expandMI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) const {
   // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
@@ -169,7 +172,7 @@ bool RISCVExpandPseudoImpl::expandMI(
   return false;
 }
 
-bool RISCVExpandPseudoImpl::expandCCOp(
+bool RISCVExpandPseudoPreEmitImpl::expandCCOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) const {
   // First try expanding to a Conditional Move rather than a branch+mv
@@ -298,7 +301,7 @@ bool RISCVExpandPseudoImpl::expandCCOp(
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandCCOpToCMov(
+bool RISCVExpandPseudoPreEmitImpl::expandCCOpToCMov(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -425,9 +428,9 @@ bool RISCVExpandPseudoImpl::expandCCOpToCMov(
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandVMSET_VMCLR(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator MBBI,
-                                              unsigned Opcode) const {
+bool RISCVExpandPseudoPreEmitImpl::expandVMSET_VMCLR(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    unsigned Opcode) const {
   DebugLoc DL = MBBI->getDebugLoc();
   Register DstReg = MBBI->getOperand(0).getReg();
   const MCInstrDesc &Desc = TII->get(Opcode);
@@ -438,7 +441,7 @@ bool RISCVExpandPseudoImpl::expandVMSET_VMCLR(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandMV_FPR16INX(
+bool RISCVExpandPseudoPreEmitImpl::expandMV_FPR16INX(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
@@ -455,7 +458,7 @@ bool RISCVExpandPseudoImpl::expandMV_FPR16INX(
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandMV_FPR32INX(
+bool RISCVExpandPseudoPreEmitImpl::expandMV_FPR32INX(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
@@ -475,7 +478,7 @@ bool RISCVExpandPseudoImpl::expandMV_FPR32INX(
 // This function expands the PseudoRV32ZdinxSD for storing a double-precision
 // floating-point value into memory by generating an equivalent instruction
 // sequence for RV32.
-bool RISCVExpandPseudoImpl::expandRV32ZdinxStore(
+bool RISCVExpandPseudoPreEmitImpl::expandRV32ZdinxStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
@@ -524,7 +527,7 @@ bool RISCVExpandPseudoImpl::expandRV32ZdinxStore(
 // This function expands PseudoRV32ZdinxLoad for loading a double-precision
 // floating-point value from memory into an equivalent instruction sequence for
 // RV32.
-bool RISCVExpandPseudoImpl::expandRV32ZdinxLoad(
+bool RISCVExpandPseudoPreEmitImpl::expandRV32ZdinxLoad(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
   const TargetRegisterInfo *TRI = STI->getRegisterInfo();
@@ -582,7 +585,7 @@ bool RISCVExpandPseudoImpl::expandRV32ZdinxLoad(
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandPseudoReadVLENBViaVSETVLIX0(
+bool RISCVExpandPseudoPreEmitImpl::expandPseudoReadVLENBViaVSETVLIX0(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
@@ -600,7 +603,7 @@ bool RISCVExpandPseudoImpl::expandPseudoReadVLENBViaVSETVLIX0(
   return true;
 }
 
-bool RISCVExpandPseudoImpl::expandPseudoClearFPR64(
+bool RISCVExpandPseudoPreEmitImpl::expandPseudoClearFPR64(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   const DebugLoc &DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
@@ -617,19 +620,19 @@ bool RISCVExpandPseudoImpl::expandPseudoClearFPR64(
   return true;
 }
 
-char RISCVExpandPseudoLegacy::ID = 0;
+char RISCVExpandPseudoPreEmitLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVExpandPseudoLegacy, "riscv-expand-pseudo",
-                RISCV_EXPAND_PSEUDO_NAME, false, false)
+INITIALIZE_PASS(RISCVExpandPseudoPreEmitLegacy, "riscv-expand-pseudo-pre-emit",
+                RISCV_EXPAND_PSEUDO_PRE_EMIT_NAME, false, false)
 
-FunctionPass *llvm::createRISCVExpandPseudoLegacyPass() {
-  return new RISCVExpandPseudoLegacy();
+FunctionPass *llvm::createRISCVExpandPseudoPreEmitLegacyPass() {
+  return new RISCVExpandPseudoPreEmitLegacy();
 }
 
 PreservedAnalyses
-RISCVExpandPseudoPass::run(MachineFunction &MF,
-                           MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = RISCVExpandPseudoImpl().run(MF);
+RISCVExpandPseudoPreEmitPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVExpandPseudoPreEmitImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   return getMachineFunctionPassPreservedAnalyses();

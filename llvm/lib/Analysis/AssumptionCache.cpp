@@ -34,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -43,14 +42,6 @@ static cl::opt<bool>
     VerifyAssumptionCache("verify-assumption-cache", cl::Hidden,
                           cl::desc("Enable verification of assumption cache"),
                           cl::init(false));
-
-unsigned llvm::MaxAssumesPerValue = 1024;
-
-static cl::opt<unsigned, true> MaxAssumesPerValueOpt(
-    "max-assumes-per-value", cl::Hidden, cl::location(MaxAssumesPerValue),
-    cl::init(1024),
-    cl::desc("Maximum number of assumptions affecting a single value that "
-             "analyses will inspect"));
 
 SmallVector<AssumptionCache::ResultElem, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
@@ -218,27 +209,6 @@ void AssumptionCache::scanFunction() {
     updateAffectedValues(cast<AssumeInst>(A));
 }
 
-/// Check the assumptions cached for \p F, collecting them in \p Cached. Returns
-/// a description of the first invariant violated, or nullptr if there is none.
-static const char *
-findCacheViolation(const Function &F, ArrayRef<WeakVH> Assumptions,
-                   SmallPtrSetImpl<const CallInst *> &Cached) {
-  for (const WeakVH &VH : Assumptions) {
-    if (!VH)
-      continue;
-
-    const auto *CI = cast<CallInst>(VH);
-    if (CI->getFunction() != &F)
-      return "Cached assumption not inside this function";
-    if (!match(CI, m_Intrinsic<Intrinsic::assume>()))
-      return "Cached something other than a call to @llvm.assume";
-    if (!Cached.insert(CI).second)
-      return "Cache contains multiple copies of a call";
-  }
-
-  return nullptr;
-}
-
 void AssumptionCache::registerAssumption(AssumeInst *CI) {
   // If we haven't scanned the function yet, just drop this assumption. It will
   // be found when we scan later.
@@ -255,19 +225,18 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
 
   // We expect the number of assumptions to be small, so in an asserts build
   // check that we don't accumulate duplicates and that all assumptions point
-  // to the same function. Scanning the whole cache on every registration is
-  // quadratic, so stop once it outgrows that expectation unless expensive
-  // checks are enabled. Larger caches are checked by
-  // AssumptionCacheTracker::verifyAnalysis() instead.
-#ifdef EXPENSIVE_CHECKS
-  constexpr unsigned MaxAssumesToVerify = std::numeric_limits<unsigned>::max();
-#else
-  constexpr unsigned MaxAssumesToVerify = 64;
-#endif
-  if (AssumeHandles.size() <= MaxAssumesToVerify) {
-    SmallPtrSet<const CallInst *, 16> Cached;
-    if (const char *Violation = findCacheViolation(F, AssumeHandles, Cached))
-      llvm_unreachable(Violation);
+  // to the same function.
+  SmallPtrSet<Value *, 16> AssumptionSet;
+  for (auto &VH : AssumeHandles) {
+    if (!VH)
+      continue;
+
+    assert(&F == cast<Instruction>(VH)->getParent()->getParent() &&
+           "Cached assumption not inside this function!");
+    assert(match(cast<CallInst>(VH), m_Intrinsic<Intrinsic::assume>()) &&
+           "Cached something other than a call to @llvm.assume!");
+    assert(AssumptionSet.insert(VH).second &&
+           "Cache contains multiple copies of a call!");
   }
 #endif
 
@@ -355,18 +324,16 @@ void AssumptionCacheTracker::verifyAnalysis() const {
   if (!VerifyAssumptionCache)
     return;
 
+  SmallPtrSet<const CallInst *, 4> AssumptionSet;
   for (const auto &I : AssumptionCaches) {
-    const Function &F = cast<Function>(*I.first);
+    for (auto &VH : I.second->assumptions())
+      if (VH)
+        AssumptionSet.insert(cast<CallInst>(VH));
 
-    SmallPtrSet<const CallInst *, 4> Cached;
-    if (const char *Violation =
-            findCacheViolation(F, I.second->assumptions(), Cached))
-      report_fatal_error(Violation);
-
-    for (const BasicBlock &B : F)
+    for (const BasicBlock &B : cast<Function>(*I.first))
       for (const Instruction &II : B)
         if (match(&II, m_Intrinsic<Intrinsic::assume>()) &&
-            !Cached.count(cast<CallInst>(&II)))
+            !AssumptionSet.count(cast<CallInst>(&II)))
           report_fatal_error("Assumption in scanned function not in cache");
   }
 }
