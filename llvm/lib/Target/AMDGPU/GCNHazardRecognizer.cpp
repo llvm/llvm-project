@@ -3164,6 +3164,16 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
   return WaitStatesNeeded;
 }
 
+/// Map an MFMA opcode to a form that ignores the vdst/src2 register bank and
+/// the mac form, so two MFMAs can be compared for being the same instruction.
+static unsigned canonicalizeMFMAOpcode(unsigned Opc) {
+  if (int MacOp = AMDGPU::getMFMAEarlyClobberOp(Opc); MacOp != -1)
+    Opc = MacOp;
+  if (int AGPROp = AMDGPU::getAGPRFormOp(Opc); AGPROp != -1)
+    Opc = AGPROp;
+  return Opc;
+}
+
 static int
 GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(int NumPasses,
                                                               bool IsGFX950) {
@@ -3355,6 +3365,14 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
         else if (ST.hasGFX940Insts() &&
                  TSchedModel.computeInstrLatency(MI1) == 2)
           NeedWaitStates = GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates;
+
+        // The accumulator forwarding path that allows zero wait states is only
+        // available while the chain stays on a single MFMA. Two different MFMAs
+        // sharing an accumulator need the wait states of a partial overlap.
+        if (ST.hasGFX940Insts() &&
+            canonicalizeMFMAOpcode(Opc) != canonicalizeMFMAOpcode(Opc1))
+          NeedWaitStates = std::max(NeedWaitStates,
+                                    getMFMAOverlappedSrcCWaitStates(MI, MI1));
       } else {
         NeedWaitStates = getMFMAOverlappedSrcCWaitStates(MI, MI1);
       }
