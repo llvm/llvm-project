@@ -16,7 +16,7 @@ namespace llvm {
 class SPIRVTargetMachine;
 
 class SPIRVLegalizeZeroSizeArrays
-    : public OptionalPassInfoMixin<SPIRVLegalizeZeroSizeArrays> {
+    : public RequiredPassInfoMixin<SPIRVLegalizeZeroSizeArrays> {
   const SPIRVTargetMachine &TM;
 
 public:
