@@ -95,7 +95,7 @@ public:
     return true;
   }
 
-  void addFallbackFunction(decltype(Fn) FallbackFunc) {
+  void setFallbackFunction(decltype(Fn) FallbackFunc) {
     UsesFuncPtr = true;
     FuncPtr = FallbackFunc;
   }
