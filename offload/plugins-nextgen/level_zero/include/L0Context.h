@@ -129,6 +129,11 @@ class L0ContextTy {
   /// API version supported by the Level Zero driver.
   ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
 
+  /// Version of the Level Zero driver.
+  std::string DriverVersion;
+
+  Expected<std::string> tryGetIntelDriverVersion();
+
   /// Imported external pointers. Track this only for user-directed
   /// imports/releases.
   llvm::DenseMap<uintptr_t, size_t> ImportedPtrs;
@@ -206,6 +211,9 @@ public:
   /// Return driver API version.
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
 
+  /// Return driver version.
+  const std::string &getDriverVersion() const { return DriverVersion; }
+
   /// Return the event pool of this driver.
   EventPoolTy &getEventPool() { return EventPool; }
   const EventPoolTy &getEventPool() const { return EventPool; }
@@ -229,6 +237,9 @@ public:
                ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
       CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
+  ZeDispatcher<zeIntelGetDriverVersionString,
+               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+      IntelGetDriverVersionString;
 };
 
 } // namespace llvm::omp::target::plugin
