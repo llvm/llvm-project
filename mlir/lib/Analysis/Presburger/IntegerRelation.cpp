@@ -2124,7 +2124,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
       if (darkShadow) {
         // The dark shadow is a convex subset of the exact integer shadow. If
         // there is a point here, it proves the existence of a solution.
-        ineq[ineq.size() - 1] += lbCoeff * ubCoeff - lbCoeff - ubCoeff + 1;
+        ineq[ineq.size() - 1] -= lbCoeff * ubCoeff - lbCoeff - ubCoeff + 1;
       }
       // TODO: we need to have a way to add inequalities in-place in
       // IntegerRelation instead of creating and copying over.
