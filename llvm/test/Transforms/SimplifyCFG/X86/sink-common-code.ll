@@ -2177,6 +2177,62 @@ join:
   ret i32 %phi
 }
 
+define void @store_different_alignments(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @store_different_alignments(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF1:%.*]], label [[IF2:%.*]]
+; CHECK:       if1:
+; CHECK-NEXT:    store i8 0, ptr [[P1:%.*]], align 2
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    store i8 0, ptr [[P2:%.*]], align 1
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if1, label %if2
+
+if1:
+  store i8 0, ptr %p1, align 2
+  br label %end
+
+if2:
+  store i8 0, ptr %p2, align 1
+  br label %end
+
+end:
+  ret void
+}
+
+define void @store_different_alignments_incompatible_attributes(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @store_different_alignments_incompatible_attributes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF1:%.*]], label [[IF2:%.*]]
+; CHECK:       if1:
+; CHECK-NEXT:    store volatile i8 0, ptr [[P1:%.*]], align 2
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    store i8 0, ptr [[P2:%.*]], align 1
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if1, label %if2
+
+if1:
+  store volatile i8 0, ptr %p1, align 2
+  br label %end
+
+if2:
+  store i8 0, ptr %p2, align 1
+  br label %end
+
+end:
+  ret void
+}
+
 declare void @dummy()
 declare void @use.ptr(ptr)
 
