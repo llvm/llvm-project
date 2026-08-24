@@ -9,25 +9,22 @@
 // clang-ssaf-src-edit-merge: per-LU source-edit YAML merge tool.
 //
 // Reads N per-TU clang::tooling::TranslationUnitReplacements YAML files,
-// deduplicates and merges them via the in-tree clang-apply-replacements
-// library (specifically clang::replace::mergeAndDeduplicate), and writes a
-// single merged YAML. The tool does NOT write source files — applying the
-// merge result is the caller's responsibility (typically clang-reforge
-// invokes `clang-apply-replacements` after this tool returns).
+// deduplicates and merges them into one flat, conflict-resolved list (see
+// "Conflict policy" below), and writes a single merged YAML spanning all N
+// TUs. The tool does NOT write source files — applying the merge result is
+// the caller's responsibility (typically clang-reforge invokes
+// `clang-apply-replacements` after this tool returns).
 //
-// Conflict policy: this tool implements a drop-all policy on top of the
-// underlying merge step, which resolves overlapping Replacements itself by
-// keeping the first-registered one in each overlapping group, and silently
-// excludes any input file it could not process at all (e.g. one that does
-// not exist on disk).
+// Conflict policy: this tool implements a drop-all policy. For each file, a
+// maximal group of transitively-overlapping input Replacements (a cluster)
+// is computed directly from the input; if a cluster has more than one
+// member, every member is removed from the merged output — not just enough
+// of them to resolve the overlap. A one-line stderr summary is emitted per
+// dropped cluster, and the tool still exits 0. Any input file that does not
+// exist on disk is excluded entirely from the merged output.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-apply-replacements/Tooling/ApplyReplacements.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Tooling/ReplacementsYaml.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
@@ -47,7 +44,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <cassert>
 #include <map>
 #include <set>
 #include <string>
@@ -77,6 +73,9 @@ constexpr const char *CannotWriteFile = "cannot write {0}";
 constexpr const char *WriteErrorOnFile = "write error on {0}";
 
 constexpr const char *CannotWriteOutput = "cannot write {0}: {1}";
+
+constexpr const char *MissingReplacementFile =
+    "{0}: file does not exist; skipping its replacement(s)";
 
 constexpr const char *CandidateEditMessage = "candidate edit: \"{0}\"";
 
@@ -123,35 +122,22 @@ bool readInput(llvm::StringRef Path,
   return true;
 }
 
-/// Pull every Replacement out of a FileToChangesMap into a flat ordered
-/// vector. Within each AtomicChange, the underlying Replacements are
-/// already (file, offset)-ordered by the library; across files we order
-/// by file path for determinism.
-std::vector<clang::tooling::Replacement>
-flattenFileChanges(const clang::replace::FileToChangesMap &Changes) {
-  // Group by file first so the output is deterministic across runs.
-  std::map<std::string, std::set<clang::tooling::Replacement>> ByFile;
-  for (const auto &Entry : Changes) {
-    const std::string Path = Entry.first.getName().str();
-    auto &Bucket = ByFile[Path];
-    for (const clang::tooling::AtomicChange &AC : Entry.second) {
-      for (const clang::tooling::Replacement &R : AC.getReplacements())
-        Bucket.insert(R);
-    }
-  }
-
-  std::vector<clang::tooling::Replacement> Flat;
-  for (auto &Entry : ByFile) {
-    // Bucket is a std::set<Replacement>, so it's already ordered by
-    // Replacement::operator< — the (offset, length, text) order this
-    // function promises, since every entry here shares Entry.first as its
-    // file path.
-    auto &Bucket = Entry.second;
-    for (const auto &R : Bucket)
-      Flat.push_back(R);
-  }
-  return Flat;
-}
+/// The merged output: a flat list of Replacements spanning every input file.
+///
+/// Deliberately not clang::tooling::TranslationUnitReplacements: that type
+/// represents one TU's replacements, but this represents the drop-all-policy
+/// result of merging N TUs' worth of edits. `MappingTraits` below serializes
+/// this to the identical YAML shape (the same two required keys,
+/// MainSourceFile and Replacements) so clang-apply-replacements — which only
+/// knows how to read that shape — can still consume the output; only the
+/// C++ type stops making a claim about the data it doesn't hold.
+/// MainSourceFile is populated on a best-effort basis (computeMainSourceFile,
+/// below) purely for wire compatibility: nothing in the merge/apply pipeline
+/// reads it back.
+struct MergedReplacements {
+  std::string MainSourceFile;
+  std::vector<clang::tooling::Replacement> Replacements;
+};
 
 /// Compute the shared MainSourceFile across inputs.
 ///
@@ -239,10 +225,10 @@ std::vector<std::vector<clang::tooling::Replacement>> buildConflictClusters(
   return Clusters;
 }
 
-/// Emit one stderr line per reportable conflict cluster.
+/// Emit one stderr line per conflict cluster.
 ///
-/// Precondition: `Clusters` contains only reportable clusters (those with a
-/// member in OutputKeys) and is sorted by (file, min-offset)
+/// Precondition: `Clusters` is sorted by (file, min-offset) ascending —
+/// guaranteed by buildConflictClusters, the only place Clusters is built.
 void emitConflictClusterLines(
     const std::vector<std::vector<clang::tooling::Replacement>> &Clusters) {
   for (const auto &Cluster : Clusters) {
@@ -386,6 +372,20 @@ bool parentDirectoryExists(llvm::StringRef Path) {
 
 } // namespace
 
+namespace llvm {
+namespace yaml {
+/// Specialized MappingTraits to describe how a MergedReplacements is
+/// (de)serialized. Mirrors MappingTraits<TranslationUnitReplacements> in
+/// ReplacementsYaml.h exactly, key-for-key, for wire compatibility.
+template <> struct MappingTraits<MergedReplacements> {
+  static void mapping(IO &Io, MergedReplacements &Doc) {
+    Io.mapRequired("MainSourceFile", Doc.MainSourceFile);
+    Io.mapRequired("Replacements", Doc.Replacements);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
 int main(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions(MergeCategory);
@@ -419,13 +419,12 @@ int main(int argc, const char **argv) {
     TUs.push_back(std::move(TU));
   }
 
-  // Pre-deduplicate identical replacements across all input TUs before
-  // calling into clang-apply-replacements.
+  // Pre-deduplicate identical replacements across all input TUs.
   //
   // This loop keeps a running set of every (file, offset, length, text)
   // tuple already kept across all TUs and drops
   // any later Replacement that matches one already kept, so each distinct
-  // Replacement reaches the library exactly once. The first occurrence (in
+  // Replacement is considered exactly once below. The first occurrence (in
   // input-file order, then within-file order) wins; later duplicates are
   // byte-identical to it, so which one is "first" is observationally moot.
   {
@@ -441,102 +440,78 @@ int main(int argc, const char **argv) {
     }
   }
 
-  // Pre-compute the input-side replacement set for conflict reporting,
-  // grouped by file up front since buildConflictClusters only looks for
-  // overlap within one file. Zero-length insertions never overlap anything
-  // — they're dropped here rather than inside buildConflictClusters, since
-  // there's no other reason for them to be in this set at all.
+  // Determine which input files exist on disk. A Replacement targeting a
+  // file that doesn't exist can never be applied, so every Replacement
+  // targeting that file is excluded from the merged output.
+  std::set<std::string> MissingFiles;
+  {
+    std::set<std::string> AllFiles;
+    for (const auto &TU : TUs)
+      for (const auto &R : TU.Replacements)
+        AllFiles.insert(R.getFilePath().str());
+    for (const std::string &F : AllFiles)
+      if (!llvm::sys::fs::exists(F))
+        MissingFiles.insert(F);
+  }
+  for (const std::string &F : MissingFiles)
+    llvm::errs() << ToolName << ": " << llvm::formatv(MissingReplacementFile, F)
+                 << "\n";
+
+  // Split every surviving-candidate Replacement by file. Zero-length
+  // insertions go straight into SurvivorsByFile — they can never overlap
+  // anything, so they're never at risk of being dropped. Length > 0 entries
+  // go into InputKeysByFile, the input to buildConflictClusters, which is
+  // the sole authority on which of them conflict.
+  std::map<std::string, std::set<clang::tooling::Replacement>> SurvivorsByFile;
   std::map<std::string, std::set<clang::tooling::Replacement>> InputKeysByFile;
-  for (const auto &TU : TUs)
-    for (const auto &R : TU.Replacements)
-      if (R.getLength() > 0)
+  for (const auto &TU : TUs) {
+    for (const auto &R : TU.Replacements) {
+      if (MissingFiles.count(R.getFilePath().str()))
+        continue;
+      if (R.getLength() == 0)
+        SurvivorsByFile[R.getFilePath().str()].insert(R);
+      else
         InputKeysByFile[R.getFilePath().str()].insert(R);
+    }
+  }
 
-  // Build a SourceManager for mergeAndDeduplicate.
-  clang::DiagnosticOptions DiagOpts;
-  clang::DiagnosticsEngine Diagnostics(clang::DiagnosticIDs::create(),
-                                       DiagOpts);
-  clang::FileManager Files((clang::FileSystemOptions()));
-  clang::SourceManager SM(Diagnostics, Files);
-
-  // Run the library's merge. The tool's drop-all policy operates on its own
-  // cluster analysis below; the mergeAndDeduplicate library's first-registered
-  // behavior is overridden by removing every cluster member from
-  // OutDoc.Replacements. The library's return value still drives its own
-  // per-Replacement stderr diagnostics, which we leave intact.
-  clang::replace::FileToChangesMap FileChanges;
-  const clang::replace::TUDiagnostics NoDiagnostics;
-  (void)clang::replace::mergeAndDeduplicate(TUs, NoDiagnostics, FileChanges, SM,
-                                            /*IgnoreInsertConflict=*/false);
-
-  // Flatten the merged FileChanges back into a TranslationUnitReplacements.
-  clang::tooling::TranslationUnitReplacements OutDoc;
-  OutDoc.MainSourceFile = computeMainSourceFile(TUs);
-  OutDoc.Replacements = flattenFileChanges(FileChanges);
-
-  // Drop-all conflict handling.
-  //
-  // Step 1: build conflict clusters from the input key set.
+  // Build conflict clusters — the sole authority on both what gets dropped
+  // and what gets reported. There is no separate merge step to disagree
+  // with it.
   std::vector<std::vector<clang::tooling::Replacement>> Clusters =
       buildConflictClusters(InputKeysByFile);
 
-  // Step 2: compute OutputKeys = set of Replacement for every entry in
-  // the library's merged FileChanges, BEFORE drop-all filtering. This is
-  // the cluster-eligibility predicate's right-hand side.
-  std::set<clang::tooling::Replacement> OutputKeys;
-  for (const auto &R : OutDoc.Replacements)
-    OutputKeys.insert(R);
-
-  // Step 3: a cluster is reportable iff at least one of its members appears
-  // in OutputKeys (cluster ∩ OutputKeys ≠ ∅).
-  std::vector<std::vector<clang::tooling::Replacement>> ReportableClusters;
-  ReportableClusters.reserve(Clusters.size());
-  for (auto &Cluster : Clusters) {
-    bool Reportable = false;
-    for (const clang::tooling::Replacement &K : Cluster) {
-      if (OutputKeys.count(K)) {
-        Reportable = true;
-        break;
-      }
-    }
-    if (Reportable)
-      ReportableClusters.push_back(std::move(Cluster));
-  }
-
-  // Step 4: build the exact key set for every reportable cluster member.
-  // Drop-all then strips every matching entry from OutDoc. Keying on the
-  // full Replacement (not just (file, offset)) matters because a
-  // zero-length insertion can share an offset with an unrelated conflict
-  // cluster (zero-length ranges never overlap anything, so they're never
-  // cluster members) — keying on (file, offset) alone would collaterally
-  // delete that insertion too.
-  std::set<clang::tooling::Replacement> KeysToRemove;
-  for (const auto &Cluster : ReportableClusters)
+  // Every Replacement that's a member of a (size > 1) cluster is dropped;
+  // everything else in InputKeysByFile survives into SurvivorsByFile.
+  std::set<clang::tooling::Replacement> ClusterMembers;
+  for (const auto &Cluster : Clusters)
     for (const clang::tooling::Replacement &K : Cluster)
-      KeysToRemove.insert(K);
+      ClusterMembers.insert(K);
+  for (auto &Entry : InputKeysByFile)
+    for (const clang::tooling::Replacement &R : Entry.second)
+      if (!ClusterMembers.count(R))
+        SurvivorsByFile[Entry.first].insert(R);
 
-  if (!KeysToRemove.empty()) {
-    auto &Reps = OutDoc.Replacements;
-    Reps.erase(std::remove_if(Reps.begin(), Reps.end(),
-                              [&](const clang::tooling::Replacement &R) {
-                                return KeysToRemove.count(R) > 0;
-                              }),
-               Reps.end());
-  }
+  // Flatten SurvivorsByFile into the merged output. Iterating a std::map of
+  // std::sets yields (file, then offset/length/text) order deterministically,
+  // regardless of argv or input-file order.
+  MergedReplacements OutDoc;
+  OutDoc.MainSourceFile = computeMainSourceFile(TUs);
+  for (auto &Entry : SurvivorsByFile)
+    for (const clang::tooling::Replacement &R : Entry.second)
+      OutDoc.Replacements.push_back(R);
 
-  // Step 5: emit stderr cluster lines. ReportableClusters was sorted by
-  // (file, min-offset) ascending inside buildConflictClusters; the
-  // reportability filter preserved that order.
-  emitConflictClusterLines(ReportableClusters);
+  // Emit stderr cluster lines. Clusters was sorted by (file, min-offset)
+  // ascending inside buildConflictClusters.
+  emitConflictClusterLines(Clusters);
 
-  // Step 6: when --sarif-conflicts-out=<path> was supplied, write the
-  // SARIF document. Empty ReportableClusters still produces a well-formed
-  // SARIF with results: [] — the file's presence is the signal that
-  // conflict reporting was requested. Flag-omitted skips emission
-  // entirely; no file is created at any path.
+  // When --sarif-conflicts-out=<path> was supplied, write the SARIF
+  // document. An empty Clusters still produces a well-formed SARIF with
+  // results: [] — the file's presence is the signal that conflict
+  // reporting was requested. Flag-omitted skips emission entirely; no file
+  // is created at any path.
   if (!SarifConflictsOut.empty()) {
-    if (llvm::Error E =
-            emitConflictSarif(SarifConflictsOut, ReportableClusters)) {
+    if (llvm::Error E = emitConflictSarif(SarifConflictsOut, Clusters)) {
       llvm::errs() << ToolName << ": " << llvm::toString(std::move(E)) << "\n";
       return 1;
     }
