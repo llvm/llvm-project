@@ -894,6 +894,7 @@ add_header_library(
   HDRS
     sysinfo.h
   DEPENDS
+    libc.hdr.types.struct_sysinfo
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -940,3 +941,99 @@ add_header_library(
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )
+
+add_header_library(
+  rt_sigaction
+  HDRS
+    rt_sigaction.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  clone3
+  HDRS
+    clone3.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  execle
+  HDRS
+    execle.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  wait4
+  HDRS
+    wait4.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  execve
+  HDRS
+    execve.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  timer_create
+  HDRS
+    timer_create.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sigevent
+    libc.hdr.types.timer_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  timer_delete
+  HDRS
+    timer_delete.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+

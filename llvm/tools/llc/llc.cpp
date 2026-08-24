@@ -675,17 +675,14 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     Err.print(argv[0], WithColor::error(errs(), argv[0]));
     return 1;
   }
-  if (!TargetTriple.empty())
-    M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
+
+  M->setTargetTriple(TheTriple);
 
   std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
   if (!CM && CM_IR)
     Target->setCodeModel(*CM_IR);
   if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
     Target->setLargeDataThreshold(*LDT);
-
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
@@ -758,19 +755,18 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       (Target->shouldDefaultToNewPM() &&
        !(EnableNewPassManager.getNumOccurrences() && !EnableNewPassManager) &&
        getRunPassNames().empty())) {
-    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
-                                  std::move(Target), std::move(Out),
-                                  std::move(DwoOut), Context, TLII, VK,
-                                  PassPipeline, codegen::getFileType());
+    return compileModuleWithNewPM(
+        argv[0], std::move(M), std::move(MIR), std::move(Target),
+        std::move(Out), std::move(DwoOut), Context, TLII, VK, PassPipeline,
+        PluginList, codegen::getFileType());
   }
 
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
-      Target->Options.EABIVersion, Options.MCOptions.ABIName,
-      Target->Options.VecLib));
+      Target->Options.ExceptionModel, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();
