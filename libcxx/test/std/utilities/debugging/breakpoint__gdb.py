@@ -11,55 +11,39 @@ import sys
 
 import gdb
 
-test_fail = False
-bp_hit = False
 
-
-def exit_handler(event):
-    exit_code = getattr(event, "exit_code", None)
-
-    if not bp_hit or test_fail or exit_code != 0:
-        print(
-            f"bp_hit: {bp_hit}, test_fail: {test_fail}, exit: {exit_code}",
-            file=sys.stderr,
-        )
-        print("Failed GDB test", file=sys.stderr)
-        sys.exit(1)
-
-    sys.exit(0)
-
+class TestFail(Exception):
+    pass
 
 def bp_handler(event):
-    global bp_hit
-    global test_fail
     try:
-        bp_hit = True
-
         frame = gdb.newest_frame()
         found_main = False
 
-        while frame != None:
+        while frame is not None:
             if frame.name() == "main":
                 found_main = True
                 break
             frame = frame.older()
 
         if not found_main:
-            test_fail = True
+            raise TestFail("Could not find main in stopped frames")
 
-    finally:
-        gdb.execute("continue")
+        gdb.execute("quit 0")
+    except TestFail as e:
+        print(e, file=sys.stderr)
+        gdb.execute("quit 1")
 
 
 def main():
     gdb.execute("set height 0")
     gdb.execute("set python print-stack full")
+    gdb.execute("set confirm off")
 
     gdb.events.stop.connect(bp_handler)
-    gdb.events.exited.connect(exit_handler)
     gdb.execute("run")
 
-    print("Inferior didn't exit as expected", file=sys.stderr)
+    print("Should have quit by now", file=sys.stderr)
     sys.exit(1)
 
 
