@@ -69,7 +69,9 @@ public:
   }
   static constexpr OffloadArch getUnused() { return {TargetArch::Unused, 0}; }
   static constexpr OffloadArch getUnknown() { return {TargetArch::Unknown, 0}; }
-  static constexpr OffloadArch getAMDGCNSPIRV() { return {TargetArch::AMDGCNSPIRV, 0}; }
+  static constexpr OffloadArch getAMDGCNSPIRV() {
+    return {TargetArch::AMDGCNSPIRV, 0};
+  }
   static constexpr OffloadArch getGeneric() { return {TargetArch::Generic, 0}; }
 
   /// Default architectures used when the user does not specify one.
