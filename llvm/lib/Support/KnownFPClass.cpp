@@ -658,9 +658,9 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   Known.propagateNonSNaN(KnownSrc);
 
-  // asin is sign-preserving.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  // asin is sign-preserving for finite arguments.
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegFinite);
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
