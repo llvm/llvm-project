@@ -28,11 +28,9 @@ func.func @mixed_scope_worker_reduction_combine(
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         acc.predicate_region {
-          acc.reduction_combine %local into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
           // expected-error@+1 {{operations in the same predicate region require incompatible ThreadY predication}}
-          acc.reduction_combine %other_arg into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_x]>}
+          acc.reduction_combine %other_arg into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_x]>) : memref<i32>
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
@@ -71,8 +69,7 @@ func.func @worker_combine_with_single_store(%result: memref<i32>) {
         acc.predicate_region {
           // expected-error@+1 {{operations in the same predicate region require incompatible ThreadY predication}}
           memref.store %c7_i32, %selected[] : memref<i32>
-          acc.reduction_combine %local into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
@@ -109,8 +106,7 @@ func.func @worker_combine_with_atomic_update(%result: memref<i32>) {
             %next = arith.addi %current, %c1_i32 : i32
             acc.yield %next : i32
           }
-          acc.reduction_combine %local into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}

@@ -132,7 +132,7 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
-  bool foldSingleElementStore(Instruction &I);
+  bool foldInsertElementsToStores(Instruction &I);
   bool scalarizeLoad(Instruction &I);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
@@ -1834,6 +1834,80 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   return ScalarizationResult::unsafe();
 }
 
+/// Return the GEP index type if the unsigned vector index \p Idx can be
+/// represented by an inbounds GEP. A null result means that the maximum byte
+/// offset cannot be represented by the pointer's signed GEP index type.
+///
+///   unsigned lane range
+///                |
+///                v
+///   MaxByteOffset = MaxLane * element store size
+///                |
+///                +-- unavailable or outside signed GEP range --> reject
+///                |
+///                v
+///   valid range --> use the pointer's GEP index type
+static IntegerType *getScalarizedGEPIndexInfo(VectorType *VecTy, Value *Idx,
+                                              Type *PtrTy,
+                                              const DataLayout &DL) {
+  auto *GEPIndexTy = cast<IntegerType>(DL.getIndexType(PtrTy));
+  unsigned GEPBits = GEPIndexTy->getBitWidth();
+  uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+
+  uint64_t MaxLane = NumElements - 1;
+  if (auto *C = dyn_cast<ConstantInt>(Idx)) {
+    if (C->getValue().uge(NumElements))
+      return nullptr;
+    MaxLane = C->getZExtValue();
+  }
+
+  Type *ElemTy = VecTy->getElementType();
+  if (!DL.typeSizeEqualsStoreSize(ElemTy))
+    return nullptr;
+
+  TypeSize ElemStride = DL.getTypeStoreSize(ElemTy);
+  if (ElemStride.isScalable())
+    return nullptr;
+
+  // Compare both values in a common width:
+  //
+  //   MaxLane (uint64_t) * ElemStride (uint64_t)   signed_max(GEPBits)
+  //                         |                               |
+  //                         v                               v
+  //             ByteOffset (up to 128 bits)        sext to WideBits
+  //                         \                               /
+  //                          +------------ ugt ------------+
+  //                                       |
+  //                                greater -> reject
+  //
+  // WideBits = max(GEPBits, 128) prevents the multiplication from wrapping
+  // and preserves the GEP limit during the comparison.
+  unsigned WideBits = std::max(GEPBits, 128u);
+  APInt MaxLaneValue(WideBits, MaxLane);
+  APInt ByteOffset = MaxLaneValue;
+  ByteOffset *= APInt(WideBits, ElemStride.getFixedValue());
+  APInt MaxGEPOffset = APInt::getSignedMaxValue(GEPBits).sext(WideBits);
+  // Reject offsets outside the GEP's positive signed range. Compare as
+  // unsigned because the full 128-bit product may set its sign bit.
+  if (ByteOffset.ugt(MaxGEPOffset))
+    return nullptr;
+
+  return GEPIndexTy;
+}
+
+/// Materialize an index for a scalarized GEP after profitability is known.
+/// Vector element indices are unsigned, but GEP sign-extends narrow integer
+/// indices. Widen a narrow index explicitly so its unsigned value is retained.
+static Value *materializeScalarizedGEPIndex(Value *Idx, IntegerType *GEPIndexTy,
+                                            IRBuilderBase &Builder) {
+  unsigned SrcBits = Idx->getType()->getIntegerBitWidth();
+  unsigned DstBits = GEPIndexTy->getBitWidth();
+  if (SrcBits >= DstBits)
+    return Idx;
+
+  return Builder.CreateZExt(Idx, GEPIndexTy, Idx->getName() + ".gepidx");
+}
+
 /// The memory operation on a vector of \p ScalarType had alignment of
 /// \p VectorAlignment. Compute the maximal, but conservatively correct,
 /// alignment that will be valid for the memory operation on a single scalar
@@ -1847,73 +1921,209 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
   return commonAlignment(VectorAlignment, DL.getTypeStoreSize(ScalarType));
 }
 
-// Combine patterns like:
-//   %0 = load <4 x i32>, <4 x i32>* %a
-//   %1 = insertelement <4 x i32> %0, i32 %b, i32 1
-//   store <4 x i32> %1, <4 x i32>* %a
-// to:
-//   %0 = bitcast <4 x i32>* %a to i32*
-//   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
-//   store i32 %b, i32* %1
-bool VectorCombine::foldSingleElementStore(Instruction &I) {
+/// Fold a vector store fed by a single-use insertelement chain into scalar
+/// stores.
+///
+/// Before:
+///
+///   %p --> vector load --> insert %x, lane 1 --> insert %y, lane 3
+///                                                      |
+///                                                      v
+///                                              vector store to %p
+///
+///   Vector lanes:        [ 0 ] [ 1 ] [ 2 ] [ 3 ]
+///   Stored value:        [ old |  x  | old |  y  ]  (one vector store)
+///
+/// After:
+///
+///                  +--> GEP(%p, lane 1) --> store %x
+///   %p -------------+
+///                  +--> GEP(%p, lane 3) --> store %y
+///
+///   Vector lanes:        [ 0 ] [ 1 ] [ 2 ] [ 3 ]
+///   Scalar stores:              x             y
+///                            store@1       store@3
+///
+///   Step 1. Gate:
+///        target supports vector-element GEP addressing
+///
+///   Step 2. Trace:
+///        vector store <-- insertelement <-- ... <-- insertelement <-- load
+///
+///   Steps 3-5. Validate:
+///        reject unprofitable full overwrites; require simple accesses, a
+///        common address/block, no memory write in between, and scalarizable
+///        indices.
+bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
+  // Step 1: The target must support addressing a vector element with a GEP.
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
+
   auto *SI = cast<StoreInst>(&I);
   if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
 
-  // TODO: Combine more complicated patterns (multiple insert) by referencing
-  // TargetTransformInfo.
-  Instruction *Source;
-  Value *NewElement;
-  Value *Idx;
-  if (!match(SI->getValueOperand(),
-             m_InsertElt(m_Instruction(Source), m_Value(NewElement),
-                         m_Value(Idx))))
+  // Step 2: Collect a single-use insertelement chain, starting at the vector
+  // store and walking back to the candidate load.
+  Value *Source = SI->getValueOperand();
+  SmallVector<std::pair<Value *, Value *>, 4> InsertElements;
+  Value *Base = Source;
+  while (auto *Insert = dyn_cast<InsertElementInst>(Base)) {
+    if (!Insert->hasOneUse())
+      break;
+    Value *InsertVal = Insert->getOperand(1);
+    Value *Idx = Insert->getOperand(2);
+    InsertElements.push_back({InsertVal, Idx});
+    Base = Insert->getOperand(0);
+  }
+
+  if (InsertElements.empty())
     return false;
 
-  if (auto *Load = dyn_cast<LoadInst>(Source)) {
-    auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
-    Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
-    // Don't optimize for atomic/volatile load or store. Ensure memory is not
-    // modified between, vector type matches store size, and index is inbounds.
-    if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
-        !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
-        SrcAddr != SI->getPointerOperand()->stripPointerCasts())
-      return false;
+  // The backwards walk collected the inserts in reverse program order. Restore
+  // it now so later scalar stores preserve writes to duplicate/equal indices.
+  std::reverse(InsertElements.begin(), InsertElements.end());
+  auto *Load = dyn_cast<LoadInst>(Base);
+  if (!Load)
+    return false;
+  auto *VecTy = cast<VectorType>(SI->getValueOperand()->getType());
 
-    if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
-                             MemoryLocation::get(SI), AA))
-      return false;
+  // Step 3: Avoid replacing a complete overwrite with scalar stores when every
+  // lane receives the same value; keeping the vector operation is preferable.
+  if (auto *FVT = dyn_cast<FixedVectorType>(VecTy)) {
+    if (InsertElements.size() == FVT->getNumElements()) {
+      Value *FirstVal = InsertElements.front().first;
+      if (all_of(InsertElements,
+                 [FirstVal](const auto &Elt) { return Elt.first == FirstVal; }))
+        return false;
+    }
+  }
+  Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
+  // Step 4: Establish the load/store update is legal: both accesses are simple,
+  // have the same base address and block, have scalar elements whose type size
+  // equals their store size, and no intervening operation modifies the updated
+  // memory.
+  if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
+      !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
+      SrcAddr != SI->getPointerOperand()->stripPointerCasts())
+    return false;
+
+  if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+                           MemoryLocation::get(SI), AA))
+    return false;
+
+  // Step 5: Validate every index before changing IR. A safe-with-freeze result
+  // is recorded by ScalarizationResult, so discard it until profitability is
+  // known; otherwise a rejected candidate could leave a freeze behind.
+  for (auto [InsertVal, Idx] : InsertElements) {
     auto ScalarizableIdx =
-        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
     if (ScalarizableIdx.isUnsafe())
       return false;
 
-    // Ensure we add the load back to the worklist BEFORE its users so they can
-    // erased in the correct order.
-    Worklist.push(Load);
+    auto GEPIndex =
+        getScalarizedGEPIndexInfo(VecTy, Idx, SI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarizableIdx.discard();
+      return false;
+    }
+
+    // We are only checking legality here. Do not mutate IR before the
+    // profitability check, but also do not leave a pending ToFreeze behind.
+    ScalarizableIdx.discard();
+  }
+
+  InstructionCost OldCost = TTI.getMemoryOpCost(
+      Instruction::Store, SI->getValueOperand()->getType(), SI->getAlign(),
+      SI->getPointerAddressSpace(), CostKind);
+
+  if (Load->hasOneUse())
+    OldCost += TTI.getMemoryOpCost(Instruction::Load, Load->getType(),
+                                   Load->getAlign(),
+                                   Load->getPointerAddressSpace(), CostKind);
+
+  for (auto [InsertVal, Idx] : InsertElements) {
+    int Index = -1;
+    if (auto *CIdx = dyn_cast<ConstantInt>(Idx))
+      Index = CIdx->getZExtValue();
+
+    OldCost += TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, Index);
+  }
+
+  InstructionCost NewCost = 0;
+  // This transform replaces insertelement operations on a single vector with
+  // GEPs and scalar stores, so assume constant-index GEP offsets stay within
+  // addressing-mode ranges that getGEPCost considers TCC_Free. Cost only GEPs
+  // with dynamic indices.
+  for (auto [InsertVal, Idx] : InsertElements) {
+    if (isa<ConstantInt>(Idx))
+      continue;
+    const Value *GEPIndices[] = {ConstantInt::get(Idx->getType(), 0), Idx};
+    NewCost += TTI.getGEPCost(VecTy, SI->getPointerOperand(), GEPIndices,
+                              InsertVal->getType(), CostKind);
+  }
+
+  for (auto [InsertVal, Idx] : InsertElements) {
+    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
+        std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
+        *DL);
+
+    NewCost += TTI.getMemoryOpCost(Instruction::Store, InsertVal->getType(),
+                                   ScalarOpAlignment,
+                                   SI->getPointerAddressSpace(), CostKind);
+  }
+
+  LLVM_DEBUG(dbgs() << "Found an insert-elements vector store scalarization "
+                       "candidate: "
+                    << I << "\n"
+                    << "  NumInserts: " << InsertElements.size() << "\n"
+                    << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (OldCost <= NewCost)
+    return false;
+
+  for (auto [InsertVal, Idx] : InsertElements) {
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
+    assert(!ScalarizableIdx.isUnsafe() && "already checked above");
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
-    Value *GEP = Builder.CreateInBoundsGEP(
-        SI->getValueOperand()->getType(), SI->getPointerOperand(),
-        {ConstantInt::get(Idx->getType(), 0), Idx});
-    StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
-    NSI->copyMetadata(*SI);
-    // The new GEP may change the pointer operand, so !invariant.group cannot
-    // be transferred to the scalar store.
-    NSI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
-    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
-        std::max(SI->getAlign(), Load->getAlign()), NewElement->getType(), Idx,
-        *DL);
-    NSI->setAlignment(ScalarOpAlignment);
-    replaceValue(I, *NSI);
-    eraseInstruction(I);
-    return true;
   }
 
-  return false;
+  Worklist.push(Load);
+  StoreInst *LastStore = nullptr;
+  for (auto [InsertVal, Idx] : InsertElements) {
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
+    if (ScalarizableIdx.isUnsafe())
+      return false;
+
+    IntegerType *GEPIndexTy =
+        getScalarizedGEPIndexInfo(VecTy, Idx, SI->getPointerOperandType(), *DL);
+
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndexTy, Builder);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        SI->getValueOperand()->getType(), SI->getPointerOperand(),
+        {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
+
+    LastStore = Builder.CreateStore(InsertVal, GEP);
+    LastStore->copyMetadata(*SI);
+
+    // The new GEP may change the pointer operand, so !invariant.group cannot
+    // be transferred to the scalar store.
+    LastStore->setMetadata(LLVMContext::MD_invariant_group, nullptr);
+    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
+        std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
+        *DL);
+    LastStore->setAlignment(ScalarOpAlignment);
+  }
+
+  replaceValue(I, *LastStore);
+  eraseInstruction(I);
+  return true;
 }
 
 /// Try to scalarize vector loads feeding extractelement or bitcast
@@ -1982,6 +2192,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     return false;
 
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  DenseMap<ExtractElementInst *, IntegerType *> GEPIndexInfos;
   llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
@@ -2000,6 +2211,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                                         SQ.getWithInstruction(LI));
     if (ScalarIdx.isUnsafe())
       return false;
+
+    IntegerType *GEPIndex = getScalarizedGEPIndexInfo(
+        VecTy, UI->getIndexOperand(), LI->getPointerOperandType(), *DL);
+    if (!GEPIndex) {
+      ScalarIdx.discard();
+      return false;
+    }
+
+    GEPIndexInfos.try_emplace(UI, GEPIndex);
+
     if (ScalarIdx.isSafeWithFreeze()) {
       NeedFreeze.try_emplace(UI, ScalarIdx);
       ScalarIdx.discard();
@@ -2014,6 +2235,11 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                             Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
                                                     nullptr, nullptr, CostKind);
+    if (!Index && UI->getIndexOperand()->getType()->getIntegerBitWidth() <
+                      GEPIndex->getBitWidth())
+      ScalarizedCost += TTI.getCastInstrCost(
+          Instruction::ZExt, GEPIndex, UI->getIndexOperand()->getType(),
+          TTI::CastContextHint::None, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << *LI
@@ -2035,13 +2261,16 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(EI);
-    if (It != NeedFreeze.end())
+    if (auto It = NeedFreeze.find(EI); It != NeedFreeze.end())
       It->second.freeze(Builder, *cast<Instruction>(Idx));
 
     Builder.SetInsertPoint(EI);
-    Value *GEP =
-        Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
+    auto It = GEPIndexInfos.find(EI);
+    assert(It != GEPIndexInfos.end() &&
+           "Missing scalarized GEP index information");
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, It->second, Builder);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        VecTy, Ptr, {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     auto *NewLoad = cast<LoadInst>(
         Builder.CreateLoad(ElemType, GEP, EI->getName() + ".scalar"));
 
@@ -6244,6 +6473,7 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   if (NewCost > OldCost || !NewCost.isValid())
     return false;
 
+  Builder.SetInsertPoint(II);
   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
@@ -6681,7 +6911,7 @@ bool VectorCombine::run() {
       return true;
 
     if (Opcode == Instruction::Store)
-      if (foldSingleElementStore(I))
+      if (foldInsertElementsToStores(I))
         return true;
 
     // If this is an early pipeline invocation of this pass, we are done.

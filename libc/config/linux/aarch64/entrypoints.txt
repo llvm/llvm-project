@@ -349,6 +349,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -1112,6 +1115,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
@@ -1330,6 +1334,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.nanosleep
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall
