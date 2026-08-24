@@ -69,16 +69,15 @@ LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If ScanFrom is specified this method performs context-sensitive analysis
-/// and returns true if it is safe to load immediately before ScanFrom.
+/// If SQ.CxtI is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CxtI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing ScanFrom, to determine if
+/// quick local scan of the basic block containing SQ.CxtI, to determine if
 /// the address is already accessed.
-LLVM_ABI bool isSafeToLoadUnconditionally(
-    Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
-    Instruction *ScanFrom, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Align Alignment,
+                                          const APInt &Size,
+                                          const SimplifyQuery &SQ);
 
 /// Return true if we can prove that the given load (which is assumed to be
 /// within the specified loop) would access only dereferenceable memory, and
@@ -109,16 +108,14 @@ isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If DT and ScanFrom are specified this method performs context-sensitive
-/// analysis and returns true if it is safe to load immediately before ScanFrom.
+/// If SQ.CxtI are specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CxtI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing ScanFrom, to determine if
+/// quick local scan of the basic block containing SQ.CxtI, to determine if
 /// the address is already accessed.
-LLVM_ABI bool isSafeToLoadUnconditionally(
-    Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
-    Instruction *ScanFrom, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
+                                          const SimplifyQuery &SQ);
 
 /// Return true if speculation of the given load must be suppressed to avoid
 /// ordering or interfering with an active sanitizer.  If not suppressed,
