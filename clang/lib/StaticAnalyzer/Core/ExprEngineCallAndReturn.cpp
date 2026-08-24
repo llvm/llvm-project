@@ -541,12 +541,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   // formal arguments.
   State = State->enterStackFrame(Call, CalleeSF);
 
-  bool isNew;
-  if (ExplodedNode *N = G.getNode(Loc, State, false, &isNew)) {
-    N->addPredecessor(Pred, G);
-    if (isNew)
-      WList->enqueue(N);
-  }
+  if (ExplodedNode *N = Engine.makeNode(Loc, State, Pred))
+    WList->enqueue(N);
 
   NumInlinedCalls++;
   Engine.FunctionSummaries->bumpNumTimesInlined(D);
