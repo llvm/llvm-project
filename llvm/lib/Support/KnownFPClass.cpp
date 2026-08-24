@@ -553,6 +553,9 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
 
   Known.propagateNonNaN(KnownSrc);
 
+  // The following deductions assume that both exp10(-1.0) = +0.1 and
+  // exp10(+1.0) = +10.0 are both finite normal values.
+
   // Only a negative normal or negative infinity can produce positive zero.
   // A negative subnormal input is too small to produce positive zero.
   if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
