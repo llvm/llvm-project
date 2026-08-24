@@ -199,8 +199,8 @@ if "%force-msvc%" == "" (
       set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
       
       set common_cmake_flags=%common_cmake_flags%^
-        -DCMAKE_C_COMPILER=C:\clang\clang-msvc\bin\clang-cl.exe ^
-        -DCMAKE_CXX_COMPILER=C:\clang\clang-msvc\bin\clang-cl.exe ^
+        -DCMAKE_C_COMPILER=clang-cl.exe ^
+        -DCMAKE_CXX_COMPILER=clang-cl.exe ^
         -DCMAKE_LINKER=lld-link.exe ^
         -DLLVM_ENABLE_LLD=ON ^
         -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
