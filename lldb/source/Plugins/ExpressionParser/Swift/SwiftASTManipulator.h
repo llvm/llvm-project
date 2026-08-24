@@ -120,6 +120,7 @@ public:
       return m_name.str().starts_with("$pack_count_");
     }
     bool IsUnboundPack() const { return m_is_unbound_pack; }
+    bool IsAvailable() const { return m_is_available; }
 
     VariableInfo() = default;
     VariableInfo(CompilerType type, swift::Identifier name,
@@ -135,7 +136,8 @@ public:
           m_var_introducer(other.m_var_introducer),
           m_lookup_error(other.m_lookup_error.Clone()),
           m_is_capture_list(other.m_is_capture_list),
-          m_is_unbound_pack(other.m_is_unbound_pack) {}
+          m_is_unbound_pack(other.m_is_unbound_pack),
+          m_is_available(other.m_is_available) {}
 
     VariableInfo(CompilerType type, swift::Identifier name,
                  swift::VarDecl *decl)
@@ -150,6 +152,7 @@ public:
       m_lookup_error = other.m_lookup_error.Clone();
       m_is_capture_list = other.m_is_capture_list;
       m_is_unbound_pack = other.m_is_unbound_pack;
+      m_is_available = other.m_is_available;
       return *this;
     }
 
@@ -160,6 +163,7 @@ public:
       m_lookup_error = Status::FromError(std::move(error));
     }
     llvm::Error TakeLookupError() { return m_lookup_error.ToError(); }
+    void SetUnavailable() { m_is_available = false; }
 
     friend class SwiftASTManipulator;
 
@@ -173,6 +177,7 @@ public:
     Status m_lookup_error;
     bool m_is_capture_list = false;
     bool m_is_unbound_pack = false;
+    bool m_is_available = true;
   };
 
   SwiftASTManipulatorBase(swift::SourceFile &source_file,

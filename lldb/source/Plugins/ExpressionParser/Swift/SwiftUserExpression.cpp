@@ -405,8 +405,16 @@ static llvm::Error AddVariableInfo(
   }
 
   auto ts = target_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!ts)
-    return llvm::createStringError("type for self has no type system");
+  if (!ts) {
+    if (is_self)
+      return llvm::createStringError("type for self has no type system");
+    std::string msg =
+        llvm::formatv("discarded local '{0}', type '{1}' is not a Swift type",
+                      name, target_type.GetDisplayTypeName());
+    diagnostic_manager.AddDiagnostic(msg, lldb::eSeverityWarning,
+                                     eDiagnosticOriginLLDB);
+    return llvm::Error::success();
+  }
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
@@ -473,14 +481,19 @@ static llvm::Error AddVariableInfo(
   SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
       new SwiftASTManipulatorBase::VariableMetadataVariable(
           patched_variable_sp));
-  local_variables.emplace_back(
+  auto &variable_info = local_variables.emplace_back(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
       metadata_sp,
       variable_sp->IsConstant() ? swift::VarDecl::Introducer::Let
                                 : swift::VarDecl::Introducer::Var,
       false, is_unbound_pack);
-  if (variable_status.Fail())
-    local_variables.back().SetLookupError(variable_status.takeError());
+  if (variable_status.Fail()) {
+    variable_info.SetLookupError(variable_status.takeError());
+    // Unavailable self is handled separately by downgrading the
+    // method to a freestanding function.
+    if (!is_self)
+      variable_info.SetUnavailable();
+  }
 
   processed_variables.insert(overridden_name);
   return llvm::Error::success();
