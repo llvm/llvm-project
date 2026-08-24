@@ -2060,6 +2060,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -2070,6 +2071,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",
