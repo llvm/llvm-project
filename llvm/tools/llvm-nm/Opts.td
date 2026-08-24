@@ -35,6 +35,7 @@ defm radix : Eq<"radix", "Radix (o/d/x) for printing symbol Values">, MetaVarNam
 def reverse_sort : FF<"reverse-sort", "Sort in reverse order">;
 def size_sort : FF<"size-sort", "Sort symbols by size">;
 def special_syms : FF<"special-syms", "Do not filter special symbols from the output">;
+def synthetic_syms : FF<"synthetic", "Include synthetic symbols in the output.  These are special symbols created by the linker for various purposes">;
 def undefined_only : FF<"undefined-only", "Show only undefined symbols">;
 def version : FF<"version", "Display the version">;
 def without_aliases : FF<"without-aliases", "Exclude aliases from output">, Flags<[HelpHidden]>;
