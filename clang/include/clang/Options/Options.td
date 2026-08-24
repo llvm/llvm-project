@@ -3883,6 +3883,9 @@ def fmodule_file : Joined<["-"], "fmodule-file=">,
 def fmodules_ignore_macro : Joined<["-"], "fmodules-ignore-macro=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ignore the definition of the given macro when building and loading modules">;
+def fmodules_ignore_search_path : Joined<["-"], "fmodules-ignore-search-path=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Ignore the given header search path when building and loading modules">;
 def fmodules_strict_decluse : Flag <["-"], "fmodules-strict-decluse">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Like -fmodules-decluse but requires all headers to be in modules">,
@@ -9572,7 +9575,7 @@ def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
       HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
-def _SLASH_experimental_deterministic : CLJoined<"experimental:deterministic">,
+def _SLASH_experimental_deterministic : CLFlag<"experimental:deterministic">,
       HelpText<"Emit warnings on usage of non-deterministic macros __DATE__, __TIME__ and __TIMESTAMP__">;
 def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
       HelpText<"Undefine the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;

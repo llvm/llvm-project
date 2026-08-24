@@ -231,36 +231,36 @@ gpu.module @test {
   // CHECK-SAME: [[SRC:%.+]]: vector<32x80xf32>, [[ACC:%.+]]: vector<32xf32>
   //
   // Extract column tiles for the first row-tile:
-  // CHECK: [[TILE00:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE01:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 16]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE02:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 32]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE03:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 48]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE04:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 64]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE00:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 0]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE01:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 16]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE02:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 32]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE03:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 48]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE04:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 64]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
   //
   // Perform sequential reduction for first tile (rows 0..15):
   // CHECK: [[TMP00:%.+]] = arith.addf [[TILE00]], [[TILE01]] : vector<16x16xf32>
   // CHECK: [[TMP01:%.+]] = arith.addf [[TMP00]], [[TILE02]] : vector<16x16xf32>
   // CHECK: [[TMP02:%.+]] = arith.addf [[TMP01]], [[TILE03]] : vector<16x16xf32>
   // CHECK: [[TMP03:%.+]] = arith.addf [[TMP02]], [[TILE04]] : vector<16x16xf32>
-  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [0]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [0]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[RED0:%.+]] = vector.multi_reduction <add>, [[TMP03]], [[ACC0]] [1] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[RED0]], {{%.+}} {offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[RED0]], {{%.+}} offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
   //
   // Extract column tiles for the second row-tile:
-  // CHECK: [[TILE10:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 0]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE11:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 16]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE12:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 32]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE13:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 48]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
-  // CHECK: [[TILE14:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 64]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE10:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 0]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE11:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 16]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE12:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 32]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE13:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 48]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
+  // CHECK: [[TILE14:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 64]{{.*}} : vector<32x80xf32> to vector<16x16xf32>
   //
   // Perform sequential reduction for second tile (rows 16..31):
   // CHECK: [[TMP10:%.+]] = arith.addf [[TILE10]], [[TILE11]] : vector<16x16xf32>
   // CHECK: [[TMP11:%.+]] = arith.addf [[TMP10]], [[TILE12]] : vector<16x16xf32>
   // CHECK: [[TMP12:%.+]] = arith.addf [[TMP11]], [[TILE13]] : vector<16x16xf32>
   // CHECK: [[TMP13:%.+]] = arith.addf [[TMP12]], [[TILE14]] : vector<16x16xf32>
-  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [16]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[RED1:%.+]] = vector.multi_reduction <add>, [[TMP13]], [[ACC1]] [1] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[RED1]], [[INS0]] {offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[RED1]], [[INS0]] offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
   gpu.func @multi_reduction_2d_last_dim(%src: vector<32x80xf32>, %acc: vector<32xf32>) -> vector<32xf32> {
     %0 = vector.multi_reduction <add>, %src, %acc {layout_operand_0 = #xegpu.layout<inst_data = [16, 16]>} [1] : vector<32x80xf32> to vector<32xf32>
     gpu.return %0 : vector<32xf32>
@@ -274,30 +274,30 @@ gpu.module @test {
   // CHECK-SAME: [[SRC:%.+]]: vector<4x8x16x32xf32>, [[ACC:%.+]]: vector<4x16xf32>
   //
   // First kept tile [0, 0]: extract 4 source tiles over reduced dims [1, 3]
-  // CHECK: [[T00:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T01:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T02:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 4, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T03:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 4, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T00:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 0, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T01:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 0, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T02:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 4, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T03:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 4, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
   // Sequential reduction:
   // CHECK: [[R00:%.+]] = arith.addf [[T00]], [[T01]] : vector<2x4x16x16xf32>
   // CHECK: [[R01:%.+]] = arith.addf [[R00]], [[T02]] : vector<2x4x16x16xf32>
   // CHECK: [[R02:%.+]] = arith.addf [[R01]], [[T03]] : vector<2x4x16x16xf32>
-  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [0, 0], sizes = [2, 16]{{.*}} : vector<4x16xf32> to vector<2x16xf32>
+  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [0, 0], sizes = [2, 16]{{.*}} : vector<4x16xf32> to vector<2x16xf32>
   // CHECK: [[MR0:%.+]] = vector.multi_reduction <add>, [[R02]], [[ACC0]] [1, 3] : vector<2x4x16x16xf32> to vector<2x16xf32>
-  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} {offsets = [0, 0]{{.*}} : vector<2x16xf32> into vector<4x16xf32>
+  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} offsets = [0, 0]{{.*}} : vector<2x16xf32> into vector<4x16xf32>
   //
   // Second kept tile [2, 0]:
-  // CHECK: [[T10:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [2, 0, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T11:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [2, 0, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T12:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [2, 4, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
-  // CHECK: [[T13:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [2, 4, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T10:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [2, 0, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T11:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [2, 0, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T12:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [2, 4, 0, 0], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
+  // CHECK: [[T13:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [2, 4, 0, 16], sizes = [2, 4, 16, 16]{{.*}} : vector<4x8x16x32xf32> to vector<2x4x16x16xf32>
   // Sequential reduction:
   // CHECK: [[R10:%.+]] = arith.addf [[T10]], [[T11]] : vector<2x4x16x16xf32>
   // CHECK: [[R11:%.+]] = arith.addf [[R10]], [[T12]] : vector<2x4x16x16xf32>
   // CHECK: [[R12:%.+]] = arith.addf [[R11]], [[T13]] : vector<2x4x16x16xf32>
-  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [2, 0], sizes = [2, 16]{{.*}} : vector<4x16xf32> to vector<2x16xf32>
+  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [2, 0], sizes = [2, 16]{{.*}} : vector<4x16xf32> to vector<2x16xf32>
   // CHECK: [[MR1:%.+]] = vector.multi_reduction <add>, [[R12]], [[ACC1]] [1, 3] : vector<2x4x16x16xf32> to vector<2x16xf32>
-  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] {offsets = [2, 0]{{.*}} : vector<2x16xf32> into vector<4x16xf32>
+  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] offsets = [2, 0]{{.*}} : vector<2x16xf32> into vector<4x16xf32>
   gpu.func @multi_reduction_multi_dim(%src: vector<4x8x16x32xf32>, %acc: vector<4x16xf32>) -> vector<4x16xf32> {
     %0 = vector.multi_reduction <add>, %src, %acc {layout_operand_0 = #xegpu.layout<inst_data = [2, 4, 16, 16]>} [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
     gpu.return %0 : vector<4x16xf32>
@@ -311,26 +311,26 @@ gpu.module @test {
   // CHECK-SAME: [[SRC:%.+]]: vector<48x32xf32>, [[ACC:%.+]]: vector<32xf32>
   //
   // First column tile [0]: extract 3 source tiles over reduced dim [0]
-  // CHECK: [[T00:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
-  // CHECK: [[T01:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
-  // CHECK: [[T02:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [32, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T00:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T01:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T02:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [32, 0], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
   // Sequential reduction:
   // CHECK: [[R00:%.+]] = arith.addf [[T00]], [[T01]] : vector<16x16xf32>
   // CHECK: [[R01:%.+]] = arith.addf [[R00]], [[T02]] : vector<16x16xf32>
-  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [0], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [0], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[MR0:%.+]] = vector.multi_reduction <add>, [[R01]], [[ACC0]] [0] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} {offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
   //
   // Second column tile [16]:
-  // CHECK: [[T10:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
-  // CHECK: [[T11:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
-  // CHECK: [[T12:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [32, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T10:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T11:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
+  // CHECK: [[T12:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [32, 16], sizes = [16, 16]{{.*}} : vector<48x32xf32> to vector<16x16xf32>
   // Sequential reduction:
   // CHECK: [[R10:%.+]] = arith.addf [[T10]], [[T11]] : vector<16x16xf32>
   // CHECK: [[R11:%.+]] = arith.addf [[R10]], [[T12]] : vector<16x16xf32>
-  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [16], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [16], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[MR1:%.+]] = vector.multi_reduction <add>, [[R11]], [[ACC1]] [0] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] {offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
   gpu.func @multi_reduction_reduce_dim0(%src: vector<48x32xf32>, %acc: vector<32xf32>) -> vector<32xf32> {
     %0 = vector.multi_reduction <add>, %src, %acc {layout_operand_0 = #xegpu.layout<inst_data = [16, 16]>} [0] : vector<48x32xf32> to vector<32xf32>
     gpu.return %0 : vector<32xf32>
@@ -345,19 +345,48 @@ gpu.module @test {
   // CHECK-SAME: [[SRC:%.+]]: vector<32x16xf32>, [[ACC:%.+]]: vector<32xf32>
   //
   // First row tile [0]: single source tile, no arith reduction
-  // CHECK: [[T0:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [0, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
-  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [0], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[T0:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [0, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
+  // CHECK: [[ACC0:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [0], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[MR0:%.+]] = vector.multi_reduction <add>, [[T0]], [[ACC0]] [1] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} {offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS0:%.+]] = vector.insert_strided_slice [[MR0]], {{%.+}} offsets = [0]{{.*}} : vector<16xf32> into vector<32xf32>
   //
   // Second row tile [16]: single source tile, no arith reduction
-  // CHECK: [[T1:%.+]] = vector.extract_strided_slice [[SRC]] {offsets = [16, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
-  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] {offsets = [16], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
+  // CHECK: [[T1:%.+]] = vector.extract_strided_slice [[SRC]] offsets = [16, 0], sizes = [16, 16]{{.*}} : vector<32x16xf32> to vector<16x16xf32>
+  // CHECK: [[ACC1:%.+]] = vector.extract_strided_slice [[ACC]] offsets = [16], sizes = [16]{{.*}} : vector<32xf32> to vector<16xf32>
   // CHECK: [[MR1:%.+]] = vector.multi_reduction <add>, [[T1]], [[ACC1]] [1] : vector<16x16xf32> to vector<16xf32>
-  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] {offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
+  // CHECK: [[INS1:%.+]] = vector.insert_strided_slice [[MR1]], [[INS0]] offsets = [16]{{.*}} : vector<16xf32> into vector<32xf32>
   gpu.func @multi_reduction_no_elwise(%src: vector<32x16xf32>, %acc: vector<32xf32>) -> vector<32xf32> {
     %0 = vector.multi_reduction <add>, %src, %acc {layout_operand_0 = #xegpu.layout<inst_data = [16, 16]>} [1] : vector<32x16xf32> to vector<32xf32>
     gpu.return %0 : vector<32xf32>
+  }
+
+//-----
+  // Unrolling a >2D nd desc keeps the whole memref as create_nd source.
+  // CHECK-LABEL: gpu.func @load_store_nd_3d
+  // CHECK-SAME: [[arg0:%.+]]: memref<4x8x16xf32>, [[z:%.+]]: index
+  // CHECK-NOT: memref.subview
+  // CHECK: [[t:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<4x8x16xf32> -> !xegpu.tensor_desc<1x8x16xf32>
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z]], {{.*}}] : !xegpu.tensor_desc<1x8x16xf32> -> vector<1x8x16xf32>
+  // CHECK: [[z1:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z1]], {{.*}}]
+  // CHECK: [[z2:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z2]], {{.*}}]
+  // CHECK: [[z3:%.+]] = arith.addi [[z]], {{%.+}}
+  // CHECK: xegpu.load_nd [[t]]{{\[}}[[z3]], {{.*}}]
+  // CHECK: xegpu.store_nd {{%.+}}, [[t]]{{\[}}[[z]], {{.*}}]
+  // CHECK-COUNT-3: xegpu.store_nd {{%.+}}, [[t]]
+  // CHECK-NOT: memref.subview
+  gpu.func @load_store_nd_3d(%src: memref<4x8x16xf32>, %z: index) {
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<4x8x16xf32>
+      -> !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+    %v = xegpu.load_nd %t[%z, %c0, %c0]
+      : !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+      -> vector<4x8x16xf32>
+    xegpu.store_nd %v, %t[%z, %c0, %c0]
+      : vector<4x8x16xf32>,
+        !xegpu.tensor_desc<4x8x16xf32, #xegpu.layout<inst_data = [1, 8, 16]>>
+    gpu.return
   }
 
 }

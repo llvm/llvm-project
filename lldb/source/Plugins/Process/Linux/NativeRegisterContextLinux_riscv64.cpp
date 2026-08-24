@@ -10,23 +10,21 @@
 
 #include "NativeRegisterContextLinux_riscv64.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
-
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
+#include <elf.h>
 #include <sys/ptrace.h>
 #include <sys/uio.h>
-// NT_PRSTATUS and NT_FPREGSET definition
-#include <elf.h>
 
 using namespace lldb;
 using namespace lldb_private;

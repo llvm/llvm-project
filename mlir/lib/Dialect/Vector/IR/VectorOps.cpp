@@ -603,16 +603,24 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
+  // Verify the reduction dimensions.
+  int64_t sourceRank = getSourceVectorType().getRank();
+  SmallVector<bool> isReduced(sourceRank, false);
+  for (int64_t dim : getReductionDims()) {
+    if (dim < 0 || dim >= sourceRank)
+      return emitOpError("reduction dimension out of range: ") << dim;
+    if (isReduced[dim])
+      return emitOpError("duplicate reduction dimension: ") << dim;
+    isReduced[dim] = true;
+  }
+
   SmallVector<int64_t> targetShape;
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto [dimIdx, dimSize] :
        llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims(),
-                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
-                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
-                      })) {
+    if (!isReduced[dimIdx]) {
       targetShape.push_back(dimSize);
       scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
@@ -6179,6 +6187,21 @@ TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
+
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
 
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
                                                  VectorType vecTy,
