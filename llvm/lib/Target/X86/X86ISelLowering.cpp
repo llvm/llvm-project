@@ -23003,8 +23003,7 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
   Vec = DAG.getBitcast(MVT::v4i32, Vec);
   Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
   Vec = DAG.getBitcast(MVT::v4f32, Vec);
-  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Vec,
-                            DAG.getVectorIdxConstant(0, DL));
+  SDValue Res = DAG.getExtractVectorElt(DL, MVT::f32, Vec, 0);
 
   EVT DstVT = Op.getValueType();
   if (DstVT != MVT::f32)
