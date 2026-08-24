@@ -6800,9 +6800,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
 
 // When the enclosing kernel has debug info (-g offload), the inlinable
 // __kmpc_target_init/__kmpc_target_deinit calls must carry a !dbg location or
-// the verifier rejects the module during the device link. createOutlinedFunction
-// installs the outlined function's location as the builder's current debug
-// location before emitting these calls, so both must inherit it.
+// the verifier rejects the module during the device link.
+// createOutlinedFunction installs the outlined function's location as the
+// builder's current debug location before emitting these calls, so both must
+// inherit it.
 TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(OpenMPIRBuilderConfig(
