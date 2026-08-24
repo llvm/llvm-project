@@ -99,8 +99,7 @@ static ConstantRange getRISCVVSetVLMaxRange(const IntrinsicInst &II,
       II.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
     ConstantRange VScaleRange = getVScaleRange(II.getFunction(), Width);
     VScaleRange = VScaleRange.intersectWith(ConstantRange(
-        APInt(Width, 1),
-        APInt(Width, MaxVLen / RISCV::RVVBitsPerBlock + 1)));
+        APInt(Width, 1), APInt(Width, MaxVLen / RISCV::RVVBitsPerBlock + 1)));
     VLenRange = VScaleRange.multiply(
         ConstantRange(APInt(Width, RISCV::RVVBitsPerBlock)));
   }
