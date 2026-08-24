@@ -9064,64 +9064,6 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     visitVPStridedStore(VPIntrin, OpValues);
     break;
-  case ISD::VP_FMULADD: {
-    assert(OpValues.size() == 5 && "Unexpected number of operands");
-    SDNodeFlags SDFlags;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin))
-      SDFlags.copyFMF(*FPMO);
-    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), ValueVTs[0])) {
-      setValue(&VPIntrin, DAG.getNode(ISD::VP_FMA, DL, VTs, OpValues, SDFlags));
-    } else {
-      SDValue Mul = DAG.getNode(
-          ISD::VP_FMUL, DL, VTs,
-          {OpValues[0], OpValues[1], OpValues[3], OpValues[4]}, SDFlags);
-      SDValue Add =
-          DAG.getNode(ISD::VP_FADD, DL, VTs,
-                      {Mul, OpValues[2], OpValues[3], OpValues[4]}, SDFlags);
-      setValue(&VPIntrin, Add);
-    }
-    break;
-  }
-  case ISD::VP_IS_FPCLASS: {
-    const DataLayout DLayout = DAG.getDataLayout();
-    EVT DestVT = TLI.getValueType(DLayout, VPIntrin.getType());
-    auto Constant = OpValues[1]->getAsZExtVal();
-    SDValue Check = DAG.getTargetConstant(Constant, DL, MVT::i32);
-    SDValue V = DAG.getNode(ISD::VP_IS_FPCLASS, DL, DestVT,
-                            {OpValues[0], Check, OpValues[2], OpValues[3]});
-    setValue(&VPIntrin, V);
-    return;
-  }
-  case ISD::VP_INTTOPTR: {
-    SDValue N = OpValues[0];
-    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), VPIntrin.getType());
-    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(), VPIntrin.getType());
-    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
-                               OpValues[2]);
-    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
-                             OpValues[2]);
-    setValue(&VPIntrin, N);
-    break;
-  }
-  case ISD::VP_PTRTOINT: {
-    SDValue N = OpValues[0];
-    EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                          VPIntrin.getType());
-    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(),
-                                       VPIntrin.getOperand(0)->getType());
-    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
-                               OpValues[2]);
-    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
-                             OpValues[2]);
-    setValue(&VPIntrin, N);
-    break;
-  }
-  case ISD::VP_ABS:
-  case ISD::VP_CTLZ:
-  case ISD::VP_CTLZ_ZERO_POISON:
-  case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS: {
     SDValue Result =

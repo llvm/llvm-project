@@ -1407,8 +1407,12 @@ private:
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
 
-  /// Pointer to the memory manager or nullptr if not available.
+  /// Pointer to the device memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
+  /// Memory managers for the host and shared allocation kinds or nullptr if not
+  /// available.
+  MemoryManagerTy *HostMemoryManager;
+  MemoryManagerTy *SharedMemoryManager;
 
   /// Per device setting of MemoryManager's Threshold
   virtual size_t getMemoryManagerSizeThreshold() { return 0; }
@@ -1444,6 +1448,20 @@ private:
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
+
+  /// Return the memory manager for the given allocation kind.
+  MemoryManagerTy *getMemoryManagerFor(TargetAllocTy Kind) {
+    switch (Kind) {
+    case TARGET_ALLOC_DEFAULT:
+    case TARGET_ALLOC_DEVICE:
+      return MemoryManager;
+    case TARGET_ALLOC_HOST:
+      return HostMemoryManager;
+    case TARGET_ALLOC_SHARED:
+      return SharedMemoryManager;
+    }
+    return nullptr;
+  }
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
