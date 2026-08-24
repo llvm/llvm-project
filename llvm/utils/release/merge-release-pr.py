@@ -141,11 +141,19 @@ class PRMerger:
         )
         self.prdata = json.loads(o)
 
+        # Determine if we use https or ssh to connect to github
+        remote = subprocess.run(
+            ["git", "remote", "get-url", self.args.upstream],
+            capture_output=True,
+            text=True,
+        )
+        upstream_remote_type = remote.stdout.strip().replace("llvm/llvm-project.git", "")
+
         # save the baseRefName (target branch) so that we know where to push
         self.target_branch = self.prdata["baseRefName"]
         srepo = self.prdata["headRepository"]["name"]
         sowner = self.prdata["headRepositoryOwner"]["login"]
-        self.source_url = f"https://github.com/{sowner}/{srepo}"
+        self.source_url = f"{upstream_remote_type}{sowner}/{srepo}"
         self.source_branch = self.prdata["headRefName"]
 
         if srepo != "llvm-project":
