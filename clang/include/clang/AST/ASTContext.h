@@ -4016,31 +4016,17 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
     return LHS == RHS;
   }
 };
-// The empty/tombstone keys have a null Data, which no interned ref has, so
-// isEqual guards against comparing through their null pointer.
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
-  static FoldingSetNodeIDRef getEmptyKey() {
-    return FoldingSetNodeIDRef(nullptr, 0);
-  }
-  static FoldingSetNodeIDRef getTombstoneKey() {
-    return FoldingSetNodeIDRef(nullptr, 1);
-  }
   static unsigned getHashValue(FoldingSetNodeIDRef Val) {
     return Val.ComputeHash();
   }
   static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
-    if (LHS.getData() == RHS.getData() && LHS.getSize() == RHS.getSize())
-      return true;
-    if (!LHS.getData() || !RHS.getData())
-      return false;
     return LHS == RHS;
   }
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }
   static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
-    if (!RHS.getData())
-      return false;
     return LHS == RHS;
   }
 };
