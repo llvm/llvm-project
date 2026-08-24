@@ -64,8 +64,7 @@ define float @test_cross_fail(float %lhs, float %rhs) {
 define i64 @test_integer(i64  %in) {
 ; CHECK-LABEL: test_integer:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x0, xzr, x0, mi
+; CHECK-NEXT:    bic x0, x0, x0, asr #63
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i64 %in, 0
   %val = select i1 %cmp, i64 0, i64 %in
