@@ -284,6 +284,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
     if (!Ptr.isConst())
       return false;
 
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
+      return false;
+
     unsigned N = Ptr.getNumElems();
 
     if (Ptr.elemSize() == 1 /* bytes */) {
