@@ -19,9 +19,7 @@
 using namespace llvm;
 
 KnownFPClass::KnownFPClass(const APFloat &C)
-    : KnownFPClassesValue(C.classify()) {
-  setSignBit(C.isNegative());
-}
+    : KnownFPClass(C.classify(), C.isNegative()) {}
 
 KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
                                                   DenormalMode Mode) {
