@@ -37,7 +37,7 @@
 
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
-#define LLVM_WINDOWS_PREFER_FORWARD_SLASH 0
+/* LLVM_WINDOWS_PREFER_FORWARD_SLASH defined in Bazel */
 
 /* Define to 1 if you have the `backtrace' function. */
 /* HAVE_BACKTRACE defined in Bazel */
