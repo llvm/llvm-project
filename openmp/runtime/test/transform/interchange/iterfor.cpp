@@ -213,12 +213,20 @@ int main() {
 // CHECK-NEXT: i=2 j=2
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator distance: 3
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [B] iterator distance: 3
+// CHECK-NEXT: [B] iterator advance: 0 += 3
+// CHECK-NEXT: [B] iterator move assign
+// CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [B] iterator dtor
 // CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: done
-// CHECK-NEXT: [B] iterator dtor
-// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [B] dtor
 // CHECK-NEXT: [A] dtor
