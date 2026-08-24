@@ -1422,7 +1422,7 @@ void Sema::ActOnEndOfTranslationUnit() {
           continue;
 
         if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
-            InitDecl && !InitDecl->hasConstantInitialization() ||
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
             VD->needsDestruction(getASTContext()) ==
                 QualType::DK_cxx_destructor)
           return true;
