@@ -263,11 +263,6 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.builtins.fixint_helper
-  lesf2
-  HDRS
-    lesf2.h
-  DEPENDS
-    libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
 )
 
@@ -290,11 +285,6 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.builtins.fixint_helper
-  gesf2
-  HDRS
-    gesf2.h
-  DEPENDS
-    libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
 )
 
@@ -522,6 +512,24 @@ add_header_library(
   unordsf2
   HDRS
     unordsf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  gesf2
+  HDRS
+    gesf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  lesf2
+  HDRS
+    lesf2.h
   DEPENDS
     libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
