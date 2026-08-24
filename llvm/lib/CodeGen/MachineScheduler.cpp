@@ -251,6 +251,15 @@ static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
 static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
   cl::desc("Enable register pressure scheduling."), cl::init(true));
 
+static cl::opt<float> RegCriticalPressureThreshold(
+    "misched-regcritical-pressure-threshold", cl::Hidden,
+    cl::desc(
+        "When region register pressure exceeds this ratio of the target limit, "
+        "de-prioritize the RegCritical heuristic. This allows latency and other "
+        "heuristics more influence when spills are already inevitable. "
+        "0.0 disables (default)."),
+    cl::init(0.0f));
+
 static cl::opt<bool> EnableCyclicPath("misched-cyclicpath", cl::Hidden,
   cl::desc("Enable cyclic critical path analysis."), cl::init(true));
 
@@ -3892,6 +3901,39 @@ bool llvm::tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
   return false;
 }
 
+/// Check if the region's max pressure for a given PSet is already
+/// significantly over the target limit. This is used to determine when
+/// the RegCritical heuristic should be de-prioritized because spills
+/// are already inevitable and other scheduling heuristics (latency,
+/// stall, clustering) should take precedence.
+bool GenericScheduler::isRegionPressureCriticallyHigh(unsigned PSetID) const {
+  if (!DAG->isTrackingPressure())
+    return false;
+
+  // The threshold must be set for this to be active.
+  if (RegCriticalPressureThreshold <= 0.0f)
+    return false;
+
+  unsigned Limit = Context->RegClassInfo->getRegPressureSetLimit(PSetID);
+  if (Limit == 0)
+    return false;
+
+  // Check RegionCriticalPSets for this PSet. RegionCriticalPSets only
+  // contains PSets that are already over the limit.
+  for (const PressureChange &PC : DAG->getRegionCriticalPSets()) {
+    if (!PC.isValid())
+      continue;
+    if (PC.getPSet() == PSetID) {
+      // PC.getUnitInc() holds the max pressure for this PSet
+      unsigned MaxPressure = PC.getUnitInc();
+      return (float)MaxPressure > (float)Limit * RegCriticalPressureThreshold;
+    }
+  }
+
+  // PSet is not in the critical list, so it's at or below the limit.
+  return false;
+}
+
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
@@ -3964,8 +4006,22 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CriticalMax,
                                                Cand.RPDelta.CriticalMax,
                                                TryCand, Cand, RegCritical, TRI,
-                                               DAG->MF))
-    return TryCand.Reason != NoCand;
+                                               DAG->MF)) {
+    // When register pressure is already significantly over the limit,
+    // spills are inevitable. If both candidates increase critical pressure,
+    // the marginal benefit of choosing the one with a smaller increase is
+    // small compared to the cost of suboptimal instruction ordering.
+    // Allow other heuristics (latency, stall, clustering) to decide.
+    //
+    // When one candidate decreases pressure (UnitInc < 0) and the other
+    // increases, always prefer the decreasing candidate.
+    if (TryCand.RPDelta.CriticalMax.getUnitInc() < 0 ||
+        !TryCand.RPDelta.CriticalMax.isValid() ||
+        !isRegionPressureCriticallyHigh(
+            TryCand.RPDelta.CriticalMax.getPSet()))
+      return TryCand.Reason != NoCand;
+    // Fall through to latency and other heuristics.
+  }
 
   // We only compare a subset of features when comparing nodes between
   // Top and Bottom boundary. Some properties are simply incomparable, in many
