@@ -87,18 +87,16 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerPATCHABLE_RET(*MI, Lower);
     return;
   case SystemZ::CallBASR: {
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BASR)
-                       .addReg(SystemZ::R14D)
-                       .addReg(MI->getOperand(0).getReg()));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R14D)
+                                     .addReg(MI->getOperand(0).getReg()));
     return;
   }
   case SystemZ::CallBRASL: {
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BRASL)
-            .addReg(SystemZ::R14D)
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                     .addReg(SystemZ::R14D)
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_PLT)));
     return;
   }
   case SystemZ::CallJG:
@@ -114,12 +112,11 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                                             SystemZ::S_PLT)));
     return;
   case SystemZ::TLS_GDCALL: {
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BRASL)
-            .addReg(SystemZ::R14D)
-            .addExpr(getTLSGetOffset(MF->getContext()))
-            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSGD)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                     .addReg(SystemZ::R14D)
+                                     .addExpr(getTLSGetOffset(MF->getContext()))
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_TLSGD)));
     return;
   }
   case SystemZ::TLS_LDCALL: {
