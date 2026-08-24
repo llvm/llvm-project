@@ -168,6 +168,10 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Fixed a crash in {doc}`modernize-use-noexcept
+  <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
+  code with an unparsed exception specification.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
