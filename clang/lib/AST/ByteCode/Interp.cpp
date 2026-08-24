@@ -1592,7 +1592,7 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
 }
 
 static bool allowNullSubObj(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return Ptr.isZero() && S.shouldRelaxDiag(S.Current->getSource(OpPC).getLoc(),
+  return Ptr.isZero() && S.emitRelaxedDiag(S.Current->getSource(OpPC).getLoc(),
                                            diag::note_constexpr_null_subobject);
 }
 

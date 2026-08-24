@@ -45,22 +45,23 @@
 #define SIGPWR 30
 #define SIGSYS 31
 
-// Max signal number
-#define NSIG 64
+// All signal numbers need to be less than this constant.
+#define NSIG 65
+#define _NSIG NSIG
 
 // SIGRTMIN is current set to the minimum usable from user mode programs. If
 // the libc itself uses some of these signal numbers for private operations,
 // then it has to be adjusted in future to reflect that.
 #define SIGRTMIN 32
-
-#define SIGRTMAX NSIG
+// SIGRTMAX is the largest allowed value for the runtime signal.
+#define SIGRTMAX (NSIG - 1)
 
 // The kernel sigset is stored as an array of long values. Each bit of this
 // array corresponds to a signal, adjusted by 1. That is, bit 0 corresponds
 // to signal number 1, bit 1 corresponds to signal number 2 and so on. The
 // below macro denotes the size of that array (in number of long words and
 // not bytes).
-#define __NSIGSET_WORDS (NSIG / (sizeof(unsigned long) * 8))
+#define __NSIGSET_WORDS ((NSIG - 1) / (sizeof(unsigned long) * 8))
 
 #define SIG_BLOCK 0   // For blocking signals
 #define SIG_UNBLOCK 1 // For unblocking signals

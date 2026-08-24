@@ -25,6 +25,7 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -63,6 +64,9 @@ static void normalizeCacheKey(StringRef &Path,
 // Common logic.
 //===----------------------------------------------------------------------===//
 
+FileManager::FileManager(const FileSystemOptions &FSO)
+    : FileManager(FSO, nullptr) {}
+
 FileManager::FileManager(const FileSystemOptions &FSO,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : FS(std::move(FS)), FileSystemOpts(FSO), SeenDirEntries(64),
@@ -71,6 +75,16 @@ FileManager::FileManager(const FileSystemOptions &FSO,
   // file system.
   if (!this->FS)
     this->FS = llvm::vfs::getRealFileSystem();
+}
+
+void FileManager::setVirtualFileSystem(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+  this->FS = std::move(FS);
+}
+
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+FileManager::getVirtualFileSystemPtr() const {
+  return FS;
 }
 
 FileManager::~FileManager() = default;
