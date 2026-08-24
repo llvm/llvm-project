@@ -126,56 +126,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
-                                                Location loc,
-                                                xegpu::TensorDescType descType,
-                                                TypedValue<MemRefType> src) {
-  MemRefType srcTy = src.getType();
-  assert(srcTy.isStrided() && "Expected strided memref type");
-  auto [strides, offset] = srcTy.getStridesAndOffset();
-  bool isStatic = true;
-
-  // Memref is dynamic if any of its shape, offset or strides is dynamic.
-  if (!srcTy.hasStaticShape())
-    isStatic = false;
-
-  if (!ShapedType::isStatic(offset))
-    isStatic = false;
-
-  for (auto stride : strides) {
-    if (!ShapedType::isStatic(stride)) {
-      isStatic = false;
-      break;
-    }
-  }
-
-  xegpu::CreateNdDescOp ndDesc;
-  if (isStatic) {
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
-  } else {
-    // In case of ranked dynamic memref, instead of passing on the memref,
-    // i64 base address, source's offset, shape and strides have to be
-    // explicitly provided.
-    auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    auto baseAddrIndex = memref::ExtractAlignedPointerAsIndexOp::create(
-        rewriter, loc, meta.getBaseBuffer());
-    auto offset = meta.getOffset();
-    auto elemByteSize = srcTy.getElementTypeBitWidth() / 8;
-    auto offsetInBytes = arith::MulIOp::create(
-        rewriter, loc, offset,
-        arith::ConstantIndexOp::create(rewriter, loc, elemByteSize));
-    auto adjustedBaseAddr = arith::AddIOp::create(
-        rewriter, loc, baseAddrIndex.getResult(), offsetInBytes);
-    auto adjustedAddrI64 = arith::IndexCastOp::create(
-        rewriter, loc, rewriter.getI64Type(), adjustedBaseAddr);
-    ndDesc = xegpu::CreateNdDescOp::create(
-        rewriter, loc, descType, adjustedAddrI64,
-        meta.getConstifiedMixedSizes(), meta.getConstifiedMixedStrides());
-  }
-
-  return ndDesc;
-}
-
 // Adjusts the strides of a memref according to a given permutation map for
 // vector operations.
 //
@@ -646,7 +596,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
           getAsOpFoldResult(readOp.getIndices()), loadedVecTy.getRank());
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+      xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
       Operation *loadedOp =
@@ -748,7 +698,7 @@ struct TransferWriteLowering
           xegpu::MemorySpace::Global);
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
-      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+      xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
       auto storeOp = xegpu::StoreNdOp::create(
@@ -866,7 +816,7 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
         boundaryCheck, xegpu::MemorySpace::Global);
 
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+    xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
         rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
     auto loadNdOp =
         xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
@@ -911,7 +861,7 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+    xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
         rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
     auto storeNdOp =
