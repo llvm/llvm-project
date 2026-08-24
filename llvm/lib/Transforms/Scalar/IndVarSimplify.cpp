@@ -1268,9 +1268,11 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
     // Otherwise, sink it to the exit block.
     I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
     MadeAnyChanges = true;
   }
+
+  if (MadeAnyChanges)
+    SE->forgetBlockAndLoopDispositions();
 
   return MadeAnyChanges;
 }
