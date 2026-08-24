@@ -73,15 +73,23 @@ public:
 
 #### Restrictions
 
+*   Patterns must transform verifiable IR into verifiable IR, i.e., the IR must
+    be verifiable after every pattern application.
 *   All IR mutations, including creation, *must* be performed by the given
     `PatternRewriter`. This class provides hooks for performing all of the
     possible mutations that may take place within a pattern. For example, this
     means that an operation should not be erased via its `erase` method. To
     erase an operation, the appropriate `PatternRewriter` hook (in this case
-    `eraseOp`) should be used instead.
+    `eraseOp`) should be used instead. Note that changes to nested ops, regions,
+    and blocks need to go through the rewriter as well.
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 *   `matchAndRewrite` must return "success" if and only if the IR was modified.
+    In particular, this means that the pattern is not allowed to have made any
+    modification if it returns "failure".
+
+**Note:** These restrictions can be checked at runtime by building with
+`-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally paired with ASan).
 
 
 ### Application Recursion
