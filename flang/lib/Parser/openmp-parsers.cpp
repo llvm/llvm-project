@@ -2857,7 +2857,7 @@ TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
 //
 // This is a fallback that is attempted before the enclosing program unit is
 // reparsed as an execution-part construct, so the standard "!$omp" branch uses
-// the strict "_id" spelling: it must not prefix-match the "!$omp" that begins an
+// the strict "_id" spelling: it must not prefix-match the "!$omp" that begins
 // "!$ompx" line, otherwise a valid extension directive such as "!$ompx barrier"
 // would be misreported as an invalid "!$omp" directive instead of being handled
 // as a real construct.
