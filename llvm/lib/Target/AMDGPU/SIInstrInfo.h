@@ -1018,6 +1018,10 @@ public:
 
   bool isXDL(const MachineInstr &MI) const;
 
+  /// On gfx1250, XDL VA_VDST decrements are ordered after earlier decrements
+  /// when the destination spans at least eight sequential VGPRs.
+  bool isVAVDSTOrderedXDL(const MachineInstr &MI) const;
+
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 
   static bool isLDSDIR(const MachineInstr &MI) {

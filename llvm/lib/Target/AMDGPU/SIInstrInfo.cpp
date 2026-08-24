@@ -11831,3 +11831,17 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
 
   return AMDGPU::getMAIIsGFX940XDL(Opcode);
 }
+
+bool SIInstrInfo::isVAVDSTOrderedXDL(const MachineInstr &MI) const {
+  constexpr unsigned MinOrderedXDLVAVDSTVGPRs = 8;
+  if (!AMDGPU::isGFX1250(ST) || !isXDL(MI))
+    return false;
+
+  int DstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
+  if (DstIdx < 0)
+    return false;
+
+  const TargetRegisterClass *DstRC = getRegClass(MI.getDesc(), DstIdx);
+  return DstRC && RI.isVGPRClass(DstRC) &&
+         RI.getRegSizeInBits(*DstRC) >= MinOrderedXDLVAVDSTVGPRs * 32;
+}
