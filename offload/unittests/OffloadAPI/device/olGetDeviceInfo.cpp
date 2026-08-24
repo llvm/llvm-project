@@ -10,9 +10,9 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-DeviceInfoProperties JustSupportedProperties = mergeProperties(
-    {BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
-     IrrelevantForHostGTUint32Properties});
+DeviceInfoProperties JustSupportedProperties =
+    mergeProperties({BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
+                     IrrelevantForHostGTUint32Properties});
 
 DeviceInfoProperties NonZeroProperties =
     mergeProperties({RelevantGTCapabilitiesProperties,
