@@ -5832,10 +5832,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, Info);
-  if (Val.isFloat()) {
-    APFloat F = Val.getFloat();
-    return this->emitFloat(F, Info);
-  }
+  if (Val.isFloat())
+    return this->emitFloat(Val.getFloat(), Info);
 
   if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {

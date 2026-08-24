@@ -310,7 +310,8 @@ unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
 }
 
 unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  return getArchAttrAMDGCN(getGPUKindFromSubArch(SubArch));
+  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
+  return Info ? Info->ArchFeatures : FEATURE_NONE;
 }
 
 R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
