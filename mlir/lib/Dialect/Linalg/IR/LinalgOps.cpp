@@ -5125,25 +5125,21 @@ static TypedAttr combineScalarBinaryAttrs(BinaryFn kind, TypedAttr lhs,
     case BinaryFn::mul:
       return IntegerAttr::get(intType, lhsInt.getValue() * rhsInt.getValue());
     case BinaryFn::max_signed:
-      return IntegerAttr::get(intType,
-                              lhsInt.getValue().slt(rhsInt.getValue())
-                                  ? rhsInt.getValue()
-                                  : lhsInt.getValue());
+      return IntegerAttr::get(intType, lhsInt.getValue().slt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
     case BinaryFn::min_signed:
-      return IntegerAttr::get(intType,
-                              lhsInt.getValue().sgt(rhsInt.getValue())
-                                  ? rhsInt.getValue()
-                                  : lhsInt.getValue());
+      return IntegerAttr::get(intType, lhsInt.getValue().sgt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
     case BinaryFn::max_unsigned:
-      return IntegerAttr::get(intType,
-                              lhsInt.getValue().ult(rhsInt.getValue())
-                                  ? rhsInt.getValue()
-                                  : lhsInt.getValue());
+      return IntegerAttr::get(intType, lhsInt.getValue().ult(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
     case BinaryFn::min_unsigned:
-      return IntegerAttr::get(intType,
-                              lhsInt.getValue().ugt(rhsInt.getValue())
-                                  ? rhsInt.getValue()
-                                  : lhsInt.getValue());
+      return IntegerAttr::get(intType, lhsInt.getValue().ugt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
     default:
       return nullptr;
     }
@@ -5167,13 +5163,13 @@ static TypedAttr combineScalarBinaryAttrs(BinaryFn kind, TypedAttr lhs,
     case BinaryFn::max_signed:
       return FloatAttr::get(lhsType,
                             lhsFloat.getValue().compare(rhsFloat.getValue()) ==
-                                        APFloat::cmpLessThan
+                                    APFloat::cmpLessThan
                                 ? rhsFloat.getValue()
                                 : lhsFloat.getValue());
     case BinaryFn::min_signed:
       return FloatAttr::get(lhsType,
                             lhsFloat.getValue().compare(rhsFloat.getValue()) ==
-                                        APFloat::cmpGreaterThan
+                                    APFloat::cmpGreaterThan
                                 ? rhsFloat.getValue()
                                 : lhsFloat.getValue());
     default:
@@ -5208,8 +5204,8 @@ static std::optional<TypedAttr> getScalarConstant(Value val) {
 ///
 /// Works for binary elementwise ops like add/mul/max/min and their named Linalg
 /// counterparts when the scalar constants appear on the same side and the op is
-/// associative w.r.t. the constant combination (with subtraction only handled in
-/// its right-hand-scalar form: sub(sub(x, c0), c1) -> sub(x, c0 + c1)).
+/// associative w.r.t. the constant combination (with subtraction only handled
+/// in its right-hand-scalar form: sub(sub(x, c0), c1) -> sub(x, c0 + c1)).
 template <typename OpTy, BinaryFn BinaryFnValue>
 struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -5256,7 +5252,8 @@ struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
     Value outerNonConst, outerScalarOperand;
     std::optional<TypedAttr> outerScalar;
     bool outerScalarOnLeft = false;
-    std::tie(outerNonConst, outerScalar, outerScalarOperand, outerScalarOnLeft) =
+    std::tie(outerNonConst, outerScalar, outerScalarOperand,
+             outerScalarOnLeft) =
         splitConstOperands(outerOp.getInputs()[0], outerOp.getInputs()[1]);
     if (!outerScalar)
       return failure();
@@ -5272,14 +5269,16 @@ struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
     Value innerNonConst, innerScalarOperand;
     std::optional<TypedAttr> innerScalar;
     bool innerScalarOnLeft = false;
-    std::tie(innerNonConst, innerScalar, innerScalarOperand, innerScalarOnLeft) =
+    std::tie(innerNonConst, innerScalar, innerScalarOperand,
+             innerScalarOnLeft) =
         splitConstOperands(innerOp->getOperand(0), innerOp->getOperand(1));
     if (!innerScalar)
       return failure();
     if (innerNonConst.getType() != outerNonConst.getType())
       return failure();
 
-    if (BinaryFnValue == BinaryFn::sub && (outerScalarOnLeft || innerScalarOnLeft))
+    if (BinaryFnValue == BinaryFn::sub &&
+        (outerScalarOnLeft || innerScalarOnLeft))
       return failure();
 
     TypedAttr foldedScalar =
@@ -5300,24 +5299,6 @@ struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
     return success();
   }
 };
-
-void ElementwiseOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                                MLIRContext *context) {
-  results.add<FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::add>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::sub>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::mul>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::max_signed>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::min_signed>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::max_unsigned>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::min_unsigned>>(context);
-}
 
 //===----------------------------------------------------------------------===//
 // PackOp/UnPackOp Common
@@ -7056,27 +7037,26 @@ Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
 
 void LinalgDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<EraseDeadLinalgOp, FoldTensorCastConsumerOp, FoldTensorCastPackOp,
-              FoldTensorCastUnPackOp, InferStaticShapeOfOperands,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::add>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::sub>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::mul>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::max_signed>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::min_signed>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::max_unsigned>,
-              FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
-                                                 BinaryFn::min_unsigned>,
-              FoldConsecutiveScalarBinaryPattern<linalg::AddOp, BinaryFn::add>,
-              FoldConsecutiveScalarBinaryPattern<linalg::SubOp, BinaryFn::sub>,
-              FoldConsecutiveScalarBinaryPattern<linalg::MulOp, BinaryFn::mul>,
-              FoldConsecutiveScalarBinaryPattern<linalg::MaxOp, BinaryFn::max_signed>,
-              FoldConsecutiveScalarBinaryPattern<linalg::MinOp, BinaryFn::min_signed>>(getContext());
+  results.add<
+      EraseDeadLinalgOp, FoldTensorCastConsumerOp, FoldTensorCastPackOp,
+      FoldTensorCastUnPackOp, InferStaticShapeOfOperands,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::add>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::sub>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::mul>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::max_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::min_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::max_unsigned>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::min_unsigned>,
+      FoldConsecutiveScalarBinaryPattern<linalg::AddOp, BinaryFn::add>,
+      FoldConsecutiveScalarBinaryPattern<linalg::SubOp, BinaryFn::sub>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MulOp, BinaryFn::mul>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MaxOp, BinaryFn::max_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MinOp, BinaryFn::min_signed>>(
+      getContext());
 }
 
 Operation *LinalgDialect::materializeConstant(OpBuilder &builder,
