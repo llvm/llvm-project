@@ -1,5 +1,4 @@
 # RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts -verify-machineinstrs -fixup-bw-eliminate-redundant-zext=0 %s -o - | FileCheck %s --check-prefix=DISABLED
 
 --- |
   define i32 @same_block(ptr %p) { ret i32 0 }
@@ -16,10 +15,6 @@
 # CHECK-LABEL: name: same_block
 # CHECK:      $r12d = MOVZX32rm8
 # CHECK-NEXT: CMP32ri renamable $r12d, 13
-#
-# DISABLED-LABEL: name: same_block
-# DISABLED:      $r12d = MOVZX32rm8
-# DISABLED-NEXT: renamable $r12d = MOVZX32rr8 killed renamable $r12b
 name:            same_block
 tracksRegLiveness: true
 body:             |
@@ -71,10 +66,6 @@ body:             |
 # CHECK-LABEL: name: into_copy
 # CHECK:      $eax = MOVZX32rm8
 # CHECK-NEXT: $ecx = MOV32rr $eax
-#
-# DISABLED-LABEL: name: into_copy
-# DISABLED:      $eax = MOVZX32rm8
-# DISABLED-NEXT: renamable $ecx = MOVZX32rr8 renamable $al
 name:            into_copy
 tracksRegLiveness: true
 body:             |
@@ -124,10 +115,6 @@ body:             |
 # CHECK-LABEL: name: word_from_byte
 # CHECK:      $eax = MOVZX32rm8
 # CHECK-NEXT: CMP32ri renamable $eax, 13
-#
-# DISABLED-LABEL: name: word_from_byte
-# DISABLED:      $eax = MOVZX32rm8
-# DISABLED-NEXT: renamable $eax = MOVZX32rr16 killed renamable $ax
 name:            word_from_byte
 tracksRegLiveness: true
 body:             |
