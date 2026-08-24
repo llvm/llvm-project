@@ -2720,13 +2720,13 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register EltNo = Extract.getIndexReg();
     LLT VecVT = MRI.getType(InVec);
     if (VecVT.isScalableVector())
-      break;
+      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
     unsigned NumSrcElts = VecVT.getNumElements();
     auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
-    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
-    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
-      DemandedSrcElts =
-          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
     return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
