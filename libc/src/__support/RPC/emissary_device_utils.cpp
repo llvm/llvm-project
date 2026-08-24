@@ -10,7 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if __has_include("../../../clang/lib/Headers/EmissaryIds.h")
+#include "../../../clang/lib/Headers/EmissaryIds.h"
+#else
 #include "EmissaryIds.h"
+#endif
+
 #include "rpc_client.h"
 #include "shared/rpc.h"
 #include "src/__support/macros/config.h"

@@ -18,7 +18,11 @@ extern "C" double bar(int x, double y, double *darray) { return y * darray[0]; }
 //  This 4-part definition file is typically in it's own file:
 //
 // 1. === Includes, always include EmissaryIds.h
-#include <EmissaryIds.h>
+#if __has_include("../../../clang/lib/Headers/EmissaryIds.h")
+#include "../clang/lib/Headers/EmissaryIds.h"
+#else
+#include "EmissaryIds.h"
+#endif
 #include <stdarg.h>
 
 // 2.===  Enum with index for each function provided by Emissary API.
