@@ -251,3 +251,52 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
 
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 declare void @use(i8)
+
+define i32 @adc_shl(i32 %a, i32 %b) {
+; X86-LABEL: adc_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    cmpl $70, {{[0-9]+}}(%esp)
+; X86-NEXT:    setb %cl
+; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $70, %esi
+; X64-NEXT:    setb %al
+; X64-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-NEXT:    retq
+  %add = shl i32 %a, 1
+  %cmp = icmp ult i32 %b, 70
+  %conv = zext i1 %cmp to i32
+  %add1 = or disjoint i32 %add, %conv
+  ret i32 %add1
+}
+
+define i32 @adc_test(i32 %a, i32 %b) {
+; X86-LABEL: adc_test:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $70, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_test:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rdi), %ecx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $70, %esi
+; X64-NEXT:    setb %al
+; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    retq
+  %add = add i32 %a, %a
+  %cmp = icmp ult i32 %b, 70
+  %conv = zext i1 %cmp to i32
+  %add1 = add i32 %add, %conv
+  ret i32 %add1
+}
