@@ -301,7 +301,7 @@ define void @passed_to_unknown_bundle(ptr %p) {
 define void @already_nofreeobj(ptr nofreeobj %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define void @already_nofreeobj(
-; CHECK-SAME: ptr nofree nofreeobj readnone captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: ptr nofreeobj readnone captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -309,7 +309,7 @@ define void @already_nofreeobj(ptr nofreeobj %p) {
 
 define void @call_with_nofreeobj(ptr %p) {
 ; CHECK-LABEL: define void @call_with_nofreeobj(
-; CHECK-SAME: ptr captures(none) [[P:%.*]]) {
+; CHECK-SAME: ptr nofree captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:    call void @takes_ptr(ptr nofreeobj captures(none) [[P]])
 ; CHECK-NEXT:    ret void
 ;
