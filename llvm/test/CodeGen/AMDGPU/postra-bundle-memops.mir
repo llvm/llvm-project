@@ -352,6 +352,58 @@ body:             |
     KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
 ...
 
+# The trailing KILL defines $vgpr0 (lowerCopy'd from an undef COPY) and must not be erased.
+---
+name: post_bundle_kill_with_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-LABEL: name: post_bundle_kill_with_def
+    ; GCN: liveins: $vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit $vgpr3_vgpr4, implicit killed $vgpr1, implicit $exec, implicit $vgpr5_vgpr6, implicit killed $vgpr2 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = KILL undef $sgpr4, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed $vgpr0
+    GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr2, 0, 0, implicit $exec
+    $vgpr0 = KILL undef $sgpr4, implicit $exec
+    S_NOP 0, implicit killed $vgpr0
+...
+
+# A non-erasable KILL must not leak state that blocks erasing the next bundle's KILL.
+---
+name: post_bundle_kill_after_nonerasable_kill
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr7, $vgpr8, $vgpr9
+    ; GCN-LABEL: name: post_bundle_kill_after_nonerasable_kill
+    ; GCN: liveins: $vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr7, $vgpr8, $vgpr9
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit $vgpr3_vgpr4, implicit killed $vgpr1, implicit $exec, implicit $vgpr5_vgpr6, implicit killed $vgpr2 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: KILL killed $vgpr7
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: BUNDLE implicit $vgpr3_vgpr4, implicit killed $vgpr8, implicit $exec, implicit $vgpr5_vgpr6, implicit killed $vgpr9 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr8, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr9, 0, 0, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: S_NOP 1
+    GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr2, 0, 0, implicit $exec
+    KILL killed $vgpr7
+    S_NOP 0
+    GLOBAL_STORE_DWORD $vgpr3_vgpr4, killed $vgpr8, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr5_vgpr6, killed $vgpr9, 0, 0, implicit $exec
+    KILL killed $vgpr8
+    S_NOP 1
+...
+
 # Avoid bundling if a MBB has SCHED_BARRIER
 ---
 name: no_sched_barrier_within_bundle

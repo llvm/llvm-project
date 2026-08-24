@@ -271,6 +271,7 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:148
 ; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:144
 ; CHECK-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:140
+; CHECK-NEXT:    ; kill: def $vgpr3 killed $sgpr4 killed $exec
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[42:43], 1, v18
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[28:29], 1, v20
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[26:27], 1, v17
@@ -278,6 +279,17 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[18:19], 1, v21
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[24:25], 1, v23
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[20:21], 1, v25
+; CHECK-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr7 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr9 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr11 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr13 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr15 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr17 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr19 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr21 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr23 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr25 killed $sgpr4 killed $exec
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], 1, v27
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[12:13], 1, v26
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[8:9], 1, v29
@@ -384,6 +396,16 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:1396 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_and_b32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[46:47], 1, v1
+; CHECK-NEXT:    ; kill: def $vgpr1 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr57 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr49 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr43 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr51 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $agpr33 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $agpr35 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr59 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $agpr39 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $agpr37 killed $sgpr4 killed $exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(32)
 ; CHECK-NEXT:    buffer_store_dword a0, off, s[0:3], s32 offset:1000 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
@@ -481,6 +503,7 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:528
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:524
+; CHECK-NEXT:    ; kill: def $vgpr3 killed $sgpr4 killed $exec
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1504 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0

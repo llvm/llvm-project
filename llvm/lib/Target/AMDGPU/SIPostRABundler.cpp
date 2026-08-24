@@ -222,6 +222,12 @@ bool SIPostRABundler::run(MachineFunction &MF) {
 
           while (Next != E && Next->isKill()) {
             MachineInstr &Kill = *Next;
+
+            // KILL from an undef-source COPY keeps its def; must not erase it.
+            if (!Kill.all_defs().empty())
+              break;
+
+            KillUsedRegUnits.reset();
             collectUsedRegUnits(Kill, KillUsedRegUnits);
 
             KillUsedRegUnits &= BundleUsedRegUnits;
@@ -230,13 +236,11 @@ bool SIPostRABundler::run(MachineFunction &MF) {
             //
             // TODO: Should we just remove all kills? Is there any real reason to
             // keep them after RA?
-            if (KillUsedRegUnits.none()) {
-              ++Next;
-              Kill.eraseFromParent();
-            } else
+            if (!KillUsedRegUnits.none())
               break;
 
-            KillUsedRegUnits.reset();
+            ++Next;
+            Kill.eraseFromParent();
           }
 
           BundleUsedRegUnits.reset();
