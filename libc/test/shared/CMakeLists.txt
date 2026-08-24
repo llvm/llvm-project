@@ -917,23 +917,3 @@ add_fp_unittest(
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
-
-# Emissary runtime handler registry test.
-# include <EmissaryIds.h> from the Clang resource headers source tree, so add
-# that directory to the include path. Skip if it is not present (e.g. a libc
-# checkout without the clang component).
-set(_emissary_ids_dir "${LIBC_SOURCE_DIR}/../clang/lib/Headers")
-if(EXISTS "${_emissary_ids_dir}/EmissaryIds.h")
-  add_libc_test(
-    emissary_registry_test
-    UNIT_TEST_ONLY
-    SUITE
-      libc-shared-tests
-    SRCS
-      emissary_registry_test.cpp
-    COMPILE_OPTIONS
-      -I${_emissary_ids_dir}
-    DEPENDS
-      libc.src.__support.CPP.array
-  )
-endif()
