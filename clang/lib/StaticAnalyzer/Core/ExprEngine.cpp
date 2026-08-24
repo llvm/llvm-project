@@ -1153,7 +1153,7 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
 
   ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
-  Engine.enqueueStmtNodes(Dst, CurrBlock, currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,

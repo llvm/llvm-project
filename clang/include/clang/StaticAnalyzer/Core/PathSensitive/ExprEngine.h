@@ -223,6 +223,7 @@ public:
     // call to resetCurrStackFrameAndBlock.
     assert(!CurrBlock && !CurrStackFrame &&
            "The current StackFrame and Block is already set");
+    assert(SF && B && "The StackFrame and Block must be non-null");
     CurrStackFrame = SF;
     CurrBlock = B;
   }
