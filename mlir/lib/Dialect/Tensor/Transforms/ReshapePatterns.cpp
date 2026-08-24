@@ -64,21 +64,25 @@ struct FoldExtractSliceOfExpandShape : public OpRewritePattern<ExtractSliceOp> {
       return failure();
 
     if (sliceOp.getType() != expandOp.getSrcType())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          sliceOp, "slice result type does not match expand_shape source type");
 
     SmallVector<OpFoldResult> mixedExpandedSizes =
         expandOp.getMixedOutputShape();
     if (mixedExpandedSizes.size() != sliceOp.getMixedSizes().size())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          sliceOp, "expand_shape output rank does not match slice rank");
 
     for (auto [offset, size, stride, expandedSize] :
          llvm::zip_equal(sliceOp.getMixedOffsets(), sliceOp.getMixedSizes(),
                          sliceOp.getMixedStrides(), mixedExpandedSizes)) {
       if (getConstantIntValue(offset) != static_cast<int64_t>(0) ||
           getConstantIntValue(stride) != static_cast<int64_t>(1))
-        return failure();
+        return rewriter.notifyMatchFailure(
+            sliceOp, "slice is not a zero-offset, unit-stride full slice");
       if (size != expandedSize)
-        return failure();
+        return rewriter.notifyMatchFailure(
+            sliceOp, "slice size does not match expand_shape output size");
     }
 
     rewriter.replaceOp(sliceOp, expandOp.getSrc());
