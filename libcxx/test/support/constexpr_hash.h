@@ -14,10 +14,26 @@ namespace support {
 template <typename _Tp>
 concept EnabledForHash = requires(_Tp t) {
   { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
-};
+}
+
+// we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
+//  note: bit_cast from a pointer type is not allowed in a constant expression
+// read of member '__a' of union with active member '__t' is not allowed in a constant expression
+/*
+
+    union {
+      _Tp __t;
+      size_t __a;
+    } __u;
+    __u.__a = 0;
+    __u.__t = __v;
+    return __u.__a;
+*/
+and not std::is_pointer_v<_Tp>;
+
 
 template <typename _Tp>
-concept DisabledForHash = not EnabledForHash<_Tp>;
+concept DisabledForHash = not EnabledForHash<_Tp> ;
 
 // TODO: document the constraints of using this at runtime OR make it consteval only
 template <typename _Tp>
@@ -45,8 +61,9 @@ struct constexpr_hash<_Tp> {
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
-    } else if constexpr (std::is_floating_point_v<_Tp>) {
+    } else if constexpr (std::is_floating_point_v<_Tp> ) {
     if (__v == 0.0f)
+
       return 0;
     // return __scalar_hash<_Tp>::operator()(__v);
 
@@ -64,7 +81,7 @@ struct constexpr_hash<_Tp> {
         // return region[multiple - 1]; // TODO: hash-ing
         // return 1234ULL;
 
-    }
+    } 
     __builtin_unreachable(); // todo: revisit
   }
 
