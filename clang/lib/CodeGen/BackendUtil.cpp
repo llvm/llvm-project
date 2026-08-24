@@ -394,17 +394,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
     break;
   }
 
-  // Set float ABI type.
-  assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
-          CodeGenOpts.FloatABI == "hard" || CodeGenOpts.FloatABI.empty()) &&
-         "Invalid Floating Point ABI!");
-  Options.FloatABIType =
-      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
-          .Case("soft", llvm::FloatABI::Soft)
-          .Case("softfp", llvm::FloatABI::Soft)
-          .Case("hard", llvm::FloatABI::Hard)
-          .Default(llvm::FloatABI::Default);
-
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {
   case LangOptions::FPM_Off:
@@ -484,7 +473,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
   Options.LoopAlignment = CodeGenOpts.LoopAlignment;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
-  Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
+  Options.ObjectFilenameForDebug =
+      CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
   Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
@@ -1281,9 +1271,9 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   const llvm::TargetOptions &Options = TM->Options;
-  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
+  CodeGenPasses.add(
+      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
+                                    Options.MCOptions.ABIName, Options.VecLib));
 
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
@@ -1527,7 +1517,9 @@ static void createAndEmbedModuleForDynamicDebugging(
     // the same source file compiled twice won't generate unique hashes.
     Hash.update(CGOpts.CmdArgs);
     for (auto *CU : M->debug_compile_units()) {
-      Hash.update(CU->getDirectory());
+      if (CU->getDirectory().size() > 0)
+        Hash.update(CU->getDirectory());
+
       Hash.update(CU->getFilename());
     }
 
