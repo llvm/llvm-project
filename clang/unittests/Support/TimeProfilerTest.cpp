@@ -397,6 +397,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc",
                                 /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
   std::string Json = teardownProfiler();
+#ifdef _WIN32
   ASSERT_EQ(R"(
 ExecuteCompiler
 | Frontend (test.cc)
@@ -422,6 +423,33 @@ ExecuteCompiler
 | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));
+#else
+  ASSERT_EQ(R"(
+ExecuteCompiler
+| Frontend (test.cc)
+| | ParseFunctionDefinition (fooC)
+| | ParseFunctionDefinition (fooB)
+| | ParseFunctionDefinition (fooMTA)
+| | ParseFunctionDefinition (fooA)
+| | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
+| | | ParseFunctionDefinition (user)
+| | | | DeduceTemplateArguments (.\\a.h:7:10)
+| | | | DeferInstantiation (fooA<int>)
+| PerformPendingInstantiations
+| | InstantiateFunction (fooA<int>, a.h:7)
+| | | DeduceTemplateArguments (.\\b.h:8:17)
+| | | InstantiateFunction (fooB<int>, b.h:8)
+| | | | DeduceTemplateArguments (.\\b.h:3:7)
+| | | | DeferInstantiation (fooC<int>)
+| | | | BuildCFG
+| | | DeduceTemplateArguments (.\\a.h:4:5 <Spelling=<scratch space>:4:1>)
+| | | DeferInstantiation (fooMTA<int>)
+| | | InstantiateFunction (fooC<int>, b.h:3)
+| | | | BuildCFG
+| | | InstantiateFunction (fooMTA<int>, a.h:4)
+)",
+            buildTraceGraph(Json));
+#endif
 }
 
 static SpecializationCounts
