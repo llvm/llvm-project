@@ -14,16 +14,17 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-NativeTypeTypedefUDT::NativeTypeTypedefUDT(NativeSession &Session, SymIndexId Id,
-                                     codeview::UDTSym Typedef)
+NativeTypeTypedefUDT::NativeTypeTypedefUDT(NativeSession &Session,
+                                           SymIndexId Id,
+                                           codeview::UDTSym Typedef)
     : NativeRawSymbol(Session, PDB_SymType::Typedef, Id),
       Record(std::move(Typedef)) {}
 
 NativeTypeTypedefUDT::~NativeTypeTypedefUDT() = default;
 
 void NativeTypeTypedefUDT::dump(raw_ostream &OS, int Indent,
-                             PdbSymbolIdField ShowIdFields,
-                             PdbSymbolIdField RecurseIdFields) const {
+                                PdbSymbolIdField ShowIdFields,
+                                PdbSymbolIdField RecurseIdFields) const {
   NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
   dumpSymbolField(OS, "name", getName(), Indent);
   dumpSymbolIdField(OS, "typeId", getTypeId(), Indent, Session,
