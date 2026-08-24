@@ -1478,11 +1478,19 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "AliasSetTracker_fixed_gen",
+    srcs = ["lib/Analysis/AliasSetTracker.cpp"],
+    outs = ["lib/Analysis/AliasSetTracker_fixed.cpp"],
+    cmd = "sed 's/AliasSet::ModAccess/ModRefInfo::Mod/g' $< > $@",
+)
+
 cc_library(
     name = "Analysis",
     srcs = glob(
         ["lib/Analysis/*.cpp"],
-    ),
+        exclude = ["lib/Analysis/AliasSetTracker.cpp"],
+    ) + [":AliasSetTracker_fixed_gen"],
     hdrs = glob(
         [
             "include/llvm/Analysis/*.h",
