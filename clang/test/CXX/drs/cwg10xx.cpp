@@ -132,6 +132,7 @@ static_assert(from_double(2.5) == E::One, "");
 static_assert(from_double(__builtin_nan("")) == E::One, "");
 
 enum class G : unsigned char { Zero, One, Two };
+
 static_assert(static_cast<G>(0.0) == G::Zero, "");
 static_assert(static_cast<G>(-0.0) == G::Zero, "");
 static_assert(static_cast<G>(0.5) == G::Zero, "");
