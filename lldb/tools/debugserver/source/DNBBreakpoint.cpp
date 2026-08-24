@@ -171,9 +171,18 @@ void DNBBreakpointList::DisableAll() {
 
 void DNBBreakpointList::RemoveTrapsFromBuffer(nub_addr_t addr, nub_size_t size,
                                               void *p) const {
+  if (m_breakpoints.empty())
+    return;
+
   uint8_t *buf = (uint8_t *)p;
   const_iterator end = m_breakpoints.end();
   const_iterator pos = m_breakpoints.lower_bound(addr);
+
+  // lower_bound finds a breakpoint starting >= addr. The breakpoint prior to
+  // that may start before addr but extend beyond it, so it must be checked too.
+  if (pos != m_breakpoints.begin())
+    --pos;
+
   while (pos != end && (pos->first < (addr + size))) {
     nub_addr_t intersect_addr;
     nub_size_t intersect_size;
