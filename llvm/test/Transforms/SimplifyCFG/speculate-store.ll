@@ -483,6 +483,105 @@ ret.end:
   ret void
 }
 
+define void @ifconvertstore_with_op(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_with_op(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[B]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %if.then, label %ret.end
+
+if.then:
+  %or = or i32 %B, 4
+  store i32 %or, ptr %A
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
+define void @ifconvertstore_with_op_swapped(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_with_op_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[OR]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %ret.end, label %if.then
+
+if.then:
+  %or = or i32 %B, 4
+  store i32 %or, ptr %A
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
+define void @ifconvertstore_two_ops(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_two_ops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], 1
+; CHECK-NEXT:    store i32 [[XOR]], ptr [[A]], align 4
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %if.then, label %ret.end
+if.then:
+  %or = or i32 %B, 4
+  %xor = xor i32 %or, 1
+  store i32 %xor, ptr %A
+  br label %ret.end
+ret.end:
+  ret void
+}
+
+define i32 @ifconvertstore_with_op_and_phi(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_with_op_and_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[B]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %if.then, label %ret.end
+if.then:
+  %or = or i32 %B, 4
+  store i32 %or, ptr %A
+  br label %ret.end
+ret.end:
+  %r = phi i32 [ %or, %if.then ], [ 0, %entry ]
+  ret i32 %r
+}
+
 ; CHECK: !0 = !{!"branch_weights", i32 3, i32 5}
 !0 = !{!"branch_weights", i32 3, i32 5}
 
