@@ -248,14 +248,14 @@ endif
 #----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
-SWIFT=$(shell dirname $(SWIFTC))/swift
+SWIFT := $(dir $(SWIFTC_PATH))swift
 SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g')
 SWIFT_FE=$(SWIFT) -frontend
 
 ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(DYLIB_NAME)" ""
-MODULENAME?=$(shell basename $(EXE) .out)
+MODULENAME?=$(patsubst %.out,%,$(notdir $(EXE)))
 # Compile with -parse-as-library when main.swift contains "@main".
 # $(file ...) requires GNU Make 4.0+, unavailable on macOS (ships with 3.81).
 ifeq "$(OS)" "Windows_NT"
