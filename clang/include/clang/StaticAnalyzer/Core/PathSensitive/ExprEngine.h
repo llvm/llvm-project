@@ -815,12 +815,11 @@ public:
   /// and updateObjectsUnderConstruction.
   std::pair<ProgramStateRef, SVal>
   handleConstructionContext(const Expr *E, ProgramStateRef State,
-                            const NodeBuilderContext *BldrCtx,
                             const StackFrame *SF, const ConstructionContext *CC,
                             EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(), SF,
-                                            CC, CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, getNumVisitedCurrent(),
+                                            SF, CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, SF, CC, CallOpts);
 
     return std::make_pair(State, V);
