@@ -1663,6 +1663,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // /threads: takes a positive integer and provides the default value for
   // /opt:lldltojobs=.
+  parallel::strategy = available_concurrency();
   if (auto *arg = args.getLastArg(OPT_threads)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;

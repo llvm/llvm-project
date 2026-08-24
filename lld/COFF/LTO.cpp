@@ -129,14 +129,14 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
-        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
+        available_concurrency(ctx.config.thinLTOJobs),
         std::string(ctx.config.thinLTOPrefixReplaceOld),
         std::string(ctx.config.thinLTOPrefixReplaceNew),
         std::string(ctx.config.thinLTOPrefixReplaceNativeObject),
         ctx.config.thinLTOEmitImportsFiles, indexFile.get(), OnIndexWrite);
   } else {
     backend = lto::createInProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs));
+        heavyweight_available_concurrency(ctx.config.thinLTOJobs));
   }
 
   if (ctx.config.dtltoDistributor.empty())
