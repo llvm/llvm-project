@@ -8,7 +8,7 @@ define half @swap(half %a, half %b, i32 %i) {
 ; GFX11-TRUE16-LABEL: swap:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:  .LBB0_1: ; %loop
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -51,7 +51,7 @@ define half @swap(half %a, half %b, i32 %i) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v1.l, v0.l
+; GFX12-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:  .LBB0_1: ; %loop
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1

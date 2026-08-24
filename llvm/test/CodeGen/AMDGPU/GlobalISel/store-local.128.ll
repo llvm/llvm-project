@@ -239,21 +239,23 @@ define amdgpu_kernel void @store_lds_v4i32_align1(ptr addrspace(3) %out, <4 x i3
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b32 s6, 0xffff, s0
 ; GFX11-NEXT:    s_lshr_b32 s5, s0, 16
-; GFX11-NEXT:    v_pack_b32_f16 v0, s0, s1
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 24
 ; GFX11-NEXT:    s_and_b32 s7, 0xffff, s1
 ; GFX11-NEXT:    s_lshr_b32 s6, s6, 8
 ; GFX11-NEXT:    v_mov_b32_e32 v5, s4
 ; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
 ; GFX11-NEXT:    s_lshr_b32 s0, s7, 8
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, s6
 ; GFX11-NEXT:    v_mov_b16_e32 v1.h, s5
 ; GFX11-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, s1
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 24
 ; GFX11-NEXT:    s_and_b32 s9, 0xffff, s2
 ; GFX11-NEXT:    v_mov_b16_e32 v4.l, s0
 ; GFX11-NEXT:    s_lshr_b32 s0, s2, 24
 ; GFX11-NEXT:    v_mov_b16_e32 v2.h, s4
-; GFX11-NEXT:    v_pack_b32_f16 v3, s6, s1
+; GFX11-NEXT:    v_mov_b16_e32 v3.h, s1
 ; GFX11-NEXT:    s_lshr_b32 s1, s9, 8
 ; GFX11-NEXT:    ds_store_b8 v5, v0
 ; GFX11-NEXT:    ds_store_b8 v5, v3 offset:1
@@ -263,16 +265,19 @@ define amdgpu_kernel void @store_lds_v4i32_align1(ptr addrspace(3) %out, <4 x i3
 ; GFX11-NEXT:    ds_store_b8 v5, v4 offset:5
 ; GFX11-NEXT:    ds_store_b8_d16_hi v5, v2 offset:6
 ; GFX11-NEXT:    ds_store_b8_d16_hi v5, v3 offset:7
-; GFX11-NEXT:    v_pack_b32_f16 v1, s2, s0
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, s0
 ; GFX11-NEXT:    s_and_b32 s0, 0xffff, s3
 ; GFX11-NEXT:    s_lshr_b32 s8, s2, 16
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, s2
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, s1
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 8
-; GFX11-NEXT:    v_pack_b32_f16 v0, s1, s8
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, s8
 ; GFX11-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX11-NEXT:    v_pack_b32_f16 v2, s3, s0
+; GFX11-NEXT:    v_mov_b16_e32 v2.h, s0
 ; GFX11-NEXT:    s_lshr_b32 s0, s3, 24
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_pack_b32_f16 v3, s1, s0
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, s3
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, s1
+; GFX11-NEXT:    v_mov_b16_e32 v3.h, s0
 ; GFX11-NEXT:    ds_store_b8 v5, v1 offset:8
 ; GFX11-NEXT:    ds_store_b8 v5, v0 offset:9
 ; GFX11-NEXT:    ds_store_b8_d16_hi v5, v0 offset:10
