@@ -316,13 +316,6 @@ jobs:
         echo "C:\clang\clang-msvc\bin" >> $env:GITHUB_PATH ;
 
     - wait-all:
-    # End of Parallel block.
-    - name: Install Wix (Windows ARM64)
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        choco install wixtoolset --version 3.14.1.20250415
-        # Add wix install directory to PATH.
-        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 
     - name: Debug
       if: failure()
