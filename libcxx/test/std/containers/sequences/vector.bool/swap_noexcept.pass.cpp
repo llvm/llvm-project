@@ -64,27 +64,16 @@ int main(int, char**) {
     typedef std::vector<bool, other_allocator<bool>> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
-#endif // _LIBCPP_VERSION
   {
-#if TEST_STD_VER >= 14
-#  if defined(_LIBCPP_VERSION)
     //  In C++14, if POCS is set, swapping the allocator is required not to throw
     typedef std::vector<bool, some_alloc<bool>> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-#  endif // _LIBCPP_VERSION
-#else
-    typedef std::vector<bool, some_alloc<bool>> C;
-    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-#endif
   }
-#if TEST_STD_VER >= 14
-#  if defined(_LIBCPP_VERSION)
   {
     typedef std::vector<bool, some_alloc2<bool>> C;
     //  if the allocators are always equal, then the swap can be noexcept
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
-#  endif // _LIBCPP_VERSION
 #endif
 
   return 0;

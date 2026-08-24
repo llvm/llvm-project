@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <list>
+// <deque>
 
-// list(list&&)
+// deque(deque&&)
 //        noexcept(is_nothrow_move_constructible<allocator_type>::value);
 
 // This tests a conforming extension
 
 // UNSUPPORTED: c++03
 
-#include <list>
 #include <cassert>
+#include <deque>
 
-#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -29,25 +28,7 @@ struct some_alloc {
   void allocate(std::size_t);
 };
 
-int main(int, char**) {
-#if defined(_LIBCPP_VERSION)
-  {
-    typedef std::list<MoveOnly> C;
-    static_assert(std::is_nothrow_move_constructible<C>::value, "");
-  }
-  {
-    typedef std::list<MoveOnly, test_allocator<MoveOnly>> C;
-    static_assert(std::is_nothrow_move_constructible<C>::value, "");
-  }
-  {
-    typedef std::list<MoveOnly, other_allocator<MoveOnly>> C;
-    static_assert(std::is_nothrow_move_constructible<C>::value, "");
-  }
-#endif // _LIBCPP_VERSION
-  {
-    typedef std::list<MoveOnly, some_alloc<MoveOnly>> C;
-    static_assert(!std::is_nothrow_move_constructible<C>::value, "");
-  }
-
-  return 0;
-}
+static_assert(std::is_nothrow_move_constructible<std::deque<MoveOnly>>::value, "");
+static_assert(std::is_nothrow_move_constructible<std::deque<MoveOnly, test_allocator<MoveOnly>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<std::deque<MoveOnly, other_allocator<MoveOnly>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<std::deque<MoveOnly, some_alloc<MoveOnly>>>::value, "");
