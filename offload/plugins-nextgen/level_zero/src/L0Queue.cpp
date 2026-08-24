@@ -57,14 +57,17 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
 
   bool AppendLaunchKernelWithArgsAvailable =
       Device.getL0Context().LaunchKernelWithArguments.available();
-  
-  if (AppendLaunchKernelWithArgsAvailable && Device.getL0Context().AppendLaunchKernelSupported.load(std::memory_order_acquire)) {
+
+  if (AppendLaunchKernelWithArgsAvailable &&
+      Device.getL0Context().AppendLaunchKernelSupported.load(
+          std::memory_order_acquire)) {
     auto Result = CmdList->appendLaunchKernelWithArgs(
         Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
         NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
     // Can a context have multiple users?
-    if (!Device.getL0Context().AppendLaunchKernelSupported.load(std::memory_order_acquire)) {
+    if (!Device.getL0Context().AppendLaunchKernelSupported.load(
+            std::memory_order_acquire)) {
       // Commandlist failed to launch kernel with arguments, fallback to older
       // API.
       consumeError(std::move(Result));

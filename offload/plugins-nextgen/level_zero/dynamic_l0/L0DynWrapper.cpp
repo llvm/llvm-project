@@ -96,7 +96,6 @@ DLWRAP(zeCommandListAppendWaitOnEvents, 3)
 DLWRAP(zeEventQueryStatus, 1)
 DLWRAP(zeDriverGetDefaultContext, 1)
 
-
 DLWRAP_FINALIZE()
 
 #ifdef _WIN32
