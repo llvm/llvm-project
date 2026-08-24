@@ -52,7 +52,18 @@ using DirectiveSet =
       state.GetLocation(), std::min<size_t>(64, state.BytesRemaining()));
 }
 
-constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
+// Accept the standard "!$omp" sentinel as well as the implementation-defined
+// extension sentinels "!$omx" (fixed form) and "!$ompx" (free form) defined in
+// OpenMP 5.2, section 3.1.  The prescanner normalizes the comment character of
+// fixed-form sentinels (c$omx, *$omx) to '!'.  The sentinels are matched with
+// the "_id" literal (not "_sptok") so that a sentinel is not accepted as a
+// prefix of a longer one: "!$OMP" must not match the "!$omp" that begins
+// "!$ompx".  The "_id" match fails when the token is immediately followed by
+// another identifier character.
+constexpr auto ompxSentinel = "!$OMPX"_id || "!$OMX"_id;
+constexpr auto ompSentinel = "!$OMP"_id;
+constexpr auto startOmpLine =
+    skipStuffBeforeStatement >> (ompxSentinel || ompSentinel);
 constexpr auto endOmpLine = space >> endOfLine;
 
 constexpr auto logicalConstantExpr{logical(constantExpr)};
@@ -2632,7 +2643,16 @@ static constexpr DirectiveSet GetAllDirectives() { //
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
     OmpEndDirectiveParser{GetAllDirectives()}))
 
-TYPE_PARSER(startOmpLine >>
-    sourced(construct<OpenMPInvalidDirective>(
-        maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{})))
+// A string following an OpenMP sentinel that is not a recognized directive.
+// When it follows an implementation-defined extension sentinel (!$omx / !$ompx)
+// the node is flagged (true) so that semantics ignores it with a warning rather
+// than reporting an error, allowing portable use of vendor extensions
+// (OpenMP 5.2, section 3.1).
+TYPE_PARSER(skipStuffBeforeStatement >>
+    ((ompxSentinel >>
+         sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
+             !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(true)))) ||
+        (ompSentinel >>
+            sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
+                !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(false))))))
 } // namespace Fortran::parser

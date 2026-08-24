@@ -5530,9 +5530,19 @@ struct OpenMPMisplacedEndDirective : public OmpEndDirective {
       OpenMPMisplacedEndDirective, OmpEndDirective);
 };
 
-// Unrecognized string after the !$OMP sentinel.
+// Unrecognized string after an OpenMP sentinel.  isExtensionSentinel is true
+// when the sentinel was an implementation-defined extension sentinel (!$omx in
+// fixed source form or !$ompx in free source form, OpenMP 5.2 section 3.1); in
+// that case an unrecognized directive is ignored with a warning instead of
+// being reported as an error.  The bool constructor is explicit so that the
+// node is not implicitly constructible from a bool: such a conversion would
+// make parse-tree visitors that provide a catch-all handler ambiguous.
 struct OpenMPInvalidDirective {
   using EmptyTrait = std::true_type;
+  OpenMPInvalidDirective() = default;
+  explicit OpenMPInvalidDirective(bool isExtension)
+      : isExtensionSentinel{isExtension} {}
+  bool isExtensionSentinel{false};
   CharBlock source;
 };
 

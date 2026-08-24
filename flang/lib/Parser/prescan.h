@@ -198,7 +198,12 @@ private:
     return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
   }
   bool IsOpenMPDirective() const {
-    return directiveSentinel_ && std::strcmp(directiveSentinel_, "$omp") == 0;
+    return directiveSentinel_ &&
+        (std::strcmp(directiveSentinel_, "$omp") == 0 ||
+            // Implementation-defined extension sentinels (OpenMP 5.2, 3.1):
+            // "$omx" (fixed form) and "$ompx" (free form).
+            std::strcmp(directiveSentinel_, "$omx") == 0 ||
+            std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
