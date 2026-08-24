@@ -116,7 +116,6 @@ void taintedIndexNonlarge(void) {
   // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative}}
 }
 
-
 void taintedIndexUnsigned(void) {
   unsigned index;
   scanf("%u", &index);
