@@ -110,12 +110,11 @@ define void @test_moveweak_clobber(ptr %src, ptr %dest, ptr %val) {
 }
 
 ; Test that copyWeak does NOT clobber a load from its source.
-define void @test_copyweak_no_clobber(ptr %src, ptr %dest, ptr %val) {
+define void @test_copyweak_no_clobber(ptr noalias %src, ptr noalias %dest, ptr %val) {
 ; CHECK-LABEL: @test_copyweak_no_clobber(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
 ; CHECK-NEXT:    call void @llvm.objc.copyWeak(ptr [[DEST:%.*]], ptr [[SRC]])
-; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[SRC]])
-; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)

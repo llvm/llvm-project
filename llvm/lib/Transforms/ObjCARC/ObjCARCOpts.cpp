@@ -2096,6 +2096,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
     // within the same block. Theoretically, we could do memdep-style non-local
     // analysis too, but that would want caching. A better approach would be to
     // use the technique that EarlyCSE uses.
+    Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
     inst_iterator Current = std::prev(I);
     BasicBlock *CurrentBB = &*Current.getBasicBlockIterator();
     for (BasicBlock::iterator B = CurrentBB->begin(),
@@ -2110,7 +2111,6 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         // with that one.
         CallInst *Call = cast<CallInst>(Inst);
         CallInst *EarlierCall = cast<CallInst>(EarlierInst);
-        Value *Arg = Call->getArgOperand(0);
         Value *EarlierArg = EarlierCall->getArgOperand(0);
         switch (PA.getAA()->alias(Arg, EarlierArg)) {
         case AliasResult::MustAlias:
@@ -2140,7 +2140,6 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         // replace this load's value with the stored value.
         CallInst *Call = cast<CallInst>(Inst);
         CallInst *EarlierCall = cast<CallInst>(EarlierInst);
-        Value *Arg = Call->getArgOperand(0);
         Value *EarlierArg = EarlierCall->getArgOperand(0);
         switch (PA.getAA()->alias(Arg, EarlierArg)) {
         case AliasResult::MustAlias:
@@ -2165,9 +2164,30 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         break;
       }
       case ARCInstKind::MoveWeak:
-      case ARCInstKind::CopyWeak:
-        // TOOD: Grab the copied value.
-        goto clobbered;
+      case ARCInstKind::CopyWeak: {
+        CallInst *EarlierCall = cast<CallInst>(EarlierInst);
+        Value *EarlierDest = EarlierCall->getArgOperand(0);
+        Value *EarlierSrc = EarlierCall->getArgOperand(1);
+
+        // If the source and destination might alias, don't try to trace.
+        if (PA.getAA()->alias(EarlierDest, EarlierSrc) != AliasResult::NoAlias)
+          goto clobbered;
+
+        switch (PA.getAA()->alias(Arg, EarlierDest)) {
+        case AliasResult::MustAlias:
+          Arg = EarlierSrc;
+          break;
+        case AliasResult::MayAlias:
+        case AliasResult::PartialAlias:
+          goto clobbered;
+        case AliasResult::NoAlias:
+          if (EarlierClass == ARCInstKind::MoveWeak &&
+              PA.getAA()->alias(Arg, EarlierSrc) != AliasResult::NoAlias)
+            goto clobbered;
+          break;
+        }
+        break;
+      }
       case ARCInstKind::AutoreleasepoolPush:
       case ARCInstKind::None:
       case ARCInstKind::IntrinsicUser:
