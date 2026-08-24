@@ -66,6 +66,16 @@ define i32 @test5_asan(i1 %C) sanitize_address {
   ret i32 %Z
 }
 
+define i32 @test5_dasan(i1 %C) sanitize_device_address {
+; CHECK-LABEL: @test5_dasan(
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[C:%.*]], i32 42, i32 47
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %Y = select i1 %C, ptr @X, ptr @X2
+  %Z = load i32, ptr %Y
+  ret i32 %Z
+}
+
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1

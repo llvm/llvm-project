@@ -2740,6 +2740,11 @@ fn -> other_fn -> other_fn ; fn is norecurse
     (dynamic address safety analysis based on tagged pointers) are enabled for
     this function.
 
+`sanitize_device_address`
+:   This attribute indicates that DeviceAddressSanitizer checks
+    (dynamic address safety analysis for memory accessed by offloading
+    devices) are enabled for this function.
+
 `sanitize_memtag`
 :   This attribute indicates that MemTagSanitizer checks
     (dynamic address safety analysis based on Armv8 MTE) are enabled for
