@@ -1,0 +1,38 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --change-section-lma *-0x30 %t %t2
+# RUN: llvm-readelf --program-headers %t2 | FileCheck %s
+
+# Regression test: a segment with a nonzero MemSize but no assigned
+# VAddr/PAddr (e.g. PT_RISCV_ATTRIBUTES) must not participate in
+# --change-section-lma; previously this caused a spurious underflow
+# error when shifting other segments downward.
+#
+# This is a separate file (rather than an addition to
+# change-section-lma.test) because that file's first LOAD segment's
+# size is implicitly derived from the total program header table
+# size, making it fragile to extend with additional entries.
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 0x10
+  - Name: .riscv.attributes
+    Type: SHT_PROGBITS
+    Size: 0x3f
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     0x70000003
+    Flags:    [ PF_R ]
+    VAddr:    0x0
+    PAddr:    0x0
+    Align:    0x1
+    FirstSec: .riscv.attributes
+    LastSec:  .riscv.attributes

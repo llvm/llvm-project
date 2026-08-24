@@ -823,7 +823,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (Config.ChangeSectionLMAValAll != 0) {
     for (Segment &Seg : Obj.segments()) {
-      if (Seg.MemSize > 0) {
+      if (Seg.MemSize > 0 && (Seg.VAddr != 0 || Seg.PAddr != 0)) {
         if (Config.ChangeSectionLMAValAll > 0 &&
             Seg.PAddr > std::numeric_limits<uint64_t>::max() -
                             Config.ChangeSectionLMAValAll) {
