@@ -694,6 +694,7 @@ set(files
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
   __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_end.h
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h

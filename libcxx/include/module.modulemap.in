@@ -2421,6 +2421,9 @@ module std {
         header "__pstl/cpu_algos/fill.h"
         export std_core.utility_core.empty
       }
+      module find_end {
+        header "__pstl/cpu_algos/find_end.h"
+      }
       module find_if {
         header "__pstl/cpu_algos/find_if.h"
       }
