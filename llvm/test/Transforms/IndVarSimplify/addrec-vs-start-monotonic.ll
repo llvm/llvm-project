@@ -51,9 +51,11 @@ define void @nuw_addrec_on_rhs(i64 %start, i64 %n, ptr %out) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[START]], [[IV]]
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[START]], [[IV]]
 ; CHECK-NEXT:    [[LE:%.*]] = icmp ule i64 [[START]], [[IV]]
 ; CHECK-NEXT:    [[LT:%.*]] = icmp ult i64 [[START]], [[IV]]
 ; CHECK-NEXT:    store volatile i1 [[GT]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 [[GE]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[LE]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[LT]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
@@ -68,9 +70,11 @@ entry:
 loop:
   %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
   %gt = icmp ugt i64 %start, %iv
+  %ge = icmp uge i64 %start, %iv
   %le = icmp ule i64 %start, %iv
   %lt = icmp ult i64 %start, %iv
   store volatile i1 %gt, ptr %out
+  store volatile i1 %ge, ptr %out
   store volatile i1 %le, ptr %out
   store volatile i1 %lt, ptr %out
   %iv.next = add nuw i64 %iv, 1
@@ -80,6 +84,49 @@ loop:
 exit:
   ret void
 }
+
+define void @no_nuw(i64 %start, i64 %n, ptr %out) {
+; CHECK-LABEL: define void @no_nuw(
+; CHECK-SAME: i64 [[START:%.*]], i64 [[N:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i64 [[IV]], [[START]]
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[IV]], [[START]]
+; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[IV]], [[START]]
+; CHECK-NEXT:    [[LE:%.*]] = icmp ule i64 [[IV]], [[START]]
+; CHECK-NEXT:    store volatile i1 [[LT]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 [[GE]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 [[GT]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 [[LE]], ptr [[OUT]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %lt = icmp ult i64 %iv, %start
+  %ge = icmp uge i64 %iv, %start
+  %gt = icmp ugt i64 %iv, %start
+  %le = icmp ule i64 %iv, %start
+  store volatile i1 %lt, ptr %out
+  store volatile i1 %ge, ptr %out
+  store volatile i1 %gt, ptr %out
+  store volatile i1 %le, ptr %out
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 
 define void @nsw_nonneg_step(i64 %start, i64 %n, i64 %step.raw, ptr %out) {
 ; CHECK-LABEL: define void @nsw_nonneg_step(
