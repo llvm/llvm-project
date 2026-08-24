@@ -1,0 +1,99 @@
+# An importing compile unit emits its own DW_TAG_module skeleton for a module,
+# and that skeleton can name a different DW_AT_LLVM_include_path than the
+# module's own compile unit: a Swift unit names the .swiftmodule while the
+# companion Clang module names the framework bundle. Consumers compare the
+# search paths of two imported modules to tell whether they belong to the same
+# framework, so every importer has to resolve a module to the DIE of the unit
+# describing that module in full.
+#
+# Only the first object file which references a .pcm gets a module unit for it,
+# so the second object file below resolves its import across object file
+# boundaries.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/M.pcm %p/../Inputs/module-import-canonical/M.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/1.o %p/../Inputs/module-import-canonical/1.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/2.o %p/../Inputs/module-import-canonical/2.ll
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map.map \
+RUN:     -oso-prepend-path %t -o %t/parallel.dwarf
+RUN: llvm-dwarfdump --verify %t/parallel.dwarf
+RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf | FileCheck %s
+
+# The output must not depend on thread interleaving.
+
+RUN: dsymutil --linker parallel -f --num-threads 1 \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map.map \
+RUN:     -oso-prepend-path %t -o %t/serial.dwarf
+RUN: cmp %t/parallel.dwarf %t/serial.dwarf
+
+# The classic linker resolves the imports to the same DIE.
+
+RUN: dsymutil --linker classic -f \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map.map \
+RUN:     -oso-prepend-path %t -o %t/classic.dwarf
+RUN: llvm-dwarfdump --verify %t/classic.dwarf
+RUN: llvm-dwarfdump --debug-info %t/classic.dwarf | FileCheck %s
+
+# When the module unit is in an ODR language, the DW_TAG_module describing the
+# module lands in the type table, and an import has to resolve to that copy.
+# The classic linker has no type table, so it is not run over this variant.
+
+RUN: mkdir -p %t/odr && cp %t/1.o %t/2.o %t/odr
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/odr/M.pcm %p/../Inputs/module-import-canonical/M-odr.ll
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map.map \
+RUN:     -oso-prepend-path %t/odr -o %t/odr.dwarf
+RUN: llvm-dwarfdump --verify %t/odr.dwarf
+RUN: llvm-dwarfdump --debug-info %t/odr.dwarf | FileCheck %s --check-prefix=ODR
+
+RUN: dsymutil --linker parallel -f --num-threads 1 \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map.map \
+RUN:     -oso-prepend-path %t/odr -o %t/odr-serial.dwarf
+RUN: cmp %t/odr.dwarf %t/odr-serial.dwarf
+
+# The module's own compile unit holds the DW_TAG_module carrying the bundle
+# path. Capture its offset. The DIE label strips leading zeros differently from
+# DW_AT_import, so anchor on the significant digits.
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"M"
+CHECK:      0x0[[MODULE:[0-9a-f]+]]: DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK-NEXT:   DW_AT_LLVM_include_path {{.*}}"/tmp/M.framework"
+
+# Each importing unit resolves its import to that DIE, not to any skeleton of
+# its own naming a different include path.
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"1.m"
+CHECK:        DW_TAG_imported_declaration
+CHECK:          DW_AT_import {{.*}}(0x{{0*}}[[MODULE]] "M")
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"2.m"
+CHECK:        DW_TAG_imported_declaration
+CHECK:          DW_AT_import {{.*}}(0x{{0*}}[[MODULE]] "M")
+
+# The type table holds the module DIE carrying the bundle path, and both
+# importing units resolve to it.
+
+ODR:      DW_TAG_compile_unit
+ODR:        DW_AT_name {{.*}}"__artificial_type_unit"
+ODR:      0x0[[TYPEMODULE:[0-9a-f]+]]: DW_TAG_module
+ODR-NEXT:   DW_AT_name {{.*}}"M"
+ODR-NEXT:   DW_AT_LLVM_include_path {{.*}}"/tmp/M.framework"
+
+ODR:      DW_TAG_compile_unit
+ODR:        DW_AT_name {{.*}}"1.m"
+ODR:        DW_AT_import {{.*}}(0x{{0*}}[[TYPEMODULE]] "M")
+
+ODR:      DW_TAG_compile_unit
+ODR:        DW_AT_name {{.*}}"2.m"
+ODR:        DW_AT_import {{.*}}(0x{{0*}}[[TYPEMODULE]] "M")

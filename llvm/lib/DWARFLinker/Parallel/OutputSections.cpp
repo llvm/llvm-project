@@ -67,6 +67,7 @@ void SectionDescriptor::clearAllSectionData() {
   ListDebugULEB128DieRefPatch.erase();
   ListDebugOffsetPatch.erase();
   ListDebugDieTypeRefPatch.erase();
+  ListDebugDieModuleRefPatch.erase();
   ListDebugType2TypeDieRefPatch.erase();
   ListDebugTypeDeclFilePatch.erase();
   ListDebugTypeLineStrPatch.erase();
@@ -430,6 +431,34 @@ void OutputSections::applyPatches(
     Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref_addr,
                   TypeEntry->getFinalDie().getOffset());
   });
+
+  Section.ListDebugDieModuleRefPatch.forEach(
+      [&](DebugDieModuleRefPatch &Patch) {
+        const ModuleAnchor &Anchor = *Patch.Anchor;
+
+        uint64_t FinalOffset;
+        if (Anchor.TypeName) {
+          assert(TypeUnitPtr != nullptr);
+          TypeEntryBody *TypeEntry = Anchor.TypeName->getValue().load();
+          assert(TypeEntry &&
+                 formatv("No data for type {0}", Anchor.TypeName->getKey())
+                     .str()
+                     .c_str());
+
+          FinalOffset = TypeEntry->getFinalDie().getOffset();
+        } else if (Anchor.Section) {
+          FinalOffset = Anchor.Section->StartOffset + Anchor.LocalOffset;
+        } else {
+          // No unit describes this module in full, so the importer's own
+          // skeleton is all the output has.
+          FinalOffset = Patch.RefDieIdxOrClonedOffset +
+                        Patch.RefCU.getPointer()
+                            ->getSectionDescriptor(DebugSectionKind::DebugInfo)
+                            .StartOffset;
+        }
+
+        Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref_addr, FinalOffset);
+      });
 
   Section.ListDebugType2TypeDieRefPatch.forEach(
       [&](DebugType2TypeDieRefPatch &Patch) {
