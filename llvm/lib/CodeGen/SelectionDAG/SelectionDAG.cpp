@@ -6152,7 +6152,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::POISON: {
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     Known.setSignBit(false);
     break;
   }
@@ -6195,7 +6195,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                     Depth + 1);
       } else {
         // Out of bounds index is poison.
-        Known.KnownFPClasses = fcNone;
+        Known.setKnownFPClasses(fcNone);
       }
     } else {
       Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
@@ -6243,7 +6243,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                 InterestedClasses, Depth + 1);
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
-    Known.KnownFPClasses &= ~AssertedClasses;
+    Known.setKnownFPClasses(Known.getKnownFPClasses() & ~AssertedClasses);
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
