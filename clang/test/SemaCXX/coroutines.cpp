@@ -1568,7 +1568,6 @@ void g() {
 }
 
 namespace GH194298 {
-// https://github.com/llvm/llvm-project/issues/194298
 coro<promise_void> f1() : bar { co_await suspend_always{} }; // expected-error {{only constructors take base initializers}}
 coro<promise> f2() : bar { co_yield 0 }; // expected-error {{only constructors take base initializers}}
 coro<promise_void> f3() : bar { co_return }; // expected-error {{expected expression}} \
