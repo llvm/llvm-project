@@ -11,27 +11,29 @@ define i8 @to_fp8_f32(float %x) {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_frexp_exp_i32_f32_e32 v3, v0
-; GFX942-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; GFX942-NEXT:    v_sub_u32_e32 v4, 15, v3
-; GFX942-NEXT:    v_and_b32_e32 v2, 0x7fffff, v1
 ; GFX942-NEXT:    v_min_u32_e32 v4, 31, v4
-; GFX942-NEXT:    v_or_b32_e32 v2, 0x800000, v2
+; GFX942-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; GFX942-NEXT:    v_sub_u32_e64 v6, v4, 1 clamp
-; GFX942-NEXT:    v_bfe_u32 v7, v2, 0, v6
+; GFX942-NEXT:    v_and_b32_e32 v2, 0x7fffff, v1
+; GFX942-NEXT:    v_lshlrev_b32_e64 v7, v6, 1
+; GFX942-NEXT:    v_or_b32_e32 v2, 0x800000, v2
+; GFX942-NEXT:    v_add_u32_e32 v7, -1, v7
+; GFX942-NEXT:    v_and_b32_e32 v7, v2, v7
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
 ; GFX942-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
-; GFX942-NEXT:    v_and_or_b32 v7, v5, 1, v7
-; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
+; GFX942-NEXT:    v_or_b32_e32 v7, v7, v5
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
 ; GFX942-NEXT:    s_movk_i32 s0, 0x80
-; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
-; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX942-NEXT:    v_and_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v2
 ; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 8, vcc
 ; GFX942-NEXT:    v_or3_b32 v2, v5, v4, v2

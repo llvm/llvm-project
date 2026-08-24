@@ -3273,19 +3273,19 @@ define void @vec384_i8_widen_to_i128_factor16_broadcast_to_v3i128_factor3(ptr %i
 ;
 ; AVX1-LABEL: vec384_i8_widen_to_i128_factor16_broadcast_to_v3i128_factor3:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm1
-; AVX1-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
+; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm1
+; AVX1-NEXT:    vpaddb 48(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm2
 ; AVX1-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm1, (%rcx)
 ; AVX1-NEXT:    vmovdqa %xmm0, 16(%rcx)
 ; AVX1-NEXT:    vmovdqa %xmm2, 32(%rcx)
-; AVX1-NEXT:    vmovdqa %xmm1, (%rcx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_i8_widen_to_i128_factor16_broadcast_to_v3i128_factor3:
