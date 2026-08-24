@@ -339,7 +339,7 @@ static BugDescription describeTaintBug(bounds::CheckResult Res,
                                        StringRef OffsetName) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}.",
+          formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}",
                   RegName, OffsetName, Res.mayUnderflow() ? " negative" : "",
                   (Res.mayUnderflow() && Res.mayOverflow()) ? " or" : "",
                   Res.mayOverflow() ? " too large" : "")};
