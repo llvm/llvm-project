@@ -110,6 +110,7 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "slsr"
+#define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE( DEBUG_TYPE "-rp", X)
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -1526,7 +1527,7 @@ public:
 #else
       unsigned RPBackward = maxPressureInBlockBackward(BB, BBToLiveness[&BB].LiveIn,
         BBToLiveness[&BB].LiveOut);
-      dbgs() << "MaxRPBackward:" << BB.getName() << ":" << RPBackward << "\n";
+      DEBUG_SLSR_RP(dbgs() << "MaxRPBackward:" << BB.getName() << ":" << RPBackward << "\n");
 #endif
 
     }
@@ -1733,8 +1734,9 @@ private:
         auto RW = regWeight(V);
         W += RW;
         if (IsDebugBlock && StoreCount == 32) {
-          dbgs() << "regweight: " << "i: " << i << " value: " << *V
-                 << " RW: " << RW << ", ";
+          DEBUG_SLSR_RP(
+                 {dbgs() << "regweight: " << "i: " << i << " value: " << *V
+                 << " RW: " << RW << ", ";});
           // dbgs() << "W: " << W << "\n";
         }
 
@@ -1752,7 +1754,7 @@ private:
         Open.erase(V);
 
       if (IsDebugBlock && StoreCount == 32) {
-        dbgs() << "W: " << W << " MaxW: " << MaxW << "\n";
+        DEBUG_SLSR_RP(dbgs() << "W: " << W << " MaxW: " << MaxW << "\n");
       }
     }
     return MaxW;
@@ -1837,7 +1839,7 @@ private:
             // When IsCand is true, there is only reg-like one Op in practice.
             // TODO: Can further restrict by Candidate's type and DeltaKind.
             LiveSetWithSLSR.erase(Op);
-            dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op << " in inst " << I << "\n";
+            DEBUG_SLSR_RP(dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op << " in inst " << I << "\n");
           } else {
             LiveSetWithSLSR.insert(Op);
           }
@@ -1869,7 +1871,7 @@ private:
       }
     }
 
-    dbgs() << "MaxWWithSLSR: " << MaxWWithSLSR << "\n";
+    DEBUG_SLSR_RP(dbgs() << "MaxWWithSLSR: " << MaxWWithSLSR << "\n");
 
     return MaxW;
   }
