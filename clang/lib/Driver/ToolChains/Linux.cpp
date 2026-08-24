@@ -891,9 +891,27 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                    options::OPT_fno_offload_via_llvm, false))
     return;
 
+  // On Debian and derivatives, the ROCm runtime ships under
+  // <rocm>/lib/<multiarch-triple>/ (e.g. /usr/lib/x86_64-linux-gnu/) rather
+  // than <rocm>/lib/. Prefer the multiarch subdir when libamdhip64.so lives
+  // there, so the absolute path emitted below, the -L search path, and any
+  // -rpath all resolve to a real file. Non-multiarch layouts (Fedora, Arch,
+  // /opt/rocm, etc.) are unaffected: the probe short-circuits when the
+  // multiarch subdir does not contain libamdhip64.so.
+  SmallString<0> HIPLibPath;
+  if (ActiveKinds & Action::OFK_HIP) {
+    HIPLibPath = RocmInstallation->getLibPath();
+    std::string MultiarchTriple =
+        getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
+    SmallString<0> MultiarchProbe = HIPLibPath;
+    llvm::sys::path::append(MultiarchProbe, MultiarchTriple, "libamdhip64.so");
+    if (getVFS().exists(MultiarchProbe))
+      llvm::sys::path::append(HIPLibPath, MultiarchTriple);
+  }
+
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
-    Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+    Libraries.emplace_back(HIPLibPath, "libamdhip64.so");
   else if ((ActiveKinds & Action::OFK_SYCL) &&
            !Args.hasArg(options::OPT_nolibsycl))
     Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
@@ -914,8 +932,7 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
 
   // FIXME: The ROCm builds implicitly depends on this being present.
   if (ActiveKinds & Action::OFK_HIP)
-    CmdArgs.push_back(
-        Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+    CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + HIPLibPath));
 
   // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
   // self-contained superset of clang_rt.profile, emitted first so the base
