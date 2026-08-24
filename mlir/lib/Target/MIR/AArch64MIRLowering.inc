@@ -1,3 +1,4 @@
+// clang-format off
 {"ABSWr", "abs"},
 {"ABSXr", "abs"},
 {"ABS_ZPmZ_B", "abs"},

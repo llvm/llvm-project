@@ -17,11 +17,11 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -42,8 +42,8 @@ static llvm::LLT typeToLLT(Type t) {
   if (auto p = dyn_cast<mir::PointerType>(t))
     return llvm::LLT::pointer(p.getAddressSpace(), p.getSizeInBits());
   if (auto v = dyn_cast<mir::VectorType>(t))
-    return llvm::LLT::fixed_vector(v.getNumElements(),
-                                   llvm::LLT::scalar(v.getElementType().getWidth()));
+    return llvm::LLT::fixed_vector(
+        v.getNumElements(), llvm::LLT::scalar(v.getElementType().getWidth()));
   return llvm::LLT();
 }
 
@@ -52,8 +52,7 @@ static llvm::LLT typeToLLT(Type t) {
 class Exporter {
 public:
   Exporter(llvm::MachineFunction &mf)
-      : mf(mf), mri(mf.getRegInfo()),
-        tii(mf.getSubtarget().getInstrInfo()),
+      : mf(mf), mri(mf.getRegInfo()), tii(mf.getSubtarget().getInstrInfo()),
         tri(mf.getSubtarget().getRegisterInfo()) {
     // Reverse map: opcode name -> opcode number.
     for (unsigned op = 0, e = tii->getNumOpcodes(); op != e; ++op)

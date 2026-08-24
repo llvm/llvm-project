@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // A TableGen backend that reads LLVM's generic (GlobalISel) opcode definitions
-// from `GenericInstruction` records (llvm/include/llvm/Target/GenericOpcodes.td)
-// and emits MLIR ODS operation definitions for the `mir` dialect.
+// from `GenericInstruction` records
+// (llvm/include/llvm/Target/GenericOpcodes.td) and emits MLIR ODS operation
+// definitions for the `mir` dialect.
 //
 // Each `G_*` record becomes an op `mir.g_*` derived from the `MIR_GenericOp`
 // base class. Generic-type operands/results (type0/ptype0/...) map onto the
@@ -48,8 +49,8 @@ static bool getBitOrFalse(const Record &record, llvm::StringRef field) {
 /// generated ODS accessors, appending `_` to C++ keywords.
 static std::string sanitizeName(llvm::StringRef name) {
   static const char *kKeywords[] = {
-      "register", "int",   "float",  "double", "char",  "bool",
-      "void",     "class", "struct", "const",  "static", "new",
+      "register", "int",      "float",    "double",  "char",   "bool",
+      "void",     "class",    "struct",   "const",   "static", "new",
       "delete",   "operator", "template", "default", "return"};
   for (const char *kw : kKeywords)
     if (name == kw)
@@ -77,7 +78,7 @@ static bool appendArg(llvm::StringRef defName, llvm::StringRef rawName,
   }
   // Immediate / opaque placeholders become attributes.
   if (defName == "unknown" || defName.ends_with("imm") ||
-      defName.starts_with("untyped_imm") || defName.starts_with("i") ) {
+      defName.starts_with("untyped_imm") || defName.starts_with("i")) {
     attributes.push_back(("AnyAttr:$" + argName));
     return true;
   }
@@ -121,7 +122,8 @@ static bool emitGenericOp(const Record &record, llvm::raw_ostream &os) {
     return true;
   };
 
-  if (!handleDag(outs, /*isResult=*/true) || !handleDag(ins, /*isResult=*/false))
+  if (!handleDag(outs, /*isResult=*/true) ||
+      !handleDag(ins, /*isResult=*/false))
     return false;
 
   // Traits.
@@ -167,7 +169,8 @@ static bool emitGenericOps(const RecordKeeper &records, llvm::raw_ostream &os) {
   os << "include \"mlir/Dialect/MIR/IR/MIRTypes.td\"\n";
   os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
   unsigned emitted = 0, skipped = 0;
-  for (const Record *r : records.getAllDerivedDefinitions("GenericInstruction")) {
+  for (const Record *r :
+       records.getAllDerivedDefinitions("GenericInstruction")) {
     if (emitGenericOp(*r, os))
       ++emitted;
     else {

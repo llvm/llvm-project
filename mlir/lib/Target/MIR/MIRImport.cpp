@@ -120,7 +120,7 @@ private:
       if (dst.getReg().isVirtual() && src.getReg().isPhysical()) {
         Type ty = regType(dst.getReg());
         auto reg = mir::PhysRegAttr::get(ctx, physRegName(src.getReg()));
-        auto op = b.create<mir::CopyFromPhysOp>(loc, ty, reg);
+        auto op = mir::CopyFromPhysOp::create(b, loc, ty, reg);
         map(dst.getReg(), op.getResult());
         return success();
       }
@@ -130,7 +130,7 @@ private:
         if (!v)
           return failure();
         auto reg = mir::PhysRegAttr::get(ctx, physRegName(dst.getReg()));
-        b.create<mir::CopyToPhysOp>(loc, v, reg);
+        mir::CopyToPhysOp::create(b, loc, v, reg);
         return success();
       }
       // vreg = COPY vreg   -> mir.copy
@@ -138,7 +138,7 @@ private:
         Value v = lookup(src.getReg());
         if (!v)
           return failure();
-        auto op = b.create<mir::CopyOp>(loc, v.getType(), v);
+        auto op = mir::CopyOp::create(b, loc, v.getType(), v);
         map(dst.getReg(), op.getResult());
         return success();
       }
@@ -253,8 +253,8 @@ static OwningOpRef<Operation *> translateMIRToModule(llvm::SourceMgr &sourceMgr,
   std::string err;
   const llvm::Target *target = llvm::TargetRegistry::lookupTarget(triple, err);
   if (!target) {
-    emitError(UnknownLoc::get(ctx)) << "no target for triple " << triple.str()
-                                    << ": " << err;
+    emitError(UnknownLoc::get(ctx))
+        << "no target for triple " << triple.str() << ": " << err;
     return {};
   }
   llvm::TargetOptions options;
@@ -279,7 +279,7 @@ static OwningOpRef<Operation *> translateMIRToModule(llvm::SourceMgr &sourceMgr,
     llvm::MachineFunction *mf = mmi.getMachineFunction(f);
     if (!mf)
       continue;
-    auto func = b.create<mir::FuncOp>(loc, f.getName());
+    auto func = mir::FuncOp::create(b, loc, f.getName());
     Block *body = &func.getBody().emplaceBlock();
     if (failed(Importer(ctx, *mf).run(body))) {
       emitError(loc) << "unsupported construct while importing @"
@@ -294,7 +294,8 @@ static OwningOpRef<Operation *> translateMIRToModule(llvm::SourceMgr &sourceMgr,
 namespace mlir {
 void registerFromMIRTranslation() {
   TranslateToMLIRRegistration registration(
-      "import-mir", "Translate pre-RA LLVM MachineIR (.mir) to the MIR dialects",
+      "import-mir",
+      "Translate pre-RA LLVM MachineIR (.mir) to the MIR dialects",
       [](llvm::SourceMgr &sourceMgr,
          MLIRContext *ctx) -> OwningOpRef<Operation *> {
         return translateMIRToModule(sourceMgr, ctx);

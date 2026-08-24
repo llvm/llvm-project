@@ -43,11 +43,9 @@ static llvm::cl::opt<std::string>
                                    "(e.g. AArch64)"),
                     llvm::cl::init("AArch64"), llvm::cl::cat(targetOpCat));
 
-static llvm::cl::opt<std::string>
-    dialectClass("mir-target-opbase",
-                 llvm::cl::desc("ODS base class for the generated ops"),
-                 llvm::cl::init("AArch64MIR_TargetOp"),
-                 llvm::cl::cat(targetOpCat));
+static llvm::cl::opt<std::string> dialectClass(
+    "mir-target-opbase", llvm::cl::desc("ODS base class for the generated ops"),
+    llvm::cl::init("AArch64MIR_TargetOp"), llvm::cl::cat(targetOpCat));
 
 static llvm::cl::opt<bool> emitLowering(
     "mir-emit-lowering",
@@ -101,11 +99,11 @@ static std::string sanitizeIdent(llvm::StringRef name) {
   if (out.empty() || !llvm::isAlpha(out[0]))
     out = "op_" + out;
   static const char *kReserved[] = {
-      "and",     "and_eq", "bitand", "bitor", "compl", "not",    "not_eq",
-      "or",      "or_eq",  "xor",    "xor_eq", "int",  "float",  "double",
-      "char",    "bool",   "void",   "class",  "struct", "const", "static",
-      "new",     "delete", "operator", "template", "default", "return",
-      "register"};
+      "and",      "and_eq",  "bitand", "bitor",   "compl",  "not",
+      "not_eq",   "or",      "or_eq",  "xor",     "xor_eq", "int",
+      "float",    "double",  "char",   "bool",    "void",   "class",
+      "struct",   "const",   "static", "new",     "delete", "operator",
+      "template", "default", "return", "register"};
   for (const char *kw : kReserved)
     if (out == kw)
       return out + "_";
@@ -115,9 +113,9 @@ static std::string sanitizeIdent(llvm::StringRef name) {
 namespace {
 /// Accumulated information for one mnemonic cluster.
 struct Cluster {
-  bool anyResults = false;   // some variant defines results
-  bool anyOperands = false;  // some variant takes inputs
-  bool allPure = true;       // every variant is side-effect free
+  bool anyResults = false;  // some variant defines results
+  bool anyOperands = false; // some variant takes inputs
+  bool allPure = true;      // every variant is side-effect free
   bool anyCommutable = false;
   llvm::SmallVector<std::string> opcodes; // concrete record names subsumed
 };
@@ -127,7 +125,7 @@ struct Cluster {
 static unsigned numDagArgs(const Record &record, llvm::StringRef field) {
   if (const auto *dag = llvm::dyn_cast_or_null<llvm::DagInit>(
           record.getValue(field) ? record.getValue(field)->getValue()
-                                  : nullptr))
+                                 : nullptr))
     return dag->getNumArgs();
   return 0;
 }
@@ -140,6 +138,9 @@ static bool emitTargetOps(const RecordKeeper &records, llvm::raw_ostream &os) {
     os << "include \"mlir/Dialect/MIR/IR/MIRTypes.td\"\n";
     os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
   }
+  // The lowering table is a generated data table; keep clang-format off it.
+  if (emitLowering)
+    os << "// clang-format off\n";
 
   // Cluster instructions by mnemonic, preserving first-seen order.
   llvm::StringMap<unsigned> clusterIndex;
@@ -199,8 +200,8 @@ static bool emitTargetOps(const RecordKeeper &records, llvm::raw_ostream &os) {
     if (c.anyCommutable)
       traits.push_back("Commutative");
 
-    os << "def " << targetNamespace << "MIR_" << ident << " : "
-       << dialectClass << "<\"" << opName << "\", [";
+    os << "def " << targetNamespace << "MIR_" << ident << " : " << dialectClass
+       << "<\"" << opName << "\", [";
     llvm::interleaveComma(traits, os);
     os << "]> {\n";
     os << "  let arguments = (ins Variadic<MIR_AnyLLT>:$srcs,\n"
@@ -214,6 +215,9 @@ static bool emitTargetOps(const RecordKeeper &records, llvm::raw_ostream &os) {
     ++emitted;
   }
 
+  // Note: in lowering mode the whole file stays under `clang-format off`
+  // (opened above); it is #included inside an array initializer, so we do not
+  // re-enable formatting for the trailing summary comment.
   os << "// Considered " << considered << " instructions, emitted " << emitted
      << " ops across " << clusters.size() << " mnemonics.\n";
   return false;
