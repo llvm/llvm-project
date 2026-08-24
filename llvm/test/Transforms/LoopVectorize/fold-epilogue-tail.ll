@@ -7,11 +7,18 @@
 ; RUN: --disable-output -force-vector-width=16 -epilogue-vectorization-force-VF=8 -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
-; RUN:  -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
-
 ; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -epilogue-vectorization-force-VF=8  \
-; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
+; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
+
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
+; RUN:  -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
+
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=8 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VFs
+
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 \
+; RUN: -enable-early-exit-vectorization-with-side-effects < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EARLY-EXIT
 
 ; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize -enable-vplan-native-path --disable-output \
 ; RUN: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize \
@@ -27,10 +34,13 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
 ;
 ; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced main/epilogue loop VF
+; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied without forced main/epilogue loop VF
 
 ; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced main/epilogue loop VF
+; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied without forced main/epilogue loop VF
+;
+; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when mainVF <= epilogueVF
 ;
 
 entry:
@@ -78,7 +88,7 @@ exit.2:
 
 define i32 @opt_for_size(ptr %p, i32 %n, i8 %val) optsize {
 ; CHECK-LABEL: Checking a loop in 'opt_for_size'
-; CHECK: remark: <unknown>:0:0: No epilogue to apply tail-folding for. Fall back to a normal epilogue
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since tail-folding is already requested for the main vector loop.
 ;
 entry:
   br label %for.body
@@ -97,7 +107,7 @@ for.end:
 
 define i32 @low_tc(ptr %p, i8 %val)  {
 ; CHECK-LABEL: Checking a loop in 'low_tc'
-; CHECK: remark: <unknown>:0:0: No epilogue to apply tail-folding for. Fall back to a normal epilogue
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since tail-folding is already requested for the main vector loop.
 ;
 entry:
   br label %for.body
@@ -114,30 +124,9 @@ for.end:
   ret i32 0
 }
 
-define i32 @any-of-redc(ptr %src, i64 %n) {
-; CHECK-LABEL: Checking a loop in 'any-of-redc'
-; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for select-cmp Reductions
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %red = phi i32 [ 0, %entry ], [ %select, %loop ]
-  %gep = getelementptr inbounds i8, ptr %src, i64 %iv
-  %load = load i8, ptr %gep, align 1
-  %icmp = icmp eq i8 %load, 0
-  %select = select i1 %icmp, i32 1, i32 %red
-  %iv.next = add i64 %iv, 1
-  %icmp3 = icmp eq i64 %iv, %n
-  br i1 %icmp3, label %exit, label %loop
-
-exit:
-  ret i32 %select
-}
-
 define i1 @early_exit(ptr %A, i64 %n, i8 %find) {
-; CHECK-LABEL: LV: Checking a loop in 'early_exit'
-; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
+; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'early_exit'
+; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
 ;
 entry:
   br label %for.body
@@ -155,6 +144,34 @@ cont:
   br i1 %contcond, label %for.body, label %exit
 exit:
   ret i1 %exitcond
+}
+
+; For this function, the check line is not related to epilogue tail-folding, but when vectorizing this case gets supported,
+; the check line should be changed to: Epilogue tail-folding is not supported yet for early-exit loops, same as the case above.
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'combined_exit_conditions'
+; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: loop not vectorized: Cannot vectorize uncountable loop
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+  %data = load i32, ptr %src.ptr, align 4
+  %add = add nsw i32 %data, 1
+  %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+  store i32 %add, ptr %dst.ptr, align 4
+  %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+  %ee.val = load i32, ptr %ee.ptr, align 4
+  %ee.cmp = icmp ne i32 %ee.val, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cmp = icmp eq i64 %iv.next, 20
+  %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret void
 }
 
 define void @test_outer_loop(ptr %A, i64 %m) {

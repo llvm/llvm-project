@@ -7156,8 +7156,15 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
   }
 
   if (!Hints.getWidth() || !hasForcedEpilogueVF()) {
-    reportVectorizationInfo("For now, Epilogue tail-folding can't be "
+    reportVectorizationInfo("For now, epilogue tail-folding can't be "
                             "applied without forced main/epilogue loop VF",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
+    reportVectorizationInfo("For now, epilogue tail-folding can't be "
+                            "applied when mainVF <= epilogueVF",
                             "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
     return CM_EpilogueAllowed;
   }
@@ -7180,31 +7187,15 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
 
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
-    reportVectorizationInfo("No epilogue to apply tail-folding for. Fall back "
-                            "to a normal epilogue",
-                            "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  // For now epilogue TF is not supported for some kinds of reductions that
-  // results in more overhead
-  bool HasReductions = !LVL.getReductionVars().empty();
-  bool HasSelectCmpReductions =
-      HasReductions &&
-      any_of(LVL.getReductionVars(), [](auto &Reduction) -> bool {
-        const RecurrenceDescriptor &RdxDesc = Reduction.second;
-        RecurKind RK = RdxDesc.getRecurrenceKind();
-        return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-               RecurrenceDescriptor::isFindIVRecurrenceKind(RK);
-      });
-  if (HasSelectCmpReductions) {
     reportVectorizationInfo(
-        "Epilogue tail-folding is not supported yet for select-cmp Reductions",
+        "Not applying tail-folding to the epilogue, since tail-folding is "
+        "already requested for the main vector loop.",
         "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
 
-  if (L->getExitingBlock() != L->getLoopLatch()) {
+  if (L->getExitingBlock() != L->getLoopLatch() ||
+      LVL.hasUncountableEarlyExit()) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported yet for early-exit loops",
         "InvalidTailFoldedEpilogue", ORE, L);
