@@ -9296,6 +9296,16 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
         parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
         outlinedFnLoc.getCol(), SP, outlinedFnLoc.getInlinedAt()));
 
+  // OMPIRBuilder emits runtime calls into the outlined function before bodyCB
+  // below gets a chance to attach the subprogram to it, so it needs the
+  // outlined function's location handed to it separately. Only pass it under
+  // the same condition that decides whether the subprogram is attached at all:
+  // a location may not be attached to an instruction in a function that has no
+  // subprogram.
+  llvm::DebugLoc outlinedFnDbgLoc;
+  if (outlinedFnLoc && parentLLVMFn->getSubprogram())
+    outlinedFnDbgLoc = outlinedFnLoc;
+
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   bool isGPU = ompBuilder->Config.isGPU();
@@ -9695,7 +9705,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), deallocBlocks,
           info, entryInfo, defaultAttrs, runtimeAttrs, ifCond, kernelInput,
           genMapInfoCB, bodyCB, argAccessorCB, customMapperCB, dds,
-          targetOp.getNowait(), dynSizeVal, fallbackType);
+          targetOp.getNowait(), dynSizeVal, fallbackType, outlinedFnDbgLoc);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
