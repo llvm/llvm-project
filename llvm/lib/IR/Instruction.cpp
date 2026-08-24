@@ -814,13 +814,13 @@ void Instruction::andIRFlags(const Value *V) {
 }
 
 void Instruction::intersectIRAttributes(const Instruction *I) {
+  assert(I->getOpcode() == getOpcode() &&
+         "Intersecting attributes between different operations is unsupported");
+
   // TODO: Should we intersect metadata here too?
   andIRFlags(I);
 
-  auto IsLoadOrStore = [](const Instruction *I) {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
-  };
-  if (IsLoadOrStore(I) && IsLoadOrStore(this)) {
+  if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
     Align Common =
         std::min(getLoadStoreAlignment(this), getLoadStoreAlignment(I));
     assert(isAligned(Common, getLoadStoreAlignment(this).value()) &&
