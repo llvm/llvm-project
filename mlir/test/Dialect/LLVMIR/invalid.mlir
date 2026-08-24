@@ -831,6 +831,14 @@ func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
 
 // -----
 
+func.func @atomicrmw_expected_float_ignore_denormal_mode(%i32_ptr : !llvm.ptr, %i32 : i32) {
+  // expected-error@+1 {{expected floating-point operation with 'ignore_denormal_mode'}}
+  %0 = llvm.atomicrmw ignore_denormal_mode add %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  llvm.return
+}
+
+// -----
+
 func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that operand #1 and operand #2 have the same type}}
   %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>

@@ -154,8 +154,7 @@ def ROCDL_Dialect : Dialect {
      // Correspond to LLVM metadata of the same name
      "::mlir::UnitAttr":$last_use,
      "::mlir::UnitAttr":$no_remote_memory,
-     "::mlir::UnitAttr":$no_fine_grained_memory,
-     "::mlir::UnitAttr":$ignore_denormal_mode
+     "::mlir::UnitAttr":$no_fine_grained_memory
   );
 
   let useDefaultAttributePrinterParser = 1;

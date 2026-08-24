@@ -239,12 +239,6 @@ public:
         i->setMetadata("amdgpu.no.fine.grained.memory",
                        llvm::MDNode::get(llvmContext, {}));
     }
-    if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
-        attribute.getName()) {
-      for (llvm::Instruction *i : instructions)
-        i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
-                       llvm::MDNode::get(llvmContext, {}));
-    }
 
     return success();
   }
