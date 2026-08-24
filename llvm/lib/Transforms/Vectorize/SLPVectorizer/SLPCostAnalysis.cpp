@@ -32,7 +32,7 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
-    return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+    return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
                               Args);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
@@ -40,10 +40,10 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                              Mask, NumSrcElts, NumSubElts, Index)) {
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
-      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
-                                CostKind, Index, Tp);
+      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
+                                Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
                             Args);
 }
 
