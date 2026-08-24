@@ -933,17 +933,14 @@ bool RISCVLegalizerInfo::legalizeReadCounter(
 
   // Splice the instructions after the readcyclecounter into DoneMBB, notifying
   // the observer about each moved instruction so CSEInfo stays consistent.
-  SmallVector<MachineInstr *, 4> MovedInstrs;
   for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
                                    E = BB->end();
        I != E; ++I)
-    MovedInstrs.push_back(&*I);
-  for (MachineInstr *MovedMI : MovedInstrs)
-    Observer.changingInstr(*MovedMI);
+    Observer.changingInstr(*I);
   DoneMBB->splice(DoneMBB->begin(), BB,
                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  for (MachineInstr *MovedMI : MovedInstrs)
-    Observer.changedInstr(*MovedMI);
+  for (MachineInstr &MovedMI : DoneMBB->instrs())
+    Observer.changedInstr(MovedMI);
   DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
   BB->addSuccessor(LoopMBB);
 
