@@ -185,8 +185,8 @@ def FeatureStdExtZicfilp
                                  [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<1, 0, "Shadow stack",
-                                 [FeatureStdExtZicsr, FeatureStdExtZimop]>,
+    : RISCVExtension<1, 0, "Shadow stack",
+                     [FeatureStdExtZicsr, FeatureStdExtZimop]>,
       RISCVExtensionBitmask<1, 27>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
@@ -1073,13 +1073,13 @@ def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
 def FeatureStdExtSmcsps
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Conditional Stack Pointer Swap at Machine Level">;
 def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
                       AssemblerPredicate<(all_of FeatureStdExtSmcsps),
                           "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
 def FeatureStdExtSscsps
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Conditional Stack Pointer Swap at Supervisor Level",
                                  [FeatureStdExtSmcsps]>;
 def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
@@ -1100,20 +1100,35 @@ def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
 def FeatureStdExtSmijt
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
 def FeatureStdExtSsijt
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Supervisor Level">;
 
 def FeatureStdExtSmehv
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Synchronous Exception Hardware Vectoring at Machine Level",
                                  [FeatureStdExtSmijt]>;
 def FeatureStdExtSsehv
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Synchronous Exception Hardware Vectoring at Supervisor Level",
                                  [FeatureStdExtSsijt]>;
+
+def FeatureStdExtSmip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Machine Level">;
+def HasStdExtSmip : Predicate<"Subtarget->hasStdExtSmip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSmip),
+                        "'Smip' (Support for Interrupt Handler Push/Pop at "
+                        "Machine Level)">;
+def FeatureStdExtSsip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Supervisor Level">;
+def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSsip),
+                        "'Ssip' (Support for Interrupt Handler Push/Pop at "
+                        "Supervisor Level)">;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;

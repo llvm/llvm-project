@@ -6384,7 +6384,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
           VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
-      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+      assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
@@ -8370,7 +8370,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
-  assert(!verifyFunction(*F, &dbgs()));
 
   return true;
 }
@@ -8436,6 +8435,11 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 #endif
     }
   }
+
+  // Verify once per function rather than once per processed loop, which would
+  // make the pass quadratic in the number of loops.
+  assert((!Changed || !verifyFunction(F, &dbgs())) &&
+         "Invalid IR produced by LoopVectorize");
 
   // Process each loop nest in the function.
   return LoopVectorizeResult(Changed, CFGChanged);

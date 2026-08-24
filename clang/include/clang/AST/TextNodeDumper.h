@@ -216,6 +216,7 @@ public:
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
+  void dumpBareConcept(TemplateName TN);
   void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
