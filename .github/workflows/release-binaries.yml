@@ -181,7 +181,7 @@ jobs:
             ;;
           windows-11-arm)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-              build_runs_on="$INPUTS_RUNS_ON"
+              build_runs_on="windows-11-vs2026-arm"
             else
               build_runs_on="windows-11-arm-16core"
             fi
