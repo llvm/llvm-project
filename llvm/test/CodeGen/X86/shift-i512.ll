@@ -220,17 +220,17 @@ define i512 @shl_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX512VBMI-NEXT:    vpbroadcastq %rdi, %zmm1
 ; AVX512VBMI-NEXT:    movl %edi, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %edi
-; AVX512VBMI-NEXT:    andl $56, %edi
-; AVX512VBMI-NEXT:    negl %edi
-; AVX512VBMI-NEXT:    movslq %edi, %rdx
-; AVX512VBMI-NEXT:    vmovdqu64 -64(%rsp,%rdx), %zmm1
-; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm1[0,1,2,3,4,5,6]
-; AVX512VBMI-NEXT:    vpbroadcastq %rcx, %zmm2
-; AVX512VBMI-NEXT:    vpshldvq %zmm2, %zmm0, %zmm1
-; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm1, 32(%rax)
-; AVX512VBMI-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512VBMI-NEXT:    shrl $3, %ecx
+; AVX512VBMI-NEXT:    andl $56, %ecx
+; AVX512VBMI-NEXT:    negl %ecx
+; AVX512VBMI-NEXT:    movslq %ecx, %rcx
+; AVX512VBMI-NEXT:    vmovdqu64 -64(%rsp,%rcx), %zmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm2[0,1,2,3,4,5,6]
+; AVX512VBMI-NEXT:    vpshldvq %zmm1, %zmm0, %zmm2
+; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm2, 32(%rax)
+; AVX512VBMI-NEXT:    vmovdqu %ymm2, (%rax)
 ; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
@@ -434,15 +434,15 @@ define i512 @lshr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; AVX512VBMI-NEXT:    movl %ecx, %edx
+; AVX512VBMI-NEXT:    vpbroadcastq %rcx, %zmm1
+; AVX512VBMI-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VBMI-NEXT:    shrl $3, %ecx
 ; AVX512VBMI-NEXT:    andl $56, %ecx
-; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rcx), %zmm1
-; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm1[1,2,3,4,5,6,7],zmm0[0]
-; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm2
-; AVX512VBMI-NEXT:    vpshrdvq %zmm2, %zmm0, %zmm1
-; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm1, 32(%rax)
-; AVX512VBMI-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rcx), %zmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm2[1,2,3,4,5,6,7],zmm0[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm1, %zmm0, %zmm2
+; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm2, 32(%rax)
+; AVX512VBMI-NEXT:    vmovdqu %ymm2, (%rax)
 ; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
