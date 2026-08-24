@@ -814,6 +814,11 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
     if (BinOp->getOpcode() == Instruction::SDiv)
       BinOp->setIsExact(Instr->isExact());
 
+  // This narrowing is only valid at the uses of the result. A debug record
+  // can describe the value outside that range, where the narrow computation
+  // does not have the source-level value. Do not transfer those records to the
+  // sign-extended replacement.
+  Instr->dropDbgRecords();
   Instr->replaceAllUsesWith(Sext);
   Instr->eraseFromParent();
   return true;
@@ -1111,6 +1116,10 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
+  // The replacement is equivalent only where LVI proved the operand
+  // non-negative. Debug records may be observed outside that range, where an
+  // arithmetic and logical shift have different values.
+  SDI->dropDbgRecords();
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
 
