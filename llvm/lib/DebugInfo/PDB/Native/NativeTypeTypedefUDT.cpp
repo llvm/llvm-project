@@ -1,4 +1,12 @@
-#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedef.h"
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedefUDT.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 
@@ -6,14 +14,14 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-NativeTypeTypedef::NativeTypeTypedef(NativeSession &Session, SymIndexId Id,
+NativeTypeTypedefUDT::NativeTypeTypedefUDT(NativeSession &Session, SymIndexId Id,
                                      codeview::UDTSym Typedef)
     : NativeRawSymbol(Session, PDB_SymType::Typedef, Id),
       Record(std::move(Typedef)) {}
 
-NativeTypeTypedef::~NativeTypeTypedef() = default;
+NativeTypeTypedefUDT::~NativeTypeTypedefUDT() = default;
 
-void NativeTypeTypedef::dump(raw_ostream &OS, int Indent,
+void NativeTypeTypedefUDT::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,
                              PdbSymbolIdField RecurseIdFields) const {
   NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
@@ -22,10 +30,10 @@ void NativeTypeTypedef::dump(raw_ostream &OS, int Indent,
                     PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
 }
 
-std::string NativeTypeTypedef::getName() const {
+std::string NativeTypeTypedefUDT::getName() const {
   return std::string(Record.Name);
 }
 
-SymIndexId NativeTypeTypedef::getTypeId() const {
+SymIndexId NativeTypeTypedefUDT::getTypeId() const {
   return Session.getSymbolCache().findSymbolByTypeIndex(Record.Type);
 }
