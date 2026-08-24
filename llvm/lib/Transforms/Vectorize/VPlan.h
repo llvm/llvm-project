@@ -77,7 +77,6 @@ using VPlanPtr = std::unique_ptr<VPlan>;
 /// Different methods of handling early exits.
 ///
 enum class UncountableExitStyle {
-  NoUncountableExit = 0,
   /// No side effects to worry about, so we can process any uncountable exits
   /// in the loop and branch either to the middle block if the trip count was
   /// reached, or an early exitblock to determine which exit was taken.
@@ -1107,8 +1106,10 @@ public:
   /// Returns true if the set flags are valid for \p Opcode.
   LLVM_ABI_FOR_TEST bool flagsValidForOpcode(unsigned Opcode) const;
 
-  /// Returns true if \p Opcode has its required flags set.
-  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode) const;
+  /// Returns true if \p Opcode with scalar result type \p ResultTy has its
+  /// required flags set.
+  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode,
+                                                   Type *ResultTy) const;
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1841,7 +1842,12 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
                             computeScalarTypeForInstruction(Opcode, Operands),
                             Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {
+    assert(flagsValidForOpcode(Opcode) &&
+           "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode, getScalarType()) &&
+           "Opcode requires specific flags to be set");
+  }
 
   ~VPWidenRecipe() override = default;
 
@@ -1899,7 +1905,7 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
-    assert(hasRequiredFlagsForOpcode(Opcode) &&
+    assert(hasRequiredFlagsForOpcode(Opcode, ResultTy) &&
            "Opcode requires specific flags to be set");
     setUnderlyingValue(CI);
   }
@@ -2976,6 +2982,8 @@ public:
                     return getMask(I)->getScalarType()->isIntegerTy(1);
                   }) &&
            "masks must be a bool");
+    assert(hasRequiredFlagsForOpcode(Instruction::PHI, getScalarType()) &&
+           "blends require the flags of the phi they replace");
     setUnderlyingValue(Phi);
   }
 
@@ -4917,6 +4925,13 @@ public:
   bool hasTailFolded() const {
     const VPRegionBlock *LoopRegion = getVectorLoopRegion();
     return LoopRegion && LoopRegion->getHeaderMask();
+  }
+
+  /// Returns true if the plan requires a scalar epilogue after the vector
+  /// loop. Must be called before removeBranchOnConst.
+  bool requiresScalarEpilogue() const {
+    const VPBasicBlock *MiddleVPBB = getMiddleBlock();
+    return MiddleVPBB->getSingleSuccessor() == getScalarPreheader();
   }
 
   /// Returns the 'middle' block of the plan, that is the block that selects

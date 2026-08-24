@@ -395,12 +395,10 @@ define void @latch_postinc_nuw_unsigned_lower_bound_folds(ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[IV]], 100
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[LT]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    store i8 [[Z]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

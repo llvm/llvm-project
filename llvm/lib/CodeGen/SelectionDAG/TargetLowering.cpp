@@ -9349,6 +9349,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   switch (Sem) {
   case APFloatBase::S_Float8E5M2:
   case APFloatBase::S_Float8E4M3FN:
+  case APFloatBase::S_Float8E5M3FNU:
   case APFloatBase::S_Float6E3M2FN:
   case APFloatBase::S_Float6E2M3FN:
   case APFloatBase::S_Float4E2M1FN:
@@ -9380,7 +9381,9 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   const unsigned DstBits = APFloat::getSizeInBits(DstSem);
   const unsigned DstPrecision = APFloat::semanticsPrecision(DstSem);
   const unsigned DstMant = DstPrecision - 1;
-  const unsigned DstExpBits = DstBits - DstMant - 1;
+  // Unsigned formats spend no bit on the sign.
+  const bool DstHasSign = APFloat::semanticsHasSignedRepr(DstSem);
+  const unsigned DstExpBits = DstBits - (DstHasSign ? 1 : 0) - DstMant;
   const int DstBias = 1 - APFloat::semanticsMinExponent(DstSem);
   const unsigned DstExpMax = (1U << DstExpBits) - 1;
   const uint64_t DstMantMask = (DstMant > 0) ? ((1ULL << DstMant) - 1) : 0;
@@ -9553,10 +9556,13 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       DAG.getNode(ISD::ADD, dl, IntVT, NewExp,
                   DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, MantOverflow));
 
-  // Precompute sign shifted to MSB of destination.
+  // Precompute sign shifted to MSB of destination. Unsigned formats have no
+  // sign bit to merge in.
   SDValue SignShifted =
-      DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
-                  DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+      DstHasSign
+          ? DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
+                        DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl))
+          : Zero;
 
   // Destination denormal conversion (when new_exp <= 0).
   // Shift the mantissa right by 1 - new_exp additional bits and set the
@@ -9739,6 +9745,17 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   SDValue Result = FiniteResult;
   Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
+
+  // Negative values are unrepresentable in an unsigned format: clamp to zero
+  // when saturating, poison otherwise so no select is needed. -0.0 is handled
+  // by IsZero above. Run before the NaN case so a negative NaN still yields
+  // NaN.
+  if (!DstHasSign && Saturate) {
+    SDValue IsNegative =
+        DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETOLT);
+    Result = DAG.getSelect(dl, IntVT, IsNegative, Zero, Result);
+  }
+
   Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
 
   // Truncate to destination integer type.
@@ -9760,6 +9777,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   switch (Sem) {
   case APFloatBase::S_Float8E5M2:
   case APFloatBase::S_Float8E4M3FN:
+  case APFloatBase::S_Float8E5M3FNU:
   case APFloatBase::S_Float6E3M2FN:
   case APFloatBase::S_Float6E2M3FN:
   case APFloatBase::S_Float4E2M1FN:
@@ -9775,7 +9793,9 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
   const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
   const unsigned SrcMant = SrcPrecision - 1;
-  const unsigned SrcExp = SrcBits - SrcMant - 1;
+  // Unsigned formats spend no bit on the sign.
+  const bool SrcHasSign = APFloat::semanticsHasSignedRepr(SrcSem);
+  const unsigned SrcExp = SrcBits - (SrcHasSign ? 1 : 0) - SrcMant;
   const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
   const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
 
@@ -9816,13 +9836,16 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
                               DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
                   DAG.getConstant(ExpMask, dl, IntVT));
 
-  SDValue SignBit =
-      DAG.getNode(ISD::SRL, dl, IntVT, Src,
-                  DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
-
+  // An unsigned source has no sign bit; bit SrcBits - 1 is part of the
+  // exponent.
   SDValue SignShifted =
-      DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
-                  DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+      SrcHasSign
+          ? DAG.getNode(
+                ISD::SHL, dl, IntVT,
+                DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                            DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl)),
+                DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl))
+          : Zero;
 
   // Classify the input.
   SDValue ExpAllOnes = DAG.getConstant(ExpMask, dl, IntVT);
@@ -11162,7 +11185,7 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
   // %cond = to_bool_vec %source
   // %splat = splat /*val=*/VL
   // %tz = step_vector
-  // %v = vp.select %cond, /*true=*/tz, /*false=*/%splat
+  // %v = select %cond, /*true=*/tz, /*false=*/%splat
   // %r = vp.reduce.umin %v
   SDLoc DL(N);
   SDValue Source = N->getOperand(0);
@@ -11178,15 +11201,13 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
     SDValue AllZero = DAG.getConstant(0, DL, SrcVT);
     SrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                              SrcVT.getVectorElementCount());
-    Source = DAG.getNode(ISD::VP_SETCC, DL, SrcVT, Source, AllZero,
-                         DAG.getCondCode(ISD::SETNE), Mask, EVL);
+    Source = DAG.getSetCC(DL, SrcVT, Source, AllZero, ISD::SETNE);
   }
 
   SDValue ExtEVL = DAG.getZExtOrTrunc(EVL, DL, ResVT);
   SDValue Splat = DAG.getSplat(ResVecVT, DL, ExtEVL);
   SDValue StepVec = DAG.getStepVector(DL, ResVecVT);
-  SDValue Select =
-      DAG.getNode(ISD::VP_SELECT, DL, ResVecVT, Source, StepVec, Splat, EVL);
+  SDValue Select = DAG.getSelect(DL, ResVecVT, Source, StepVec, Splat);
   return DAG.getNode(ISD::VP_REDUCE_UMIN, DL, ResVT, ExtEVL, Select, Mask, EVL);
 }
 
