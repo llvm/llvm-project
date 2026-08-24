@@ -28,6 +28,7 @@ static_library("Instrumentation") {
     "ControlHeightReduction.cpp",
     "CopyProf.cpp",
     "DataFlowSanitizer.cpp",
+    "DeviceAddressSanitizer.cpp",
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",

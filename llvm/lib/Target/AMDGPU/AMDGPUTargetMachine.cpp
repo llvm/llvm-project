@@ -770,6 +770,7 @@ AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
     return F->isDeclaration() || F->getName().starts_with("__asan_") ||
+           F->getName().starts_with("__dasan_") ||
            F->getName().starts_with("__sanitizer_") ||
            AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
