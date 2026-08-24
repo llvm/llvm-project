@@ -2248,6 +2248,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
+  if (Ty.getAddressSpace() == LangAS::opencl_constant)
+    Load->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                      llvm::MDNode::get(Load->getContext(), {}));
   if (isNontemporal) {
     llvm::MDNode *Node = llvm::MDNode::get(
         Load->getContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
