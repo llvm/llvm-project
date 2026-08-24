@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel -mcpu=mips1 < %s | FileCheck %s -check-prefix=MIPS1-LE
-; RUN: llc -march=mips -mcpu=mips1 < %s | FileCheck %s -check-prefix=MIPS1-BE
+; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips1 < %s | FileCheck %s -check-prefix=MIPS1-LE
+; RUN: llc -mtriple=mips-linux-gnu -mcpu=mips1 < %s | FileCheck %s -check-prefix=MIPS1-BE
 
 @test = global double 1.000000e+00, align 8
 
