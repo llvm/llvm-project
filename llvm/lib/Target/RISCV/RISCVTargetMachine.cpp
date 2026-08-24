@@ -128,14 +128,14 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVQCRelaxMarkingPass(*PR);
   initializeRISCVGatherScatterLoweringLegacyPass(*PR);
-  initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
+  initializeRISCVCodeGenPrepareLegacyPass(*PR);
   initializeRISCVZacasABIFixLegacyPass(*PR);
-  initializeRISCVPostRAExpandPseudoPass(*PR);
+  initializeRISCVPostRAExpandPseudoLegacyPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsLegacyPass(*PR);
   initializeRISCVFoldMemOffsetLegacyPass(*PR);
-  initializeRISCVPreRAExpandPseudoPass(*PR);
-  initializeRISCVExpandPseudoPass(*PR);
+  initializeRISCVPreRAExpandPseudoLegacyPass(*PR);
+  initializeRISCVExpandPseudoLegacyPass(*PR);
   initializeRISCVVectorPeepholeLegacyPass(*PR);
   initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVVMV0EliminationPass(*PR);
@@ -148,7 +148,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
-  initializeRISCVExpandAtomicPseudoPass(*PR);
+  initializeRISCVExpandAtomicPseudoLegacyPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
   initializeRISCVPromoteConstantPass(*PR);
@@ -550,12 +550,12 @@ bool RISCVPassConfig::addRegBankSelect() {
 }
 
 bool RISCVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
 void RISCVPassConfig::addPreSched2() {
-  addPass(createRISCVPostRAExpandPseudoPass());
+  addPass(createRISCVPostRAExpandPseudoLegacyPass());
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
@@ -589,7 +589,7 @@ void RISCVPassConfig::addPreEmitPass2() {
     // ensuring return instruction is detected correctly.
     addPass(createRISCVPushPopOptimizationPass());
   }
-  addPass(createRISCVExpandPseudoPass());
+  addPass(createRISCVExpandPseudoLegacyPass());
 
   // Add QC Relaxation Markers as late as possible, and only for RV32
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
@@ -599,7 +599,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
-  addPass(createRISCVExpandAtomicPseudoPass());
+  addPass(createRISCVExpandAtomicPseudoLegacyPass());
 
   // KCFI indirect call checks are lowered to a bundle.
   addPass(createUnpackMachineBundlesLegacy([&](const MachineFunction &MF) {
@@ -635,7 +635,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
-  addPass(createRISCVPreRAExpandPseudoPass());
+  addPass(createRISCVPreRAExpandPseudoLegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     // Add Zilsd pre-allocation load/store optimization
