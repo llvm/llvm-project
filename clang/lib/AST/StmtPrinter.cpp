@@ -1594,7 +1594,7 @@ void StmtPrinter::VisitFixedPointLiteral(FixedPointLiteral *Node) {
 static void PrintFloatingLiteral(raw_ostream &OS, FloatingLiteral *Node,
                                  bool PrintSuffix) {
   SmallString<16> Str;
-  Node->getValue().toString(Str);
+  Node->getValue().toStringShortest(Str);
   OS << Str;
   if (Str.find_first_not_of("-0123456789") == StringRef::npos)
     OS << '.'; // Trailing dot in order to separate from ints.

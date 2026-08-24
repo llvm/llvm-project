@@ -98,6 +98,10 @@ features cannot lower the translation-unit ABI level;
 
 ### AST Dumping Potentially Breaking Changes
 
+- The AST printer (`-ast-print`) now prints a floating-point literal as the
+  shortest decimal form that round-trips to the same value. For example,
+  `3.14` printed as `3.1400000000000001` before and prints as `3.14` now.
+
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.

@@ -1588,6 +1588,10 @@ static void writeAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
   // Try for a decimal string output. If the value is convertible back to the
   // same APFloat value, then we know that it is safe to use it. Otherwise, fall
   // back onto the hexadecimal format.
+  // Compare with the numeric operator==, not toStringRoundTrip's bitwise
+  // equality: a ppc_fp128 constant whose low double is -0.0 parses back with
+  // +0.0 there, and such numerically equal forms historically print in
+  // decimal. NaN never compares equal, so it still takes the hex fallback.
   SmallString<128> StrVal;
   APF.toString(StrVal, 6, 0, false);
   if (APFloat(APF.getSemantics(), StrVal) == APF) {

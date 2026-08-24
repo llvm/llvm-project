@@ -1629,6 +1629,72 @@ TEST(APFloatTest, toString) {
   }
 }
 
+static std::string convertToStringShortest(const APFloat &F, unsigned Pad = 3,
+                                           bool Tr = true) {
+  llvm::SmallVector<char, 100> Buffer;
+  F.toStringShortest(Buffer, Pad, Tr);
+  return std::string(Buffer.data(), Buffer.size());
+}
+
+TEST(APFloatTest, toStringRoundTrip) {
+  SmallString<32> Str;
+  // 6 digits: lossless for 3.14, lossy for pi/4; the string appends either way.
+  ASSERT_TRUE(APFloat(3.14).toStringRoundTrip(Str, 6, 0, false));
+  ASSERT_EQ("3.140000e+00", Str);
+  Str.clear();
+  ASSERT_FALSE(
+      APFloat(0.78539816339744830961).toStringRoundTrip(Str, 6, 0, false));
+  ASSERT_EQ("7.853980e-01", Str);
+  Str.clear();
+  // FormatPrecision = 0 (natural precision) always round-trips.
+  ASSERT_TRUE(APFloat(0.78539816339744830961).toStringRoundTrip(Str));
+  ASSERT_EQ("0.78539816339744828", Str);
+  Str.clear();
+  // "+Inf" parses back even though the IR and MLIR grammars reject it.
+  ASSERT_TRUE(APFloat::getInf(APFloat::IEEEdouble()).toStringRoundTrip(Str));
+  ASSERT_EQ("+Inf", Str);
+}
+
+TEST(APFloatTest, toStringShortest) {
+  ASSERT_EQ("3.14", convertToStringShortest(APFloat(3.14)));
+  ASSERT_EQ("-3.14", convertToStringShortest(APFloat(-3.14)));
+  ASSERT_EQ("4", convertToStringShortest(APFloat(4.0)));
+  ASSERT_EQ("0.5", convertToStringShortest(APFloat(0.5)));
+  ASSERT_EQ("0.1", convertToStringShortest(APFloat(0.1)));
+  ASSERT_EQ("873.1834", convertToStringShortest(APFloat(873.1834)));
+  ASSERT_EQ("1.0E+10", convertToStringShortest(APFloat(1e10)));
+  // DBL_MAX needs every natural-precision digit.
+  ASSERT_EQ("1.7976931348623157E+308",
+            convertToStringShortest(APFloat(1.7976931348623157E+308)));
+  // The smallest double denormal.
+  ASSERT_EQ("5.0E-324",
+            convertToStringShortest(APFloat(4.9406564584124654e-324)));
+
+  // Non-double semantics.
+  ASSERT_EQ("3.14", convertToStringShortest(APFloat(3.14f)));
+  ASSERT_EQ("0.1", convertToStringShortest(APFloat(0.1f)));
+  ASSERT_EQ("0.1", convertToStringShortest(
+                       APFloat(APFloat::x87DoubleExtended(), "0.1")));
+  ASSERT_EQ("0.1",
+            convertToStringShortest(APFloat(APFloat::IEEEquad(), "0.1")));
+  ASSERT_EQ("0.1", convertToStringShortest(
+                       APFloat(APFloat::PPCDoubleDouble(), "0.1")));
+
+  // FormatMaxPadding and TruncateZero pass through to toString.
+  ASSERT_EQ("1.0E+1", convertToStringShortest(APFloat(10.0), 0));
+  ASSERT_EQ("1.0e+01", convertToStringShortest(APFloat(10.0), 0, false));
+
+  // Zero and non-finite values format exactly as toString.
+  ASSERT_EQ("0", convertToStringShortest(APFloat(0.0)));
+  ASSERT_EQ("-0", convertToStringShortest(APFloat(-0.0)));
+  ASSERT_EQ("+Inf",
+            convertToStringShortest(APFloat::getInf(APFloat::IEEEdouble())));
+  ASSERT_EQ("-Inf", convertToStringShortest(
+                        APFloat::getInf(APFloat::IEEEdouble(), true)));
+  ASSERT_EQ("NaN",
+            convertToStringShortest(APFloat::getNaN(APFloat::IEEEdouble())));
+}
+
 TEST(APFloatTest, toInteger) {
   bool isExact = false;
   APSInt result(5, /*isUnsigned=*/true);

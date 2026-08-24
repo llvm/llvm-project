@@ -2265,8 +2265,10 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os,
   bool isNaN = apValue.isNaN();
   if (!isInf && !isNaN) {
     SmallString<128> strValue;
-    apValue.toString(strValue, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
-                     /*TruncateZero=*/false);
+    bool isLossless = apValue.toStringRoundTrip(strValue,
+                                                /*FormatPrecision=*/6,
+                                                /*FormatMaxPadding=*/0,
+                                                /*TruncateZero=*/false);
 
     // Check to make sure that the stringized number is not some string like
     // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
@@ -2276,9 +2278,8 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os,
              (strValue[1] >= '0' && strValue[1] <= '9'))) &&
            "[-+]?[0-9] regex does not match!");
 
-    // Parse back the stringized version and check that the value is equal
-    // (i.e., there is no precision loss).
-    if (APFloat(apValue.getSemantics(), strValue).bitwiseIsEqual(apValue)) {
+    // Lossless if it parses back to the same value.
+    if (isLossless) {
       os << strValue;
       return;
     }

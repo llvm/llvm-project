@@ -18,6 +18,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -5971,6 +5972,168 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
 
 APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
   return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
+}
+
+bool APFloat::toStringRoundTrip(SmallVectorImpl<char> &Str,
+                                unsigned FormatPrecision,
+                                unsigned FormatMaxPadding,
+                                bool TruncateZero) const {
+  SmallString<32> Buf;
+  toString(Buf, FormatPrecision, FormatMaxPadding, TruncateZero);
+  Str.append(Buf.begin(), Buf.end());
+  APFloat Parsed(getSemantics());
+  Expected<opStatus> Status =
+      Parsed.convertFromString(Buf, rmNearestTiesToEven);
+  if (!Status) {
+    consumeError(Status.takeError());
+    return false;
+  }
+  return Parsed.bitwiseIsEqual(*this);
+}
+
+/// 5^Exp zero-extended to \p Width bits.
+static APInt pow5AsAPInt(unsigned Exp, unsigned Width) {
+  APInt Result(Width, 1);
+  for (; Exp >= 27; Exp -= 27)
+    Result *= UINT64_C(7450580596923828125); // 5^27, the largest 64-bit power.
+  uint64_t Tail = 1;
+  while (Exp--)
+    Tail *= 5;
+  Result *= Tail;
+  return Result;
+}
+
+/// Minimum number of significant decimal digits a string needs to parse back
+/// (round-to-nearest-even) to exactly \p Val. Val must be finite, non-zero,
+/// and use the IEEEFloat layout.
+///
+/// A string parses back to Val exactly when its value rounds to Val, so the
+/// answer is the fewest significant digits of any decimal in Val's rounding
+/// interval. The interval follows Ryu (Adams, PLDI 2018,
+/// https://doi.org/10.1145/3192366.3192369); the shortest decimal in it is
+/// found as in Dragonbox (Jeon, github.com/jk-jeon/dragonbox, after
+/// Giulietti's Schubfach): anchor on the coarsest power-of-ten grid the
+/// interval width guarantees to hit, then walk the trailing zeros. Exact
+/// APInt arithmetic replaces the per-format power tables, so every IEEEFloat
+/// semantics works.
+static unsigned shortestDigitCount(const APFloat &Val) {
+  const fltSemantics &Sem = Val.getSemantics();
+  const unsigned Prec = APFloat::semanticsPrecision(Sem);
+  const int MinExp = APFloat::semanticsMinExponent(Sem);
+
+  // Exact integer significand M and exponent Q with |Val| == M * 2^Q.
+  const APFloat AbsVal = abs(Val);
+  const int Q = std::max(ilogb(AbsVal), MinExp) - int(Prec - 1);
+  APFloat Wide = AbsVal;
+  if (APFloat::semanticsSizeInBits(Sem) <= 32) {
+    // Tiny formats cannot hold their own significand as an integer (e.g.
+    // Float6E2M3FN); go through IEEEdouble, an exact superset of them all.
+    bool LosesInfo = false;
+    Wide.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                 &LosesInfo);
+    assert(!LosesInfo && "widening conversion is exact");
+  }
+  bool IsExact = false;
+  APSInt M(Prec + 2, /*isUnsigned=*/true);
+  scalbn(Wide, -Q, APFloat::rmNearestTiesToEven)
+      .convertToInteger(M, APFloat::rmNearestTiesToEven, &IsExact);
+  assert(IsExact && "significand extraction is exact");
+
+  // The gap below halves when the significand is a power of two above the
+  // minimum exponent (Ryu's mmShift). The interval is (Low, High) * 2^E2;
+  // its bounds parse back to Val only when the significand is even (a
+  // halfway decimal ties to the even neighbor).
+  const bool HalfBelow = M.isPowerOf2() && ilogb(AbsVal) > MinExp;
+  const bool Inclusive = !M[0];
+  const int E2 = Q - (HalfBelow ? 2 : 1);
+  const unsigned Width =
+      Prec + 16 +
+      (E2 >= 0 ? unsigned(E2) : unsigned((uint64_t(-E2) * 2322) / 1000) + 2);
+  APInt MW = M.zext(Width);
+  APInt Low = HalfBelow ? (MW << 2) - 1 : (MW << 1) - 1;
+  APInt High = HalfBelow ? (MW << 2) + 2 : (MW << 1) + 1;
+
+  // Scale the bounds to integers by a shared power of ten; every candidate
+  // keeps its significant digit count.
+  if (E2 >= 0) {
+    Low <<= unsigned(E2);
+    High <<= unsigned(E2);
+  } else {
+    const APInt P5 = pow5AsAPInt(unsigned(-E2), Width);
+    Low *= P5;
+    High *= P5;
+  }
+
+  // Anchor grid: the largest T0 with 10^T0 <= the interval width, so
+  // multiples of 10^T0 cannot all miss. 30102/100000 underestimates
+  // log10(2), so the estimate never overshoots and trails T0 by at most two.
+  const APInt IntervalWidth = High - Low;
+  unsigned T0 =
+      unsigned((uint64_t(IntervalWidth.getActiveBits() - 1) * 30102) / 100000);
+  APInt P10 = pow5AsAPInt(T0, Width).shl(T0);
+  while ((P10 * 10).ule(IntervalWidth)) {
+    P10 *= 10;
+    ++T0;
+  }
+
+  // Candidate multiples of 10^T0 in the interval: CMin..CMax, at most ten of
+  // them. Open bounds can eat a lone candidate; one grid finer cannot miss.
+  APInt CMin(Width, 0), CMax(Width, 0);
+  auto FindCandidates = [&]() {
+    APInt Quo(Width, 0), Rem(Width, 0);
+    APInt::udivrem(Low, P10, Quo, Rem);
+    CMin = (Inclusive && Rem.isZero()) ? Quo : Quo + 1;
+    APInt::udivrem(High, P10, Quo, Rem);
+    CMax = (!Inclusive && Rem.isZero()) ? Quo - 1 : Quo;
+  };
+  FindCandidates();
+  while (CMin.ugt(CMax)) {
+    P10 = P10.udiv(10);
+    FindCandidates();
+  }
+
+  // Step to coarser grids while the range still holds a multiple of the next
+  // power of ten. The candidates are small, so these divisions are cheap.
+  while (true) {
+    const APInt CMax10 = CMax.udiv(10);
+    if ((CMax10 * 10).ult(CMin))
+      break;
+    CMin = (CMin + 9).udiv(10);
+    CMax = CMax10;
+  }
+  unsigned Digits = 0;
+  for (; !CMin.isZero(); ++Digits)
+    CMin = CMin.udiv(10);
+  return Digits;
+}
+
+void APFloat::toStringShortest(SmallVectorImpl<char> &Str,
+                               unsigned FormatMaxPadding,
+                               bool TruncateZero) const {
+  SmallString<32> Best;
+  toString(Best, /*FormatPrecision=*/0, FormatMaxPadding, TruncateZero);
+  if (isFiniteNonZero()) {
+    // Probe below the conservative natural precision (toStringImpl's FIXME).
+    // No precision below shortestDigitCount can parse back equal, so start
+    // there; the result matches probing from 1. DoubleAPFloat layouts and
+    // the largest value of no-infinity semantics keep the full probe (their
+    // parse saturates instead of rounding).
+    unsigned Precision = 1;
+    if (usesLayout<IEEEFloat>(getSemantics()) &&
+        (semanticsHasInf(getSemantics()) ||
+         !abs(*this).bitwiseIsEqual(getLargest(getSemantics()))))
+      Precision = shortestDigitCount(*this);
+    for (unsigned MaxPrecision = Best.size(); Precision < MaxPrecision;
+         ++Precision) {
+      SmallString<32> Candidate;
+      if (toStringRoundTrip(Candidate, Precision, FormatMaxPadding,
+                            TruncateZero)) {
+        Best = Candidate;
+        break;
+      }
+    }
+  }
+  Str.append(Best.begin(), Best.end());
 }
 
 void APFloat::print(raw_ostream &OS) const {
