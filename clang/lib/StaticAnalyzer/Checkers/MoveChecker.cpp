@@ -728,9 +728,8 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
         ExplicitObjectMethod->isMoveAssignmentOperator()) {
       const MemRegion *ArgRegion = Call.getArgSVal(1).getAsRegion();
       const CXXRecordDecl *RD = ExplicitObjectMethod->getParent();
-      MisuseKind MK = ExplicitObjectMethod->isMoveAssignmentOperator()
-                          ? MK_Move
-                          : MK_Copy;
+      MisuseKind MK =
+          ExplicitObjectMethod->isMoveAssignmentOperator() ? MK_Move : MK_Copy;
       modelUse(State, ArgRegion, RD, MK, C);
       return;
     }
