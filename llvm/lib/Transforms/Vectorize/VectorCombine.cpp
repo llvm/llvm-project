@@ -248,15 +248,46 @@ static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   return true;
 }
 
+/// Fold a scalar load inserted into lane zero into a widened vector load.
+///
+///   Input example (i32 at byte offset 4):
+///     BasePtr + 4 --> load i32 --> insert into lane 0 of <4 x i32>
+///
+///   Scalar-aligned transformation of the input example:
+///     memory:  [ 0..3 ] [ 4..7 ] [ 8..11 ] [ 12..15 ]
+///     v4i32:   [lane 0] [lane 1] [lane 2 ] [ lane 3 ]
+///                           |
+///                           v
+///                       scalar bytes
+///     BasePtr --> load <4 x i32> --> shuffle [1, poison, poison, poison]
+///
+///   Unaligned example (i32 at byte offset 2, little-endian only):
+///   * ChunkSize = gcd(4, 2) = 2 bytes
+///     memory:  [ 0..1 ] [ 2..3 ] [ 4..5 ] [ 6..7 ] ... [ 14..15 ]
+///     v8i16:   [lane 0] [lane 1] [lane 2] [lane 3] ... [ lane 7 ]
+///                          |          |
+///                          +----------+
+///                               |
+///                               v
+///                        scalar bytes [ 2..5 ]
+///     BasePtr --> load <8 x i16> --> shuffle [1, 2, poison, ...]
+///                                            |
+///                                            v
+///                                      bitcast <4 x i32>
+///
+/// If a widened load is safe at the original load pointer, that pointer is the
+/// BasePtr above and Offset is zero. Otherwise, constant inbounds GEP offsets
+/// are stripped to find a safe BasePtr and the shuffle selects the original
+/// bytes from the widened load.
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
-  // Match insert into fixed vector of scalar value.
+  // Match a scalar inserted into lane zero, optionally through an extract from
+  // lane zero of a vector load.
   // TODO: Handle non-zero insert index.
   Value *Scalar;
   if (!match(&I,
              m_InsertElt(m_Poison(), m_OneUse(m_Value(Scalar)), m_ZeroInt())))
     return false;
 
-  // Optionally match an extract from another vector.
   Value *X;
   bool HasExtract = match(Scalar, m_ExtractElt(m_Value(X), m_ZeroInt()));
   if (!HasExtract)
@@ -266,48 +297,75 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (!canWidenLoad(Load, TTI))
     return false;
 
-  Type *ScalarTy = Scalar->getType();
-  uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
+  Type *OriginalScalarTy = Scalar->getType();
+  uint64_t OriginalScalarSizeInBits =
+      OriginalScalarTy->getPrimitiveSizeInBits();
   unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
 
-  // Check safety of replacing the scalar load with a larger vector load.
-  // We use minimal alignment (maximum flexibility) because we only care about
-  // the dereferenceable region. When calculating cost and creating a new op,
-  // we may use a larger value based on alignment attributes.
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
-  unsigned MinVecNumElts = MinVectorSize / ScalarSize;
-  auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
+  unsigned MinVecNumElts = MinVectorSize / OriginalScalarSizeInBits;
+  auto *MinVecTy = VectorType::get(OriginalScalarTy, MinVecNumElts, false);
+
   unsigned OffsetEltIndex = 0;
+  // An aligned scalar occupies one vector element. Unaligned accesses below
+  // split it into smaller chunks and update this count.
+  unsigned NumScalarChunks = 1;
+  // For an unaligned scalar, load and shuffle GCD-sized integer chunks, then
+  // bitcast the chunk vector to the requested result type.
+  bool UseChunkedLoad = false;
+
+  // Check the widened access with minimal alignment. The actual load alignment
+  // is derived after choosing a safe pointer.
   Align Alignment = Load->getAlign();
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, SQ.AC,
                                    SQ.DT)) {
-    // It is not safe to load directly from the pointer, but we can still peek
-    // through gep offsets and check if it safe to load from a base address with
-    // updated alignment. If it is, we can shuffle the element(s) into place
-    // after loading.
+    // Recover a candidate load pointer from constant inbounds GEPs. Keep the
+    // original scalar's offset in the pointer index width; dynamic and
+    // non-inbounds address calculations remain in SrcPtr.
     unsigned OffsetBitWidth = DL->getIndexTypeSizeInBits(SrcPtr->getType());
     APInt Offset(OffsetBitWidth, 0);
     SrcPtr = SrcPtr->stripAndAccumulateInBoundsConstantOffsets(*DL, Offset);
 
-    // We want to shuffle the result down from a high element of a vector, so
-    // the offset must be positive.
+    // A forward vector load cannot select bytes before its pointer.
     if (Offset.isNegative())
       return false;
 
-    // The offset must be a multiple of the scalar element to shuffle cleanly
-    // in the element's size.
-    uint64_t ScalarSizeInBytes = ScalarSize / 8;
-    if (Offset.urem(ScalarSizeInBytes) != 0)
-      return false;
+    const uint64_t OriginalScalarSizeInBytes = OriginalScalarSizeInBits / 8;
+    uint64_t ChunkSizeInBytes = OriginalScalarSizeInBytes;
+    if (uint64_t UnalignedBytes = Offset.urem(OriginalScalarSizeInBytes)) {
+      // Reconstruct an unaligned scalar from smaller integer chunks.
+      // Consecutive low-address chunks appear in increasing vector lanes on a
+      // little-endian target. Big-endian reconstruction would require a
+      // different lane order and is deliberately left unsupported.
+      if (DL->isBigEndian())
+        return false;
 
-    // If we load MinVecNumElts, will our target element still be loaded?
-    APInt OffsetEltIndexAP = Offset.udiv(ScalarSizeInBytes);
-    if (OffsetEltIndexAP.uge(MinVecNumElts))
+      // The GCD gives the largest chunk that exactly divides both the scalar
+      // width and byte offset. This minimizes the number of shuffle lanes.
+      ChunkSizeInBytes = std::gcd(OriginalScalarSizeInBytes, UnalignedBytes);
+      const uint64_t ChunkSizeInBits = ChunkSizeInBytes * 8;
+      NumScalarChunks = OriginalScalarSizeInBytes / ChunkSizeInBytes;
+      MinVecNumElts = MinVectorSize / ChunkSizeInBits;
+      Type *ChunkTy = Type::getIntNTy(I.getContext(), ChunkSizeInBits);
+      auto *ChunkVecTy = VectorType::get(ChunkTy, MinVecNumElts, false);
+
+      // The chunk vector is later bitcast, so its total width must not change.
+      if (DL->getTypeSizeInBits(ChunkVecTy) !=
+          DL->getTypeSizeInBits(I.getType()))
+        return false;
+
+      MinVecTy = ChunkVecTy;
+      UseChunkedLoad = true;
+    }
+
+    APInt OffsetEltIndexAP = Offset.udiv(ChunkSizeInBytes);
+    if ((OffsetEltIndexAP + NumScalarChunks).ugt(MinVecNumElts))
       return false;
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
+    // The complete widened access at the recovered pointer must not trap.
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
                                      SQ.AC, SQ.DT))
       return false;
@@ -323,31 +381,57 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
   Type *LoadTy = Load->getType();
   unsigned AS = Load->getPointerAddressSpace();
+  auto VecTy = cast<InsertElementInst>(&I)->getType();
+
   InstructionCost OldCost =
       TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS, CostKind);
-  APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
+  APInt DemandedElts =
+      APInt::getOneBitSet(VecTy->getElementCount().getFixedValue(), 0);
   OldCost +=
-      TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
+      TTI.getScalarizationOverhead(VecTy, DemandedElts,
                                    /* Insert */ true, HasExtract, CostKind);
 
   // New pattern: load VecPtr
   InstructionCost NewCost =
       TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS, CostKind);
-  // Optionally, we are shuffling the loaded vector element(s) into place.
-  // For the mask set everything but element 0 to undef to prevent poison from
-  // propagating from the extra loaded memory. This will also optionally
-  // shrink/grow the vector from the loaded size to the output size.
-  // We assume this operation has no cost in codegen if there was no offset.
-  // Note that we could use freeze to avoid poison problems, but then we might
-  // still need a shuffle to change the vector size.
   auto *Ty = cast<FixedVectorType>(I.getType());
-  unsigned OutputNumElts = Ty->getNumElements();
-  SmallVector<int, 16> Mask(OutputNumElts, PoisonMaskElem);
-  assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
-  Mask[0] = OffsetEltIndex;
-  if (OffsetEltIndex)
-    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy, Mask,
-                                  CostKind);
+  SmallVector<int> Mask;
+  assert(OffsetEltIndex + NumScalarChunks <= MinVecNumElts &&
+         "Address offset too big");
+  if (UseChunkedLoad) {
+    // Poison unused lanes, then gather the scalar chunks into the low lanes.
+    Mask.assign(MinVecNumElts, PoisonMaskElem);
+    std::iota(Mask.begin(), Mask.begin() + NumScalarChunks, OffsetEltIndex);
+
+    // The chunked path always shuffles from a non-zero source lane:
+    //   %chunks = shufflevector <8 x i16> %wide.i16, <8 x i16> poison,
+    //       <8 x i32> <i32 1, i32 2, i32 poison, i32 poison,
+    //                   i32 poison, i32 poison, i32 poison, i32 poison>
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy, MinVecTy,
+                                  Mask, CostKind);
+
+    // Account for the bitcast after the unaligned chunk shuffle:
+    //   %result = bitcast <8 x i16> %chunks to <4 x i32>
+    NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
+                                    TargetTransformInfo::CastContextHint::None,
+                                    CostKind);
+  } else {
+    // Poison unused lanes, select the scalar into lane zero, and resize the
+    // vector if needed.
+    unsigned OutputNumElts = Ty->getNumElements();
+    Mask.assign(OutputNumElts, PoisonMaskElem);
+    Mask[0] = OffsetEltIndex;
+
+    // Assume an offset-zero shuffle is free because codegen can use the loaded
+    // vector directly.
+    if (OffsetEltIndex) {
+      // Account for the shuffle in the scalar-aligned example:
+      //   %aligned = shufflevector <4 x i32> %wide.i32, <4 x i32> poison,
+      //       <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+      NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy,
+                                    Mask, CostKind);
+    }
+  }
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -357,12 +441,18 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
+  Value *Result;
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
-  Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
-  VecLd = Builder.CreateShuffleVector(VecLd, Mask);
+  Result = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+  Worklist.pushValue(Result);
+  Result = Builder.CreateShuffleVector(Result, Mask);
+  if (UseChunkedLoad) {
+    Worklist.pushValue(Result);
+    Result = Builder.CreateBitOrPointerCast(Result, I.getType());
+  }
 
-  replaceValue(I, *VecLd);
+  replaceValue(I, *Result);
   ++NumVecLoad;
   return true;
 }
