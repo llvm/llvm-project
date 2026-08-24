@@ -34,7 +34,7 @@ using namespace llvm::dxil;
 
 static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
                                 const ModuleMetadataInfo &MMDI) {
-  // Heap resources do not count towards hasUAVsAtEveryStage. 
+  // Heap resources do not count towards hasUAVsAtEveryStage.
   bool HasUAVWithBinding = any_of(
       DRM.uavs(), [](const ResourceInfo &RI) { return RI.hasBinding(); });
   if (!HasUAVWithBinding)
