@@ -11,6 +11,7 @@
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
+!rec_PVPtr = !cir.struct<"PVPtr" packed {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
 !rec_Ov = !cir.struct<"Ov" {data !s32i, pad !cir.array<!u8i x 12>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
 !rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
@@ -93,6 +94,15 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"P" packed
+
+  // A vtable pointer is classifiable on its own, but packed still rejects the
+  // record around it.  This is the shape a polymorphic class with tail padding
+  // lowers to, since CIRGen marks that packed.
+  cir.func @take_packed_vptr(%arg0: !rec_PVPtr) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"PVPtr" packed
 
   // A padded (over-aligned) struct is rejected: it needs pad-aware
   // classification.
