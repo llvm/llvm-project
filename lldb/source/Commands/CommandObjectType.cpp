@@ -21,6 +21,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueString.h"
@@ -67,14 +68,16 @@ public:
   bool m_skip_pointers;
   bool m_skip_references;
   bool m_cascade;
+  bool m_wants_deref;
   FormatterMatchType m_match_type;
   StringList m_target_types;
   std::string m_category;
 
-  SynthAddOptions(bool sptr, bool sref, bool casc,
+  SynthAddOptions(bool sptr, bool sref, bool casc, bool wants_deref,
                   FormatterMatchType match_type, std::string catg)
       : m_skip_pointers(sptr), m_skip_references(sref), m_cascade(casc),
-        m_match_type(match_type), m_category(catg) {}
+        m_wants_deref(wants_deref), m_match_type(match_type), m_category(catg) {
+  }
 
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
@@ -89,11 +92,10 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
       continue;
     auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
-      result.AppendWarningWithFormat(
-          "unsigned %s being treated as two types. if you meant the combined "
-          "type "
-          "name use  quotes, as in \"unsigned %s\"\n",
-          next.str().c_str(), next.str().c_str());
+      result.AppendWarningWithFormatv(
+          "unsigned {0} being treated as two types. if you meant the combined "
+          "type name use quotes, as in \"unsigned {0}\"",
+          next);
       return true;
     }
   }
@@ -122,9 +124,9 @@ const char *FormatCategoryToString(FormatCategoryItem item, bool long_name) {
 class CommandObjectTypeSummaryAdd : public CommandObjectParsed,
                                     public IOHandlerDelegateMultiline {
 private:
-  class CommandOptions : public Options {
+  class CommandOptions : public OptionGroup {
   public:
-    CommandOptions(CommandInterpreter &interpreter) {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -150,11 +152,15 @@ private:
     uint32_t m_ptr_match_depth = 1;
   };
 
+  OptionGroupOptions m_option_group;
   CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_class_options;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_option_group; }
 
   bool Execute_ScriptSummary(Args &command, CommandReturnObject &result);
+
+  bool Execute_PythonClassSummary(Args &command, CommandReturnObject &result);
 
   bool Execute_StringSummary(Args &command, CommandReturnObject &result);
 
@@ -250,11 +256,12 @@ public:
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a function.\n");
+              locked_stream.PutCString(
+                  "error: unable to generate a function.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -322,6 +329,13 @@ private:
           error = Status::FromErrorStringWithFormat(
               "invalid value for cascade: %s", option_arg.str().c_str());
         break;
+      case 'D':
+        m_wants_deref = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (!success)
+          error = Status::FromErrorStringWithFormat(
+              "invalid value for wants-dereference: %s",
+              option_arg.str().c_str());
+        break;
       case 'P':
         handwrite_python = true;
         break;
@@ -361,6 +375,7 @@ private:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_cascade = true;
+      m_wants_deref = true;
       m_class_name = "";
       m_skip_pointers = false;
       m_skip_references = false;
@@ -379,6 +394,7 @@ private:
     bool m_cascade;
     bool m_skip_references;
     bool m_skip_pointers;
+    bool m_wants_deref;
     std::string m_class_name;
     bool m_input_python;
     std::string m_category;
@@ -454,12 +470,13 @@ protected:
                     SyntheticChildren::Flags()
                         .SetCascades(options->m_cascade)
                         .SetSkipPointers(options->m_skip_pointers)
-                        .SetSkipReferences(options->m_skip_references),
+                        .SetSkipReferences(options->m_skip_references)
+                        .SetFrontEndWantsDereference(options->m_wants_deref),
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
                 DataVisualization::Categories::GetCategory(
-                    ConstString(options->m_category.c_str()), category);
+                    ConstString(options->m_category), category);
 
                 Status error;
 
@@ -474,18 +491,18 @@ protected:
                     }
                   } else {
                     LockedStreamFile locked_stream = error_sp->Lock();
-                    locked_stream.Printf("error: invalid type name.\n");
+                    locked_stream.PutCString("error: invalid type name.\n");
                     break;
                   }
                 }
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a class.\n");
+              locked_stream.PutCString("error: unable to generate a class.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -655,7 +672,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n",
+      result.AppendErrorWithFormat("%s takes one or more args",
                                    m_cmd_name.c_str());
       return;
     }
@@ -663,7 +680,7 @@ protected:
     const Format format = m_format_options.GetFormat();
     if (format == eFormatInvalid &&
         m_command_options.m_custom_type_name.empty()) {
-      result.AppendErrorWithFormat("%s needs a valid format.\n",
+      result.AppendErrorWithFormat("%s needs a valid format",
                                    m_cmd_name.c_str());
       return;
     }
@@ -678,7 +695,7 @@ protected:
                       .SetSkipReferences(m_command_options.m_skip_references));
     else
       entry = std::make_shared<TypeFormatImpl_EnumType>(
-          ConstString(m_command_options.m_custom_type_name.c_str()),
+          m_command_options.m_custom_type_name,
           TypeFormatImpl::Flags()
               .SetCascades(m_command_options.m_cascade)
               .SetSkipPointers(m_command_options.m_skip_pointers)
@@ -825,7 +842,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc != 1) {
-      result.AppendErrorWithFormat("%s takes 1 arg.\n", m_cmd_name.c_str());
+      result.AppendErrorWithFormat("%s takes 1 arg", m_cmd_name.c_str());
       return;
     }
 
@@ -869,7 +886,7 @@ protected:
     if (delete_category || extra_deletion) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendErrorWithFormat("no custom formatter for %s.\n", typeA);
+      result.AppendErrorWithFormat("no custom formatter for %s", typeA);
     }
   }
 };
@@ -1152,7 +1169,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Status error;
-  const int short_option = m_getopt_table[option_idx].val;
+  const int short_option = g_type_summary_add_options[option_idx].short_option;
   bool success;
 
   switch (short_option) {
@@ -1255,7 +1272,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1 && !m_options.m_name) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -1281,9 +1298,9 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
     if (interpreter && !interpreter->CheckObjectExists(funct_name))
-      result.AppendWarningWithFormat(
-          "The provided function \"%s\" does not exist - "
-          "please define it before attempting to use this summary.\n",
+      result.AppendWarningWithFormatv(
+          "the provided function \"{0}\" does not exist - "
+          "please define it before attempting to use this summary",
           funct_name);
   } else if (!m_options.m_python_script
                   .empty()) // we have a quick 1-line script, just use it
@@ -1363,6 +1380,48 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   return result.Succeeded();
 }
 
+bool CommandObjectTypeSummaryAdd::Execute_PythonClassSummary(
+    Args &command, CommandReturnObject &result) {
+  const size_t argc = command.GetArgumentCount();
+
+  if (argc < 1 && !m_options.m_name) {
+    result.AppendErrorWithFormat("%s takes one or more args",
+                                 m_cmd_name.c_str());
+    return false;
+  }
+
+  const std::string &class_name = m_class_options.GetName();
+  if (class_name.empty()) {
+    result.AppendError("must provide a Python class name");
+    return false;
+  }
+
+  TypeSummaryImplSP script_format = std::make_shared<ScriptedSummaryFormat>(
+      m_options.m_flags, class_name.c_str(), m_options.m_ptr_match_depth);
+
+  Status error;
+
+  for (auto &entry : command.entries()) {
+    AddSummary(ConstString(entry.ref()), script_format, m_options.m_match_type,
+               m_options.m_category, &error);
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      return false;
+    }
+  }
+
+  if (m_options.m_name) {
+    AddNamedSummary(m_options.m_name, script_format, &error);
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      result.AppendError("added to types, but not given a name");
+      return false;
+    }
+  }
+
+  return result.Succeeded();
+}
+
 #endif
 
 bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
@@ -1370,7 +1429,7 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1 && !m_options.m_name) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -1439,7 +1498,14 @@ CommandObjectTypeSummaryAdd::CommandObjectTypeSummaryAdd(
     CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "type summary add",
                           "Add a new summary style for a type.", nullptr),
-      IOHandlerDelegateMultiline("DONE"), m_options(interpreter) {
+      IOHandlerDelegateMultiline("DONE"),
+      m_class_options("scripted string summary", /*is_class=*/true, 'L', 'K',
+                      'V', /*required_options=*/0) {
+  m_option_group.Append(&m_options);
+  m_option_group.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                        LLDB_OPT_SET_ALL);
+  m_option_group.Finalize();
+
   AddSimpleArgumentList(eArgTypeName, eArgRepeatPlus);
 
   SetHelpLong(
@@ -1542,16 +1608,24 @@ void CommandObjectTypeSummaryAdd::DoExecute(Args &command,
                                             CommandReturnObject &result) {
   WarnOnPotentialUnquotedUnsignedType(command, result);
 
-  if (m_options.m_is_add_script) {
+  if (!m_class_options.GetName().empty()) {
+#if LLDB_ENABLE_PYTHON
+    Execute_PythonClassSummary(command, result);
+#else
+    result.AppendError("python is disabled");
+#endif
+  } else if (m_options.m_is_add_script) {
 #if LLDB_ENABLE_PYTHON
     Execute_ScriptSummary(command, result);
 #else
     result.AppendError("python is disabled");
 #endif
-    return;
+  } else {
+    Execute_StringSummary(command, result);
   }
 
-  Execute_StringSummary(command, result);
+  if (result.GetStatus() != eReturnStatusFailed)
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 }
 
 static bool FixArrayTypeNameWithRegex(ConstString &type_name) {
@@ -1584,7 +1658,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
                                              std::string category_name,
                                              Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
+  DataVisualization::Categories::GetCategory(ConstString(category_name),
                                              category);
 
   if (match_type == eFormatterMatchExact) {
@@ -1604,7 +1678,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -1742,7 +1816,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes 1 or more args.\n",
+      result.AppendErrorWithFormat("%s takes 1 or more args",
                                    m_cmd_name.c_str());
       return;
     }
@@ -1878,7 +1952,7 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes 1 or more arg.\n",
+      result.AppendErrorWithFormat("%s takes 1 or more arg",
                                    m_cmd_name.c_str());
       return;
     }
@@ -2035,8 +2109,7 @@ protected:
         return;
       }
     } else if (argc != 0) {
-      result.AppendErrorWithFormat("%s takes 0 or one arg.\n",
-                                   m_cmd_name.c_str());
+      result.AppendErrorWithFormat("%s takes 0 or one arg", m_cmd_name.c_str());
       return;
     }
 
@@ -2131,7 +2204,8 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
   auto options = std::make_unique<SynthAddOptions>(
       m_options.m_skip_pointers, m_options.m_skip_references,
-      m_options.m_cascade, m_options.m_match_type, m_options.m_category);
+      m_options.m_cascade, m_options.m_wants_deref, m_options.m_match_type,
+      m_options.m_category);
 
   for (auto &entry : command.entries()) {
     if (entry.ref().empty()) {
@@ -2156,14 +2230,14 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const size_t argc = command.GetArgumentCount();
 
   if (argc < 1) {
-    result.AppendErrorWithFormat("%s takes one or more args.\n",
+    result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
   }
 
   if (m_options.m_class_name.empty() && !m_options.m_input_python) {
     result.AppendErrorWithFormat("%s needs either a Python class name or -P to "
-                                 "directly input Python code.\n",
+                                 "directly input Python code",
                                  m_cmd_name.c_str());
     return false;
   }
@@ -2173,6 +2247,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   ScriptedSyntheticChildren *impl = new ScriptedSyntheticChildren(
       SyntheticChildren::Flags()
           .SetCascades(m_options.m_cascade)
+          .SetFrontEndWantsDereference(m_options.m_wants_deref)
           .SetSkipPointers(m_options.m_skip_pointers)
           .SetSkipReferences(m_options.m_skip_references),
       m_options.m_class_name.c_str());
@@ -2184,15 +2259,15 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   const char *python_class_name = impl->GetPythonClassName();
   if (interpreter && !interpreter->CheckObjectExists(python_class_name))
     result.AppendWarningWithFormatv(
-        "The provided class '{0}' does not exist - please define it "
+        "the provided class '{0}' does not exist - please define it "
         "before attempting to use this synthetic provider",
         llvm::StringRef(python_class_name));
 
   // now I have a valid provider, let's add it to every type
 
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(
-      ConstString(m_options.m_category.c_str()), category);
+  DataVisualization::Categories::GetCategory(ConstString(m_options.m_category),
+                                             category);
 
   Status error;
 
@@ -2228,7 +2303,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
                                          std::string category_name,
                                          Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
+  DataVisualization::Categories::GetCategory(ConstString(category_name),
                                              category);
 
   if (match_type == eFormatterMatchExact) {
@@ -2245,13 +2320,12 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     // name-based lookup here to try to prevent conflicts.
     FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
                                             FormattersMatchCandidate::Flags());
-    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
-                             false)) {
+    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter)) {
       if (error)
-        *error = Status::FromErrorStringWithFormat(
-            "cannot add synthetic for type %s when "
+        *error = Status::FromErrorStringWithFormatv(
+            "cannot add synthetic for type {0} when "
             "filter is defined in same category!",
-            type_name.AsCString());
+            type_name);
       return false;
     }
   }
@@ -2267,7 +2341,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString();
+    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter && !interpreter->CheckObjectExists(function_name)) {
       *error = Status::FromErrorStringWithFormat(
@@ -2369,8 +2443,8 @@ private:
                  FilterFormatType type, std::string category_name,
                  Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(category_name.c_str()), category);
+    DataVisualization::Categories::GetCategory(ConstString(category_name),
+                                               category);
 
     if (type == eRegularFilter) {
       if (FixArrayTypeNameWithRegex(type_name))
@@ -2387,14 +2461,13 @@ private:
       FormattersMatchCandidate candidate_type(
           type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
       lldb::SyntheticChildrenSP entry;
-      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
-                               false)) {
+      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth)) {
         if (error)
-          *error = Status::FromErrorStringWithFormat(
-              "cannot add filter for type %s when "
+          *error = Status::FromErrorStringWithFormatv(
+              "cannot add filter for type {0} when "
               "synthetic is defined in same "
               "category!",
-              type_name.AsCString());
+              type_name);
         return false;
       }
     }
@@ -2464,13 +2537,13 @@ protected:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n",
+      result.AppendErrorWithFormat("%s takes one or more args",
                                    m_cmd_name.c_str());
       return;
     }
 
     if (m_options.m_expr_paths.empty()) {
-      result.AppendErrorWithFormat("%s needs one or more children.\n",
+      result.AppendErrorWithFormat("%s needs one or more children",
                                    m_cmd_name.c_str());
       return;
     }
@@ -2492,7 +2565,7 @@ protected:
 
     lldb::TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(
-        ConstString(m_options.m_category.c_str()), category);
+        ConstString(m_options.m_category), category);
 
     Status error;
 
@@ -2750,7 +2823,8 @@ public:
 protected:
   void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
-    TargetSP target_sp = GetDebugger().GetSelectedTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresFrame");
     Thread *thread = GetDefaultThread();
     if (!thread) {
       result.AppendError("no default thread");
@@ -2761,13 +2835,13 @@ protected:
         thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     ValueObjectSP result_valobj_sp;
     EvaluateExpressionOptions options;
-    lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(
+    lldb::ExpressionResults expr_result = target->EvaluateExpression(
         command, frame_sp.get(), result_valobj_sp, options);
     if (expr_result == eExpressionCompleted && result_valobj_sp) {
       result_valobj_sp =
           result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-              target_sp->GetPreferDynamicValue(),
-              target_sp->GetEnableSyntheticValue());
+              target->GetPreferDynamicValue(),
+              target->GetEnableSyntheticValue());
       typename FormatterType::SharedPointer formatter_sp =
           m_discovery_function(*result_valobj_sp);
       if (formatter_sp) {

@@ -93,7 +93,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          // to implicitly cast into the default address space.
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-           B == LangAS::cuda_shared)) ||
+           B == LangAS::cuda_shared || B == LangAS::amdgpu_barrier)) ||
          // In HLSL, the this pointer for member functions points to the default
          // address space. This causes a problem if the structure is in
          // a different address space. We want to allow casting from these
@@ -101,6 +101,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
+         (A == LangAS::Default && B == LangAS::hlsl_output) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
@@ -126,6 +127,41 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
   if (ND)
     return ND->getIdentifier();
   return nullptr;
+}
+
+bool QualType::hasPostfixDeclaratorSyntax() const {
+  QualType QT = *this;
+  while (true) {
+    const Type *T = QT.getTypePtr();
+    switch (T->getTypeClass()) {
+    default:
+      return false;
+    case Type::Pointer:
+      QT = cast<PointerType>(T)->getPointeeType();
+      break;
+    case Type::BlockPointer:
+      QT = cast<BlockPointerType>(T)->getPointeeType();
+      break;
+    case Type::MemberPointer:
+      QT = cast<MemberPointerType>(T)->getPointeeType();
+      break;
+    case Type::LValueReference:
+    case Type::RValueReference:
+      QT = cast<ReferenceType>(T)->getPointeeType();
+      break;
+    case Type::PackExpansion:
+      QT = cast<PackExpansionType>(T)->getPattern();
+      break;
+    case Type::Paren:
+    case Type::ConstantArray:
+    case Type::DependentSizedArray:
+    case Type::IncompleteArray:
+    case Type::VariableArray:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      return true;
+    }
+  }
 }
 
 bool QualType::mayBeDynamicClass() const {
@@ -1327,11 +1363,11 @@ public:
     if (deducedType.isNull())
       return {};
 
-    if (deducedType.getAsOpaquePtr() == T->getDeducedType().getAsOpaquePtr())
+    if (deducedType == T->getDeducedType())
       return QualType(T, 0);
 
-    return Ctx.getAutoType(deducedType, T->getKeyword(), T->isDependentType(),
-                           /*IsPack=*/false, T->getTypeConstraintConcept(),
+    return Ctx.getAutoType(T->getDeducedKind(), deducedType, T->getKeyword(),
+                           T->getTypeConstraintConcept(),
                            T->getTypeConstraintArguments());
   }
 
@@ -1603,6 +1639,24 @@ struct SubstObjCTypeArgsVisitor
   }
 };
 
+struct StripNullabilityTypeVisitor
+    : public SimpleTransformVisitor<StripNullabilityTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripNullabilityTypeVisitor>;
+
+  explicit StripNullabilityTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType type(attrType, 0);
+    if (AttributedType::stripOuterNullability(type)) {
+      while (AttributedType::stripOuterNullability(type)) {
+      }
+      return BaseType::recurse(type);
+    }
+
+    return BaseType::VisitAttributedType(attrType);
+  }
+};
+
 struct StripObjCKindOfTypeVisitor
     : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
   using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
@@ -1677,6 +1731,14 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
   StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
+}
+
+QualType QualType::stripNullability(const ASTContext &constCtx) const {
+  // FIXME: SimpleTransformVisitor currently takes a non-const ASTContext
+  // because some rebuild paths use non-const ASTContext factory APIs.
+  auto &ctx = const_cast<ASTContext &>(constCtx);
+  StripNullabilityTypeVisitor visitor(ctx);
   return visitor.recurse(*this);
 }
 
@@ -2066,6 +2128,10 @@ public:
   Type *VisitPackExpansionType(const PackExpansionType *T) {
     return Visit(T->getPattern());
   }
+
+  Type *VisitAtomicType(const AtomicType *T) {
+    return Visit(T->getValueType());
+  }
 };
 
 } // namespace
@@ -2274,8 +2340,22 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-  else
-    return isSignedIntegerOrEnumerationType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isSignedIntegerOrEnumerationType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
+#include "clang/Basic/AArch64ACLETypes.def"
+    default:
+      break;
+    }
+  }
+
+  return isSignedIntegerOrEnumerationType();
 }
 
 /// isUnsignedIntegerType - Return true if this is an integer type that is
@@ -2584,6 +2664,8 @@ bool Type::isSizelessBuiltinType() const {
       // HLSL intangible types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+      // AMDGPU feature predicate type
+    case BuiltinType::AMDGPUFeaturePredicate:
       return true;
     default:
       return false;
@@ -2736,6 +2818,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  if (Context.getLangOpts().HLSL &&
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
+    return true;
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -2887,8 +2973,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
@@ -3612,6 +3699,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3676,8 +3767,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:
@@ -5094,7 +5183,7 @@ LinkageInfo Type::getLinkageAndVisibility() const {
   return LinkageComputer{}.getTypeLinkageAndVisibility(this);
 }
 
-std::optional<NullabilityKind> Type::getNullability() const {
+NullabilityKindOrNone Type::getNullability() const {
   QualType Type(this, 0);
   while (const auto *AT = Type->getAs<AttributedType>()) {
     // Check whether this is an attributed type with nullability
@@ -5199,6 +5288,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
@@ -5260,7 +5351,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   llvm_unreachable("bad type kind!");
 }
 
-std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
+NullabilityKindOrNone AttributedType::getImmediateNullability() const {
   if (getAttrKind() == attr::TypeNonNull)
     return NullabilityKind::NonNull;
   if (getAttrKind() == attr::TypeNullable)
@@ -5272,8 +5363,7 @@ std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
   return std::nullopt;
 }
 
-std::optional<NullabilityKind>
-AttributedType::stripOuterNullability(QualType &T) {
+NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   QualType AttrTy = T;
   if (auto MacroTy = dyn_cast<MacroQualifiedType>(T))
     AttrTy = MacroTy->getUnderlyingType();
@@ -5286,6 +5376,16 @@ AttributedType::stripOuterNullability(QualType &T) {
   }
 
   return std::nullopt;
+}
+
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
 }
 
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
@@ -5424,6 +5524,31 @@ bool Type::isCUDADeviceBuiltinTextureType() const {
   return false;
 }
 
+static bool isAMDGPUNamedBarrierTypeImpl(const Type *Ty, bool AllowWrappers) {
+  // This query does not care about qualifiers at all.
+  Ty = Ty->getUnqualifiedDesugaredType();
+
+  // Unwrap arrays.
+  while (isa<ArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(Ty))
+    return BT->getKind() == BuiltinType::AMDGPUNamedWorkgroupBarrier;
+  if (AllowWrappers) {
+    if (const auto *RT = dyn_cast<RecordType>(Ty))
+      return RT->getDecl()->hasAttr<AMDGPUNamedBarrierWrapperAttr>();
+  }
+  return false;
+}
+
+bool Type::isAMDGPUNamedBarrierType() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/false);
+}
+
+bool Type::isAMDGPUNamedBarrierTypeOrWrapper() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/true);
+}
+
 bool Type::hasSizedVLAType() const {
   if (!isVariablyModifiedType())
     return false;
@@ -5479,6 +5604,16 @@ bool Type::isHLSLIntangibleType() const {
   return RD->isHLSLIntangible();
 }
 
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
+  const Type *BaseTy = getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
+      return true;
+  }
+  return false;
+}
+
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   switch (type.getObjCLifetime()) {
   case Qualifiers::OCL_None:
@@ -5506,6 +5641,41 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   return DK_none;
+}
+
+static bool
+requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
+                           llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Context.getAsArrayType(Ty))
+    Ty = Context.getBaseElementType(Arr);
+
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
+
+  assert(!Ty->isIncompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (requiresBuiltinLaunderImpl(Context, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+bool QualType::requiresBuiltinLaunder(const ASTContext &Context) const {
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return requiresBuiltinLaunderImpl(Context, *this, Seen);
 }
 
 bool MemberPointerType::isSugared() const {
@@ -5545,46 +5715,72 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
   llvm::APFixedPoint(Val, FXSema).toString(Str);
 }
 
-AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-                   TypeDependence ExtraDependence, QualType Canon,
-                   TemplateDecl *TypeConstraintConcept,
+DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
+                         QualType DeducedAsTypeOrCanon)
+    : Type(TC, /*canon=*/DK == DeducedKind::Deduced
+                   ? DeducedAsTypeOrCanon.getCanonicalType()
+                   : DeducedAsTypeOrCanon,
+           TypeDependence::None) {
+  DeducedTypeBits.Kind = llvm::to_underlying(DK);
+  switch (DK) {
+  case DeducedKind::Undeduced:
+    break;
+  case DeducedKind::Deduced:
+    assert(!DeducedAsTypeOrCanon.isNull() && "Deduced type cannot be null");
+    addDependence(DeducedAsTypeOrCanon->getDependence() &
+                  ~TypeDependence::VariablyModified);
+    DeducedAsType = DeducedAsTypeOrCanon;
+    break;
+  case DeducedKind::DeducedAsPack:
+    addDependence(TypeDependence::UnexpandedPack);
+    [[fallthrough]];
+  case DeducedKind::DeducedAsDependent:
+    addDependence(TypeDependence::DependentInstantiation);
+    break;
+  }
+  assert(getDeducedKind() == DK && "DeducedKind does not match the type state");
+}
+
+AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
+                   AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
-    : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
+    : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
-  assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
-  if (TypeConstraintConcept) {
-    if (isa<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      addDependence(TypeDependence::DependentInstantiation);
+  assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
+  if (!TypeConstraintConcept.isNull()) {
+
+    assert(TypeConstraintConcept.getKind() == TemplateName::Template);
+
+    auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
-      // We only syntactically depend on the constraint arguments. They don't
-      // affect the deduced type, only its validity.
-      addDependence(
-          toSyntacticDependence(toTypeDependence(Arg.getDependence())));
-
+      Dep |= toTypeDependence(Arg.getDependence());
       new (ArgBuffer++) TemplateArgument(Arg);
     }
+    // A deduced AutoType only syntactically depends on its constraints.
+    if (DK == DeducedKind::Deduced)
+      Dep = toSyntacticDependence(Dep);
+    addDependence(Dep);
   }
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                       QualType Deduced, AutoTypeKeyword Keyword,
-                       bool IsDependent, TemplateDecl *CD,
+                       DeducedKind DK, QualType Deduced,
+                       AutoTypeKeyword Keyword, TemplateName CD,
                        ArrayRef<TemplateArgument> Arguments) {
-  ID.AddPointer(Deduced.getAsOpaquePtr());
-  ID.AddInteger((unsigned)Keyword);
-  ID.AddBoolean(IsDependent);
-  ID.AddPointer(CD);
+  DeducedType::Profile(ID, DK, Deduced);
+  ID.AddInteger(llvm::to_underlying(Keyword));
+  CD.Profile(ID);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-  Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+  Profile(ID, Context, getDeducedKind(), getDeducedType(), getKeyword(),
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
@@ -5809,6 +6005,41 @@ std::string FunctionEffectWithCondition::description() const {
   if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
+}
+
+TypeDependence
+HLSLAttributedResourceType::computeDependence(QualType Contained,
+                                              const Attributes &Attrs) {
+  TypeDependence Deps = TypeDependence::None;
+  if (!Contained.isNull())
+    Deps |= Contained->getDependence();
+  if (Attrs.SampleCountExpr)
+    Deps |= toTypeDependence(Attrs.SampleCountExpr->getDependence());
+  return Deps;
+}
+
+HLSLAttributedResourceType::HLSLAttributedResourceType(QualType Wrapped,
+                                                       QualType Contained,
+                                                       const Attributes &Attrs)
+    : Type(HLSLAttributedResource, QualType(),
+           computeDependence(Contained, Attrs)),
+      WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+void HLSLAttributedResourceType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx,
+                                         QualType Wrapped, QualType Contained,
+                                         const Attributes &Attrs) {
+  ID.AddPointer(Wrapped.getAsOpaquePtr());
+  ID.AddPointer(Contained.getAsOpaquePtr());
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
+  ID.AddBoolean(Attrs.IsROV);
+  ID.AddBoolean(Attrs.RawBuffer);
+  ID.AddBoolean(Attrs.IsCounter);
+  ID.AddBoolean(Attrs.IsArray);
+  ID.AddBoolean(Attrs.SampleCountExpr != nullptr);
+  if (Attrs.SampleCountExpr)
+    Attrs.SampleCountExpr->Profile(ID, Ctx, /*Canonical=*/true);
 }
 
 const HLSLAttributedResourceType *

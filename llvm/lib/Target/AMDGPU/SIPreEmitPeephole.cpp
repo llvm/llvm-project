@@ -22,6 +22,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -32,7 +33,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
 
+STATISTIC(NumModeWritesRemoved,
+          "Number of redundant mode register writes removed");
+
 namespace {
+
+/// The state of one independent field of the MODE register, as tracked by
+/// removeRedundantModeWrites.
+struct ModeFieldState {
+  std::optional<int64_t> Value;
+  std::optional<int64_t> ValueBeforePendingWrite;
+  MachineInstr *PendingWrite = nullptr;
+
+  bool isTracked() const { return PendingWrite || Value; }
+};
 
 class SIPreEmitPeephole {
 private:
@@ -52,6 +66,7 @@ private:
                              const MachineBasicBlock &From,
                              const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
+  bool removeRedundantModeWrites(MachineBasicBlock &SrcMBB) const;
   // Creates a list of packed instructions following an MFMA that are suitable
   // for unpacking.
   void collectUnpackingCandidates(MachineInstr &BeginMI,
@@ -237,14 +252,16 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     if (M == E)
       return Changed;
     // If SReg is VCC and SReg definition is a VALU comparison.
-    // This means S_AND with EXEC is not required.
+    // This means S_AND with EXEC is not required, unless
+    // the implicit def of SCC is alive.
     // Erase the S_AND and return.
     // Note: isVOPC is used instead of isCompare to catch V_CMP_CLASS
     if (A->getOpcode() == And && SReg == CondReg && !ModifiesExec &&
-        TII->isVOPC(*M)) {
+        TII->isVOPC(*M) && A->allImplicitDefsAreDead()) {
       A->eraseFromParent();
       return true;
     }
+
     if (!M->isMoveImmediate() || !M->getOperand(1).isImm() ||
         (M->getOperand(1).getImm() != -1 && M->getOperand(1).getImm() != 0))
       return Changed;
@@ -512,6 +529,76 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
   return true;
 }
 
+/// Remove writes to the FP round mode and FP denorm mode that can never be
+/// observed: either the value written is already live in MODE, or a mode write
+/// replaces the whole mode field before anything reads it.
+///
+/// s_round_mode and s_denorm_mode each assign one field of MODE and preserve
+/// the rest of the register, so the two fields are tracked independently and a
+/// write to one is transparent to the other.
+///
+/// This is a purely intra-block analysis: the mode on entry to \p SrcMBB is
+/// unknown, and a write that is still live at the end of the block is kept for
+/// the benefit of the successors.
+bool SIPreEmitPeephole::removeRedundantModeWrites(
+    MachineBasicBlock &SrcMBB) const {
+  bool Changed = false;
+  ModeFieldState DenormMode;
+  ModeFieldState RoundMode;
+
+  for (MachineInstr &MI : make_early_inc_range(SrcMBB)) {
+    if (MI.isDebugInstr())
+      continue;
+
+    unsigned Opc = MI.getOpcode();
+    if (Opc == AMDGPU::S_DENORM_MODE || Opc == AMDGPU::S_ROUND_MODE) {
+      ModeFieldState &Field =
+          Opc == AMDGPU::S_DENORM_MODE ? DenormMode : RoundMode;
+      int64_t NewValue = MI.getOperand(0).getImm();
+
+      if (Field.PendingWrite) {
+        LLVM_DEBUG(dbgs() << "Removing dead mode write: "
+                          << *Field.PendingWrite);
+        Field.PendingWrite->eraseFromParent();
+        ++NumModeWritesRemoved;
+        Changed = true;
+        Field.PendingWrite = nullptr;
+        Field.Value = Field.ValueBeforePendingWrite;
+      }
+
+      if (Field.Value == NewValue) {
+        LLVM_DEBUG(dbgs() << "Removing redundant mode write: " << MI);
+        MI.eraseFromParent();
+        ++NumModeWritesRemoved;
+        Changed = true;
+        continue;
+      }
+
+      Field.ValueBeforePendingWrite = Field.Value;
+      Field.PendingWrite = &MI;
+      Field.Value = NewValue;
+      continue;
+    }
+
+    // Nothing tracked yet; skip register checks below.
+    if (!DenormMode.isTracked() && !RoundMode.isTracked())
+      continue;
+
+    // Inline asm cannot declare a MODE clobber, so assume it writes both.
+    if (MI.isInlineAsm() || MI.modifiesRegister(AMDGPU::MODE, TRI)) {
+      DenormMode = ModeFieldState();
+      RoundMode = ModeFieldState();
+      continue;
+    }
+
+    if (MI.readsRegister(AMDGPU::MODE, TRI) || MI.hasUnmodeledSideEffects()) {
+      DenormMode.PendingWrite = nullptr;
+      RoundMode.PendingWrite = nullptr;
+    }
+  }
+  return Changed;
+}
+
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -576,10 +663,13 @@ uint32_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   // e32 instructions don't allow source modifiers.
   switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx1250:
     return AMDGPU::V_ADD_F32_e64;
   case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx1250:
     return AMDGPU::V_MUL_F32_e64;
   case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx1250:
     return AMDGPU::V_FMA_F32_e64;
   default:
     return std::numeric_limits<uint32_t>::max();
@@ -766,8 +856,6 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   SIPreEmitPeephole Impl;
 
@@ -777,10 +865,6 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
     return PA;
   }
 
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 
@@ -794,6 +878,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   MF.RenumberBlocks();
 
   for (MachineBasicBlock &MBB : MF) {
+    Changed |= removeRedundantModeWrites(MBB);
+
     MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
     // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {

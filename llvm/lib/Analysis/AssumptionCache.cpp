@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -115,7 +117,7 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   }
 }
 
-void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
@@ -130,16 +132,33 @@ void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
         Found = true;
         Elem.Assume = nullptr;
       }
+
+      // We need to iterate through this loop to determine the value of
+      // HasNonnull, to avoid prematurely calling AffectedValues.erase(AVI).
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
         break;
     }
-    assert(Found && "already unregistered or incorrect cache state");
-    if (!HasNonnull)
+
+    if (!Found) {
+      // It may well be the case that we fail to find an affected value in the
+      // cache. In particular, if an assume call is updated via `Use::set()`, we
+      // won't be notified that the affected value has changed and the cache
+      // will silently go stale.
+    } else if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
+}
 
+void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+  removeAffectedValues(CI);
   llvm::erase(AssumeHandles, CI);
+}
+
+void AssumptionCache::replaceAssumption(WeakVH &Handle, AssumeInst *New) {
+  removeAffectedValues(cast<AssumeInst>(Handle));
+  Handle = New;
+  updateAffectedValues(New);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {
@@ -237,9 +256,28 @@ PreservedAnalyses AssumptionPrinterPass::run(Function &F,
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";
-  for (auto &VH : AC.assumptions())
-    if (VH)
-      OS << "  " << *cast<CallInst>(VH)->getArgOperand(0) << "\n";
+  for (auto &VH : AC.assumptions()) {
+    if (!VH)
+      continue;
+
+    auto *Assume = cast<CallInst>(VH);
+    if (!Assume->hasOperandBundles()) {
+      OS << "  " << *Assume->getArgOperand(0) << "\n";
+      continue;
+    }
+
+    assert(match(Assume->getArgOperand(0), m_One()) &&
+           "assume must have trivial cond");
+    OS << "  [ ";
+    ListSeparator LS;
+    for (const OperandBundleUse &BU : Assume->operand_bundles()) {
+      OS << LS << '"' << BU.getTagName() << "\"(";
+      interleaveComma(BU.Inputs, OS,
+                      [&](const Use &Input) { Input->printAsOperand(OS); });
+      OS << ')';
+    }
+    OS << " ]\n";
+  }
 
   return PreservedAnalyses::all();
 }

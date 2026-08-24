@@ -11,6 +11,7 @@ import json
 
 class TsanCPPGlobalLocationTestCase(TestBase):
     @expectedFailureNetBSD
+    @skipIfLinux  # https://github.com/llvm/llvm-project/issues/191012
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessThreadSanitizer

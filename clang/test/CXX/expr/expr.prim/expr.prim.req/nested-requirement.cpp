@@ -152,7 +152,7 @@ void func() {
   // expected-note@#bar {{while substituting template arguments into constraint expression here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
   // expected-note@#bar {{candidate template ignored: constraints not satisfied [with T = False]}}
-  // expected-note@#bar {{because 'X<False>::value' evaluated to false}}
+  // expected-note@#bar {{because 'X<SubstitutionFailureNestedRequires::ErrorExpressions_NotSF::False>::value' evaluated to false}}
 
   bar<int>();
   // expected-error@-1 {{no matching function for call to 'bar'}} \
@@ -182,4 +182,20 @@ template <typename> class j {
   j();
 };
 template <> j(); // expected-error {{deduction guide declaration without trailing return type}}
+}
+
+namespace GH213575 {
+struct S {};
+template <typename T> bar C; // expected-error {{unknown type name 'bar'}}
+
+template <typename U> auto foo() {
+  return []<typename T>(
+             T, bool b = requires { C<T>; }) {
+    static_assert(requires { requires C<U>; }); // expected-error {{static assertion failed due to requirement 'requires { requires <<error-expression>>; }'}}
+    return 0;
+  };
+}
+
+auto baz = foo<int>();
+int qux = baz(S{}); // expected-note {{in instantiation of function template specialization 'GH213575::foo()::(lambda)::operator()<GH213575::S>' requested here}}
 }

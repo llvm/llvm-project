@@ -797,3 +797,225 @@ define i8 @scmp_ashr_slt_pattern_neg(i8 %a) {
   %retval = select i1 %cmp, i8 %a.lobit, i8 1
   ret i8 %retval
 }
+
+define i64 @sext_scmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+; Don't fold when scmp has multiple uses: would leave the narrow scmp alive
+; and add a second wider scmp.
+define i64 @sext_scmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use(i8 [[CMP]])
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[CMP]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  call void @use(i8 %cmp)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+declare void @use32(i32 %value)
+
+define i8 @trunc_scmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_scmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %cmp = call i32 @llvm.scmp(i32 %x, i32 %y)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}
+
+define <4 x i8> @trunc_scmp_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @trunc_scmp_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %cmp = call <4 x i32> @llvm.scmp(<4 x i32> %x, <4 x i32> %y)
+  %tr = trunc <4 x i32> %cmp to <4 x i8>
+  ret <4 x i8> %tr
+}
+
+; Don't fold when scmp has multiple uses: would leave the wide scmp alive
+; and add a second narrower scmp.
+define i8 @trunc_scmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_scmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use32(i32 [[CMP]])
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %cmp = call i32 @llvm.scmp(i32 %x, i32 %y)
+  call void @use32(i32 %cmp)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}
+
+; scmp(X, 0) with X known in [-1, 1] -> X (same width)
+define i32 @scmp_zero_range_same_width(i32 range(i32 -1, 2) %x) {
+; CHECK-LABEL: define i32 @scmp_zero_range_same_width(
+; CHECK-SAME: i32 range(i32 -1, 2) [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %r = call i32 @llvm.scmp.i32.i32(i32 %x, i32 0)
+  ret i32 %r
+}
+
+; scmp(X, 0) with X known in [-1, 1] -> trunc X (narrower result)
+define i8 @scmp_zero_range_trunc(i32 range(i32 -1, 2) %x) {
+; CHECK-LABEL: define i8 @scmp_zero_range_trunc(
+; CHECK-SAME: i32 range(i32 -1, 2) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}
+
+; scmp(X, 0) with X known in [-1, 1] -> sext X (wider result)
+define i64 @scmp_zero_range_sext(i32 range(i32 -1, 2) %x) {
+; CHECK-LABEL: define i64 @scmp_zero_range_sext(
+; CHECK-SAME: i32 range(i32 -1, 2) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %r = call i64 @llvm.scmp.i64.i32(i32 %x, i32 0)
+  ret i64 %r
+}
+
+; Range inferred from instruction: ashr X, 31 is -1 or 0.
+define i8 @scmp_zero_ashr_operand(i32 %x) {
+; CHECK-LABEL: define i8 @scmp_zero_ashr_operand(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X]], 31
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i32 [[SIGN]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i32 %x, 31
+  %r = call i8 @llvm.scmp.i8.i32(i32 %sign, i32 0)
+  ret i8 %r
+}
+
+; Range inferred from instruction: X & 1 is 0 or 1.
+define i8 @scmp_zero_and1_operand(i32 %x) {
+; CHECK-LABEL: define i8 @scmp_zero_and1_operand(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = and i32 %x, 1
+  %r = call i8 @llvm.scmp.i8.i32(i32 %b, i32 0)
+  ret i8 %r
+}
+
+; Vector version.
+define <2 x i8> @scmp_zero_range_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i8> @scmp_zero_range_vec(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i32> [[X]], splat (i32 31)
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw <2 x i32> [[SIGN]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sign = ashr <2 x i32> %x, splat (i32 31)
+  %r = call <2 x i8> @llvm.scmp.v2i8.v2i32(<2 x i32> %sign, <2 x i32> zeroinitializer)
+  ret <2 x i8> %r
+}
+
+; Negative test: range [-1, 3) may contain 2, scmp(2, 0) != 2 after trunc/sext.
+define i8 @scmp_zero_range_too_wide_pos(i32 range(i32 -1, 3) %x) {
+; CHECK-LABEL: define i8 @scmp_zero_range_too_wide_pos(
+; CHECK-SAME: i32 range(i32 -1, 3) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}
+
+; Negative test: range [-2, 2) may contain -2.
+define i8 @scmp_zero_range_too_wide_neg(i32 range(i32 -2, 2) %x) {
+; CHECK-LABEL: define i8 @scmp_zero_range_too_wide_neg(
+; CHECK-SAME: i32 range(i32 -2, 2) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}
+
+; Negative test: RHS is not zero.
+define i8 @scmp_nonzero_rhs_range(i32 range(i32 -1, 2) %x) {
+; CHECK-LABEL: define i8 @scmp_nonzero_rhs_range(
+; CHECK-SAME: i32 range(i32 -1, 2) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 1)
+  ret i8 %r
+}
+
+; i1 X is always one of 0 or -1 (signed), so this folds unconditionally.
+define i8 @scmp_zero_i1(i1 %x) {
+; CHECK-LABEL: define i8 @scmp_zero_i1(
+; CHECK-SAME: i1 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[X]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i1(i1 %x, i1 false)
+  ret i8 %r
+}
+
+; Wide integer type: range bounds don't fit in int64_t. Fold when in [-1, 1].
+define i8 @scmp_zero_range_i128(i128 range(i128 -1, 2) %x) {
+; CHECK-LABEL: define i8 @scmp_zero_range_i128(
+; CHECK-SAME: i128 range(i128 -1, 2) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = trunc i128 [[X]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+; Negative test: i128 upper bound 2^100 is way out of [-1, 1].
+define i8 @scmp_zero_range_i128_huge(i128 range(i128 -1, 1267650600228229401496703205376) %x) {
+; CHECK-LABEL: define i8 @scmp_zero_range_i128_huge(
+; CHECK-SAME: i128 range(i128 -1, 1267650600228229401496703205376) [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i128(i128 [[X]], i128 0)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+; Real-world motivating case (Rust Ipv4Addr::cmp): the range of a ucmp result
+; is [-1, 1], so the outer scmp folds to a trunc, which then combines with
+; the inner ucmp into a single narrower ucmp.
+define i8 @scmp_zero_of_ucmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_zero_of_ucmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[XS:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; CHECK-NEXT:    [[YS:%.*]] = call i32 @llvm.bswap.i32(i32 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[XS]], i32 [[YS]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xs = call i32 @llvm.bswap.i32(i32 %x)
+  %ys = call i32 @llvm.bswap.i32(i32 %y)
+  %cmp = call i64 @llvm.ucmp.i64.i32(i32 %xs, i32 %ys)
+  %r = call i8 @llvm.scmp.i8.i64(i64 %cmp, i64 0)
+  ret i8 %r
+}

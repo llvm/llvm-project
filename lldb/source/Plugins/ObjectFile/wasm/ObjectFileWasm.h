@@ -9,12 +9,26 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_OBJECTFILEWASM_H
 
+#include "WasmAddress.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
 
 namespace lldb_private {
 namespace wasm {
+
+/// A global declared by the module itself. Imported globals occupy the low
+/// indices of the same index space and have no entry here.
+struct WasmGlobal {
+  /// Size of the global's value type, which bounds what a read can produce.
+  /// Absent for a value type whose values cannot be read.
+  std::optional<uint32_t> size;
+
+  /// Value the global is initialized with, when the initializer is a constant.
+  /// Anything else has to be evaluated against module state the object file
+  /// does not have.
+  std::optional<uint64_t> init_expr_value;
+};
 
 /// Generic Wasm object file reader.
 ///
@@ -42,12 +56,10 @@ public:
                                           const lldb::ProcessSP &process_sp,
                                           lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        ModuleSpecList &specs);
+  static ModuleSpecList
+  GetModuleSpecifications(const FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   /// PluginInterface protocol.
   /// \{
@@ -91,7 +103,7 @@ public:
 
   ArchSpec GetArchitecture() override { return m_arch; }
 
-  UUID GetUUID() override { return m_uuid; }
+  UUID GetUUID() override;
 
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 
@@ -101,6 +113,11 @@ public:
 
   bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
                       bool value_is_offset) override;
+
+  /// A global has no bytes in the module to read, so serve its initial value
+  /// when there is no process to ask for the current one.
+  size_t ReadSectionData(Section *section, lldb::offset_t section_offset,
+                         void *dst, size_t dst_len) override;
 
   lldb_private::Address GetBaseAddress() override {
     return IsInMemory() ? Address(m_memory_addr) : Address(0);
@@ -150,6 +167,8 @@ private:
 
   std::vector<section_info> m_sect_infos;
   uint32_t m_num_imported_functions = 0;
+  uint32_t m_num_imported_globals = 0;
+  std::vector<WasmGlobal> m_globals;
   std::vector<Symbol> m_symbols;
   ArchSpec m_arch;
   UUID m_uuid;

@@ -23,7 +23,9 @@
 # RUN: cp %p/../Inputs/module-warnings/1.o %t.dir
 # RUN: cp %p/../Inputs/module-warnings/Foo.pcm %t.dir/ModuleCache
 #
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y \
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y \
+# RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker parallel -verify -f -oso-prepend-path=%t.dir -y \
 # RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
 #
 # Module-not-found should be reported only once.
@@ -32,17 +34,25 @@
 # CHECK-NOT: warning: {{.*}}Bar.pcm:
 #
 # RUN: cp %p/../Inputs/module-warnings/libstatic.a %t.dir
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker parallel -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
 # CHECK: rebuild the module cache
 # CHECK-NOT: static libraries
 #
 # RUN: rm -rf %t.dir/ModuleCache
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=STATIC,STATIC-CLASSIC
+# RUN: dsymutil --linker parallel -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=STATIC
 # STATIC: warning: {{.*}}Bar.pcm:
 # STATIC: note: Linking a static library
 # STATIC: warning: {{.*}}Foo.pcm:
-# STATIC: warning: couldn`t find compile unit for the macro table with offset = 0x0
+
+## The classic linker emits a combined .debug_macinfo table and warns about
+## MacroLists it has to drop because no compile unit references them. The
+## parallel linker emits .debug_macinfo per compile unit, so unreferenced lists
+## are never emitted and have no corresponding warning.
+# STATIC-CLASSIC: warning: couldn`t find compile unit for the macro table with offset = 0x0
 # STATIC-NOT: warning:
 
 ---

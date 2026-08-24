@@ -25,7 +25,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i64 [[TMP3]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[IV_START]] to i32
@@ -53,13 +53,12 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF3]]
 ; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[IV_START]], [[N_VEC4]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
@@ -87,7 +86,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[IND_END5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END6]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[VECTOR_SCEVCHECK]] ], [ [[IV_START]], [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[IND_END5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[VECTOR_SCEVCHECK]] ], [ [[IV_START]], [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL7]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -138,13 +137,13 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[L]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[L]], 64
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[L]], 63
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[L]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[DOTSPLATINSERT2]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i16 [[DOTCAST]], [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i16> splat (i16 16), [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i16> [[TMP2]], splat (i16 4)
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[OFF]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i16> [[DOTSPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, [[TMP2]]
@@ -175,14 +174,12 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[L]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[DOTCAST9:%.*]] = trunc i64 [[N_VEC]] to i16
-; CHECK-NEXT:    [[IND_END10:%.*]] = mul i16 [[DOTCAST9]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[L]], 8
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[L]], 7
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[L]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[DOTCAST7:%.*]] = trunc i64 [[N_VEC5]] to i16
 ; CHECK-NEXT:    [[IND_END8:%.*]] = mul i16 [[DOTCAST7]], [[TMP0]]
@@ -213,7 +210,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    br i1 [[CMP_N25]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i16 [ [[IND_END8]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i16 [ [[IND_END8]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -262,25 +259,21 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i32 31
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i64 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[BC_RESUME_VAL]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i8> [ [[BROADCAST_SPLAT]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND2]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i8> [ zeroinitializer, [[VEC_EPILOG_PH]] ], [ [[VEC_IND2]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1052
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i64 3
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ 1052, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]

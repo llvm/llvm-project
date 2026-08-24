@@ -46,7 +46,7 @@ static Value getMemrefBuffPtr(Location loc, MemRefType type, Value buffer,
   return memRefDescriptor.bufferPtr(rewriter, loc, typeConverter, type);
 }
 
-LogicalResult x86::MaskCompressOp::verify() {
+LogicalResult x86::avx512::MaskCompressOp::verify() {
   if (getSrc() && getConstantSrc())
     return emitError("cannot use both src and constant_src");
 
@@ -60,7 +60,7 @@ LogicalResult x86::MaskCompressOp::verify() {
   return success();
 }
 
-SmallVector<Value> x86::MaskCompressOp::getIntrinsicOperands(
+SmallVector<Value> x86::avx512::MaskCompressOp::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   auto loc = getLoc();
@@ -82,9 +82,9 @@ SmallVector<Value> x86::MaskCompressOp::getIntrinsicOperands(
 }
 
 SmallVector<Value>
-x86::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
-                                 const LLVMTypeConverter &typeConverter,
-                                 RewriterBase &rewriter) {
+x86::avx::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
+                                      const LLVMTypeConverter &typeConverter,
+                                      RewriterBase &rewriter) {
   SmallVector<Value> intrinsicOperands(operands);
   // Dot product of all elements, broadcasted to all elements.
   Value scale =
@@ -94,7 +94,7 @@ x86::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   return intrinsicOperands;
 }
 
-SmallVector<Value> x86::BcstToPackedF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::BcstToPackedF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);
@@ -102,7 +102,7 @@ SmallVector<Value> x86::BcstToPackedF32Op::getIntrinsicOperands(
                            typeConverter, rewriter)};
 }
 
-SmallVector<Value> x86::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);
@@ -110,7 +110,7 @@ SmallVector<Value> x86::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
                            typeConverter, rewriter)};
 }
 
-SmallVector<Value> x86::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86::avx::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   Adaptor adaptor(operands, *this);
@@ -295,15 +295,22 @@ LogicalResult x86::amx::TileMulFOp::verify() {
   x86::amx::TileType aType = getLhsTileType();
   x86::amx::TileType bType = getRhsTileType();
   x86::amx::TileType cType = getTileType();
+  unsigned scale = 1;
+  if (aType.getElementType().isF8E4M3FN() || aType.getElementType().isF8E5M2())
+    scale = 2;
   if (failed(verifyTileSize(*this, aType)) ||
       failed(verifyTileSize(*this, bType)) ||
       failed(verifyTileSize(*this, cType)) ||
-      failed(verifyMultShape(*this, aType, bType, cType, 1)))
+      failed(verifyMultShape(*this, aType, bType, cType, scale)))
     return failure();
   Type ta = aType.getElementType();
   Type tb = bType.getElementType();
   Type tc = cType.getElementType();
-  if ((!ta.isBF16() && !ta.isF16()) || (ta != tb) || !tc.isF32())
+  bool flag1 = !ta.isBF16() && !ta.isF16() &&
+               !((ta.isF8E4M3FN() || ta.isF8E5M2()) &&
+                 (tb.isF8E4M3FN() || tb.isF8E5M2()));
+  bool flag2 = (ta.isBF16() || ta.isF16()) ? (ta != tb) : false;
+  if (flag1 || flag2 || !tc.isF32())
     return emitOpError("unsupported type combination");
   return success();
 }

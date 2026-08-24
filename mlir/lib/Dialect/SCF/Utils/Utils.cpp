@@ -367,7 +367,8 @@ void mlir::generateUnrolledLoop(
 /// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    bool shouldPromoteIfSingleIteration) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
@@ -385,13 +386,40 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   bool generateEpilogueLoop = true;
 
   std::optional<APInt> constTripCount = forOp.getStaticTripCount();
+  // A static trip count does not imply constant bounds: it is also known when
+  // the lower and the upper bound are the same value (zero iterations), when
+  // the lower bound is zero and the upper bound is the step (one iteration),
+  // and when the upper bound is a constant offset from a non-constant lower
+  // bound. The computation below reads all three bounds as constants, so fall
+  // back to the dynamic case unless they are.
+  if (constTripCount && !(getConstantAPIntValue(forOp.getLowerBound()) &&
+                          getConstantAPIntValue(forOp.getUpperBound()) &&
+                          getConstantAPIntValue(step)))
+    constTripCount = std::nullopt;
   if (constTripCount) {
     // Constant loop bounds computation.
-    int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
-    int64_t ubCst = getConstantIntValue(forOp.getUpperBound()).value();
-    int64_t stepCst = getConstantIntValue(forOp.getStep()).value();
+    bool isUnsignedLoop = forOp.getUnsignedCmp();
+    // For unsigned loops, bounds must be zero-extended: narrow integer types
+    // (e.g. i1, i2, i3) may have bit patterns that are negative in a signed
+    // context (e.g., i1 value 1 has getSExtValue() == -1, getZExtValue() == 1).
+    // Zero-extension is only safe when the unsigned value fits in int64_t, i.e.
+    // the type's bitwidth is < 64. Bail out for 64-bit unsigned loops.
+    if (isUnsignedLoop) {
+      if (auto intTy = dyn_cast<IntegerType>(forOp.getUpperBound().getType()))
+        if (intTy.getWidth() >= 64)
+          return failure();
+    }
+    auto getLoopBound = [&](Value v) -> int64_t {
+      auto apInt = getConstantAPIntValue(v);
+      assert(apInt && "expected constant loop bound");
+      return isUnsignedLoop ? static_cast<int64_t>(apInt->first.getZExtValue())
+                            : apInt->first.getSExtValue();
+    };
+    int64_t lbCst = getLoopBound(forOp.getLowerBound());
+    int64_t ubCst = getLoopBound(forOp.getUpperBound());
+    int64_t stepCst = getLoopBound(step);
     if (unrollFactor == 1) {
-      if (constTripCount->isOne() &&
+      if (shouldPromoteIfSingleIteration && constTripCount->isOne() &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return UnrolledLoopInfo{forOp, std::nullopt};
@@ -412,9 +440,16 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     else
       upperBoundUnrolled = forOp.getUpperBound();
 
-    // Create constant for 'stepUnrolled'.
+    // Create constant for 'stepUnrolled'. When the main loop has zero
+    // iterations (tripCountEvenMultiple == 0), keep the original step.
+    // stepCst * unrollFactor may produce a value that, when truncated to the
+    // bound type's bitwidth during IntegerAttr construction, wraps to zero; a
+    // zero step causes constantTripCount to return nullopt instead of 0, which
+    // prevents the zero-trip main loop from being elided.
+    bool mainLoopHasNoIter = (tripCountEvenMultiple == 0);
+    bool stepUnchanged = (stepCst == stepUnrolledCst);
     stepUnrolled =
-        stepCst == stepUnrolledCst
+        (mainLoopHasNoIter || stepUnchanged)
             ? step
             : arith::ConstantOp::create(boundsBuilder, loc,
                                         boundsBuilder.getIntegerAttr(
@@ -463,7 +498,8 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getInitArgs().size(), results);
-    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+    if (!shouldPromoteIfSingleIteration ||
+        epilogueForOp.promoteIfSingleIteration(rewriter).failed())
       resultLoops.epilogueLoopOp = epilogueForOp;
   }
 
@@ -485,8 +521,10 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
         return arith::AddIOp::create(b, loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
-  // Promote the loop body up if this has turned into a single iteration loop.
-  if (forOp.promoteIfSingleIteration(rewriter).failed())
+  // Promote the loop body up if this has turned into a single iteration loop
+  // and `shouldPromoteIfSingleIteration` is true.
+  if (!shouldPromoteIfSingleIteration ||
+      forOp.promoteIfSingleIteration(rewriter).failed())
     resultLoops.mainLoopOp = forOp;
   return resultLoops;
 }
@@ -974,6 +1012,13 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     auto yieldedVals = llvm::to_vector(innerTerminator->getOperands());
     assert(llvm::equal(outerLoop.getRegionIterArgs(), innerLoop.getInitArgs()));
     for (Value &yieldedVal : yieldedVals) {
+      // The yielded value may be the induction variable of the inner loop,
+      // which is about to be inlined and whose block argument is about to
+      // be destroyed. Use its replacement value instead.
+      if (yieldedVal == innerLoop.getInductionVar()) {
+        yieldedVal = delinearizeIvs[i];
+        continue;
+      }
       // The yielded value may be an iteration argument of the inner loop
       // which is about to be inlined.
       auto iter = llvm::find(innerLoop.getRegionIterArgs(), yieldedVal);

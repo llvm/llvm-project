@@ -47,7 +47,8 @@ class StringRef;
 class raw_ostream;
 class LiveIntervals;
 class LiveVariables;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 // This structure uniquely identifies a basic block section.
@@ -85,12 +86,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
   using NumberInfo = DenseMapInfo<unsigned>;
 
-  static inline MBBSectionID getEmptyKey() {
-    return MBBSectionID(NumberInfo::getEmptyKey());
-  }
-  static inline MBBSectionID getTombstoneKey() {
-    return MBBSectionID(NumberInfo::getTombstoneKey());
-  }
   static unsigned getHashValue(const MBBSectionID &SecID) {
     return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
                                     NumberInfo::getHashValue(SecID.Number));
@@ -189,6 +184,9 @@ private:
   /// as predecessor/successor, a terminator MachineInstr, or a jump table.
   bool MachineBlockAddressTaken = false;
 
+  /// Relatively stable number used for analyses.
+  unsigned AnalysisNumber = 0;
+
   /// If this MachineBasicBlock corresponds to an IR-level "blockaddress"
   /// constant, this contains a pointer to that block.
   BasicBlock *AddressTakenIRBlock = nullptr;
@@ -214,6 +212,8 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
+
+  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -1030,13 +1030,17 @@ public:
   }
 
   // Helper method for new pass manager migration.
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    const SplitCriticalEdgeAnalyses &Analyses,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1269,6 +1273,10 @@ public:
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
 
+  /// For analyses, blocks have a more stable number.
+  int getAnalysisNumber() const { return AnalysisNumber; }
+  void setAnalysisNumber(int N) { AnalysisNumber = N; }
+
   /// Return the call frame size on entry to this basic block.
   unsigned getCallFrameSize() const { return CallFrameSize; }
   /// Set the call frame size on entry to this basic block.
@@ -1364,8 +1372,8 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1381,8 +1389,8 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1407,8 +1415,8 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1427,8 +1435,8 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 

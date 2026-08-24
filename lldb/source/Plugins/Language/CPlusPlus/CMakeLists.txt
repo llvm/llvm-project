@@ -6,6 +6,10 @@ lldb_tablegen(LanguageCPlusPlusPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesEnumGen)
 
+lldb_tablegen(LanguageCPlusPlusProperties.json -dump-json
+  SOURCE LanguageCPlusPlusProperties.td
+  TARGET LLDBPluginLanguageCPlusPlusPropertiesJsonGen)
+
 add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
   Coroutines.cpp
@@ -14,13 +18,15 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CxxStringTypes.cpp
   Generic.cpp
   GenericBitset.cpp
+  GenericErrorCode.cpp
+  GenericFilesystem.cpp
   GenericInitializerList.cpp
   GenericList.cpp
   GenericOptional.cpp
+  GenericQueue.cpp
   LibCxx.cpp
   LibCxxAtomic.cpp
   LibCxxMap.cpp
-  LibCxxQueue.cpp
   LibCxxRangesRefView.cpp
   LibCxxSliceArray.cpp
   LibCxxProxyArray.cpp
@@ -37,11 +43,13 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStl.cpp
   MsvcStlAtomic.cpp
   MsvcStlDeque.cpp
+  MsvcStlExpected.cpp
   MsvcStlSmartPointer.cpp
   MsvcStlSpan.cpp
   MsvcStlTree.cpp
   MsvcStlTuple.cpp
   MsvcStlUnordered.cpp
+  MsvcStlValarray.cpp
   MsvcStlVariant.cpp
   MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp

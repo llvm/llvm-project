@@ -31,6 +31,7 @@
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -48,6 +49,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -617,9 +619,15 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     }
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
   }
-  if (auto funcAttr = dyn_cast<FlatSymbolRefAttr>(attr))
-    return llvm::ConstantExpr::getBitCast(
-        moduleTranslation.lookupFunction(funcAttr.getValue()), llvmType);
+  if (auto symAttr = dyn_cast<FlatSymbolRefAttr>(attr)) {
+    StringRef name = symAttr.getValue();
+    if (llvm::Function *func = moduleTranslation.lookupFunction(name))
+      return llvm::ConstantExpr::getBitCast(func, llvmType);
+    if (llvm::GlobalValue *global = moduleTranslation.lookupGlobal(name))
+      return llvm::ConstantExpr::getBitCast(global, llvmType);
+    emitError(loc, "unknown symbol reference '") << name << "' in constant";
+    return nullptr;
+  }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr)) {
     llvm::Type *elementType;
     uint64_t numElements;
@@ -658,7 +666,6 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         return llvm::ConstantAggregateZero::get(arrayType);
       }
       if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
-        // TODO: Handle all compatible types. This code only handles integer.
         if (isa<llvm::IntegerType>(elementType)) {
           if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
             if (ci->getBitWidth() == 8) {
@@ -680,6 +687,26 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
               SmallVector<int64_t> constants(numElements, ci->getZExtValue());
               return llvm::ConstantDataArray::get(elementType->getContext(),
                                                   constants);
+            }
+          }
+        }
+        if (elementType->isFloatingPointTy()) {
+          if (llvm::ConstantFP *cfp = dyn_cast<llvm::ConstantFP>(child)) {
+            APInt bitPattern = cfp->getValueAPF().bitcastToAPInt();
+            uint64_t value = bitPattern.getZExtValue();
+            // TODO: This code only handles 16, 32, and 64 bit floats. Handle
+            // all compatible types, fp8, fp4, etc.
+            if (bitPattern.getBitWidth() == 16) {
+              SmallVector<uint16_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
+            }
+            if (bitPattern.getBitWidth() == 32) {
+              SmallVector<uint32_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
+            }
+            if (bitPattern.getBitWidth() == 64) {
+              SmallVector<uint64_t> constants(numElements, value);
+              return llvm::ConstantDataArray::getFP(elementType, constants);
             }
           }
         }
@@ -761,13 +788,14 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
 }
 
 ModuleTranslation::ModuleTranslation(Operation *module,
-                                     std::unique_ptr<llvm::Module> llvmModule)
+                                     std::unique_ptr<llvm::Module> llvmModule,
+                                     llvm::vfs::FileSystem *fs)
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
       loopAnnotationTranslation(std::make_unique<LoopAnnotationTranslation>(
           *this, *this->llvmModule)),
-      typeTranslator(this->llvmModule->getContext()),
+      fileSystem(fs), typeTranslator(this->llvmModule->getContext()),
       iface(module->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -899,13 +927,13 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
-  return builder.CreateIntrinsic(intrinsic, tys, args);
+  return builder.CreateIntrinsicWithoutFolding(intrinsic, tys, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     llvm::Type *retTy, ArrayRef<llvm::Value *> args) {
-  return builder.CreateIntrinsic(retTy, intrinsic, args);
+  return builder.CreateIntrinsicWithoutFolding(retTy, intrinsic, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
@@ -954,11 +982,16 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    auto attr = llvm::cast<TypedAttr>(intrOp->getAttr(immArgName));
-    assert(attr.getType().isIntOrFloat() && "expected int or float immarg");
-    auto *type = moduleTranslation.convertType(attr.getType());
+    Attribute attr = intrOp->getAttr(immArgName);
+    if (auto intrinsicIntegerAttr =
+            dyn_cast<LLVM::IntrinsicIntegerAttrInterface>(attr))
+      attr = intrinsicIntegerAttr.getIntegerAttr();
+    auto typedAttr = llvm::cast<TypedAttr>(attr);
+    assert(typedAttr.getType().isIntOrFloat() &&
+           "expected int or float immarg");
+    auto *type = moduleTranslation.convertType(typedAttr.getType());
     args[immArgPos] = LLVM::detail::getLLVMConstant(
-        type, attr, intrOp->getLoc(), moduleTranslation);
+        type, typedAttr, intrOp->getLoc(), moduleTranslation);
   }
   unsigned opArg = 0;
   for (auto &arg : args) {
@@ -990,9 +1023,8 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
-LogicalResult ModuleTranslation::convertOperation(Operation &op,
-                                                  llvm::IRBuilderBase &builder,
-                                                  bool recordInsertions) {
+LogicalResult ModuleTranslation::convertOperationImpl(
+    Operation &op, llvm::IRBuilderBase &builder, bool recordInsertions) {
   const LLVMTranslationDialectInterface *opIface = iface.getInterfaceFor(&op);
   if (!opIface)
     return op.emitError("cannot be converted to LLVM IR: missing "
@@ -1052,7 +1084,7 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
     builder.SetCurrentDebugLocation(
         debugTranslation->translateLoc(op.getLoc(), subprogram));
 
-    if (failed(convertOperation(op, builder, recordInsertions)))
+    if (failed(convertOperationImpl(op, builder, recordInsertions)))
       return failure();
 
     // Set the branch weight metadata on the translated instruction.
@@ -1167,7 +1199,9 @@ convertMLIRAttributesToLLVM(Location loc, llvm::LLVMContext &ctx,
 
 LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Mapping from compile unit to its respective set of global variables.
-  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
+  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> globalGVars;
+  // Mapping from subprogram to its respective set of static local variables.
+  DenseMap<llvm::DISubprogram *, SmallVector<llvm::Metadata *>> staticLocals;
 
   // First, create all global variables and global aliases in LLVM IR. A global
   // or alias body may refer to another global/alias or itself, so all the
@@ -1177,16 +1211,16 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
-    if (op.getValueOrNull()) {
+    const bool deferValueAttrToPass2 = op.getValueOrNull() &&
+                                       !op.getInitializerBlock() &&
+                                       !isa<StringAttr>(op.getValueOrNull());
+    if (op.getValueOrNull() && !deferValueAttrToPass2) {
       // String attributes are treated separately because they cannot appear as
       // in-function constants and are thus not supported by getLLVMConstant.
       if (auto strAttr = dyn_cast_or_null<StringAttr>(op.getValueOrNull())) {
         cst = llvm::ConstantDataArray::getString(
             llvmModule->getContext(), strAttr.getValue(), /*AddNull=*/false);
         type = cst->getType();
-      } else if (!(cst = getLLVMConstant(type, op.getValueOrNull(), op.getLoc(),
-                                         *this))) {
-        return failure();
       }
     }
 
@@ -1196,16 +1230,18 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     // external to have initializers. If MLIR does not provide an initializer,
     // default to undef.
     bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
-    if (!dropInitializer && !cst)
-      cst = llvm::UndefValue::get(type);
-    else if (dropInitializer && cst)
+    if (!deferValueAttrToPass2) {
+      if (!dropInitializer && !cst)
+        cst = llvm::UndefValue::get(type);
+      else if (dropInitializer && cst)
+        cst = nullptr;
+    } else {
       cst = nullptr;
+    }
 
     auto *var = new llvm::GlobalVariable(
         *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
-        /*InsertBefore=*/nullptr,
-        op.getThreadLocal_() ? llvm::GlobalValue::GeneralDynamicTLSModel
-                             : llvm::GlobalValue::NotThreadLocal,
+        /*InsertBefore=*/nullptr, convertThreadLocalModeToLLVM(op.getTlsMode()),
         op.getAddrSpace(), op.getExternallyInitialized());
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
@@ -1229,6 +1265,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
 
     globalsMapping.try_emplace(op, var);
+    globalsByNameMapping.try_emplace(op.getSymName(), var);
 
     // Add debug information if present.
     if (op.getDbgExprs()) {
@@ -1255,7 +1292,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         //
         // 3. For entities like static local variables in C or variable with
         // SAVE attribute in Fortran, the scope hierarchy can be
-        // variable -> DISubprogram -> DICompileUnit
+        // variable (-> DILocalScope)* -> DISubprogram
         llvm::DIScope *scope = diGlobalVar->getScope();
         if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
           scope = mod->getScope();
@@ -1263,15 +1300,23 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
           if (auto *sp =
                   dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
             scope = sp->getUnit();
-        } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
-          scope = sp->getUnit();
+        } else if (auto *lbb =
+                       dyn_cast_if_present<llvm::DILexicalBlockBase>(scope)) {
+          scope = lbb->getSubprogram();
+        }
 
-        // Get the compile unit (scope) of the the global variable.
+        // Get the compile unit (scope) of the the global variable, or the
+        // subprogram of the static local variable.
         if (llvm::DICompileUnit *compileUnit =
                 dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
           // Update the compile unit with this incoming global variable
           // expression during the finalizing step later.
-          allGVars[compileUnit].push_back(diGlobalExpr);
+          globalGVars[compileUnit].push_back(diGlobalExpr);
+        } else if (llvm::DISubprogram *sp =
+                       dyn_cast_if_present<llvm::DISubprogram>(scope)) {
+          // Update the subprogram with this incoming static local variable
+          // expression during the finalizing step later.
+          staticLocals[sp].push_back(diGlobalExpr);
         }
       }
     }
@@ -1284,6 +1329,28 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if (failed(convertedTargetSpecificAttrs))
       return failure();
     var->addAttributes(*convertedTargetSpecificAttrs);
+  }
+
+  // Value-attribute initializers may reference other globals by symbol name.
+  // Register every global above before materializing those constants.
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
+    if (!op.getValueOrNull() || op.getInitializerBlock() ||
+        isa<StringAttr>(op.getValueOrNull()))
+      continue;
+
+    llvm::Type *type = convertType(op.getType());
+    llvm::Constant *cst =
+        getLLVMConstant(type, op.getValueOrNull(), op.getLoc(), *this);
+    if (!cst)
+      return failure();
+
+    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
+    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
+    if (dropInitializer)
+      var->setInitializer(nullptr);
+    else
+      var->setInitializer(cst);
   }
 
   // Create all llvm::GlobalAlias
@@ -1299,9 +1366,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         type, op.getAddrSpace(), linkage, op.getSymName(), /*placeholder*/ cst,
         &llvmMod);
 
-    var->setThreadLocalMode(op.getThreadLocal_()
-                                ? llvm::GlobalAlias::GeneralDynamicTLSModel
-                                : llvm::GlobalAlias::NotThreadLocal);
+    var->setThreadLocalMode(convertThreadLocalModeToLLVM(op.getTlsMode()));
 
     // Note there is no need to setup the comdat because GlobalAlias calls into
     // the aliasee comdat information automatically.
@@ -1441,10 +1506,14 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
   // Finally, update the compile units their respective sets of global variables
   // created earlier.
-  for (const auto &[compileUnit, globals] : allGVars) {
+  for (const auto &[compileUnit, globals] : globalGVars)
     compileUnit->replaceGlobalVariables(
         llvm::MDTuple::get(getLLVMContext(), globals));
-  }
+
+  // And update the subprograms with their respective sets of static local
+  // variables.
+  for (const auto &[sp, globals] : staticLocals)
+    sp->retainNodes(globals.begin(), globals.end());
 
   // Convert global alias bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
@@ -1509,6 +1578,106 @@ static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
   return llvm::MDNode::get(context, mdValues);
 }
 
+FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
+  llvm::LLVMContext &llvmContext = getLLVMContext();
+
+  return llvm::TypeSwitch<Attribute, FailureOr<llvm::Metadata *>>(attr)
+      .Case([&](MDStringAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::MDString::get(llvmContext, a.getValue().getValue());
+      })
+      .Case([&](MDConstantAttr a) -> FailureOr<llvm::Metadata *> {
+        IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
+        if (!intAttr) {
+          return emitError()
+                 << "expected integer attribute in metadata constant";
+        }
+        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+            llvm::Type::getIntNTy(llvmContext,
+                                  intAttr.getType().getIntOrFloatBitWidth()),
+            intAttr.getValue()));
+      })
+      .Case([&](MDGlobalValueAttr a) -> FailureOr<llvm::Metadata *> {
+        if (llvm::Function *fn = lookupFunction(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(fn);
+        if (llvm::GlobalValue *global = lookupGlobal(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(global);
+        Operation *symbol =
+            symbolTable().lookupSymbolIn(mlirModule, a.getName());
+        if (auto alias = dyn_cast_if_present<LLVM::AliasOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupAlias(alias))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        if (auto ifunc = dyn_cast_if_present<LLVM::IFuncOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupIFunc(ifunc))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        return emitError() << "could not resolve metadata reference '"
+                           << a.getName() << "'";
+      })
+      .Case([&](MDNullAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::ConstantAsMetadata::get(llvm::ConstantPointerNull::get(
+            llvm::PointerType::get(llvmContext, a.getAddressSpace())));
+      })
+      .Case([&](MDAddrSpaceCastAttr a) -> FailureOr<llvm::Metadata *> {
+        FailureOr<llvm::Metadata *> arg =
+            convertMetadataAttr(a.getArg(), emitError);
+        if (failed(arg))
+          return failure();
+        // The verifier restricts the operand to pointer-valued metadata
+        // attributes, all of which translate to a ConstantAsMetadata.
+        auto *argAsMD = cast<llvm::ConstantAsMetadata>(*arg);
+        return llvm::ConstantAsMetadata::get(
+            llvm::ConstantExpr::getAddrSpaceCast(
+                argAsMD->getValue(),
+                llvm::PointerType::get(llvmContext, a.getAddressSpace())));
+      })
+      .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
+        SmallVector<llvm::Metadata *> operands;
+        for (Attribute operand : a.getOperands()) {
+          FailureOr<llvm::Metadata *> md =
+              convertMetadataAttr(operand, emitError);
+          if (failed(md))
+            return failure();
+          operands.push_back(*md);
+        }
+        return llvm::MDNode::get(llvmContext, operands);
+      })
+      .Default([&](Attribute attr) -> FailureOr<llvm::Metadata *> {
+        return emitError() << "unsupported LLVM metadata attribute " << attr;
+      });
+}
+
+LogicalResult ModuleTranslation::convertFunctionMetadata() {
+  for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
+    ArrayAttr metadata = function.getFunctionMetadataAttr();
+    if (!metadata)
+      continue;
+
+    llvm::Function *llvmFunc = lookupFunction(function.getName());
+    for (auto entry : metadata.getAsRange<LLVM::FunctionMetadataAttr>()) {
+      StringRef metadataName = entry.getMetadataName().getValue();
+
+      FailureOr<llvm::Metadata *> md =
+          convertMetadataAttr(entry.getNode(), [&]() {
+            return function.emitError()
+                   << "failed to convert function_metadata entry '"
+                   << metadataName << "': ";
+          });
+      if (failed(md))
+        return failure();
+      llvm::MDNode *node = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
+      if (!node) {
+        return function.emitError()
+               << "failed to convert function_metadata entry '" << metadataName
+               << "'";
+      }
+      llvmFunc->addMetadata(metadataName, *node);
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // Clear the block, branch value mappings, they are only relevant within one
   // function.
@@ -1563,6 +1732,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (auto preferVectorWidth = func.getPreferVectorWidth())
     llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
+
+  if (func.getUseSampleProfile())
+    llvmFunc->addFnAttr("use-sample-profile");
 
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
@@ -1925,15 +2097,20 @@ ModuleTranslation::convertParameterAttrs(Location loc,
 
 LogicalResult ModuleTranslation::convertFunctionSignatures() {
   // Declare all functions first because there may be function calls that form a
-  // call graph with cycles, or global initializers that reference functions.
+  // call graph with cycles, global initializers that reference functions, or
+  // metadata that references functions declared later in the module.
   for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
     llvm::FunctionCallee llvmFuncCst = llvmModule->getOrInsertFunction(
         function.getName(),
         cast<llvm::FunctionType>(convertType(function.getFunctionType())));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
+    mapFunction(function.getName(), llvmFunc);
+  }
+
+  for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
+    llvm::Function *llvmFunc = lookupFunction(function.getName());
     llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     llvmFunc->setCallingConv(convertCConvToLLVM(function.getCConv()));
-    mapFunction(function.getName(), llvmFunc);
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
@@ -1943,8 +2120,19 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
-    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
-      llvmFunc->setEntryCount(entryCount.value());
+    if (auto entryCount = function.getFunctionEntryCountAttr()) {
+      ArrayRef<uint64_t> imports = entryCount.getImports();
+      llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
+      if (!imports.empty())
+        importGUIDs.insert(imports.begin(), imports.end());
+      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
+      llvmFunc->setMetadata(
+          llvm::LLVMContext::MD_prof,
+          metadataBuilder.createFunctionEntryCount(
+              entryCount.getEntryCount(),
+              entryCount.getCountType() == ProfileCountType::Synthetic,
+              imports.empty() ? nullptr : &importGUIDs));
+    }
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
@@ -2376,6 +2564,12 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   return ompBuilder.get();
 }
 
+llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
+  if (fileSystem)
+    return *fileSystem;
+  return *llvm::vfs::getRealFileSystem();
+}
+
 llvm::DILocation *ModuleTranslation::translateLoc(Location loc,
                                                   llvm::DILocalScope *scope) {
   return debugTranslation->translateLoc(loc, scope);
@@ -2465,7 +2659,8 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                              StringRef name, bool disableVerification) {
+                              StringRef name, bool disableVerification,
+                              llvm::vfs::FileSystem *fs) {
   if (!satisfiesLLVMModule(module)) {
     module->emitOpError("can not be translated to an LLVMIR module");
     return nullptr;
@@ -2479,7 +2674,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::ensureDistinctSuccessors(module);
   LLVM::legalizeDIExpressionsRecursively(module);
 
-  ModuleTranslation translator(module, std::move(llvmModule));
+  ModuleTranslation translator(module, std::move(llvmModule), fs);
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
       llvmContext,
       llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
@@ -2498,6 +2693,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertGlobalsAndAliases()))
     return nullptr;
   if (failed(translator.convertIFuncs()))
+    return nullptr;
+  if (failed(translator.convertFunctionMetadata()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;

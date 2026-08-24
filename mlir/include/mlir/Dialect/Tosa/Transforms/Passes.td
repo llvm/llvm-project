@@ -39,8 +39,7 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
 
   let dependentDialects = [
     "func::FuncDialect",
-    "tensor::TensorDialect",
-    "tosa::TosaDialect",
+    "tensor::TensorDialect"
   ];
 
   let options = [
@@ -90,7 +89,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">
+             "sections of the specifciation">,
+      Option<"validateFunctionSignature", "validate-function-signature", "bool",
+             /*default=*/"true",
+             "Verify if the function signature is valid for TOSA dialect, i.e. all "
+             "function arguments and return types are tosa-conformant tensor types">,
    ];
 }
 
@@ -185,6 +188,17 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 }
 
+def TosaDowngrade1p1To1p0Pass
+    : Pass<"tosa-downgrade-1-1-to-1-0", "func::FuncOp"> {
+  let summary = "Downgrade TOSA 1.1 specification constructs to TOSA 1.0";
+  let description = [{
+    Rewrites constructs which are only compatible in TOSA specification 1.1 and
+    above to their TOSA 1.0 counterparts where possible. Downgrading is best-effort
+    and validation should be performed afterwards to ensure compatibility with
+    the TOSA 1.0 specification.
+  }];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
@@ -203,8 +217,7 @@ def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 
@@ -228,8 +241,7 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 

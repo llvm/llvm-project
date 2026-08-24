@@ -629,6 +629,49 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+struct DefRangeRegisterRelIndirHeader {
+  ulittle16_t Register;
+  ulittle16_t Flags;
+  little32_t BasePointerOffset;
+  /// Offset to add after dereferencing `Register + BasePointerOffset`.
+  little32_t OffsetInUdt;
+};
+
+/// S_DEFRANGE_REGISTER_REL_INDIR
+///
+/// The local is located at `*(Register + BasePointerOffset) + OffsetInUDT`.
+class DefRangeRegisterRelIndirSym : public SymbolRecord {
+public:
+  explicit DefRangeRegisterRelIndirSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
+  explicit DefRangeRegisterRelIndirSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelIndirSym),
+        RecordOffset(RecordOffset) {}
+
+  // These flags are the same as in DefRangeRegisterRelSym.
+  // The flags implement this notional bitfield:
+  //   uint16_t IsSubfield : 1;
+  //   uint16_t Padding : 3;
+  //   uint16_t OffsetInParent : 12;
+  enum : uint16_t {
+    IsSubfieldFlag = 1,
+    OffsetInParentShift = 4,
+  };
+
+  bool hasSpilledUDTMember() const { return Hdr.Flags & IsSubfieldFlag; }
+  uint16_t offsetInParent() const { return Hdr.Flags >> OffsetInParentShift; }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + sizeof(DefRangeRegisterRelIndirHeader);
+  }
+
+  DefRangeRegisterRelIndirHeader Hdr;
+  LocalVariableAddrRange Range;
+  std::vector<LocalVariableAddrGap> Gaps;
+
+  uint32_t RecordOffset = 0;
+};
+
 // S_BLOCK32
 class BlockSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 16;

@@ -9,5 +9,5 @@
 #include "clc/math/clc_fabs.h"
 #include "clc/math/clc_fmin.h"
 
-#define __CLC_BODY <clc_minmag.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_minmag.inc"
+#include "clc/math/gentype.inc"

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx11-17,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-17,since-cxx14,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11
 
 __extension__ typedef __SIZE_TYPE__ size_t;
 
@@ -295,6 +295,25 @@ namespace cwg1330 { // cwg1330: 4 c++11
 } // namespace cwg1330
 
 // cwg1334: sup 1719
+
+namespace cwg1336 { // cwg1336: 3.1
+#if __cplusplus >= 201103L
+struct A {
+  A(int, int);
+};
+
+struct B {
+  explicit B(int, int); // #cwg1336-B-ctor
+};
+
+void f() {
+  A a = {1, 2};
+  B b = {1, 2};
+  // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
+  //   expected-note@#cwg1336-B-ctor {{explicit constructor declared here}}
+}
+#endif
+} // namespace cwg1336
 
 namespace cwg1340 { // cwg1340: 2.9
 struct A;

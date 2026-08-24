@@ -9,6 +9,7 @@
 #include "Diagnostics.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
@@ -19,6 +20,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Edit/EditedSource.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -179,7 +181,6 @@ const char *getMainFileRange(const Diag &D, const SourceManager &SM,
       case diag::note_checking_constraints_for_class_spec_id_here:
       case diag::note_checking_constraints_for_function_here:
       case diag::note_constraint_substitution_here:
-      case diag::note_constraint_normalization_here:
       case diag::note_parameter_mapping_substitution_here:
         R = N.Range;
         return "in template";
@@ -679,6 +680,28 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
                    .str();
 }
 
+static bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
+                                   const llvm::StringSet<> &Suppress,
+                                   const std::optional<LangOptions> &LangOpts) {
+  // Don't complain about header-only stuff in mainfiles if it's a header.
+  // FIXME: would be cleaner to suppress in clang, once we decide whether the
+  //        behavior should be to silently-ignore or respect the pragma.
+  if (LangOpts && Diag.getID() == diag::pp_pragma_sysheader_in_main_file &&
+      LangOpts->IsHeaderFile)
+    return true;
+
+  if (const char *CodePtr = getDiagnosticCode(Diag.getID())) {
+    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
+      return true;
+  }
+  StringRef Warning =
+      Diag.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          Diag.getID());
+  if (!Warning.empty() && Suppress.contains(Warning))
+    return true;
+  return false;
+}
+
 void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
   // If the diagnostic was generated for a different SourceManager, skip it.
@@ -695,6 +718,19 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   bool OriginallyError =
       Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
           Info.getID());
+
+  if (!isNote(DiagLevel)) {
+    const Config &Cfg = Config::current();
+    // Check if diagnostics is suppressed (possibly by user), before doing any
+    // adjustments.
+    if (Cfg.Diagnostics.SuppressAll ||
+        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress, LangOpts)) {
+      DiagLevel = DiagnosticsEngine::Ignored;
+    } else if (Adjuster) {
+      // FIXME: Merge with feature modules.
+      DiagLevel = Adjuster(DiagLevel, Info);
+    }
+  }
 
   if (Info.getLocation().isInvalid()) {
     // Handle diagnostics coming from command-line arguments. The source manager
@@ -752,7 +788,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       return false;
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
-    llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : FixIts) {
       // Allow fixits within a single macro-arg expansion to be applied.
       // This can be incorrect if the argument is expanded multiple times in
@@ -770,6 +805,14 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       if (FixIt.RemoveRange.getBegin().isMacroID() ||
           FixIt.RemoveRange.getEnd().isMacroID())
         return false;
+    }
+    llvm::SmallVector<FixItHint> MergedFixIts;
+    clang::edit::mergeFixits(FixIts, SM, *LangOpts, MergedFixIts);
+    if (MergedFixIts.empty())
+      return false;
+    llvm::SmallVector<TextEdit> Edits;
+    Edits.reserve(MergedFixIts.size());
+    for (const auto &FixIt : MergedFixIts) {
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(), SM))
         return false;
       Edits.push_back(toTextEdit(FixIt, SM, *LangOpts));
@@ -777,8 +820,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallString<64> Message;
     // If requested and possible, create a message like "change 'foo' to 'bar'".
-    if (SyntheticMessage && FixIts.size() == 1) {
-      const auto &FixIt = FixIts.front();
+    if (SyntheticMessage && MergedFixIts.size() == 1) {
+      const auto &FixIt = MergedFixIts.front();
       bool Invalid = false;
       llvm::StringRef Remove =
           Lexer::getSourceText(FixIt.RemoveRange, SM, *LangOpts, &Invalid);
@@ -806,8 +849,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
-    LastDiag->Fixes.push_back(
-        Fix{std::string(Message), std::move(Edits), {}});
+    LastDiag->Fixes.push_back(Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 
@@ -816,9 +858,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     flushLastDiag();
 
     LastDiag = Diag();
-    // FIXME: Merge with feature modules.
-    if (Adjuster)
-      DiagLevel = Adjuster(DiagLevel, Info);
 
     FillDiagBase(*LastDiag);
     if (isExcluded(LastDiag->ID))
@@ -903,28 +942,6 @@ void StoreDiags::flushLastDiag() {
   if (!mentionsMainFile(*LastDiag))
     return;
   Output.push_back(std::move(*LastDiag));
-}
-
-bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
-                            const llvm::StringSet<> &Suppress,
-                            const LangOptions &LangOpts) {
-  // Don't complain about header-only stuff in mainfiles if it's a header.
-  // FIXME: would be cleaner to suppress in clang, once we decide whether the
-  //        behavior should be to silently-ignore or respect the pragma.
-  if (Diag.getID() == diag::pp_pragma_sysheader_in_main_file &&
-      LangOpts.IsHeaderFile)
-    return true;
-
-  if (const char *CodePtr = getDiagnosticCode(Diag.getID())) {
-    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
-      return true;
-  }
-  StringRef Warning =
-      Diag.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
-          Diag.getID());
-  if (!Warning.empty() && Suppress.contains(Warning))
-    return true;
-  return false;
 }
 
 llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {

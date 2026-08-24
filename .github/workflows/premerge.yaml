@@ -58,8 +58,9 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Build and Test
         timeout-minutes: 120
@@ -112,14 +113,14 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Premerge Artifacts (Linux ${{ runner.arch }})
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
       - name: Upload Comment
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
         continue-on-error: true
         with:
@@ -138,8 +139,9 @@ jobs:
         shell: bash
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Compute Projects
         id: vars
@@ -166,11 +168,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          WINDOWS_PROJECTS: ${{ steps.vars.outputs.windows-projects }}
+          WINDOWS_CHECK_TARGETS: ${{ steps.vars.outputs.windows-check-targets }}
+          WINDOWS_RUNTIMES: ${{ steps.vars.outputs.windows-runtimes }}
+          WINDOWS_RUNTIMES_CHECK_TARGETS: ${{ steps.vars.outputs.windows-runtimes-check-targets }}
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
-          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\" \"${{ steps.vars.outputs.windows-runtimes }}\" \"${{ steps.vars.outputs.windows-runtimes-check-targets }}\""
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"$WINDOWS_PROJECTS\" \"$WINDOWS_CHECK_TARGETS\" \"$WINDOWS_RUNTIMES\" \"$WINDOWS_RUNTIMES_CHECK_TARGETS\""
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
@@ -178,14 +184,14 @@ jobs:
         # https://github.com/actions/upload-artifact/issues/569
         continue-on-error: true
         if: '!cancelled()'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Premerge Artifacts (Windows)
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
       - name: Upload Comment
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         continue-on-error: true
         with:
@@ -193,51 +199,125 @@ jobs:
           path: |
             comments-Windows-AMD64
 
-  premerge-check-macos:
-    name: MacOS Premerge Checks
-    runs-on: macos-14
+  # Computes which projects/check-targets to build and test on the
+  # self-hosted macOS runners. This job intentionally runs on a
+  # GitHub-hosted runner rather than a self-hosted one, since self-hosted
+  # macOS capacity is limited and shouldn't be spent just to compute what
+  # to build. Its outputs feed premerge-check-macos below, which does the
+  # actual build/test on the self-hosted runners, so changes here directly
+  # affect what runs there.
+  premerge-compute-macos:
+    name: Compute macOS Projects
     if: >-
-      github.repository_owner == 'llvm' &&
-      (startswith(github.ref_name, 'release/') ||
-       startswith(github.base_ref, 'release/')) &&
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      macos-projects: ${{ steps.vars.outputs.macos-projects }}
+      macos-check-targets: ${{ steps.vars.outputs.macos-check-targets }}
+      macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
+      macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
     steps:
+      # For pull requests we get the changed files from the GitHub API, so we
+      # only need a sparse checkout of .ci/ to run compute_projects.py. For
+      # pushes (e.g. release branches) there is no PR to query, so we fall
+      # back to a git diff, which needs real history.
+      - name: Checkout LLVM (sparse)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: .ci
+          sparse-checkout-cone-mode: false
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          persist-credentials: false
           fetch-depth: 2
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
-        with:
-          max-size: "2000M"
-      - name: Install Ninja
+      - name: Get Changed Files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          brew install ninja
-      - name: Build and Test
-        run: |
-          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
-
-          if [[ "${projects_to_build}" == "" ]]; then
-            echo "No projects to build"
-            exit 0
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' > /tmp/changed_files.txt
+          else
+            git diff --name-only HEAD~1...HEAD > /tmp/changed_files.txt
           fi
+      - name: Compute Projects
+        id: vars
+        run: |
+          python3 .ci/compute_projects.py Darwin < /tmp/changed_files.txt > /tmp/env_vars.sh
+          source /tmp/env_vars.sh
 
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
+          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
 
-          # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is for
-          # https://github.com/llvm/llvm-project/issues/81967
-          # Disable sharding in lit so that the LIT_XFAIL environment var works.
-          cmake -G Ninja \
-                -B build \
-                -S llvm \
-                -DLLVM_ENABLE_PROJECTS="${projects_to_build}" \
-                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DLLDB_INCLUDE_TESTS=OFF \
-                -DLLVM_ENABLE_ASSERTIONS=ON \
-                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
+          echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
 
-          # The libcxx tests fail, so we are skipping the runtime targets.
-          ninja -C build ${project_check_targets}
+  premerge-check-macos:
+    name: Build and Test macOS arm64
+    needs: premerge-compute-macos
+    runs-on: [self-hosted, macOS, ARM64, apple-runners]
+    # Skip the self-hosted runner entirely if there is nothing to build,
+    # rather than tying up a runner slot for a no-op run.
+    if: >-
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed') &&
+        needs.premerge-compute-macos.outputs.macos-projects != ''
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Install Ninja, CMake, and sccache
+        run: |
+          brew install ninja cmake
+          command -v sccache >/dev/null || brew install sccache
+      - name: Set up Python venv
+        run: |
+          "$(brew --prefix python@3.14)/bin/python3.14" -m venv "${RUNNER_TEMP}/venv"
+          echo "${RUNNER_TEMP}/venv/bin" >> "$GITHUB_PATH"
+      - name: Build and Test
+        timeout-minutes: 240
+        env:
+          SCCACHE_BUCKET: sccache-bucket
+          SCCACHE_REGION: us-west-2
+          PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
+          CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
+          RUNTIMES: ${{ needs.premerge-compute-macos.outputs.macos-runtimes }}
+          RUNTIMES_CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-runtimes-check-targets }}
+          CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          export SCCACHE_IDLE_TIMEOUT=0
+          mkdir -p artifacts
+          SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
+
+          ./.ci/monolithic-macos.sh "${PROJECTS}" "${CHECK_TARGETS}" "${RUNTIMES}" "${RUNTIMES_CHECK_TARGETS}"
+      - name: Upload Artifacts
+        # In some cases, Github will fail to upload the artifact. We want to
+        # continue anyways as a failed artifact upload is an infra failure, not
+        # a checks failure.
+        # https://github.com/actions/upload-artifact/issues/569
+        continue-on-error: true
+        if: '!cancelled()'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Premerge Artifacts (macOS arm64)
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'

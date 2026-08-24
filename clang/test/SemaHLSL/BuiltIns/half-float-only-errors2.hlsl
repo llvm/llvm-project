@@ -11,3 +11,8 @@ double2 test_vec_double_builtin(double2 p0, double2 p1) {
     return TEST_FUNC(p0, p1);
   // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'double2' (aka 'vector<double, 2>'))}}
 }
+
+double2x2 test_mat_double_builtin(double2x2 p0, double2x2 p1) {
+    return TEST_FUNC(p0, p1);
+  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'double2x2' (aka 'matrix<double, 2, 2>'))}}
+}

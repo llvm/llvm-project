@@ -146,7 +146,7 @@ void mixed_region_types(void) {
 void symbolic_region(int *p) {
   int a;
 
-  clang_analyzer_eval(&a != p); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&a != p); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(&a > p); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(&a >= p); // expected-warning{{UNKNOWN}}
 }

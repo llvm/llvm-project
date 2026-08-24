@@ -371,6 +371,15 @@ public:
   OnDiskGraphDB::FileBackedData
   getInternalFileBackedObjectData(StringRef RootPath) const;
 
+  /// Read this object's data from its file again, so the result does not
+  /// reference \a Region and stays valid after this object is gone.
+  ///
+  /// \returns \c nullptr when it does not apply, and the caller is
+  /// expected to copy instead.
+  std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(StringRef RootPath, StringRef Name,
+                            bool RequiresNullTerminator) const;
+
   StandaloneDataInMemory(std::unique_ptr<sys::fs::mapped_file_region> Region,
                          TrieRecord::StorageKind SK, FileOffset IndexOffset)
       : Region(std::move(Region)), SK(SK), IndexOffset(IndexOffset) {
@@ -916,6 +925,9 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     if (auto E = UpstreamDB->validate(Deep, Hasher))
       return E;
   }
+  if (!isAligned(Align(8), DataPool.size()))
+    return createStringError(llvm::errc::illegal_byte_sequence,
+                             "data pool bump pointer is not aligned");
   return Index.validate([&](FileOffset Offset,
                             OnDiskTrieRawHashMap::ConstValueProxy Record)
                             -> Error {
@@ -924,7 +936,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
           llvm::errc::illegal_byte_sequence,
           "bad record at 0x" +
               utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
+              Msg);
     };
 
     if (Record.Data.size() != sizeof(TrieRecord))
@@ -953,13 +965,28 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // the record. It can be reused by later insertion so just skip this entry
       // for now.
       return Error::success();
-    case TrieRecord::StorageKind::DataPool:
+    case TrieRecord::StorageKind::DataPool: {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
           D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
+
+      // DataRecord start needs to be aligned.
+      if (!isAligned(Align(8), D.Offset.get()))
+        return formatError("data record offset is not aligned");
+
+      // Validate the layout flags before getFromDataPool calls getTotalSize().
+      auto HeaderData =
+          DataPool.get(D.Offset, sizeof(DataRecordHandle::Header));
+      if (!HeaderData)
+        return formatError(toString(HeaderData.takeError()));
+      auto LF = DataRecordHandle::get(HeaderData->data()).getLayoutFlags();
+      if (LF.NumRefs > DataRecordHandle::NumRefsFlags::Max ||
+          LF.DataSize > DataRecordHandle::DataSizeFlags::Max)
+        return formatError("data record has invalid layout flags");
       break;
+    }
     case TrieRecord::StorageKind::Standalone:
     case TrieRecord::StorageKind::StandaloneLeaf:
     case TrieRecord::StorageKind::StandaloneLeaf0:
@@ -985,7 +1012,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     auto dataError = [&](Twine Msg) {
       return createStringError(llvm::errc::illegal_byte_sequence,
                                "bad data for digest \'" + toHex(I->Hash) +
-                                   "\': " + Msg.str());
+                                   "\': " + Msg);
     };
     SmallVector<ArrayRef<uint8_t>> Refs;
     ArrayRef<char> StoredData;
@@ -999,6 +1026,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(toString(DataRecord.takeError()));
 
       for (auto InternRef : DataRecord->getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1015,6 +1044,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(
             "data record span passed the end of the standalone file");
       for (auto InternRef : DataRecord.getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1051,7 +1082,7 @@ Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) const {
         llvm::errc::illegal_byte_sequence,
         "bad ref=0x" +
             utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
-            Msg.str());
+            Msg);
   };
 
   if (ExternalRef.getOpaqueData() == 0)
@@ -1269,6 +1300,23 @@ OnDiskGraphDB::getInternalFileBackedObjectData(ObjectHandle Node) const {
   }
 }
 
+std::unique_ptr<MemoryBuffer>
+OnDiskGraphDB::getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
+                                         bool RequiresNullTerminator) const {
+  // Only an object with a file to itself can be read back on its own; one in
+  // the shared data pool is a subrange of a file holding unrelated objects.
+  auto SDIMOrRecord = getStandaloneDataOrDataRecord(DataPool, Node);
+  if (auto **SDIM =
+          std::get_if<const StandaloneDataInMemory *>(&SDIMOrRecord)) {
+    if (std::unique_ptr<MemoryBuffer> Standalone =
+            (*SDIM)->getStandaloneMemoryBuffer(RootPath, Name,
+                                               RequiresNullTerminator))
+      return Standalone;
+  }
+
+  return MemoryBuffer::getMemBufferCopy(toStringRef(getObjectData(Node)), Name);
+}
+
 Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::load(ObjectID ExternalRef) {
   InternalRef Ref = getInternalRef(ExternalRef);
@@ -1441,6 +1489,63 @@ StandaloneDataInMemory::getInternalFileBackedObjectData(
   llvm_unreachable("Unknown StorageKind enum");
 }
 
+namespace {
+/// A MemoryBuffer exposing a subrange of another buffer's bytes, under its own
+/// name.
+class AdoptedMemoryBuffer final : public MemoryBuffer {
+public:
+  AdoptedMemoryBuffer(std::unique_ptr<MemoryBuffer> Buffer, StringRef Name,
+                      uint64_t Offset, uint64_t Size)
+      : Buffer(std::move(Buffer)), Name(Name.str()) {
+    const char *Start = this->Buffer->getBufferStart() + Offset;
+    init(Start, Start + Size, /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const final { return Name; }
+
+  BufferKind getBufferKind() const final { return Buffer->getBufferKind(); }
+
+private:
+  std::unique_ptr<MemoryBuffer> Buffer;
+  std::string Name;
+};
+} // end anonymous namespace
+
+std::unique_ptr<MemoryBuffer> StandaloneDataInMemory::getStandaloneMemoryBuffer(
+    StringRef RootPath, StringRef Name, bool RequiresNullTerminator) const {
+  // A plain leaf's file is exactly the data, with no nul after it to map. The
+  // other kinds have one: a record's own terminator, or the one appended to a
+  // "leaf+0".
+  if (RequiresNullTerminator && SK == TrieRecord::StorageKind::StandaloneLeaf)
+    return nullptr;
+
+  // Read the file again instead of sharing \a Region, whose lifetime is tied
+  // to this object. These files are written once and never modified, so the
+  // second read sees the same bytes. Whether that ends up mapping the file or
+  // copying it is up to MemoryBuffer; either way the result stands alone.
+  SmallString<256> Path;
+  ::getStandalonePath(RootPath, TrieRecord::getStandaloneFilePrefix(SK),
+                      IndexOffset, Path);
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Mapped =
+      MemoryBuffer::getFile(Path, /*IsText=*/false,
+                            /*RequiresNullTerminator=*/false,
+                            /*IsVolatile=*/false);
+  if (!Mapped)
+    return nullptr;
+
+  // Find the data within the mapping. A leaf's file holds just the data; a
+  // record's also holds its header and refs.
+  OnDiskContent Content = getContent();
+  ArrayRef<char> Data = Content.getData();
+  uint64_t Offset = Content.Record ? Data.data() - Region->data() : 0;
+  if (Offset + Data.size() > (*Mapped)->getBufferSize())
+    return nullptr;
+
+  return std::make_unique<AdoptedMemoryBuffer>(std::move(*Mapped), Name, Offset,
+                                               Data.size());
+}
+
 static Expected<MappedTempFile>
 createTempFile(StringRef FinalPath, uint64_t Size, OnDiskCASLogger *Logger) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
@@ -1481,8 +1586,6 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   SmallString<256> Path;
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I.Offset, Path);
-
-  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
@@ -1526,6 +1629,8 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return Error::success();
   }
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Big leaf nodes.
   if (Refs.empty() && Data.size() > TrieRecord::MaxEmbeddedSize)

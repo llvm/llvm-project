@@ -15,6 +15,8 @@ import datetime
 
 
 class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsdate_with_run_command(self):
         """Test formatters for  NSDate."""
         self.appkit_tester_impl(self.nsdate_data_formatter_commands, False)

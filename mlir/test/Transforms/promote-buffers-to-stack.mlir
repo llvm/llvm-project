@@ -603,13 +603,13 @@ func.func @indexElementType() {
 // CHECK-LABEL: func @bigIndexElementType
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 256>>} {
   func.func @bigIndexElementType() {
-    %0 = memref.alloc() {alignment = 64 : i64, custom_attr} : memref<4xindex>
+    %0 = memref.alloc() alignment = 64 {custom_attr} : memref<4xindex>
     return
   }
 }
-// DEFINDEX-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
-// LOWLIMIT-NEXT: memref.alloc() {alignment = 64 : i64, custom_attr}
-// RANK-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
+// DEFINDEX-NEXT: memref.alloca() alignment = 64 {custom_attr}
+// LOWLIMIT-NEXT: memref.alloc() alignment = 64 {custom_attr}
+// RANK-NEXT: memref.alloca() alignment = 64 {custom_attr}
 // CHECK-NEXT: return
 
 // -----
@@ -626,3 +626,17 @@ func.func @huge_static_memref() {
   %alloc = memref.alloc() : memref<3090540x3090540x3090540xi32>
   return
 }
+
+// -----
+
+// Test that allocations with memref element types (nested memrefs) are not
+// promoted to stack allocations, since no data layout information is available
+// for the inner memref type.
+
+// CHECK-LABEL: func @nestedMemref
+func.func @nestedMemref() {
+  %0 = memref.alloc() : memref<1xmemref<2xf32>>
+  return
+}
+// CHECK-NEXT: memref.alloc()
+// CHECK-NEXT: return

@@ -7,7 +7,7 @@ define i64 @test(i32 %arg) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) null, i64 896), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) null, i64 896), align 4
 ; CHECK-NEXT:    ret i64 0

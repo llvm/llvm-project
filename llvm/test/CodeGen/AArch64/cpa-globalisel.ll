@@ -661,8 +661,8 @@ define hidden void @multidim() {
 ; CHECK-CPA-O0-NEXT:    addpt x8, x8, x10, lsl #1
 ; CHECK-CPA-O0-NEXT:    ldrb w8, [x8, w9, sxtw]
 ; CHECK-CPA-O0-NEXT:    uxtb w8, w8
-; CHECK-CPA-O0-NEXT:    cbz w8, .LBB14_2
-; CHECK-CPA-O0-NEXT:    b .LBB14_1
+; CHECK-CPA-O0-NEXT:    cbnz w8, .LBB14_1
+; CHECK-CPA-O0-NEXT:    b .LBB14_2
 ; CHECK-CPA-O0-NEXT:  .LBB14_1:
 ; CHECK-CPA-O0-NEXT:    adrp x0, .L.str
 ; CHECK-CPA-O0-NEXT:    add x0, x0, :lo12:.L.str
@@ -710,8 +710,8 @@ define hidden void @multidim() {
 ; CHECK-NOCPA-O0-NEXT:    add x8, x8, x10, lsl #1
 ; CHECK-NOCPA-O0-NEXT:    ldrb w8, [x8, w9, sxtw]
 ; CHECK-NOCPA-O0-NEXT:    uxtb w8, w8
-; CHECK-NOCPA-O0-NEXT:    cbz w8, .LBB14_2
-; CHECK-NOCPA-O0-NEXT:    b .LBB14_1
+; CHECK-NOCPA-O0-NEXT:    cbnz w8, .LBB14_1
+; CHECK-NOCPA-O0-NEXT:    b .LBB14_2
 ; CHECK-NOCPA-O0-NEXT:  .LBB14_1:
 ; CHECK-NOCPA-O0-NEXT:    adrp x0, .L.str
 ; CHECK-NOCPA-O0-NEXT:    add x0, x0, :lo12:.L.str

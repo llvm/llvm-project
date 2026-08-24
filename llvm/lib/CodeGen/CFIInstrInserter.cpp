@@ -17,6 +17,7 @@
 /// blocks in a function.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -35,18 +36,9 @@ static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
     cl::Hidden);
 
 namespace {
-class CFIInstrInserter : public MachineFunctionPass {
- public:
-  static char ID;
-
-  CFIInstrInserter() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
+class CFIInstrInserterImpl {
+public:
+  bool run(MachineFunction &MF) {
     if (!MF.needsFrameMoves())
       return false;
 
@@ -195,15 +187,40 @@ private:
   /// outgoing offset and register of the MBB.
   unsigned verify(MachineFunction &MF);
 };
-}  // namespace
 
-char CFIInstrInserter::ID = 0;
-INITIALIZE_PASS(CFIInstrInserter, "cfi-instr-inserter",
+class CFIInstrInserterLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  CFIInstrInserterLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return CFIInstrInserterImpl().run(MF);
+  }
+};
+} // namespace
+
+char CFIInstrInserterLegacy::ID = 0;
+INITIALIZE_PASS(CFIInstrInserterLegacy, "cfi-instr-inserter",
                 "Check CFA info and insert CFI instructions if needed", false,
                 false)
-FunctionPass *llvm::createCFIInstrInserter() { return new CFIInstrInserter(); }
+FunctionPass *llvm::createCFIInstrInserterLegacy() {
+  return new CFIInstrInserterLegacy();
+}
 
-void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
+PreservedAnalyses
+CFIInstrInserterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  CFIInstrInserterImpl().run(MF);
+  return PreservedAnalyses::all();
+}
+
+void CFIInstrInserterImpl::calculateCFAInfo(MachineFunction &MF) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   // Initial CFA offset value i.e. the one valid at the beginning of the
   // function.
@@ -236,7 +253,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   updateSuccCFAInfo(MBBVector[MF.front().getNumber()]);
 }
 
-void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
+void CFIInstrInserterImpl::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   // Outgoing cfa offset set by the block.
   int64_t SetOffset = MBBInfo.IncomingCFAOffset;
   // Outgoing cfa register set by the block.
@@ -323,7 +340,12 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpWindowSave:
       case MCCFIInstruction::OpNegateRAState:
       case MCCFIInstruction::OpNegateRAStateWithPC:
+      case MCCFIInstruction::OpLLVMSetRAState:
       case MCCFIInstruction::OpGnuArgsSize:
+      case MCCFIInstruction::OpLLVMRegisterPair:
+      case MCCFIInstruction::OpLLVMVectorRegisters:
+      case MCCFIInstruction::OpLLVMVectorOffset:
+      case MCCFIInstruction::OpLLVMVectorRegisterMask:
       case MCCFIInstruction::OpLabel:
       case MCCFIInstruction::OpValOffset:
         break;
@@ -366,7 +388,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
                    CSRRestored);
 }
 
-void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
+void CFIInstrInserterImpl::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
   SmallVector<MachineBasicBlock *, 4> Stack;
   Stack.push_back(MBBInfo.MBB);
 
@@ -386,7 +408,7 @@ void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
   } while (!Stack.empty());
 }
 
-bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
+bool CFIInstrInserterImpl::insertCFIInstrs(MachineFunction &MF) {
   const MBBCFAInfo *PrevMBBInfo = &MBBVector[MF.front().getNumber()];
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   bool InsertedCFIInstr = false;
@@ -484,8 +506,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
   return InsertedCFIInstr;
 }
 
-void CFIInstrInserter::reportCFAError(const MBBCFAInfo &Pred,
-                                      const MBBCFAInfo &Succ) {
+void CFIInstrInserterImpl::reportCFAError(const MBBCFAInfo &Pred,
+                                          const MBBCFAInfo &Succ) {
   errs() << "*** Inconsistent CFA register and/or offset between pred and succ "
             "***\n";
   errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
@@ -500,8 +522,8 @@ void CFIInstrInserter::reportCFAError(const MBBCFAInfo &Pred,
          << " incoming CFA Offset:" << Succ.IncomingCFAOffset << "\n";
 }
 
-void CFIInstrInserter::reportCSRError(const MBBCFAInfo &Pred,
-                                      const MBBCFAInfo &Succ) {
+void CFIInstrInserterImpl::reportCSRError(const MBBCFAInfo &Pred,
+                                          const MBBCFAInfo &Succ) {
   errs() << "*** Inconsistent CSR Saved between pred and succ in function "
          << Pred.MBB->getParent()->getName() << " ***\n";
   errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
@@ -516,7 +538,7 @@ void CFIInstrInserter::reportCSRError(const MBBCFAInfo &Pred,
   errs() << "\n";
 }
 
-unsigned CFIInstrInserter::verify(MachineFunction &MF) {
+unsigned CFIInstrInserterImpl::verify(MachineFunction &MF) {
   unsigned ErrorNum = 0;
   for (auto *CurrMBB : depth_first(&MF)) {
     const MBBCFAInfo &CurrMBBInfo = MBBVector[CurrMBB->getNumber()];

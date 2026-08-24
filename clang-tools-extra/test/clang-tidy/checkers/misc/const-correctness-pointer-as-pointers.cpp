@@ -10,6 +10,9 @@
 // RUN: }}' \
 // RUN: -- -fno-delayed-template-parsing
 
+#include <memory>
+#include <vector>
+
 void pointee_to_const() {
   int a[] = {1, 2};
   int *p_local0 = &a[0];
@@ -51,6 +54,172 @@ void ignore_const_alias() {
 void *return_non_const() {
   void *const a = nullptr;
   return a;
+}
+
+void *return_as_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-NOT: warning
+  return p_local0;
+}
+
+const void *return_as_const_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = &i;
+  return p_local0;
+}
+
+void take_void_pointer(void *);
+void pass_as_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-NOT: warning
+  take_void_pointer(p_local0);
+}
+
+void take_const_void_pointer(const void *);
+void pass_as_const_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = &i;
+  take_const_void_pointer(p_local0);
+}
+
+void write_through_post_increment(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *p_local0++ = 0;
+}
+
+void write_through_pre_increment(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *++p_local0 = 0;
+}
+
+void write_through_post_decrement(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *p_local0-- = 0;
+}
+
+void write_through_pre_decrement(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *--p_local0 = 0;
+}
+
+void write_through_increment_subscript(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  (p_local0++)[0] = 0;
+}
+
+void write_through_add_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *(p_local0 += 1) = 0;
+}
+
+void write_through_sub_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  *(p_local0 -= 1) = 0;
+}
+
+void write_through_add_assign_subscript(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  (p_local0 += 1)[0] = 0;
+}
+
+void write_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  *(p_local0 = p_local1) = 0;
+}
+
+void write_through_plain_assign_subscript(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  (p_local0 = p_local1)[0] = 0;
+}
+
+void alias_through_increment(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  int *q = p_local0++;
+  *q = 0;
+}
+
+void alias_through_add_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-NOT: warning
+  int *q = (p_local0 += 1);
+  *q = 0;
+}
+
+void alias_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  int *q = (p_local0 = p_local1);
+  *q = 0;
+}
+
+template <class T>
+void template_write_through_pointer_arithmetic() {
+  T a[] = {1, 2};
+  T *p_local0 = &a[0];
+  // CHECK-NOT: warning
+  *p_local0++ = 0;
+  T *p_local1 = &a[0];
+  // CHECK-NOT: warning
+  *(p_local1 += 1) = 0;
+}
+
+void instantiate_write_through_pointer_arithmetic() {
+  template_write_through_pointer_arithmetic<int>();
+}
+
+template <class T>
+void template_write_through_plain_assign() {
+  T a[] = {1, 2};
+  T *p_local0 = &a[0];
+  T *p_local1 = &a[0];
+  // CHECK-NOT: warning
+  *(p_local0 = p_local1) = 0;
+}
+
+void instantiate_write_through_plain_assign() {
+  template_write_through_plain_assign<int>();
+}
+
+void read_through_increment(int *p) {
+  int *p_local0 = p;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = p;
+  int i = *p_local0++;
+}
+
+void read_through_add_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = p;
+  int i = *(p_local0 += 1);
+}
+
+void read_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = p;
+  int *p_local1 = p;
+  int i = *(p_local0 = p_local1);
 }
 
 void function_pointer_basic() {
@@ -114,4 +283,73 @@ void multi_level_pointer() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'foo' of type 'const char **[1]' can be declared 'const'
   // CHECK-FIXES: const char * const* foo[] = {&s};
   const char * p = *foo[0];
+}
+
+void* operator new(decltype(sizeof(void*)), void*) noexcept;
+
+void pointer_in_emplacement_new() {
+  int* ptr = nullptr;
+  // CHECK-NOT: warning
+  new(ptr) int {123};
+}
+
+void takesConstPointerRef(int *const &);
+void takesConstPointerRRef(int *const &&);
+using IntPtrAlias = int *;
+typedef int *IntPtrTypedef;
+void takesAliasConstPointerRef(IntPtrAlias const &);
+void takesTypedefConstPointerRef(IntPtrTypedef const &);
+
+void ignore_const_pointer_reference_sinks() {
+  int value = 0;
+
+  int *p_local0 = &value;
+  takesConstPointerRef(p_local0);
+
+  int *p_local1 = &value;
+  int *const &ref = p_local1;
+  (void)ref;
+
+  IntPtrAlias p_local2 = &value;
+  takesAliasConstPointerRef(p_local2);
+
+  int *p_local3 = &value;
+  takesConstPointerRRef(static_cast<int *const &&>(p_local3));
+
+  IntPtrTypedef p_local4 = &value;
+  takesTypedefConstPointerRef(p_local4);
+
+  int *p_local5 = &value;
+  int *volatile &volatile_ref = p_local5;
+  (void)volatile_ref;
+}
+
+void ignore_range_for_pointer_reference_sink() {
+  int value = 0;
+  std::vector<int *> const source = {&value};
+  std::vector<int *> sink;
+  for (int *element : source)
+    sink.push_back(element);
+}
+
+struct UniquePtrData {};
+
+void ignore_unique_ptr_emplace_sink() {
+  /*const*/ UniquePtrData *const newdata = new UniquePtrData;
+
+  std::vector<std::unique_ptr<UniquePtrData>> data;
+  data.emplace_back(newdata);
+}
+
+void auto_pointee_to_const() {
+  int a[] = {1, 2};
+  int *p_normal = &a[0];
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_normal' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_normal = &a[0];
+  p_normal = &a[1];
+
+  // A bare 'auto' deduces to 'int *'; the pointee 'const' cannot be spelled through 'auto',
+  // so unlike the pointer above it is not diagnosed.
+  auto p_auto = &a[0];
+  p_auto = &a[1];
 }

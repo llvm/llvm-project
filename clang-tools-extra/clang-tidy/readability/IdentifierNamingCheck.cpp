@@ -263,7 +263,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     const size_t StyleSize = StyleNames[I].size();
     StyleString.assign({StyleNames[I], "HungarianPrefix"});
 
-    auto HPTOpt =
+    const auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
     if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
@@ -304,7 +304,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     return {};
 
   // Get type text of variable declarations.
-  auto &SM = VD->getASTContext().getSourceManager();
+  const auto &SM = VD->getASTContext().getSourceManager();
   const char *Begin = SM.getCharacterData(VD->getBeginLoc());
   const char *End = SM.getCharacterData(VD->getEndLoc());
   intptr_t StrLen = End - Begin;
@@ -403,7 +403,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
     : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
-  auto IterAndInserted = NamingStylesCache.try_emplace(
+  const auto IterAndInserted = NamingStylesCache.try_emplace(
       llvm::sys::path::parent_path(Context->getCurrentFile()),
       getFileStyleFromOptions(Options));
   assert(IterAndInserted.second && "Couldn't insert Style");
@@ -416,6 +416,9 @@ IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
     int StyleKindIndex) const {
+  if (StyleKindIndex == SK_Default)
+    return true;
+
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -431,7 +434,7 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
   if (OptionKey.empty())
     return false;
 
-  auto Iter = StrMap.find(OptionKey);
+  const auto Iter = StrMap.find(OptionKey);
   if (Iter == StrMap.end())
     return false;
 
@@ -643,7 +646,7 @@ StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
       !isOptionEnabled("TreatStructAsClass", HNOption.General))
     return {};
 
-  return CRD->isAbstract() ? "I" : "C";
+  return CRD->hasDefinition() && CRD->isAbstract() ? "I" : "C";
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
@@ -894,7 +897,7 @@ bool IdentifierNamingCheck::matchesStyle(
 
   // Ensure the name doesn't have any extra underscores beyond those specified
   // in the prefix and suffix.
-  if (Name.starts_with("_") || Name.ends_with("_"))
+  if (Name.starts_with('_') || Name.ends_with('_'))
     return false;
 
   if (Style.Case && !Matchers[static_cast<size_t>(*Style.Case)].match(Name))
@@ -950,7 +953,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_LowerCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += Word.lower();
     }
     break;
@@ -958,7 +961,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_UpperCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += Word.upper();
     }
     break;
@@ -984,7 +987,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_CamelSnakeCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front())
-        Fixup += "_";
+        Fixup += '_';
       Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
@@ -993,7 +996,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_CamelSnakeBack:
     for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
-        Fixup += "_";
+        Fixup += '_';
         Fixup += toupper(Word.front());
       } else {
         Fixup += tolower(Word.front());
@@ -1005,7 +1008,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
   case IdentifierNamingCheck::CT_LeadingUpperSnakeCase:
     for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
-        Fixup += "_";
+        Fixup += '_';
         Fixup += Word.lower();
       } else {
         Fixup += toupper(Word.front());
@@ -1035,7 +1038,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   if (!FDecl->getDeclName().isIdentifier())
     return false;
   enum MainType { None, Main, WMain };
-  auto IsCharPtrPtr = [](QualType QType) -> MainType {
+  const auto IsCharPtrPtr = [](QualType QType) -> MainType {
     if (QType.isNull())
       return None;
     if (QType = QType->getPointeeType(), QType.isNull())
@@ -1048,7 +1051,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
       return WMain;
     return None;
   };
-  auto IsIntType = [](QualType QType) {
+  const auto IsIntType = [](QualType QType) {
     if (QType.isNull())
       return false;
     if (const auto *Builtin =
@@ -1100,7 +1103,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     HungarianPrefix = HungarianNotation.getPrefix(D, HNOption);
     if (!HungarianPrefix.empty()) {
       if (Style.HPType == HungarianPrefixType::HPT_LowerCase)
-        HungarianPrefix += "_";
+        HungarianPrefix += '_';
 
       if (Style.HPType == HungarianPrefixType::HPT_CamelCase)
         Fixed[0] = toupper(Fixed[0]);
@@ -1238,6 +1241,15 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   if (const auto *Decl = dyn_cast<VarDecl>(D))
     return findStyleKindForVar(Decl, Decl->getType(), NamingStyles);
 
+  // C++17 structured bindings: treat each binding as if it were a variable
+  // with the same storage and qualifiers as the parent DecompositionDecl.
+  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+        Decomp && !BD->getType().isNull())
+      return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    return SK_Invalid;
+  }
+
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
         Decl->size_overridden_methods() > 0 || Decl->hasAttr<OverrideAttr>())
@@ -1246,9 +1258,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     // If this method has the same name as any base method, this is likely
     // necessary even if it's not an override. e.g. CRTP.
     for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
-      if (const auto *RD = Base.getType()->getAsCXXRecordDecl())
-        if (RD->hasMemberName(Decl->getDeclName()))
-          return SK_Invalid;
+      if (const auto *RD = Base.getType()->getAsCXXRecordDecl();
+          RD && RD->hasMemberName(Decl->getDeclName()))
+        return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])
       return SK_ConstexprMethod;
@@ -1293,6 +1305,13 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Function])
       return SK_Function;
   }
+
+  // Ignore template wrapper decls. Their underlying decls are checked with the
+  // right naming kind, checking the wrappers too can fall back to DefaultCase
+  // and emit diagnostic for the same identifier.
+  if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
+          TypeAliasTemplateDecl>(D))
+    return SK_Invalid;
 
   if (isa<TemplateTypeParmDecl>(D)) {
     if (NamingStyles[SK_TypeTemplateParameter])
@@ -1379,7 +1398,8 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
     return std::nullopt;
 
   const SourceLocation Loc = Decl->getLocation();
-  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(Loc));
+  const SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
+  const FileStyle &FileStyle = getStyleForFile(SM.getFilename(SpellingLoc));
   if (!FileStyle.isActive())
     return std::nullopt;
 
@@ -1420,7 +1440,7 @@ IdentifierNamingCheck::getDiagInfo(const NamingCheckId &ID,
 }
 
 StringRef IdentifierNamingCheck::getRealFileName(StringRef FileName) const {
-  auto Iter = RealFileNameCache.try_emplace(FileName);
+  const auto Iter = RealFileNameCache.try_emplace(FileName);
   SmallString<256U> &RealFileName = Iter.first->getValue();
   if (!Iter.second)
     return RealFileName;
@@ -1435,21 +1455,21 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
 
   const StringRef RealFileName = getRealFileName(FileName);
   const StringRef Parent = llvm::sys::path::parent_path(RealFileName);
-  auto Iter = NamingStylesCache.find(Parent);
+  const auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
   const StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
-    auto It = NamingStylesCache.try_emplace(
+    const auto It = NamingStylesCache.try_emplace(
         Parent,
         getFileStyleFromOptions({CheckName, Options.CheckOptions, Context}));
     assert(It.second);
     return It.first->getValue();
   }
   // Default construction gives an empty style.
-  auto It = NamingStylesCache.try_emplace(Parent);
+  const auto It = NamingStylesCache.try_emplace(Parent);
   assert(It.second);
   return It.first->getValue();
 }

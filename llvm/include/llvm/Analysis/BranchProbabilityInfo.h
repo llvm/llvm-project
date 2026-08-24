@@ -13,13 +13,9 @@
 #ifndef LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 #define LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
@@ -31,8 +27,7 @@
 namespace llvm {
 
 class Function;
-class Loop;
-class LoopInfo;
+class CycleInfo;
 class raw_ostream;
 class DominatorTree;
 class PostDominatorTree;
@@ -114,36 +109,15 @@ class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() = default;
 
-  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
+  BranchProbabilityInfo(const Function &F, const CycleInfo &CI,
                         const TargetLibraryInfo *TLI = nullptr,
                         DominatorTree *DT = nullptr,
                         PostDominatorTree *PDT = nullptr) {
-    calculate(F, LI, TLI, DT, PDT);
-  }
-
-  BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
-        LastF(Arg.LastF) {
-    for (auto &Handle : Handles)
-      Handle.setBPI(this);
-  }
-
-  BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
-  BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
-
-  BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
-    releaseMemory();
-    Handles = std::move(RHS.Handles);
-    Probs = std::move(RHS.Probs);
-    for (auto &Handle : Handles)
-      Handle.setBPI(this);
-    return *this;
+    calculate(F, CI, TLI, DT, PDT);
   }
 
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &);
-
-  LLVM_ABI void releaseMemory();
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -161,9 +135,6 @@ public:
   /// It returns the sum of all probabilities for edges from Src to Dst.
   LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
                                                 const BasicBlock *Dst) const;
-
-  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                                const_succ_iterator Dst) const;
 
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
@@ -185,9 +156,8 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  LLVM_ABI void
-  setEdgeProbability(const BasicBlock *Src,
-                     const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void setEdgeProbability(const BasicBlock *Src,
+                                   ArrayRef<BranchProbability> Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
@@ -203,7 +173,7 @@ public:
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
+  LLVM_ABI void calculate(const Function &F, const CycleInfo &CI,
                           const TargetLibraryInfo *TLI, DominatorTree *DT,
                           PostDominatorTree *PDT);
 
@@ -211,33 +181,17 @@ public:
   LLVM_ABI void eraseBlock(const BasicBlock *BB);
 
 private:
-  // We need to store CallbackVH's in order to correctly handle basic block
-  // removal.
-  class BasicBlockCallbackVH final : public CallbackVH {
-    BranchProbabilityInfo *BPI;
+  MutableArrayRef<BranchProbability> allocEdges(const BasicBlock *BB);
+  ArrayRef<BranchProbability> getEdges(const BasicBlock *BB) const;
 
-    void deleted() override {
-      assert(BPI != nullptr);
-      BPI->eraseBlock(cast<BasicBlock>(getValPtr()));
-    }
-
-  public:
-    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
-
-    BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
-        : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
-  };
-
-  DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
-
-  // Since we allow duplicate edges from one basic block to another, we use
-  // a pair (PredBlock and an index in the successors) to specify an edge.
-  using Edge = std::pair<const BasicBlock *, unsigned>;
-
-  DenseMap<Edge, BranchProbability> Probs;
+  // Storage for branch probabilities.
+  SmallVector<BranchProbability> Probs;
+  // Map from block number to first edge.
+  SmallVector<unsigned> EdgeStarts;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
+  unsigned BlockNumberEpoch;
 };
 
 /// Analysis pass which computes \c BranchProbabilityInfo.
@@ -257,15 +211,13 @@ public:
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
-    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.
@@ -282,7 +234,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
-  void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
 

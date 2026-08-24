@@ -2076,7 +2076,10 @@ void TreePatternNode::print(raw_ostream &OS) const {
   for (const ScopedName &Name : NamesAsPredicateArg)
     OS << ":$pred:" << Name.getScope() << ":" << Name.getIdentifier();
 }
-void TreePatternNode::dump() const { print(dbgs()); }
+void TreePatternNode::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
 
 /// isIsomorphicTo - Return true if this node is recursively
 /// isomorphic to the specified node.  For this comparison, the node's
@@ -3351,6 +3354,10 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
       LegalPtrVTS(ComputeLegalPtrTypes()) {
+  IntrinsicIDs.reserve(Intrinsics.size());
+  for (auto [ID, Intrinsic] : enumerate(Intrinsics))
+    IntrinsicIDs.try_emplace(Intrinsic.TheDef, ID);
+
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -4231,7 +4238,8 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
   for (const auto &Entry : SrcNames)
     if (DstNames[Entry.first].first == nullptr &&
         SrcNames[Entry.first].second == 1)
-      Pattern->error("Pattern has dead named input: $" + Entry.first);
+      Pattern->error("Pattern has dead named input: $" + Entry.first +
+                     " (use srcvalue for an intentionally unused input)");
 
   PatternsToMatch.push_back(std::move(PTM));
 }

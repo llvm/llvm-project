@@ -24,9 +24,12 @@ namespace clang::tidy::performance {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasAccessibleNonTrivialMoveAssignment) {
-  if (!Node.hasNonTrivialMoveAssignment())
+  const CXXRecordDecl *ND = Node.getDefinition();
+  if (!ND)
     return false;
-  for (const auto *CM : Node.methods())
+  if (!ND->hasNonTrivialMoveAssignment())
+    return false;
+  for (const CXXMethodDecl *CM : ND->methods())
     if (CM->isMoveAssignmentOperator())
       return !CM->isDeleted() && CM->getAccess() == AS_public;
   llvm_unreachable("Move Assignment Operator Not Found");
@@ -56,7 +59,7 @@ AST_POLYMORPHIC_MATCHER(isInMacro,
 using utils::decl_ref_expr::allDeclRefExprs;
 
 void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
-  auto AssignOperatorExpr =
+  const auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           isCopyAssignmentOperator(),
           hasArgument(0, hasType(cxxRecordDecl(
@@ -172,10 +175,8 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
         if (!S.isReachable())
           continue;
         auto &W = CFGState.find(&*S)->second;
-        if (W.Ready) {
-          if (--W.RemainingSuccessors == 0)
-            WorkList.push_back(&*S);
-        }
+        if (W.Ready && --W.RemainingSuccessors == 0)
+          WorkList.push_back(&*S);
       }
     }
   }

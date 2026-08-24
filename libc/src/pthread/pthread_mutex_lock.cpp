@@ -8,6 +8,7 @@
 
 #include "pthread_mutex_lock.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
@@ -16,9 +17,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, pthread_mutex_lock, (pthread_mutex_t * mutex)) {
-  reinterpret_cast<Mutex *>(mutex)->lock();
+  MutexError err = reinterpret_cast<Mutex *>(mutex)->lock();
+  if (err == MutexError::DEADLOCK)
+    return EDEADLK;
   // TODO: When the Mutex class supports all the possible error conditions
   // return the appropriate error value here.
   return 0;

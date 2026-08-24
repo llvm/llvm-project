@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -69,7 +70,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -227,6 +227,10 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
+    // The pragma changed diagnostic severities; drop any cached analysis
+    // warning policies derived from the previous state.
+    S->AnalysisWarnings.clearPolicyCache();
+
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
     // can be run at the end of the function body even if the analysis warnings
@@ -375,6 +379,8 @@ void Sema::Initialize() {
   // name mangling. And the name mangling uses BuiltinVaListDecl.
   if (Context.getTargetInfo().hasBuiltinMSVaList())
     (void)Context.getBuiltinMSVaListDecl();
+  if (Context.getTargetInfo().hasBuiltinZOSVaList())
+    (void)Context.getBuiltinZOSVaListDecl();
   (void)Context.getBuiltinVaListDecl();
 
   if (SemaConsumer *SC = dyn_cast<SemaConsumer>(&Consumer))
@@ -567,18 +573,32 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isSPIRV() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())
       PushOnScopeChains(Context.getBuiltinMSVaListDecl(), TUScope);
+  }
+
+  if (Context.getTargetInfo().hasBuiltinZOSVaList()) {
+    DeclarationName ZOSVaList = &Context.Idents.get("__builtin_zos_va_list");
+    if (IdResolver.begin(ZOSVaList) == IdResolver.end())
+      PushOnScopeChains(Context.getBuiltinZOSVaListDecl(), TUScope);
   }
 
   DeclarationName BuiltinVaList = &Context.Idents.get("__builtin_va_list");
@@ -681,12 +701,12 @@ void Sema::PrintStats() const {
 void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
                                                QualType SrcType,
                                                SourceLocation Loc) {
-  std::optional<NullabilityKind> ExprNullability = SrcType->getNullability();
+  NullabilityKindOrNone ExprNullability = SrcType->getNullability();
   if (!ExprNullability || (*ExprNullability != NullabilityKind::Nullable &&
                            *ExprNullability != NullabilityKind::NullableResult))
     return;
 
-  std::optional<NullabilityKind> TypeNullability = DstType->getNullability();
+  NullabilityKindOrNone TypeNullability = DstType->getNullability();
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
@@ -956,6 +976,12 @@ bool Sema::isExternalWithNoLinkageType(const ValueDecl *VD) const {
          !isFunctionOrVarDeclExternC(VD);
 }
 
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
+    return false;
+  return SourceMgr.isInMainFile(Loc);
+}
+
 /// Obtains a sorted list of functions and variables that are undefined but
 /// ODR-used.
 void Sema::getUndefinedButUsed(
@@ -1083,6 +1109,15 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
     (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
+void Sema::LoadExternalExtnameUndeclaredIdentifiers() {
+  if (!ExternalSource)
+    return;
+
+  SmallVector<std::pair<IdentifierInfo *, AsmLabelAttr *>, 4> ExtnameIDs;
+  ExternalSource->ReadExtnameUndeclaredIdentifiers(ExtnameIDs);
+  for (auto &ExtnameID : ExtnameIDs)
+    ExtnameUndeclaredIdentifiers[ExtnameID.first] = ExtnameID.second;
+}
 
 typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
 
@@ -1143,8 +1178,9 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
+    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
+    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1153,7 +1189,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
+              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.
@@ -1164,11 +1200,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+void Sema::getSortedUnusedLocalTypedefNameCandidates(
+    SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  Sorted.assign(UnusedLocalTypedefNameCandidates.begin(),
+                UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  SmallVector<const TypedefNameDecl *, 4> Sorted;
+  getSortedUnusedLocalTypedefNameCandidates(Sorted);
+  for (const TypedefNameDecl *TD : Sorted) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)
@@ -1285,6 +1336,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
+  DiagnoseUnusedAPINotesSelectors();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -1363,8 +1415,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
@@ -1414,22 +1476,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   // in the module purview but has no definition before the end of the TU or
   // the start of a Private Module Fragment (if one is present).
   if (!PendingInlineFuncDecls.empty()) {
-    for (auto *D : PendingInlineFuncDecls) {
-      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-        bool DefInPMF = false;
-        if (auto *FDD = FD->getDefinition()) {
-          DefInPMF = FDD->getOwningModule()->isPrivateModule();
-          if (!DefInPMF)
-            continue;
-        }
-        Diag(FD->getLocation(), diag::err_export_inline_not_defined)
-            << DefInPMF;
-        // If we have a PMF it should be at the end of the ModuleScopes.
-        if (DefInPMF &&
-            ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
-          Diag(ModuleScopes.back().BeginLoc,
-               diag::note_private_module_fragment);
-        }
+    for (auto *FD : PendingInlineFuncDecls) {
+      bool DefInPMF = false;
+      if (auto *FDD = FD->getDefinition()) {
+        DefInPMF = FDD->getOwningModule()->isPrivateModule();
+        if (!DefInPMF)
+          continue;
+      }
+      Diag(FD->getLocation(), diag::err_export_inline_not_defined) << DefInPMF;
+      // If we have a PMF it should be at the end of the ModuleScopes.
+      if (DefInPMF &&
+          ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
+        Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
       }
     }
     PendingInlineFuncDecls.clear();
@@ -1604,6 +1662,40 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
+  if (!Diags.isIgnored(diag::warn_unused_but_set_global, SourceLocation())) {
+    // Diagnose unused-but-set static globals in a deterministic order.
+    // Not tracking shadowing info for static globals; there's nothing to
+    // shadow.
+    struct LocAndDiag {
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+    };
+    SmallVector<LocAndDiag, 16> DeclDiags;
+    auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+      DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+    };
+
+    // For -Wunused-but-set-variable we only care about variables that were
+    // referenced by the TU end.
+    for (const auto &Ref : RefsMinusAssignments) {
+      const VarDecl *VD = Ref.first;
+      // Only diagnose internal linkage file vars defined in the main file to
+      // match -Wunused-variable behavior and avoid false positives from
+      // headers.
+      if (VD->isInternalLinkageFileVar() && isMainFileLoc(VD->getLocation()))
+        DiagnoseUnusedButSetDecl(VD, addDiag);
+    }
+
+    llvm::sort(DeclDiags,
+               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                 // Sorting purely for determinism; matches behavior in
+                 // Sema::ActOnPopScope.
+                 return LHS.Loc < RHS.Loc;
+               });
+    for (const LocAndDiag &D : DeclDiags)
+      Diag(D.Loc, D.PD);
+  }
+
   if (!Diags.isIgnored(diag::warn_unused_private_field, SourceLocation())) {
     // FIXME: Load additional unused private field candidates from the external
     // source.
@@ -1611,7 +1703,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     RecordCompleteMap MNCComplete;
     for (const NamedDecl *D : UnusedPrivateFields) {
       const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-      if (RD && !RD->isUnion() &&
+      if (RD && !RD->isUnion() && !D->hasAttr<UnusedAttr>() &&
           IsRecordFullyDefined(RD, RecordsComplete, MNCComplete)) {
         Diag(D->getLocation(), diag::warn_unused_private_field)
               << D->getDeclName();
@@ -1656,14 +1748,15 @@ DeclContext *Sema::getFunctionLevelDeclContext(bool AllowLambda) const {
   DeclContext *DC = CurContext;
 
   while (true) {
-    if (isa<BlockDecl>(DC) || isa<EnumDecl>(DC) || isa<CapturedDecl>(DC) ||
-        isa<RequiresExprBodyDecl>(DC)) {
+    if (isa<BlockDecl, EnumDecl, CapturedDecl, RequiresExprBodyDecl,
+            CXXExpansionStmtDecl>(DC)) {
       DC = DC->getParent();
     } else if (!AllowLambda && isa<CXXMethodDecl>(DC) &&
                cast<CXXMethodDecl>(DC)->getOverloadedOperator() == OO_Call &&
                cast<CXXRecordDecl>(DC->getParent())->isLambda()) {
       DC = DC->getParent()->getParent();
-    } else break;
+    } else
+      break;
   }
 
   return DC;
@@ -2053,13 +2146,40 @@ void Sema::emitDeferredDiags() {
     ExternalSource->ReadDeclsToCheckForDeferredDiags(
         DeclsToCheckForDeferredDiags);
 
+  // For each implicit-H+D-explicit-inst function with deferred errors but no
+  // organic device caller, drop the diagnostics and mark for a trap body.
+  auto ClassifyImplicitHDExplicitInst = [&]() {
+    if (!LangOpts.CUDAIsDevice)
+      return;
+    for (auto &Pair : DeviceDeferredDiags) {
+      const FunctionDecl *FD = Pair.first;
+      if (!SemaCUDA::isImplicitHDExplicitInstantiation(FD))
+        continue;
+      if (CUDA().DeviceKnownEmittedFns.count(FD))
+        continue;
+      bool HasError =
+          llvm::any_of(Pair.second, [&](const PartialDiagnosticAt &PDAt) {
+            return getDiagnostics().getDiagnosticLevel(PDAt.second.getDiagID(),
+                                                       PDAt.first) >=
+                   DiagnosticsEngine::Error;
+          });
+      if (!HasError)
+        continue;
+      Pair.second.clear();
+      Context.CUDADeviceInvalidFuncs.insert(FD->getCanonicalDecl());
+    }
+  };
+
   if ((DeviceDeferredDiags.empty() && !LangOpts.OpenMP) ||
-      DeclsToCheckForDeferredDiags.empty())
+      DeclsToCheckForDeferredDiags.empty()) {
+    ClassifyImplicitHDExplicitInst();
     return;
+  }
 
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
+  ClassifyImplicitHDExplicitInst();
   DDE.emitCollectedDiags();
 }
 
@@ -2300,6 +2420,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
+
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
 
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&

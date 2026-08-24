@@ -30,7 +30,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Depth -> Scalar -> Integer -> Constant ->
 !PARSE-TREE:  = '2_4'

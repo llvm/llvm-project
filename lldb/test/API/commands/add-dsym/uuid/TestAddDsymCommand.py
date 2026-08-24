@@ -9,8 +9,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
+@requireDarwin
 class AddDsymCommandCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.template = "main.cpp.template"

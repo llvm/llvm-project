@@ -38,14 +38,13 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/CapturedStmt.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -107,6 +106,10 @@ namespace clang {
     /// The number of record fields required for the Expr class
     /// itself.
     static const unsigned NumExprFields = NumStmtFields + 2;
+
+    /// The number of record fields required for the ObjCObjectLiteral class
+    /// itself (Expr fields + isExpressibleAsConstantInitializer).
+    static const unsigned NumObjCObjectLiteralFields = NumExprFields + 1;
 
     /// The number of bits required for the packing bits for the Expr class.
     static const unsigned NumExprBits = 10;
@@ -1277,6 +1280,7 @@ void ASTStmtReader::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0; I != NumInits; ++I)
       E->updateInit(Record.getContext(), I, Record.readSubExpr());
   }
+  E->InitListExprBits.IsExplicit = Record.readBool();
 }
 
 void ASTStmtReader::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
@@ -1367,7 +1371,7 @@ void ASTStmtReader::VisitVAArgExpr(VAArgExpr *E) {
   E->setWrittenTypeInfo(readTypeSourceInfo());
   E->setBuiltinLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
-  E->setIsMicrosoftABI(Record.readInt());
+  E->setVarargABI(static_cast<clang::VAArgExpr::VarArgKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
@@ -1384,8 +1388,14 @@ void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
   Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());
   E->Data = Data;
-  E->Begin = Record.readInt();
-  E->NumOfElements = Record.readInt();
+  E->Begin = Record.readUInt32();
+  E->NumOfElements = Record.readUInt32();
+  ASTContext &Ctx = Record.getContext();
+  E->Ctx = &Ctx;
+  E->setType(Ctx.IntTy);
+  E->FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(E->getType())), E->getType(),
+      E->EmbedKeywordLoc);
 }
 
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
@@ -1458,15 +1468,16 @@ void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   E->DefaultLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
 
+  // During serialization, either one more Stmt or one more
+  // TypeSourceInfo was encoded to account for the predicate
+  // (whether it was an expression or a type).
   Stmt **Stmts = E->getTrailingObjects<Stmt *>();
-  // Add 1 to account for the controlling expression which is the first
-  // expression in the trailing array of Stmt *. This is not needed for
-  // the trailing array of TypeSourceInfo *.
-  for (unsigned I = 0, N = NumAssocs + 1; I < N; ++I)
+  for (unsigned I = 0, N = NumAssocs + (E->IsExprPredicate ? 1 : 0); I < N; ++I)
     Stmts[I] = Record.readSubExpr();
 
   TypeSourceInfo **TSIs = E->getTrailingObjects<TypeSourceInfo *>();
-  for (unsigned I = 0, N = NumAssocs; I < N; ++I)
+  for (unsigned I = 0, N = NumAssocs + (!E->IsExprPredicate ? 1 : 0); I < N;
+       ++I)
     TSIs[I] = readTypeSourceInfo();
 }
 
@@ -1499,14 +1510,19 @@ void ASTStmtReader::VisitAtomicExpr(AtomicExpr *E) {
 //===----------------------------------------------------------------------===//
 // Objective-C Expressions and Statements
 
-void ASTStmtReader::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+void ASTStmtReader::VisitObjCObjectLiteral(ObjCObjectLiteral *E) {
   VisitExpr(E);
+  E->setExpressibleAsConstantInitializer(Record.readInt());
+}
+
+void ASTStmtReader::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+  VisitObjCObjectLiteral(E);
   E->setString(cast<StringLiteral>(Record.readSubStmt()));
   E->setAtLoc(readSourceLocation());
 }
 
 void ASTStmtReader::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   // could be one of several IntegerLiteral, FloatLiteral, etc.
   E->SubExpr = Record.readSubStmt();
   E->BoxingMethod = readDeclAs<ObjCMethodDecl>();
@@ -1514,7 +1530,7 @@ void ASTStmtReader::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
 }
 
 void ASTStmtReader::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   unsigned NumElements = Record.readInt();
   assert(NumElements == E->getNumElements() && "Wrong number of elements");
   Expr **Elements = E->getElements();
@@ -1525,7 +1541,7 @@ void ASTStmtReader::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
 }
 
 void ASTStmtReader::VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   unsigned NumElements = Record.readInt();
   assert(NumElements == E->getNumElements() && "Wrong number of elements");
   bool HasPackExpansions = Record.readInt();
@@ -1557,6 +1573,7 @@ void ASTStmtReader::VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
   VisitExpr(E);
   E->setSelector(Record.readSelector());
   E->setAtLoc(readSourceLocation());
+  E->setSelectorNameLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
 }
 
@@ -1765,6 +1782,33 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->setBody(Record.readSubStmt());
 }
 
+void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.skipInts(1); // Skip kind.
+  S->LParenLoc = readSourceLocation();
+  S->ColonLoc = readSourceLocation();
+  S->RParenLoc = readSourceLocation();
+  S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
+  for (Stmt *&SubStmt : S->children())
+    SubStmt = Record.readSubStmt();
+}
+
+void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.skipInts(2);
+  S->Parent = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
+  for (unsigned I = 0; I < S->getNumSubStmts(); ++I)
+    S->getAllSubStmts()[I] = Record.readSubStmt();
+  S->setShouldApplyLifetimeExtensionToPreamble(Record.readBool());
+}
+
+void ASTStmtReader::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  E->setRangeExpr(cast<InitListExpr>(Record.readSubExpr()));
+  E->setIndexExpr(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   S->KeywordLoc = readSourceLocation();
@@ -1777,6 +1821,7 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
+  E->CXXOperatorCallExprBits.IsReversed = Record.readInt();
   E->BeginLoc = Record.readSourceLocation();
 }
 
@@ -2050,6 +2095,17 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
   E->SubExpr = Record.readSubExpr();
 }
 
+void ASTStmtReader::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  unsigned NumTemplateArgs = Record.readInt();
+  assert(NumTemplateArgs == E->getNumTemplateArgs() &&
+         "Wrong NumTemplateArgs!");
+  ReadTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects(),
+                            NumTemplateArgs);
+  E->NameInfo = Record.readDeclarationNameInfo();
+  E->Name = Record.readTemplateName();
+}
+
 void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
@@ -2183,6 +2239,7 @@ void ASTStmtReader::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
+  E->TypeTraitExprBits.IsComparisonResult = Record.readInt();
   E->TypeTraitExprBits.NumArgs = Record.readInt();
   E->TypeTraitExprBits.Kind = Record.readInt();
 
@@ -2268,11 +2325,11 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  E->AssociatedDeclAndRef.setPointer(readDeclAs<Decl>());
-  E->AssociatedDeclAndRef.setInt(CurrentUnpackingBits->getNextBit());
+  E->AssociatedDeclAndFinal.setPointer(readDeclAs<Decl>());
+  E->AssociatedDeclAndFinal.setInt(CurrentUnpackingBits->getNextBit());
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
   E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
-  E->Final = CurrentUnpackingBits->getNextBit();
+  E->ParamType = Record.readType();
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
@@ -2519,6 +2576,10 @@ void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
+void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
 void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPCanonicalLoopSequenceTransformationDirective(D);
 }
@@ -2649,7 +2710,14 @@ void ASTStmtReader::VisitOMPScanDirective(OMPScanDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
-void ASTStmtReader::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
+void ASTStmtReader::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+}
+
+void ASTStmtReader::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
 }
@@ -3495,14 +3563,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_OBJC_ARRAY_LITERAL:
-      S = ObjCArrayLiteral::CreateEmpty(Context,
-                                        Record[ASTStmtReader::NumExprFields]);
+      S = ObjCArrayLiteral::CreateEmpty(
+          Context, Record[ASTStmtReader::NumObjCObjectLiteralFields]);
       break;
 
     case EXPR_OBJC_DICTIONARY_LITERAL:
-      S = ObjCDictionaryLiteral::CreateEmpty(Context,
-            Record[ASTStmtReader::NumExprFields],
-            Record[ASTStmtReader::NumExprFields + 1]);
+      S = ObjCDictionaryLiteral::CreateEmpty(
+          Context, Record[ASTStmtReader::NumObjCObjectLiteralFields],
+          Record[ASTStmtReader::NumObjCObjectLiteralFields + 1]);
       break;
 
     case EXPR_OBJC_ENCODE:
@@ -3613,6 +3681,19 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
              /*numHandlers=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
+    case STMT_CXX_EXPANSION_PATTERN:
+      S = CXXExpansionStmtPattern::CreateEmpty(
+          Context, Empty,
+          static_cast<CXXExpansionStmtPattern::ExpansionStmtKind>(
+              Record[ASTStmtReader::NumStmtFields]));
+      break;
+
+    case STMT_CXX_EXPANSION_INSTANTIATION:
+      S = CXXExpansionStmtInstantiation::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumStmtFields],
+          Record[ASTStmtReader::NumStmtFields + 1]);
+      break;
+
     case STMT_CXX_FOR_RANGE:
       S = new (Context) CXXForRangeStmt(Empty);
       break;
@@ -3674,6 +3755,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
+      break;
+    }
+
+    case STMT_OMP_SPLIT_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPSplitDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 
@@ -3808,11 +3896,17 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
 
-    case STMT_OMP_ORDERED_DIRECTIVE: {
+    case STMT_OMP_ORDERED_STANDALONE_DIRECTIVE: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
-      bool HasAssociatedStmt = Record[ASTStmtReader::NumStmtFields + 2];
-      S = OMPOrderedDirective::CreateEmpty(Context, NumClauses,
-                                           !HasAssociatedStmt, Empty);
+      S = OMPOrderedStandaloneDirective::CreateEmpty(Context, NumClauses,
+                                                     Empty);
+      break;
+    }
+
+    case STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OMPOrderedBlockAssocDirective::CreateEmpty(Context, NumClauses,
+                                                     Empty);
       break;
     }
 
@@ -4327,6 +4421,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case EXPR_DEPENDENT_TEMPLATE_ID:
+      S = DependentTemplateIdExpr::CreateEmpty(
+          Context, /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
     case EXPR_CXX_DEPENDENT_SCOPE_DECL_REF: {
       BitsUnpacker DependentScopeDeclRefBits(
           Record[ASTStmtReader::NumStmtFields]);
@@ -4373,7 +4472,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(
           Context, Record[ASTStmtReader::NumExprFields],
-          Record[ASTStmtReader::NumExprFields + 1]);
+          Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_ARRAY_TYPE_TRAIT:
@@ -4490,6 +4589,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
+
+    case EXPR_CXX_EXPANSION_SELECT:
+      S = new (Context) CXXExpansionSelectExpr(Empty);
+      break;
+
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);

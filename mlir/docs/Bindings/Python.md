@@ -350,6 +350,30 @@ Module.parse("...", context=standalone_ctx)
 
 The context object remains live as long as there are IR objects referencing it.
 
+##### Transient Scope
+
+MLIR contexts also support a *transient scope* context manager (`with ctx.transient_scope():`).
+Within a transient scope, any newly created types, attributes, affine expressions, and unregistered operations
+are recorded in a transient layer. When exiting the scope, all transient allocations are rolled back and reclaimed
+without tearing down loaded dialects or modifying the base context state:
+
+```python
+from mlir.ir import Context, IntegerType, Module
+
+with Context() as ctx:
+  i32 = IntegerType.get_signless(32)  # Base type
+
+  with ctx.transient_scope():
+    # Transient types and IR construction
+    i64 = IntegerType.get_signless(64)
+    # ... perform temporary transformations or speculative compilation ...
+
+  # Exiting the transient scope invalidates transient IR entities.
+  # The base state (e.g. `i32` and loaded dialects) is preserved.
+```
+
+Note: Any Python objects referencing transient IR entities must not be accessed after exiting the transient scope.
+
 #### Insertion Points and Locations
 
 When constructing an MLIR operation, two pieces of information are required:
@@ -1180,6 +1204,29 @@ filled with `import`s from the generated files to enable `import
 mlir.dialects.<dialect-namespace>` in Python.
 
 
+#### Customizing Type Annotations
+
+The generated `__init__` methods include type annotations for operand and
+attribute arguments. Built-in mappings cover standard MLIR types and attributes,
+but dialects can extend them by adding definitions from
+[`PythonBindings.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PythonBindings.td)
+to the same `.td` file passed to `mlir-tblgen -gen-python-op-bindings`:
+
+```tablegen
+include "mlir/Bindings/Python/PythonBindings.td"
+
+// Operand/result annotations: maps a C++ type from the ODS type constraint's
+// cppClassName to a Python type annotation, e.g.
+// `ir.Value` -> `ir.Value[my_dialect.MyTensorType]`.
+def : PythonTypeName<"::my_dialect::MyTensorType",
+                     "my_dialect.MyTensorType">;
+
+// Attribute annotations: maps a TableGen attribute def name to the Python
+// type accepted by its AttrBuilder, e.g.
+// `Union[Any, ir.Attribute]` -> `Union[my_dialect.MyValue, ir.Attribute]`.
+def : PythonAttrType<"MyCustomAttr", "my_dialect.MyValue">;
+```
+
 ### Attributes and Types
 
 Dialect attributes and types are provided in Python as subclasses of the
@@ -1307,12 +1354,12 @@ class MyInt(Dialect, name="myint"):
 
 class ConstantOp(MyInt.Operation, name="constant"):
     value: IntegerAttr
-    cst: Result[IntegerType[32]]
+    cst: Result[IntegerType[32]] = infer_result()
 
 class AddOp(MyInt.Operation, name="add"):
     lhs: Operand[IntegerType[32]]
     rhs: Operand[IntegerType[32]]
-    res: Result[IntegerType[32]]
+    res: Result[IntegerType[32]] = infer_result()
 
 # The code below requires an available MLIR context and location.
 

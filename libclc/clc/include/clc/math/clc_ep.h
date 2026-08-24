@@ -15,7 +15,7 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc/math/clc_ep_decl.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/math/clc_ep_decl.inc"
+#include "clc/math/gentype.inc"
 
 #endif // __CLC_MATH_CLC_EP_H__

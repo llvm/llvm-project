@@ -25,7 +25,6 @@ TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, SV sv, typename S::size_type pos2, typename S::size_type n, S expected) {
   static_assert((!std::is_same<S, SV>::value), "");
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos1 <= old_size && pos2 <= sv.size()) {
     s.insert(pos1, sv, pos2, n);
     LIBCPP_ASSERT(s.__invariants());
@@ -33,6 +32,7 @@ test(S s, typename S::size_type pos1, SV sv, typename S::size_type pos2, typenam
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.insert(pos1, sv, pos2, n);
       assert(false);
@@ -48,7 +48,6 @@ template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void test_npos(S s, typename S::size_type pos1, SV sv, typename S::size_type pos2, S expected) {
   static_assert((!std::is_same<S, SV>::value), "");
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos1 <= old_size && pos2 <= sv.size()) {
     s.insert(pos1, sv, pos2);
     LIBCPP_ASSERT(s.__invariants());
@@ -56,6 +55,7 @@ TEST_CONSTEXPR_CXX20 void test_npos(S s, typename S::size_type pos1, SV sv, type
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.insert(pos1, sv, pos2);
       assert(false);

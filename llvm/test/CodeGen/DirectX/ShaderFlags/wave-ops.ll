@@ -28,6 +28,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i32 @wave_get_lane_count() {
+entry:
+  ; CHECK: Function wave_get_lane_count : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.get.lane.count()
+  ret i32 %ret
+}
+
 define noundef i1 @wave_any(i1 %x) {
 entry:
   ; CHECK: Function wave_any : [[WAVE_FLAG]]
@@ -53,6 +60,13 @@ define noundef i32 @wave_bit_xor(i32 %x) {
 entry:
   ; CHECK: Function wave_bit_xor : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.reduce.xor(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_bit_and(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_and : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.and(i32 %x)
   ret i32 %ret
 }
 
@@ -172,5 +186,26 @@ define noundef i32 @wave_prefix_uproduct(i32 noundef %x) {
 entry:
   ; CHECK: Function wave_prefix_uproduct : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.prefix.uproduct.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_x_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_x_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.x.i32(i32 %expr)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_y_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_y_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.y.i32(i32 %expr)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_diagonal_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_diagonal_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.diagonal.i32(i32 %expr)
   ret i32 %ret
 }

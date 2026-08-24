@@ -210,8 +210,6 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
                              BasicBlock *BB, bool RTC) {
-  assert((Set.is_params() || BB) &&
-         "Assumptions without a basic block must be parameter sets");
   if (RecordedAssumptions)
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }
@@ -370,9 +368,6 @@ private:
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
     return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
   }
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
-  }
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
     return GenSE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }
@@ -447,6 +442,10 @@ private:
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
     // with it. However, it still contains references to the SCoP region.
+    //
+    // Insert in the cache to cut recursive cycles:
+    // visitUnknown follow VMap and GenSE.getSCEV() back to E.
+    SCEVCache[E] = Evaluated;
     return visit(Evaluated);
   }
   ///}
@@ -461,20 +460,6 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
   ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, Name, VMap, LoopMap,
                         RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
-}
-
-Value *polly::getConditionFromTerminator(Instruction *TI) {
-  if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
-    if (BR->isUnconditional())
-      return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));
-
-    return BR->getCondition();
-  }
-
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return SI->getCondition();
-
-  return nullptr;
 }
 
 Loop *polly::getLoopSurroundingScop(Scop &S, LoopInfo &LI) {

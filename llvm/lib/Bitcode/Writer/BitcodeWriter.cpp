@@ -136,6 +136,7 @@ enum {
   // CONSTANTS_BLOCK abbrev id's.
   CONSTANTS_SETTYPE_ABBREV = bitc::FIRST_APPLICATION_ABBREV,
   CONSTANTS_INTEGER_ABBREV,
+  CONSTANTS_BYTE_ABBREV,
   CONSTANTS_CE_CAST_Abbrev,
   CONSTANTS_NULL_Abbrev,
 
@@ -229,10 +230,12 @@ public:
     GlobalValueId = VE.getValues().size();
     if (!Index)
       return;
-    for (const auto &GUIDSummaryLists : *Index)
+    // Sort by GUID for deterministic value ID assignment.
+    for (const auto &GUIDSummaryLists :
+         Index->sortedGlobalValueSummariesRange())
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
+        if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -253,6 +256,7 @@ public:
 
 protected:
   void writePerModuleGlobalValueSummary();
+  void writeGUIDList();
 
 private:
   void writePerModuleFunctionSummaryRecord(
@@ -582,7 +586,8 @@ public:
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
-      for (auto &Summaries : Index)
+      // Sort by GUID for deterministic output.
+      for (const auto &Summaries : Index.sortedGlobalValueSummariesRange())
         for (auto &Summary : Summaries.second.getSummaryList())
           Callback({Summaries.first, Summary.get()}, false);
     }
@@ -689,37 +694,84 @@ static unsigned getEncodedBinaryOpcode(unsigned Opcode) {
   }
 }
 
-static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
-  switch (Op) {
+static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
+  unsigned Encoding = 0;
+  switch (I.getOperation()) {
   default: llvm_unreachable("Unknown RMW operation!");
-  case AtomicRMWInst::Xchg: return bitc::RMW_XCHG;
-  case AtomicRMWInst::Add: return bitc::RMW_ADD;
-  case AtomicRMWInst::Sub: return bitc::RMW_SUB;
-  case AtomicRMWInst::And: return bitc::RMW_AND;
-  case AtomicRMWInst::Nand: return bitc::RMW_NAND;
-  case AtomicRMWInst::Or: return bitc::RMW_OR;
-  case AtomicRMWInst::Xor: return bitc::RMW_XOR;
-  case AtomicRMWInst::Max: return bitc::RMW_MAX;
-  case AtomicRMWInst::Min: return bitc::RMW_MIN;
-  case AtomicRMWInst::UMax: return bitc::RMW_UMAX;
-  case AtomicRMWInst::UMin: return bitc::RMW_UMIN;
-  case AtomicRMWInst::FAdd: return bitc::RMW_FADD;
-  case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
-  case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
-  case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
+  case AtomicRMWInst::Xchg:
+    Encoding = bitc::RMW_XCHG;
+    break;
+  case AtomicRMWInst::Add:
+    Encoding = bitc::RMW_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    Encoding = bitc::RMW_SUB;
+    break;
+  case AtomicRMWInst::And:
+    Encoding = bitc::RMW_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    Encoding = bitc::RMW_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    Encoding = bitc::RMW_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    Encoding = bitc::RMW_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    Encoding = bitc::RMW_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    Encoding = bitc::RMW_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    Encoding = bitc::RMW_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    Encoding = bitc::RMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Encoding = bitc::RMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Encoding = bitc::RMW_FSUB;
+    break;
+  case AtomicRMWInst::FMax:
+    Encoding = bitc::RMW_FMAX;
+    break;
+  case AtomicRMWInst::FMin:
+    Encoding = bitc::RMW_FMIN;
+    break;
   case AtomicRMWInst::FMaximum:
-    return bitc::RMW_FMAXIMUM;
+    Encoding = bitc::RMW_FMAXIMUM;
+    break;
   case AtomicRMWInst::FMinimum:
-    return bitc::RMW_FMINIMUM;
+    Encoding = bitc::RMW_FMINIMUM;
+    break;
+  case AtomicRMWInst::FMaximumNum:
+    Encoding = bitc::RMW_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    Encoding = bitc::RMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
-    return bitc::RMW_UINC_WRAP;
+    Encoding = bitc::RMW_UINC_WRAP;
+    break;
   case AtomicRMWInst::UDecWrap:
-    return bitc::RMW_UDEC_WRAP;
+    Encoding = bitc::RMW_UDEC_WRAP;
+    break;
   case AtomicRMWInst::USubCond:
-    return bitc::RMW_USUB_COND;
+    Encoding = bitc::RMW_USUB_COND;
+    break;
   case AtomicRMWInst::USubSat:
-    return bitc::RMW_USUB_SAT;
+    Encoding = bitc::RMW_USUB_SAT;
+    break;
   }
+
+  if (I.isElementwise())
+    Encoding |= bitc::RMW_ELEMENTWISE_FLAG;
+  return Encoding;
 }
 
 static unsigned getEncodedOrdering(AtomicOrdering Ordering) {
@@ -774,6 +826,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
   case Attribute::FnRetThunkExtern:
     return bitc::ATTR_KIND_FNRETTHUNK_EXTERN;
+  case Attribute::Flatten:
+    return bitc::ATTR_KIND_FLATTEN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:
@@ -812,6 +866,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
     return bitc::ATTR_KIND_NOFREE;
+  case Attribute::NoFreeObj:
+    return bitc::ATTR_KIND_NOFREEOBJ;
   case Attribute::NoImplicitFloat:
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
@@ -958,6 +1014,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DENORMAL_FPENV;
   case Attribute::NoOutline:
     return bitc::ATTR_KIND_NOOUTLINE;
+  case Attribute::NoIPA:
+    return bitc::ATTR_KIND_NOIPA;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1028,7 +1086,7 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Kind));
         if (Kind == Attribute::Memory) {
           // Version field for upgrading old memory effects.
-          const uint64_t Version = 1;
+          const uint64_t Version = 2;
           Record.push_back((Version << 56) | Attr.getValueAsInt());
         } else {
           Record.push_back(Attr.getValueAsInt());
@@ -1173,6 +1231,11 @@ void ModuleBitcodeWriter::writeTypeTable() {
       break;
     case Type::X86_AMXTyID:   Code = bitc::TYPE_CODE_X86_AMX;   break;
     case Type::TokenTyID:     Code = bitc::TYPE_CODE_TOKEN;     break;
+    case Type::ByteTyID:
+      // BYTE: [width]
+      Code = bitc::TYPE_CODE_BYTE;
+      TypeVals.push_back(T->getByteBitWidth());
+      break;
     case Type::IntegerTyID:
       // INTEGER: [width]
       Code = bitc::TYPE_CODE_INTEGER;
@@ -1491,9 +1554,19 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
-  if (!M.getModuleInlineAsm().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
-                      0 /*TODO*/);
+
+  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+    SmallVector<std::pair<StringRef, StringRef>> Props =
+        Frag.Props.getAsStrings();
+    for (auto [Key, Value] : Props) {
+      SmallVector<unsigned, 64> Record;
+      Record.append(Key.begin(), Key.end());
+      Record.push_back(0);
+      Record.append(Value.begin(), Value.end());
+      Stream.EmitRecord(bitc::MODULE_CODE_ASM_PROPERTY, Record);
+    }
+    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, Frag.Asm, 0 /*TODO*/);
+  }
 
   // Emit information about sections and GC, computing how many there are. Also
   // compute the maximum alignment value.
@@ -1591,6 +1664,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
@@ -1757,6 +1832,13 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= bitc::AllowContract;
     if (FPMO->hasApproxFunc())
       Flags |= bitc::ApproxFunc;
+
+    // Handle uitofp.
+    if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
+      Flags <<= 1;
+      if (NNI->hasNonNeg())
+        Flags |= 1 << bitc::PNNI_NON_NEG;
+    }
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
     if (NNI->hasNonNeg())
       Flags |= 1 << bitc::PNNI_NON_NEG;
@@ -1923,6 +2005,9 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getFlags());
   Record.push_back(N->getNumExtraInhabitants());
   Record.push_back(N->getDataSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
 
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
   Record.clear();
@@ -1953,6 +2038,10 @@ void ModuleBitcodeWriter::writeDIFixedPointType(
 
   WriteWideInt(N->getNumeratorRaw());
   WriteWideInt(N->getDenominatorRaw());
+
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
 
   Stream.EmitRecord(bitc::METADATA_FIXED_POINT_TYPE, Record, Abbrev);
   Record.clear();
@@ -2141,6 +2230,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
   Record.push_back(Lang.hasVersionedName() ? Lang.getVersion() : 0);
+  Record.push_back(Lang.getDialect());
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
@@ -2871,6 +2961,16 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         emitWideAPInt(Record, IV->getValue());
         Code = bitc::CST_CODE_WIDE_INTEGER;
       }
+    } else if (const ConstantByte *BV = dyn_cast<ConstantByte>(C)) {
+      if (BV->getBitWidth() <= 64) {
+        uint64_t V = BV->getSExtValue();
+        emitSignedInt64(Record, V);
+        Code = bitc::CST_CODE_BYTE;
+        AbbrevToUse = CONSTANTS_BYTE_ABBREV;
+      } else { // Wide bytes, > 64 bits in size.
+        emitWideAPInt(Record, BV->getValue());
+        Code = bitc::CST_CODE_WIDE_BYTE;
+      }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
       Type *Ty = CFP->getType()->getScalarType();
@@ -2920,10 +3020,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       else if (isCStr7)
         AbbrevToUse = CString7Abbrev;
     } else if (const ConstantDataSequential *CDS =
-                  dyn_cast<ConstantDataSequential>(C)) {
+                   dyn_cast<ConstantDataSequential>(C)) {
       Code = bitc::CST_CODE_DATA;
       Type *EltTy = CDS->getElementType();
-      if (isa<IntegerType>(EltTy)) {
+      if (isa<IntegerType>(EltTy) || isa<ByteType>(EltTy)) {
         for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
       } else {
@@ -3470,25 +3570,31 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     break;
   }
 
-  case Instruction::Load:
-    if (cast<LoadInst>(I).isAtomic()) {
+  case Instruction::Load: {
+    const auto &LI = cast<LoadInst>(I);
+    if (LI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_LOADATOMIC;
-      pushValueAndType(I.getOperand(0), InstID, Vals);
+      pushValueAndType(LI.getOperand(0), InstID, Vals);
     } else {
       Code = bitc::FUNC_CODE_INST_LOAD;
-      if (!pushValueAndType(I.getOperand(0), InstID, Vals)) // ptr
+      if (!pushValueAndType(LI.getOperand(0), InstID, Vals)) // ptr
         AbbrevToUse = FUNCTION_INST_LOAD_ABBREV;
     }
-    Vals.push_back(VE.getTypeID(I.getType()));
-    Vals.push_back(getEncodedAlign(cast<LoadInst>(I).getAlign()));
-    Vals.push_back(cast<LoadInst>(I).isVolatile());
-    if (cast<LoadInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<LoadInst>(I).getOrdering()));
-      Vals.push_back(getEncodedSyncScopeID(cast<LoadInst>(I).getSyncScopeID()));
+    Vals.push_back(VE.getTypeID(LI.getType()));
+    Vals.push_back(getEncodedAlign(LI.getAlign()));
+    Vals.push_back(LI.isVolatile());
+    if (LI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(LI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(LI.getSyncScopeID()));
+      if (LI.isElementwise())
+        Vals.push_back(1);
     }
     break;
-  case Instruction::Store:
-    if (cast<StoreInst>(I).isAtomic()) {
+  }
+
+  case Instruction::Store: {
+    const auto &SI = cast<StoreInst>(I);
+    if (SI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_STOREATOMIC;
     } else {
       Code = bitc::FUNC_CODE_INST_STORE;
@@ -3498,14 +3604,17 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       AbbrevToUse = 0;
     if (pushValueAndType(I.getOperand(0), InstID, Vals)) // valty + val
       AbbrevToUse = 0;
-    Vals.push_back(getEncodedAlign(cast<StoreInst>(I).getAlign()));
-    Vals.push_back(cast<StoreInst>(I).isVolatile());
-    if (cast<StoreInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<StoreInst>(I).getOrdering()));
-      Vals.push_back(
-          getEncodedSyncScopeID(cast<StoreInst>(I).getSyncScopeID()));
+    Vals.push_back(getEncodedAlign(SI.getAlign()));
+    Vals.push_back(SI.isVolatile());
+    if (SI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(SI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(SI.getSyncScopeID()));
+      if (SI.isElementwise())
+        Vals.push_back(1);
     }
     break;
+  }
+
   case Instruction::AtomicCmpXchg:
     Code = bitc::FUNC_CODE_INST_CMPXCHG;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
@@ -3525,8 +3634,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_ATOMICRMW;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
-    Vals.push_back(
-        getEncodedRMWOperation(cast<AtomicRMWInst>(I).getOperation()));
+    Vals.push_back(getEncodedRMWOperation(cast<AtomicRMWInst>(I)));
     Vals.push_back(cast<AtomicRMWInst>(I).isVolatile());
     Vals.push_back(getEncodedOrdering(cast<AtomicRMWInst>(I).getOrdering()));
     Vals.push_back(
@@ -3968,6 +4076,15 @@ void ModuleBitcodeWriter::writeBlockInfo() {
       llvm_unreachable("Unexpected abbrev ordering!");
   }
 
+  { // BYTE abbrev for CONSTANTS_BLOCK.
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::CST_CODE_BYTE));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    if (Stream.EmitBlockInfoAbbrev(bitc::CONSTANTS_BLOCK_ID, Abbv) !=
+        CONSTANTS_BYTE_ABBREV)
+      llvm_unreachable("Unexpected abbrev ordering!");
+  }
+
   { // CE_CAST abbrev for CONSTANTS_BLOCK.
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::CST_CODE_CE_CAST));
@@ -4068,7 +4185,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(ValAbbrevOp); // OpVal
     Abbv->Add(TypeAbbrevOp); // dest ty
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 9)); // flags
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_CAST_FLAGS_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
@@ -4232,7 +4349,8 @@ void IndexBitcodeWriter::writeModStrings() {
     auto ModuleId = ModuleIdMap.size();
     ModuleIdMap[Key] = ModuleId;
     Vals.push_back(ModuleId);
-    Vals.append(Key.begin(), Key.end());
+    // Use bytes_begin/end() for unsigned char iteration.
+    Vals.append(Key.bytes_begin(), Key.bytes_end());
 
     // Emit the finished record.
     Stream.EmitRecord(bitc::MST_CODE_ENTRY, Vals, AbbrevToUse);
@@ -4592,7 +4710,11 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
 void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev, unsigned FSModVTableRefsAbbrev) {
-  auto VI = Index->getValueInfo(V.getGUID());
+  // Be a little lenient here, to accomodate older files without GUIDs
+  // already computed and assigned as metadata.
+  GlobalValue::GUID GUID = V.getGUIDOrFallback();
+
+  auto VI = Index->getValueInfo(GUID);
   if (!VI || VI.getSummaryList().empty()) {
     // Only declarations should not have a summary (a declaration might however
     // have a summary if the def was in module level asm).
@@ -4805,11 +4927,17 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    // Be a little lenient here, to accomodate older files without GUIDs
+    // already computed and assigned as metadata.
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
-      assert(F.isDeclaration());
+      if (!F.isDeclaration())
+        reportFatalUsageError("expected function definition " + F.getName() +
+                              " to have an associated value info.");
       continue;
     }
     auto *Summary = VI.getSummaryList()[0].get();
@@ -4837,7 +4965,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4887,6 +5017,37 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                       ArrayRef<uint64_t>{Index->getBlockCount()});
 
   Stream.ExitBlock();
+}
+
+void ModuleBitcodeWriterBase::writeGUIDList() {
+  const ValueEnumerator::ValueList &Vals = VE.getValues();
+  const size_t Max = Vals.size();
+
+  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  for (const GlobalValue &GV : M.global_values()) {
+    auto MaybeGUID = GV.getGUIDIfAssigned();
+    if (!MaybeGUID)
+      continue;
+    auto GUID = *MaybeGUID;
+
+    const auto ValueID = VE.getValueID(&GV);
+    GUIDs[ValueID] = GUID;
+  }
+
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_GUIDLIST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  SmallVector<uint32_t> RecordVals;
+  RecordVals.reserve(Max * 2);
+  for (auto GUID : GUIDs) {
+    RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
+    RecordVals.push_back(static_cast<uint32_t>(GUID));
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, RecordVals, GUIDListAbbrev);
 }
 
 /// Emit the combined summary section into the combined index file.
@@ -5234,21 +5395,23 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  SmallVector<StringRef, 4> Functions;
+  SmallVector<std::pair<StringRef, GlobalValue::GUID>, 4> Functions;
   auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
                               bitc::GlobalValueSummarySymtabCodes Code) {
     if (CfiIndex.empty())
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-      auto Defs = CfiIndex.forGuid(GUID);
-      llvm::append_range(Functions, Defs);
+      auto Names = CfiIndex.getNamesForGUID(GUID);
+      for (StringRef Name : Names)
+        Functions.push_back({Name, GUID});
     }
     if (Functions.empty())
       return;
     llvm::sort(Functions);
-    for (const auto &S : Functions) {
-      NameVals.push_back(StrtabBuilder.add(S));
-      NameVals.push_back(S.size());
+    for (const auto &Record : Functions) {
+      NameVals.push_back(Record.second);
+      NameVals.push_back(StrtabBuilder.add(Record.first));
+      NameVals.push_back(Record.first.size());
     }
     Stream.EmitRecord(Code, NameVals);
     NameVals.clear();
@@ -5680,6 +5843,8 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {

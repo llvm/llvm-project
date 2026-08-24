@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -15,7 +23,7 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 include(CheckCXXCompilerFlag)
 
-if (LIBC_CMAKE_VERBOSE_LOGGING)
+if(LIBC_CMAKE_VERBOSE_LOGGING)
   get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
   foreach(OLD_DEF ${LIBC_OLD_PREPROCESSOR_DEFS})
     message(STATUS "Undefining ${OLD_DEF}")
@@ -30,10 +38,9 @@ set_directory_properties(PROPERTIES
   # to set a few preprocessor defines which we do not want.
   COMPILE_DEFINITIONS ""
 )
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
-
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -73,6 +80,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
+set(LIBC_TEST_FLOAT_RANGE_COUNT "1231" CACHE STRING
+  "Number of values sampled by libc floating-point range tests.")
+if(NOT "${LIBC_TEST_FLOAT_RANGE_COUNT}" MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "Invalid LIBC_TEST_FLOAT_RANGE_COUNT: ${LIBC_TEST_FLOAT_RANGE_COUNT}. "
+    "Expected a positive integer.")
+endif()
 
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
@@ -97,7 +111,7 @@ if(COMMAND_RETURN_CODE EQUAL 0)
     "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
   )
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
-                 "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
   # Try with GCC option: -print-search-dirs, which will output in the form:
   #   install: <path>
@@ -115,9 +129,9 @@ else()
     string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
     list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
     message(STATUS "Set COMPILER_RESOURCE_DIR to "
-    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
-else()
-    if (LIBC_TARGET_OS_IS_GPU)
+      "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+  else()
+    if(LIBC_TARGET_OS_IS_GPU)
       message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
     else()
       set(COMPILER_RESOURCE_DIR OFF)
@@ -138,19 +152,27 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
+if(LLVM_LIBC_FULL_BUILD)
+  set(LLVM_LIBC_OVERLAY OFF)
+else()
+  set(LLVM_LIBC_OVERLAY ON)
+endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
+option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
+  "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
 if(LIBC_TARGET_OS_IS_LINUX)
-  set(kernel_headers "/usr/include")
+  if(LIBC_TARGET_TRIPLE AND EXISTS "/usr/${LIBC_TARGET_TRIPLE}/include")
+    set(kernel_headers "/usr/${LIBC_TARGET_TRIPLE}/include")
+  else()
+    set(kernel_headers "/usr/include")
+  endif()
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
-
-set(LIBC_ENABLE_UNITTESTS ON)
-set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 set(LIBC_CONFIG_JSON_FILE_LIST "")
 
@@ -177,7 +199,7 @@ endif()
 # also set flags to enable or disable wide character support within other
 # functions (e.g. printf)." ON)
 
-#TODO: Add carve-out specific config files to the list here.
+# TODO: Add carve-out specific config files to the list here.
 
 include(LibcConfig)
 # Config loading happens in three steps:
@@ -216,7 +238,7 @@ foreach(opt IN LISTS global_config)
   message(STATUS "${opt_name}: ${opt_value}")
   set(${opt_name} ${opt_value})
 endforeach()
-generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
+generate_config_doc(${main_config_file} ${LIBC_BUILD_DIR}/docs/configure.rst)
 
 # Load each target specific config.
 foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
@@ -234,6 +256,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   cmake_path(NORMAL_PATH LIBC_TARGET_SUBDIR)
 endif()
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -260,6 +283,7 @@ else()
   endif()
 endif()
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LIBC_TARGET_TRIPLE)
   set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
 elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
@@ -270,7 +294,10 @@ endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
-  set(LIBC_ENABLE_UNITTESTS OFF)
+  find_program(LIBC_LLVM_LINK llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
+  if(NOT LIBC_LLVM_LINK)
+    message(FATAL_ERROR "llvm-link not found in ${LLVM_TOOLS_BINARY_DIR} or system path")
+  endif()
 endif()
 
 include(LLVMLibCCheckMPFR)
@@ -285,7 +312,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
     set(LLVM_LIBC_ENABLE_LINTING OFF)
     message(WARNING "C++ compiler is not clang++, linting with be disabled.")
   else()
-    if (NOT LLVM_LIBC_CLANG_TIDY)
+    if(NOT LLVM_LIBC_CLANG_TIDY)
       find_program(LLVM_LIBC_CLANG_TIDY NAMES clang-tidy)
     endif()
 
@@ -333,10 +360,10 @@ endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
 if(LLVM_LIBC_INCLUDE_SCUDO)
-  if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
+  if(NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
     message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
-  if (DEFINED COMPILER_RT_BUILD_SANITIZERS AND NOT COMPILER_RT_BUILD_SANITIZERS)
+  if(DEFINED COMPILER_RT_BUILD_SANITIZERS AND NOT COMPILER_RT_BUILD_SANITIZERS)
     message(FATAL_ERROR "Disabling COMPILER_RT_BUILD_SANITIZERS will produce a libc without malloc/free")
   endif()
 endif()
@@ -355,21 +382,21 @@ set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
 # Check entrypoints.txt
 if(EXISTS "${LIBC_CONFIG_PATH}/entrypoints.txt")
-    include("${LIBC_CONFIG_PATH}/entrypoints.txt")
+  include("${LIBC_CONFIG_PATH}/entrypoints.txt")
 else()
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/entrypoints.txt file not found.")
 endif()
 
 # Check headers.txt
 if(EXISTS "${LIBC_CONFIG_PATH}/headers.txt")
-    include("${LIBC_CONFIG_PATH}/headers.txt")
+  include("${LIBC_CONFIG_PATH}/headers.txt")
 elseif(LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
 endif()
 
 # Check exclude.txt that appends to TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS list
 if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
-    include("${LIBC_CONFIG_PATH}/exclude.txt")
+  include("${LIBC_CONFIG_PATH}/exclude.txt")
 endif()
 
 # #TODO: Set up support for premade configs adding their own exclude lists.
@@ -389,7 +416,7 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
     message(FATAL_ERROR "Invalid entrypoint target name ${entrypoint}; Expected"
-                        " a '.' (dot) in the name.")
+      " a '.' (dot) in the name.")
   endif()
   math(EXPR name_loc "${last_dot_loc} + 1")
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
@@ -403,12 +430,13 @@ else()
 endif()
 
 add_subdirectory(include)
+add_subdirectory(shared)
 add_subdirectory(config)
 add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
   # The startup system can potentially depend on the library components so add
   # it after the library implementation directories.
   add_subdirectory(startup)
@@ -425,6 +453,6 @@ endif()
 
 add_subdirectory(benchmarks)
 
-if (LIBC_INCLUDE_DOCS)
+if(LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()

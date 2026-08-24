@@ -41,35 +41,35 @@ void Func11(struct U* u, struct V v, int i){}
 int Func12(struct U u, struct V v, int i){ return 0; }
 #pragma acc routine(Func12) seq device_type(radeon) bind(BIND12_R) device_type(multicore, host) bind(BIND12_MCH)
 
-// CHECK: cir.func{{.*}} @[[F1_NAME:.*Func1[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F1_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F1_NAME:.*Func1[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F1_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F1_R_NAME]] func(@[[F1_NAME]]) bind("BIND1") seq
 //
-// CHECK: cir.func{{.*}} @[[F2_NAME:.*Func2[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F2_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F2_NAME:.*Func2[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F2_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @[[F3_NAME:.*Func3[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F3_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F3_NAME:.*Func3[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F3_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F3_R_NAME]] func(@[[F3_NAME]]) bind("BIND3" [#acc.device_type<nvidia>]) seq
 //
-// CHECK: cir.func{{.*}} @[[F4_NAME:.*Func4[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F4_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F4_NAME:.*Func4[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F4_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @[[F5_NAME:.*Func5[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F5_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F5_NAME:.*Func5[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F5_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F5_R_NAME]] func(@[[F5_NAME]]) bind("BIND5_N" [#acc.device_type<nvidia>], "BIND5_N" [#acc.device_type<host>], "BIND5_M" [#acc.device_type<multicore>]) seq
 //
-// CHECK: cir.func{{.*}} @[[F6_NAME:.*Func6[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F6_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F6_NAME:.*Func6[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F6_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @[[F7_NAME:.*Func7[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F7_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F7_NAME:.*Func7[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F7_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F7_R_NAME]] func(@[[F7_NAME]]) bind(@BIND7) seq
 //
-// CHECK: cir.func{{.*}} @[[F8_NAME:.*Func8[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F8_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F8_NAME:.*Func8[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F8_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @[[F9_NAME:.*Func9[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F9_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F9_NAME:.*Func9[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F9_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F9_R_NAME]] func(@[[F9_NAME]]) bind(@BIND9 [#acc.device_type<nvidia>]) seq
 //
-// CHECK: cir.func{{.*}} @[[F10_NAME:.*Func10[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F10_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F10_NAME:.*Func10[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F10_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @[[F11_NAME:.*Func11[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F11_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F11_NAME:.*Func11[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F11_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F11_R_NAME]] func(@[[F11_NAME]]) bind(@BIND11_NVH [#acc.device_type<nvidia>], @BIND11_NVH [#acc.device_type<host>], @BIND11_MC [#acc.device_type<multicore>])
 //
-// CHECK: cir.func{{.*}} @[[F12_NAME:.*Func12[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F12_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[F12_NAME:.*Func12[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F12_R_NAME:.*]]]>{{.*}}}
 //
 // CHECK: acc.routine @[[F2_R_NAME]] func(@[[F2_NAME]]) bind("BIND2") seq
 // CHECK: acc.routine @[[F4_R_NAME]] func(@[[F4_NAME]]) bind("BIND4" [#acc.device_type<radeon>]) seq

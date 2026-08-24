@@ -652,13 +652,13 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // IOS versions.
   let Uses = [SP] in {
-    def tTAILJMPr : tPseudoExpand<(outs), (ins tcGPR:$dst),
+    def tTAILJMPr : tPseudoExpand<(outs), (ins GPR:$dst),
                      4, IIC_Br, [],
                      (tBX GPR:$dst, (ops 14, zero_reg))>,
                      Requires<[IsThumb]>, Sched<[WriteBr]>;
   }
-  // tTAILJMPd: MachO version uses a Thumb2 branch (no Thumb1 tail calls
-  // on MachO), so it's in ARMInstrThumb2.td.
+  // tTAILJMPd: MachO version uses a wide branch, so it's in
+  // ARMInstrThumb2.td.
   // Non-MachO version:
   let Uses = [SP] in {
     def tTAILJMPdND : tPseudoExpand<(outs),
@@ -1102,7 +1102,8 @@ def tASRrr :                    // A8.6.15
   T1sItDPEncode<0b0100, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                 IIC_iMOVsr,
                 "asr", "\t$Rdn, $Rm",
-                [(set tGPR:$Rdn, (sra tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+                [(set tGPR:$Rdn, (sra tGPR:$Rn, tGPR:$Rm))]>,
+                Sched<[WriteALU]>;
 
 // BIC register
 def tBIC :                      // A8.6.20
@@ -1114,21 +1115,12 @@ def tBIC :                      // A8.6.20
 
 // CMN register
 let isCompare = 1, Defs = [CPSR] in {
-//FIXME: Disable CMN, as CCodes are backwards from compare expectations
-//       Compare-to-zero still works out, just not the relationals
-//def tCMN :                     // A8.6.33
-//  T1pIDPEncode<0b1011, (outs), (ins tGPR:$lhs, tGPR:$rhs),
-//               IIC_iCMPr,
-//               "cmn", "\t$lhs, $rhs",
-//               [(set CPSR, (ARMcmp tGPR:$lhs, (ineg tGPR:$rhs)))]>;
-
-def tCMNz :                     // A8.6.33
+def tCMN :                     // A8.6.33
   T1pIDPEncode<0b1011, (outs), (ins tGPR:$Rn, tGPR:$Rm),
                IIC_iCMPr,
                "cmn", "\t$Rn, $Rm",
-               [(set CPSR, (ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)))]>,
-  Sched<[WriteCMP]>;
-
+               [(set CPSR, (ARMcmn tGPR:$Rn, tGPR:$Rm))]>,
+               Sched<[WriteCMP]>;
 } // isCompare = 1, Defs = [CPSR]
 
 // CMP immediate
@@ -1583,6 +1575,11 @@ def tInt_WIN_eh_sjlj_longjmp
 // Comparisons
 def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
             (tCMPi8  tGPR:$Rn, imm0_255:$imm8)>;
+
+// Fold compare-equal of a negated register into CMN register form.
+def : T1Pat<(ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)),
+            (tCMN tGPR:$Rn, tGPR:$Rm)>;
+
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 

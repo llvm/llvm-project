@@ -60,6 +60,11 @@ def CXXForRangeStmt : StmtNode<Stmt>;
 def CoroutineBodyStmt : StmtNode<Stmt>;
 def CoreturnStmt : StmtNode<Stmt>;
 
+// C++ expansion statements (P1306)
+def CXXExpansionStmtPattern : StmtNode<Stmt>;
+def CXXExpansionStmtInstantiation
+    : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmtPattern!
+
 // Expressions
 def Expr : StmtNode<ValueStmt, 1>;
 def PredefinedExpr : StmtNode<Expr>;
@@ -156,6 +161,7 @@ def ExprWithCleanups : StmtNode<FullExpr>;
 def CXXTemporaryObjectExpr : StmtNode<CXXConstructExpr>;
 def CXXUnresolvedConstructExpr : StmtNode<Expr>;
 def CXXDependentScopeMemberExpr : StmtNode<Expr>;
+def DependentTemplateIdExpr : StmtNode<Expr>;
 def OverloadExpr : StmtNode<Expr, 1>;
 def UnresolvedLookupExpr : StmtNode<OverloadExpr>;
 def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
@@ -184,11 +190,15 @@ def RequiresExpr : StmtNode<Expr>;
 // c++ 26 reflection
 def CXXReflectExpr : StmtNode<Expr>;
 
+// C++26 Expansion statement support expressions
+def CXXExpansionSelectExpr : StmtNode<Expr>;
+
 // Obj-C Expressions.
-def ObjCStringLiteral : StmtNode<Expr>;
-def ObjCBoxedExpr : StmtNode<Expr>;
-def ObjCArrayLiteral : StmtNode<Expr>;
-def ObjCDictionaryLiteral : StmtNode<Expr>;
+def ObjCObjectLiteral : StmtNode<Expr, 1>;
+def ObjCStringLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCBoxedExpr : StmtNode<ObjCObjectLiteral>;
+def ObjCArrayLiteral : StmtNode<ObjCObjectLiteral>;
+def ObjCDictionaryLiteral : StmtNode<ObjCObjectLiteral>;
 def ObjCEncodeExpr : StmtNode<Expr>;
 def ObjCMessageExpr : StmtNode<Expr>;
 def ObjCSelectorExpr : StmtNode<Expr>;
@@ -243,6 +253,7 @@ def OMPTileDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPStripeDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPUnrollDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPSplitDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPInterchangeDirective
     : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPCanonicalLoopSequenceTransformationDirective
@@ -268,7 +279,8 @@ def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
 def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
 def OMPDepobjDirective : StmtNode<OMPExecutableDirective>;
 def OMPScanDirective : StmtNode<OMPExecutableDirective>;
-def OMPOrderedDirective : StmtNode<OMPExecutableDirective>;
+def OMPOrderedStandaloneDirective : StmtNode<OMPExecutableDirective>;
+def OMPOrderedBlockAssocDirective : StmtNode<OMPExecutableDirective>;
 def OMPAtomicDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDataDirective : StmtNode<OMPExecutableDirective>;

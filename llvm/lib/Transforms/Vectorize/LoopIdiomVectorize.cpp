@@ -327,7 +327,7 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   //   %cmp.not = icmp eq i32 %inc, %n
   //   br i1 %cmp.not, label %while.end, label %while.body
   //
-  if (LoopBlocks[0]->sizeWithoutDebug() > 4)
+  if (LoopBlocks[0]->size() > 4)
     return false;
 
   // The second block should contain 7 instructions, e.g.
@@ -341,7 +341,7 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   //   %cmp.not.ld = icmp eq i8 %load.a, %load.b
   //   br i1 %cmp.not.ld, label %while.cond, label %while.end
   //
-  if (LoopBlocks[1]->sizeWithoutDebug() > 7)
+  if (LoopBlocks[1]->size() > 7)
     return false;
 
   // The incoming value to the PHI node from the loop should be an add of 1.
@@ -1043,10 +1043,8 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
 
   // Check instruction counts.
   auto LoopBlocks = CurLoop->getBlocks();
-  if (LoopBlocks[0]->sizeWithoutDebug() > 3 ||
-      LoopBlocks[1]->sizeWithoutDebug() > 4 ||
-      LoopBlocks[2]->sizeWithoutDebug() > 3 ||
-      LoopBlocks[3]->sizeWithoutDebug() > 3)
+  if (LoopBlocks[0]->size() > 3 || LoopBlocks[1]->size() > 4 ||
+      LoopBlocks[2]->size() > 3 || LoopBlocks[3]->size() > 3)
     return false;
 
   // Check that no instruction other than IndPhi has outside uses.
@@ -1094,10 +1092,11 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
         return false;
     }
 
-  // Match the loads and check they are simple.
-  Value *Search, *Needle;
-  if (!match(LoadSearch, m_Load(m_Value(Search))) ||
-      !match(LoadNeedle, m_Load(m_Value(Needle))) ||
+  // Match the loads and check they are simple. The loads come from two PHIs,
+  // each with two incoming values.
+  PHINode *PSearch, *PNeedle;
+  if (!match(LoadSearch, m_Load(m_Phi(PSearch))) ||
+      !match(LoadNeedle, m_Load(m_Phi(PNeedle))) ||
       !cast<LoadInst>(LoadSearch)->isSimple() ||
       !cast<LoadInst>(LoadNeedle)->isSimple())
     return false;
@@ -1119,10 +1118,7 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
   if (TTI->getIntrinsicInstrCost(Attrs, TTI::TCK_SizeAndLatency) > 4)
     return false;
 
-  // The loads come from two PHIs, each with two incoming values.
-  PHINode *PSearch = dyn_cast<PHINode>(Search);
-  PHINode *PNeedle = dyn_cast<PHINode>(Needle);
-  if (!PSearch || PSearch->getNumIncomingValues() != 2 || !PNeedle ||
+  if (PSearch->getNumIncomingValues() != 2 ||
       PNeedle->getNumIncomingValues() != 2)
     return false;
 

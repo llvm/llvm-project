@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
@@ -14,11 +16,11 @@ void test_temporary_dtor() {
 }
 
 // CIR: cir.func {{.*}} @_Z19test_temporary_dtorv()
-// CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp.ensured"]
+// CIR:   %[[ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_A>
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
-// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, i64 1, align 1
+// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, align 1
 // LLVM:   call void @_ZN1AD1Ev(ptr {{.*}} %[[ALLOCA]])
 
 // OGCG: define dso_local void @_Z19test_temporary_dtorv()
@@ -35,49 +37,45 @@ bool make_temp(const B &) { return false; }
 bool test_temp_or() { return make_temp(1) || make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
-// CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
-// CIR:     cir.cleanup.scope {
-// CIR:       %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:         %[[TRUE:.*]] = cir.const #true
-// CIR:         cir.yield %[[TRUE]] : !cir.bool
-// CIR:       }, false {
-// CIR:         %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:         %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
-// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:         cir.cleanup.scope {
-// CIR:           %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
-// CIR:           cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
-// CIR:           cir.yield
-// CIR:         } cleanup  normal {
-// CIR:           cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:           cir.yield
-// CIR:         }
-// CIR:         %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
-// CIR:         cir.yield %[[TERNARY_TMP]] : !cir.bool
-// CIR:       })
-// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
-// CIR:       cir.yield
-// CIR:     } cleanup  normal {
-// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
-// CIR:       cir.yield
-// CIR:     }
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
+// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:       %[[TRUE:.*]] = cir.const #true
+// CIR:       cir.yield %[[TRUE]] : !cir.bool
+// CIR:     }, false {
+// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:       cir.cleanup.scope {
+// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
+// CIR:         cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
+// CIR:         cir.yield
+// CIR:       } cleanup normal {
+// CIR:         cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
+// CIR:       cir.yield %[[TERNARY_TMP]] : !cir.bool
+// CIR:     })
+// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:     cir.yield
 // CIR:   }
 // CIR:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
-// LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
 // LLVM:   %[[TMP_RESULT1:.*]] = alloca i8
 // LLVM:   %[[TMP_RESULT2:.*]] = alloca i8
-// LLVM:   br label %[[LOR_BEGIN:.*]]
-// LLVM: [[LOR_BEGIN]]:
+// LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP0]], i32 {{.*}} 1)
 // LLVM:   br label %[[SCOPE_BEGIN:.*]]
 // LLVM: [[SCOPE_BEGIN]]:
@@ -141,49 +139,45 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 bool test_temp_and() { return make_temp(1) && make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
-// CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
-// CIR:     cir.cleanup.scope {
-// CIR:       %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:         %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:         %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
-// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:         cir.cleanup.scope {
-// CIR:           %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
-// CIR:           cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
-// CIR:           cir.yield
-// CIR:         } cleanup  normal {
-// CIR:           cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:           cir.yield
-// CIR:         }
-// CIR:         %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
-// CIR:         cir.yield %[[TERNARY_TMP]] : !cir.bool
-// CIR:       }, false {
-// CIR:         %[[FALSE:.*]] = cir.const #false
-// CIR:         cir.yield %[[FALSE]] : !cir.bool
-// CIR:       })
-// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
-// CIR:       cir.yield
-// CIR:     } cleanup  normal {
-// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
-// CIR:       cir.yield
-// CIR:     }
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
+// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:       cir.cleanup.scope {
+// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
+// CIR:         cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
+// CIR:         cir.yield
+// CIR:       } cleanup normal {
+// CIR:         cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
+// CIR:       cir.yield %[[TERNARY_TMP]] : !cir.bool
+// CIR:     }, false {
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.yield %[[FALSE]] : !cir.bool
+// CIR:     })
+// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:     cir.yield
 // CIR:   }
 // CIR:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
-// LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B{{.*}}
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B{{.*}}
 // LLVM:   %[[TMP_RESULT:.*]] = alloca i8{{.*}}
 // LLVM:   %[[TMP_RESULT2:.*]] = alloca i8{{.*}}
-// LLVM:   br label %[[LAND_BEGIN:.*]]
-// LLVM: [[LAND_BEGIN]]:
+// LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B{{.*}}
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP0]], i32 {{.*}} 1)
 // LLVM:   br label %[[SCOPE_BEGIN:.*]]
 // LLVM: [[SCOPE_BEGIN]]:
@@ -219,8 +213,6 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP0]])
 // LLVM:   br label %[[LAND_END2:.*]]
 // LLVM: [[LAND_END2]]:
-// LLVM:   br label %[[LAND_END3:.*]]
-// LLVM: [[LAND_END3]]:
 // LLVM:   br label %[[RETURN_BLOCK:.*]]
 // LLVM: [[RETURN_BLOCK]]:
 // LLVM:   %[[TMP2_LOAD:.*]] = load i8, ptr %[[TMP_RESULT2]], align 1
@@ -263,16 +255,6 @@ struct D {
   ~D() {}
 };
 
-// CIR: cir.func {{.*}} @_ZN1DD2Ev
-// CIR:   %[[C:.*]] = cir.get_member %{{.*}}[1] {name = "c"}
-// CIR:   cir.call @_ZN1CD1Ev(%[[C]])
-
-// LLVM: define {{.*}} void @_ZN1DD2Ev
-// LLVM:   %[[C:.*]] = getelementptr %struct.D, ptr %{{.*}}, i32 0, i32 1
-// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])
-
-// This destructor is defined after the calling function in OGCG.
-
 void test_nested_dtor() {
   D d;
 }
@@ -285,6 +267,17 @@ void test_nested_dtor() {
 
 // OGCG: define {{.*}} void @_Z16test_nested_dtorv()
 // OGCG:   call void @_ZN1DD2Ev(ptr {{.*}} %{{.*}})
+
+// CIR: cir.func {{.*}} @_ZN1DD2Ev
+// CIR:   %[[BASE:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
+// CIR:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[PTR:.*]] = cir.ptr_stride %[[BASE]], %[[OFFSET]] : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
+// CIR:   %[[C:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
+// CIR:   cir.call @_ZN1CD1Ev(%[[C]])
+
+// LLVM: define {{.*}} void @_ZN1DD2Ev
+// LLVM:   %[[C:.*]] = getelementptr i8, ptr %{{.*}}, i64 4
+// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])
 
 // OGCG: define {{.*}} void @_ZN1DD2Ev
 // OGCG:   %[[C:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 4
@@ -299,17 +292,6 @@ struct F : public E {
   ~F() {}
 };
 
-// CIR: cir.func {{.*}} @_ZN1FD2Ev
-// CIR:   %[[BASE_E:.*]] = cir.base_class_addr %{{.*}} : !cir.ptr<!rec_F> nonnull [0] -> !cir.ptr<!rec_E>
-// CIR:   cir.call @_ZN1ED2Ev(%[[BASE_E]]) nothrow : (!cir.ptr<!rec_E> {{.*}}) -> ()
-
-// Because E is at offset 0 in F, there is no getelementptr needed.
-
-// LLVM: define {{.*}} void @_ZN1FD2Ev
-// LLVM:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
-
-// This destructor is defined after the calling function in OGCG.
-
 void test_base_dtor_call() {
   F f;
 }
@@ -322,6 +304,15 @@ void test_base_dtor_call() {
 
 // OGCG: define {{.*}} void @_Z19test_base_dtor_callv()
 // OGCG:   call void @_ZN1FD2Ev(ptr {{.*}} %{{.*}})
+
+// CIR: cir.func {{.*}} @_ZN1FD2Ev
+// CIR:   %[[BASE_E:.*]] = cir.base_class_addr %{{.*}} : !cir.ptr<!rec_F> nonnull [0] -> !cir.ptr<!rec_E>
+// CIR:   cir.call @_ZN1ED2Ev(%[[BASE_E]]) nothrow : (!cir.ptr<!rec_E> {{.*}}) -> ()
+
+// Because E is at offset 0 in F, there is no getelementptr needed.
+
+// LLVM: define {{.*}} void @_ZN1FD2Ev
+// LLVM:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
 
 // OGCG: define {{.*}} void @_ZN1FD2Ev
 // OGCG:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
@@ -340,14 +331,14 @@ int test_temp_in_condition(G &obj) {
   return 0;
 }
 
-// CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {
-// CIR:   %[[OBJ:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["obj", init, const]
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
+// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_G, !cir.ptr<!rec_G>, ["ref.tmp0"]
-// CIR:     %[[REF_TMP1:.*]] = cir.alloca !rec_G, !cir.ptr<!rec_G>, ["ref.tmp1"]
-// CIR:     %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
+// CIR:     %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_G>
+// CIR:     %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_G>
+// CIR:     %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:     %[[LOAD_OBJ:.*]] = cir.load{{.*}} %[[OBJ]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
 // CIR:     %[[COPY:.*]] = cir.call @_ZNK1G4copyEv(%[[LOAD_OBJ]]) : (!cir.ptr<!rec_G> {{.*}}) -> !rec_G
 // CIR:     cir.store{{.*}} %[[COPY]], %[[REF_TMP0]]
@@ -358,12 +349,12 @@ int test_temp_in_condition(G &obj) {
 // CIR:         %[[EQUAL:.*]] = cir.call @_ZNK1GeqERKS_(%[[REF_TMP0]], %[[REF_TMP1]]) : (!cir.ptr<!rec_G> {{.*}}, !cir.ptr<!rec_G> {{.*}}) -> (!cir.bool {{.*}})
 // CIR:         cir.store{{.*}} %[[EQUAL]], %[[CLEANUP_TMP]]
 // CIR:         cir.yield
-// CIR:       } cleanup  normal {
+// CIR:       } cleanup normal {
 // CIR:         cir.call @_ZN1GD1Ev(%[[REF_TMP1]]) nothrow : (!cir.ptr<!rec_G> {{.*}}) -> ()
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield
-// CIR:     } cleanup  normal {
+// CIR:     } cleanup normal {
 // CIR:       cir.call @_ZN1GD1Ev(%[[REF_TMP0]]) nothrow : (!cir.ptr<!rec_G> {{.*}}) -> ()
 // CIR:       cir.yield
 // CIR:     }
@@ -463,16 +454,6 @@ void test_base_dtor_call_virtual_base() {
   Derived d;
 }
 
-// Derived D2 (base) destructor -- does not call VirtualBase destructor
-
-// CIR:     cir.func {{.*}} @_ZN7DerivedD2Ev
-// CIR-NOT:   cir.call{{.*}} @_ZN11VirtualBaseD2Ev
-// CIR:       cir.return
-
-// LLVM:     define {{.*}} void @_ZN7DerivedD2Ev
-// LLVM-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev
-// LLVM:       ret
-
 // Derived D1 (complete) destructor -- does call VirtualBase destructor
 
 // CIR: cir.func {{.*}} @_ZN7DerivedD1Ev
@@ -486,11 +467,19 @@ void test_base_dtor_call_virtual_base() {
 // LLVM:   call void @_ZN7DerivedD2Ev(ptr {{.*}} %{{.*}}, ptr {{.*}} @_ZTT7Derived)
 // LLVM:   call void @_ZN11VirtualBaseD2Ev(ptr {{.*}} %{{.*}})
 
-// OGCG emits these destructors in reverse order
-
 // OGCG: define {{.*}} void @_ZN7DerivedD1Ev
 // OGCG:   call void @_ZN7DerivedD2Ev(ptr {{.*}} %{{.*}}, ptr {{.*}} @_ZTT7Derived)
 // OGCG:   call void @_ZN11VirtualBaseD2Ev(ptr {{.*}} %{{.*}})
+
+// Derived D2 (base) destructor -- does not call VirtualBase destructor
+
+// CIR:     cir.func {{.*}} @_ZN7DerivedD2Ev
+// CIR-NOT:   cir.call{{.*}} @_ZN11VirtualBaseD2Ev
+// CIR:       cir.return
+
+// LLVM:     define {{.*}} void @_ZN7DerivedD2Ev
+// LLVM-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev
+// LLVM:       ret
 
 // OGCG:     define {{.*}} void @_ZN7DerivedD2Ev
 // OGCG-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev

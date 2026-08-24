@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -679,7 +680,7 @@ public:
   bool visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn);
 
   /// Get the PCH file if one was included.
-  OptionalFileEntryRef getPCHFile();
+  std::optional<StringRef> getPCHFile();
 
   /// Returns true if the ASTUnit was constructed from a serialized
   /// module file.

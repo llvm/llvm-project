@@ -348,7 +348,7 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
     return 0;
 
   DWARFDie Curr = Die.getParent();
-  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Die.getParent()) {
+  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Curr.getParent()) {
     if (Curr.getTag() == DW_TAG_inlined_subroutine) {
       ErrorCategory.Report(
           "Call site nested entry within inlined subroutine", [&]() {
@@ -500,7 +500,7 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
     return 0;
   OS << "Verifying " << Name << "...\n";
   DWARFUnitIndex Index(InfoColumnKind);
-  DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
+  DataExtractor D(IndexStr, DCtx.isLittleEndian());
   if (!Index.parse(D))
     return 1;
   using MapType = IntervalMap<uint64_t, uint64_t>;
@@ -771,7 +771,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
       for (const auto &Entry : *Loc) {
-        DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
+        DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
         DWARFExpression Expression(Data, U->getAddressByteSize(),
                                    U->getFormParams().Format);
         bool Error =
@@ -1773,15 +1773,23 @@ void DWARFVerifier::verifyNameIndexEntries(
     // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
     // will return the unit DIE of DU if we aren't able to get the .dwo file,
     // but that is what the function currently does.
+    // A CU is a skeleton CU only when DWARF 5+ tags it as DW_TAG_skeleton_unit,
+    // or when, in older DWARF, the CU has no children.
+    DWARFDie UnitDie = DU->getUnitDIE();
+    auto IsSkeletonCU = [&]() {
+      if (DU->getVersion() >= 5)
+        return UnitDie.getTag() == dwarf::DW_TAG_skeleton_unit;
+      return !UnitDie.hasChildren();
+    };
+    bool IsSkeleton = DU->getDWOId() && IsSkeletonCU();
     DWARFUnit *NonSkeletonUnit = nullptr;
-    if (DU->getDWOId()) {
+    if (IsSkeleton) {
       auto Iter = CUOffsetsToDUMap.find(DU->getOffset());
       NonSkeletonUnit = Iter->second;
     } else {
       NonSkeletonUnit = DU;
     }
-    DWARFDie UnitDie = DU->getUnitDIE();
-    if (DU->getDWOId() && !NonSkeletonUnit->isDWOUnit()) {
+    if (IsSkeleton && !NonSkeletonUnit->isDWOUnit()) {
       ErrorCategory.Report("Unable to get load .dwo file", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x} unable to load "
@@ -1913,8 +1921,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
   }
   DWARFUnit *U = Die.getDwarfUnit();
   for (const auto &Entry : *Loc) {
-    DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
@@ -1981,6 +1988,12 @@ void DWARFVerifier::verifyNameIndexCompleteness(
 
   // Object members aren't globally visible.
   case DW_TAG_member:
+    return;
+
+  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
+  // Their DW_AT_name carries the annotation kind, not a globally visible
+  // symbol, so they should not be indexed.
+  case DW_TAG_LLVM_annotation:
     return;
 
   // According to a strict reading of the specification, enumerators should not
@@ -2184,7 +2197,7 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
 
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
-  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian());
   if (!D.getAppleNamesSection().Data.empty())
     verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())
@@ -2330,20 +2343,19 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("String offset error", [&]() {
       error() << formatv("{0}: {1}\n", SectionName, Msg);
-      return false;
     });
   }
   return Success;
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef s, std::function<void(void)> detailCallback) {
-  this->Report(s, "", detailCallback);
+void OutputCategoryAggregator::Report(StringRef s,
+                                      function_ref<void(void)> detailCallback) {
+  Report(s, "", detailCallback);
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef category, StringRef sub_category,
-    std::function<void(void)> detailCallback) {
+void OutputCategoryAggregator::Report(StringRef category,
+                                      StringRef sub_category,
+                                      function_ref<void(void)> detailCallback) {
   std::lock_guard<std::mutex> Lock(WriteMutex);
   ++NumErrors;
   std::string category_str = std::string(category);
@@ -2357,13 +2369,13 @@ void OutputCategoryAggregator::Report(
 }
 
 void OutputCategoryAggregator::EnumerateResults(
-    std::function<void(StringRef, unsigned)> handleCounts) {
+    function_ref<void(StringRef, unsigned)> handleCounts) {
   for (const auto &[name, aggData] : Aggregation) {
     handleCounts(name, aggData.OverallCount);
   }
 }
 void OutputCategoryAggregator::EnumerateDetailedResultsFor(
-    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+    StringRef category, function_ref<void(StringRef, unsigned)> handleCounts) {
   const auto Agg = Aggregation.find(category);
   if (Agg != Aggregation.end()) {
     for (const auto &[name, aggData] : Agg->second.DetailedCounts) {

@@ -15,8 +15,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -313,7 +311,10 @@ protected:
       auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
-      dimVal = *constDim;
+      std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+      if (!constDim64)
+        return rewriter.notifyMatchFailure(op, "DIM does not fit in int64_t");
+      dimVal = *constDim64;
 
       if ((dimVal <= 0 || dimVal > getSourceRank()))
         return rewriter.notifyMatchFailure(op,
@@ -382,6 +383,10 @@ template <bool IS_MAX>
 static mlir::Value
 genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::Value elem, mlir::Value reduction) {
+  // TODO: there is some opportunity to generalize this code with
+  // IntrinsicLibrary::genExtremum(), but one have to be careful
+  // to preserve the NaNs behavior (when needed) that is handled
+  // here with the three FP comparisons.
   if (mlir::isa<mlir::FloatType>(reduction.getType())) {
     // For FP reductions we want the first smallest value to be used, that
     // is not NaN. A OGL/OLT condition will usually work for this unless all
@@ -802,6 +807,7 @@ private:
     this->checkReductions(currentValue);
     llvm::SmallVector<mlir::Value> result;
     fir::FirOpBuilder &builder = this->builder;
+    builder.setFPMaxminBehavior(fpMaxminBehavior);
     mlir::Location loc = this->loc;
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
@@ -893,45 +899,10 @@ private:
     assert(!useIsFirst() &&
            "unordered max/min reduction must not use first predicate");
 
-    if (mlir::isa<fir::CharacterType>(this->getSourceElementType()))
-      TODO(loc, "max/minval with CHARACTER type");
-
-    if (auto intType =
-            mlir::dyn_cast<mlir::IntegerType>(this->getSourceElementType())) {
-      if (intType.isUnsigned())
-        TODO(loc, "max/minval with UNSIGNED type");
-
-      if constexpr (isMax)
-        return mlir::arith::MaxSIOp::create(builder, loc, elementValue,
-                                            currentMinMax);
-      else
-        return mlir::arith::MinSIOp::create(builder, loc, elementValue,
-                                            currentMinMax);
-    }
-
-    if (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Extremum) {
-      if constexpr (isMax)
-        return mlir::arith::MaximumFOp::create(builder, loc, elementValue,
-                                               currentMinMax);
-      else
-        return mlir::arith::MinimumFOp::create(builder, loc, elementValue,
-                                               currentMinMax);
-    }
-
-    if (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::ExtremeNum ||
-        (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Portable &&
-         mlir::arith::bitEnumContainsAll(
-             this->getFastMath(), mlir::arith::FastMathFlags::nnan |
-                                      mlir::arith::FastMathFlags::nsz))) {
-      if constexpr (isMax)
-        return mlir::arith::MaxNumFOp::create(builder, loc, elementValue,
-                                              currentMinMax);
-      else
-        return mlir::arith::MinNumFOp::create(builder, loc, elementValue,
-                                              currentMinMax);
-    }
-
-    llvm_unreachable("unhandled unordered max/min reduction");
+    if constexpr (isMax)
+      return fir::genMax(builder, loc, {elementValue, currentMinMax});
+    else
+      return fir::genMin(builder, loc, {elementValue, currentMinMax});
   }
 
   std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
@@ -1158,12 +1129,13 @@ private:
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value cond =
         builder.createConvert(loc, builder.getI1Type(), elementValue);
+    mlir::Value zero =
+        builder.createIntegerConstant(loc, getResultElementType(), 0);
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
-    mlir::Value add1 =
-        mlir::arith::AddIOp::create(builder, loc, currentValue[0], one);
-    return {mlir::arith::SelectOp::create(builder, loc, cond, add1,
-                                          currentValue[0])};
+    mlir::Value addend =
+        mlir::arith::SelectOp::create(builder, loc, cond, one, zero);
+    return {mlir::arith::AddIOp::create(builder, loc, currentValue[0], addend)};
   }
 };
 
@@ -1466,7 +1438,11 @@ public:
         if (!constDim)
           return rewriter.notifyMatchFailure(
               op, "Nonconstant DIM for CSHIFT/EOSHIFT");
-        dimVal = *constDim;
+        std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+        if (!constDim64)
+          return rewriter.notifyMatchFailure(
+              op, "DIM does not fit in int64_t for CSHIFT/EOSHIFT");
+        dimVal = *constDim64;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
@@ -2536,7 +2512,7 @@ public:
     std::optional<bool> isBack;
     if (back) {
       if (auto backCst = fir::getIntIfConstant(back))
-        isBack = *backCst != 0;
+        isBack = !backCst->isZero();
     } else {
       isBack = false;
     }

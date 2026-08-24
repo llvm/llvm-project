@@ -21,6 +21,8 @@ struct basic_string {
   typedef size_t size_type;
   typedef basic_string<C, T, A> _Type;
   basic_string();
+  basic_string(const basic_string &);
+  basic_string(basic_string &&);
   basic_string(basic_string_view<C, T>);
   basic_string(const C *p, const A &a = A());
   basic_string(const C *p, size_type count);
@@ -33,6 +35,7 @@ struct basic_string {
   const C *c_str() const;
   const C *data() const;
 
+  void clear();
   bool empty() const;
   size_type size() const;
   size_type length() const;

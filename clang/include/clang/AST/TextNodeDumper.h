@@ -208,6 +208,7 @@ public:
   void dumpType(QualType T);
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
+  void dumpFormalLinkage(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
@@ -215,6 +216,7 @@ public:
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
+  void dumpBareConcept(TemplateName TN);
   void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
@@ -266,6 +268,9 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
+  void VisitCXXExpansionStmtPattern(const CXXExpansionStmtPattern *Node);
+  void
+  VisitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
@@ -273,6 +278,7 @@ public:
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
   void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *Node);
+  void VisitDependentTemplateIdExpr(const DependentTemplateIdExpr *Node);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *Node);
   void VisitPredefinedExpr(const PredefinedExpr *Node);
   void VisitCharacterLiteral(const CharacterLiteral *Node);
@@ -343,6 +349,7 @@ public:
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
+  void VisitDeducedType(const DeducedType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);
@@ -394,6 +401,8 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
   void VisitAccessSpecDecl(const AccessSpecDecl *D);
   void VisitFriendDecl(const FriendDecl *D);
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D);
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);
   void VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D);

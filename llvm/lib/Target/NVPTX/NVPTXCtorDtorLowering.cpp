@@ -10,7 +10,6 @@
 /// This pass creates a unified init and fini kernel with the required metadata
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXCtorDtorLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
@@ -24,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -51,8 +51,8 @@ static std::string getHash(StringRef Str) {
 }
 
 static void addKernelAttrs(Function *F) {
-  F->addFnAttr("nvvm.maxclusterrank", "1");
-  F->addFnAttr("nvvm.maxntid", "1");
+  F->addFnAttr(NVVMAttr::MaxClusterRank, "1");
+  F->addFnAttr(NVVMAttr::MaxNTID, "1");
   F->setCallingConv(CallingConv::PTX_Kernel);
 }
 
@@ -244,7 +244,7 @@ public:
 } // End anonymous namespace
 
 PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+                                                 ModuleAnalysisManager &MAM) {
   return lowerCtorsAndDtors(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

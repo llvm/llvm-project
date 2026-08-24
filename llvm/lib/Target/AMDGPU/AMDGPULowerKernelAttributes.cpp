@@ -57,6 +57,8 @@ enum ImplicitArgOffsets {
   HIDDEN_REMAINDER_X = 18,
   HIDDEN_REMAINDER_Y = 20,
   HIDDEN_REMAINDER_Z = 22,
+
+  GRID_DIMS = 64
 };
 
 class AMDGPULowerKernelAttributes : public ModulePass {
@@ -116,6 +118,47 @@ static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
   return true;
 }
 
+static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
+                                            unsigned KnownNumGridDims) {
+  IntegerType *Ty = dyn_cast<IntegerType>(Load->getType());
+  if (!Ty || Ty->getBitWidth() < 3)
+    return false;
+
+  if (KnownNumGridDims == 3) {
+    Load->replaceAllUsesWith(ConstantInt::get(Load->getType(), 3));
+    return true;
+  }
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  unsigned LowerBound = KnownNumGridDims == 2 ? 2 : 1;
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range = MDB.createRange(APInt(Ty->getBitWidth(), LowerBound),
+                                  APInt(Ty->getBitWidth(), 4));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+/// Compute the known number of grid dimensions based on !reqd_work_group_size
+/// metadata. Returns 3 if the grid is known to be exactly 3-D, 2 if it is
+/// known to be at least 2-D, or 0 if nothing more than the default [1, 3]
+/// range can be deduced.
+static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
+  ConstantInt *KnownZ =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
+  if (KnownZ->getZExtValue() != 1)
+    return 3;
+
+  ConstantInt *KnownY =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(1));
+  if (KnownY->getZExtValue() != 1)
+    return 2;
+
+  return 0;
+}
+
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Function *F = CI->getFunction();
 
@@ -136,6 +179,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
   const DataLayout &DL = F->getDataLayout();
   bool MadeChange = false;
+
+  unsigned KnownNumGridDims = HasReqdWorkGroupSize ? computeNumGridDims(MD) : 0;
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -223,6 +268,11 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
           Remainders[2] = Load;
           MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
         }
+        break;
+
+      case GRID_DIMS:
+        if (LoadSize <= 2)
+          MadeChange |= annotateGridDimsLoadWithRangeMD(Load, KnownNumGridDims);
         break;
       default:
         break;
@@ -372,7 +422,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
         using namespace llvm::PatternMatch;
         if (!match(
                 Inst,
-                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
+                m_UDiv(m_ZExtOrSelf(m_LoadSimple(m_GEP(
                            m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
                            m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
                        m_Value())))

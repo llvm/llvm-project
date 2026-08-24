@@ -10,10 +10,10 @@ typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
 
 __m128 test_cmpnleps(__m128 A, __m128 B) {
   // CIR-LABEL:   cir.func no_inline dso_local @test_cmpnleps(
-  // CIR:           %[[ARG0:.*]]: !cir.vector<4 x !cir.float> {{.*}}, %[[ARG1:.*]]: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float> {
-  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["A", init] {alignment = 16 : i64}
-  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["B", init] {alignment = 16 : i64}
-  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["__retval"] {alignment = 16 : i64}
+  // CIR:           %[[ARG0:.*]]: !cir.vector<4 x !cir.float> {{.*}}, %[[ARG1:.*]]: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float> {{.*}}{
+  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca "A" align(16) init : !cir.ptr<!cir.vector<4 x !cir.float>>
+  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca "B" align(16) init : !cir.ptr<!cir.vector<4 x !cir.float>>
+  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca "__retval" align(16) : !cir.ptr<!cir.vector<4 x !cir.float>>
   // CIR:           cir.store %[[ARG0]], %[[ALLOCA_0]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
@@ -28,9 +28,9 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnleps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
@@ -61,10 +61,10 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
 
 __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // CIR-LABEL:   cir.func no_inline dso_local @test_cmpnlepd(
-  // CIR:           %[[ARG0:.*]]: !cir.vector<2 x !cir.double> {{.*}}, %[[ARG1:.*]]: !cir.vector<2 x !cir.double> {{.*}}) -> !cir.vector<2 x !cir.double> {
-  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["A", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["B", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["__retval"] {alignment = 16 : i64} 
+  // CIR:           %[[ARG0:.*]]: !cir.vector<2 x !cir.double> {{.*}}, %[[ARG1:.*]]: !cir.vector<2 x !cir.double> {{.*}}) -> !cir.vector<2 x !cir.double> {{.*}}{
+  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca "A" align(16) init : !cir.ptr<!cir.vector<2 x !cir.double>> 
+  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca "B" align(16) init : !cir.ptr<!cir.vector<2 x !cir.double>> 
+  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca "__retval" align(16) : !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           cir.store %[[ARG0]], %[[ALLOCA_0]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
@@ -79,9 +79,9 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnlepd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
@@ -112,10 +112,10 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
 
 __m128 test_cmpnltps(__m128 A, __m128 B) {
   // CIR-LABEL:   cir.func no_inline dso_local @test_cmpnltps(
-  // CIR:           %[[ARG0:.*]]: !cir.vector<4 x !cir.float> {{.*}}, %[[ARG1:.*]]: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float> {
-  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["A", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["B", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["__retval"] {alignment = 16 : i64} 
+  // CIR:           %[[ARG0:.*]]: !cir.vector<4 x !cir.float> {{.*}}, %[[ARG1:.*]]: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float> {{.*}}{
+  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca "A" align(16) init : !cir.ptr<!cir.vector<4 x !cir.float>> 
+  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca "B" align(16) init : !cir.ptr<!cir.vector<4 x !cir.float>> 
+  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca "__retval" align(16) : !cir.ptr<!cir.vector<4 x !cir.float>> 
   // CIR:           cir.store %[[ARG0]], %[[ALLOCA_0]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>> 
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float> 
@@ -130,9 +130,9 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnltps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
@@ -163,10 +163,10 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
 
 __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // CIR-LABEL:   cir.func no_inline dso_local @test_cmpnltpd(
-  // CIR:           %[[ARG0:.*]]: !cir.vector<2 x !cir.double> {{.*}}, %[[ARG1:.*]]: !cir.vector<2 x !cir.double> {{.*}}) -> !cir.vector<2 x !cir.double> {
-  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["A", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["B", init] {alignment = 16 : i64} 
-  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["__retval"] {alignment = 16 : i64} 
+  // CIR:           %[[ARG0:.*]]: !cir.vector<2 x !cir.double> {{.*}}, %[[ARG1:.*]]: !cir.vector<2 x !cir.double> {{.*}}) -> !cir.vector<2 x !cir.double> {{.*}}{
+  // CIR:           %[[ALLOCA_0:.*]] = cir.alloca "A" align(16) init : !cir.ptr<!cir.vector<2 x !cir.double>> 
+  // CIR:           %[[ALLOCA_1:.*]] = cir.alloca "B" align(16) init : !cir.ptr<!cir.vector<2 x !cir.double>> 
+  // CIR:           %[[ALLOCA_2:.*]] = cir.alloca "__retval" align(16) : !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           cir.store %[[ARG0]], %[[ALLOCA_0]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
@@ -181,9 +181,9 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnltpd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, i64 1, align 16
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, i64 1, align 16
+  // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
+  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16

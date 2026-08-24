@@ -2,6 +2,7 @@ import("//llvm/lib/Target/targets.gni")
 
 group("unittests") {
   deps = [
+    "ABI:ABITests",
     "ADT:ADTTests",
     "Analysis:AnalysisTests",
     "AsmParser:AsmParserTests",
@@ -33,6 +34,7 @@ group("unittests") {
     "FileCheck:FileCheckTests",
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
+    "HTTP:HTTPTests",
     "IR:IRTests",
     "InterfaceStub:InterfaceStubTests",
     "LineEditor:LineEditorTests",
@@ -51,7 +53,6 @@ group("unittests") {
     "SandboxIR:SandboxIRTests",
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
-    "Support/HTTP:SupportHTTPTests",
     "Support/LSP:LSPTests",
     "TableGen:TableGenTests",
     "Target:TargetMachineCTests",

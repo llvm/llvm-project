@@ -11,7 +11,6 @@
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"
-#include <cstdarg>
 #include <type_traits>
 
 namespace Fortran::semantics {
@@ -95,6 +94,13 @@ constexpr Legality IsLegalDoTerm(
   } else {
     return Legality::never;
   }
+}
+
+// Handles an assignment statement that might be wrapped by a construct
+// other than an ActionStmt.
+constexpr Legality IsLegalDoTerm(
+    const parser::Statement<parser::AssignmentStmt> &) {
+  return Legality::formerly;
 }
 
 template <typename A> constexpr bool IsFormat(const parser::Statement<A> &) {
@@ -214,7 +220,7 @@ public:
         auto targetFlags{ConstructBranchTargetFlags(endStmt)};
         AddTargetLabelDefinition(endStmt.label.value(), targetFlags,
             currentScope_,
-            /*isExecutableConstructEndStmt=*/false);
+            /*isExecutableConstructEndStmt=*/false, endStmt.source);
       }
     }
     return true;
@@ -242,19 +248,19 @@ public:
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
-          /*isExecutableConstructEndStmt=*/false);
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
     } else if constexpr (std::is_same_v<A, parser::EndIfStmt> ||
         std::is_same_v<A, parser::EndSelectStmt>) {
       // the label on an END IF/SELECT is not in the last part/case
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
-          /*isExecutableConstructEndStmt=*/true);
+          /*isExecutableConstructEndStmt=*/true, currentPosition_);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
-          /*isExecutableConstructEndStmt=*/true);
+          /*isExecutableConstructEndStmt=*/true, currentPosition_);
     } else if constexpr (!common::HasMember<A, LabeledProgramUnitEndStmts>) {
       // Program unit END statements have already been processed.
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
-          /*isExecutableConstructEndStmt=*/false);
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
     }
     return true;
   }
@@ -552,6 +558,14 @@ public:
     PopDisposableMap();
   }
 
+  // F2023 C7115
+  void Post(const parser::EnumerationTypeDef &enumTypeDef) {
+    CheckOptionalName<parser::EnumerationTypeStmt>(
+        "enumeration type definition", enumTypeDef,
+        std::get<parser::Statement<parser::EndEnumerationTypeStmt>>(
+            enumTypeDef.t));
+  }
+
   void Post(const parser::LabelDoStmt &labelDoStmt) {
     AddLabelReferenceFromDoStmt(std::get<parser::Label>(labelDoStmt.t));
   }
@@ -843,19 +857,25 @@ private:
   }
 
   // 6.2.5., paragraph 2
+  //
+  // `position` is the source position of the labeled statement itself.  It is
+  // passed in rather than read from currentPosition_ because the END statement
+  // of a program unit is visited in advance, before the statement visitor has
+  // moved currentPosition_ onto it.
   void AddTargetLabelDefinition(parser::Label label,
       LabeledStmtClassificationSet labeledStmtClassificationSet,
-      ProxyForScope scope, bool isExecutableConstructEndStmt) {
+      ProxyForScope scope, bool isExecutableConstructEndStmt,
+      parser::CharBlock position) {
     CheckLabelInRange(label);
     TargetStmtMap &targetStmtMap{disposableMaps_.empty()
             ? programUnits_.back().targetStmts
             : disposableMaps_.back()};
     const auto pair{targetStmtMap.emplace(label,
-        LabeledStatementInfoTuplePOD{scope, currentPosition_,
+        LabeledStatementInfoTuplePOD{scope, position,
             labeledStmtClassificationSet, isExecutableConstructEndStmt})};
     if (!pair.second) {
-      context_.Say(currentPosition_, "Label '%u' is not distinct"_err_en_US,
-          SayLabel(label));
+      context_.Say(
+          position, "Label '%u' is not distinct"_err_en_US, SayLabel(label));
     }
   }
 
@@ -1037,8 +1057,10 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
           SayLabel(label));
     } else if (!doTarget.labeledStmtClassificationSet.test(
                    TargetStatementEnum::Do)) {
-      context.Say(doTarget.parserCharBlock,
-          "A DO loop should terminate with an END DO or CONTINUE"_err_en_US);
+      context
+          .Say(doTarget.parserCharBlock,
+              "This statement cannot terminate the DO loop"_err_en_US)
+          .Attach(position, "which begins at"_en_US);
     } else {
       loopBodies.emplace_back(SkipLabel(position), doTarget.parserCharBlock);
     }

@@ -6,37 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements the SSAF entity linker tool that performs entity
-//  linking across multiple TU summaries using the EntityLinker framework.
+//  This file implements the SSAF entity linker tool. Its default behavior is to
+//  link N inputs (TU summaries, static libraries, and multi-arch static
+//  libraries) into one LU summary via the EntityLinker framework. It also
+//  provides the `static-library` subcommand for bundling TU summaries into a
+//  StaticLibrary, and the `multi-arch` subcommand for bundling StaticLibrary
+//  and SharedLibrary members (or existing multi-arch bundles) into
+//  MultiArchStaticLibrary or MultiArchSharedLibrary.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
+#include "LinkCLI.h"
+#include "MultiArchCreateCLI.h"
+#include "StaticLibraryCreateCLI.h"
+
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
 #include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace clang::ssaf;
-
-namespace fs = llvm::sys::fs;
-namespace path = llvm::sys::path;
 
 namespace {
 
@@ -46,244 +39,167 @@ namespace {
 
 cl::OptionCategory SsafLinkerCategory("clang-ssaf-linker options");
 
+// The `static-library` subcommand groups all StaticLibrary operations.
+cl::SubCommand StaticLibraryCmd("static-library",
+                                "Operations on StaticLibraries");
+
+// The `multi-arch` subcommand groups all multi-architecture operations.
+cl::SubCommand MultiArchCmd("multi-arch",
+                            "Operations on multi-architecture StaticLibrary "
+                            "and SharedLibrary artifacts");
+
+// Top-level (default) `link` action positionals.
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
                                  cl::OneOrMore, cl::cat(SsafLinkerCategory));
 
-cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
 
+cl::opt<std::string> TargetTriple(
+    "target-triple",
+    cl::desc(
+        "Target triple of the link unit (defaults to the first input's; "
+        "required when the first input is a multi-arch static library with "
+        "several members)"),
+    cl::value_desc("triple"), cl::cat(SsafLinkerCategory));
+
+// --verbose and --time apply to every subcommand.
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
-                      cl::init(false), cl::cat(SsafLinkerCategory));
+                      cl::init(false), cl::cat(SsafLinkerCategory),
+                      cl::sub(cl::SubCommand::getTopLevel()),
+                      cl::sub(StaticLibraryCmd), cl::sub(MultiArchCmd));
 
 cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
-                   cl::cat(SsafLinkerCategory));
+                   cl::cat(SsafLinkerCategory),
+                   cl::sub(cl::SubCommand::getTopLevel()),
+                   cl::sub(StaticLibraryCmd), cl::sub(MultiArchCmd));
+
+// The `static-library` subcommand's verb positional. Declared BEFORE
+// StaticLibraryInputs so cl-lib binds argv[0] under the subcommand to the
+// verb rather than to the greedy input list.
+cl::opt<std::string> StaticLibraryVerb(cl::Positional, cl::Required,
+                                       cl::sub(StaticLibraryCmd),
+                                       cl::desc("<verb>"),
+                                       cl::cat(SsafLinkerCategory));
+
+// The `static-library` subcommand's action-specific positional input
+// list. Currently consumed by `static-library create`; if future verbs
+// need different input shapes they'll declare their own positionals.
+cl::list<std::string> StaticLibraryInputs(cl::Positional,
+                                          cl::sub(StaticLibraryCmd),
+                                          cl::desc("<TU summary files>"),
+                                          cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryOutput("o", cl::Required,
+                                         cl::sub(StaticLibraryCmd),
+                                         cl::desc("Output file path"),
+                                         cl::value_desc("path"),
+                                         cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryNamespace(
+    "namespace", cl::sub(StaticLibraryCmd),
+    cl::desc("Namespace name for the StaticLibrary (defaults to output "
+             "file stem)"),
+    cl::value_desc("name"), cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryTriple(
+    "target-triple", cl::sub(StaticLibraryCmd),
+    cl::desc("Target triple (defaults to inputs' triple; must match all "
+             "inputs when set)"),
+    cl::value_desc("triple"), cl::cat(SsafLinkerCategory));
+
+// The `multi-arch` subcommand's verb positional. Declared BEFORE
+// MultiArchInputs so cl-lib binds argv[0] under the subcommand to the verb
+// rather than to the greedy input list.
+cl::opt<std::string> MultiArchVerb(cl::Positional, cl::Required,
+                                   cl::sub(MultiArchCmd), cl::desc("<verb>"),
+                                   cl::cat(SsafLinkerCategory));
+
+// The `multi-arch` subcommand's action-specific positional input list.
+// Currently consumed by `multi-arch create`.
+cl::list<std::string>
+    MultiArchInputs(cl::Positional, cl::sub(MultiArchCmd),
+                    cl::desc("<static-library or shared-library files>"),
+                    cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> MultiArchOutput("o", cl::Required, cl::sub(MultiArchCmd),
+                                     cl::desc("Output file path"),
+                                     cl::value_desc("path"),
+                                     cl::cat(SsafLinkerCategory));
+
+//===----------------------------------------------------------------------===//
+// StaticLibrary Verbs
+//===----------------------------------------------------------------------===//
+
+// Verb strings for the `static-library` subcommand. Kept in sync with
+// UnknownStaticLibraryVerb below.
+constexpr const char *StaticLibraryCreateVerb = "create";
+
+//===----------------------------------------------------------------------===//
+// MultiArch Verbs
+//===----------------------------------------------------------------------===//
+
+// Verb strings for the `multi-arch` subcommand. Kept in sync with
+// UnknownMultiArchVerb below.
+constexpr const char *MultiArchCreateVerb = "create";
 
 //===----------------------------------------------------------------------===//
 // Error Messages
 //===----------------------------------------------------------------------===//
 
-namespace ErrorMessages {
+namespace LocalErrorMessages {
 
-constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}";
+constexpr const char *UnknownStaticLibraryVerb =
+    "unknown static-library verb '{0}': expected 'create'";
 
-constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist";
+constexpr const char *UnknownMultiArchVerb =
+    "unknown multi-arch verb '{0}': expected 'create'";
 
-constexpr const char *OutputDirectoryNotWritable =
-    "Parent directory is not writable";
-
-constexpr const char *ExtensionNotSupplied = "Extension not supplied";
-
-constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'";
-
-constexpr const char *LinkingSummary = "Linking summary '{0}'";
-
-} // namespace ErrorMessages
+} // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
-// Diagnostic Utilities
+// default (no subcommand) link action
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned IndentationWidth = 2;
-
-llvm::StringRef ToolName;
-
-template <typename... Ts> [[noreturn]] void fail(const char *Msg) {
-  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
-  llvm::sys::Process::Exit(1);
-}
-
-template <typename... Ts>
-[[noreturn]] void fail(const char *Fmt, Ts &&...Args) {
-  std::string Message = llvm::formatv(Fmt, std::forward<Ts>(Args)...);
-  fail(Message.data());
-}
-
-template <typename... Ts> [[noreturn]] void fail(llvm::Error Err) {
-  fail(toString(std::move(Err)).data());
-}
-
-template <typename... Ts>
-void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
-  if (Verbose) {
-    llvm::WithColor::note()
-        << std::string(IndentationLevel * IndentationWidth, ' ') << "- "
-        << llvm::formatv(Fmt, std::forward<Ts>(Args)...) << "\n";
-  }
+void runLink(llvm::TimerGroup &TG) {
+  LinkCLI LC;
+  LC.run(TG, InputPaths, OutputPath, TargetTriple, Verbose, Time);
 }
 
 //===----------------------------------------------------------------------===//
-// Format Registry
+// static-library subcommand dispatch
 //===----------------------------------------------------------------------===//
 
-SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
-  static llvm::SmallVector<
-      std::pair<std::string, std::unique_ptr<SerializationFormat>>, 4>
-      ExtensionFormatList;
+void runStaticLibrary(llvm::TimerGroup &TG) {
+  if (StaticLibraryVerb == StaticLibraryCreateVerb) {
+    StaticLibraryCreateCLI::Config Cfg;
+    Cfg.InputPaths = StaticLibraryInputs;
+    Cfg.OutputPath = StaticLibraryOutput;
+    Cfg.Namespace = StaticLibraryNamespace;
+    Cfg.TargetTriple = StaticLibraryTriple;
+    Cfg.Verbose = Verbose;
+    Cfg.Time = Time;
 
-  // Most recently used format is most likely to be reused again.
-  auto ReversedList = llvm::reverse(ExtensionFormatList);
-  auto It = llvm::find_if(ReversedList, [&](const auto &Entry) {
-    return Entry.first == Extension;
-  });
-  if (It != ReversedList.end()) {
-    return It->second.get();
+    StaticLibraryCreateCLI SLC;
+    SLC.run(TG, Cfg);
+    return;
   }
-
-  // SerializationFormats are uppercase while file extensions are lowercase.
-  std::string CapitalizedExtension = Extension.upper();
-
-  if (!isFormatRegistered(CapitalizedExtension)) {
-    return nullptr;
-  }
-
-  auto Format = makeFormat(CapitalizedExtension);
-  SerializationFormat *Result = Format.get();
-  assert(Result);
-
-  ExtensionFormatList.emplace_back(Extension, std::move(Format));
-
-  return Result;
+  fail(LocalErrorMessages::UnknownStaticLibraryVerb,
+       StaticLibraryVerb.getValue());
 }
 
 //===----------------------------------------------------------------------===//
-// Data Structures
+// multi-arch subcommand dispatch
 //===----------------------------------------------------------------------===//
 
-struct SummaryFile {
-  std::string Path;
-  SerializationFormat *Format = nullptr;
-
-  static SummaryFile fromPath(llvm::StringRef Path) {
-    llvm::StringRef Extension = path::extension(Path);
-    if (Extension.empty()) {
-      fail(ErrorMessages::CannotValidateSummary, Path,
-           ErrorMessages::ExtensionNotSupplied);
-    }
-    Extension = Extension.drop_front();
-    SerializationFormat *Format = getFormatForExtension(Extension);
-    if (!Format) {
-      std::string BadExtension =
-          llvm::formatv(ErrorMessages::NoFormatForExtension, Extension);
-      fail(ErrorMessages::CannotValidateSummary, Path, BadExtension);
-    }
-    return {Path.str(), Format};
+void runMultiArch(llvm::TimerGroup &TG) {
+  if (MultiArchVerb == MultiArchCreateVerb) {
+    MultiArchCreateCLI MAC;
+    MAC.run(TG, MultiArchInputs, MultiArchOutput, Verbose, Time);
+    return;
   }
-};
-
-struct LinkerInput {
-  std::vector<SummaryFile> InputFiles;
-  SummaryFile OutputFile;
-  std::string LinkUnitName;
-};
-
-static void printVersion(llvm::raw_ostream &OS) { OS << ToolName << " 0.1\n"; }
-
-//===----------------------------------------------------------------------===//
-// Pipeline
-//===----------------------------------------------------------------------===//
-
-LinkerInput validate(llvm::TimerGroup &TG) {
-  llvm::Timer TValidate("validate", "Validate Input", TG);
-  LinkerInput LI;
-
-  {
-    llvm::TimeRegion _(Time ? &TValidate : nullptr);
-    llvm::StringRef ParentDir = path::parent_path(OutputPath);
-    llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
-
-    if (!fs::exists(DirToCheck)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryMissing);
-    }
-
-    if (fs::access(DirToCheck, fs::AccessMode::Write)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryNotWritable);
-    }
-
-    LI.OutputFile = SummaryFile::fromPath(OutputPath);
-    LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
-  }
-
-  info(2, "Validated output summary path '{0}'.", LI.OutputFile.Path);
-
-  {
-    llvm::TimeRegion _(Time ? &TValidate : nullptr);
-    for (const auto &InputPath : InputPaths) {
-      llvm::SmallString<256> RealPath;
-      std::error_code EC = fs::real_path(InputPath, RealPath, true);
-      if (EC) {
-        fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
-      }
-      LI.InputFiles.push_back(SummaryFile::fromPath(RealPath));
-    }
-  }
-
-  info(2, "Validated {0} input summary paths.", LI.InputFiles.size());
-
-  return LI;
-}
-
-void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
-  info(2, "Constructing linker.");
-
-  EntityLinker EL(NestedBuildNamespace(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
-
-  llvm::Timer TRead("read", "Read Summaries", TG);
-  llvm::Timer TLink("link", "Link Summaries", TG);
-  llvm::Timer TWrite("write", "Write Summary", TG);
-
-  info(2, "Linking summaries.");
-
-  for (auto [Index, InputFile] : llvm::enumerate(LI.InputFiles)) {
-    std::unique_ptr<TUSummaryEncoding> Summary;
-
-    {
-      info(3, "[{0}/{1}] Reading '{2}'.", (Index + 1), LI.InputFiles.size(),
-           InputFile.Path);
-
-      llvm::TimeRegion _(Time ? &TRead : nullptr);
-
-      auto ExpectedSummaryEncoding =
-          InputFile.Format->readTUSummaryEncoding(InputFile.Path);
-      if (!ExpectedSummaryEncoding) {
-        fail(ExpectedSummaryEncoding.takeError());
-      }
-
-      Summary = std::make_unique<TUSummaryEncoding>(
-          std::move(*ExpectedSummaryEncoding));
-    }
-
-    {
-      info(3, "[{0}/{1}] Linking '{2}'.", (Index + 1), LI.InputFiles.size(),
-           InputFile.Path);
-
-      llvm::TimeRegion _(Time ? &TLink : nullptr);
-
-      if (auto Err = EL.link(std::move(Summary))) {
-        fail(ErrorBuilder::wrap(std::move(Err))
-                 .context(ErrorMessages::LinkingSummary, InputFile.Path)
-                 .build());
-      }
-    }
-  }
-
-  {
-    info(2, "Writing output summary to '{0}'.", LI.OutputFile.Path);
-
-    llvm::TimeRegion _(Time ? &TWrite : nullptr);
-
-    auto Output = std::move(EL).getOutput();
-    if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
-            Output, LI.OutputFile.Path)) {
-      fail(std::move(Err));
-    }
-  }
+  fail(LocalErrorMessages::UnknownMultiArchVerb, MultiArchVerb.getValue());
 }
 
 } // namespace
@@ -293,36 +209,20 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 //===----------------------------------------------------------------------===//
 
 int main(int argc, const char **argv) {
+  llvm::StringRef ToolHeading = "SSAF Linker";
+
   InitLLVM X(argc, argv);
-  // path::stem strips the .exe extension on Windows so ToolName is consistent.
-  ToolName = llvm::sys::path::stem(argv[0]);
+  initTool(argc, argv, "0.1", SsafLinkerCategory, ToolHeading);
 
-  // Hide options unrelated to clang-ssaf-linker from --help output.
-  cl::HideUnrelatedOptions(SsafLinkerCategory);
-  // Register a custom version printer for the --version flag.
-  cl::SetVersionPrinter(printVersion);
-  // Parse command-line arguments and exit with an error if they are invalid.
-  cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
+  llvm::TimerGroup Timers(getToolName(), ToolHeading);
 
-  initializeJSONFormat();
-
-  llvm::TimerGroup LinkerTimers(ToolName, "SSAF Linker");
-  LinkerInput LI;
-
-  {
-    info(0, "Linking started.");
-
-    {
-      info(1, "Validating input.");
-      LI = validate(LinkerTimers);
-    }
-
-    {
-      info(1, "Linking input.");
-      link(LI, LinkerTimers);
-    }
-
-    info(0, "Linking finished.");
+  if (StaticLibraryCmd) {
+    runStaticLibrary(Timers);
+  } else if (MultiArchCmd) {
+    runMultiArch(Timers);
+  } else {
+    // Default (no subcommand): run the linker pipeline.
+    runLink(Timers);
   }
 
   return 0;

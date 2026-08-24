@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -119,6 +119,7 @@ FunctionPass *llvm::createNVPTXMarkKernelPtrsGlobalPass() {
 
 PreservedAnalyses
 NVPTXMarkKernelPtrsGlobalPass::run(Function &F, FunctionAnalysisManager &) {
-  return markKernelPtrsGlobal(F) ? PreservedAnalyses::none()
-                                 : PreservedAnalyses::all();
+  if (!markKernelPtrsGlobal(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

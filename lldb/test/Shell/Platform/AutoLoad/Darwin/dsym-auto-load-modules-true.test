@@ -1,0 +1,25 @@
+# REQUIRES: python, system-darwin
+
+# Test that when a module is listed in target.auto-load-scripts-for-modules with 'true',
+# its scripting resources are loaded even when target.load-script-from-symbol-file
+# is false.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file false' \
+# RUN:   -o 'settings set target.auto-load-scripts-for-modules TestModule=true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s
+
+# CHECK: AUTOLOAD_SUCCESS
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("AUTOLOAD_SUCCESS", file=sys.stderr)

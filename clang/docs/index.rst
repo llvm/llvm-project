@@ -27,8 +27,9 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/index
+   ScalableStaticAnalysis/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -67,7 +68,9 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   RISCVSupport
    CXXTypeAwareAllocators
+   CIR/index
    CommandGuide/index
    FAQ
 
@@ -123,16 +126,12 @@ Design Documents
    PCHInternals
    ItaniumMangleAbiTags
    ControlFlowIntegrityDesign
-   HardwareAssistedAddressSanitizerDesign.rst
+   HardwareAssistedAddressSanitizerDesign
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
-   ClangIRCodeDuplication
-   ClangIRABILowering
-   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`search`
-

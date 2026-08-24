@@ -44,6 +44,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -67,7 +68,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern cl::opt<unsigned> PartialUnrollingThreshold;
+extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -343,7 +344,7 @@ private:
       ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                      VecTy, {}, CostKind, 0, nullptr, {});
+                                      VecTy, CostKind, {}, 0, nullptr, {});
     }
 
     // Lowering to a library call (with output pointers) may require us to emit
@@ -396,10 +397,23 @@ public:
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();
 
-    const FeatureBitset &CallerBits =
-        TM.getSubtargetImpl(*Caller)->getFeatureBits();
-    const FeatureBitset &CalleeBits =
-        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+    const TargetSubtargetInfo *CallerSTI = TM.getSubtargetImpl(*Caller);
+    const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
+    FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
+    FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset InlineMustMatchFeatures =
+        CallerSTI->getInlineMustMatchFeatures();
+
+    FeatureBitset CallerBits =
+        (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+    FeatureBitset CalleeBits =
+        (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+
+    if ((CallerBits & InlineMustMatchFeatures) !=
+        (CalleeBits & InlineMustMatchFeatures))
+      return false;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -480,9 +494,11 @@ public:
     return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
   }
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
-    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
+    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy, Alignment,
+                                  AddrSpace](unsigned VF) {
       auto *SrcTy = FixedVectorType::get(ScalarMemTy, VF / 2);
       EVT VT = getTLI()->getValueType(DL, SrcTy);
       if (getTLI()->isOperationLegal(ISD::STORE, VT) ||
@@ -493,7 +509,8 @@ public:
           getTLI()->getValueType(DL, FixedVectorType::get(ScalarValTy, VF / 2));
       EVT LegalizedVT =
           getTLI()->getTypeToTransformTo(ScalarMemTy->getContext(), VT);
-      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT);
+      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT, Alignment,
+                                         AddrSpace);
     };
     while (VF > 2 && IsSupportedByTarget(VF))
       VF /= 2;
@@ -650,9 +667,10 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
-    // there.
-    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
+    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
+    // small code model allows a 4GB span of text + data, which might not fit
+    // in the 32-bit offsets relative lookup tables generate.
+    if (TargetTriple.isAArch64())
       return false;
 
     return true;
@@ -663,6 +681,21 @@ public:
     EVT VT = TLI->getValueType(DL, Ty);
     return TLI->isTypeLegal(VT) &&
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
+  }
+
+  bool haveFastClmul(IntegerType *Ty) const override {
+    // FIXME: clmul should really be Promote for any bitwidth under the largest
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    const DataLayout &DL = thisT()->DL;
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
+
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, IndexTy);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
   }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
@@ -797,8 +830,8 @@ public:
     return BaseT::getEpilogueVectorizationMinVF();
   }
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
-    return BaseT::preferPredicateOverEpilogue(TFI);
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
+    return BaseT::preferTailFoldingOverEpilogue(TFI);
   }
 
   TailFoldingStyle getPreferredTailFoldingStyle() const override {
@@ -826,6 +859,10 @@ public:
     return BaseT::simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
   }
 
   std::optional<unsigned>
@@ -925,10 +962,6 @@ public:
     }
 
     return Cost;
-  }
-
-  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const override {
-    return false;
   }
 
   bool
@@ -1043,7 +1076,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -1180,7 +1216,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
@@ -1258,10 +1294,32 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
-        if (DstLT.first == SrcLT.first &&
-            TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
-          return 0;
+            Opcode == Instruction::ZExt ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
+        if (I) {
+          if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
+            if (DstLT.first == SrcLT.first &&
+                TLI->isLoadLegal(ExtVT, LoadVT, LI->getAlign(),
+                                 LI->getPointerAddressSpace(), LType, false))
+              return 0;
+          } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
+            switch (II->getIntrinsicID()) {
+            case Intrinsic::masked_load: {
+              Type *PtrType = II->getArgOperand(0)->getType();
+              assert(PtrType->isPointerTy());
+
+              if (DstLT.first == SrcLT.first &&
+                  TLI->isLoadLegal(
+                      ExtVT, LoadVT, II->getParamAlign(0).valueOrOne(),
+                      PtrType->getPointerAddressSpace(), LType, false))
+                return 0;
+
+              break;
+            }
+            default:
+              break;
+            }
+          }
+        }
       }
       break;
     case Instruction::AddrSpaceCast:
@@ -1533,6 +1591,10 @@ public:
       return 4;
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
 
+    // FIXME: Arbitrary cost
+    if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+      return 4;
+
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
     if (CostKind != TTI::TCK_RecipThroughput)
@@ -1551,9 +1613,11 @@ public:
       TargetLowering::LegalizeAction LA = TargetLowering::Expand;
       EVT MemVT = getTLI()->getValueType(DL, Src);
       if (Opcode == Instruction::Store)
-        LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
+        LA = getTLI()->getTruncStoreAction(LT.second, MemVT, Alignment,
+                                           AddressSpace);
       else
-        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
+        LA = getTLI()->getLoadAction(LT.second, MemVT, Alignment, AddressSpace,
+                                     ISD::EXTLOAD, false);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.
@@ -1757,25 +1821,12 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
-            ICA.getID() == Intrinsic::vp_fneg) {
+        if (ICA.getID() == Intrinsic::vp_udiv ||
+            ICA.getID() == Intrinsic::vp_sdiv ||
+            ICA.getID() == Intrinsic::vp_urem ||
+            ICA.getID() == Intrinsic::vp_srem) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
-        }
-        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
-          return thisT()->getCastInstrCost(
-              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-              TTI::CastContextHint::None, CostKind);
-        }
-        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
-          // We can only handle vp_cmp intrinsics with underlying instructions.
-          if (ICA.getInst()) {
-            assert(FOp);
-            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
-                                               ICA.getReturnType(),
-                                               UI->getPredicate(), CostKind);
-          }
         }
       }
       if (ICA.getID() == Intrinsic::vp_load_ff) {
@@ -1825,8 +1876,7 @@ public:
             CostKind);
       }
 
-      if (ICA.getID() == Intrinsic::vp_select ||
-          ICA.getID() == Intrinsic::vp_merge) {
+      if (ICA.getID() == Intrinsic::vp_merge) {
         TTI::OperandValueInfo OpInfoX, OpInfoY;
         if (!ICA.isTypeBasedOnly()) {
           OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
@@ -1997,10 +2047,10 @@ public:
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
-      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                     cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(
+          TTI::SK_ExtractSubvector, cast<VectorType>(RetTy),
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
+          cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -2010,7 +2060,7 @@ public:
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
           cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_splice_left:
@@ -2021,7 +2071,7 @@ public:
       unsigned Index = COffset->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind,
+          cast<VectorType>(Args[0]->getType()), CostKind, {},
           IID == Intrinsic::vector_splice_left ? Index : -Index,
           cast<VectorType>(RetTy));
     }
@@ -2094,14 +2144,9 @@ public:
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandCttzElements(ArgType))
-        return getTypeLegalizationCost(RetTy).first;
-
       // TODO: The costs below reflect the expansion code in
-      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
-      // favour of compile time.
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
 
       // Find the smallest "sensible" element type to use for the expansion.
       bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
@@ -2110,7 +2155,8 @@ public:
         VScaleRange = getVScaleRange(I->getCaller(), 64);
 
       unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
-          RetTy, ArgType.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
+          getTLI()->getValueType(DL, RetTy), ArgType.getVectorElementCount(),
+          ZeroIsPoison, &VScaleRange);
       Type *NewEltTy = IntegerType::getIntNTy(RetTy->getContext(), EltWidth);
 
       // Create the new vector type & get the vector length
@@ -2144,6 +2190,10 @@ public:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
     case Intrinsic::experimental_vector_histogram_umin:
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     case Intrinsic::modf:
     case Intrinsic::sincos:
@@ -2167,46 +2217,42 @@ public:
       // The possible expansions are...
       //
       // loop_dependence_war_mask:
-      //   diff = (ptrB - ptrA) / eltSize
+      //   diff = (addrB - addrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
-      //   diff = (abs(ptrB - ptrA)) / eltSize
+      //   diff = (abs(addrB - addrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
-      auto *PtrTy = cast<PointerType>(ICA.getArgTypes()[0]);
-      Type *IntPtrTy = IntegerType::getIntNTy(
-          RetTy->getContext(), thisT()->getDataLayout().getPointerSizeInBits(
-                                   PtrTy->getAddressSpace()));
+      Type *AddrTy = ICA.getArgTypes()[0];
       bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
 
       InstructionCost Cost =
-          thisT()->getArithmeticInstrCost(Instruction::Sub, IntPtrTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Sub, AddrTy, CostKind);
       if (IsReadAfterWrite) {
-        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, IntPtrTy, {IntPtrTy},
-                                         {});
+        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, AddrTy, {AddrTy}, {});
         Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
       }
 
       TTI::OperandValueInfo EltSizeOpInfo =
           TTI::getOperandInfo(ICA.getArgs()[2]);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, IntPtrTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, AddrTy,
                                               CostKind, {}, EltSizeOpInfo);
 
       Type *CondTy = IntegerType::getInt1Ty(RetTy->getContext());
       CmpInst::Predicate Pred =
           IsReadAfterWrite ? CmpInst::ICMP_EQ : CmpInst::ICMP_SLE;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy,
-                                          IntPtrTy, Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, IntPtrTy,
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy, AddrTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, AddrTy,
                                           CondTy, Pred, CostKind);
 
       IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                    {IntPtrTy, IntPtrTy}, FMF);
+                                    {AddrTy, AddrTy}, FMF);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }
@@ -2507,21 +2553,15 @@ public:
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
       unsigned SearchSize = NeedleTy->getNumElements();
 
-      // If we're not expanding the intrinsic then we assume this is cheap to
-      // implement.
-      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
-      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
-        return getTypeLegalizationCost(RetTy).first;
-
       // Approximate the cost based on the expansion code in
-      // SelectionDAGBuilder.
+      // TargetLowering::expandVectorMatch.
       InstructionCost Cost = 0;
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
                                           CostKind, 1, nullptr, nullptr);
       Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
                                           CostKind, 0, nullptr, nullptr);
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy, {},
-                                      CostKind, 0, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy,
+                                      CostKind, {}, 0, nullptr);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
                                           CmpInst::ICMP_EQ, CostKind);
       Cost +=
@@ -2533,8 +2573,8 @@ public:
     }
     case Intrinsic::vector_reverse:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
-                                     cast<VectorType>(ICA.getArgTypes()[0]), {},
-                                     CostKind, 0, cast<VectorType>(RetTy));
+                                     cast<VectorType>(ICA.getArgTypes()[0]),
+                                     CostKind, {}, 0, cast<VectorType>(RetTy));
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
@@ -2703,6 +2743,46 @@ public:
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
       break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem: {
+      unsigned UnmaskedOpc;
+      switch (IID) {
+      case Intrinsic::masked_udiv:
+        ISD = ISD::MASKED_UDIV;
+        UnmaskedOpc = Instruction::UDiv;
+        break;
+      case Intrinsic::masked_sdiv:
+        ISD = ISD::MASKED_SDIV;
+        UnmaskedOpc = Instruction::SDiv;
+        break;
+      case Intrinsic::masked_urem:
+        ISD = ISD::MASKED_UREM;
+        UnmaskedOpc = Instruction::URem;
+        break;
+      case Intrinsic::masked_srem:
+        ISD = ISD::MASKED_SREM;
+        UnmaskedOpc = Instruction::SRem;
+        break;
+      default:
+        llvm_unreachable("Unexpected intrinsic ID");
+      }
+      InstructionCost Cost =
+          thisT()->getArithmeticInstrCost(UnmaskedOpc, RetTy, CostKind);
+
+      // Expansion generates a (select %mask, %rhs, 1) for the divisor.
+      MVT LT = getTypeLegalizationCost(RetTy).second;
+      if (!getTLI()->isOperationLegalOrCustom(ISD, LT)) {
+        Type *CondTy = cast<VectorType>(RetTy)->getWithNewType(
+            IntegerType::getInt1Ty(RetTy->getContext()));
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::Select, RetTy, CondTy, CmpInst::BAD_ICMP_PREDICATE,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
+      }
+
+      return Cost;
+    }
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
@@ -3021,18 +3101,33 @@ public:
     case Intrinsic::clmul: {
       // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
-      InstructionCost PerBitCostMul =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
-          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+      // When the multiplication with holes approach is used, that emits 16
+      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
+      if (BW >= 32 && BW <= 64 &&
+          TLI->isOperationLegalOrCustom(ISD::MUL,
+                                        TLI->getValueType(DL, RetTy))) {
+        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+      }
+
+      InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
       InstructionCost PerBitCostBittest =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          AndCost +
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
                                       ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
           thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
-      return RetTy->getScalarSizeInBits() * PerBitCost;
+      return BW * PerBitCost;
     }
     default:
       break;
@@ -3244,7 +3339,7 @@ public:
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -3260,7 +3355,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -3335,7 +3430,7 @@ public:
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -3351,7 +3446,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.
@@ -3412,6 +3507,49 @@ public:
     return RedCost + MulCost + 2 * ExtCost;
   }
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    unsigned EltSizeAcc = AccumType->getScalarSizeInBits();
+    unsigned EltSizeInA = InputTypeA->getScalarSizeInBits();
+    unsigned Ratio = EltSizeAcc / EltSizeInA;
+    if (VF.getKnownMinValue() <= Ratio || VF.getKnownMinValue() % Ratio != 0 ||
+        EltSizeAcc % EltSizeInA != 0 || (BinOp && InputTypeA != InputTypeB))
+      return InstructionCost::getInvalid();
+
+    Type *InputVectorType = VectorType::get(InputTypeA, VF);
+    Type *ExtInputVectorType = VectorType::get(AccumType, VF);
+    Type *AccumVectorType =
+        VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+
+    InstructionCost ExtendCostA = 0;
+    if (OpAExtend != TTI::PartialReductionExtendKind::PR_None)
+      ExtendCostA = getCastInstrCost(
+          TTI::getOpcodeForPartialReductionExtendKind(OpAExtend),
+          ExtInputVectorType, InputVectorType, TTI::CastContextHint::None,
+          CostKind);
+
+    // TODO: add cost of extracting subvectors from the source vector that
+    // is to be partially reduced.
+    InstructionCost ReductionOpCost =
+        Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
+
+    if (!BinOp)
+      return ExtendCostA + ReductionOpCost;
+
+    InstructionCost ExtendCostB = 0;
+    if (OpBExtend != TTI::PartialReductionExtendKind::PR_None)
+      ExtendCostB = getCastInstrCost(
+          TTI::getOpcodeForPartialReductionExtendKind(OpBExtend),
+          ExtInputVectorType, InputVectorType, TTI::CastContextHint::None,
+          CostKind);
+    return ExtendCostA + ExtendCostB + ReductionOpCost +
+           getArithmeticInstrCost(*BinOp, ExtInputVectorType, CostKind);
+  }
+
   InstructionCost getVectorSplitCost() const { return 1; }
 
   /// @}
@@ -3431,7 +3569,7 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
+  LLVM_ABI explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
 };
 
 } // end namespace llvm

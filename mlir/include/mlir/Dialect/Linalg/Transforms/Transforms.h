@@ -1423,6 +1423,11 @@ struct BlockPackMatmulOptions {
   /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
+  /// Scalable flags for block factors. When true, the corresponding block
+  /// factor is considered scalable. Must be empty (all static) or have the same
+  /// size as blockFactors.
+  SmallVector<bool, 3> scalableBlockFactors;
+
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
   bool allowPadding = true;
@@ -1640,62 +1645,21 @@ decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
 FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
     RewriterBase &rewriter, linalg::GenericOp genericOp, bool removeOutputs);
 
+/// Rewrite convolution/pooling/depthwise ops with size-1 window dimensions
+/// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
+/// layout and handles both named ops and equivalent linalg.generic ops
+/// uniformly. The result is specialized back to a named op if the input was a
+/// named op.
+/// TODO: Support n-D to (n-1)-D downscaling. Currently it only support 2D->1D
+/// downscaling.
+FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
+                                                        LinalgOp op);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
-
-/// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
-/// convolution ops. Works with both named ops and equivalent generic ops.
-template <typename Conv2DOp, typename Conv1DOp>
-struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
-
-  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
-                                               PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
-
-extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNhwcHwcfOp,
-                                                             Conv1DNwcWcfOp>;
-extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
-                                                             Conv1DNcwFcwOp>;
-
-/// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
-/// dimensions into 1-D depthwise convolution ops.
-struct DownscaleDepthwiseConv2DNhwcHwcOp final
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  DownscaleDepthwiseConv2DNhwcHwcOp(MLIRContext *context,
-                                    PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
-
-  FailureOr<DepthwiseConv1DNwcWcOp>
-  returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
-
-struct DownscaleConv2DOp final : public OpInterfaceRewritePattern<LinalgOp> {
-  DownscaleConv2DOp(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
-
-  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
-                                               PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
 
 ///
 /// Linalg generalization pattern.
@@ -1963,6 +1927,11 @@ void populateLinalgGenericOpsSpecializationPatterns(
 /// to equivalent `linalg.elementwise`.
 void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` that convert linalg category ops (e.g.
+/// `linalg.elementwise`, `linalg.contract`) to equivalent linalg named ops
+/// (e.g. `linalg.add`, `linalg.matmul`).
+void populateLinalgCategoryToNamedPatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
@@ -2021,9 +1990,6 @@ void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
 /// Populate patterns that convert `ElementwiseMappable` ops to linalg
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(RewritePatternSet &patterns);
-
-/// Populate patterns that are only useful in the context of sparse tensors.
-void populateSparseTensorRewriting(RewritePatternSet &patterns);
 
 /// Function type which is used to control when to stop fusion. It is expected
 /// that OpOperand is not modified in the callback. The OpOperand is not marked

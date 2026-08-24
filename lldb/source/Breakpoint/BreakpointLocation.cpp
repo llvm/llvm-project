@@ -34,9 +34,7 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool check_for_resolver)
-    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
-      m_is_indirect(false), m_address(addr), m_owner(owner),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_address(addr), m_owner(owner), m_loc_id(loc_id) {
   if (check_for_resolver) {
     const Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -48,9 +46,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
 }
 
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner)
-    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
-      m_is_indirect(false), m_address(LLDB_INVALID_ADDRESS), m_owner(owner),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_owner(owner), m_loc_id(loc_id) {
   SetThreadIDInternal(LLDB_INVALID_THREAD_ID);
 }
 
@@ -612,7 +608,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       if (sc.comp_unit != nullptr) {
         s->EOL();
         s->Indent("compile unit = ");
-        sc.comp_unit->GetPrimaryFile().GetFilename().Dump(s);
+        s->PutCString(sc.comp_unit->GetPrimaryFile().GetFilename());
 
         if (sc.function != nullptr) {
           s->EOL();
@@ -622,7 +618,7 @@ void BreakpointLocation::GetDescription(Stream *s,
                   sc.function->GetMangled().GetMangledName()) {
             s->EOL();
             s->Indent("mangled function = ");
-            s->PutCString(mangled_name.AsCString());
+            s->PutCString(mangled_name);
           }
         }
 
@@ -657,8 +653,8 @@ void BreakpointLocation::GetDescription(Stream *s,
   if (!is_scripted_desc) {
     if (m_address.IsSectionOffset() &&
         (level == eDescriptionLevelFull || level == eDescriptionLevelInitial))
-      s->Printf(", ");
-    s->Printf("address = ");
+      s->PutCString(", ");
+    s->PutCString("address = ");
 
     ExecutionContextScope *exe_scope = nullptr;
     Target *target = &m_owner.GetTarget();
@@ -681,7 +677,7 @@ void BreakpointLocation::GetDescription(Stream *s,
           resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
-          s->Printf(", ");
+          s->PutCString(", ");
         else if (level == lldb::eDescriptionLevelVerbose) {
           s->EOL();
           s->Indent();

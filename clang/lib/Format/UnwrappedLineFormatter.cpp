@@ -314,8 +314,7 @@ private:
       }
     }
 
-    auto ShouldMergeShortFunctions = [this, &I, &NextLine, PreviousLine,
-                                      TheLine]() {
+    auto ShouldMergeShortFunctions = [&] {
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
 
@@ -326,12 +325,12 @@ private:
 
       if (Style.AllowShortFunctionsOnASingleLine.Inline &&
           !Style.AllowShortFunctionsOnASingleLine.Other) {
-        // Just checking TheLine->Level != 0 is not enough, because it
-        // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
           return true;
 
-        if (TheLine->Level != 0) {
+        // Just checking `TheLine->Level > 0` is not enough because it would
+        // cause functions inside indented namespaces to be treated as short.
+        if (const auto Level = TheLine->Level; Level > 0) {
           if (!PreviousLine)
             return false;
 
@@ -339,15 +338,16 @@ private:
           // Find the last line with lower level.
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
-            assert(*J);
-            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
-                (*J)->isComment() || (*J)->Level > TheLine->Level) {
+            const auto *L = *J;
+            assert(L);
+            if (TheLine->InMacroBody && !L->InMacroBody)
+              break;
+            if (L->isComment() || (!TheLine->InPPDirective && L->InPPDirective))
               continue;
-            }
-            if ((*J)->Level < TheLine->Level ||
-                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-                 (*J)->First->is(tok::l_brace))) {
-              Line = *J;
+            if (L->Level < Level ||
+                (L->Level == Level && L->First->is(tok::l_brace) &&
+                 Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)) {
+              Line = L;
               break;
             }
           }
@@ -706,16 +706,14 @@ private:
     Limit = limitConsideringMacros(I + 1, E, Limit);
 
     const auto LinesToBeMerged = OpenBraceWrapped + 2;
-    if (!nextNLinesFitInto(I, I + LinesToBeMerged, Limit))
-      return 0;
 
     // Check if it's a namespace inside a namespace, and call recursively if so.
     // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
     if (L1.First->is(tok::kw_namespace)) {
       if (L1.Last->is(tok::comment) || !Style.CompactNamespaces)
         return 0;
-
-      assert(Limit >= L1.Last->TotalLength + 3);
+      if (Limit < L1.Last->TotalLength + 3)
+        return 0;
       const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
       const auto MergedLines =
           tryMergeNamespace(BraceOpenLine + 1, E, InnerLimit);
@@ -724,7 +722,7 @@ private:
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
       if (auto Distance = std::distance(I, E);
-          static_cast<decltype(N)>(Distance) <= N) {
+          static_cast<std::remove_const_t<decltype(N)>>(Distance) <= N) {
         return 0;
       }
       // Check that the line after the inner result starts with a closing brace
@@ -749,7 +747,9 @@ private:
     if (L2.First->isNot(TT_NamespaceRBrace) || L2.First->MustBreakBefore)
       return 0;
 
-    // If so, merge all lines.
+    if (!nextTwoLinesFitInto(I, Limit))
+      return 0;
+
     return LinesToBeMerged;
   }
 
@@ -983,13 +983,19 @@ private:
         if (!nextTwoLinesFitInto(I, Limit))
           return 0;
 
-        // Second, check that the next line does not contain any braces - if it
-        // does, readability declines when putting it into a single line.
+        // Second, check that the next line does not contain non-braced-init
+        // braces - if it does, readability declines when putting it into a
+        // single line.
         if (I[1]->Last->is(TT_LineComment))
           return 0;
         do {
           if (Tok->is(tok::l_brace) && Tok->isNot(BK_BracedInit))
             return 0;
+          if (Tok->is(tok::r_brace) &&
+              (!Tok->MatchingParen ||
+               Tok->MatchingParen->isNot(BK_BracedInit))) {
+            return 0;
+          }
           Tok = Tok->Next;
         } while (Tok);
 
@@ -1242,7 +1248,7 @@ protected:
     if (!DryRun) {
       Whitespaces->replaceWhitespace(
           *Child->First, /*Newlines=*/0, /*Spaces=*/1,
-          /*StartOfTokenColumn=*/State.Column, /*IsAligned=*/false,
+          /*StartOfTokenColumn=*/State.Column, /*AlignedTo=*/nullptr,
           State.Line->InPPDirective);
     }
     Penalty +=
@@ -1631,6 +1637,8 @@ static auto computeNewlines(const AnnotatedLine &Line,
                             const SmallVectorImpl<AnnotatedLine *> &Lines,
                             const FormatStyle &Style) {
   const auto &RootToken = *Line.First;
+  if (isClangFormatOn(RootToken.TokenText))
+    return RootToken.NewlinesBefore;
   auto Newlines =
       std::min(RootToken.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1);
   // Remove empty lines before "}" where applicable.
@@ -1769,7 +1777,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   }
 
   Whitespaces->replaceWhitespace(RootToken, RootToken.Newlines, Indent, Indent,
-                                 /*IsAligned=*/false,
+                                 /*AlignedTo=*/nullptr,
                                  Line.InPPDirective &&
                                      !RootToken.HasUnescapedNewline);
 }

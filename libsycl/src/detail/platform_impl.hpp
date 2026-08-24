@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the PlatformImpl class, which
+/// implements sycl::platform functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_PLATFORM_IMPL
 #define _LIBSYCL_PLATFORM_IMPL
@@ -25,6 +31,10 @@
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+namespace unittests {
+struct UnittestsHelper;
+}
 
 namespace detail {
 
@@ -69,7 +79,9 @@ public:
   /// within its lifetime.
   ///
   /// \return a raw offload platform handle.
-  const ol_platform_handle_t &getHandleRef() const { return MOffloadPlatform; }
+  const ol_platform_handle_t &getOLHandleRef() const {
+    return MOffloadPlatform;
+  }
 
   /// Queries the cache to get the implementation for specified offloading RT
   /// platform. All platform implementation objects are created at first
@@ -139,6 +151,13 @@ private:
   std::vector<DeviceImplUPtr> MRootDevices;
 
   std::shared_ptr<ContextImpl> MDefaultContext;
+
+  // Single initialization of platforms and devices doesn't allow to implement
+  // unittests for this behavior. This flag and friend class allows to force
+  // device & platform rediscovery at the next getPlatforms() call if the cache
+  // is empty.
+  static bool rediscoverIfEmpty;
+  friend struct ::sycl::unittests::UnittestsHelper;
 };
 
 } // namespace detail

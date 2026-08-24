@@ -502,7 +502,9 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_MemorySemanticsAttr",
     "SPIRV_MatrixLayoutAttr",
     "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
     "SPIRV_QuadSwapDirectionAttr",
 };
 
@@ -512,9 +514,9 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
 static void emitAttributeSerialization(const Attribute &attr,
                                        ArrayRef<SMLoc> loc, StringRef tabs,
                                        StringRef opVar, StringRef operandList,
-                                       StringRef attrName, raw_ostream &os) {
+                                       StringRef getterName, raw_ostream &os) {
   os << tabs
-     << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
+     << formatv("if (auto attr = {0}.{1}Attr()) {{\n", opVar, getterName);
   if (llvm::is_contained(constantIdEnumAttrs, attr.getAttrDefName())) {
     EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
@@ -560,7 +562,7 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
   } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
                                  "SPIRV_TensorArmAxisAttr",
-                                 "SPIRV_TosaNumericalAttr"},
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
                                 attr.getAttrDefName())) {
     os << tabs
        << formatv(
@@ -626,7 +628,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
     for (const NamedAttribute &attr : op.getAttributes()) {
       emitAttributeSerialization(
           (attr.attr.isOptional() ? attr.attr.getBaseAttr() : attr.attr), loc,
-          tabs, opVar, operands, attr.name, os);
+          tabs, opVar, operands, op.getGetterName(attr.name), os);
       os << tabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr.name);
     }
@@ -657,7 +659,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
-          loc, newtabs, opVar, operands, attr->name, os);
+          loc, newtabs, opVar, operands, op.getGetterName(attr->name), os);
       os << newtabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr->name);
     }
@@ -700,7 +702,10 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
                                         StringRef resultID, raw_ostream &os) {
   if (op.getNumResults() == 1) {
     // All non-argument attributes translated into OpDecorate instruction
-    os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
+    os << tabs
+       << formatv("for (auto attr : "
+                  "{0}->getDiscardableAttrDictionary().getValue()) {{\n",
+                  opVar);
     os << tabs
        << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
                   elidedAttrs);
@@ -865,9 +870,9 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
-  } else if (llvm::is_contained(
-                 {"SPIRV_BoolConstAttr", "SPIRV_TosaNumericalAttr"},
-                 attr.getAttrDefName()) ||
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName()) ||
              attr.getAttrDefName().contains("TensorArm")) {
     os << tabs
        << formatv("std::optional<std::pair<Attribute, Type>> c = "

@@ -45,7 +45,7 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
         {"AVX512F", "knl"},
         {"AVX512", "skylake-avx512"},
         {"AVX10.1", "sapphirerapids"},
-        {"AVX10.2", "diamondrapids"},
+        {"AVX10.2", "sapphirerapids"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {
       // 32-bit-only /arch: flags.
@@ -110,8 +110,6 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
   case llvm::Triple::Haiku:
   case llvm::Triple::OpenBSD:
     return "i586";
-  case llvm::Triple::FreeBSD:
-    return "i686";
   default:
     // Fallback to p4.
     return "pentium4";
@@ -264,17 +262,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         A->getOption().matches(options::OPT_mno_apxf)) {
       if (IsNegative) {
         EGPROpt = EGPRFeature::Disabled;
-        Features.insert(Features.end(),
-                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
-        if (!Triple.isOSWindows())
-          Features.insert(Features.end(), {"-push2pop2", "-ppx"});
       } else {
         EGPROpt = EGPRFeature::Enabled;
-        Features.insert(Features.end(),
-                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
-        if (!Triple.isOSWindows())
-          Features.insert(Features.end(), {"+push2pop2", "+ppx"});
-
         if (Not64Bit)
           D.Diag(diag::err_drv_unsupported_opt_for_target)
               << StringRef("-mapxf") << Triple.getTriple();
@@ -291,7 +280,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       for (StringRef Value : A->getValues()) {
         if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
             Value != "ndd" && Value != "ccmp" && Value != "nf" &&
-            Value != "cf" && Value != "zu")
+            Value != "cf" && Value != "zu" && Value != "jmpabs")
           D.Diag(clang::diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Value;
 
@@ -349,6 +338,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   // Handle features corresponding to "-ffixed-X" options
+  if (Args.hasArg(options::OPT_ffixed_edi)) {
+    if (ArchType != llvm::Triple::x86)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-ffixed-edi" << Triple.getTriple();
+    else
+      Features.push_back("+reserve-edi");
+  }
 #define RESERVE_REG(REG)                                                       \
   if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
     Features.push_back("+reserve-" #REG);

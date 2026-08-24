@@ -46,6 +46,25 @@ func.func @transpose_nofold_shape(%arg0: tensor<3x4xf32>) -> tensor<?x?xf32> {
 
 // -----
 
+// CHECK-LABEL: @transpose_nofold_unranked_result_not_reshape
+func.func @transpose_nofold_unranked_result_not_reshape(%arg0: tensor<6x7xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.transpose
+  %1 = tosa.transpose %arg0 { perms = array<i32: 1, 0> }: (tensor<6x7xf32>) -> tensor<*xf32>
+  return %1 : tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @reciprocal_nofold_unranked_result
+func.func @reciprocal_nofold_unranked_result() -> tensor<*xf32> {
+  %input = "tosa.const"() {values = dense<2.0> : tensor<6x7xf32>} : () -> tensor<6x7xf32>
+  // CHECK: tosa.reciprocal
+  %1 = tosa.reciprocal %input : (tensor<6x7xf32>) -> tensor<*xf32>
+  return %1 : tensor<*xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_fold_splat
 func.func @transpose_fold_splat() -> tensor<3x2xf32> {
   %input = "tosa.const"() {values = dense<4.0> : tensor<2x3xf32>} : () -> tensor<2x3xf32>
@@ -127,24 +146,6 @@ func.func @transpose_nofold_quantized_types() -> tensor<1x1x2x2x!quant.uniform<i
   %0 = tosa.transpose %input { perms = array<i32: 1, 2, 3, 0> }: (tensor<2x1x1x2x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01}>>) -> tensor<1x1x2x2x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01}>>
   return %0: tensor<1x1x2x2x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01}>>
 }
-
-// -----
-
-// CHECK-LABEL: @transpose_fold_dense_resource
-func.func @transpose_fold_dense_resource() -> tensor<2x2xf32> {
-  %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
-
-  // CHECK-NOT: tosa.transpose
-  %2 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf32>) -> tensor<2x2xf32>
-  return %2 : tensor<2x2xf32>
-}
-{-#
-  dialect_resources: {
-    builtin: {
-      resource: "0x040000003f800000400000004040000040800000"
-    }
-  }
-#-}
 
 // -----
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fsyntax-only -fms-extensions -verify -std=c++20 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fsyntax-only -fms-extensions -verify -std=c++20 -fno-dllexport-inlines %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu  -fsyntax-only -fms-extensions -verify -std=c++20 %s
 
 // expected-no-diagnostics

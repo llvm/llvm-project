@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -213,16 +214,16 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
 } // namespace llvm
 
 static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
-                         bool HeaderOnly, Cycle **CPtr = nullptr) {
+                         bool HeaderOnly, CycleRef *CPtr = nullptr) {
   if (!CI)
     return true;
   auto *BB = I->getParent();
-  auto *C = CI->getCycle(BB);
+  CycleRef C = CI->getCycle(BB);
   if (!C)
     return false;
   if (CPtr)
     *CPtr = C;
-  return !HeaderOnly || BB == C->getHeader();
+  return !HeaderOnly || BB == CI->getHeader(C);
 }
 
 /// Checks if a type could have padding bytes.
@@ -745,24 +746,12 @@ struct State;
 template <>
 struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
   using Access = AAPointerInfo::Access;
-  static inline Access getEmptyKey();
-  static inline Access getTombstoneKey();
   static unsigned getHashValue(const Access &A);
   static bool isEqual(const Access &LHS, const Access &RHS);
 };
 
 /// Helper that allows RangeTy as a key in a DenseMap.
 template <> struct DenseMapInfo<AA::RangeTy> {
-  static inline AA::RangeTy getEmptyKey() {
-    auto EmptyKey = DenseMapInfo<int64_t>::getEmptyKey();
-    return AA::RangeTy{EmptyKey, EmptyKey};
-  }
-
-  static inline AA::RangeTy getTombstoneKey() {
-    auto TombstoneKey = DenseMapInfo<int64_t>::getTombstoneKey();
-    return AA::RangeTy{TombstoneKey, TombstoneKey};
-  }
-
   static unsigned getHashValue(const AA::RangeTy &Range) {
     return detail::combineHashValue(
         DenseMapInfo<int64_t>::getHashValue(Range.Offset),
@@ -772,17 +761,6 @@ template <> struct DenseMapInfo<AA::RangeTy> {
   static bool isEqual(const AA::RangeTy &A, const AA::RangeTy B) {
     return A == B;
   }
-};
-
-/// Helper for AA::PointerInfo::Access DenseMap/Set usage ignoring everythign
-/// but the instruction
-struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
-  using Base = DenseMapInfo<Instruction *>;
-  using Access = AAPointerInfo::Access;
-  static inline Access getEmptyKey();
-  static inline Access getTombstoneKey();
-  static unsigned getHashValue(const Access &A);
-  static bool isEqual(const Access &LHS, const Access &RHS);
 };
 
 } // namespace llvm
@@ -1183,14 +1161,10 @@ struct AAPointerInfoImpl
     auto HasKernelLifetime = [&](Value *V, Module &M) {
       if (!AA::isGPU(M))
         return false;
-      switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
-      case AA::GPUAddressSpace::Shared:
-      case AA::GPUAddressSpace::Constant:
-      case AA::GPUAddressSpace::Local:
-        return true;
-      default:
-        return false;
-      };
+      unsigned VAS = V->getType()->getPointerAddressSpace();
+      return AA::isGPUSharedAddressSpace(M, VAS) ||
+             AA::isGPUConstantAddressSpace(M, VAS) ||
+             AA::isGPULocalAddressSpace(M, VAS);
     };
 
     // The IsLiveInCalleeCB will be used by the AA::isPotentiallyReachable query
@@ -2198,15 +2172,6 @@ bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
           Ordering != AtomicOrdering::Monotonic);
 }
 
-/// Return true if this intrinsic is nosync.  This is only used for intrinsics
-/// which would be nosync except that they have a volatile flag.  All other
-/// intrinsics are simply annotated with the nosync attribute in Intrinsics.td.
-bool AANoSync::isNoSyncIntrinsic(const Instruction *I) {
-  if (auto *MI = dyn_cast<MemIntrinsic>(I))
-    return !MI->isVolatile();
-  return false;
-}
-
 namespace {
 struct AANoSyncImpl : AANoSync {
   AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
@@ -2295,16 +2260,24 @@ struct AANoFreeImpl : public AANoFree {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoFree = [&](Instruction &I) {
-      bool IsKnown;
-      return AA::hasAssumedIRAttr<Attribute::NoFree>(
-          A, this, IRPosition::callsite_function(cast<CallBase>(I)),
-          DepClassTy::REQUIRED, IsKnown);
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        bool IsKnown;
+        return AA::hasAssumedIRAttr<Attribute::NoFree>(
+            A, this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
+            IsKnown);
+      }
+      // Make sure that synchronization cannot establish happens-before with a
+      // free on another thread.
+      return AA::isNoSyncInst(A, I, *this);
     };
 
     bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
+    if (!A.checkForAllReadWriteInstructions(CheckForNoFree, *this,
+                                            UsedAssumedInformation) ||
+        !A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
+
     return ChangeStatus::UNCHANGED;
   }
 
@@ -2359,24 +2332,42 @@ struct AANoFreeFloating : AANoFreeImpl {
           return true;
         unsigned ArgNo = CB->getArgOperandNo(&U);
 
+        // Even if the argument is nofree, we still need to check for nocapture,
+        // as the call may capture the argument without freeing it, and the
+        // captured argument is freed later.
         bool IsKnown;
-        return AA::hasAssumedIRAttr<Attribute::NoFree>(
-            A, this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED, IsKnown);
+        if (!AA::hasAssumedIRAttr<Attribute::NoFree>(
+                A, this, IRPosition::callsite_argument(*CB, ArgNo),
+                DepClassTy::REQUIRED, IsKnown))
+          return false;
+
+        const AANoCapture *NoCaptureAA = nullptr;
+        if (!AA::hasAssumedIRAttr<Attribute::Captures>(
+                A, this, IRPosition::callsite_argument(*CB, ArgNo),
+                DepClassTy::REQUIRED, IsKnown,
+                /*IgnoreSubsumingPositions=*/false, &NoCaptureAA)) {
+          if (NoCaptureAA && NoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
+            Follow = true;
+            return true;
+          }
+          return false;
+        }
+
+        return true;
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<PHINode>(UserI) ||
-          isa<SelectInst>(UserI)) {
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
+      if (!capturesAnyProvenance(CI))
+        return true;
+      if (capturesAnyProvenance(CI.ResultCC)) {
         Follow = true;
         return true;
       }
-      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI))
-        return true;
 
       if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;
 
-      // Unknown user.
+      // Capturing user.
       return false;
     };
     if (!A.checkForAllUses(Pred, *this, AssociatedValue))
@@ -2948,6 +2939,25 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   AAUndefinedBehaviorImpl(const IRPosition &IRP, Attributor &A)
       : AAUndefinedBehavior(IRP, A) {}
 
+  struct UBInfo {
+    enum Kind {
+      NullPtrAccess,
+      UndefPtrAccess,
+      UndefBranchCondition,
+      UndefReturnValue,
+      NullReturnViolatesNonNull,
+      UndefCallArgument,
+      NullArgViolatesNonNull,
+    };
+
+    Kind K;
+    std::optional<unsigned> ArgNo;
+
+    UBInfo(Kind K) : K(K), ArgNo(std::nullopt) {}
+
+    UBInfo(Kind K, std::optional<unsigned> ArgNo) : K(K), ArgNo(ArgNo) {}
+  };
+
   /// See AbstractAttribute::updateImpl(...).
   // through a pointer (i.e. also branches etc.)
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2955,8 +2965,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     const size_t NoUBPrevSize = AssumedNoUBInsts.size();
 
     auto InspectMemAccessInstForUB = [&](Instruction &I) {
-      // Lang ref now states volatile store is not UB, let's skip them.
-      if (I.isVolatile() && I.mayWriteToMemory())
+      // Volatile accesses on null are not necessarily UB.
+      if (I.isVolatile())
         return true;
 
       // Skip instructions that are already saved.
@@ -2974,7 +2984,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
       std::optional<Value *> SimplifiedPtrOp =
-          stopOnUndefOrAssumed(A, PtrOp, &I);
+          stopOnUndefOrAssumed(A, PtrOp, &I, UBInfo::UndefPtrAccess);
       if (!SimplifiedPtrOp || !*SimplifiedPtrOp)
         return true;
       const Value *PtrOpVal = *SimplifiedPtrOp;
@@ -2997,7 +3007,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       if (llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()))
         AssumedNoUBInsts.insert(&I);
       else
-        KnownUBInsts.insert(&I);
+        KnownUBInsts.try_emplace(&I, UBInfo::NullPtrAccess);
       return true;
     };
 
@@ -3014,8 +3024,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
-      std::optional<Value *> SimplifiedCond =
-          stopOnUndefOrAssumed(A, BrInst->getCondition(), BrInst);
+      std::optional<Value *> SimplifiedCond = stopOnUndefOrAssumed(
+          A, BrInst->getCondition(), BrInst, UBInfo::UndefBranchCondition);
       if (!SimplifiedCond || !*SimplifiedCond)
         return true;
       AssumedNoUBInsts.insert(&I);
@@ -3067,7 +3077,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (SimplifiedVal && !*SimplifiedVal)
           return true;
         if (!SimplifiedVal || isa<UndefValue>(**SimplifiedVal)) {
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I, UBInfo(UBInfo::UndefCallArgument, idx));
           continue;
         }
         if (!ArgVal->getType()->isPointerTy() ||
@@ -3077,7 +3087,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         AA::hasAssumedIRAttr<Attribute::NonNull>(
             A, this, CalleeArgumentIRP, DepClassTy::NONE, IsKnownNonNull);
         if (IsKnownNonNull)
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I,
+                                   UBInfo(UBInfo::NullArgViolatesNonNull, idx));
       }
       return true;
     };
@@ -3086,8 +3097,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       auto &RI = cast<ReturnInst>(I);
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified return value to continue.
-      std::optional<Value *> SimplifiedRetValue =
-          stopOnUndefOrAssumed(A, RI.getReturnValue(), &I);
+      std::optional<Value *> SimplifiedRetValue = stopOnUndefOrAssumed(
+          A, RI.getReturnValue(), &I, UBInfo::UndefReturnValue);
       if (!SimplifiedRetValue || !*SimplifiedRetValue)
         return true;
 
@@ -3111,7 +3122,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
             A, this, IRPosition::returned(*getAnchorScope()), DepClassTy::NONE,
             IsKnownNonNull);
         if (IsKnownNonNull)
-          KnownUBInsts.insert(&I);
+          KnownUBInsts.try_emplace(&I, UBInfo::NullReturnViolatesNonNull);
       }
 
       return true;
@@ -3175,11 +3186,55 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     return false;
   }
 
+  /// Emit an optimization remark explaining why \p I is known to cause UB,
+  /// per \p Info, right before it is replaced with 'unreachable'.
+  static void emitUBRemark(Attributor &A, Instruction *I, const UBInfo &Info) {
+    auto Remark = [&](OptimizationRemark OR) {
+      switch (Info.K) {
+      case UBInfo::NullPtrAccess:
+      case UBInfo::UndefPtrAccess: {
+        return OR << "Memory access through a pointer known to be "
+                  << ore::NV("Pointer",
+                             getPointerOperand(I, /*AllowVolatile*/ true))
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      }
+      case UBInfo::UndefBranchCondition:
+        return OR << "Branch condition known to be "
+                  << ore::NV("Condition", cast<CondBrInst>(I)->getCondition())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefReturnValue:
+      case UBInfo::NullReturnViolatesNonNull:
+        return OR << "Value returned known to be "
+                  << ore::NV("ReturnValue",
+                             cast<ReturnInst>(I)->getReturnValue())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefCallArgument:
+      case UBInfo::NullArgViolatesNonNull: {
+        bool IsUndef = Info.K == UBInfo::UndefCallArgument;
+        CallBase &CB = *cast<CallBase>(I);
+        OR << "Argument " << ore::NV("ArgNo", *Info.ArgNo)
+           << " passed to parameter of ";
+        if (auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand()))
+          OR << ore::NV("Callee", Callee);
+        else
+          OR << "the callee";
+        return OR << " known to be "
+                  << ore::NV("Argument", IsUndef ? "undef" : "null")
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      }
+      }
+      llvm_unreachable("Unknown UBInfo::Kind");
+    };
+    A.emitRemark<OptimizationRemark>(I, "UndefinedBehavior", Remark);
+  }
+
   ChangeStatus manifest(Attributor &A) override {
     if (KnownUBInsts.empty())
       return ChangeStatus::UNCHANGED;
-    for (Instruction *I : KnownUBInsts)
+    for (const auto &[I, Info] : KnownUBInsts) {
+      emitUBRemark(A, I, Info);
       A.changeToUnreachableAfterManifest(I);
+    }
     return ChangeStatus::CHANGED;
   }
 
@@ -3212,8 +3267,9 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
   ///    Note however that instructions in this set may cause UB.
 
 protected:
-  /// A set of all live instructions _known_ to cause UB.
-  SmallPtrSet<Instruction *, 8> KnownUBInsts;
+  /// A map from all live instructions _known_ to cause UB to the reason why,
+  /// used to build actionable optimization remarks in manifest().
+  MapVector<Instruction *, UBInfo> KnownUBInsts;
 
 private:
   /// A set of all the (live) instructions that are assumed to _not_ cause UB.
@@ -3222,14 +3278,14 @@ private:
   // Should be called on updates in which if we're processing an instruction
   // \p I that depends on a value \p V, one of the following has to happen:
   // - If the value is assumed, then stop.
-  // - If the value is known but undef, then consider it UB.
+  // - If the value is known but undef, then consider it UB for \p K.
   // - Otherwise, do specific processing with the simplified value.
   // We return std::nullopt in the first 2 cases to signify that an appropriate
   // action was taken and the caller should stop.
   // Otherwise, we return the simplified value that the caller should
   // use for specific processing.
   std::optional<Value *> stopOnUndefOrAssumed(Attributor &A, Value *V,
-                                              Instruction *I) {
+                                              Instruction *I, UBInfo::Kind K) {
     bool UsedAssumedInformation = false;
     std::optional<Value *> SimplifiedV =
         A.getAssumedSimplified(IRPosition::value(*V), *this,
@@ -3239,7 +3295,7 @@ private:
       if (!SimplifiedV) {
         // If it is known (which we tested above) but it doesn't have a value,
         // then we can assume `undef` and hence the instruction is UB.
-        KnownUBInsts.insert(I);
+        KnownUBInsts.try_emplace(I, K);
         return std::nullopt;
       }
       if (!*SimplifiedV)
@@ -3247,7 +3303,7 @@ private:
       V = *SimplifiedV;
     }
     if (isa<UndefValue>(V)) {
-      KnownUBInsts.insert(I);
+      KnownUBInsts.try_emplace(I, K);
       return std::nullopt;
     }
     return V;
@@ -3347,6 +3403,17 @@ struct AAWillReturnImpl : public AAWillReturn {
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(CheckForWillReturn, *this,
                                            UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    auto CheckForVolatile = [&](Instruction &I) {
+      // Volatile operations are not willreturn.
+      return !I.isVolatile();
+    };
+    if (!A.checkForAllInstructions(CheckForVolatile, *this,
+                                   {Instruction::Load, Instruction::Store,
+                                    Instruction::AtomicCmpXchg,
+                                    Instruction::AtomicRMW},
+                                   UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     return ChangeStatus::UNCHANGED;
@@ -3452,13 +3519,6 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
   using InstSetDMI = DenseMapInfo<const AA::InstExclusionSetTy *>;
   using PairDMI = DenseMapInfo<std::pair<const Instruction *, const ToTy *>>;
 
-  static ReachabilityQueryInfo<ToTy> EmptyKey;
-  static ReachabilityQueryInfo<ToTy> TombstoneKey;
-
-  static inline ReachabilityQueryInfo<ToTy> *getEmptyKey() { return &EmptyKey; }
-  static inline ReachabilityQueryInfo<ToTy> *getTombstoneKey() {
-    return &TombstoneKey;
-  }
   static unsigned getHashValue(const ReachabilityQueryInfo<ToTy> *RQI) {
     return RQI->Hash ? RQI->Hash : RQI->computeHashValue();
   }
@@ -3469,23 +3529,6 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
     return InstSetDMI::isEqual(LHS->ExclusionSet, RHS->ExclusionSet);
   }
 };
-
-#define DefineKeys(ToTy)                                                       \
-  template <>                                                                  \
-  ReachabilityQueryInfo<ToTy>                                                  \
-      DenseMapInfo<ReachabilityQueryInfo<ToTy> *>::EmptyKey =                  \
-          ReachabilityQueryInfo<ToTy>(                                         \
-              DenseMapInfo<const Instruction *>::getEmptyKey(),                \
-              DenseMapInfo<const ToTy *>::getEmptyKey());                      \
-  template <>                                                                  \
-  ReachabilityQueryInfo<ToTy>                                                  \
-      DenseMapInfo<ReachabilityQueryInfo<ToTy> *>::TombstoneKey =              \
-          ReachabilityQueryInfo<ToTy>(                                         \
-              DenseMapInfo<const Instruction *>::getTombstoneKey(),            \
-              DenseMapInfo<const ToTy *>::getTombstoneKey());
-
-DefineKeys(Instruction) DefineKeys(Function)
-#undef DefineKeys
 
 } // namespace llvm
 
@@ -4147,6 +4190,9 @@ struct AAIsDeadValueImpl : public AAIsDead {
     if (!I || wouldInstructionBeTriviallyDead(I))
       return true;
 
+    if (!I->isTerminator() && !I->mayHaveSideEffects())
+      return true;
+
     auto *CB = dyn_cast<CallBase>(I);
     if (!CB || isa<IntrinsicInst>(CB))
       return false;
@@ -4302,7 +4348,7 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         A.deleteAfterManifest(*FI);
         return ChangeStatus::CHANGED;
       }
-      if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
+      if (isAssumedSideEffectFree(A, I) && !I->isTerminator()) {
         A.deleteAfterManifest(*I);
         return ChangeStatus::CHANGED;
       }
@@ -4948,9 +4994,9 @@ struct AADereferenceableImpl : AADereferenceable {
     AA::hasAssumedIRAttr<Attribute::NonNull>(
         A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNonNull);
 
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     takeKnownDerefBytesMaximum(V.getPointerDereferenceableBytes(
-        A.getDataLayout(), CanBeNull, CanBeFreed));
+        A.getDataLayout(), CanBeNull, /*CanBeFreed=*/nullptr));
 
     if (Instruction *CtxI = getCtxI())
       followUsesInMBEC(*this, A, getState(), *CtxI);
@@ -5077,9 +5123,9 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       if (!AA || (!Stripped && this == AA)) {
         // Use IR information if we did not strip anything.
         // TODO: track globally.
-        bool CanBeNull, CanBeFreed;
-        DerefBytes =
-            Base->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+        bool CanBeNull;
+        DerefBytes = Base->getPointerDereferenceableBytes(
+            DL, CanBeNull, /*CanBeFreed=*/nullptr);
         T.GlobalState.indicatePessimisticFixpoint();
       } else {
         const DerefState &DS = AA->getState();
@@ -6689,12 +6735,17 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
 
+  static bool isGlobalizedLocal(const CallBase &CB) {
+    Attribute A = CB.getFnAttr("alloc-family");
+    return A.isValid() && A.getValueAsString() == "__kmpc_alloc_shared";
+  }
+
   struct AllocationInfo {
     /// The call that allocates the memory.
     CallBase *const CB;
 
-    /// The library function id for the allocation.
-    LibFunc LibraryFunctionId = NotLibFunc;
+    /// Whether this allocation is an OpenMP globalized local variable.
+    bool IsGlobalizedLocal = false;
 
     /// The status wrt. a rewrite.
     enum {
@@ -6763,8 +6814,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         if (nullptr != getInitialValueOfAllocation(CB, TLI, I8Ty)) {
           AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
           AllocationInfos[CB] = AI;
-          if (TLI)
-            TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+          AI->IsGlobalizedLocal = isGlobalizedLocal(*CB);
         }
       }
       return true;
@@ -6858,13 +6908,11 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
                         << "\n");
 
       auto Remark = [&](OptimizationRemark OR) {
-        LibFunc IsAllocShared;
-        if (TLI->getLibFunc(*AI.CB, IsAllocShared))
-          if (IsAllocShared == LibFunc___kmpc_alloc_shared)
-            return OR << "Moving globalized variable to the stack.";
+        if (AI.IsGlobalizedLocal)
+          return OR << "Moving globalized variable to the stack.";
         return OR << "Moving memory allocation from the heap to the stack.";
       };
-      if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
+      if (AI.IsGlobalizedLocal)
         A.emitRemark<OptimizationRemark>(AI.CB, "OMP110", Remark);
       else
         A.emitRemark<OptimizationRemark>(AI.CB, "HeapToStack", Remark);
@@ -7111,8 +7159,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       return false;
     }
 
-    // __kmpc_alloc_shared and __kmpc_alloc_free are by construction matched.
-    if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
+    // __kmpc_alloc_shared and __kmpc_free_shared are by construction matched.
+    if (!AI.IsGlobalizedLocal) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
       if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
         LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
@@ -7162,8 +7210,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
             A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
 
         if (!IsAssumedNoCapture ||
-            (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
-             !IsAssumedNoFree)) {
+            (!AI.IsGlobalizedLocal && !IsAssumedNoFree)) {
           AI.HasPotentiallyFreeingUnknownUses |= !IsAssumedNoFree;
 
           // Emit a missed remark if this is missed OpenMP globalization.
@@ -7174,8 +7221,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
                       "parameter as `__attribute__((noescape))` to override.";
           };
 
-          if (ValidUsesOnly &&
-              AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
+          if (ValidUsesOnly && AI.IsGlobalizedLocal)
             A.emitRemark<OptimizationRemarkMissed>(CB, "OMP113", Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
@@ -7236,8 +7282,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-    if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
-        MaxHeapToStackSize != -1) {
+    if (!AI.IsGlobalizedLocal && MaxHeapToStackSize != -1) {
       if (!Size || Size->ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size)
@@ -7271,9 +7316,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
     // Check if we still think we can move it into the entry block. If the
     // alloca comes from a converted __kmpc_alloc_shared then we can usually
-    // ignore the potential compilations associated with loops.
-    bool IsGlobalizedLocal =
-        AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared;
+    // ignore the potential complications associated with loops.
+    bool IsGlobalizedLocal = AI.IsGlobalizedLocal;
     if (AI.MoveAllocaIntoEntry &&
         (!Size.has_value() ||
          (!IsGlobalizedLocal && IsInLoop(*AI.CB->getParent()))))
@@ -8706,11 +8750,12 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     // Filter accesses to constant (GPU) memory if we have an AS at the access
     // site or the object is known to actually have the associated AS.
-    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
-         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
-          isIdentifiedObject(&Obj))) &&
-        AA::isGPU(*I.getModule()))
-      return true;
+    if (AA::isGPU(A.getModule())) {
+      if (AA::isGPUConstantAddressSpace(A.getModule(), AccessAS) ||
+          (AA::isGPUConstantAddressSpace(A.getModule(), ObjectAS) &&
+           isIdentifiedObject(&Obj)))
+        return true;
+    }
 
     if (isa<UndefValue>(&Obj))
       return true;
@@ -11367,7 +11412,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
               *PHI.getFunction());
 
-      Cycle *C = nullptr;
+      CycleRef C;
       bool CyclePHI = mayBeInCycle(CI, &PHI, /* HeaderOnly */ true, &C);
       for (unsigned u = 0, e = PHI.getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI.getIncomingBlock(u);
@@ -11383,7 +11428,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         // If the incoming value is not the PHI but an instruction in the same
         // cycle we might have multiple versions of it flying around.
         if (CyclePHI && isa<Instruction>(V) &&
-            (!C || C->contains(cast<Instruction>(V)->getParent())))
+            (!C || CI->contains(C, cast<Instruction>(V)->getParent())))
           return false;
 
         Worklist.push_back({{*V, IncomingBB->getTerminator()}, II.S});
@@ -12765,7 +12810,7 @@ private:
     case IRP_CALL_SITE_RETURNED: {
       const auto &CB = cast<CallBase>(getAnchorValue());
       return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          &CB, /*MustPreserveNullness=*/false);
+          &CB, /*MustPreserveOffset=*/false);
     }
     case IRP_ARGUMENT: {
       const Function *F = getAssociatedFunction();
@@ -12900,7 +12945,7 @@ private:
 
     if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
       if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              CB, /*MustPreserveNullness=*/false)) {
+              CB, /*MustPreserveOffset=*/false)) {
         for (const Value *Arg : CB->args()) {
           if (!IsLocallyInvariantLoadIfPointer(*Arg))
             return indicatePessimisticFixpoint();
@@ -12946,7 +12991,7 @@ struct AAInvariantLoadPointerCallSiteReturned final
 
     const auto &CB = cast<CallBase>(getAnchorValue());
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-            &CB, /*MustPreserveNullness=*/false))
+            &CB, /*MustPreserveOffset=*/false))
       return AAInvariantLoadPointerImpl::initialize(A);
 
     if (F->onlyReadsMemory() && F->hasNoSync())

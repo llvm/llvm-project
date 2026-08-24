@@ -697,7 +697,7 @@
 # CHECK-NEXT:  1      5     1.00    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      5     1.00    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      4     1.00                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      4     1.00                  U     prfm	#22, #0
+# CHECK-NEXT:  1      4     1.00                  U     prfm	#25, #0
 # CHECK-NEXT:  2      5     1.00    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  2      5     1.00    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  2      5     1.00    *      *      U     stxr	w5, w6, [x17]
@@ -1137,6 +1137,7 @@
 # CHECK-NEXT:  1      1     0.50                        mov	wzr, w2
 # CHECK-NEXT:  1      1     0.50                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.50                        movz	w2, #0, lsl #16
+# CHECK-NEXT:  1      1     0.50                        mov	w10, #-1235
 # CHECK-NEXT:  1      1     0.50                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.50                        mov	x2, #5299989643264
 # CHECK-NEXT:  1      1     0.50                        mov	x2, #0
@@ -1180,7 +1181,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 26.00  336.00 336.00 391.00 301.00 188.00 195.50 87.50
+# CHECK-NEXT: 26.00  336.50 336.50 391.00 301.00 188.00 195.50 87.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -1871,7 +1872,7 @@
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     prfm	#25, #0
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     stxr	w5, w6, [x17]
@@ -2311,6 +2312,7 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	wzr, w2
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     movz	w2, #0, lsl #16
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	w10, #-1235
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	w2, #-1235
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	x2, #5299989643264
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mov	x2, #0
