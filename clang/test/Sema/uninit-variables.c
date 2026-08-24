@@ -583,3 +583,29 @@ void aggregate() {
 
   (void)sizeof({ struct with_explicit_field a; a; });  // no warning -- unevaluated operand
 }
+
+// Builtins that carry the UnevaluatedArguments attribute never read their
+// argument's value -- only its type, or whether it is a constant -- so passing
+// an uninitialized variable to one is not a use.  CFGBuilder omits the argument
+// sub-expressions entirely, which is what keeps them out of this analysis.  One
+// variable each: the analysis reports only the first use of a given variable,
+// so sharing one would let a regression in all but the first go unnoticed.
+int unevaluated_builtin_args(void) {
+  int a, b, c;
+  char *p, *q;
+  int classify = __builtin_classify_type(a);        // no-warning
+  int constant = __builtin_constant_p(b);           // no-warning
+  unsigned long size = __builtin_object_size(p, 0); // no-warning
+  unsigned long dsize = __builtin_dynamic_object_size(q, 0); // no-warning
+  unsigned long token = __builtin_infer_alloc_token(c);      // no-warning
+  return classify + constant + (int)size + (int)dsize + (int)token;
+}
+
+// __builtin_os_log_format_buffer_size is on the same list: it inspects the
+// format string and the argument types to size the buffer.  The arguments are
+// evaluated by the paired __builtin_os_log_format call, which is a separate
+// call expression and is not on the list.
+unsigned long unevaluated_os_log_buffer_size(void) {
+  int x;
+  return __builtin_os_log_format_buffer_size("%d", x); // no-warning
+}
