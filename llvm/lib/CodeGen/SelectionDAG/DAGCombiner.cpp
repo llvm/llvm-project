@@ -32061,7 +32061,9 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   // alignment compared to the size and offset of the access, we may be able
   // to prove they do not alias. This check is conservative for now to catch
   // cases created by splitting vector types, it only works when the offsets are
-  // multiples of the size of the data.
+  // multiples of the size of the data. The offsets are relative to each MMO's
+  // Value, so the window-separation argument is only sound when both accesses
+  // are relative to the same object.
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
   Align OrigAlignment0 = MUC0.MMO->getBaseAlign();
@@ -32069,7 +32071,9 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   LocationSize Size0 = MUC0.NumBytes;
   LocationSize Size1 = MUC1.NumBytes;
 
-  if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
+  if (MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+      MUC0.MMO->getValue() == MUC1.MMO->getValue() &&
+      OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
       Size0.hasValue() && Size1.hasValue() && !Size0.isScalable() &&
       !Size1.isScalable() && Size0 == Size1 &&
       OrigAlignment0 > Size0.getValue().getKnownMinValue() &&
