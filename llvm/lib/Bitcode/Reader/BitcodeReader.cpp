@@ -2280,6 +2280,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeAddress;
   case bitc::ATTR_KIND_SANITIZE_HWADDRESS:
     return Attribute::SanitizeHWAddress;
+  case bitc::ATTR_KIND_SANITIZE_DEVICE_ADDRESS:
+    return Attribute::SanitizeDeviceAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_CONCURRENCY:

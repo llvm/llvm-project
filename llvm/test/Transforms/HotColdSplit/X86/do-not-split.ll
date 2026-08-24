@@ -134,6 +134,20 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+; CHECK-LABEL: @sanitize_device_address
+; CHECK-NOT: sanitize_device_address.cold.1
+define void @sanitize_device_address(i1 %arg) sanitize_device_address {
+entry:
+  br i1 %arg, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
 ; CHECK-LABEL: @sanitize_hwaddress
 ; CHECK-NOT: sanitize_hwaddress.cold.1
 define void @sanitize_hwaddress(i1 %arg) sanitize_hwaddress {
