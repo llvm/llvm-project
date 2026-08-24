@@ -34,6 +34,23 @@ namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
+bool SemaAMDGPU::checkBuiltinRequiredTargetFeatures(
+    unsigned BuiltinID, CallExpr *TheCall,
+    const llvm::StringMap<bool> &CallerFeatureMap) {
+  ASTContext &Ctx = getASTContext();
+  StringRef FeatureList(Ctx.BuiltinInfo.getRequiredFeatures(BuiltinID));
+  if (Builtin::evaluateRequiredTargetFeatures(FeatureList, CallerFeatureMap))
+    return false;
+
+  const FunctionDecl *BuiltinDecl = TheCall->getDirectCallee();
+  Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+      << (BuiltinDecl ? BuiltinDecl->getDeclName()
+                      : DeclarationName(&Ctx.Idents.get(
+                            Ctx.BuiltinInfo.getName(BuiltinID))))
+      << FeatureList;
+  return true;
+}
+
 bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
@@ -306,14 +323,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
+    if (checkBuiltinRequiredTargetFeatures(BuiltinID, TheCall,
+                                           CallerFeatureMap))
+      return true;
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
@@ -383,14 +395,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
+    if (checkBuiltinRequiredTargetFeatures(BuiltinID, TheCall,
+                                           CallerFeatureMap))
+      return true;
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;

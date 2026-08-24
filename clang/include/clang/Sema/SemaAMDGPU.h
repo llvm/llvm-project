@@ -16,6 +16,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace clang {
 class AttributeCommonInfo;
@@ -30,6 +31,10 @@ public:
   SemaAMDGPU(Sema &S);
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  bool checkBuiltinRequiredTargetFeatures(
+      unsigned BuiltinID, CallExpr *TheCall,
+      const llvm::StringMap<bool> &CallerFeatureMap);
 
   /// Emits a diagnostic if the \p E is not an atomic ordering encoded in the C
   /// ABI format, or if the atomic ordering is not valid for the operation type
