@@ -6800,7 +6800,9 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
 
 // When the enclosing kernel has debug info (-g offload), the inlinable
 // __kmpc_target_init/__kmpc_target_deinit calls must carry a !dbg location or
-// the verifier rejects the module during the device link.
+// the verifier rejects the module during the device link. createOutlinedFunction
+// installs the outlined function's location as the builder's current debug
+// location before emitting these calls, so both must inherit it.
 TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(OpenMPIRBuilderConfig(
@@ -6814,30 +6816,7 @@ TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
                                       "__omp_offloading_test_kernel", M.get());
   BasicBlock *KernelBB = BasicBlock::Create(Ctx, "entry", Kernel);
 
-  IRBuilder<> Builder(KernelBB);
-  // No debug location and, initially, no subprogram: the state in which flang
-  // emits the init call.
-  Builder.SetCurrentDebugLocation(DebugLoc());
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DebugLoc()});
-
-  OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
-      /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
-
-  OpenMPIRBuilder::InsertPointTy AfterIP =
-      OMPBuilder.createTargetInit(Loc, DefaultAttrs);
-
-  // The init call exists but has no !dbg yet, since the kernel had no
-  // subprogram when it was emitted.
-  CallInst *InitCall = nullptr;
-  for (Instruction &I : Kernel->getEntryBlock())
-    if (auto *CI = dyn_cast<CallInst>(&I))
-      if (CI->getCalledFunction()->getName() == "__kmpc_target_init")
-        InitCall = CI;
-  ASSERT_NE(InitCall, nullptr);
-  EXPECT_FALSE(InitCall->getDebugLoc());
-
-  // Attach a subprogram now, as the flang debug pass does after outlining.
+  // Attach a subprogram to the kernel, as the outlining does.
   DIBuilder DIB(*M);
   DIFile *File = DIB.createFile("kernel.f90", "/");
   DICompileUnit *CU = DIB.createCompileUnit(
@@ -6850,13 +6829,32 @@ TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
   Kernel->setSubprogram(SP);
   DIB.finalize();
 
-  // Emit the matching deinit, again with no current debug location.
+  IRBuilder<> Builder(KernelBB);
+  // The kernel-scoped location createOutlinedFunction installs from
+  // OutlinedFnLoc before emitting the runtime calls.
+  DebugLoc DL = DILocation::get(Ctx, 10, /*Column=*/0, SP);
+  Builder.SetCurrentDebugLocation(DL);
+
+  OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
+      /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
+
+  // createTargetInit/createTargetDeinit capture the builder's current debug
+  // location, mirroring how createOutlinedFunction emits them.
+  OpenMPIRBuilder::InsertPointTy AfterIP =
+      OMPBuilder.createTargetInit(Builder, DefaultAttrs);
   Builder.restoreIP(AfterIP);
-  Builder.SetCurrentDebugLocation(DebugLoc());
-  OpenMPIRBuilder::LocationDescription DeinitLoc(
-      {Builder.saveIP(), DebugLoc()});
-  OMPBuilder.createTargetDeinit(DeinitLoc);
+  Builder.SetCurrentDebugLocation(DL);
+  OMPBuilder.createTargetDeinit(Builder);
   Builder.CreateRetVoid();
+
+  CallInst *InitCall = nullptr;
+  for (Instruction &I : Kernel->getEntryBlock())
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      if (CI->getCalledFunction()->getName() == "__kmpc_target_init")
+        InitCall = CI;
+  ASSERT_NE(InitCall, nullptr);
 
   CallInst *DeinitCall = nullptr;
   for (BasicBlock &FnBB : *Kernel)
@@ -6866,9 +6864,8 @@ TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
           DeinitCall = CI;
   ASSERT_NE(DeinitCall, nullptr);
 
-  // Both runtime calls now carry a !dbg location scoped to the kernel's
-  // subprogram: the init call was patched retroactively, the deinit call got
-  // the fallback location directly.
+  // Both runtime calls carry a !dbg location scoped to the kernel's subprogram,
+  // so the kernel verifies.
   ASSERT_TRUE(InitCall->getDebugLoc());
   EXPECT_EQ(InitCall->getDebugLoc()->getScope()->getSubprogram(), SP);
   ASSERT_TRUE(DeinitCall->getDebugLoc());
