@@ -103,8 +103,10 @@ SourceRange Preprocessor::DiscardUntilEndOfDirective(
 
 /// Enumerates possible cases of #define/#undef a reserved identifier.
 enum MacroDiag {
-  MD_NoWarn,        //> Not a reserved identifier
-  MD_KeywordDef,    //> Macro hides keyword, enabled by default
+  MD_NoWarn,       //> Not a reserved identifier
+  MD_KeywordDef,   //> Macro hides keyword, enabled by default
+  MD_KeywordUnDef, //> Undef keyword,  It is generally harmless and widely used,
+                   //> enabled in pedantic mode.
   MD_ReservedMacro, //> #define of #undef reserved id, disabled by default
   MD_ReservedAttributeIdentifier
 };
@@ -213,7 +215,11 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  // Do not warn on keyword undef.  It is generally harmless and widely used.
+  StringRef Text = II->getName();
+  if (II->isKeyword(Lang))
+    return MD_KeywordUnDef;
+  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
+    return MD_KeywordUnDef;
   if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
   if (isReservedCXXAttributeName(PP, II))
@@ -412,6 +418,8 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
       if (ShadowFlag)
         *ShadowFlag = true;
     }
+    if (D == MD_KeywordUnDef)
+      Diag(MacroNameTok, diag::ext_pp_macro_name_is_keyword);
     if (D == MD_ReservedMacro)
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
     if (D == MD_ReservedAttributeIdentifier)

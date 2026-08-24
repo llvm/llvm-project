@@ -448,7 +448,19 @@ C++23, informally referred to as C++26.</p>
  <tr>
    <td>Preprocessing is never undefined</td>
    <td><a href="https://wg21.link/P2843">P2843R3</a></td>
-   <td class="none" align="center">No</td>
+   <td class="partial" align="center">
+    <details>
+      <summary>Clang 24 (Partial)</summary>
+      Error-by-default warning for #define keyword;
+      Pedantic warning for #undef keyword;
+      #line is covered by P4136R2;
+      For attributes, there has been no discussions - The conservative approach is to do nothing;
+      For define in macros, the discussion doesn't seem to have reached its course yet.
+
+      The changes in this paper may break some legacy code, so we have tried to minimize the breakage
+      while providing users with clear diagnostic information to avoid introducing new undefined behaviors.
+    </details>
+  </td>
  </tr>
  <!-- Kona, Fall 2025-->
  <tr>

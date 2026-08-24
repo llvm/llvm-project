@@ -416,6 +416,13 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- `-Wkeyword-macro` is now enabled by default for `#define` directives whose
+  macro name is a keyword or an identifier with special meaning. The
+  corresponding `#undef` diagnostic is not enabled by default; it is enabled by
+  `-pedantic`, `-Wkeyword-macro`, or its more specific
+  `-Wkeyword-macro-undef` subgroup.
+
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
