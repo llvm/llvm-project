@@ -2655,6 +2655,24 @@ bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
 bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
   return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
 }
+bool RISCVTargetLowering::isFNegFree(EVT VT) const {
+  if (!VT.isFloatingPoint())
+    return false;
+  return (VT == MVT::f64 && Subtarget.is64Bit() &&
+          Subtarget.hasStdExtD() && !Subtarget.hasStdExtZdinx()) ||
+         (VT == MVT::f32 && Subtarget.hasStdExtF() && 
+          !Subtarget.hasStdExtZfinx());
+}
+
+bool RISCVTargetLowering::shouldAlwaysPerformFMANegOpt(EVT VT) const {
+  if (!VT.isFloatingPoint())
+    return false;
+  return (VT == MVT::f64 && Subtarget.is64Bit() &&
+          Subtarget.hasStdExtD() && !Subtarget.hasStdExtZdinx()) ||
+         (VT == MVT::f32 && Subtarget.hasStdExtF() && 
+          !Subtarget.hasStdExtZfinx());
+}
+
 
 bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   return Subtarget.hasCTZLike();

@@ -19962,7 +19962,8 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // fold ((fma (fneg X), Y, (fneg Z)) -> fneg (fma X, Y, Z))
   // fold ((fma X, (fneg Y), (fneg Z)) -> fneg (fma X, Y, Z))
-  if (!TLI.isFNegFree(VT))
+bool shouldPerformFMANegOpt = !TLI.isFNegFree(VT) || TLI.shouldAlwaysPerformFMANegOpt(VT);
+  if (shouldPerformFMANegOpt)
     if (SDValue Neg = TLI.getCheaperNegatedExpression(
             SDValue(N, 0), DAG, LegalOperations, ForCodeSize))
       return DAG.getNode(ISD::FNEG, DL, VT, Neg);

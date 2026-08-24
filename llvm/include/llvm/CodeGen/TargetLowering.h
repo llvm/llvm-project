@@ -3422,6 +3422,14 @@ public:
     return false;
   }
 
+  /// Return true if the target should always perform FMA negation optimizations
+  /// even when isFNegFree returns true. This is used to handle target-specific
+  /// cases where FMA negation should be performed regardless of the general 
+  /// fneg cost model. 
+  virtual bool shouldAlwaysPerformFMANegOpt(EVT VT) const {
+    return false;
+  }
+
   /// Return true if an fabs operation is free to the point where it is never
   /// worthwhile to replace it with a bitwise operation.
   virtual bool isFAbsFree(EVT VT) const {
