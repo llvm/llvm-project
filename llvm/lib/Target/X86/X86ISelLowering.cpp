@@ -22531,6 +22531,7 @@ SDValue X86TargetLowering::LRINT_LLRINTHelper(SDNode *N,
 
 static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDNode *Node = Op.getNode();
   bool IsSigned = Node->getOpcode() == ISD::FP_TO_SINT_SAT;
   SDLoc dl(SDValue(Node, 0));
@@ -22557,9 +22558,9 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
         PosOvfBoundFlt.changeSign();
         SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
         EVT CCVT =
-            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
         EVT SelCCVT =
-            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
 
         SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
         SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
@@ -22592,10 +22593,10 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                      /*IsSigned=*/false, APFloat::rmTowardZero);
         SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
         EVT CCVT =
-            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
         SDValue IsOvf = DAG.getSetCC(dl, CCVT, Clamped, OvfBound, ISD::SETOGE);
         EVT SelCCVT =
-            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
         if (CCVT != SelCCVT)
           IsOvf = DAG.getSExtOrTrunc(IsOvf, dl, SelCCVT);
         // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
@@ -22669,10 +22670,10 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     // the second operand if either is NaN).
     // Fix up NaN by selecting 0 explicitly.
     EVT CCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
     SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
     EVT SelCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
     if (CCVT != SelCCVT)
       IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
 
