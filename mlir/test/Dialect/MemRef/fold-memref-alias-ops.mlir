@@ -413,13 +413,13 @@ func.func @fold_masked_vector_transfer_write_with_rank_reducing_subview(
 func.func @fold_dynamic_subview_with_memref_load_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index, %sz0: index) -> f32 {
   %c0 = arith.constant 0 : index
   %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] nontemporal(true) : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
   return %0 : f32
 }
 // CHECK-NEXT: %[[C0:.*]] = arith.constant 0
 // CHECK-NEXT: %[[INDEX1:.*]] = affine.linearize_index disjoint [%[[C0]], %[[ARG1]]] by (1, 16)
 // CHECK-NEXT: %[[INDEX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (%[[ARG3]], 1)
-// CHECK-NEXT: %[[VAL1:.*]] = memref.load %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: %[[VAL1:.*]] = memref.load %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] nontemporal(true) : memref<16x?xf32, strided<[16, 1]>>
 // CHECK-NEXT: return %[[VAL1]] : f32
 
 // -----
@@ -430,14 +430,14 @@ func.func @fold_dynamic_subview_with_memref_store_expand_shape(%arg0 : memref<16
   %c0 = arith.constant 0 : index
   %c1f32 = arith.constant 1.0 : f32
   %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-  memref.store %c1f32, %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  memref.store %c1f32, %expand_shape[%c0, %arg1, %arg2, %c0] nontemporal(true) : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
   return
 }
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[C1F32:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK-NEXT: %[[INDEX1:.*]] = affine.linearize_index disjoint [%[[C0]], %[[ARG1]]] by (1, 16)
 // CHECK-NEXT: %[[INDEX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (%[[ARG3]], 1)
-// CHECK-NEXT: memref.store %[[C1F32]], %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: memref.store %[[C1F32]], %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] nontemporal(true) : memref<16x?xf32, strided<[16, 1]>>
 // CHECK-NEXT: return
 
 // -----
@@ -531,21 +531,21 @@ func.func @subview_of_subview_rank_reducing_no_unit_stride(%arg0: memref<8x8xf32
 // -----
 
 // CHECK-LABEL: func @fold_load_keep_nontemporal(
-//      CHECK:   memref.load %{{.+}}[%{{.+}}, %{{.+}}] {nontemporal = true}
+//      CHECK:   memref.load %{{.+}}[%{{.+}}, %{{.+}}] nontemporal(true)
 func.func @fold_load_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>
-  %1 = memref.load %0[%arg3, %arg4] {nontemporal = true }: memref<4x4xf32, strided<[64, 3], offset: ?>>
+  %1 = memref.load %0[%arg3, %arg4] nontemporal(true): memref<4x4xf32, strided<[64, 3], offset: ?>>
   return %1 : f32
 }
 
 // -----
 
 // CHECK-LABEL: func @fold_store_keep_nontemporal(
-//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}]  {nontemporal = true} : memref<12x32xf32>
+//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}] nontemporal(true) : memref<12x32xf32>
 func.func @fold_store_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : f32) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] :
     memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>
-  memref.store %arg5, %0[%arg3, %arg4] {nontemporal=true}: memref<4x4xf32, strided<[64, 3], offset: ?>>
+  memref.store %arg5, %0[%arg3, %arg4] nontemporal(true): memref<4x4xf32, strided<[64, 3], offset: ?>>
   return
 }
 
@@ -567,7 +567,7 @@ func.func @fold_prefetch_expand_shape(%src: memref<32xf32>, %i0: index, %i1: ind
 
 func.func @fold_gpu_subgroup_mma_load_matrix_1d(%src: memref<?xvector<4xf32>>, %offset: index, %i: index) -> !gpu.mma_matrix<16x16xf16, "COp"> {
   %subview = memref.subview %src[%offset] [81920] [1] : memref<?xvector<4xf32>> to memref<81920xvector<4xf32>, strided<[1], offset: ?>>
-  %matrix = gpu.subgroup_mma_load_matrix %subview[%i] {leadDimension = 160 : index} : memref<81920xvector<4xf32>, strided<[1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
+  %matrix = gpu.subgroup_mma_load_matrix %subview[%i] leadDimension 160 : memref<81920xvector<4xf32>, strided<[1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
   return %matrix: !gpu.mma_matrix<16x16xf16, "COp">
 }
 
@@ -575,14 +575,14 @@ func.func @fold_gpu_subgroup_mma_load_matrix_1d(%src: memref<?xvector<4xf32>>, %
 //      CHECK: func.func @fold_gpu_subgroup_mma_load_matrix_1d
 // CHECK-SAME: (%[[SRC:.+]]: memref<?xvector<4xf32>>, %[[OFFSET:.+]]: index, %[[I:.+]]: index)
 //      CHECK:   %[[APPLY:.+]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[I]]]
-//      CHECK:   %[[LOAD:.+]] = gpu.subgroup_mma_load_matrix %[[SRC]][%[[APPLY]]] {leadDimension = 160 : index} : memref<?xvector<4xf32>> -> !gpu.mma_matrix<16x16xf16, "COp">
+//      CHECK:   %[[LOAD:.+]] = gpu.subgroup_mma_load_matrix %[[SRC]][%[[APPLY]]] leadDimension 160 : memref<?xvector<4xf32>> -> !gpu.mma_matrix<16x16xf16, "COp">
 //      CHECK:   return %[[LOAD]]
 
 // -----
 
 func.func @fold_gpu_subgroup_mma_store_matrix_1d(%dst: memref<?xvector<4xf32>>, %offset: index, %i: index, %matrix: !gpu.mma_matrix<16x16xf16, "COp">) {
   %subview = memref.subview %dst[%offset] [81920] [1] : memref<?xvector<4xf32>> to memref<81920xvector<4xf32>, strided<[1], offset: ?>>
-  gpu.subgroup_mma_store_matrix %matrix, %subview[%i] {leadDimension = 160 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<81920xvector<4xf32>, strided<[1], offset: ?>>
+  gpu.subgroup_mma_store_matrix %matrix, %subview[%i] leadDimension 160 : !gpu.mma_matrix<16x16xf16, "COp">, memref<81920xvector<4xf32>, strided<[1], offset: ?>>
   return
 }
 
@@ -590,7 +590,7 @@ func.func @fold_gpu_subgroup_mma_store_matrix_1d(%dst: memref<?xvector<4xf32>>, 
 //      CHECK: func.func @fold_gpu_subgroup_mma_store_matrix_1d
 // CHECK-SAME: (%[[DST:.+]]: memref<?xvector<4xf32>>, %[[OFFSET:.+]]: index, %[[I0:.+]]: index, %[[VAL:.+]]: !gpu.mma_matrix<16x16xf16, "COp">)
 //      CHECK:   %[[APPLY:.+]] = affine.apply #[[MAP]]()[%[[OFFSET]], %[[I0]]]
-//      CHECK:   gpu.subgroup_mma_store_matrix %[[VAL]], %[[DST]][%[[APPLY]]] {leadDimension = 160 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<?xvector<4xf32>>
+//      CHECK:   gpu.subgroup_mma_store_matrix %[[VAL]], %[[DST]][%[[APPLY]]] leadDimension 160 : !gpu.mma_matrix<16x16xf16, "COp">, memref<?xvector<4xf32>>
 
 // -----
 
@@ -598,8 +598,8 @@ func.func @fold_gpu_subgroup_mma_store_matrix_1d(%dst: memref<?xvector<4xf32>>, 
 //  CHECK-SAME: %[[SRC:.+]]: memref<128x128xf32>
 func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> !gpu.mma_matrix<16x16xf16, "COp"> {
   %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[256, 1], offset: ?>>
-  // CHECK: gpu.subgroup_mma_load_matrix %[[SRC]][{{.+}}] {leadDimension = 32 : index} : memref<128x128xf32> -> !gpu.mma_matrix<16x16xf16, "COp">
-  %matrix = gpu.subgroup_mma_load_matrix %subview[%arg3, %arg4] {leadDimension = 32 : index} : memref<64x32xf32, strided<[256, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %[[SRC]][{{.+}}] leadDimension 32 : memref<128x128xf32> -> !gpu.mma_matrix<16x16xf16, "COp">
+  %matrix = gpu.subgroup_mma_load_matrix %subview[%arg3, %arg4] leadDimension 32 : memref<64x32xf32, strided<[256, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
   return %matrix : !gpu.mma_matrix<16x16xf16, "COp">
 }
 
@@ -609,8 +609,8 @@ func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %ar
 //  CHECK-SAME: %[[DST:.+]]: memref<128x128xf32>
 func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %matrix: !gpu.mma_matrix<16x16xf16, "COp">) {
   %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[256, 1], offset: ?>>
-  // CHECK: gpu.subgroup_mma_store_matrix %{{.+}}, %[[DST]][{{.+}}] {leadDimension = 32 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf32>
-  gpu.subgroup_mma_store_matrix %matrix, %subview[%arg3, %arg4] {leadDimension = 32 : index} :  !gpu.mma_matrix<16x16xf16, "COp">, memref<64x32xf32, strided<[256, 1], offset: ?>>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.+}}, %[[DST]][{{.+}}] leadDimension 32 : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf32>
+  gpu.subgroup_mma_store_matrix %matrix, %subview[%arg3, %arg4] leadDimension 32 :  !gpu.mma_matrix<16x16xf16, "COp">, memref<64x32xf32, strided<[256, 1], offset: ?>>
   return
 }
 
@@ -743,7 +743,7 @@ func.func @fold_vector_load_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  %1 = vector.load %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1, %c0] nontemporal = true : memref<4x8xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -752,7 +752,7 @@ func.func @fold_vector_load_expand_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
-//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] {nontemporal = true}
+//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] nontemporal = true
 
 // -----
 
@@ -870,7 +870,7 @@ func.func @fold_vector_store_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %val : vector<8xf32>) {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  vector.store %val, %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1, %c0] nontemporal = true : memref<4x8xf32>, vector<8xf32>
   return
 }
 
@@ -879,7 +879,7 @@ func.func @fold_vector_store_expand_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] {nontemporal = true}
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] nontemporal = true
 
 // -----
 
@@ -1131,7 +1131,7 @@ func.func @fold_vector_transfer_read_rank_mismatch(
 func.func @fold_memref_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> f32 {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  %1 = memref.load %0[%arg1] {nontemporal = true} : memref<32xf32>
+  %1 = memref.load %0[%arg1] nontemporal(true) : memref<32xf32>
   return %1 : f32
 }
 
@@ -1139,14 +1139,14 @@ func.func @fold_memref_load_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
-//       CHECK:   memref.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   memref.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal(true)
 
 // -----
 
 func.func @fold_vector_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  %1 = vector.load %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1] nontemporal = true : memref<32xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -1154,7 +1154,7 @@ func.func @fold_vector_load_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
-//       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal = true
 
 // -----
 
@@ -1178,7 +1178,7 @@ func.func @fold_vector_maskedload_collapse_shape(
 func.func @fold_memref_store_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index, %val : f32) {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  memref.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>
+  memref.store %val, %0[%arg1] nontemporal(true) : memref<32xf32>
   return
 }
 
@@ -1186,14 +1186,14 @@ func.func @fold_memref_store_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
-//       CHECK:   memref.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   memref.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal(true)
 
 // -----
 
 func.func @fold_vector_store_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index, %val : vector<8xf32>) {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  vector.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1] nontemporal = true : memref<32xf32>, vector<8xf32>
   return
 }
 
@@ -1201,7 +1201,7 @@ func.func @fold_vector_store_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal = true
 
 // -----
 

@@ -1405,9 +1405,7 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
 
       // (X * C1) / C2 -> (X * (C1/D)) / (C2/D) if D = gcd(C1, C2) > 1.
       if (Op0->hasOneUse()) {
-        APInt GCD = IsSigned
-                        ? APIntOps::GreatestCommonDivisor(C1->abs(), C2->abs())
-                        : APIntOps::GreatestCommonDivisor(*C1, *C2);
+        APInt GCD = APIntOps::GreatestCommonDivisor(*C1, *C2, IsSigned);
         if (GCD.ugt(1)) {
           APInt NewC1 = IsSigned ? C1->sdiv(GCD) : C1->udiv(GCD);
           APInt NewC2 = IsSigned ? C2->sdiv(GCD) : C2->udiv(GCD);
@@ -1825,6 +1823,20 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
         BO->setIsExact();
       return BO;
     }
+  }
+
+  // (X udiv Y) udiv Z --> X udiv (Y * Z), if Y * Z does not overflow.
+  // This is the variable-operand version of the (X / C1) / C2 fold in
+  // commonIDivTransforms().
+  Value *Y;
+  if (match(Op0, m_OneUse(m_UDiv(m_Value(X), m_Value(Y)))) &&
+      willNotOverflowUnsignedMul(Y, Op1, I)) {
+    Value *YZ = Builder.CreateNUWMul(Y, Op1);
+    auto *NewDiv = BinaryOperator::CreateUDiv(X, YZ);
+    // The result is exact only if both of the original divides are exact.
+    if (I.isExact() && cast<PossiblyExactOperator>(Op0)->isExact())
+      NewDiv->setIsExact();
+    return NewDiv;
   }
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)

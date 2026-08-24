@@ -276,9 +276,11 @@ llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
   if (Width) {
-    std::optional<int> IsScalable = getOptionalIntLoopAttribute(
-        TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width, IsScalable.value_or(false));
+    // Presence of the scalable.enable unit node means a scalable ElementCount;
+    // disable or absence both mean fixed-width.
+    bool IsScalable =
+        getBooleanLoopAttribute(TheLoop, "llvm.loop.vectorize.scalable.enable");
+    return ElementCount::get(*Width, IsScalable);
   }
 
   return std::nullopt;
@@ -1616,15 +1618,50 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
+static Intrinsic::ID getVPReductionIntrinsicID(Intrinsic::ID Id) {
+  switch (Id) {
+  default:
+    llvm_unreachable("Unexpected reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+    return Intrinsic::vp_reduce_add;
+  case Intrinsic::vector_reduce_mul:
+    return Intrinsic::vp_reduce_mul;
+  case Intrinsic::vector_reduce_and:
+    return Intrinsic::vp_reduce_and;
+  case Intrinsic::vector_reduce_or:
+    return Intrinsic::vp_reduce_or;
+  case Intrinsic::vector_reduce_xor:
+    return Intrinsic::vp_reduce_xor;
+  case Intrinsic::vector_reduce_smax:
+    return Intrinsic::vp_reduce_smax;
+  case Intrinsic::vector_reduce_smin:
+    return Intrinsic::vp_reduce_smin;
+  case Intrinsic::vector_reduce_umax:
+    return Intrinsic::vp_reduce_umax;
+  case Intrinsic::vector_reduce_umin:
+    return Intrinsic::vp_reduce_umin;
+  case Intrinsic::vector_reduce_fmax:
+    return Intrinsic::vp_reduce_fmax;
+  case Intrinsic::vector_reduce_fmin:
+    return Intrinsic::vp_reduce_fmin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return Intrinsic::vp_reduce_fmaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return Intrinsic::vp_reduce_fminimum;
+  case Intrinsic::vector_reduce_fadd:
+    return Intrinsic::vp_reduce_fadd;
+  case Intrinsic::vector_reduce_fmul:
+    return Intrinsic::vp_reduce_fmul;
+  }
+}
+
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
@@ -1650,9 +1687,7 @@ Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Ops[] = {Start, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);

@@ -286,13 +286,19 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVUImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "c.lbu a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLeafOp<int bitsNum> : RISCVUImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<UImmAsmOperand<bitsNum>>;
+}
+
 // A N-bit unsigned immediate where the least significant bits are zero.
 class RISCVUImmLsbZeroOp<int width, int zeros>
     : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
                        [{, }] # zeros # [{>(Imm);}]> {
 
   // Create suffix with the appropriate number of 0s to append to all names
-  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+  string Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
 
   let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
   let EncoderMethod = "getImmOpValue";
@@ -305,6 +311,14 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
       return false;
     return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
   }];
+}
+
+// Variant of RISCVUImmLsbZeroOp for memory-operand offsets that may be
+// omitted entirely, e.g. "c.lw a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLsbZeroOp<int width, int zeros>
+    : RISCVUImmLsbZeroOp<width, zeros> {
+  let ParserMatchClass =
+      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix>>;
 }
 
 class RISCVSImmOp<int bitsNum> : RISCVOp {
@@ -386,6 +400,7 @@ def uimm64 : RISCVUImmOp<64>;
 def simm12 : RISCVSImmLeafOp<12>;
 
 class Simm12LoOp : RISCVSImmLeafOp<12> {
+  let DecoderMethod = "decodeSImm12LoOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -441,6 +456,7 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
+  let DecoderMethod = "decodeUImm20Operand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -1694,22 +1710,23 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
              (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
+// The condition codes that can be compressed to c.beqz/c.bnez.
+def CompressibleCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
-
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
-                          (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
-                                                 (NegImm simm12_lo:$Constant))),
-                                   (XLenVT X0),
-                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
 let Predicates = [HasStdExtZca, OptForMinSize] in {
-  def : SelectCompressOpt<SETEQ>;
-  def : SelectCompressOpt<SETNE>;
+  def  : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, CompressibleCond:$cc,
+                             (XLenVT GPR:$truev), GPR:$falsev),
+             (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                    (NegImm simm12_lo:$Constant))),
+                                      (XLenVT X0),
+                                      (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 }
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
@@ -2400,6 +2417,7 @@ include "RISCVInstrInfoZilx.td"
 
 // Privileged
 include "RISCVInstrInfoSmcsps.td"
+include "RISCVInstrInfoSmip.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"

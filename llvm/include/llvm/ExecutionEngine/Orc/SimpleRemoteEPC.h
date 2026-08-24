@@ -80,9 +80,6 @@ private:
                   std::unique_ptr<TaskDispatcher> D)
       : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
 
-  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-  createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
-
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 

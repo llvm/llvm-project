@@ -2,7 +2,7 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 // A union ConstRecordAttr has exactly one element, whose type must be one of
 // the union's member types (the active member). The active member may be any

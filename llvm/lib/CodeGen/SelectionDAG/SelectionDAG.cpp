@@ -350,7 +350,7 @@ bool ISD::isFreezeUndef(const SDNode *N) {
 }
 
 template <typename ConstNodeType>
-bool ISD::matchUnaryPredicateImpl(SDValue Op,
+bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
                                   std::function<bool(ConstNodeType *)> Match,
                                   bool AllowUndefs, bool AllowTruncation) {
   // FIXME: Add support for scalar UNDEF cases?
@@ -362,8 +362,14 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op,
       ISD::SPLAT_VECTOR != Op.getOpcode())
     return false;
 
+  if (ISD::SPLAT_VECTOR == Op.getOpcode() && !DemandedElts)
+    return true;
+
   EVT SVT = Op.getValueType().getScalarType();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+    if (ISD::SPLAT_VECTOR != Op.getOpcode() && !DemandedElts[i])
+      continue;
+
     if (AllowUndefs && Op.getOperand(i).isUndef()) {
       if (!Match(nullptr))
         return false;
@@ -379,12 +385,13 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op,
 }
 // Build used template types.
 template bool ISD::matchUnaryPredicateImpl<ConstantSDNode>(
-    SDValue, std::function<bool(ConstantSDNode *)>, bool, bool);
+    SDValue, const APInt &, std::function<bool(ConstantSDNode *)>, bool, bool);
 template bool ISD::matchUnaryPredicateImpl<ConstantFPSDNode>(
-    SDValue, std::function<bool(ConstantFPSDNode *)>, bool, bool);
+    SDValue, const APInt &, std::function<bool(ConstantFPSDNode *)>, bool,
+    bool);
 
 bool ISD::matchBinaryPredicate(
-    SDValue LHS, SDValue RHS,
+    SDValue LHS, SDValue RHS, const APInt &DemandedElts,
     std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
     bool AllowUndefs, bool AllowTypeMismatch) {
   if (!AllowTypeMismatch && LHS.getValueType() != RHS.getValueType())
@@ -401,8 +408,13 @@ bool ISD::matchBinaryPredicate(
        LHS.getOpcode() != ISD::SPLAT_VECTOR))
     return false;
 
+  if (ISD::SPLAT_VECTOR == LHS.getOpcode() && !DemandedElts)
+    return true;
+
   EVT SVT = LHS.getValueType().getScalarType();
   for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
+    if (ISD::SPLAT_VECTOR != LHS.getOpcode() && !DemandedElts[i])
+      continue;
     SDValue LHSOp = LHS.getOperand(i);
     SDValue RHSOp = RHS.getOperand(i);
     bool LHSUndef = AllowUndefs && LHSOp.isUndef();
@@ -1649,25 +1661,6 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
 }
 
-SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
-                                           SDValue EVL, const SDLoc &DL,
-                                           EVT VT) {
-  EVT OpVT = Op.getValueType();
-  assert(VT.isInteger() && OpVT.isInteger() &&
-         "Cannot getVPZeroExtendInReg FP types");
-  assert(VT.isVector() && OpVT.isVector() &&
-         "getVPZeroExtendInReg type and operand type should be vector!");
-  assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
-         "Vector element counts must match in getZeroExtendInReg");
-  assert(VT.getScalarType().bitsLE(OpVT.getScalarType()) && "Not extending!");
-  if (OpVT == VT)
-    return Op;
-  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
-                                   VT.getScalarSizeInBits());
-  return getNode(ISD::VP_AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT), Mask,
-                 EVL);
-}
-
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
   // Only unsigned pointer semantics are supported right now. In the future this
   // might delegate to TLI to check pointer signedness.
@@ -1692,26 +1685,6 @@ SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
 SDValue SelectionDAG::getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
   return getNode(ISD::XOR, DL, VT, Val, TrueValue);
-}
-
-SDValue SelectionDAG::getVPLogicalNOT(const SDLoc &DL, SDValue Val,
-                                      SDValue Mask, SDValue EVL, EVT VT) {
-  SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
-  return getNode(ISD::VP_XOR, DL, VT, Val, TrueValue, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                         SDValue Mask, SDValue EVL) {
-  return getVPZExtOrTrunc(DL, VT, Op, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                       SDValue Mask, SDValue EVL) {
-  if (VT.bitsGT(Op.getValueType()))
-    return getNode(ISD::VP_ZERO_EXTEND, DL, VT, Op, Mask, EVL);
-  if (VT.bitsLT(Op.getValueType()))
-    return getNode(ISD::VP_TRUNCATE, DL, VT, Op, Mask, EVL);
-  return Op;
 }
 
 SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
@@ -3395,6 +3368,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::FREEZE: {
+    if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
+                                         UndefPoisonKind::UndefOrPoison))
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    break;
+  }
   case ISD::MERGE_VALUES:
     return computeKnownBits(Op.getOperand(Op.getResNo()), DemandedElts,
                             Depth + 1);
@@ -3452,6 +3431,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
+      if (SrcOp.getOpcode() == ISD::POISON)
+        continue;
+
       Known2 = computeKnownBits(SrcOp, Depth + 1);
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
@@ -3468,6 +3450,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     }
+
+    // If every demanded element was poison, we know nothing.
+    if (Known.hasConflict())
+      Known.resetAll();
     break;
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
@@ -4766,26 +4752,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   };
 
   // Is the constant a known power of 2 or zero?
-  if (ISD::matchUnaryPredicate(Val, IsPowerOfTwoOrZero))
+  if (ISD::matchUnaryPredicate(Val, DemandedElts, IsPowerOfTwoOrZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   switch (Val.getOpcode()) {
-  case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant powers of two or zero?
-    if (all_of(enumerate(Val->ops()), [&](auto P) {
-          auto *C = dyn_cast<ConstantSDNode>(P.value());
-          return !DemandedElts[P.index()] || (C && IsPowerOfTwoOrZero(C));
-        }))
-      return true;
-    break;
-
-  case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant power of two?
-    if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
-      if (IsPowerOfTwoOrZero(C))
-        return true;
-    break;
-
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Val.getOperand(0);
     SDValue EltNo = Val.getOperand(1);
@@ -6575,29 +6546,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return !V.isZero();
   };
 
-  if (ISD::matchUnaryPredicate(Op, IsNeverZero))
+  if (ISD::matchUnaryPredicate(Op, DemandedElts, IsNeverZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
   // some degree.
   switch (Op.getOpcode()) {
   default:
-    break;
-
-  case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant non-zero?
-    if (all_of(enumerate(Op->ops()), [&](auto P) {
-          auto *C = dyn_cast<ConstantSDNode>(P.value());
-          return !DemandedElts[P.index()] || (C && IsNeverZero(C));
-        }))
-      return true;
-    break;
-
-  case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant non-zero?
-    if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
-      if (IsNeverZero(C))
-        return true;
     break;
 
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -9196,13 +9152,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::BITCAST:
     // Fold bit_convert nodes from a type to themselves.
-    if (N1.getValueType() == VT)
-      return N1;
-    break;
-  case ISD::VP_TRUNCATE:
-  case ISD::VP_SIGN_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
-    // Don't create noop casts.
     if (N1.getValueType() == VT)
       return N1;
     break;
@@ -12017,17 +11966,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(NumOps == 5 && "BR_CC takes 5 operands!");
     assert(Ops[2].getValueType() == Ops[3].getValueType() &&
            "LHS/RHS of comparison should match types!");
-    break;
-  case ISD::VP_ADD:
-  case ISD::VP_SUB:
-    // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_XOR;
-    break;
-  case ISD::VP_MUL:
-    // If it is VP_MUL mask operation then turn it to VP_AND
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_AND;
     break;
   case ISD::VP_REDUCE_MUL:
     // If it is VP_REDUCE_MUL mask operation then turn it to VP_REDUCE_AND

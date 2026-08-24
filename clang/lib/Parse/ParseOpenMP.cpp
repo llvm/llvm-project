@@ -63,6 +63,9 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
                                                     StringRef Name) {
   unsigned Version = P.getLangOpts().OpenMP;
   auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
+  // "ORDERED" is parsed as OMPD_ordered_standalone.
+  if (D == Directive::OMPD_ordered_blockassoc)
+    D = Directive::OMPD_ordered_standalone;
   assert(D == Kind && "Directive kind mismatch");
   // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
   // are explicitly allowed.
@@ -2211,6 +2214,17 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
           << (DKind == OMPD_declare_simd ? 0 : 1);
       return DeclGroupPtrTy();
     }
+
+    DeclGroupRef DG = Ptr.get();
+    SourceManager &SM = PP.getSourceManager();
+    if (llvm::none_of(DG, [&](const Decl *D) {
+          return SM.isBeforeInTranslationUnit(Loc, D->getBeginLoc());
+        })) {
+      Diag(Loc, diag::err_omp_decl_in_declare_simd_variant)
+          << (DKind == OMPD_declare_simd ? 0 : 1);
+      return DeclGroupPtrTy();
+    }
+
     if (DKind == OMPD_declare_simd)
       return ParseOMPDeclareSimdClauses(Ptr, Toks, Loc);
     assert(DKind == OMPD_declare_variant &&
@@ -2294,11 +2308,9 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
   bool HasAssociatedStatement = true;
   Association Assoc = getDirectiveAssociation(DKind);
 
-  // OMPD_ordered has None as association, but it comes in two variants,
-  // the second of which is associated with a block.
   // OMPD_scan and OMPD_section are both "separating", but section is treated
   // as if it was associated with a statement, while scan is not.
-  if (DKind != OMPD_ordered && DKind != OMPD_section &&
+  if (DKind != OMPD_ordered_standalone && DKind != OMPD_section &&
       (Assoc == Association::None || Assoc == Association::Separating)) {
     if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
@@ -2417,7 +2429,9 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
   // Consume final annot_pragma_openmp_end.
   ConsumeAnnotationToken();
 
-  if (DKind == OMPD_ordered) {
+  assert(DKind != OMPD_ordered_blockassoc &&
+         "Wrong kind for ordered directive");
+  if (DKind == OMPD_ordered_standalone) {
     // If the depend or doacross clause is specified, the ordered construct
     // is a stand-alone directive.
     for (auto CK : {OMPC_depend, OMPC_doacross}) {
@@ -2431,6 +2445,9 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
         HasAssociatedStatement = false;
       }
     }
+
+    if (HasAssociatedStatement)
+      DKind = OMPD_ordered_blockassoc;
   }
 
   if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
@@ -3224,14 +3241,27 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   bool WrongDirective = false;
   unsigned OMPVersion = Actions.getLangOpts().OpenMP;
 
-  // Check if clause is allowed for the given directive.
-  if (CKind != OMPC_unknown &&
-      !isAllowedClauseForDirective(DKind, CKind, getLangOpts().OpenMP)) {
-    Diag(Tok, diag::err_omp_unexpected_clause)
-        << getOpenMPClauseName(CKind)
-        << getOpenMPDirectiveName(DKind, OMPVersion);
-    ErrorFound = true;
-    WrongDirective = true;
+  auto CheckClauseValid = [&](OpenMPDirectiveKind D, OpenMPClauseKind C) {
+    if (!isAllowedClauseForDirective(D, C, OMPVersion)) {
+      Diag(Tok, diag::err_omp_unexpected_clause)
+          << getOpenMPClauseName(C) << getOpenMPDirectiveName(D, OMPVersion);
+      ErrorFound = true;
+      WrongDirective = true;
+    }
+  };
+
+  if (CKind != OMPC_unknown) {
+    // Check if clause is allowed for the given directive.
+    assert(DKind != OMPD_ordered_blockassoc &&
+           "Wrong kind for ordered directive");
+    if (DKind == OMPD_ordered_standalone) {
+      // Initially OMPD_ordered_standalone is used for ORDERED, before the
+      // actual kind can be determined.
+      if (!isAllowedClauseForDirective(DKind, CKind, OMPVersion))
+        CheckClauseValid(OMPD_ordered_blockassoc, CKind);
+    } else {
+      CheckClauseValid(DKind, CKind);
+    }
   }
 
   switch (CKind) {
@@ -3475,7 +3505,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_affinity:
   case OMPC_doacross:
   case OMPC_enter:
-    if (getLangOpts().OpenMP >= 52 && DKind == OMPD_ordered &&
+    if (getLangOpts().OpenMP >= 52 && DKind == OMPD_ordered_standalone &&
         CKind == OMPC_depend)
       Diag(Tok, diag::warn_omp_depend_in_ordered_deprecated);
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
@@ -3767,9 +3797,10 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
   bool IsTargetSync = false;
 
   while (Tok.is(tok::identifier)) {
-    // Currently prefer_type is only allowed with 'init' and it must be first.
-    bool PreferTypeAllowed = Kind == OMPC_init && InteropInfo.Prefs.empty() &&
-                             !IsTarget && !IsTargetSync;
+    // prefer_type is allowed with 'init' and 'append_args' and must be first.
+    bool PreferTypeAllowed = (Kind == OMPC_init || Kind == OMPC_append_args) &&
+                             InteropInfo.Prefs.empty() && !IsTarget &&
+                             !IsTargetSync;
     if (Tok.getIdentifierInfo()->isStr("target")) {
       // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
       // Each interop-type may be specified on an action-clause at most
@@ -3785,6 +3816,10 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       ConsumeToken();
     } else if (Tok.getIdentifierInfo()->isStr("prefer_type") &&
                PreferTypeAllowed) {
+      if (Kind == OMPC_append_args && getLangOpts().OpenMP < 60) {
+        Diag(Tok, diag::err_omp_append_args_prefer_type_60);
+        HasError = true;
+      }
       ConsumeToken();
       BalancedDelimiterTracker PT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
@@ -5001,7 +5036,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     } else {
       ConsumeToken();
       // Special processing for depend(source) clause.
-      if (DKind == OMPD_ordered && Kind == OMPC_depend &&
+      if (DKind == OMPD_ordered_standalone && Kind == OMPC_depend &&
           Data.ExtraModifier == OMPC_DEPEND_source) {
         // Parse ')'.
         T.consumeClose();
@@ -5011,8 +5046,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     if (Tok.is(tok::colon)) {
       Data.ColonLoc = ConsumeToken();
     } else if (Kind != OMPC_doacross || Tok.isNot(tok::r_paren)) {
-      Diag(Tok, DKind == OMPD_ordered ? diag::warn_pragma_expected_colon_r_paren
-                                      : diag::warn_pragma_expected_colon)
+      Diag(Tok, DKind == OMPD_ordered_standalone
+                    ? diag::warn_pragma_expected_colon_r_paren
+                    : diag::warn_pragma_expected_colon)
           << (Kind == OMPC_depend ? "dependency type" : "dependence-type");
     }
     if (Kind == OMPC_doacross) {

@@ -938,6 +938,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
       AttributedTypes(this_()), DependentBitIntTypes(this_()),
+      HLSLAttributedResourceTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
       ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
       SourceMgr(SM), LangOpts(LOpts),
@@ -3373,13 +3374,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
 }
 
 uint16_t
-ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                     bool IsVTTEntry) {
   assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
+
   std::unique_ptr<MangleContext> MC(createMangleContext());
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
   MC->mangleCXXVTable(RD, Out);
+  if (IsVTTEntry)
+    Out << VTTVTablePointerDiscriminatorSuffix;
   return llvm::getPointerAuthStableSipHash(Str);
 }
 
@@ -5804,7 +5809,7 @@ QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
 
 QualType ASTContext::getAttributedType(NullabilityKind nullability,
                                        QualType modifiedType,
-                                       QualType equivalentType) {
+                                       QualType equivalentType) const {
   switch (nullability) {
   case NullabilityKind::NonNull:
     return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
@@ -5897,7 +5902,7 @@ QualType ASTContext::getHLSLAttributedResourceType(
     const HLSLAttributedResourceType::Attributes &Attrs) {
 
   llvm::FoldingSetNodeID ID;
-  HLSLAttributedResourceType::Profile(ID, Wrapped, Contained, Attrs);
+  HLSLAttributedResourceType::Profile(ID, *this, Wrapped, Contained, Attrs);
 
   void *InsertPos = nullptr;
   HLSLAttributedResourceType *Ty =
@@ -6908,10 +6913,10 @@ ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
 QualType
 ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
                         AutoTypeKeyword Keyword,
-                        TemplateDecl *TypeConstraintConcept,
+                        TemplateName TypeConstraintConcept,
                         ArrayRef<TemplateArgument> TypeConstraintArgs) const {
   if (DK == DeducedKind::Undeduced && Keyword == AutoTypeKeyword::Auto &&
-      !TypeConstraintConcept) {
+      TypeConstraintConcept.isNull()) {
     assert(DeducedAsType.isNull() && "");
     assert(TypeConstraintArgs.empty() && "");
     return getAutoDeductType();
@@ -6928,10 +6933,10 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
     assert(!DeducedAsType.isNull() && "deduced type must be provided");
   } else {
     assert(DeducedAsType.isNull() && "deduced type must not be provided");
-    if (TypeConstraintConcept) {
+    if (!TypeConstraintConcept.isNull()) {
       bool AnyNonCanonArgs = false;
-      auto *CanonicalConcept =
-          cast<TemplateDecl>(TypeConstraintConcept->getCanonicalDecl());
+      TemplateName CanonicalConcept =
+          getCanonicalTemplateName(TypeConstraintConcept);
       auto CanonicalConceptArgs = ::getCanonicalTemplateArguments(
           *this, TypeConstraintArgs, AnyNonCanonArgs);
       if (TypeConstraintConcept != CanonicalConcept || AnyNonCanonArgs)
@@ -7052,12 +7057,12 @@ QualType ASTContext::getAtomicType(QualType T) const {
 /// getAutoDeductType - Get type pattern for deducing against 'auto'.
 QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
-    AutoDeductTy = QualType(new (*this, alignof(AutoType))
-                                AutoType(DeducedKind::Undeduced, QualType(),
-                                         AutoTypeKeyword::Auto,
-                                         /*TypeConstraintConcept=*/nullptr,
-                                         /*TypeConstraintArgs=*/{}),
-                            0);
+    AutoDeductTy = QualType(
+        new (*this, alignof(AutoType))
+            AutoType(DeducedKind::Undeduced, QualType(), AutoTypeKeyword::Auto,
+                     /*TypeConstraintConcept=*/TemplateName(),
+                     /*TypeConstraintArgs=*/{}),
+        0);
   return AutoDeductTy;
 }
 
@@ -7551,8 +7556,8 @@ bool ASTContext::isSameTypeConstraint(const TypeConstraint *XTC,
   if (!XTC)
     return true;
 
-  auto *NCX = XTC->getNamedConcept();
-  auto *NCY = YTC->getNamedConcept();
+  TemplateDecl *NCX = XTC->getNamedConcept().getAsTemplateDecl();
+  TemplateDecl *NCY = YTC->getNamedConcept().getAsTemplateDecl();
   if (!NCX || !NCY || !isSameEntity(NCX, NCY))
     return false;
   if (XTC->getConceptReference()->hasExplicitTemplateArgs() !=
@@ -8204,8 +8209,7 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
-                                                               Result, Result);
+    Result = getAttributedType(*Nullability, Result, Result);
   }
   return Result;
 }
@@ -14439,8 +14443,9 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     assert(AX->getDeducedKind() == AY->getDeducedKind());
     assert(AX->getDeducedKind() != DeducedKind::Deduced);
     assert(AX->getKeyword() == AY->getKeyword());
-    TemplateDecl *CD = ::getCommonDecl(AX->getTypeConstraintConcept(),
-                                       AY->getTypeConstraintConcept());
+    TemplateDecl *CD =
+        ::getCommonDecl(AX->getTypeConstraintConcept().getAsTemplateDecl(),
+                        AY->getTypeConstraintConcept().getAsTemplateDecl());
     SmallVector<TemplateArgument, 8> As;
     if (CD &&
         getCommonTemplateArguments(Ctx, As, AX->getTypeConstraintArguments(),
@@ -14449,7 +14454,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
       As.clear();
     }
     return Ctx.getAutoType(AX->getDeducedKind(), QualType(), AX->getKeyword(),
-                           CD, As);
+                           TemplateName(CD), As);
   }
   case Type::IncompleteArray: {
     const auto *AX = cast<IncompleteArrayType>(X),
@@ -14830,8 +14835,9 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     if (KW != AY->getKeyword())
       return QualType();
 
-    TemplateDecl *CD = ::getCommonDecl(AX->getTypeConstraintConcept(),
-                                       AY->getTypeConstraintConcept());
+    TemplateDecl *CD =
+        ::getCommonDecl(AX->getTypeConstraintConcept().getAsTemplateDecl(),
+                        AY->getTypeConstraintConcept().getAsTemplateDecl());
     SmallVector<TemplateArgument, 8> As;
     if (CD &&
         getCommonTemplateArguments(Ctx, As, AX->getTypeConstraintArguments(),
@@ -14844,7 +14850,7 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     // sugar. This implies they can't contain unexpanded packs either.
     return Ctx.getAutoType(DeducedKind::Deduced,
                            Ctx.getQualifiedType(Underlying), AX->getKeyword(),
-                           CD, As);
+                           TemplateName(CD), As);
   }
   case Type::PackIndexing:
   case Type::Decltype:
@@ -15726,4 +15732,286 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
     return;
   if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
     PFPFieldsWithEvaluatedOffset.insert(FD);
+}
+
+namespace {
+// PaddingCalculator is a utility class that calculates the padding bits in a
+// c/c++ type. It traverses the type recursively, collecting occupied
+// bit intervals, and then computes the padding intervals.
+// If a byte only contains some padding bits, it gets intervals for only those
+// bits. This is the case for bit-fields.
+struct PaddingCalculator {
+  PaddingCalculator(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  void run(QualType Ty) {
+    OccuppiedIntervals.clear();
+    Stack.clear();
+
+    TySizeInBits = Ctx.getTypeSize(Ty);
+
+    Stack.push_back(Data{0, Ty.getCanonicalType(), true});
+    while (!Stack.empty()) {
+      Data Current = Stack.back();
+      Stack.pop_back();
+      Visit(Current);
+    }
+    MergeOccuppiedIntervals();
+  }
+
+  llvm::SmallVector<ASTContext::BitInterval> GetPaddingIntervals() {
+    llvm::SmallVector<ASTContext::BitInterval> Results;
+    if (OccuppiedIntervals.size() == 1 &&
+        OccuppiedIntervals.front().First == 0 &&
+        OccuppiedIntervals.front().Last == TySizeInBits) {
+      return Results;
+    }
+    Results.reserve(OccuppiedIntervals.size() + 1);
+    uint64_t CurrentPos = 0;
+    for (const ASTContext::BitInterval &OccupiedInterval : OccuppiedIntervals) {
+      if (OccupiedInterval.First > CurrentPos) {
+        Results.push_back(
+            ASTContext::BitInterval{CurrentPos, OccupiedInterval.First});
+      }
+      CurrentPos = OccupiedInterval.Last;
+    }
+    if (TySizeInBits > CurrentPos) {
+      Results.push_back(ASTContext::BitInterval{CurrentPos, TySizeInBits});
+    }
+    return Results;
+  }
+
+private:
+  struct Data {
+    uint64_t StartBitOffset;
+    QualType Ty;
+    bool VisitVirtualBase;
+  };
+
+  // Return the number of non padding bits of a scalar type.
+  //
+  // The property that we specifically care about here is whether the scalar
+  // type has padding bits, i.e. are there bits in the type which are not
+  // specified by the ABI.
+  //
+  // We currently don't care about this anywhere else in clang: layout cares
+  // about the ABI size, calling convention code cares about specific types,
+  // but nothing cares about padding specifically. And it's not something we can
+  // easily query from LLVM due to the type system mismatches.
+  // DL.getTypeSizeInBits(convertTypeForLoadStore(T)) is probably close, but the
+  // DataLayout methods aren't really designed for this usage.
+  //
+  // Therefore, it is better to explicitly list all the scalar types
+  // containing padding bits that we know of, namely, _BitInt(N) and x87 long
+  // double.
+  //
+  // FIXME: There are likely other scalar types we need to think about here, as
+  // brought up in review for #215823:
+  //  - bool
+  //  - enums(both with/without fixed underlying type)
+  //  - nullptr_t
+  //  - more?
+  uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
+    if (const auto *BIT = Ty->getAs<BitIntType>())
+      return BIT->getNumBits();
+
+    if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Ctx.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return llvm::APFloat::getSizeInBits(
+            Ctx.getTargetInfo().getLongDoubleFormat());
+    }
+
+    return Ctx.getTypeSize(Ty);
+  }
+
+  void Visit(const Data &D) {
+    if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
+      VisitArray(AT, D.StartBitOffset);
+      return;
+    }
+
+    if (auto *Record = D.Ty->getAsRecordDecl()) {
+      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      return;
+    }
+
+    if (D.Ty->isAtomicType()) {
+      auto Unwrapped = D;
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType().getCanonicalType();
+      Stack.push_back(Unwrapped);
+      return;
+    }
+
+    if (const auto *Complex = D.Ty->getAs<ComplexType>()) {
+      VisitComplex(Complex, D.StartBitOffset);
+      return;
+    }
+
+    if (const auto *VT = D.Ty->getAs<clang::VectorType>()) {
+      VisitVector(VT, D.StartBitOffset);
+      return;
+    }
+
+    uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
+    OccuppiedIntervals.push_back(
+        ASTContext::BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
+  }
+
+  void VisitArray(const ConstantArrayType *AT, uint64_t StartBitOffset) {
+    for (uint64_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
+         ++ArrIndex) {
+
+      QualType ElementQualType = AT->getElementType();
+      auto ElementSize = Ctx.getTypeSizeInChars(ElementQualType);
+      auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
+      auto Offset = ElementSize.alignTo(ElementAlign);
+
+      Stack.push_back(Data{
+          StartBitOffset + ArrIndex * Offset.getQuantity() * Ctx.getCharWidth(),
+          ElementQualType.getCanonicalType(), /*VisitVirtualBase*/ true});
+    }
+  }
+
+  void VisitStruct(const RecordDecl *R, uint64_t StartBitOffset,
+                   bool VisitVirtualBase) {
+    const ASTRecordLayout &ASTLayout = Ctx.getASTRecordLayout(R);
+    auto *CXXRecord = dyn_cast<CXXRecordDecl>(R);
+
+    unsigned PointerSizeInBits = Ctx.getTypeSize(Ctx.NullPtrTy);
+
+    if (CXXRecord) {
+      if (ASTLayout.hasOwnVFPtr()) {
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartBitOffset, StartBitOffset + PointerSizeInBits});
+      }
+
+      if (ASTLayout.hasOwnVBPtr()) {
+        auto Offset = ASTLayout.getVBPtrOffset().getQuantity();
+        auto StartVBPtr = StartBitOffset + Offset * Ctx.getCharWidth();
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartVBPtr, StartVBPtr + PointerSizeInBits});
+      }
+
+      const auto VisitBase = [&ASTLayout, StartBitOffset, this](
+                                 const CXXBaseSpecifier &Base, auto GetOffset) {
+        auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+        if (!BaseRecord) {
+          return;
+        }
+        auto BaseOffset =
+            std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
+
+        Stack.push_back(
+            Data{StartBitOffset + BaseOffset * Ctx.getCharWidth(),
+                 Base.getType().getCanonicalType(), /*VisitVirtualBase*/
+                 false});
+      };
+
+      for (auto Base : CXXRecord->bases()) {
+        if (!Base.isVirtual()) {
+          VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+        }
+      }
+
+      if (VisitVirtualBase) {
+        for (auto VBase : CXXRecord->vbases()) {
+          VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+        }
+      }
+    }
+
+    for (auto *Field : R->fields()) {
+      // Treat unnamed bitfields as padding.
+      if (Field->isUnnamedBitField())
+        continue;
+
+      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
+      if (Field->isBitField()) {
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartBitOffset + FieldOffset,
+            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
+      } else {
+        Stack.push_back(Data{StartBitOffset + FieldOffset,
+                             Field->getType().getCanonicalType(),
+                             /*VisitVirtualBase*/ true});
+      }
+    }
+  }
+
+  void VisitComplex(const ComplexType *CT, uint64_t StartBitOffset) {
+    QualType ElementQualType = CT->getElementType().getCanonicalType();
+    auto ElementSize = Ctx.getTypeSizeInChars(ElementQualType);
+    auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
+    auto ImgOffset = ElementSize.alignTo(ElementAlign);
+
+    Stack.push_back(
+        Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
+    Stack.push_back(
+        Data{StartBitOffset + ImgOffset.getQuantity() * Ctx.getCharWidth(),
+             ElementQualType, /*VisitVirtualBase*/ true});
+  }
+
+  void VisitVector(const clang::VectorType *VT, uint64_t StartBitOffset) {
+    uint64_t SizeBit = [&]() -> uint64_t {
+      if (VT->isPackedVectorBoolType(Ctx))
+        return VT->getNumElements();
+      return getScalarOccupiedSizeInBits(VT->getElementType()) *
+             VT->getNumElements();
+    }();
+    OccuppiedIntervals.push_back(
+        ASTContext::BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
+  void MergeOccuppiedIntervals() {
+    std::sort(OccuppiedIntervals.begin(), OccuppiedIntervals.end(),
+              [](const ASTContext::BitInterval &lhs,
+                 const ASTContext::BitInterval &rhs) {
+                return std::tie(lhs.First, lhs.Last) <
+                       std::tie(rhs.First, rhs.Last);
+              });
+
+    llvm::SmallVector<ASTContext::BitInterval> Merged;
+    Merged.reserve(OccuppiedIntervals.size());
+
+    for (const ASTContext::BitInterval &NextInterval : OccuppiedIntervals) {
+      if (Merged.empty()) {
+        Merged.push_back(NextInterval);
+        continue;
+      }
+      auto &LastInterval = Merged.back();
+
+      if (NextInterval.First > LastInterval.Last) {
+        Merged.push_back(NextInterval);
+      } else {
+        LastInterval.Last = std::max(LastInterval.Last, NextInterval.Last);
+      }
+    }
+
+    OccuppiedIntervals = Merged;
+  }
+
+  const ASTContext &Ctx;
+  //  unsigned PointerSizeInBits;
+  uint64_t TySizeInBits = 0;
+  llvm::SmallVector<Data> Stack;
+  llvm::SmallVector<ASTContext::BitInterval> OccuppiedIntervals;
+};
+} // namespace
+
+llvm::ArrayRef<ASTContext::BitInterval>
+ASTContext::getPaddingIntervals(QualType Ty) const {
+  Ty = Ty.getCanonicalType();
+  auto cached = PaddingIntervalCache.find(Ty);
+  if (cached != PaddingIntervalCache.end())
+    return cached->second;
+
+  PaddingCalculator pc{*this};
+  pc.run(Ty);
+
+  auto [itr, res] =
+      PaddingIntervalCache.insert_or_assign(Ty, pc.GetPaddingIntervals());
+  assert(res && "Failed to insert?");
+
+  return itr->second;
 }

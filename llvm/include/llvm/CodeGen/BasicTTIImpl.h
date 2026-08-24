@@ -1821,25 +1821,12 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
-            ICA.getID() == Intrinsic::vp_fneg) {
+        if (ICA.getID() == Intrinsic::vp_udiv ||
+            ICA.getID() == Intrinsic::vp_sdiv ||
+            ICA.getID() == Intrinsic::vp_urem ||
+            ICA.getID() == Intrinsic::vp_srem) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
-        }
-        if (VPCastIntrinsic::isVPCast(ICA.getID())) {
-          return thisT()->getCastInstrCost(
-              *FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-              TTI::CastContextHint::None, CostKind);
-        }
-        if (VPCmpIntrinsic::isVPCmp(ICA.getID())) {
-          // We can only handle vp_cmp intrinsics with underlying instructions.
-          if (ICA.getInst()) {
-            assert(FOp);
-            auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-            return thisT()->getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0],
-                                               ICA.getReturnType(),
-                                               UI->getPredicate(), CostKind);
-          }
         }
       }
       if (ICA.getID() == Intrinsic::vp_load_ff) {
@@ -1889,8 +1876,7 @@ public:
             CostKind);
       }
 
-      if (ICA.getID() == Intrinsic::vp_select ||
-          ICA.getID() == Intrinsic::vp_merge) {
+      if (ICA.getID() == Intrinsic::vp_merge) {
         TTI::OperandValueInfo OpInfoX, OpInfoY;
         if (!ICA.isTypeBasedOnly()) {
           OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
@@ -2158,14 +2144,9 @@ public:
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandCttzElements(ArgType))
-        return getTypeLegalizationCost(RetTy).first;
-
       // TODO: The costs below reflect the expansion code in
-      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
-      // favour of compile time.
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
 
       // Find the smallest "sensible" element type to use for the expansion.
       bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
@@ -2572,14 +2553,8 @@ public:
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
       unsigned SearchSize = NeedleTy->getNumElements();
 
-      // If we're not expanding the intrinsic then we assume this is cheap to
-      // implement.
-      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
-      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
-        return getTypeLegalizationCost(RetTy).first;
-
       // Approximate the cost based on the expansion code in
-      // SelectionDAGBuilder.
+      // TargetLowering::expandVectorMatch.
       InstructionCost Cost = 0;
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
                                           CostKind, 1, nullptr, nullptr);
