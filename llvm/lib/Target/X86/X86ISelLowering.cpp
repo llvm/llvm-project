@@ -53630,11 +53630,10 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   bool IsSub = N->getOpcode() == ISD::SUB;
   SDValue X = N->getOperand(0);
   SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
 
   if (N->getOpcode() == ISD::OR && !N->getFlags().hasDisjoint())
     return SDValue();
-
-  EVT VT = N->getValueType(0);
 
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
