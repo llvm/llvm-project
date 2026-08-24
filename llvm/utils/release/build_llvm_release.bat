@@ -326,7 +326,8 @@ if "%arch%"=="arm64" (
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
-ninja clang-cl lld-link llvm-lib llvm-windres runtimes || exit /b 1
+ninja help
+ninja clang lld-link llvm-lib llvm-windres runtimes || exit /b 1
 if "%fast-build%" neq "true" (
 ninja check-llvm || exit /b 1
 ninja check-clang || exit /b 1
