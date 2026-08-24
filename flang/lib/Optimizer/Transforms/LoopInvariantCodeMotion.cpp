@@ -246,16 +246,18 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
 ///
 /// fir.convert and fir.address_of are at most one instruction and are often
 /// free. A load of a trivial non-vector type is a single access, and a load of
-/// a descriptor is a fixed-size copy. Vector loads may be large, and CHARACTER,
-/// derived types and arrays may be arbitrarily large, so those are left to the
-/// aggressive mode.
+/// a descriptor of known rank is a fixed-size copy. Vector loads may be large,
+/// an assumed-rank descriptor load lowers to a runtime-sized memcpy, and
+/// CHARACTER, derived types and arrays may be arbitrarily large, so those are
+/// left to the aggressive mode.
 static bool isCheapToHoistFromNestedRegion(Operation *op) {
   if (isa<fir::ConvertOp, fir::AddrOfOp>(op))
     return true;
   if (auto load = dyn_cast<fir::LoadOp>(op)) {
     Type resultType = load.getType();
-    return isa<fir::BaseBoxType>(resultType) ||
-           (fir::isa_trivial(resultType) && !fir::isa_vector(resultType));
+    if (isa<fir::BaseBoxType>(resultType))
+      return !fir::isa_unknown_size_box(resultType);
+    return fir::isa_trivial(resultType) && !fir::isa_vector(resultType);
   }
   return false;
 }

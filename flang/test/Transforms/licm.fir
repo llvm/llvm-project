@@ -2830,6 +2830,31 @@ func.func @test_cheap_nested_skips_vector_load(%arg0: !fir.ref<!fir.vector<8:f64
 }
 
 // -----
+// Test that an assumed-rank descriptor load inside scf.if is NOT hoisted in the
+// default "cheap" nested hoisting mode. The descriptor size depends on the rank,
+// which is only known at runtime, so the load lowers to a memcpy whose length is
+// computed from the descriptor.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_assumed_rank_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+// CHECK:               fir.store
+func.func @test_cheap_nested_skips_assumed_rank_load(%arg0: !fir.ref<!fir.box<!fir.array<*:f32>>>, %arg1: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+      fir.store %val to %arg1 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+    }
+  }
+  return
+}
+
+// -----
 // Test that a volatile scalar load inside scf.if is NOT hoisted in the default
 // "cheap" nested hoisting mode. The cost model admits it as a trivial scalar;
 // the safety path rejects it.
