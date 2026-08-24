@@ -911,10 +911,21 @@ LogicalResult TestWithBoundsOp::verify() {
     expectedWidth = IndexType::kInternalStorageBitWidth;
   else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
     expectedWidth = intTy.getWidth();
-  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
-    return emitOpError("bound attribute width (")
-           << getUmin().getBitWidth() << ") does not match result type width ("
-           << expectedWidth << ")";
+  // wrapper to check bound width and return error message if needed
+  auto verifyBoundWidth = [&](StringRef name,
+                              const APInt &bound) -> LogicalResult {
+    if (expectedWidth != 0 && bound.getBitWidth() != expectedWidth)
+      return emitOpError() << "'" << name << "' bound attribute width ("
+                           << bound.getBitWidth()
+                           << ") does not match result type width ("
+                           << expectedWidth << ")";
+    return success();
+  };
+  if (failed(verifyBoundWidth("umin", getUmin())) ||
+      failed(verifyBoundWidth("umax", getUmax())) ||
+      failed(verifyBoundWidth("smin", getSmin())) ||
+      failed(verifyBoundWidth("smax", getSmax())))
+    return failure();
   return success();
 }
 
