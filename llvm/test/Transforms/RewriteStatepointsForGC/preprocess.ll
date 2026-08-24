@@ -1,10 +1,9 @@
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
-; Test to make sure we destroy LCSSA's single entry phi nodes before
-; running liveness
-
 declare void @consume(...) "gc-leaf-function"
 
+; Test to make sure we destroy LCSSA's single entry phi nodes before
+; running liveness
 define void @test6(ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test6
 entry:
@@ -16,7 +15,6 @@ next:                                             ; preds = %entry
 ; CHECK-NEXT: gc.relocate
 ; CHECK-NEXT: @consume(ptr addrspace(1) %obj.relocated)
 ; CHECK-NEXT: @consume(ptr addrspace(1) %obj.relocated)
-; Need to delete unreachable gc.statepoint call
   %obj2 = phi ptr addrspace(1) [ %obj, %entry ]
   call void @foo() [ "deopt"() ]
   call void (...) @consume(ptr addrspace(1) %obj2)
@@ -24,11 +22,10 @@ next:                                             ; preds = %entry
   ret void
 }
 
+; Need to delete unreachable gc.statepoint call
 define void @test7() gc "statepoint-example" {
 ; CHECK-LABEL: test7
 ; CHECK-NOT: gc.statepoint
-; Need to delete unreachable gc.statepoint invoke - tested separately given
-; a correct implementation could only remove the instructions, not the block
   ret void
 
 unreached:                                        ; preds = %unreached
@@ -38,6 +35,8 @@ unreached:                                        ; preds = %unreached
   br label %unreached
 }
 
+; Need to delete unreachable gc.statepoint invoke - tested separately given
+; a correct implementation could only remove the instructions, not the block
 define void @test8() gc "statepoint-example" personality ptr undef {
 ; CHECK-LABEL: test8
 ; CHECK-NOT: gc.statepoint

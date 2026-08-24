@@ -1,7 +1,6 @@
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; A null test of a single value
-
 define i1 @test(ptr addrspace(1) %p, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test
 entry:
@@ -19,7 +18,6 @@ continue:                                         ; preds = %safepoint, %entry
 ; CHECK-DAG: [ %p, %entry ]
 ; CHECK: %cond = icmp
 ; CHECK: br i1 %cond
-; Comparing two pointers
   br i1 %cond, label %taken, label %untaken
 
 taken:                                            ; preds = %continue
@@ -29,6 +27,7 @@ untaken:                                          ; preds = %continue
   ret i1 false
 }
 
+; Comparing two pointers
 define i1 @test2(ptr addrspace(1) %p, ptr addrspace(1) %q, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test2
 entry:
@@ -49,8 +48,6 @@ continue:                                         ; preds = %safepoint, %entry
 ; CHECK-DAG: [ %p, %entry ]
 ; CHECK: %cond = icmp
 ; CHECK: br i1 %cond
-; Check that nothing bad happens if already last instruction
-; before terminator
   br i1 %cond, label %taken, label %untaken
 
 taken:                                            ; preds = %continue
@@ -60,6 +57,8 @@ untaken:                                          ; preds = %continue
   ret i1 false
 }
 
+; Check that nothing bad happens if already last instruction
+; before terminator
 define i1 @test3(ptr addrspace(1) %p, ptr addrspace(1) %q, i1 %rare) gc "statepoint-example" {
 ; CHECK-LABEL: @test3
 ; CHECK: gc.statepoint
